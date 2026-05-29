@@ -54,6 +54,7 @@ external interface ScriptStepDisplayDefaultState: State {
 
 
 //---------------------------------------------------------------------------------------------------------------------
+// TODO: can this be made an RPureComponent for conceptual simplicity and optimization?
 @Suppress("unused")
 class ScriptStepDisplayDefault(
     props: ScriptStepDisplayDefaultProps
@@ -186,6 +187,7 @@ class ScriptStepDisplayDefault(
             .graphMetadata
             .objectMetadata[props.common.objectLocation]!!
 
+        // TODO: looks like it's recomputed each time, can this be optimized?
         val summaryAttributeNames = findSummaryAttributes(objectMetadata)
 
         setState {

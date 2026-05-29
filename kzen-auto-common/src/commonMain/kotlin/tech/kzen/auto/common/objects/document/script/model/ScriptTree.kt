@@ -192,6 +192,27 @@ data class ScriptTree(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    // All descendant step paths in document order (depth-first; each branch's child list is already
+    // document-sorted by read). Excludes this node itself — called on the root it yields every step,
+    // skipping the root main object which is the script document, not a step.
+    fun orderedDescendantObjectPaths(): List<ObjectPath> {
+        val buffer = mutableListOf<ObjectPath>()
+        collectDescendants(buffer)
+        return buffer
+    }
+
+
+    private fun collectDescendants(buffer: MutableList<ObjectPath>) {
+        for (childTrees in children.values) {
+            for (childTree in childTrees) {
+                buffer.add(childTree.objectPath)
+                childTree.collectDescendants(buffer)
+            }
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     fun predecessors(target: ObjectPath): List<ObjectPath> {
         val buffer = ArrayDeque<ObjectPath>()
         predecessors(target, buffer)

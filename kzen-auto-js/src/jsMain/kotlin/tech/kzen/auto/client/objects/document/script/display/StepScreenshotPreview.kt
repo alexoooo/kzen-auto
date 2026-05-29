@@ -1,9 +1,12 @@
 package tech.kzen.auto.client.objects.document.script.display
 
 import emotion.react.css
+import js.objects.unsafeJso
 import kotlinx.browser.window
+import mui.material.IconButton
 import mui.material.Modal
 import org.w3c.dom.events.Event
+import org.w3c.dom.events.KeyboardEvent
 import react.ChildrenBuilder
 import react.Props
 import react.RefObject
@@ -20,6 +23,7 @@ import tech.kzen.auto.client.wrap.RComponent
 import tech.kzen.auto.client.wrap.contextValue
 import tech.kzen.auto.client.wrap.createRef
 import tech.kzen.auto.client.wrap.installContextType
+import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.exec.BinaryExecutionValue
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -45,10 +49,15 @@ external interface StepScreenshotPreviewState: State {
     var stepTitle: String?
 
     var modalOpen: Boolean
+
+    // Which step's screenshot the full-screen view currently shows; navigation moves it between
+    // steps while the originating component's modal stays mounted.
+    var modalLocation: ObjectLocation?
 }
 
 
 //---------------------------------------------------------------------------------------------------------------------
+// TODO: split this into thumbnail/preview/fullscreen, consolidate StepImageDisplay related code into package
 @Suppress("unused")
 class StepScreenshotPreview(
     props: StepScreenshotPreviewProps
@@ -85,6 +94,22 @@ class StepScreenshotPreview(
     private val onViewportChange: (Event?) -> Unit = { recomputeFloatingPosition() }
     private var viewportListenersAttached = false
 
+    // Latest state captured from the observers (kept current even when the per-step early-returns
+    // skip setState) so the full-screen view can resolve OTHER steps' screenshots and titles for
+    // prev/next navigation. Plain fields, not React state — navigation re-renders via modalLocation.
+    private var latestScriptState: ScriptState? = null
+    private var latestClientState: ClientState? = null
+
+    // Stable handler so add/removeEventListener pair up. Active only while the full-screen view is
+    // open; handles Left/Right only (MUI Modal already dismisses on Escape via onClose).
+    private val onModalKeyDown: (Event?) -> Unit = { event ->
+        when ((event as? KeyboardEvent)?.key) {
+            "ArrowLeft" -> navigateModal(-1)
+            "ArrowRight" -> navigateModal(1)
+        }
+    }
+    private var modalKeyListenerAttached = false
+
 
     //-----------------------------------------------------------------------------------------------------------------
     init {
@@ -108,6 +133,7 @@ class StepScreenshotPreview(
         scriptStore?.unobserve(this)
         ClientContext.clientStateGlobal.unobserve(this)
         detachViewportListeners()
+        detachModalKeyListener()
     }
 
 
@@ -134,11 +160,16 @@ class StepScreenshotPreview(
         floatingLeft = 0.0
         stepTitle = null
         modalOpen = false
+        modalLocation = null
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun onScriptState(scriptState: ScriptState) {
+        // Captured before the early-return below so the full-screen view's navigation always sees
+        // the current trace snapshot, even when this step's own screenshot/expansion is unchanged.
+        latestScriptState = scriptState
+
         val traceInfo = computeStepTraceInfo(
             scriptState, props.objectLocation, ClientContext.objectStableMapper)
         val nextScreenshot = traceInfo.trace?.detail as? BinaryExecutionValue
@@ -169,6 +200,9 @@ class StepScreenshotPreview(
 
 
     override fun onClientState(clientState: ClientState) {
+        // Captured before the early-return below so navigation can resolve other steps' titles.
+        latestClientState = clientState
+
         val headerInfo = computeStepHeaderInfo(clientState, props.objectLocation)
             ?: return
 
@@ -202,6 +236,25 @@ class StepScreenshotPreview(
         viewportListenersAttached = false
         window.removeEventListener("scroll", onViewportChange, true)
         window.removeEventListener("resize", onViewportChange)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun attachModalKeyListener() {
+        if (modalKeyListenerAttached) {
+            return
+        }
+        modalKeyListenerAttached = true
+        window.addEventListener("keydown", onModalKeyDown)
+    }
+
+
+    private fun detachModalKeyListener() {
+        if (!modalKeyListenerAttached) {
+            return
+        }
+        modalKeyListenerAttached = false
+        window.removeEventListener("keydown", onModalKeyDown)
     }
 
 
@@ -244,6 +297,28 @@ class StepScreenshotPreview(
     }
 
 
+    // Hovering the (expanded) preview itself lifts it above overlapping neighbours — same z-index
+    // bump as hovering the thumbnail. NB: unlike onThumbnailEnter this does NOT recompute placement
+    // (the expanded preview is already pinned); it only toggles hovered. hovered=false on leave
+    // doesn't hide the preview because render keeps it while state.expanded is true.
+    private fun onPreviewEnter() {
+        if (!state.hovered) {
+            setState {
+                hovered = true
+            }
+        }
+    }
+
+
+    private fun onPreviewLeave() {
+        if (state.hovered) {
+            setState {
+                hovered = false
+            }
+        }
+    }
+
+
     private fun recomputeFloatingPosition() {
         val (left, top) = floatingPosition()
             ?: return
@@ -260,15 +335,58 @@ class StepScreenshotPreview(
 
 
     private fun onThumbnailClick() {
+        attachModalKeyListener()
         setState {
             modalOpen = true
+            modalLocation = props.objectLocation
         }
     }
 
 
     private fun onModalClose() {
+        detachModalKeyListener()
         setState {
             modalOpen = false
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    // Step locations that currently have a screenshot, in document order — the navigation sequence
+    // for the full-screen view.
+    private fun screenshotLocations(): List<ObjectLocation> {
+        val scriptState = latestScriptState
+            ?: return emptyList()
+
+        val documentPath = props.objectLocation.documentPath
+        return scriptState.scriptTree
+            .orderedDescendantObjectPaths()
+            .map { documentPath.toObjectLocation(it) }
+            .filter { hasScreenshot(scriptState, it) }
+    }
+
+
+    private fun hasScreenshot(scriptState: ScriptState, location: ObjectLocation): Boolean {
+        val trace = computeStepTraceInfo(scriptState, location, ClientContext.objectStableMapper).trace
+        return trace?.detail is BinaryExecutionValue
+    }
+
+
+    private fun navigateModal(delta: Int) {
+        val locations = screenshotLocations()
+        val index = locations.indexOf(state.modalLocation ?: props.objectLocation)
+        if (index < 0) {
+            return
+        }
+
+        val nextIndex = index + delta
+        if (nextIndex < 0 || nextIndex >= locations.size) {
+            // Stop at the ends.
+            return
+        }
+
+        setState {
+            modalLocation = locations[nextIndex]
         }
     }
 
@@ -278,10 +396,7 @@ class StepScreenshotPreview(
         val screenshot = state.screenshot
             ?: return
 
-        val screenshotPngUrl = screenshot.cache("img") {
-            val base64 = IoUtils.base64Encode(screenshot.value)
-            "data:png/png;base64,$base64"
-        }
+        val screenshotPngUrl = pngUrl(screenshot)
 
         renderThumbnail(screenshotPngUrl)
 
@@ -292,9 +407,18 @@ class StepScreenshotPreview(
         }
 
         if (state.modalOpen) {
-            renderModalViewer(screenshotPngUrl)
+            renderModalViewer()
         }
     }
+
+
+    // base64 data URL, cached on the screenshot value (shared across thumbnail, floating preview,
+    // and the full-screen view, including navigated-to neighbours).
+    private fun pngUrl(screenshot: BinaryExecutionValue): String =
+        screenshot.cache("img") {
+            val base64 = IoUtils.base64Encode(screenshot.value)
+            "data:png/png;base64,$base64"
+        }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -374,13 +498,32 @@ class StepScreenshotPreview(
 
             if (persistent) {
                 onClick = { onThumbnailClick() }
+                // Hovering the preview (not just the thumbnail) brings it forward over overlapping
+                // neighbours.
+                onMouseEnter = { onPreviewEnter() }
+                onMouseLeave = { onPreviewLeave() }
             }
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun ChildrenBuilder.renderModalViewer(pngUrl: String) {
+    private fun ChildrenBuilder.renderModalViewer() {
+        // The shown screenshot follows modalLocation (changed by prev/next), resolved from the
+        // latest trace snapshot; fall back to this step's own screenshot if the snapshot is absent.
+        val modalLocation = state.modalLocation
+            ?: props.objectLocation
+
+        val screenshot = latestScriptState
+            ?.let { computeStepTraceInfo(it, modalLocation, ClientContext.objectStableMapper).trace?.detail as? BinaryExecutionValue }
+            ?: state.screenshot
+            ?: return
+
+        val locations = screenshotLocations()
+        val index = locations.indexOf(modalLocation)
+        val hasPrev = index > 0
+        val hasNext = index in 0 until (locations.size - 1)
+
         Modal {
             open = true
             // NB: MUI Modal's onClose fires for both backdrop click and Escape (reason
@@ -403,10 +546,14 @@ class StepScreenshotPreview(
                 }
                 onClick = { onModalClose() }
 
-                renderModalHeader()
+                renderModalHeader(modalLocation, canNavigate = locations.size > 1)
+
+                renderModalNavButton(alignLeft = true, iconName = "NavigateBefore", enabled = hasPrev) {
+                    navigateModal(-1)
+                }
 
                 img {
-                    src = pngUrl
+                    src = pngUrl(screenshot)
 
                     css {
                         display = Display.block
@@ -421,6 +568,54 @@ class StepScreenshotPreview(
                         cursor = Cursor.pointer
                     }
                 }
+
+                renderModalNavButton(alignLeft = false, iconName = "NavigateNext", enabled = hasNext) {
+                    navigateModal(1)
+                }
+            }
+        }
+    }
+
+
+    // Prev/next button pinned to a viewport-height column on one edge, vertically centred. The
+    // button stops click propagation so navigating doesn't also trigger the backdrop's close;
+    // clicking the empty column still falls through to close ("click anywhere closes"). Disabled
+    // (greyed) at the ends of the sequence.
+    private fun ChildrenBuilder.renderModalNavButton(
+        alignLeft: Boolean,
+        iconName: String,
+        enabled: Boolean,
+        onActivate: () -> Unit
+    ) {
+        div {
+            css {
+                position = Position.fixed
+                top = 0.px
+                bottom = 0.px
+                if (alignLeft) {
+                    left = 0.px
+                }
+                else {
+                    right = 0.px
+                }
+                display = Display.flex
+                alignItems = AlignItems.center
+                padding = Padding(0.px, 0.5.em, 0.px, 0.5.em)
+                zIndex = integer(2)
+            }
+
+            IconButton {
+                disabled = !enabled
+                onClick = { event ->
+                    event.stopPropagation()
+                    onActivate()
+                }
+                iconByName(iconName) {
+                    style = unsafeJso {
+                        color = if (enabled) NamedColor.white else Color("rgba(255, 255, 255, 0.3)")
+                        fontSize = 2.5.em
+                    }
+                }
             }
         }
     }
@@ -429,7 +624,13 @@ class StepScreenshotPreview(
     // Indicator so the full-screen view is self-explanatory (e.g. if opened as a browser tab):
     // which Script / Step it belongs to, and how to dismiss. pointer-events none → clicking the
     // bar still falls through to the backdrop's close handler ("click anywhere closes").
-    private fun ChildrenBuilder.renderModalHeader() {
+    private fun ChildrenBuilder.renderModalHeader(modalLocation: ObjectLocation, canNavigate: Boolean) {
+        // Title follows modalLocation (navigation moves between steps); resolved from the latest
+        // client state, falling back to this step's own title.
+        val title = latestClientState
+            ?.let { computeStepHeaderInfo(it, modalLocation)?.title }
+            ?: state.stepTitle
+
         div {
             css {
                 position = Position.fixed
@@ -453,7 +654,7 @@ class StepScreenshotPreview(
                     fontSize = 1.1.em
                     fontWeight = FontWeight.bold
                 }
-                +"${props.objectLocation.documentPath.name.value} > ${state.stepTitle ?: ""}"
+                +"${modalLocation.documentPath.name.value} > ${title ?: ""}"
             }
 
             div {
@@ -462,7 +663,12 @@ class StepScreenshotPreview(
                     opacity = number(0.8)
                     marginTop = 0.25.em
                 }
-                +"Click anywhere or press Esc to close"
+                +if (canNavigate) {
+                    "Use ← → to navigate · click anywhere or press Esc to close"
+                }
+                else {
+                    "Click anywhere or press Esc to close"
+                }
             }
         }
     }
