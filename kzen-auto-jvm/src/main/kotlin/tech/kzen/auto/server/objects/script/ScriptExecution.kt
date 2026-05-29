@@ -38,7 +38,7 @@ class ScriptExecution(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val logicHandleFacade = LogicHandleFacade(runExecutionId, logicHandle, objectStableMapper)
+    private val logicHandleFacade = LogicHandleFacade(runExecutionId, logicHandle)
 
     private var activeScriptModel = ActiveScriptModel()
     private var previousStatefulElements = mutableMapOf<ObjectStableId, StatefulLogicElement<*>>()

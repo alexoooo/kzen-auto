@@ -9,8 +9,8 @@ import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunResponse
 import tech.kzen.lib.common.exec.logic.run.model.LogicStatus
-import tech.kzen.auto.common.paradigm.task.model.TaskId
-import tech.kzen.auto.common.paradigm.task.model.TaskModel
+import tech.kzen.lib.common.exec.task.model.TaskId
+import tech.kzen.lib.common.exec.task.model.TaskModel
 import tech.kzen.auto.platform.encodeURIComponent
 import tech.kzen.lib.client.ClientJsonUtils
 import tech.kzen.lib.common.exec.ExecutionResult

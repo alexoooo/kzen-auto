@@ -10,8 +10,8 @@ import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowRepo
 import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunResponse
-import tech.kzen.auto.common.paradigm.task.model.TaskId
-import tech.kzen.auto.common.paradigm.task.model.TaskModel
+import tech.kzen.lib.common.exec.task.model.TaskId
+import tech.kzen.lib.common.exec.task.model.TaskModel
 import tech.kzen.auto.server.paradigm.detached.ExecutionDownloadResult
 import tech.kzen.auto.server.service.exec.ModelDetachedExecutor
 import tech.kzen.auto.server.service.exec.ModelTaskRepository

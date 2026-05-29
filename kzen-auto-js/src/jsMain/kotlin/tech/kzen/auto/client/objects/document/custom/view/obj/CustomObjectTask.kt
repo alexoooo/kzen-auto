@@ -15,8 +15,8 @@ import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.iconByName
 import tech.kzen.auto.client.wrap.setState
-import tech.kzen.auto.common.paradigm.task.model.TaskModel
-import tech.kzen.auto.common.paradigm.task.model.TaskState
+import tech.kzen.lib.common.exec.task.model.TaskModel
+import tech.kzen.lib.common.exec.task.model.TaskState
 import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionSuccess

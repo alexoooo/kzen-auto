@@ -144,8 +144,7 @@ class ServerLogicController(
         val logicHandle: LogicHandle = object: LogicHandle {
             override fun start(
                 logicRunExecutionId: LogicRunExecutionId,
-                originalObjectLocation: ObjectLocation,
-                objectStableMapper: ObjectStableMapper
+                originalObjectLocation: ObjectLocation
             ): LogicExecutionFacade {
                 val currentState = checkNotNull(stateOrNull)
                 check(currentState.runId == runId)
@@ -166,7 +165,7 @@ class ServerLogicController(
                     successfulGraphDefinition, commonMutableLogicControl, listener, logicTraceStore)
 
                 val logicExecution = logicExecutionFacadeImpl.open(
-                    runId, originalObjectLocation, this, graphCreator, objectStableMapper)
+                    runId, originalObjectLocation, this, graphCreator)
 
                 val stableObjectLocation = objectStableMapper.objectStableId(originalObjectLocation)
                 hostFrame.dependencies.add(LogicFrame(
@@ -186,7 +185,7 @@ class ServerLogicController(
         val logic = rootInstance as Logic
         val execution =
             try {
-                logic.execute(logicHandle, logicTraceHandle, runExecutionId, commonMutableLogicControl, objectStableMapper)
+                logic.execute(logicHandle, logicTraceHandle, runExecutionId, commonMutableLogicControl)
             }
             catch (e: Exception) {
                 logger.warn("Execution error: {}", root, e)

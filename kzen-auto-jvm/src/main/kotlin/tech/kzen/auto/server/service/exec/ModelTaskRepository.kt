@@ -1,13 +1,13 @@
 package tech.kzen.auto.server.service.exec
 
 import org.slf4j.LoggerFactory
-import tech.kzen.auto.common.paradigm.task.ManagedTask
-import tech.kzen.auto.common.paradigm.task.TaskHandle
-import tech.kzen.auto.common.paradigm.task.TaskRepository
-import tech.kzen.auto.common.paradigm.task.TaskRun
-import tech.kzen.auto.common.paradigm.task.model.TaskId
-import tech.kzen.auto.common.paradigm.task.model.TaskModel
-import tech.kzen.auto.common.paradigm.task.model.TaskState
+import tech.kzen.lib.common.exec.task.ManagedTask
+import tech.kzen.lib.common.exec.task.TaskHandle
+import tech.kzen.lib.common.exec.task.TaskRepository
+import tech.kzen.lib.common.exec.task.TaskRun
+import tech.kzen.lib.common.exec.task.model.TaskId
+import tech.kzen.lib.common.exec.task.model.TaskModel
+import tech.kzen.lib.common.exec.task.model.TaskState
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.exec.ExecutionRequest

@@ -1,8 +1,8 @@
 package tech.kzen.auto.server.objects.custom.test
 
-import tech.kzen.auto.common.paradigm.task.ManagedTask
-import tech.kzen.auto.common.paradigm.task.TaskHandle
-import tech.kzen.auto.common.paradigm.task.TaskRun
+import tech.kzen.lib.common.exec.task.ManagedTask
+import tech.kzen.lib.common.exec.task.TaskHandle
+import tech.kzen.lib.common.exec.task.TaskRun
 import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionSuccess

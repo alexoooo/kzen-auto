@@ -50,7 +50,6 @@ import tech.kzen.auto.server.util.WorkUtils
 import tech.kzen.lib.common.exec.*
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
-import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import tech.kzen.lib.platform.DateTimeUtils
 import java.awt.geom.IllegalPathStateException
 import java.nio.file.Paths
@@ -387,8 +386,7 @@ class ReportDocument(
         logicHandle: LogicHandle,
         logicTraceHandle: LogicTraceHandle,
         logicRunExecutionId: LogicRunExecutionId,
-        logicControl: LogicControl,
-        objectStableMapper: ObjectStableMapper
+        logicControl: LogicControl
     ): LogicExecution {
         val reportRunContext = reportRunContext()
             ?: throw IllegalStateException("Unable to create context")
