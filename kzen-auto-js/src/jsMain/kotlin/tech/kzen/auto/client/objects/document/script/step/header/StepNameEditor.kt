@@ -28,13 +28,12 @@ external interface StepNameEditorProps: react.Props {
 
 external interface StepNameEditorState: react.State {
     var editing: Boolean
-    var nameHovered: Boolean
 }
 
 
 //---------------------------------------------------------------------------------------------------------------------
-// NB: extracted as a pure component so that toggling the parent's nameHovered state doesn't cascade into the
-//     MUI IconButton subtree (~10 non-pure fibers — ButtonBase, ripple, SvgIcon, ownerState forwarding).
+// NB: kept as its own pure component so the (~10 non-pure) MUI IconButton subtree — ButtonBase, ripple, SvgIcon,
+//     ownerState forwarding — bails out when the editor re-renders for unrelated reasons.
 //     Props must be stable references (use a class field for onAction, not ::method).
 external interface RenameButtonProps: react.Props {
     var onAction: () -> Unit
@@ -81,7 +80,6 @@ class StepNameEditor(
     //-----------------------------------------------------------------------------------------------------------------
     override fun StepNameEditorState.init(props: StepNameEditorProps) {
         editing = false
-        nameHovered = false
     }
 
 
@@ -108,35 +106,21 @@ class StepNameEditor(
     }
 
 
-    private fun onNameAreaEnter() {
-        if (!state.nameHovered) {
-            setState {
-                nameHovered = true
-            }
-        }
-    }
-
-
-    private fun onNameAreaLeave() {
-        if (state.nameHovered) {
-            setState {
-                nameHovered = false
-            }
-        }
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
         div {
+            // NB: the rename button is revealed on hover via pure CSS (see [data-rename-button] below) rather than
+            //     a hover state field — a state toggle here would re-reconcile this step's sibling slots on every
+            //     mouse move and flash them in React DevTools' "Highlight updates" overlay (a false positive).
             css {
                 display = Display.flex
                 alignItems = AlignItems.center
                 minWidth = 0.px
-            }
 
-            onMouseEnter = { onNameAreaEnter() }
-            onMouseLeave = { onNameAreaLeave() }
+                "&:hover [data-rename-button]" {
+                    opacity = number(1.0)
+                }
+            }
 
             if (state.editing) {
                 renderEditor()
@@ -171,14 +155,15 @@ class StepNameEditor(
             }
         }
 
-        // NB: the wrapper div carries the hover-driven opacity. Placing it on a plain element (not the IconButton's
-        //     sx) means re-rendering on hover doesn't cascade into MUI's IconButton subtree.
+        // NB: hidden by default; the enclosing name area's &:hover rule reveals it (data-rename-button hook).
         div {
+            asDynamic()["data-rename-button"] = ""
+
             css {
                 display = Display.inlineFlex
                 alignItems = AlignItems.center
                 marginLeft = 0.25.em
-                opacity = if (state.nameHovered) number(1.0) else number(0.0)
+                opacity = number(0.0)
             }
 
             RenameButton::class.react {

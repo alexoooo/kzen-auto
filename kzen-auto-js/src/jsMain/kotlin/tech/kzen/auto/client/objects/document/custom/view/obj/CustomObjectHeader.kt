@@ -32,7 +32,6 @@ external interface CustomObjectHeaderProps: Props {
 
 external interface CustomObjectHeaderState: State {
     var editing: Boolean
-    var nameHovered: Boolean
 }
 
 
@@ -46,7 +45,6 @@ class CustomObjectHeader(
     //-----------------------------------------------------------------------------------------------------------------
     override fun CustomObjectHeaderState.init(props: CustomObjectHeaderProps) {
         editing = false
-        nameHovered = false
     }
 
 
@@ -61,24 +59,6 @@ class CustomObjectHeader(
     private fun onCloseEdit() {
         setState {
             editing = false
-        }
-    }
-
-
-    private fun onNameAreaEnter() {
-        if (!state.nameHovered) {
-            setState {
-                nameHovered = true
-            }
-        }
-    }
-
-
-    private fun onNameAreaLeave() {
-        if (state.nameHovered) {
-            setState {
-                nameHovered = false
-            }
         }
     }
 
@@ -111,15 +91,19 @@ class CustomObjectHeader(
     //-----------------------------------------------------------------------------------------------------------------
     private fun ChildrenBuilder.renderNameArea() {
         div {
+            // NB: rename button revealed on hover via CSS (data-rename-button below), not a hover state field —
+            //     a state toggle would re-reconcile sibling objects on every mouse move and flash them in React
+            //     DevTools' "Highlight updates" overlay (a false positive).
             css {
                 flexGrow = number(1.0)
                 minWidth = 0.px
                 display = Display.flex
                 alignItems = AlignItems.center
-            }
 
-            onMouseEnter = { onNameAreaEnter() }
-            onMouseLeave = { onNameAreaLeave() }
+                "&:hover [data-rename-button]" {
+                    opacity = number(1.0)
+                }
+            }
 
             if (state.editing) {
                 renderEditor()
@@ -140,18 +124,25 @@ class CustomObjectHeader(
             +props.objectLocation.objectPath.name.value
         }
 
-        IconButton {
-            title = "Rename"
-            size = Size.small
+        // NB: wrapper carries data-rename-button + base hidden opacity; the name area's &:hover rule reveals it.
+        div {
+            asDynamic()["data-rename-button"] = ""
 
-            sx {
+            css {
+                display = Display.inlineFlex
+                alignItems = AlignItems.center
                 marginLeft = 0.25.em
-                opacity = if (state.nameHovered) number(1.0) else number(0.0)
+                opacity = number(0.0)
             }
 
-            onClick = { onStartEdit() }
+            IconButton {
+                title = "Rename"
+                size = Size.small
 
-            iconByName("Edit") {}
+                onClick = { onStartEdit() }
+
+                iconByName("Edit") {}
+            }
         }
     }
 

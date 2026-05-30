@@ -14,8 +14,6 @@ import tech.kzen.auto.client.objects.document.common.dragdrop.dropMarkerFor
 import tech.kzen.auto.client.objects.document.script.ScriptController
 import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
 import tech.kzen.auto.client.objects.document.script.display.ScriptStepSlot
-import tech.kzen.auto.client.objects.document.script.display.ScriptStepSlot.Companion.registerYieldZone
-import tech.kzen.auto.client.objects.document.script.display.ScriptStepSlot.Companion.unregisterYieldZone
 import tech.kzen.auto.client.objects.document.script.display.StepDisplayManager
 import tech.kzen.auto.client.objects.document.script.display.StepScreenshotPreview
 import tech.kzen.auto.client.service.ClientContext
@@ -82,18 +80,6 @@ class ScriptBranchDisplay(
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private val dragHandleColor = Color("rgba(0, 0, 0, 0.45)")
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    // NB: stable identity across renders so the ref callback doesn't re-fire register/unregister
-    //     on every render. Registers the rendered root with ScriptStepSlot's yield-zone registry —
-    //     so an enclosing slot (e.g. an If wrapping this branch) yields when the cursor sits in
-    //     this branch's gap/padding area, not just when it's directly over a nested step slot.
-    private val rootRefCallback = refCallback<HTMLDivElement> { element ->
-        registerYieldZone(element)
-        val cleanup: () -> Unit = { unregisterYieldZone(element) }
-        cleanup
     }
 
 
@@ -268,7 +254,10 @@ class ScriptBranchDisplay(
             ?: return
 
         div {
-            ref = rootRefCallback
+            // NB: data-step-branch marks this branch's gap/padding as a "yield zone" so an enclosing slot's drag
+            //     handle stays hidden when the cursor sits here (see ScriptStepSlot's :has() rule). Pure attribute
+            //     + CSS — no ref/registry, so mouse movement over the branch triggers no React re-render.
+            asDynamic()["data-step-branch"] = ""
 
             if (stepLocations.isEmpty()) {
                 div {

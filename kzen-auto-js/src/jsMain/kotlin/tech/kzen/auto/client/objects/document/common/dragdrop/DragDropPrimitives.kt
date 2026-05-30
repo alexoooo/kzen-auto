@@ -49,6 +49,10 @@ fun ChildrenBuilder.dragHandle(
     frosted: Boolean = false
 ) {
     div {
+        // NB: selector hook so a caller can reveal the handle on hover via CSS (see ScriptStepSlot) without a
+        //     hover state field. isVisible remains the "force visible" channel (e.g. while this is the drag source).
+        asDynamic()["data-drag-handle"] = ""
+
         css {
             position = Position.absolute
             top = 0.px

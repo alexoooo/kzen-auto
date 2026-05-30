@@ -17,7 +17,6 @@ import tech.kzen.auto.client.objects.document.custom.CustomTheme
 import tech.kzen.auto.client.objects.document.custom.view.CustomViewStore
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.react
-import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.custom.CustomConventions
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.ObjectMetadata
@@ -37,17 +36,12 @@ external interface CustomObjectProps: Props {
 }
 
 
-external interface CustomObjectState: State {
-    var isHovering: Boolean
-}
-
-
 //---------------------------------------------------------------------------------------------------------------------
 @Suppress("unused")
 class CustomObject(
     props: CustomObjectProps
 ):
-    RPureComponent<CustomObjectProps, CustomObjectState>(props)
+    RPureComponent<CustomObjectProps, State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     private var detachedRunner: CustomObjectDetachedRunner? = null
@@ -77,26 +71,6 @@ class CustomObject(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun CustomObjectState.init(props: CustomObjectProps) {
-        isHovering = false
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    private fun onMouseEnter() {
-        if (!state.isHovering) {
-            setState { isHovering = true }
-        }
-    }
-
-
-    private fun onMouseLeave() {
-        if (state.isHovering) {
-            setState { isHovering = false }
-        }
-    }
-
-
     private fun onDragOver(event: DragEvent<HTMLDivElement>) {
         event.preventDefault()
         val rect = event.currentTarget.getBoundingClientRect()
@@ -114,18 +88,23 @@ class CustomObject(
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
         div {
+            // NB: handle revealed on hover via CSS (below), not a hover state field — a state toggle would
+            //     re-reconcile this object's sibling list on every mouse move and flash them in React DevTools'
+            //     "Highlight updates" overlay (a false positive). Objects aren't nested, so plain :hover suffices.
             css {
                 position = Position.relative
                 marginBottom = 1.em
+
+                "&:hover > [data-drag-handle]" {
+                    opacity = number(1.0)
+                }
             }
 
-            onMouseEnter = { onMouseEnter() }
-            onMouseLeave = { onMouseLeave() }
             onDragOver = ::onDragOver
             onDrop = ::onDrop
 
             dragHandle(
-                isVisible = state.isHovering || props.dropMarker != null,
+                isVisible = props.dropMarker != null,
                 handleColor = CustomTheme.mutedText,
                 onStart = { props.viewStore.onDragStart(props.indexInDocument) },
                 onEnd = { props.viewStore.onDragEnd() })
