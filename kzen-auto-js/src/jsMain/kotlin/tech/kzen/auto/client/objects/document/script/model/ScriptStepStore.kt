@@ -6,7 +6,7 @@ import tech.kzen.lib.common.model.location.ObjectLocation
 // Thin sub-store for per-step UI state, alongside ScriptProgressStore / ScriptValidationStore. Unlike
 // those, it owns no network refresh — expansion is a pure synchronous toggle — so it just writes the
 // ScriptStepState slice into ScriptState; the publish drives both the step body and its sibling
-// StepScreenshotPreview via the existing onScriptState channel.
+// StepImageThumbnail via the existing onScriptState channel.
 class ScriptStepStore(private val store: ScriptStore) {
     fun setExpanded(objectLocation: ObjectLocation, expanded: Boolean) {
         store.update { state ->

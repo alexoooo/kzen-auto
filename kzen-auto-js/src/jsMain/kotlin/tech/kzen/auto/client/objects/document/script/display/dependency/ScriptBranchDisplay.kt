@@ -15,7 +15,7 @@ import tech.kzen.auto.client.objects.document.script.ScriptController
 import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
 import tech.kzen.auto.client.objects.document.script.display.ScriptStepSlot
 import tech.kzen.auto.client.objects.document.script.display.StepDisplayManager
-import tech.kzen.auto.client.objects.document.script.display.StepScreenshotPreview
+import tech.kzen.auto.client.objects.document.script.display.image.StepImageThumbnail
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
@@ -360,7 +360,7 @@ class ScriptBranchDisplay(
                 body()
             }
             if (stepLocation != null) {
-                StepScreenshotPreview::class.react {
+                StepImageThumbnail::class.react {
                     objectLocation = stepLocation
                 }
             }

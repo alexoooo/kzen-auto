@@ -193,6 +193,14 @@ class ScriptStore: ClientStateGlobal.Observer {
     }
 
 
+    // Non-throwing snapshot read (mirrors ClientStateGlobal.current()), for consumers that may
+    // render before the store is initialized or during teardown.
+    // TODO: is this actually necessary, or just hypothetical benefit (YAGNI)?
+    fun stateOrNull(): ScriptState? {
+        return state
+    }
+
+
     fun mainLocation(): ObjectLocation {
         return state().mainLocation
     }

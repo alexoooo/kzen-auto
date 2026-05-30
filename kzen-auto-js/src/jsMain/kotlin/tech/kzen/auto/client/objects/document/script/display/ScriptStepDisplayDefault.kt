@@ -69,7 +69,7 @@ class ScriptStepDisplayDefault(
 
         // Soft-elevation card chrome — lifts a step card off the grey stage; matches the app-wide
         // 3px card radius (Report controllers, VertexController). Single-layer shadow per the
-        // StepScreenshotPreview idiom. Resting is subtle; hover deepens it as an interactivity cue.
+        // StepImageThumbnail idiom. Resting is subtle; hover deepens it as an interactivity cue.
         // Shared with the branch-bearing If/Loop header slab (branchHeaderSlab) so every step card
         // reads with the same elevation.
         val cardCornerRadius = 3.px
@@ -259,7 +259,7 @@ class ScriptStepDisplayDefault(
     //-----------------------------------------------------------------------------------------------------------------
     private fun onToggleExpanded() {
         // Single source of truth: write expansion to ScriptState via the sub-store. Both this step
-        // body and its sibling StepScreenshotPreview (no prop path between them) re-render from the
+        // body and its sibling StepImageThumbnail (no prop path between them) re-render from the
         // resulting onScriptState publish, so there's no local setState here.
         contextValue<ScriptStore?>()?.stepStore?.setExpanded(props.common.objectLocation, !state.expanded)
     }
@@ -385,7 +385,7 @@ class ScriptStepDisplayDefault(
         }
 
         renderValue(trace.displayValue)
-        // Screenshot (BinaryExecutionValue) details are shown by the floating StepScreenshotPreview
+        // Screenshot (BinaryExecutionValue) details are shown by the floating StepImageThumbnail
         // to the right, so don't repeat them inline here (matches the collapsed branch's guard).
         if (trace.detail !is BinaryExecutionValue) {
             renderDetail(trace.detail)
