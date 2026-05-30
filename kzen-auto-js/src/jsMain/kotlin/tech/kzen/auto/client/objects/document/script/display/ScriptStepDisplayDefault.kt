@@ -15,7 +15,7 @@ import tech.kzen.auto.client.objects.document.script.step.header.StepHeader
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
-import tech.kzen.auto.client.wrap.RComponent
+import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.contextValue
 import tech.kzen.auto.client.wrap.installContextType
 import tech.kzen.auto.client.wrap.react
@@ -54,12 +54,11 @@ external interface ScriptStepDisplayDefaultState: State {
 
 
 //---------------------------------------------------------------------------------------------------------------------
-// TODO: can this be made an RPureComponent for conceptual simplicity and optimization?
 @Suppress("unused")
 class ScriptStepDisplayDefault(
     props: ScriptStepDisplayDefaultProps
 ):
-    RComponent<ScriptStepDisplayDefaultProps, ScriptStepDisplayDefaultState>(props),
+    RPureComponent<ScriptStepDisplayDefaultProps, ScriptStepDisplayDefaultState>(props),
     ClientStateGlobal.Observer,
     ScriptStore.Observer
 {
@@ -169,6 +168,17 @@ class ScriptStepDisplayDefault(
 
         val expanded = scriptState.isStepExpanded(props.common.objectLocation)
 
+        // NB: value compare (==) — computeStepTraceInfo rebuilds a fresh StepTrace each call (its fields come
+        //     from the stable trace map, so it's value-equal but not ===). Skip setState on publishes that
+        //     don't change THIS step, so a sibling step's expand/collapse doesn't re-render every step body.
+        if (state.expanded == expanded &&
+            state.isNextToRun == traceInfo.isNextToRun &&
+            state.stepTrace == traceInfo.trace &&
+            state.stepValidation == stepValidation
+        ) {
+            return
+        }
+
         setState {
             this.isNextToRun = traceInfo.isNextToRun
             this.stepTrace = traceInfo.trace
@@ -187,8 +197,19 @@ class ScriptStepDisplayDefault(
             .graphMetadata
             .objectMetadata[props.common.objectLocation]!!
 
-        // TODO: looks like it's recomputed each time, can this be optimized?
         val summaryAttributeNames = findSummaryAttributes(objectMetadata)
+
+        // NB: value compare (==) — summaryAttributeNames is a fresh List each call (Kotlin List == is
+        //     structural). Skip setState on no-op clientState publishes so the RPureComponent conversion
+        //     isn't defeated by a fresh-list reference on every broadcast.
+        if (state.objectMetadata == objectMetadata &&
+            state.icon == headerInfo.icon &&
+            state.description == headerInfo.description &&
+            state.title == headerInfo.title &&
+            state.summaryAttributeNames == summaryAttributeNames
+        ) {
+            return
+        }
 
         setState {
             this.objectMetadata = objectMetadata
@@ -274,6 +295,7 @@ class ScriptStepDisplayDefault(
                 onToggleExpanded = ::onToggleExpanded
             }
 
+            +"[x]"
             if (state.expanded) {
                 div {
                     css {

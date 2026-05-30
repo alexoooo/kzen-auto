@@ -45,6 +45,7 @@ external interface SelectLogicEditorState: State {
 
 
 //---------------------------------------------------------------------------------------------------------------------
+// TODO: convert to RPureComponent
 @Suppress("unused")
 class SelectLogicEditor(
     props: AttributeEditorProps

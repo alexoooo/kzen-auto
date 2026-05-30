@@ -22,7 +22,7 @@ import tech.kzen.auto.client.objects.document.script.model.ScriptStoreContext
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
-import tech.kzen.auto.client.wrap.RComponent
+import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.contextValue
 import tech.kzen.auto.client.wrap.installContextType
 import tech.kzen.auto.client.wrap.react
@@ -65,7 +65,7 @@ external interface IfStepDisplayState: State {
 class IfStepDisplay(
     props: IfStepDisplayProps
 ):
-    RComponent<IfStepDisplayProps, IfStepDisplayState>(props),
+    RPureComponent<IfStepDisplayProps, IfStepDisplayState>(props),
     ClientStateGlobal.Observer,
     ScriptStore.Observer
 {
@@ -126,6 +126,15 @@ class IfStepDisplay(
         val info = computeStepHeaderInfo(clientState, props.common.objectLocation)
             ?: return
 
+        // NB: skip setState on no-op publishes so a sibling step's change doesn't re-render this body
+        //     (and so the RPureComponent conversion isn't defeated by an unconditional setState).
+        if (state.icon == info.icon &&
+            state.description == info.description &&
+            state.title == info.title
+        ) {
+            return
+        }
+
         setState {
             this.icon = info.icon
             this.description = info.description
@@ -137,6 +146,15 @@ class IfStepDisplay(
     override fun onScriptState(scriptState: ScriptState) {
         val info = computeStepTraceInfo(
             scriptState, props.common.objectLocation, ClientContext.objectStableMapper)
+
+        // NB: value compare (==) — computeStepTraceInfo rebuilds a fresh StepTrace each call (value-equal,
+        //     not ===). Skip setState when THIS step is unchanged so a sibling's expand/collapse or trace
+        //     update doesn't re-render every step body.
+        if (state.stepTrace == info.trace &&
+            state.isNextToRun == info.isNextToRun
+        ) {
+            return
+        }
 
         setState {
             this.stepTrace = info.trace

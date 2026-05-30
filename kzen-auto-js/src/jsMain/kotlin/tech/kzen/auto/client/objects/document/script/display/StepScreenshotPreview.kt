@@ -19,7 +19,7 @@ import tech.kzen.auto.client.objects.document.script.model.ScriptStore
 import tech.kzen.auto.client.objects.document.script.model.ScriptStoreContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
-import tech.kzen.auto.client.wrap.RComponent
+import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.contextValue
 import tech.kzen.auto.client.wrap.createRef
 import tech.kzen.auto.client.wrap.installContextType
@@ -62,7 +62,7 @@ external interface StepScreenshotPreviewState: State {
 class StepScreenshotPreview(
     props: StepScreenshotPreviewProps
 ):
-    RComponent<StepScreenshotPreviewProps, StepScreenshotPreviewState>(props),
+    RPureComponent<StepScreenshotPreviewProps, StepScreenshotPreviewState>(props),
     ScriptStore.Observer,
     ClientStateGlobal.Observer
 {

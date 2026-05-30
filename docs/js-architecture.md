@@ -25,7 +25,7 @@ Every UI feature in the codebase follows the same four-piece pattern.
 |-------|------|---------|
 | `<X>State` | Immutable data class. Composed hierarchically — a parent `*State` aggregates child `*State`s. | `ReportState` aggregates `ReportInputState`, `ReportFilterState`, `ReportOutputState`, etc. |
 | `<X>Store` | Mutable state holder. Owns sub-stores. Implements `ClientStateGlobal.Observer` (if top-level). Defines its own nested `Observer` interface for downstream subscribers. | `ReportStore: ClientStateGlobal.Observer` owns `input/formula/filter/analysis/previewFiltered/output/run` sub-stores |
-| `<X>Controller` | A `RComponent` / `RPureComponent` subclass. Registers as `<X>Store.Observer` in `componentDidMount`; calls `setState` on `onXyzState` callbacks. | `ReportController: RPureComponent<Props, ReportControllerState>, ReportStore.Observer` |
+| `<X>Controller` | A `RComponent` / `RPureComponent` subclass (prefer `RPureComponent` + consumed-subset state — see [Preferred render scoping](#preferred-render-scoping-with-rpurecomponent-and-consumed-subset-state)). Registers as `<X>Store.Observer` in `componentDidMount`; calls `setState` on `onXyzState` callbacks. | `ReportController: RPureComponent<Props, ReportControllerState>, ReportStore.Observer` |
 | `<X>Store.Observer` | A nested interface defining the one method downstream observers (typically the controller) implement. | `fun onReportState(reportState: ReportState)` |
 
 Concrete mounting code (from `ReportController.kt`):
@@ -59,6 +59,69 @@ fun didMount(subscriber: Observer) {
 ```
 
 So the chain is: `ClientStateGlobal` → `ReportStore` (observes) → `ReportController` (observes) → `setState` → React rerender. No diffing logic; everything flows through method-call observer notifications.
+
+### Preferred render scoping with `RPureComponent` and consumed-subset state
+
+A store's `publish()` notifies **every** subscriber with the **full** published `*State` on **any**
+change, and that `*State` is a fresh object each time. So the default tendency — extend `RComponent`
+(which always re-renders on `setState`/parent render) and `setState { this.xState = xState }` with the
+whole object — makes one entity's change re-render every sibling observer. This is the dominant source
+of avoidable re-renders in this codebase (it also lights up *every* sibling in React DevTools'
+"Highlight updates" overlay — see the `audit/` notes). **Prefer the following unless there's a concrete
+reason a component must always re-render:**
+
+1. **Extend `RPureComponent`, not `RComponent`.** `RPureComponent.shouldComponentUpdate`
+   shallow-compares props and state (`===` per key, in `wrap/React.kt`) and bails when nothing changed —
+   both on no-op `setState` and on a parent re-rendering with unchanged props.
+
+2. **Store only the subset of the published state that `render` actually reads — never the whole
+   `*State` object.** The whole object is a fresh reference every publish, so storing it defeats the
+   shallow-equal (its `===` check always fails) and the component re-renders on every publish. Storing
+   the consumed fields (usually primitives / already-stable references) lets `RPureComponent` bail when
+   this component's slice is unchanged — *no manual guard needed; the setState can stay unconditional
+   because the shallow-equal does the avoidance.* Example — `ScriptController` keeps `scriptLoaded` /
+   `globalError` / `hasProgress` rather than the whole `ScriptState`, so a per-step expand/collapse
+   publish doesn't re-render the Script subtree:
+   ```kotlin
+   // ScriptController.onScriptState — extract only what render consumes
+   override fun onScriptState(scriptState: ScriptState) {
+       setState {
+           this.scriptLoaded = true
+           this.globalError = scriptState.globalError
+           this.hasProgress = scriptState.progress.hasProgress()
+       }
+   }
+   ```
+
+3. **If a consumed value is freshly *allocated* each publish, add a value-equality (`==`) early-return
+   guard in the observer callback** (or stabilize the reference). Some derived values are rebuilt every
+   call — e.g. `computeStepTraceInfo` returns a fresh `StepTrace` whose fields come from a stable map, so
+   it is value-equal (`==`) but **not** `===`. A fresh reference in state defeats `RPureComponent`'s
+   `===` shallow-equal, so the guard must skip the `setState` entirely when the slice is value-equal (a
+   `===`/reference guard would never bail). The step-body displays (`ScriptStepDisplayDefault`,
+   `IfStepDisplay`, `MappingStepDisplay`) — which subscribe directly to the broadcast `ScriptStore` —
+   show the pattern:
+   ```kotlin
+   // ScriptStepDisplayDefault.onScriptState — value-compare (==), not ===
+   if (state.expanded == expanded &&
+       state.isNextToRun == traceInfo.isNextToRun &&
+       state.stepTrace == traceInfo.trace &&            // fresh StepTrace ref each call → must be ==
+       state.stepValidation == stepValidation
+   ) {
+       return
+   }
+   setState { /* … */ }
+   ```
+
+4. **Keep props passed to a pure child referentially stable** (cache the value object; reuse one
+   handle instead of `Foo.Handle().also { … }` per render) so the child's `===` prop check can bail —
+   otherwise a fresh prop cascades a re-render through the whole subtree. `ScriptController.renderMain`
+   caches its `common` and reuses a single `StepDisplayManager.Handle` for this reason.
+
+`ScriptStore.publish()` is deliberately left as a full broadcast — re-architecting it to per-location
+targeting is invasive, and per-observer scoping (1–3) achieves the same end. The canonical
+`ReportController` still stores the whole `ReportState` (older style); the script controllers above are
+the reference for this scoping and the preferred shape for new and refactored components.
 
 ## 3. Document folder convention
 

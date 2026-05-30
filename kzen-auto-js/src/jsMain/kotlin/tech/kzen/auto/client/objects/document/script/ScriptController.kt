@@ -46,7 +46,13 @@ external interface ScriptControllerProps: Props {
 
 external interface ScriptControllerState: State {
     var clientState: ClientState?
-    var scriptState: ScriptState?
+
+    // NB: only the subset of ScriptState that render consumes is stored (not the whole object), so the
+    //     RPureComponent shallow-equal bails on publishes that change only per-step UI state (e.g.
+    //     expand/collapse) — otherwise storing the whole ScriptState re-renders the entire Script subtree.
+    var scriptLoaded: Boolean
+    var globalError: String?
+    var hasProgress: Boolean
 }
 
 
@@ -121,11 +127,19 @@ class ScriptController:
     //-----------------------------------------------------------------------------------------------------------------
     private val store = ScriptStore()
 
+    // NB: stable references for MultiStepDisplay's props so it (RPureComponent) bails out whenever
+    //     ScriptController re-renders without the step list changing. A fresh Handle/common per render
+    //     would fail the shallow === check and cascade a re-render down to every ScriptStepSlot.
+    private val stepDisplayHandle = StepDisplayManager.Handle()
+    private var cachedMainCommon: ScriptStepDisplayPropsCommon? = null
+
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ScriptControllerState.init(props: ScriptControllerProps) {
         clientState = null
-        scriptState = null
+        scriptLoaded = false
+        globalError = null
+        hasProgress = false
     }
 
 
@@ -146,8 +160,12 @@ class ScriptController:
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun onScriptState(scriptState: ScriptState) {
+        // NB: extract only what render reads. On expand/collapse these are unchanged, so the
+        //     RPureComponent shallow-equal bails (no re-render, no fresh child props, no cascade).
         setState {
-            this.scriptState = scriptState
+            this.scriptLoaded = true
+            this.globalError = scriptState.globalError
+            this.hasProgress = scriptState.progress.hasProgress()
         }
     }
 
@@ -180,8 +198,9 @@ class ScriptController:
             return
         }
 
-        val scriptState = state.scriptState
-            ?: return
+        if (!state.scriptLoaded) {
+            return
+        }
 
         val mainObjectLocation = documentPath.toMainObjectLocation()
         ScriptStoreContext.Provider(store) {
@@ -192,9 +211,10 @@ class ScriptController:
                 renderSignature(mainObjectLocation)
             }
 
-            if (scriptState.globalError != null) {
+            val globalError = state.globalError
+            if (globalError != null) {
                 div {
-                    +"Error: ${scriptState.globalError}"
+                    +"Error: $globalError"
                 }
             }
 
@@ -211,7 +231,7 @@ class ScriptController:
                 renderMain(mainObjectLocation)
             }
 
-            renderRunController(clientState, scriptState)
+            renderRunController(clientState)
         }
     }
 
@@ -227,28 +247,36 @@ class ScriptController:
     private fun ChildrenBuilder.renderMain(
         mainObjectLocation: ObjectLocation
     ) {
+        stepDisplayHandle.wrapper = props.stepDisplayManager
+
         MultiStepDisplay::class.react {
-            common = ScriptStepDisplayPropsCommon(
-                mainObjectLocation,
-                0,
-                first = true,
-                last = true
-            )
-
-            stepDisplayManager =
-                StepDisplayManager.Handle().also {
-                    it.wrapper = props.stepDisplayManager
-                }
-
+            common = mainCommonFor(mainObjectLocation)
+            stepDisplayManager = stepDisplayHandle
             scriptCommander = props.scriptCommander
         }
     }
 
 
+    // NB: value compare (not ===) — mainObjectLocation is freshly derived from documentPath each render,
+    //     so rebuild common only when the document actually changes, keeping the reference stable otherwise.
+    private fun mainCommonFor(mainObjectLocation: ObjectLocation): ScriptStepDisplayPropsCommon {
+        val existing = cachedMainCommon
+        if (existing != null && existing.objectLocation == mainObjectLocation) {
+            return existing
+        }
+        val fresh = ScriptStepDisplayPropsCommon(
+            mainObjectLocation,
+            0,
+            first = true,
+            last = true)
+        cachedMainCommon = fresh
+        return fresh
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private fun ChildrenBuilder.renderRunController(
-        clientState: ClientState,
-        scriptState: ScriptState
+        clientState: ClientState
     ) {
         div {
             css {
@@ -261,7 +289,7 @@ class ScriptController:
 
             ScriptProgressController::class.react {
                 active = clientState.clientLogicState.isActive()
-                hasProgress = scriptState.progress.hasProgress()
+                hasProgress = state.hasProgress
                 scriptProgressStore = store.progressStore
             }
         }
