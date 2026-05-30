@@ -11,6 +11,17 @@ fun HTML.indexPage(
     kzenAutoConfig: KzenAutoConfig
 ) {
     head {
+        // react-scan: dev-only, accurate live re-render overlay. Replaces reliance on the React
+        // DevTools "Highlight updates" overlay, which flashes fibers merely visited during
+        // reconciliation (self-duration 0) and so buries true re-renders in false positives.
+        // Non-deferred and emitted first, so it patches React before the deferred app bundle's
+        // createRoot. Gated to dev (developmentMode) so it never loads in production.
+        if (kzenAutoConfig.developmentMode()) {
+            script("text/javascript", "https://unpkg.com/react-scan@0.5.7/dist/auto.global.js") {
+                attributes["crossorigin"] = "anonymous"
+            }
+        }
+
         title("Kzen")
         meta {
             charset = "UTF-8"

@@ -33,4 +33,14 @@ data class KzenAutoConfig(
     fun jsResourcePath(): String {
         return "$staticResourcePath/${jsFileName()}"
     }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    // NB: set only by the dev server mains (FrontendDevelopment / BackendDevelopment), never by the
+    //     packaged production entry point (KzenAutoMain) — so this gates dev-only page content out
+    //     of production. Read at call time (not captured in the constructor): the property is set
+    //     after the config is built but before any request is served.
+    fun developmentMode(): Boolean {
+        return System.getProperty("io.ktor.development") == "true"
+    }
 }
