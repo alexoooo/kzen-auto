@@ -201,6 +201,13 @@ class IfStepDisplay(
             branchStageSeam()
             div {
                 css {
+                    // position:relative lifts this wrapper into the positioned paint layer so its
+                    // white lip paints ABOVE the absolutely-positioned branchStageLedge (which would
+                    // otherwise paint over the lip and shade the white line where the vertical ledge
+                    // crosses it). The ledge stays visible through the wrapper's transparent region;
+                    // it's interrupted only by the opaque lip — the same way the real condition slab
+                    // above interrupts it — so the white line reads crisp and continuous.
+                    position = Position.relative
                     backgroundImage = linearGradient(
                         0.deg,
                         stop(NamedColor.white, 0.px),                 // white at the bottom (the Else seam)

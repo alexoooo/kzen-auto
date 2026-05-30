@@ -66,14 +66,25 @@ class ScriptStepDisplayDefault(
     companion object {
         private val successColour = Color("#00b467")
         private val errorColour = Color("#b40000")
-        private val idleBorderColour = Color("rgba(0, 0, 0, 0.12)")
+
+        // Soft-elevation card chrome — lifts a step card off the grey stage; matches the app-wide
+        // 3px card radius (Report controllers, VertexController). Single-layer shadow per the
+        // StepScreenshotPreview idiom. Resting is subtle; hover deepens it as an interactivity cue.
+        // Shared with the branch-bearing If/Loop header slab (branchHeaderSlab) so every step card
+        // reads with the same elevation.
+        val cardCornerRadius = 3.px
+        val cardRestingShadow = BoxShadow(0.px, 1.px, 3.px, Color("rgba(0, 0, 0, 0.12)"))
+        val cardHoverShadow = BoxShadow(0.px, 2.px, 6.px, Color("rgba(0, 0, 0, 0.18)"))
 
         fun statusBorderColor(
             traceState: StepTrace.State,
             error: String?,
             nextToRun: Boolean
         ): Color {
-            return activeStatusColor(traceState, error, nextToRun) ?: idleBorderColour
+            // NB: idle falls back to white (not a gray line) — the gray accent blended into the
+            //     gray stage. The card's resting shadow now provides separation. 4px width is kept
+            //     (just white) so there's no layout shift when the step transitions to running/done.
+            return activeStatusColor(traceState, error, nextToRun) ?: NamedColor.white
         }
 
         fun backgroundColor(
@@ -276,6 +287,16 @@ class ScriptStepDisplayDefault(
                 paddingRight = 0.5.em
                 paddingTop = 0.5.em
                 paddingBottom = 0.5.em
+
+                // Soft elevation: rounded corners + a subtle resting shadow lift the card off the
+                // grey stage; the shadow deepens on hover (coincides with the slot's drag-handle
+                // reveal) as an interactivity cue. Monochrome palette unchanged.
+                borderRadius = cardCornerRadius
+                boxShadow = cardRestingShadow
+                transition = "box-shadow 120ms ease-out".unsafeCast<Transition>()
+                "&:hover" {
+                    boxShadow = cardHoverShadow
+                }
             }
 
             StepHeader::class.react {
