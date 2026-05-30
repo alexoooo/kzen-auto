@@ -84,6 +84,16 @@ class ScriptBranchDisplay(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    // Constructed once per instance, so these are ===-stable across renders and let each ScriptStepSlot
+    // (RPureComponent) bail when only a sibling changed. The slot threads its own indexInParent back in,
+    // so a single shared reference serves every slot rather than a fresh closure per slot per render.
+    private val onSlotDragStart: (Int) -> Unit = { index -> onDragStart(index) }
+    private val onSlotDragOver: (Int, DragEvent<HTMLDivElement>) -> Unit = { index, event -> onDragOver(index, event) }
+    private val onSlotDrop: (DragEvent<HTMLDivElement>) -> Unit = { event -> onDrop(event) }
+    private val onSlotDragEnd: () -> Unit = { onDragEnd() }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     override fun StepListDisplayState.init(props: StepListDisplayProps) {
         creating = false
         dropAfter = false
@@ -453,10 +463,10 @@ class ScriptBranchDisplay(
             this.stepDisplayManager = props.stepDisplayManager
             this.handleColor = dragHandleColor
 
-            this.onDragStart = { onDragStart(index) }
-            this.onDragOver = { event -> onDragOver(index, event) }
-            this.onDrop = { event -> this@ScriptBranchDisplay.onDrop(event) }
-            this.onDragEnd = { this@ScriptBranchDisplay.onDragEnd() }
+            this.onDragStart = onSlotDragStart
+            this.onDragOver = onSlotDragOver
+            this.onDrop = onSlotDrop
+            this.onDragEnd = onSlotDragEnd
         }
     }
 }

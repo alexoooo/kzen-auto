@@ -295,7 +295,7 @@ class ScriptStepDisplayDefault(
                 onToggleExpanded = ::onToggleExpanded
             }
 
-            +"[x]"
+//            +"[x]"
             if (state.expanded) {
                 div {
                     css {

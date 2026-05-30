@@ -28,8 +28,10 @@ external interface ScriptStepSlotProps: Props {
     var stepDisplayManager: StepDisplayManager.Wrapper
     var handleColor: Color
 
-    var onDragStart: () -> Unit
-    var onDragOver: (DragEvent<HTMLDivElement>) -> Unit
+    // NB: the two index-dependent handlers take the slot's index so the parent can hold a single stable
+    //     reference for all slots (the slot threads its own indexInParent back in) — see ScriptBranchDisplay.
+    var onDragStart: (Int) -> Unit
+    var onDragOver: (Int, DragEvent<HTMLDivElement>) -> Unit
     var onDrop: (DragEvent<HTMLDivElement>) -> Unit
     var onDragEnd: () -> Unit
 }
@@ -90,13 +92,13 @@ class ScriptStepSlot(
                 }
             }
 
-            onDragOver = props.onDragOver
+            onDragOver = { event -> props.onDragOver(props.indexInParent, event) }
             onDrop = props.onDrop
 
             dragHandle(
                 isVisible = props.isDragSource,
                 handleColor = props.handleColor,
-                onStart = props.onDragStart,
+                onStart = { props.onDragStart(props.indexInParent) },
                 onEnd = props.onDragEnd,
                 frosted = true)
             dropIndicator(props.dropMarker)

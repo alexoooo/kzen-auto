@@ -54,6 +54,10 @@ external interface TargetSpecEditorState: State {
     var targetRenaming: Boolean
 
     var visualTargets: List<ObjectLocation>?
+
+    // False until the first onClientState hydration; gates componentDidUpdate so the undefined→loaded
+    // transition isn't echoed back to the notation as a spurious UpsertAttributeCommand on mount/expand.
+    var initialized: Boolean
 }
 
 
@@ -95,7 +99,7 @@ class TargetSpecEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun TargetSpecEditorState.init(props: AttributeEditorProps) {
-
+        initialized = false
     }
 
 
@@ -115,6 +119,7 @@ class TargetSpecEditor(
 
         setState {
             this.targetType = targetType
+            initialized = true
 
             targetTextPending = false
             targetRenaming = false
@@ -174,6 +179,14 @@ class TargetSpecEditor(
         prevState: TargetSpecEditorState,
         snapshot: Any
     ) {
+        if (!prevState.initialized) {
+            // First hydration (undefined → loaded) came from onClientState reading the notation; don't
+            // echo it straight back as a write. This is what made expanding a target step issue a no-op
+            // UpsertAttributeCommand that re-rendered the whole branch + slots. Genuine user edits below
+            // run only once we're past hydration.
+            return
+        }
+
         if (state.targetType != prevState.targetType) {
             editAttributeCommandAsync()
         }
