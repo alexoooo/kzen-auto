@@ -204,7 +204,8 @@ class IfStepDisplay(
                     backgroundImage = linearGradient(
                         0.deg,
                         stop(NamedColor.white, 0.px),                 // white at the bottom (the Else seam)
-                        stop(Color("rgba(255, 255, 255, 0)"), 14.px)) // sharp fade up to transparent
+                        stop(NamedColor.white, 4.px),                 // hold solid white for a few px above the line
+                        stop(Color("rgba(255, 255, 255, 0)"), 18.px)) // then fade up to transparent
                 }
                 branchStageTopShadow {
                     renderThenBranch()
