@@ -4,6 +4,7 @@ import emotion.react.css
 import react.ChildrenBuilder
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
+import tech.kzen.auto.client.objects.document.script.display.ScriptStepDisplayDefault
 import tech.kzen.auto.client.objects.document.script.display.StepDisplayManager
 import tech.kzen.auto.client.objects.document.script.display.dependency.ScriptBranchDisplay
 import tech.kzen.auto.client.wrap.react
@@ -30,7 +31,8 @@ fun ChildrenBuilder.scriptBranchContainer(
     label: String,
     branchLocation: AttributeLocation,
     stepDisplayManager: StepDisplayManager.Wrapper,
-    scriptCommander: ScriptCommander
+    scriptCommander: ScriptCommander,
+    roundedBottom: Boolean
 ) {
     div {
         css {
@@ -48,6 +50,14 @@ fun ChildrenBuilder.scriptBranchContainer(
                 flexShrink = number(0.0)
                 padding = Padding(28.px, 0.75.em)
                 color = Color("rgba(0, 0, 0, 0.7)")
+
+                // Last branch of the construct: round the trunk's bottom corners so its white fill
+                // clips to the rounded shape (border-radius clips the background) — the white "⌐"
+                // frame's bottom. branchStageBase draws the matching hairline + shade over this edge.
+                if (roundedBottom) {
+                    borderBottomLeftRadius = ScriptStepDisplayDefault.cardCornerRadius
+                    borderBottomRightRadius = ScriptStepDisplayDefault.cardCornerRadius
+                }
             }
             +label
         }

@@ -10,8 +10,10 @@ import tech.kzen.auto.client.objects.document.script.display.ScriptStepDisplayPr
 import tech.kzen.auto.client.objects.document.script.display.ScriptStepDisplayWrapper
 import tech.kzen.auto.client.objects.document.script.display.StepDisplayManager
 import tech.kzen.auto.client.objects.document.script.display.branch.branchHeaderSlab
+import tech.kzen.auto.client.objects.document.script.display.branch.branchStageBase
 import tech.kzen.auto.client.objects.document.script.display.branch.branchStageLedge
 import tech.kzen.auto.client.objects.document.script.display.branch.branchStageSeam
+import tech.kzen.auto.client.objects.document.script.display.branch.branchStageThenLip
 import tech.kzen.auto.client.objects.document.script.display.branch.branchStageTopShadow
 import tech.kzen.auto.client.objects.document.script.display.branch.scriptBranchContainer
 import tech.kzen.auto.client.objects.document.script.display.computeStepHeaderInfo
@@ -33,13 +35,7 @@ import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
-import web.cssom.Color
-import web.cssom.NamedColor
 import web.cssom.Position
-import web.cssom.deg
-import web.cssom.linearGradient
-import web.cssom.px
-import web.cssom.stop
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -192,31 +188,27 @@ class IfStepDisplay(
             // Vertical ledge down the trunk's right edge, continuous through both branches.
             branchStageLedge()
 
-            // Then: shared seam + top down-shadow (cast from the white condition above), wrapped in
-            // an If-specific fade up to white at the bottom. That bottom fade forms the white "lip"
-            // sitting just above the Else seam — standing in for a white slab there, the way the
-            // white condition sits above the Then seam — so both seams read the same (white above →
-            // 1px line → shadow below). Paint-only, masked by the white trunk. Outer div = bottom
-            // fade, inner branchStageTopShadow = top shadow (two anchors → two divs).
+            // Outer frame: hairline + soft shade down the trunk's left edge and across its bottom,
+            // with rounded bottom corners — completing the white "⌐" card frame (header = top).
+            branchStageBase()
+
+            // Then: shared seam + top down-shadow (cast from the white condition above). The white
+            // "lip" at the bottom of this branch (branchStageThenLip) stands in for a white slab
+            // above the Else seam, so both seams read the same (white above → 1px line → shadow
+            // below, the way the white condition slab sits above the Then seam).
             branchStageSeam()
             div {
                 css {
-                    // position:relative lifts this wrapper into the positioned paint layer so its
-                    // white lip paints ABOVE the absolutely-positioned branchStageLedge (which would
-                    // otherwise paint over the lip and shade the white line where the vertical ledge
-                    // crosses it). The ledge stays visible through the wrapper's transparent region;
-                    // it's interrupted only by the opaque lip — the same way the real condition slab
-                    // above interrupts it — so the white line reads crisp and continuous.
+                    // position:relative so the lip's bottom:0 anchors to THIS branch's bottom (not
+                    // the whole construct's), and so the lip sits in the positioned paint layer above
+                    // the absolutely-positioned branchStageLedge — the lip interrupts the ledge where
+                    // they cross, keeping the Else seam's white line crisp and continuous.
                     position = Position.relative
-                    backgroundImage = linearGradient(
-                        0.deg,
-                        stop(NamedColor.white, 0.px),                 // white at the bottom (the Else seam)
-                        stop(NamedColor.white, 4.px),                 // hold solid white for a few px above the line
-                        stop(Color("rgba(255, 255, 255, 0)"), 18.px)) // then fade up to transparent
                 }
                 branchStageTopShadow {
                     renderThenBranch()
                 }
+                branchStageThenLip()
             }
 
             // Else: shared seam + top down-shadow, cast from the white lip formed above.
@@ -233,7 +225,8 @@ class IfStepDisplay(
             label = "Then",
             branchLocation = AttributeLocation(props.common.objectLocation, thenAttributePath),
             stepDisplayManager = props.stepDisplayManager,
-            scriptCommander = props.scriptCommander)
+            scriptCommander = props.scriptCommander,
+            roundedBottom = false)
     }
 
 
@@ -242,6 +235,7 @@ class IfStepDisplay(
             label = "Else",
             branchLocation = AttributeLocation(props.common.objectLocation, elseAttributePath),
             stepDisplayManager = props.stepDisplayManager,
-            scriptCommander = props.scriptCommander)
+            scriptCommander = props.scriptCommander,
+            roundedBottom = true)
     }
 }

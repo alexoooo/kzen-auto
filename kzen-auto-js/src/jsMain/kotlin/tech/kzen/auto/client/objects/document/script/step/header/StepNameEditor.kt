@@ -122,6 +122,10 @@ class StepNameEditor(
                 }
             }
 
+            // NB: no stopPropagation on this (full-width) name-area div — the empty space around a short name
+            //     must fall through to the header's expand/collapse toggle (StepHeader). Only the genuinely
+            //     handled bits stop: the title text and pencil (edit), and the whole editor while editing.
+
             if (state.editing) {
                 renderEditor()
             }
@@ -141,7 +145,12 @@ class StepNameEditor(
                 overflow = Overflow.hidden
                 textOverflow = TextOverflow.ellipsis
                 minWidth = 0.px
+                cursor = Cursor.pointer
             }
+
+            // NB: clicking the name text starts editing (in addition to the pencil) — same onStartEdit the
+            //     RenameButton drives. stopPropagation so the text edits rather than toggling the header.
+            onClick = { it.stopPropagation(); onStartEdit() }
 
             title = props.description
 
@@ -166,6 +175,9 @@ class StepNameEditor(
                 opacity = number(0.0)
             }
 
+            // stopPropagation so the pencil edits without also toggling the header's expand/collapse.
+            onClick = { it.stopPropagation() }
+
             RenameButton::class.react {
                 onAction = onStartEditCallback
             }
@@ -179,6 +191,10 @@ class StepNameEditor(
                 flexGrow = number(1.0)
                 minWidth = 0.px
             }
+
+            // stopPropagation so interacting with the text field (clicks to place the caret, select, etc.)
+            // doesn't bubble to the header toggle and collapse the step mid-edit.
+            onClick = { it.stopPropagation() }
 
             ObjectNameEditor::class.react {
                 objectLocation = props.objectLocation

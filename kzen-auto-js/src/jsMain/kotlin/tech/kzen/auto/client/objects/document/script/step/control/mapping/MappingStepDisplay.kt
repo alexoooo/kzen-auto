@@ -10,6 +10,7 @@ import tech.kzen.auto.client.objects.document.script.display.ScriptStepDisplayPr
 import tech.kzen.auto.client.objects.document.script.display.ScriptStepDisplayWrapper
 import tech.kzen.auto.client.objects.document.script.display.StepDisplayManager
 import tech.kzen.auto.client.objects.document.script.display.branch.branchHeaderSlab
+import tech.kzen.auto.client.objects.document.script.display.branch.branchStageBase
 import tech.kzen.auto.client.objects.document.script.display.branch.branchStageLedge
 import tech.kzen.auto.client.objects.document.script.display.branch.branchStageSeam
 import tech.kzen.auto.client.objects.document.script.display.branch.branchStageTopShadow
@@ -178,6 +179,11 @@ class MappingStepDisplay(
             }
 
             branchStageLedge()
+
+            // Outer frame: hairline + soft shade down the trunk's left edge and across its bottom,
+            // with rounded bottom corners — completing the white "⌐" card frame (header = top).
+            branchStageBase()
+
             branchStageSeam()
             branchStageTopShadow {
                 renderSteps()
@@ -191,6 +197,7 @@ class MappingStepDisplay(
             label = "Each",
             branchLocation = AttributeLocation(props.common.objectLocation, ScriptConventions.stepsAttributePath),
             stepDisplayManager = props.stepDisplayManager,
-            scriptCommander = props.scriptCommander)
+            scriptCommander = props.scriptCommander,
+            roundedBottom = true)
     }
 }

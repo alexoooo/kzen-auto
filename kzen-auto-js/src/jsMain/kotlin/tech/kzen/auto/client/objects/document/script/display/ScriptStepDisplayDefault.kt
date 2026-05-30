@@ -297,7 +297,16 @@ class ScriptStepDisplayDefault(
                 "&:hover" {
                     boxShadow = cardHoverShadow
                 }
+
+                // The whole card (its padding/outskirts included) toggles expand/collapse on click.
+                cursor = Cursor.pointer
             }
+
+            // Click-to-toggle lives on the card so its padding ring is clickable too. The handled controls —
+            // the name text & pencil (edit), the delete/chevron buttons, and (when expanded) the whole body —
+            // stop propagation, so only "chrome" clicks (padding, header gaps, summary, collapsed trace) reach
+            // here. The drag handle / drop indicator are slot siblings outside this div, so they never bubble in.
+            onClick = { onToggleExpanded() }
 
             StepHeader::class.react {
                 indexInParent = props.common.indexInParent
@@ -322,7 +331,13 @@ class ScriptStepDisplayDefault(
                     css {
                         paddingLeft = 1.em
                         paddingTop = 0.5.em
+
+                        // The expanded body (attribute editors) is NOT a toggle target — override the card's
+                        // pointer back to the default and stop clicks below from bubbling up to collapse it.
+                        cursor = Cursor.default
                     }
+
+                    onClick = { it.stopPropagation() }
 
                     renderBody(objectMetadata, trace)
                     renderValidation()
@@ -335,6 +350,7 @@ class ScriptStepDisplayDefault(
                         paddingTop = 0.5.em
                     }
 
+                    // No own handler: this collapsed-only block bubbles to the card's click-to-expand.
                     renderValue(trace.displayValue)
                     if (trace.detail !is BinaryExecutionValue) {
                         renderDetail(trace.detail)

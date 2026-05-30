@@ -101,14 +101,34 @@ class StepHeader(
         div {
             css {
                 display = Display.flex
-                alignItems = AlignItems.center
+                flexDirection = FlexDirection.column
                 width = 100.pct
                 minWidth = 0.px
             }
 
-            renderRunIcon()
-            renderNameAndSummary()
-            renderRightCluster()
+            // NB: no toggle handler here — the enclosing step card owns click-to-toggle (so its padding /
+            //     outskirts are clickable too). Header clicks just bubble up to it; the handled controls
+            //     within (name text, pencil, delete, chevron) stop propagation so they don't also toggle.
+
+            // Top row: run icon · name · action buttons, centred against each other. The collapsed-state
+            // summary lives in a row BELOW this one (not the same flex line), so this row's height is driven
+            // only by the constant icon/name/buttons — the icon and right-cluster buttons hold a fixed
+            // vertical position whether or not the summary is present (previously the summary grew this row
+            // and, under center alignment, shoved them down on collapse).
+            div {
+                css {
+                    display = Display.flex
+                    alignItems = AlignItems.center
+                    width = 100.pct
+                    minWidth = 0.px
+                }
+
+                renderRunIcon()
+                renderName()
+                renderRightCluster()
+            }
+
+            renderSummary()
         }
     }
 
@@ -139,13 +159,11 @@ class StepHeader(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun ChildrenBuilder.renderNameAndSummary() {
+    private fun ChildrenBuilder.renderName() {
         div {
             css {
                 flexGrow = number(1.0)
                 minWidth = 0.px
-                display = Display.flex
-                flexDirection = FlexDirection.column
             }
 
             StepNameEditor::class.react {
@@ -153,8 +171,6 @@ class StepHeader(
                 title = props.title
                 description = props.description
             }
-
-            renderSummary()
         }
     }
 
@@ -169,13 +185,37 @@ class StepHeader(
         val attributeViewManager = props.attributeViewManager
             ?: return
 
-        for (summaryAttributeName in summaryAttributeNames) {
-            div {
-                key = react.Key(summaryAttributeName.value)
+        div {
+            css {
+                display = Display.flex
+                minWidth = 0.px
+            }
 
-                attributeViewManager.child(this) {
-                    objectLocation = props.objectLocation
-                    attributeName = summaryAttributeName
+            // Spacer matching the run icon's footprint, so the summary stays indented under the name now
+            // that it's a row below the icon/name row (rather than nested in the old name+summary column).
+            div {
+                css {
+                    width = runIconSize
+                    flexShrink = number(0.0)
+                    marginRight = 0.25.em
+                }
+            }
+
+            div {
+                css {
+                    flexGrow = number(1.0)
+                    minWidth = 0.px
+                }
+
+                for (summaryAttributeName in summaryAttributeNames) {
+                    div {
+                        key = react.Key(summaryAttributeName.value)
+
+                        attributeViewManager.child(this) {
+                            objectLocation = props.objectLocation
+                            attributeName = summaryAttributeName
+                        }
+                    }
                 }
             }
         }
@@ -209,7 +249,8 @@ class StepHeader(
                     title = "Delete"
                     size = Size.small
 
-                    onClick = { onRemove() }
+                    // stopPropagation: this button handles its own click; don't also trip the card's click-to-expand.
+                    onClick = { it.stopPropagation(); onRemove() }
 
                     iconByName("Delete") {}
                 }
@@ -222,7 +263,8 @@ class StepHeader(
                     title = if (expanded) "Collapse" else "Expand"
                     size = Size.small
 
-                    onClick = { onToggleExpanded() }
+                    // stopPropagation: the chevron owns the toggle; don't let the click also reach the card's expand.
+                    onClick = { it.stopPropagation(); onToggleExpanded() }
 
                     iconByName(if (expanded) "KeyboardArrowUp" else "KeyboardArrowDown") {}
                 }
