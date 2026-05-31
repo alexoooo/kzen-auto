@@ -1,7 +1,6 @@
 @file:Suppress("UnstableApiUsage")
 
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpack
 
 
 plugins {
@@ -65,13 +64,11 @@ dependencies {
 tasks.withType<ProcessResources> {
     val jsProject = project(":kzen-auto-js")
 
-    val browserDistributionTask = jsProject.tasks.getByName("jsBrowserDistribution")
-    dependsOn(browserDistributionTask)
+    // esbuild bundle (replaces webpack) → build/dist/js/productionExecutable/<module>.js (+ .js.map)
+    val bundleTask = jsProject.tasks.named("jsEsbuildBundle")
+    dependsOn(bundleTask)
 
-    val task = jsProject.tasks.getByName("jsBrowserProductionWebpack") as KotlinWebpack
-    dependsOn(task)
-
-    from(task.outputDirectory) {
+    from(jsProject.layout.buildDirectory.dir("dist/js/productionExecutable")) {
         into("static")
     }
 }

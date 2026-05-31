@@ -103,6 +103,7 @@ class CustomObject(
             onDragOver = ::onDragOver
             onDrop = ::onDrop
 
+            +"[x]"
             dragHandle(
                 isVisible = props.dropMarker != null,
                 handleColor = CustomTheme.mutedText,
