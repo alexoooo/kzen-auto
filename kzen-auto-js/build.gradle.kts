@@ -68,6 +68,9 @@ kotlin {
 
             // NB: avoid "unmet peer dependency" warning
             implementation(npm("@babel/core", babelCoreVersion))
+
+            // esbuild-based webpack minifier (replaces Terser in production) — see webpack.config.d
+            implementation(npm("esbuild-loader", esbuildLoaderVersion))
         }
 
         jsTest.dependencies {
