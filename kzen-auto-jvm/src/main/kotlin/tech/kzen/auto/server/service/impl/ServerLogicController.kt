@@ -112,6 +112,16 @@ class ServerLogicController(
         root: ObjectLocation,
         snapshotGraphDefinitionAttempt: GraphDefinitionAttempt?
     ): LogicRunId? {
+        return start(root, snapshotGraphDefinitionAttempt, false)
+    }
+
+
+    @Synchronized
+    fun start(
+        root: ObjectLocation,
+        snapshotGraphDefinitionAttempt: GraphDefinitionAttempt?,
+        pauseOnError: Boolean
+    ): LogicRunId? {
         val state = stateOrNull
         if (state != null) {
             return null
@@ -139,7 +149,7 @@ class ServerLogicController(
         val rootInstance = rootGraphInstance.objectInstances[root]?.reference
             ?: return null
 
-        val commonMutableLogicControl = MutableLogicControl()
+        val commonMutableLogicControl = MutableLogicControl(pauseOnError)
 
         val logicHandle: LogicHandle = object: LogicHandle {
             override fun start(
@@ -323,6 +333,12 @@ class ServerLogicController(
                 }
                 else {
                     state.paused = true
+                    // Converge on the same state as a user-initiated pause (e.g. after a
+                    // pause-on-error) so a subsequent step() satisfies its pauseRequested /
+                    // Pause-command preconditions. Idempotent for a real user pause: the flag is
+                    // already set and commandPause() is then a no-op CAS.
+                    state.pauseRequested = true
+                    state.frame.control.commandPause()
                 }
             }
         }
@@ -378,6 +394,13 @@ class ServerLogicController(
                 if (result.isTerminal()) {
                     state.frame.execution.close(result is LogicResultFailed)
                     clearState()
+                }
+                else {
+                    // Re-affirm the paused-and-Pause-requested invariant (a step ending in a
+                    // pause-on-error leaves the run paused and ready for another step/continue).
+                    state.paused = true
+                    state.pauseRequested = true
+                    state.frame.control.commandPause()
                 }
             }
         }

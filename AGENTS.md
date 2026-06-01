@@ -16,6 +16,10 @@ Five Gradle subprojects:
 - **`kzen-auto-plugin`** — **the public SPI**. Downstream plugins (e.g. `../kzen-sample-plugin`) compile against this and only this. Pure JVM. Treat its API surface as a stable contract.
 - **`kzen-auto-test`** — blackbox end-to-end self-test harness. JVM-only; spawns two kzen-auto JVMs (tester + SUT) and drives them through Chrome via the Script feature. Opt-in `selfTest` task, NOT bound to `check`. See [`kzen-auto-test/AGENTS.md`](kzen-auto-test/AGENTS.md).
 
+## File safety
+
+`kzen-auto-jvm/src/main/resources/notation/main/` (and any `notation/main/` a run writes into) holds the **user's own working documents and run artifacts** — Scripts, Reports, screenshots — frequently `git add`ed but not yet committed. **Never delete, move, or overwrite files there (or anywhere) that aren't part of your task, even when uncommitted, untracked, or gitignored.** Scope deletions to paths you created this session or to `build/` output; if a file seems in the way, surface it and ask. See the umbrella [`AGENTS.md`](../AGENTS.md) "File safety" rule.
+
 ## Entry points
 
 | Class | Module | Purpose |

@@ -72,6 +72,7 @@ object CommonRestApi {
     const val paramRunId = "run"
     const val paramExecutionId = "execution"
     const val paramAction = "action"
+    const val paramPauseOnError = "pauseOnError"
 
 
     private const val actionPrefix = "/action/"

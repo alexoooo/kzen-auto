@@ -79,7 +79,7 @@ class RunStep(
             }
 
         try {
-            val runResult = execution.continueOrStart()
+            val runResult = execution.continueOrStart(scriptExecutionContext.graphDefinition)
 
             pausedExecution =
                 if (runResult is LogicResultPaused) {

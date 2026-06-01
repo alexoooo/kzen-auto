@@ -1,0 +1,83 @@
+AdhocNamed:
+  abstract: true
+  class: tech.kzen.auto.server.objects.custom.test.AdhocNamed
+
+AdhocDetached:
+  is: Prototype
+  abstract: true
+  class: tech.kzen.auto.server.objects.custom.test.AdhocDetached
+  meta:
+    tags:
+      - detached
+    named:
+      is: AdhocNamed
+      editor: SelectObjectEditor
+
+main:
+  is: CustomDocument
+  exports:
+    - main.objects/AdhocLogic xyy
+
+AdhocTask:
+  is: Prototype
+  abstract: true
+  class: tech.kzen.auto.server.objects.custom.test.AdhocTask
+  meta:
+    tags:
+      - task
+    named:
+      is: AdhocNamed
+      editor: SelectObjectEditor
+
+AdhocLogic:
+  is: Prototype
+  abstract: true
+  class: tech.kzen.auto.server.objects.custom.test.AdhocLogic
+  meta:
+    tags:
+      - logic
+    named:
+      is: AdhocNamed
+      editor: SelectObjectEditor
+
+main.objects/AdhocDetached1:
+  is: AdhocDetached
+  named: AdhocNamedImpl
+
+main.objects/AdhocTask1:
+  is: AdhocTask
+  named: AdhocNamedImpl
+
+main.objects/AdhocLogic xyy:
+  is: AdhocLogic
+  named: AdhocNamedImpl
+
+AdhocNamed2:
+  is: AdhocNamed
+  class: tech.kzen.auto.server.objects.custom.test.AdhocNamedImpl
+  name: foooxxxxxx
+  meta:
+    name: String
+
+AdhocNamedImpl:
+  is: AdhocNamed
+  class: tech.kzen.auto.server.objects.custom.test.AdhocNamedImpl
+  name: xxxxs
+  meta:
+    name: String
+
+main.objects/AdhocDetached:
+  is: AdhocDetached
+  named: AdhocNamedImpl
+
+main.objects/AdhocLogic:
+  is: AdhocLogic
+  named: AdhocNamedImpl
+
+main.objects/AdhocLogic2:
+  is: AdhocLogic
+  named: AdhocNamed2
+
+main.objects/AdhocTask:
+  is: AdhocTask
+  named: AdhocNamed2

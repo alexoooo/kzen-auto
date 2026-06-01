@@ -102,6 +102,7 @@ class ScriptExecution(
             logicHandleFacade,
             logicTraceHandle,
             graphInstance,
+            graphDefinition,
             arguments,
             scriptTree,
             validation,

@@ -6,6 +6,7 @@ import tech.kzen.lib.common.exec.logic.trace.LogicTraceHandle
 import tech.kzen.lib.common.exec.logic.LogicControl
 import tech.kzen.lib.common.exec.logic.LogicHandleFacade
 import tech.kzen.lib.common.exec.tuple.TupleValue
+import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.instance.GraphInstance
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
@@ -17,6 +18,9 @@ data class ScriptExecutionContext(
     val logicHandleFacade: LogicHandleFacade,
     val logicTraceHandle: LogicTraceHandle,
     val graphInstance: GraphInstance,
+    // Full (live) definition this pass is running against — passed into nested RunStep executions
+    // so they resolve against current notation rather than a stale start-time snapshot.
+    val graphDefinition: GraphDefinition,
     val arguments: TupleValue,
     val scriptTree: ScriptTree,
     val scriptValidation: ScriptValidation,

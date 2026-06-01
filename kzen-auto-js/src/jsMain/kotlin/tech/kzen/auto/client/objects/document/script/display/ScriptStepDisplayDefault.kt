@@ -114,6 +114,11 @@ class ScriptStepDisplayDefault(
                     successColour
                 }
             }
+            else if (traceState == StepTrace.State.Error) {
+                // Paused-on-error: red, and ahead of the nextToRun branch so it wins over the gold
+                // "next to run" tint (the failed step is also the next to run on resume).
+                errorColour
+            }
             else if (nextToRun) {
                 EdgeController.goldLight50
             }

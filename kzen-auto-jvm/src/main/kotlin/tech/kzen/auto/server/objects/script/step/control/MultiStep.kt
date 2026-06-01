@@ -94,6 +94,19 @@ class MultiStep(
                 is LogicResultFailed -> {
                     stepModel.value = null
                     stepModel.error = result.message
+
+                    if (scriptExecutionContext.logicControl.pauseOnError()) {
+                        // Pause at the failed step instead of ending the run. The Error state keeps
+                        // it as "next to run" (nextToRun does NOT skip Error), so once the user
+                        // fixes the step and resumes, the existing pause path re-runs just it. Leave
+                        // nextStepTracePath pointing here so the client highlights it.
+                        stepModel.traceState = StepTrace.State.Error
+                        scriptExecutionContext.logicTraceHandle.set(
+                            logicTracePath,
+                            stepModel.trace().asExecutionValue())
+                        return LogicResultPaused
+                    }
+
                     stepModel.traceState = StepTrace.State.Done
                     scriptExecutionContext.logicTraceHandle.set(
                         logicTracePath,
@@ -154,6 +167,8 @@ class MultiStep(
     private fun nextToRun(stepContext: ScriptExecutionContext): ObjectLocation? {
         for (stepLocation in steps) {
             val model = stepContext.getOrPutStepModel(stepLocation)
+            // Only Done is skipped. An Error step (pause-on-error) is intentionally runnable, so a
+            // resume re-runs it; on success it becomes Done and is skipped thereafter.
             if (model.traceState == StepTrace.State.Done) {
                 continue
             }

@@ -1,0 +1,37 @@
+main:
+  is: Script
+  steps:
+    - main.steps/Open browser
+    - main.steps/Browse to URL
+    - 'main.steps/Click "New Script..." menu option'
+    - main.steps/Click
+    - main.steps/Write
+    - main.steps/Close browser
+
+main.steps/Open browser:
+  is: BrowserOpenStep
+
+main.steps/Browse to URL:
+  is: BrowserGetStep
+  location: "http://localhost:8080/index.html#main/Script.yaml"
+  screenshotDelayMilliseconds: 1250
+
+'main.steps/Click "New Script..." menu option':
+  is: BrowserClickStep
+  target:
+    type: Visual
+    value: "main/Action Target/~main.yaml#main"
+
+main.steps/Close browser:
+  is: BrowserCloseStep
+
+main.steps/Click:
+  is: BrowserClickStep
+  target:
+    type: Focus
+
+main.steps/Write:
+  is: BrowserWriteStep
+  target:
+    type: Focus
+  text: hhhhhj

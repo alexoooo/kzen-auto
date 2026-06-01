@@ -113,7 +113,7 @@ class ClientLogicGlobal(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun startAndRunAsync(mainLocation: ObjectLocation, paused: Boolean) {
+    fun startAndRunAsync(mainLocation: ObjectLocation, paused: Boolean, pauseOnError: Boolean) {
         require(!clientLogicState.isActive()) {
             "Already running"
         }
@@ -127,10 +127,10 @@ class ClientLogicGlobal(
             delay(1)
             val logicRunId =
                 if (paused) {
-                    ClientContext.restClient.logicStartAndStep(mainLocation)
+                    ClientContext.restClient.logicStartAndStep(mainLocation, pauseOnError)
                 }
                 else {
-                    ClientContext.restClient.logicStartAndRun(mainLocation)
+                    ClientContext.restClient.logicStartAndRun(mainLocation, pauseOnError)
                 }
 
             clientLogicState = clientLogicState.copy(

@@ -657,12 +657,14 @@ class ClientRestApi(
 
 
     suspend fun logicStartAndRun(
-        objectLocation: ObjectLocation
+        objectLocation: ObjectLocation,
+        pauseOnError: Boolean
     ): LogicRunId? {
         val response = getOrPut(
             CommonRestApi.logicStartAndRun,
             CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
-            CommonRestApi.paramObjectPath to objectLocation.objectPath.asString())
+            CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
+            CommonRestApi.paramPauseOnError to pauseOnError.toString())
 
         return when {
             response.isEmpty() -> null
@@ -672,12 +674,14 @@ class ClientRestApi(
 
 
     suspend fun logicStartAndStep(
-        objectLocation: ObjectLocation
+        objectLocation: ObjectLocation,
+        pauseOnError: Boolean
     ): LogicRunId? {
         val response = getOrPut(
             CommonRestApi.logicStartAndStep,
             CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
-            CommonRestApi.paramObjectPath to objectLocation.objectPath.asString())
+            CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
+            CommonRestApi.paramPauseOnError to pauseOnError.toString())
 
         return when {
             response.isEmpty() -> null

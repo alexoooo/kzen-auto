@@ -38,7 +38,11 @@ data class StepTrace(
         Idle,
         Active,
         Running,
-        Done
+        Done,
+
+        // Step failed under pause-on-error: rendered as an error and re-run on resume (NOT skipped
+        // like Done). Cleared back to Done once a re-run succeeds.
+        Error
     }
 
 

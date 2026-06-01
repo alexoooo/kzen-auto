@@ -1086,12 +1086,18 @@ class RestHandler(
 
         val objectLocation = ObjectLocation(documentPath, objectPath)
 
+        val pauseOnError: Boolean = parameters
+            .getAll(CommonRestApi.paramPauseOnError)
+            ?.singleOrNull()
+            ?.toBoolean()
+            ?: false
+
         val graphDefinitionAttempt = runBlocking {
             graphStore.graphDefinition()
         }
 
         val logicRunId = runBlocking {
-            serverLogicController.start(objectLocation, graphDefinitionAttempt)
+            serverLogicController.start(objectLocation, graphDefinitionAttempt, pauseOnError)
         }
             ?: return null
 

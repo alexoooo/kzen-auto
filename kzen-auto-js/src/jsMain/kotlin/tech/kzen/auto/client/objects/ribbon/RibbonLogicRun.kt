@@ -30,6 +30,10 @@ external interface RibbonLogicRunState: State {
     var executing: Boolean
     var dropdownOpen: Boolean
     var frame: LogicRunFrameInfo?
+
+    // Run-start mode: when set, a failed step pauses the run (to fix + continue) instead of ending
+    // it. Read at start only; locked while a run is active.
+    var pauseOnError: Boolean
 }
 
 
@@ -66,6 +70,7 @@ class RibbonLogicRun (
         executing = false
         dropdownOpen = false
         frame = null
+        pauseOnError = false
     }
 
 
@@ -154,6 +159,16 @@ class RibbonLogicRun (
     }
 
 
+    private fun onTogglePauseOnError() {
+        // NB: read the prior value OUTSIDE the setState lambda — the kzen setState lambda runs on an
+        // empty object, so `pauseOnError = !pauseOnError` inside it would read undefined.
+        val next = !state.pauseOnError
+        setState {
+            pauseOnError = next
+        }
+    }
+
+
     private fun onAction(action: String, active: Boolean, executing: Boolean) {
         val mainObjectLocation = this.mainObjectLocation
             ?: return
@@ -167,7 +182,8 @@ class RibbonLogicRun (
                     ClientContext.clientLogicGlobal.continueRunAsync()
                 }
                 else {
-                    ClientContext.clientLogicGlobal.startAndRunAsync(mainObjectLocation, false)
+                    ClientContext.clientLogicGlobal.startAndRunAsync(
+                        mainObjectLocation, false, state.pauseOnError)
                 }
             }
 
@@ -180,7 +196,8 @@ class RibbonLogicRun (
                     ClientContext.clientLogicGlobal.stepAsync()
                 }
                 else {
-                    ClientContext.clientLogicGlobal.startAndRunAsync(mainObjectLocation, true)
+                    ClientContext.clientLogicGlobal.startAndRunAsync(
+                        mainObjectLocation, true, state.pauseOnError)
                 }
             }
 
@@ -233,7 +250,40 @@ class RibbonLogicRun (
             renderStopButton(active)
         }
 
+        renderPauseOnErrorToggle(active, runnable)
         renderDetailsToggle(active)
+    }
+
+
+    private fun ChildrenBuilder.renderPauseOnErrorToggle(active: Boolean, runnable: Boolean) {
+        ToggleButton {
+            value = "pauseOnError"
+            selected = state.pauseOnError
+
+            // Applies at run start only, so lock it once a run is active.
+            disabled = active || !runnable
+            size = Size.medium
+
+            sx {
+                height = 34.px
+                marginLeft = 0.5.em
+                color = NamedColor.black
+            }
+
+            title = "Pause on error: stop at a failed step so it can be fixed and re-run"
+
+            // ToggleButton's onClick is (event, value) -> Unit; we ignore both and just flip state.
+            onClick = { _, _ -> onTogglePauseOnError() }
+
+            span {
+                css {
+                    fontSize = 1.5.em
+                    marginRight = 0.25.em
+                    marginBottom = (-0.25).em
+                }
+                iconByName("ReportProblem") {}
+            }
+        }
     }
 
 

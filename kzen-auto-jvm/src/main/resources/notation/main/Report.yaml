@@ -1,0 +1,12 @@
+main:
+  is: Report
+  input:
+    browser:
+      directory: "C:/Users/ostro/IdeaProjects/kzen-auto"
+      filter: ""
+    selection:
+      dataType: tech.kzen.auto.plugin.model.record.FlatFileRecord
+      groupBy: ""
+      locations:
+        - location: "C:/Users/ostro/IdeaProjects/kzen-auto/build.gradle.kts"
+          coordinate: Text

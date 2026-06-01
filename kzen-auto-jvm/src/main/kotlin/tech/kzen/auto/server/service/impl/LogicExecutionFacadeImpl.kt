@@ -79,7 +79,10 @@ class LogicExecutionFacadeImpl(
     }
 
 
-    override fun continueOrStart(): LogicResult {
+    override fun continueOrStart(graphDefinition: GraphDefinition): LogicResult {
+        // Use the live definition passed down from the enclosing pass (not the start-time snapshot
+        // captured in the constructor field, which is only used by open() for first instantiation),
+        // so editing a failed step inside this sub-script takes effect on resume.
         return logicExecution!!.continueOrStart(
             logicControl, graphDefinition)
     }
