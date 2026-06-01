@@ -15,7 +15,7 @@ import react.dom.onChange
 import tech.kzen.auto.client.objects.document.report.input.model.ReportInputStore
 import tech.kzen.auto.client.util.ClientInputUtils
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.material.iconByName
+import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -146,7 +146,7 @@ class InputBrowserPathController(
                     key = Key(part.asString())
 
                     if (index != 0) {
-                        iconByName("ArrowForwardIos") {
+                        icon("material-symbols:arrow-forward-ios") {
                             style = unsafeJso {
                                 fontSize = 0.75.em
                                 marginLeft = 0.25.em
@@ -211,7 +211,7 @@ class InputBrowserPathController(
                             onEditToggle()
                         }
 
-                        iconByName("Edit") {}
+                        icon("material-symbols:edit") {}
                     }
                 }
             }
@@ -246,7 +246,7 @@ class InputBrowserPathController(
                 }
                 title = "Cancel"
 
-                iconByName("Cancel") {
+                icon("material-symbols:cancel") {
                     style = unsafeJso {
                         fontSize = 0.85.em
                     }
@@ -259,7 +259,7 @@ class InputBrowserPathController(
                 }
                 title = "Save"
 
-                iconByName("Save") {
+                icon("material-symbols:save") {
                     style = unsafeJso {
                         fontSize = 0.85.em
                     }

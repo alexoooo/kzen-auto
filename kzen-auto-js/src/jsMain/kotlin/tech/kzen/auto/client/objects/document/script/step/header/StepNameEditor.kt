@@ -8,7 +8,7 @@ import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.objects.document.common.edit.ObjectNameEditor
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.material.iconByName
+import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.util.AutoConventions
@@ -50,7 +50,7 @@ class RenameButton(props: RenameButtonProps):
 
             onClick = { props.onAction() }
 
-            iconByName("Edit") {}
+            icon("material-symbols:edit") {}
         }
     }
 }

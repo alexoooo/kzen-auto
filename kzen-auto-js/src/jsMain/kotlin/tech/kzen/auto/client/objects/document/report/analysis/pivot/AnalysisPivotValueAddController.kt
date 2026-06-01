@@ -12,7 +12,7 @@ import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.report.analysis.model.ReportAnalysisStore
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.material.iconByName
+import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.select.ReactSelect
 import tech.kzen.auto.client.wrap.select.ReactSelectOption
@@ -188,7 +188,7 @@ class AnalysisPivotValueAddController(
                     onAdd()
                 }
 
-                iconByName("AddCircleOutline") {}
+                icon("material-symbols:add-circle-outline") {}
             }
         }
     }
@@ -206,7 +206,7 @@ class AnalysisPivotValueAddController(
                     onCancel()
                 }
 
-                iconByName("Cancel") {}
+                icon("material-symbols:cancel") {}
             }
         }
     }

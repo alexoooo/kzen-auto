@@ -20,7 +20,7 @@ EdgePipe:
 TopToBottomPipe:
   abstract: true
   is: EdgePipe
-  icon: ArrowDownward
+  icon: "material-symbols:arrow-downward"
   title: ""
   description: "From top to down"
   orientation: TopToBottom
@@ -29,7 +29,7 @@ TopToBottomPipe:
 TopToLeftPipe:
   abstract: true
   is: EdgePipe
-  icon: SubdirectoryArrowLeft
+  icon: "material-symbols:subdirectory-arrow-left"
   title: ""
   description: "From top to left"
   orientation: TopToLeft
@@ -38,7 +38,7 @@ TopToLeftPipe:
 TopToRightPipe:
   abstract: true
   is: EdgePipe
-  icon: SubdirectoryArrowRight
+  icon: "material-symbols:subdirectory-arrow-right"
   title: ""
   description: "From top to right"
   orientation: TopToRight
@@ -79,7 +79,7 @@ TopToBottomAndLeftAndRightPipe:
 LeftToRightPipe:
   abstract: true
   is: EdgePipe
-  icon: ArrowForward
+  icon: "material-symbols:arrow-forward"
   title: ""
   description: "From left to right"
   orientation: LeftToRight
@@ -104,7 +104,7 @@ LeftToBottomAndRightPipe:
 RightToLeftPipe:
   abstract: true
   is: EdgePipe
-  icon: ArrowBack
+  icon: "material-symbols:arrow-back"
   title: ""
   description: "From right to left"
   orientation: RightToLeft

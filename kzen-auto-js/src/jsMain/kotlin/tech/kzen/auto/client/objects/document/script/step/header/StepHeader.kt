@@ -15,7 +15,7 @@ import tech.kzen.auto.client.objects.document.common.attribute.AttributeViewMana
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.material.iconByName
+import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.attribute.AttributeName
@@ -148,7 +148,7 @@ class StepHeader(
 
             title = props.description
 
-            iconByName(props.icon) {
+            icon(props.icon) {
                 style = unsafeJso {
                     color = NamedColor.black
                     fontSize = 1.75.em
@@ -252,7 +252,7 @@ class StepHeader(
                     // stopPropagation: this button handles its own click; don't also trip the card's click-to-expand.
                     onClick = { it.stopPropagation(); onRemove() }
 
-                    iconByName("Delete") {}
+                    icon("material-symbols:delete") {}
                 }
             }
 
@@ -266,7 +266,7 @@ class StepHeader(
                     // stopPropagation: the chevron owns the toggle; don't let the click also reach the card's expand.
                     onClick = { it.stopPropagation(); onToggleExpanded() }
 
-                    iconByName(if (expanded) "KeyboardArrowUp" else "KeyboardArrowDown") {}
+                    icon(if (expanded) "KeyboardArrowUp" else "KeyboardArrowDown") {}
                 }
             }
         }

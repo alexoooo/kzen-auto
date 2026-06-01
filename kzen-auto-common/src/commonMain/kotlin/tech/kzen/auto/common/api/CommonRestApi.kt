@@ -107,4 +107,9 @@ object CommonRestApi {
 
     // stable object id mapping
     const val objectStableMapperSnapshot = "/object-stable/snapshot"
+
+    // icon catalogue (Iconify on-demand protocol): GET /icon/{set}.json?icons=name1,name2,...
+    // Served by the JVM backend from a bundled collection resource; the JS bundle holds no icon data.
+    const val iconCollectionPrefix = "/icon/"
+    const val paramIcons = "icons"
 }

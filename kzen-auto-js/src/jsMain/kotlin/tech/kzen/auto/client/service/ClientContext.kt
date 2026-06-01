@@ -11,6 +11,7 @@ import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.service.logic.ClientLogicGlobal
 import tech.kzen.auto.client.service.rest.*
+import tech.kzen.auto.client.wrap.iconify.IconLoader
 import tech.kzen.auto.common.codegen.KzenAutoCommonModule
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowLoop
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowRepository
@@ -110,10 +111,16 @@ object ClientContext {
         KzenLibCommonModule.register()
         KzenAutoCommonModule.register()
         KzenAutoJsModule.register()
+
+        // Register the on-demand Iconify loader before any <Icon> renders.
+        IconLoader.install()
     }
 
 
     suspend fun initAsync() {
+        // Best-effort: fetch always-visible icons up front so the first paint has them.
+        IconLoader.preload()
+
         navigationGlobal.postConstruct(mirroredGraphStore)
 
 //        mirroredGraphStore.observe(executionRepository)

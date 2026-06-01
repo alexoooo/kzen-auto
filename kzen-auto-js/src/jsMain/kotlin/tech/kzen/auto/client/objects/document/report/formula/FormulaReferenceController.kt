@@ -8,7 +8,7 @@ import mui.material.InputLabel
 import react.ChildrenBuilder
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.material.iconByName
+import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.select.ReactSelect
 import tech.kzen.auto.client.wrap.select.ReactSelectOption
@@ -123,7 +123,7 @@ class FormulaReferenceController(
                     onAdd()
                 }
 
-                iconByName(props.addIcon) {}
+                icon(props.addIcon) {}
             }
         }
     }
@@ -140,7 +140,7 @@ class FormulaReferenceController(
                 onClick = {
                     onCancel()
                 }
-                iconByName("Cancel") {}
+                icon("material-symbols:cancel") {}
             }
         }
     }

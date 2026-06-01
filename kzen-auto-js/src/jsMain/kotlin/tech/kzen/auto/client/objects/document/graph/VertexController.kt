@@ -16,7 +16,7 @@ import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ExecutionIntentGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
-import tech.kzen.auto.client.wrap.material.iconByName
+import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.common.objects.document.graph.DataflowWiring
 import tech.kzen.auto.common.objects.document.graph.GraphDocument
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
@@ -627,7 +627,7 @@ class VertexController(
                 onClick = {
                     onOptionsOpen()
                 }
-                iconByName("MoreVert") {}
+                icon("material-symbols:more-vert") {}
             }
         }
 
@@ -647,7 +647,7 @@ class VertexController(
                 onRemove()
             }
 
-            iconByName("Delete") {
+            icon("material-symbols:delete") {
                 style = unsafeJso {
                     marginRight = 1.em
                 }
@@ -690,7 +690,7 @@ class VertexController(
                 position = Position.relative
             }
 
-            iconByName(icon) {
+            icon(icon) {
                 style = unsafeJso {
                     color = NamedColor.black
 
@@ -729,7 +729,7 @@ class VertexController(
                 }
                 title = "Has more messages"
 
-                iconByName("KeyboardArrowDown") {}
+                icon("material-symbols:keyboard-arrow-down") {}
             }
         }
 
@@ -759,7 +759,7 @@ class VertexController(
                         }
                     }
 
-                    iconByName("Mail") {}
+                    icon("material-symbols:mail") {}
                 }
             }
 

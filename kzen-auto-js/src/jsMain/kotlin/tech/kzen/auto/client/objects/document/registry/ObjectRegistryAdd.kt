@@ -16,7 +16,7 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.ClientInputUtils
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.material.iconByName
+import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.registry.spec.ClassListSpec
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -150,7 +150,7 @@ class ObjectRegistryAdd(
                     onAdd()
                 }
 
-                iconByName("AddCircleOutline") {}
+                icon("material-symbols:add-circle-outline") {}
             }
         }
     }

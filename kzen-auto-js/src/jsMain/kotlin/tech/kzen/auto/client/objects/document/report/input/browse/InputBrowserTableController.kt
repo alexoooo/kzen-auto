@@ -17,7 +17,7 @@ import tech.kzen.auto.client.objects.document.report.input.ReportInputController
 import tech.kzen.auto.client.objects.document.report.input.browse.model.InputBrowserState
 import tech.kzen.auto.client.objects.document.report.input.model.ReportInputStore
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.material.iconByName
+import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.auto.common.util.data.DataLocation
@@ -357,7 +357,7 @@ class InputBrowserTableController(
                             height = 1.em
                             overflow = Overflow.hidden
                         }
-                        iconByName("FolderOpen") {
+                        icon("material-symbols:folder-open") {
                             style = unsafeJso {
                                 marginTop = (-4).px
                                 marginLeft = 0.15.em
@@ -450,7 +450,7 @@ class InputBrowserTableController(
                         whiteSpace = WhiteSpace.nowrap
                     }
                     if (selected) {
-                        iconByName("Check") {
+                        icon("material-symbols:check") {
                             style = unsafeJso {
                                 marginTop = (-0.2).em
                                 marginBottom = (-0.2).em

@@ -168,7 +168,7 @@ package tech.kzen.auto.client.objects.ribbon
 //                    }
 //                }
 //
-//                iconByName("PlayArrow") {}
+//                icon("material-symbols:play-arrow") {}
 //            }
 //        }
 //

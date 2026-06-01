@@ -61,12 +61,30 @@ dependencies {
 }
 
 
+// Icon catalogue: copy the @iconify-json/material-symbols collection JSON (downloaded by kotlinNpmInstall
+// into the JS module's node_modules) into JVM resources at /icons/material-symbols.json, served on demand
+// by IconCollectionHandler. Nothing imports it from Kotlin/JS, so it stays out of the esbuild bundle.
+val iconCollectionDir = layout.buildDirectory.dir("generated-resources")
+val copyIconCollection = tasks.register<Copy>("copyIconCollection") {
+    dependsOn(rootProject.tasks.named("kotlinNpmInstall"))
+    from(rootProject.layout.buildDirectory.file(
+        "js/node_modules/@iconify-json/material-symbols/icons.json"))
+    into(iconCollectionDir.map { it.dir("icons") })
+    rename { "material-symbols.json" }
+}
+
+sourceSets.main {
+    resources.srcDir(iconCollectionDir)
+}
+
+
 tasks.withType<ProcessResources> {
     val jsProject = project(":kzen-auto-js")
 
     // esbuild bundle (replaces webpack) → build/dist/js/productionExecutable/<module>.js (+ .js.map)
     val bundleTask = jsProject.tasks.named("jsEsbuildBundle")
     dependsOn(bundleTask)
+    dependsOn(copyIconCollection)
 
     from(jsProject.layout.buildDirectory.dir("dist/js/productionExecutable")) {
         into("static")

@@ -12,7 +12,7 @@ import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.createRef
-import tech.kzen.auto.client.wrap.material.iconByName
+import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunFrameInfo
 import tech.kzen.auto.common.util.AutoConventions
@@ -281,7 +281,7 @@ class RibbonLogicRun (
                     marginRight = 0.25.em
                     marginBottom = (-0.25).em
                 }
-                iconByName("ReportProblem") {}
+                icon("material-symbols:warning") {}
             }
         }
     }
@@ -312,7 +312,7 @@ class RibbonLogicRun (
                     marginRight = 0.25.em
                     marginBottom = (-0.25).em
                 }
-                iconByName("Redo") {}
+                icon("material-symbols:redo") {}
             }
         }
     }
@@ -353,10 +353,10 @@ class RibbonLogicRun (
                     marginBottom = (-0.25).em
                 }
                 if (executing) {
-                    iconByName("Pause") {}
+                    icon("material-symbols:pause") {}
                 }
                 else {
-                    iconByName("PlayArrow") {}
+                    icon("material-symbols:play-arrow") {}
                 }
             }
         }
@@ -382,7 +382,7 @@ class RibbonLogicRun (
                     marginRight = 0.25.em
                     marginBottom = (-0.25).em
                 }
-                iconByName("Stop") {}
+                icon("material-symbols:stop") {}
             }
         }
     }
@@ -416,7 +416,7 @@ class RibbonLogicRun (
                     onClick = { onOptionsOpen() }
                 }
 
-                iconByName("ExpandMore") {}
+                icon("material-symbols:expand-more") {}
             }
         }
     }

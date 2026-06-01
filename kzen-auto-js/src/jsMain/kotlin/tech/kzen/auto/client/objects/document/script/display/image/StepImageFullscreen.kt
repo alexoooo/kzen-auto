@@ -21,7 +21,7 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.contextValue
 import tech.kzen.auto.client.wrap.installContextType
-import tech.kzen.auto.client.wrap.material.iconByName
+import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.exec.BinaryExecutionValue
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -236,7 +236,7 @@ class StepImageFullscreen(
                     event.stopPropagation()
                     onActivate()
                 }
-                iconByName(iconName) {
+                icon(iconName) {
                     style = unsafeJso {
                         color = if (enabled) NamedColor.white else Color("rgba(255, 255, 255, 0.3)")
                         fontSize = 2.5.em

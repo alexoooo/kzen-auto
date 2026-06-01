@@ -63,12 +63,14 @@ kotlin {
             implementation(kotlinWrappers.emotion.styled)
             implementation(kotlinWrappers.mui.material)
 
-            implementation(npm("@mui/icons-material", muiIconsVersion))
             implementation(npm("cropperjs", cropperJsVersion))
             implementation(npm("lodash", lodashVersion))
             implementation(npm("react-select", reactSelectVersion))
             implementation(npm("@iconify/react", iconifyReactVersion))
-            implementation(npm("@iconify/icons-vaadin", iconifyIconsVaadinVersion))
+            // Icon catalogue JSON served by the JVM backend (see kzen-auto-jvm copyIconCollection task).
+            // Nothing in Kotlin imports this — it only lands icons.json on disk for the server to serve —
+            // so it contributes zero bytes to the esbuild bundle.
+            implementation(npm("@iconify-json/material-symbols", iconifyJsonMaterialSymbolsVersion))
 
             // NB: avoid "unmet peer dependency" warning
             implementation(npm("@babel/core", babelCoreVersion))
@@ -112,8 +114,9 @@ yarn.ignoreScripts = false
 // Bundles the Kotlin/JS per-module CommonJS output with esbuild instead of webpack. esbuild ships
 // per-platform native binaries via npm so it stays Windows/Linux/macOS agnostic. The output filename
 // + dist location match what the JVM server serves (build/dist/js/productionExecutable/<jsModuleName>.js)
-// and what ProcessResources copies. Now that materialIcons.kt deep-imports only referenced icons
-// (no more require.context bundling the whole @mui/icons-material set), esbuild can bundle it.
+// and what ProcessResources copies. Icons no longer contribute to the bundle at all: they're fetched on
+// demand by name from the JVM backend (see IconLoader / IconCollectionHandler), so there's no icon
+// dependency for esbuild to bundle.
 
 val npmPackageName = "${rootProject.name}-${project.name}"
 // The compileSync output dir holds one .js per Gradle module (kotlin-kotlin-stdlib.js,

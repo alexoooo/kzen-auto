@@ -16,7 +16,7 @@ import tech.kzen.auto.client.util.NavigationRoute
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.createRef
-import tech.kzen.auto.client.wrap.material.iconByName
+import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.exec.RequestParams
@@ -257,7 +257,7 @@ class SidebarFile(
                 height = iconWidth
             }
 
-            iconByName(archetype.icon) {
+            icon(archetype.icon) {
                 title = archetype.location.objectPath.name.value
             }
         }
@@ -323,7 +323,7 @@ class SidebarFile(
                     marginRight = (-16).px
                 }
 
-                iconByName("MoreVert") {}
+                icon("material-symbols:more-vert") {}
             }
         }
 
@@ -343,7 +343,7 @@ class SidebarFile(
 
         MenuItem {
             onClick = { onRename() }
-            iconByName("Edit") {
+            icon("material-symbols:edit") {
                 style = iconStyle
             }
             +"Rename"
@@ -351,7 +351,7 @@ class SidebarFile(
 
         MenuItem {
             onClick = { onRemove() }
-            iconByName("Delete") {
+            icon("material-symbols:delete") {
                 style = iconStyle
             }
             +"Delete"

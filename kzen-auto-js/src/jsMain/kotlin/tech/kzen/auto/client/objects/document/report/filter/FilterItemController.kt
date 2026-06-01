@@ -17,7 +17,7 @@ import tech.kzen.auto.client.objects.document.common.edit.MultiTextAttributeEdit
 import tech.kzen.auto.client.objects.document.report.ReportController
 import tech.kzen.auto.client.objects.document.report.filter.model.ReportFilterStore
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.material.iconByName
+import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
@@ -251,7 +251,7 @@ class FilterItemController(
 
                                 disabled = deleteDisabled
 
-                                iconByName("Delete") {}
+                                icon("material-symbols:delete") {}
                             }
                         }
 
@@ -261,10 +261,10 @@ class FilterItemController(
                             }
 
                             if (state.open) {
-                                iconByName("ExpandLess") {}
+                                icon("material-symbols:expand-less") {}
                             }
                             else {
-                                iconByName("ExpandMore") {}
+                                icon("material-symbols:expand-more") {}
                             }
                         }
                     }

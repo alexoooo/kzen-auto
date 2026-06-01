@@ -8,7 +8,7 @@ import react.Props
 import react.State
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.material.iconByName
+import tech.kzen.auto.client.wrap.iconify.icon
 import web.cssom.NamedColor
 import web.cssom.em
 
@@ -56,7 +56,7 @@ class ScriptProgressController(
 
             title = "Reset"
 
-            iconByName("Replay") {
+            icon("material-symbols:replay") {
                 style = unsafeJso {
                     fontSize = 3.em
                 }

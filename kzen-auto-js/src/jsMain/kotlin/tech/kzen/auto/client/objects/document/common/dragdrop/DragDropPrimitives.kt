@@ -3,7 +3,7 @@ package tech.kzen.auto.client.objects.document.common.dragdrop
 import emotion.react.css
 import react.ChildrenBuilder
 import react.dom.html.ReactHTML.div
-import tech.kzen.auto.client.wrap.material.iconByName
+import tech.kzen.auto.client.wrap.iconify.icon
 import web.cssom.*
 
 
@@ -81,7 +81,7 @@ fun ChildrenBuilder.dragHandle(
             onEnd()
         }
 
-        iconByName("DragIndicator") {}
+        icon("material-symbols:drag-indicator") {}
     }
 }
 

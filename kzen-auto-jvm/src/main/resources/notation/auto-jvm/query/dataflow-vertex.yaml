@@ -21,7 +21,7 @@ IntRangeSource:
   abstract: true
   is: Dataflow
   class: tech.kzen.auto.server.objects.graph.IntRangeSource
-  icon: TripOrigin
+  icon: "material-symbols:trip-origin"
   title: "Number Range"
   description: "Range of integers, starting at 'from' and ending at 'to' (inclusively)"
   from: 1
@@ -54,7 +54,7 @@ DivisibleFilter:
   abstract: true
   is: Dataflow
   class: tech.kzen.auto.server.objects.graph.DivisibleFilter
-  icon: FilterList
+  icon: "material-symbols:filter-list"
   title: "Divisible Filter"
   description: "Filter divisible by"
   divisor: 1
@@ -72,7 +72,7 @@ ReplaceProcessor:
   abstract: true
   is: Dataflow
   class: tech.kzen.auto.server.objects.graph.ReplaceProcessor
-  icon: Forward
+  icon: "material-symbols:forward"
   title: "Replace"
   description: "Substitute the input value (which is ignored) with the given replacement"
   replacement: ""
@@ -90,7 +90,7 @@ RepeatProcessor:
   abstract: true
   is: Dataflow
   class: tech.kzen.auto.server.objects.graph.RepeatProcessor
-  icon: FileCopy
+  icon: "material-symbols:file-copy"
   title: "Repeat"
   description: "Repeat the input value a given number of times"
   times: 2
@@ -108,7 +108,7 @@ CountSink:
   abstract: true
   is: Dataflow
   class: tech.kzen.auto.server.objects.graph.CountSink
-  icon: PlusOne
+  icon: "material-symbols:exposure-plus-1"
   title: "Count"
   description: "Counter"
   meta:
@@ -122,7 +122,7 @@ AccumulateSink:
   is: Dataflow
   class: tech.kzen.auto.server.objects.graph.AccumulateSink
 #  icon: PlaylistAdd
-  icon: Print
+  icon: "material-symbols:print"
   title: "Display"
   description: "List of all seen values"
   meta:
@@ -135,7 +135,7 @@ AppendText:
   abstract: true
   is: Dataflow
   class: tech.kzen.auto.server.objects.graph.AppendText
-  icon: Add
+  icon: "material-symbols:add"
   title: "Append Text"
   description: "Concatenate two (or possibly one) text inputs"
   meta:
@@ -154,7 +154,7 @@ SelectLast:
   abstract: true
   is: Dataflow
   class: tech.kzen.auto.server.objects.graph.SelectLast
-  icon: CompareArrows
+  icon: "material-symbols:compare-arrows"
   title: "Select Last"
   description: "Second if it's available, otherwise first"
   meta:

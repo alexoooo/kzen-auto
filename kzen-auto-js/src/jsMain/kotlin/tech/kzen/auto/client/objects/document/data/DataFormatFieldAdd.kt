@@ -15,7 +15,7 @@ import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.ClientInputUtils
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.material.iconByName
+import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.data.spec.FieldFormatListSpec
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -136,7 +136,7 @@ class DataFormatFieldAdd(
                     onAdd()
                 }
 
-                iconByName("AddCircleOutline") {}
+                icon("material-symbols:add-circle-outline") {}
             }
         }
     }

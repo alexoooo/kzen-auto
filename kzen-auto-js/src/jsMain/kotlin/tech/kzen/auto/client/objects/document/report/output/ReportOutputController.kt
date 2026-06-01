@@ -14,10 +14,7 @@ import tech.kzen.auto.client.objects.document.report.output.model.ReportOutputSt
 import tech.kzen.auto.client.objects.document.report.output.model.ReportOutputStore
 import tech.kzen.auto.client.objects.document.report.run.model.ReportRunProgress
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.iconify.iconify
-import tech.kzen.auto.client.wrap.iconify.vaadinIconTable
-import tech.kzen.auto.client.wrap.iconify.vaadinIconUploadAlt
-import tech.kzen.auto.client.wrap.material.iconByName
+import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
@@ -136,7 +133,7 @@ class ReportOutputController(
                     position = Position.relative
                 }
 
-                iconByName("SaveAlt") {
+                icon("material-symbols:download") {
                     style = unsafeJso {
                         position = Position.absolute
                         fontSize = 2.5.em
@@ -219,7 +216,7 @@ class ReportOutputController(
                         marginRight = 0.25.em
                         marginBottom = (-0.25).em
                     }
-                    iconify(vaadinIconTable)
+                    icon("material-symbols:table-rows")
                 }
 
                 +"Table"
@@ -239,7 +236,7 @@ class ReportOutputController(
                         fontSize = 1.5.em
                         marginRight = 0.25.em
                     }
-                    iconify(vaadinIconUploadAlt)
+                    icon("material-symbols:upload")
                 }
 
                 +"Export"
@@ -267,7 +264,7 @@ class ReportOutputController(
                 borderColor = Color("#777777")
             }
 
-            iconByName("Settings") {}
+            icon("material-symbols:settings") {}
         }
     }
 

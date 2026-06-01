@@ -13,7 +13,7 @@ import tech.kzen.auto.client.objects.document.report.formula.model.ReportFormula
 import tech.kzen.auto.client.objects.document.report.formula.model.ReportFormulaStore
 import tech.kzen.auto.client.util.ClientInputUtils
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.material.iconByName
+import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
@@ -142,7 +142,7 @@ class FormulaAddController(
                     onAdd()
                 }
 
-                iconByName("AddCircleOutline") {}
+                icon("material-symbols:add-circle-outline") {}
             }
         }
     }
@@ -160,7 +160,7 @@ class FormulaAddController(
                 onClick = {
                     onSubmit()
                 }
-                iconByName("AddCircleOutline") {}
+                icon("material-symbols:add-circle-outline") {}
             }
 
             IconButton {
@@ -168,7 +168,7 @@ class FormulaAddController(
                 onClick = {
                     onCancel()
                 }
-                iconByName("Cancel") {}
+                icon("material-symbols:cancel") {}
             }
         }
     }

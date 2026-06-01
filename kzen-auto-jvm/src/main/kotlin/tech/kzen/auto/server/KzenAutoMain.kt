@@ -15,6 +15,7 @@ import io.ktor.server.routing.*
 import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.api.staticResourceDir
 import tech.kzen.auto.common.api.staticResourcePath
+import tech.kzen.auto.server.api.IconCollectionHandler
 import tech.kzen.auto.server.api.RestHandler
 import tech.kzen.auto.server.backend.indexPage
 import tech.kzen.auto.server.context.KzenAutoConfig
@@ -102,6 +103,8 @@ private fun Routing.routeRequests(
 
     staticResources(staticResourcePath, staticResourceDir)
 
+    routeIcons()
+
     routeNotationQuery(context.restHandler)
     routeNotationCommands(context.restHandler)
 
@@ -112,6 +115,30 @@ private fun Routing.routeRequests(
     routeDataflow(context.restHandler)
 
     routeObjectStable(context.restHandler)
+}
+
+
+private fun Routing.routeIcons() {
+    // Iconify on-demand protocol: GET /icon/{set}.json?icons=name1,name2,... → IconifyJSON subset.
+    // Tailcard capture (like routeNotationQuery) avoids mixed param+literal segment matching.
+    get(CommonRestApi.iconCollectionPrefix + "{collection...}") {
+        val collection = call.parameters.getAll("collection")?.joinToString("/") ?: ""
+        val set = collection.removeSuffix(".json")
+        val icons = call.request.queryParameters[CommonRestApi.paramIcons]
+            ?.split(",")
+            ?.map { it.trim() }
+            ?.filter { it.isNotEmpty() }
+            ?: emptyList()
+
+        // Icon data is a build artifact (the bundled material-symbols collection) — immutable for the life
+        // of this build, and a given name's glyph never changes within a published collection. Without an
+        // explicit lifetime the browser revalidates on every reload, and since Iconify caches icons only in
+        // memory (no localStorage layer in @iconify/react), every page reload re-fetches every glyph. A long
+        // max-age lets the browser serve identical batches from its own cache, so each batch is downloaded at
+        // most once per window; an icon-set dependency bump self-heals once the window lapses.
+        call.response.header(HttpHeaders.CacheControl, "public, max-age=604800")
+        call.respondText(IconCollectionHandler.query(set, icons), ContentType.Application.Json)
+    }
 }
 
 

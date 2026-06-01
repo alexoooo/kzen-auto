@@ -13,7 +13,7 @@ import tech.kzen.auto.client.objects.document.custom.CustomTheme
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.material.iconByName
+import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.exec.task.model.TaskModel
 import tech.kzen.lib.common.exec.task.model.TaskState
@@ -167,7 +167,7 @@ class CustomObjectTaskHeader(
 
                     onClick = { props.runner.cancel() }
 
-                    iconByName("Stop") {}
+                    icon("material-symbols:stop") {}
                 }
             }
 
@@ -181,7 +181,7 @@ class CustomObjectTaskHeader(
                         marginLeft = 0.5.em
                     }
 
-                    iconByName("Stop") {}
+                    icon("material-symbols:stop") {}
                 }
             }
 
@@ -197,7 +197,7 @@ class CustomObjectTaskHeader(
 
                     onClick = { props.runner.run(props.objectLocation) }
 
-                    iconByName("PlayArrow") {}
+                    icon("material-symbols:play-arrow") {}
                 }
             }
         }

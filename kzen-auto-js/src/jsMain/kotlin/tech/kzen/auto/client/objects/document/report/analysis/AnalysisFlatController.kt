@@ -18,7 +18,7 @@ import tech.kzen.auto.client.objects.document.common.edit.MultiTextAttributeEdit
 import tech.kzen.auto.client.objects.document.report.input.model.ReportInputStore
 import tech.kzen.auto.client.objects.document.report.output.model.ReportOutputStore
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.material.iconByName
+import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.common.objects.document.report.listing.AnalysisColumnInfo
 import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisFlatDataSpec
@@ -197,7 +197,7 @@ class AnalysisFlatController(
                                     commonTdCss(isFirst)
                                 }
                                 if (included) {
-                                    iconByName("Check") {
+                                    icon("material-symbols:check") {
                                         style = unsafeJso {
                                             marginTop = (-0.2).em
                                             marginBottom = (-0.2).em

@@ -14,9 +14,7 @@ import tech.kzen.auto.client.objects.document.report.filter.model.ReportFilterSt
 import tech.kzen.auto.client.objects.document.report.filter.model.ReportFilterStore
 import tech.kzen.auto.client.objects.document.report.widget.ReportBottomEgress
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.iconify.iconify
-import tech.kzen.auto.client.wrap.iconify.vaadinIconFilter
-import tech.kzen.auto.client.wrap.material.iconByName
+import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.filter.FilterSpec
@@ -107,7 +105,7 @@ class ReportFilterController(
                         top = (-16.5).px
                         left = (-3.5).px
                     }
-                    iconify(vaadinIconFilter)
+                    icon("material-symbols:filter-alt")
                 }
             }
 
@@ -134,7 +132,7 @@ class ReportFilterController(
                             onSummaryRefresh()
                         }
 
-                        iconByName("Refresh") {
+                        icon("material-symbols:refresh") {
                             style = unsafeJso {
                                 marginRight = 0.25.em
                             }

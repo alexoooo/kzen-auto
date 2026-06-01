@@ -22,7 +22,7 @@ import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.material.iconByName
+import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.refCallback
 import tech.kzen.auto.client.wrap.setState
@@ -431,7 +431,7 @@ class ScriptBranchDisplay(
                 onCreate(index)
             }
 
-            iconByName("AddCircleOutline") {
+            icon("material-symbols:add-circle-outline") {
                 style = unsafeJso {
                     fontSize = 1.em
                 }

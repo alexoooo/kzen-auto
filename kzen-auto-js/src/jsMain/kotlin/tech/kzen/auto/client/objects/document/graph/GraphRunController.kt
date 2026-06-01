@@ -5,16 +5,13 @@ import js.objects.unsafeJso
 import mui.material.Fab
 import mui.material.IconButton
 import react.ChildrenBuilder
-import react.ComponentType
 import react.Props
 import react.State
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.material.IconProps
-import tech.kzen.auto.client.wrap.material.iconByName
-import tech.kzen.auto.client.wrap.material.iconType
+import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
 import tech.kzen.auto.common.paradigm.dataflow.util.DataflowUtils
@@ -326,15 +323,15 @@ class GraphRunController(
                 height = 5.em
             }
 
-            val icon: ComponentType<IconProps> = when {
+            val iconName = when {
                 hasMoreToRun ->
-                    iconType("PlayArrow")
+                    "material-symbols:play-arrow"
 
                 looping ->
-                    iconType("Pause")
+                    "material-symbols:pause"
 
                 else ->
-                    iconType("Replay")
+                    "material-symbols:replay"
             }
 
 //            styledDiv {
@@ -346,7 +343,7 @@ class GraphRunController(
 //                        console.log("&^%&^%&%&^% click !!")
 //                    }
 //                }
-                icon {
+                icon(iconName) {
                     style = unsafeJso {
                         fontSize = 3.em
                     }
@@ -371,7 +368,7 @@ class GraphRunController(
 
             onClick = { onReset() }
 
-            iconByName("Replay") {
+            icon("material-symbols:replay") {
                 style = unsafeJso {
                     fontSize = 1.5.em
                 }
@@ -392,7 +389,7 @@ class GraphRunController(
 
             onClick = { onRun() }
 
-            iconByName("Redo") {
+            icon("material-symbols:redo") {
                 style = unsafeJso {
                     fontSize = 1.5.em
                 }

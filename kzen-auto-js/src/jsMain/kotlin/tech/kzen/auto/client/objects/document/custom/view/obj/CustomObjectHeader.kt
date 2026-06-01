@@ -14,7 +14,7 @@ import tech.kzen.auto.client.objects.document.common.edit.ObjectNameEditor
 import tech.kzen.auto.client.objects.document.custom.CustomTheme
 import tech.kzen.auto.client.objects.document.custom.view.CustomViewStore
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.material.iconByName
+import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -141,7 +141,7 @@ class CustomObjectHeader(
 
                 onClick = { onStartEdit() }
 
-                iconByName("Edit") {}
+                icon("material-symbols:edit") {}
             }
         }
     }
@@ -206,7 +206,7 @@ class CustomObjectHeader(
                     onChange = { _, _ -> onToggleExport() }
                     title = if (props.info.isExported) "Exported (click to unexport)" else "Mark as exported"
 
-                    iconByName("Public") {}
+                    icon("material-symbols:public") {}
                 }
             }
 
@@ -220,7 +220,7 @@ class CustomObjectHeader(
 
                 onClick = { onDelete() }
 
-                iconByName("Delete") {}
+                icon("material-symbols:delete") {}
             }
         }
     }

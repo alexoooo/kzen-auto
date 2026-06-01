@@ -11,7 +11,7 @@ ArgumentStep:
   abstract: true
   is: ScriptStep
   class: tech.kzen.auto.server.objects.script.step.value.ArgumentStep
-  icon: ArrowForward
+  icon: "material-symbols:arrow-forward"
   title: "Argument"
   parameter: "main"
   meta:
@@ -25,7 +25,7 @@ BooleanLiteralStep:
   abstract: true
   is: ScriptStep
   class: tech.kzen.auto.server.objects.script.step.value.BooleanLiteralStep
-  icon: ToggleOn
+  icon: "material-symbols:toggle-on"
   title: "True or false"
   value: false
   meta:
@@ -39,7 +39,7 @@ TextLiteralStep:
   abstract: true
   is: ScriptStep
   class: tech.kzen.auto.server.objects.script.step.value.TextLiteralStep
-  icon: Textsms
+  icon: "material-symbols:sms"
   title: "Text"
   value: ""
   meta:
@@ -53,7 +53,7 @@ FormulaStep:
   abstract: true
   is: ScriptStep
   class: tech.kzen.auto.server.objects.script.step.eval.FormulaStep
-  icon: Functions
+  icon: "material-symbols:functions"
   title: "Formula"
   code: ""
   meta:
@@ -68,7 +68,7 @@ NumberLiteralStep:
   abstract: true
   is: ScriptStep
   class: tech.kzen.auto.server.objects.script.step.value.NumberLiteralStep
-  icon: LooksOne
+  icon: "material-symbols:looks-one"
   title: "Number"
   value: 0
   meta:
@@ -82,7 +82,7 @@ NumberRangeStep:
   abstract: true
   is: ScriptStep
   class: tech.kzen.auto.server.objects.script.step.value.NumberRangeStep
-  icon: TripOrigin
+  icon: "material-symbols:trip-origin"
   title: "Number range"
   from: 1
   to: 10
@@ -96,7 +96,7 @@ DivisibleCheckStep:
   abstract: true
   is: ScriptStep
   class: tech.kzen.auto.server.objects.script.step.logic.DivisibleCheckStep
-  icon: FilterList
+  icon: "material-symbols:filter-list"
   title: "Is divisible by"
   number: ""
   divisor: 1
@@ -113,7 +113,7 @@ LogicalAndStep:
   abstract: true
   is: ScriptStep
   class: tech.kzen.auto.server.objects.script.step.logic.LogicalAndStep
-  icon: AddBox
+  icon: "material-symbols:add-box"
   title: "Logical AND"
   condition: ""
   and: ""
@@ -133,7 +133,7 @@ DisplayValueStep:
   abstract: true
   is: ScriptStep
   class: tech.kzen.auto.server.objects.script.step.value.DisplayValueStep
-  icon: Print
+  icon: "material-symbols:print"
   title: "Display"
   text: ""
   meta:
@@ -152,7 +152,7 @@ MultiScriptStep:
   is: ScriptStep
   class: tech.kzen.auto.server.objects.script.step.control.MultiStep
   display: MultiStepDisplay
-  icon: ToggleOn
+  icon: "material-symbols:toggle-on"
   title: "Sub-script"
   steps: []
   meta:
@@ -166,7 +166,7 @@ RunStep:
   abstract: true
   is: ScriptStep
   class: tech.kzen.auto.server.objects.script.step.control.RunStep
-  icon: PlayArrow
+  icon: "material-symbols:play-arrow"
   title: "Run"
   instructions: ""
   arguments: {}
@@ -189,7 +189,7 @@ WaitStep:
   abstract: true
   is: ScriptStep
   class: tech.kzen.auto.server.objects.script.step.control.WaitStep
-  icon: Timer
+  icon: "material-symbols:timer"
   title: "Wait"
   milliseconds: 1000
   meta:
@@ -204,7 +204,7 @@ IfStep:
   is: ScriptStep
   class: tech.kzen.auto.server.objects.script.step.control.IfStep
   display: IfStepDisplay
-  icon: Share
+  icon: "material-symbols:share"
   title: "If"
   description: "Do one thing or another based on condition"
   condition: ""
@@ -230,7 +230,7 @@ MappingStep:
   is: ScriptStep
   class: tech.kzen.auto.server.objects.script.step.control.mapping.MappingStep
   display: MappingStepDisplay
-  icon: Forward
+  icon: "material-symbols:forward"
   title: "Loop"
   description: "Use each item in a list"
   items: ""
@@ -250,7 +250,7 @@ MappingItemStep:
   abstract: true
   is: ScriptStep
   class: tech.kzen.auto.server.objects.script.step.control.mapping.MappingItemStep
-  icon: Share
+  icon: "material-symbols:share"
   title: "Item"
   meta:
     selfLocation: SelfLocation
@@ -262,7 +262,7 @@ BrowserOpenStep:
   abstract: true
   is: ScriptStep
   class: tech.kzen.auto.server.objects.script.step.browser.BrowserOpenStep
-  icon: OpenInNew
+  icon: "material-symbols:open-in-new"
   title: "Open browser"
   description: "Open a new browser window (existing one will be closed)"
   meta:
@@ -273,7 +273,7 @@ BrowserCloseStep:
   abstract: true
   is: ScriptStep
   class: tech.kzen.auto.server.objects.script.step.browser.BrowserCloseStep
-  icon: Close
+  icon: "material-symbols:close"
   title: "Close browser"
   description: "Close the browser window"
   meta:
@@ -284,7 +284,7 @@ BrowserGetStep:
   abstract: true
   is: ScriptStep
   class: tech.kzen.auto.server.objects.script.step.browser.BrowserGetStep
-  icon: Http
+  icon: "material-symbols:http"
   title: "Browse to URL"
   description: "Navigate to a new URL"
   location: "https://www.google.com/"
@@ -301,7 +301,7 @@ BrowserClickStep:
   abstract: true
   is: ScriptStep
   class: tech.kzen.auto.server.objects.script.step.browser.BrowserClickStep
-  icon: TouchApp
+  icon: "material-symbols:touch-app"
   title: "Click"
   target:
     type: Focus
@@ -316,7 +316,7 @@ BrowserWriteStep:
   abstract: true
   is: ScriptStep
   class: tech.kzen.auto.server.objects.script.step.browser.BrowserWriteStep
-  icon: Keyboard
+  icon: "material-symbols:keyboard"
   title: "Write"
   description: "Send text into input field"
   text: ""
@@ -336,7 +336,7 @@ BrowserSubmitStep:
   abstract: true
   is: ScriptStep
   class: tech.kzen.auto.server.objects.script.step.browser.BrowserSubmitStep
-  icon: Send
+  icon: "material-symbols:send"
   title: "Submit"
   target:
     type: Focus
@@ -351,7 +351,7 @@ BrowserEscapeStep:
   abstract: true
   is: ScriptStep
   class: tech.kzen.auto.server.objects.script.step.browser.BrowserEscapeStep
-  icon: CancelPresentation
+  icon: "material-symbols:cancel-presentation"
   title: "Escape"
   meta:
     selfLocation: SelfLocation

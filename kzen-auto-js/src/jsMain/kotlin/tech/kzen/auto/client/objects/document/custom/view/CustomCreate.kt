@@ -13,7 +13,7 @@ import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.objects.document.custom.CustomTheme
 import tech.kzen.auto.client.objects.document.custom.model.CustomState
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.material.iconByName
+import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.model.location.ObjectLocation
 import web.cssom.*
@@ -127,7 +127,7 @@ class CustomCreate(
                 size = Size.small
                 onClick = { onAddClick() }
 
-                iconByName("AddCircleOutline") {}
+                icon("material-symbols:add-circle-outline") {}
                 span {
                     css {
                         marginLeft = 0.3.em
@@ -159,7 +159,7 @@ class CustomCreate(
                         color = CustomTheme.primary
                     }
 
-                    iconByName("AddCircleOutline") {}
+                    icon("material-symbols:add-circle-outline") {}
                     span {
                         css {
                             marginLeft = 0.3.em

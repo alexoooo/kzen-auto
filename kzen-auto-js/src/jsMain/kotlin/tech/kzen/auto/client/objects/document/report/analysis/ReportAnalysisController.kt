@@ -16,10 +16,7 @@ import tech.kzen.auto.client.objects.document.report.input.model.ReportInputStor
 import tech.kzen.auto.client.objects.document.report.output.model.ReportOutputStore
 import tech.kzen.auto.client.objects.document.report.widget.ReportBottomEgress
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.iconify.iconify
-import tech.kzen.auto.client.wrap.iconify.vaadinIconLayout
-import tech.kzen.auto.client.wrap.iconify.vaadinIconTable
-import tech.kzen.auto.client.wrap.material.iconByName
+import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.common.objects.document.report.listing.AnalysisColumnInfo
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
@@ -104,7 +101,7 @@ class ReportAnalysisController(
                     position = Position.relative
                 }
 
-                iconByName("TableChart") {
+                icon("material-symbols:table-chart") {
                     style = unsafeJso {
                         position = Position.absolute
                         fontSize = 2.5.em
@@ -153,7 +150,7 @@ class ReportAnalysisController(
                                 marginRight = 0.25.em
                                 marginBottom = (-0.25).em
                             }
-                            iconify(vaadinIconTable)
+                            icon("material-symbols:table-rows")
                         }
 
                         +"Flat Data"
@@ -176,7 +173,7 @@ class ReportAnalysisController(
                                 marginRight = 0.25.em
                                 marginBottom = (-0.25).em
                             }
-                            iconify(vaadinIconLayout)
+                            icon("material-symbols:view-quilt")
                         }
 
                         +"Pivot Table"

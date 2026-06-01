@@ -15,7 +15,7 @@ import tech.kzen.auto.client.objects.document.report.input.model.ReportInputStor
 import tech.kzen.auto.client.util.ClientInputUtils
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
-import tech.kzen.auto.client.wrap.material.iconByName
+import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.common.objects.document.report.spec.input.InputBrowserSpec
 import web.cssom.em
 import web.html.HTMLDivElement
@@ -103,7 +103,7 @@ class InputBrowserFilterController(
             InputProps = unsafeJso {
                 startAdornment = InputAdornment.create {
                     position = InputAdornmentPosition.start
-                    iconByName("Search") {}
+                    icon("material-symbols:search") {}
                 }
             }
 

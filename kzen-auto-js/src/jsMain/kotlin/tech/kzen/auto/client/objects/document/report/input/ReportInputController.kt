@@ -19,7 +19,7 @@ import tech.kzen.auto.client.objects.document.report.run.model.ReportRunProgress
 import tech.kzen.auto.client.objects.document.report.widget.ReportBottomEgress
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.material.FadeTimeout
-import tech.kzen.auto.client.wrap.material.iconByName
+import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.report.listing.InputSelectedInfo
@@ -164,7 +164,7 @@ class ReportInputController(
                     position = Position.relative
                 }
 
-                iconByName("Input") {
+                icon("material-symbols:input") {
                     style = unsafeJso {
                         position = Position.absolute
                         fontSize = 2.5.em
@@ -246,7 +246,7 @@ class ReportInputController(
                     "Show browser"
             }
 
-            iconByName("FolderOpen") {
+            icon("material-symbols:folder-open") {
                 style = unsafeJso {
                     marginRight = 0.25.em
                 }
