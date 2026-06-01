@@ -103,7 +103,6 @@ class CustomObject(
             onDragOver = ::onDragOver
             onDrop = ::onDrop
 
-            +"[x]"
             dragHandle(
                 isVisible = props.dropMarker != null,
                 handleColor = CustomTheme.mutedText,
@@ -175,6 +174,8 @@ class CustomObject(
                             this.runner = detached
                         }
                     }
+
+                    +"[foo bbb]"
 
                     if (task != null) {
                         CustomObjectTaskBody::class.react {

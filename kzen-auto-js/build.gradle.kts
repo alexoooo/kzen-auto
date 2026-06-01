@@ -9,7 +9,11 @@ plugins {
 }
 
 
-val devMode = properties.containsKey("jsWatch")
+// Read via providers.gradleProperty (tracked by the configuration cache), NOT properties.containsKey
+// (reads the untracked legacy project-properties map). With containsKey, a cached config entry built
+// without -PjsWatch is silently reused on later -PjsWatch runs, so the dev loop bundles the minified
+// production executable instead of the development one and edits never reach the screen.
+val devMode = providers.gradleProperty("jsWatch").isPresent
 
 
 kotlin {
@@ -112,8 +116,14 @@ yarn.ignoreScripts = false
 // (no more require.context bundling the whole @mui/icons-material set), esbuild can bundle it.
 
 val npmPackageName = "${rootProject.name}-${project.name}"
-val esbuildEntry = rootProject.layout.buildDirectory
-    .file("js/packages/$npmPackageName/kotlin/$npmPackageName.js")
+// The compileSync output dir holds one .js per Gradle module (kotlin-kotlin-stdlib.js,
+// kzen-auto-kzen-auto-common.js, kzen-lib-kzen-lib.js, …); the entry only require()s them. Declare the
+// whole dir as the task input — NOT just the entry file — so a change in any dependency module
+// (kzen-auto-common, kzen-lib) re-triggers the bundle. With only inputs.file(entry), such a change
+// lands in a sibling file, the entry stays byte-identical, and jsEsbuildBundle wrongly stays UP-TO-DATE.
+val esbuildInputDir = rootProject.layout.buildDirectory
+    .dir("js/packages/$npmPackageName/kotlin")
+val esbuildEntry = esbuildInputDir.map { it.file("$npmPackageName.js") }
 val esbuildOutFile = layout.buildDirectory
     .file("dist/js/productionExecutable/${project.name}.js")
 
@@ -145,7 +155,7 @@ val jsEsbuildBundle = tasks.register<Exec>("jsEsbuildBundle") {
     // fail with "Could not resolve react". webpack's bundle task depended on kotlinNpmInstall for this.
     dependsOn(rootProject.tasks.named("kotlinNpmInstall"))
 
-    inputs.file(esbuildEntry)
+    inputs.dir(esbuildInputDir)
     outputs.file(esbuildOutFile)
 
     val invocation = buildList {
