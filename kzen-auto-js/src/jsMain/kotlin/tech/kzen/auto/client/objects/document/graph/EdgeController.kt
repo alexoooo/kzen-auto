@@ -8,7 +8,6 @@ import react.State
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.graph.edge.BottomEgress
 import tech.kzen.auto.client.objects.document.graph.edge.TopIngress
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.iconify.icon
@@ -30,11 +29,14 @@ import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.cqrs.RemoveInAttributeCommand
 import tech.kzen.lib.common.service.notation.NotationConventions
+import tech.kzen.lib.common.service.store.MirroredGraphStore
 import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------
 external interface EdgeControllerProps: Props {
+    var mirroredGraphStore: MirroredGraphStore
+
     var cellDescriptor: EdgeDescriptor
 
     var documentPath: DocumentPath
@@ -100,7 +102,7 @@ class EdgeController(
                     GraphDocument.edgesAttributeName,
                     props.attributeNesting)
 
-            ClientContext.mirroredGraphStore.apply(RemoveInAttributeCommand(
+            props.mirroredGraphStore.apply(RemoveInAttributeCommand(
                     sourceMain, objectAttributePath, false))
         }
     }

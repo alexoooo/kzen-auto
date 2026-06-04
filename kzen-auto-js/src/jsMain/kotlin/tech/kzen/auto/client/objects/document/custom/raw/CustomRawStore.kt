@@ -1,7 +1,6 @@
 package tech.kzen.auto.client.objects.document.custom.raw
 
 import tech.kzen.auto.client.objects.document.custom.model.CustomStore
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.lib.common.model.structure.notation.cqrs.SetDocumentObjectsCommand
 import tech.kzen.lib.common.service.store.MirroredGraphError
@@ -13,7 +12,7 @@ class CustomRawStore(
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     fun onEditorChange(newValue: String) {
-        parent.update { it.withRaw { raw -> raw.copy(editorValue = newValue) } }
+        parent.update { it.withRaw(parent.notationParser) { raw -> raw.copy(editorValue = newValue) } }
     }
 
 
@@ -28,27 +27,31 @@ class CustomRawStore(
         val payload = snapshot.raw.editorValue
         val documentPath = snapshot.documentPath
 
-        parent.update { it.withRaw { raw -> raw.copy(saving = true, lastError = null) } }
+        parent.update { it.withRaw(parent.notationParser) { raw -> raw.copy(saving = true, lastError = null) } }
 
         async {
             val parsed = try {
-                ClientContext.notationParser.parseDocumentObjects(payload)
+                parent.notationParser.parseDocumentObjects(payload)
             }
             catch (e: Throwable) {
-                parent.update { it.withRaw { raw -> raw.copy(saving = false, lastError = e.message ?: e.toString()) } }
+                parent.update {
+                    it.withRaw(parent.notationParser) { raw ->
+                        raw.copy(saving = false, lastError = e.message ?: e.toString())
+                    }
+                }
                 return@async
             }
 
-            val result = ClientContext.mirroredGraphStore.apply(
+            val result = parent.mirroredGraphStore.apply(
                 SetDocumentObjectsCommand(documentPath, parsed))
 
             when (result) {
                 is MirroredGraphSuccess ->
-                    parent.update { it.withRaw { raw -> raw.copy(saving = false) } }
+                    parent.update { it.withRaw(parent.notationParser) { raw -> raw.copy(saving = false) } }
 
                 is MirroredGraphError ->
                     parent.update {
-                        it.withRaw { raw ->
+                        it.withRaw(parent.notationParser) { raw ->
                             raw.copy(saving = false, lastError = result.error.message ?: result.error.toString())
                         }
                     }

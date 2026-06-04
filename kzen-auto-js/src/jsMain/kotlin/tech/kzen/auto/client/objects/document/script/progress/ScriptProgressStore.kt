@@ -1,7 +1,6 @@
 package tech.kzen.auto.client.objects.document.script.progress
 
 import tech.kzen.auto.client.objects.document.script.model.ScriptStore
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.ClientError
 import tech.kzen.auto.client.util.ClientResult
 import tech.kzen.auto.client.util.ClientSuccess
@@ -73,7 +72,7 @@ class ScriptProgressStore(
         logicExecutionId: LogicExecutionId,
         logicTraceQuery: LogicTraceQuery
     ): ClientResult<LogicTraceSnapshot> {
-        val result = ClientContext.restClient.performDetached(
+        val result = scriptStore.restClient.performDetached(
             LogicConventions.logicTraceEndpointLocation,
             CommonRestApi.paramAction to LogicConventions.actionLookup,
             CommonRestApi.paramRunId to logicRunId.value,
@@ -127,7 +126,7 @@ class ScriptProgressStore(
     private suspend fun mostRecentQuery(): ClientResult<ScriptProgressState.MostRecentResult> {
         val mainLocation = scriptStore.mainLocation()
 
-        val result = ClientContext.restClient.performDetached(
+        val result = scriptStore.restClient.performDetached(
             LogicConventions.logicTraceEndpointLocation,
             CommonRestApi.paramAction to LogicConventions.actionMostRecent,
             LogicConventions.paramSubDocumentPath to mainLocation.documentPath.asString(),
@@ -189,7 +188,7 @@ class ScriptProgressStore(
     private suspend fun clearCommand(): ClientResult<Boolean> {
         val mainLocation = scriptStore.mainLocation()
 
-        val result = ClientContext.restClient.performDetached(
+        val result = scriptStore.restClient.performDetached(
             LogicConventions.logicTraceEndpointLocation,
             CommonRestApi.paramAction to LogicConventions.actionReset,
             LogicConventions.paramSubDocumentPath to mainLocation.documentPath.asString(),

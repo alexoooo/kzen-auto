@@ -9,7 +9,7 @@ import react.Props
 import react.State
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.custom.CustomTheme
-import tech.kzen.auto.client.service.ClientContext
+import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.iconify.icon
@@ -23,7 +23,9 @@ import web.cssom.em
 
 
 //---------------------------------------------------------------------------------------------------------------------
-class CustomObjectDetachedRunner {
+class CustomObjectDetachedRunner(
+    private val restClient: ClientRestApi
+) {
     private val observers = mutableSetOf<() -> Unit>()
 
     var running: Boolean = false
@@ -50,7 +52,7 @@ class CustomObjectDetachedRunner {
         running = true
         notifyObservers()
         async {
-            val result = ClientContext.restClient.performDetached(objectLocation)
+            val result = restClient.performDetached(objectLocation)
             running = false
             lastResult = result
             notifyObservers()

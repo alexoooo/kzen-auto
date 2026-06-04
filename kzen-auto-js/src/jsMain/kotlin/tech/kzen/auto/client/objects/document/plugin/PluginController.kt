@@ -11,9 +11,9 @@ import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.objects.document.graph.edit.AttributePathValueEditorOld
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
+import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.react
@@ -25,10 +25,19 @@ import tech.kzen.lib.common.exec.ExecutionSuccess
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.reflect.Service
+import tech.kzen.lib.common.service.store.MirroredGraphStore
 import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------
+external interface PluginControllerProps: Props {
+    var clientStateGlobal: ClientStateGlobal
+    var restClient: ClientRestApi
+    var mirroredGraphStore: MirroredGraphStore
+}
+
+
 external interface PluginControllerState: State {
     var clientState: ClientState?
     var detailList: List<ReportDefinerDetail>?
@@ -39,9 +48,9 @@ external interface PluginControllerState: State {
 //---------------------------------------------------------------------------------------------------------------------
 @Suppress("unused")
 class PluginController(
-    props: Props
+    props: PluginControllerProps
 ):
-    RPureComponent<Props, PluginControllerState>(props),
+    RPureComponent<PluginControllerProps, PluginControllerState>(props),
     ClientStateGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -73,7 +82,10 @@ class PluginController(
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
-        private val archetype: ObjectLocation
+        private val archetype: ObjectLocation,
+        @Service private val clientStateGlobal: ClientStateGlobal,
+        @Service private val restClient: ClientRestApi,
+        @Service private val mirroredGraphStore: MirroredGraphStore
     ):
         DocumentController
     {
@@ -93,6 +105,9 @@ class PluginController(
             return object: ReactWrapper<Props> {
                 override fun ChildrenBuilder.child(block: Props.() -> Unit) {
                     PluginController::class.react {
+                        clientStateGlobal = this@Wrapper.clientStateGlobal
+                        restClient = this@Wrapper.restClient
+                        mirroredGraphStore = this@Wrapper.mirroredGraphStore
                         block()
                     }
                 }
@@ -102,7 +117,7 @@ class PluginController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun PluginControllerState.init(props: Props) {
+    override fun PluginControllerState.init(props: PluginControllerProps) {
         clientState = null
         detailList = null
         listingError = null
@@ -111,16 +126,16 @@ class PluginController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
-        ClientContext.clientStateGlobal.observe(this)
+        props.clientStateGlobal.observe(this)
     }
 
 
     override fun componentWillUnmount() {
-        ClientContext.clientStateGlobal.unobserve(this)
+        props.clientStateGlobal.unobserve(this)
     }
 
 
-    override fun componentDidUpdate(prevProps: Props, prevState: PluginControllerState, snapshot: Any) {
+    override fun componentDidUpdate(prevProps: PluginControllerProps, prevState: PluginControllerState, snapshot: Any) {
         val clientState = state.clientState
             ?: return
 
@@ -149,7 +164,7 @@ class PluginController(
             ?: return
 
         async {
-            val result = ClientContext.restClient.performDetached(mainObjectLocation)
+            val result = props.restClient.performDetached(mainObjectLocation)
 
             when (result) {
                 is ExecutionSuccess -> {
@@ -202,6 +217,8 @@ class PluginController(
             attributePath = PluginConventions.jarPathAttributeName.asAttributePath()
 
             valueType = TypeMetadata.long
+
+            mirroredGraphStore = props.mirroredGraphStore
 
             onChange = {
                 loadInfo()

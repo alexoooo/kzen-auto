@@ -16,7 +16,6 @@ import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
 import tech.kzen.auto.client.objects.document.script.display.ScriptStepSlot
 import tech.kzen.auto.client.objects.document.script.display.StepDisplayManager
 import tech.kzen.auto.client.objects.document.script.display.image.StepImageThumbnail
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.global.InsertionGlobal
@@ -35,6 +34,8 @@ import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.PositionRelation
 import tech.kzen.lib.common.model.structure.notation.cqrs.ShiftInAttributeCommand
+import tech.kzen.lib.common.service.store.MirroredGraphStore
+import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import web.cssom.AlignItems
 import web.cssom.Color
 import web.cssom.Display
@@ -54,6 +55,11 @@ external interface StepListDisplayProps: Props {
 
     var stepDisplayManager: StepDisplayManager.Wrapper
     var scriptCommander: ScriptCommander
+
+    var clientStateGlobal: ClientStateGlobal
+    var insertionGlobal: InsertionGlobal
+    var mirroredGraphStore: MirroredGraphStore
+    var objectStableMapper: ObjectStableMapper
 }
 
 
@@ -102,14 +108,14 @@ class ScriptBranchDisplay(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
-        ClientContext.clientStateGlobal.observe(this)
-        ClientContext.insertionGlobal.subscribe(this)
+        props.clientStateGlobal.observe(this)
+        props.insertionGlobal.subscribe(this)
     }
 
 
     override fun componentWillUnmount() {
-        ClientContext.insertionGlobal.unsubscribe(this)
-        ClientContext.clientStateGlobal.unobserve(this)
+        props.insertionGlobal.unsubscribe(this)
+        props.clientStateGlobal.unobserve(this)
     }
 
 
@@ -159,10 +165,10 @@ class ScriptBranchDisplay(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onCreate(index: Int) {
-        val graphStructure = ClientContext.clientStateGlobal.current()?.graphStructure()
+        val graphStructure = props.clientStateGlobal.current()?.graphStructure()
             ?: return
 
-        val archetypeObjectLocation = ClientContext.insertionGlobal
+        val archetypeObjectLocation = props.insertionGlobal
             .getAndClearSelection()
             ?: return
 
@@ -175,7 +181,7 @@ class ScriptBranchDisplay(
 
         async {
             for (command in commands) {
-                ClientContext.mirroredGraphStore.apply(command)
+                props.mirroredGraphStore.apply(command)
             }
         }
     }
@@ -250,7 +256,7 @@ class ScriptBranchDisplay(
             props.attributeLocation.attributePath.nesting.push(AttributeSegment.ofIndex(source)))
 
         async {
-            ClientContext.mirroredGraphStore.apply(ShiftInAttributeCommand(
+            props.mirroredGraphStore.apply(ShiftInAttributeCommand(
                 props.attributeLocation.objectLocation,
                 sourceAttributePath,
                 PositionRelation.at(newIndex)))
@@ -362,6 +368,8 @@ class ScriptBranchDisplay(
             if (stepLocation != null) {
                 StepImageThumbnail::class.react {
                     objectLocation = stepLocation
+                    objectStableMapper = props.objectStableMapper
+                    clientStateGlobal = props.clientStateGlobal
                 }
             }
         }

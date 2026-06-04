@@ -9,7 +9,6 @@ import react.Key
 import react.ReactNode
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.api.ReactWrapper
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.util.async
@@ -27,7 +26,9 @@ import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.service.store.LocalGraphStore
+import tech.kzen.lib.common.service.store.MirroredGraphStore
 import web.cssom.Color
 import web.cssom.NamedColor
 import web.cssom.em
@@ -37,6 +38,9 @@ import web.cssom.em
 external interface RibbonControllerProps: react.Props {
     var actionTypes: List<ObjectLocation>
     var ribbonGroups: List<RibbonGroup>
+    var insertionGlobal: InsertionGlobal
+    var navigationGlobal: NavigationGlobal
+    var mirroredGraphStore: MirroredGraphStore
 }
 
 
@@ -67,12 +71,18 @@ class RibbonController(
     @Reflect
     class Wrapper(
         private val actionTypes: List<ObjectLocation>,
-        private val ribbonGroups: List<RibbonGroup>
+        private val ribbonGroups: List<RibbonGroup>,
+        @Service private val insertionGlobal: InsertionGlobal,
+        @Service private val navigationGlobal: NavigationGlobal,
+        @Service private val mirroredGraphStore: MirroredGraphStore
     ): ReactWrapper<RibbonControllerProps> {
         override fun ChildrenBuilder.child(block: RibbonControllerProps.() -> Unit) {
             RibbonController::class.react {
                 actionTypes = this@Wrapper.actionTypes
                 ribbonGroups = this@Wrapper.ribbonGroups
+                insertionGlobal = this@Wrapper.insertionGlobal
+                navigationGlobal = this@Wrapper.navigationGlobal
+                mirroredGraphStore = this@Wrapper.mirroredGraphStore
                 block()
             }
         }
@@ -93,18 +103,18 @@ class RibbonController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
-        ClientContext.insertionGlobal.subscribe(this)
-        ClientContext.navigationGlobal.observe(this)
+        props.insertionGlobal.subscribe(this)
+        props.navigationGlobal.observe(this)
         async {
-            ClientContext.mirroredGraphStore.observe(this)
+            props.mirroredGraphStore.observe(this)
         }
     }
 
 
     override fun componentWillUnmount() {
-        ClientContext.insertionGlobal.unsubscribe(this)
-        ClientContext.navigationGlobal.unobserve(this)
-        ClientContext.mirroredGraphStore.unobserve(this)
+        props.insertionGlobal.unsubscribe(this)
+        props.navigationGlobal.unobserve(this)
+        props.mirroredGraphStore.unobserve(this)
     }
 
 
@@ -208,12 +218,12 @@ class RibbonController(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onUnSelect() {
-        ClientContext.insertionGlobal.clearSelection()
+        props.insertionGlobal.clearSelection()
     }
 
 
     private fun onSelect(actionType: ObjectLocation) {
-        ClientContext.insertionGlobal.setSelected(actionType)
+        props.insertionGlobal.setSelected(actionType)
     }
 
 

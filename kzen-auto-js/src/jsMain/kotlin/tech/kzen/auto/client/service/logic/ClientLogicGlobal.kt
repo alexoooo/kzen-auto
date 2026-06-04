@@ -1,7 +1,6 @@
 package tech.kzen.auto.client.service.logic
 
 import kotlinx.coroutines.delay
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.FunctionWithDebounce
@@ -127,10 +126,10 @@ class ClientLogicGlobal(
             delay(1)
             val logicRunId =
                 if (paused) {
-                    ClientContext.restClient.logicStartAndStep(mainLocation, pauseOnError)
+                    restClient.logicStartAndStep(mainLocation, pauseOnError)
                 }
                 else {
-                    ClientContext.restClient.logicStartAndRun(mainLocation, pauseOnError)
+                    restClient.logicStartAndRun(mainLocation, pauseOnError)
                 }
 
             clientLogicState = clientLogicState.copy(
@@ -163,7 +162,7 @@ class ClientLogicGlobal(
 
         async {
             delay(1)
-            val response = ClientContext.restClient.logicPause(logicRunId)
+            val response = restClient.logicPause(logicRunId)
 
             clientLogicState = clientLogicState.copy(
                 pending = ClientLogicState.Pending.None)
@@ -195,7 +194,7 @@ class ClientLogicGlobal(
 
         async {
             delay(1)
-            val response = ClientContext.restClient.logicContinueRun(logicRunId)
+            val response = restClient.logicContinueRun(logicRunId)
 
             clientLogicState = clientLogicState.copy(
                 pending = ClientLogicState.Pending.None)
@@ -227,7 +226,7 @@ class ClientLogicGlobal(
 
         async {
             delay(1)
-            val response = ClientContext.restClient.logicStep(logicRunId)
+            val response = restClient.logicStep(logicRunId)
 
             clientLogicState = clientLogicState.copy(
                 pending = ClientLogicState.Pending.None)
@@ -259,7 +258,7 @@ class ClientLogicGlobal(
 
         async {
             delay(1)
-            val response = ClientContext.restClient.logicCancel(logicRunId)
+            val response = restClient.logicCancel(logicRunId)
 
             clientLogicState = clientLogicState.copy(
                 pending = ClientLogicState.Pending.None)

@@ -83,7 +83,8 @@ class KzenAutoContext(
     //-----------------------------------------------------------------------------------------------------------------
     private val notationMetadataReader = NotationMetadataReader()
 
-    private val fileLocator: FileNotationLocator = GradleLocator()
+    private val fileLocator: FileNotationLocator = GradleLocator(
+        moduleRootOverride = config.moduleRoot)
     private val fileMedia = FileNotationMedia(fileLocator)
 
     private val readOnlyMedia: NotationMedia = runBlocking {
@@ -193,6 +194,7 @@ class KzenAutoContext(
     // definitionRepository) are already built when it is first accessed at request/run time.
     val graphEnvironment: GraphEnvironment by lazy {
         GraphEnvironment.builder()
+            .put(ClassName(KzenAutoConfig::class.qualifiedName!!), config)
             .put(ClassName(GraphCreator::class.qualifiedName!!), graphCreator)
             .put(ClassName(ObjectStableMapper::class.qualifiedName!!), objectStableMapper)
             .put(ClassName(CachedKotlinCompiler::class.qualifiedName!!), cachedKotlinCompiler)

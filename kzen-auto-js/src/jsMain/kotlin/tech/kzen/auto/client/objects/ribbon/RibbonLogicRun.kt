@@ -7,9 +7,9 @@ import react.*
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.hr
 import react.dom.html.ReactHTML.span
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
+import tech.kzen.auto.client.service.logic.ClientLogicGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.createRef
 import tech.kzen.auto.client.wrap.iconify.icon
@@ -24,6 +24,12 @@ import web.html.HTMLElement
 
 
 //---------------------------------------------------------------------------------------------------------------------
+external interface RibbonLogicRunProps: Props {
+    var clientStateGlobal: ClientStateGlobal
+    var clientLogicGlobal: ClientLogicGlobal
+}
+
+
 external interface RibbonLogicRunState: State {
     var runnable: Boolean
     var active: Boolean
@@ -40,9 +46,9 @@ external interface RibbonLogicRunState: State {
 //---------------------------------------------------------------------------------------------------------------------
 @Suppress("ConstPropertyName")
 class RibbonLogicRun (
-    props: Props
+    props: RibbonLogicRunProps
 ):
-    RPureComponent<Props, RibbonLogicRunState>(props),
+    RPureComponent<RibbonLogicRunProps, RibbonLogicRunState>(props),
     ClientStateGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -64,7 +70,7 @@ class RibbonLogicRun (
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun RibbonLogicRunState.init(props: Props) {
+    override fun RibbonLogicRunState.init(props: RibbonLogicRunProps) {
         runnable = false
         active = false
         executing = false
@@ -76,7 +82,7 @@ class RibbonLogicRun (
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
-        ClientContext.clientStateGlobal.observe(this)
+        props.clientStateGlobal.observe(this)
 
 //        async {
 //            ClientContext.executionRepository.observe(this)
@@ -95,7 +101,7 @@ class RibbonLogicRun (
 
     override fun componentWillUnmount() {
 //        ClientContext.executionRepository.unobserve(this)
-        ClientContext.clientStateGlobal.unobserve(this)
+        props.clientStateGlobal.unobserve(this)
     }
 
 
@@ -176,27 +182,27 @@ class RibbonLogicRun (
         when (action) {
             actionRunOrPause -> {
                 if (executing) {
-                    ClientContext.clientLogicGlobal.pauseAsync()
+                    props.clientLogicGlobal.pauseAsync()
                 }
                 else if (active) {
-                    ClientContext.clientLogicGlobal.continueRunAsync()
+                    props.clientLogicGlobal.continueRunAsync()
                 }
                 else {
-                    ClientContext.clientLogicGlobal.startAndRunAsync(
+                    props.clientLogicGlobal.startAndRunAsync(
                         mainObjectLocation, false, state.pauseOnError)
                 }
             }
 
             actionStop -> {
-                ClientContext.clientLogicGlobal.stopAsync()
+                props.clientLogicGlobal.stopAsync()
             }
 
             actionStep -> {
                 if (active) {
-                    ClientContext.clientLogicGlobal.stepAsync()
+                    props.clientLogicGlobal.stepAsync()
                 }
                 else {
-                    ClientContext.clientLogicGlobal.startAndRunAsync(
+                    props.clientLogicGlobal.startAndRunAsync(
                         mainObjectLocation, true, state.pauseOnError)
                 }
             }

@@ -12,7 +12,6 @@ import react.State
 import react.dom.events.KeyboardEvent
 import react.dom.html.ReactHTML.div
 import react.dom.onChange
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.ClientInputUtils
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
@@ -22,6 +21,7 @@ import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.model.document.DocumentName
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.structure.notation.cqrs.RenameDocumentRefactorCommand
+import tech.kzen.lib.common.service.store.MirroredGraphStore
 import web.cssom.*
 import web.html.HTMLInputElement
 
@@ -29,6 +29,7 @@ import web.html.HTMLInputElement
 //---------------------------------------------------------------------------------------------------------------------
 external interface DocumentNameEditorProps : PropsWithRef<DocumentNameEditor> {
     var documentPath: DocumentPath
+    var mirroredGraphStore: MirroredGraphStore
 
     var initialEditing: Boolean
     var onEditing: (Boolean) -> Unit
@@ -148,7 +149,7 @@ class DocumentNameEditor(
         props.onEditing(false)
 
         async {
-            ClientContext.mirroredGraphStore.apply(RenameDocumentRefactorCommand(
+            props.mirroredGraphStore.apply(RenameDocumentRefactorCommand(
                     props.documentPath, nameWithExtension))
 
             // NB: no need to set saving = false, the component will un-mount

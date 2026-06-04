@@ -8,12 +8,14 @@ import react.ChildrenBuilder
 import react.Props
 import react.State
 import react.dom.html.ReactHTML.div
-import tech.kzen.auto.client.service.ClientContext
+import tech.kzen.auto.client.service.global.ExecutionIntentGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
+import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowLoop
+import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowRepository
 import tech.kzen.auto.common.paradigm.dataflow.util.DataflowUtils
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.structure.GraphStructure
@@ -27,6 +29,10 @@ external interface GraphRunControllerProps: Props {
     var documentPath: DocumentPath?
     var graphStructure: GraphStructure?
     var visualDataflowModel: VisualDataflowModel?
+
+    var executionIntentGlobal: ExecutionIntentGlobal
+    var visualDataflowRepository: VisualDataflowRepository
+    var visualDataflowLoop: VisualDataflowLoop
 }
 
 
@@ -61,7 +67,7 @@ class GraphRunController(
         if (props.visualDataflowModel != prevProps.visualDataflowModel) {
             // NB: only update executionIntent to next-to-run
 
-            if (ClientContext.executionIntentGlobal.actionLocation() == null) {
+            if (props.executionIntentGlobal.actionLocation() == null) {
                 return
             }
 
@@ -71,10 +77,10 @@ class GraphRunController(
                     props.visualDataflowModel!!)
 
             if (nextToRun != null) {
-                ClientContext.executionIntentGlobal.set(nextToRun)
+                props.executionIntentGlobal.set(nextToRun)
             }
             else {
-                ClientContext.executionIntentGlobal.clear()
+                props.executionIntentGlobal.clear()
             }
         }
     }
@@ -103,19 +109,19 @@ class GraphRunController(
         }
 //        console.log("^$%^$%^% onFabEnter - $nextToRun - ${state.visualDataflowModel}")
 
-        if (nextToRun == ClientContext.executionIntentGlobal.actionLocation()) {
+        if (nextToRun == props.executionIntentGlobal.actionLocation()) {
             return
         }
 
 //        println("^$%^$%^% onRunAllEnter - ${state.execution} - $nextToRun")
         if (nextToRun != null) {
-            ClientContext.executionIntentGlobal.set(nextToRun)
+            props.executionIntentGlobal.set(nextToRun)
         }
     }
 
 
     private fun onRunLeave() {
-        ClientContext.executionIntentGlobal.clear()
+        props.executionIntentGlobal.clear()
 ////        val nextToRun = state.execution?.next()
 //        val nextToRun = state.visualDataflowModel?.let {
 //            DataflowUtils.next(
@@ -142,7 +148,7 @@ class GraphRunController(
         }
 
         // NB: could be stale due to async
-        val isLooping = ClientContext.visualDataflowLoop.isLooping(host)
+        val isLooping = props.visualDataflowLoop.isLooping(host)
 
         if (visualDataflowModel.isRunning()) {
             if (isLooping) {
@@ -188,7 +194,7 @@ class GraphRunController(
         ) ?: return
 
         async {
-            ClientContext.visualDataflowRepository.execute(
+            props.visualDataflowRepository.execute(
                     documentPath,
                     nextToRun,
                     0,
@@ -202,13 +208,13 @@ class GraphRunController(
         val host = props.documentPath
                 ?: return
 
-        if (ClientContext.visualDataflowLoop.isLooping(host)) {
+        if (props.visualDataflowLoop.isLooping(host)) {
             return
         }
 
         async {
-            ClientContext.executionIntentGlobal.clear()
-            ClientContext.visualDataflowLoop.loop(host)
+            props.executionIntentGlobal.clear()
+            props.visualDataflowLoop.loop(host)
         }
     }
 
@@ -218,11 +224,11 @@ class GraphRunController(
         val host = props.documentPath
                 ?: return
 
-        if (!ClientContext.visualDataflowLoop.isLooping(host)) {
+        if (!props.visualDataflowLoop.isLooping(host)) {
             return
         }
 
-        ClientContext.visualDataflowLoop.pause(host)
+        props.visualDataflowLoop.pause(host)
     }
 
 
@@ -230,11 +236,11 @@ class GraphRunController(
         val host = props.documentPath
                 ?: return
 
-        ClientContext.executionIntentGlobal.clear()
+        props.executionIntentGlobal.clear()
         onPause()
 
         async {
-            ClientContext.visualDataflowRepository.reset(host)
+            props.visualDataflowRepository.reset(host)
         }
     }
 

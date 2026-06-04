@@ -8,6 +8,7 @@ import tech.kzen.auto.client.objects.document.script.step.header.StepHeader
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.common.objects.document.script.model.StepTrace
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.service.store.MirroredGraphStore
 import web.cssom.NamedColor
 import web.cssom.Overflow
 import web.cssom.Padding
@@ -27,6 +28,7 @@ fun ChildrenBuilder.branchHeaderSlab(
     title: String,
     trace: StepTrace?,
     isNextToRun: Boolean,
+    mirroredGraphStore: MirroredGraphStore,
     body: ChildrenBuilder.() -> Unit
 ) {
     val traceState = trace?.state ?: StepTrace.State.Idle
@@ -65,6 +67,7 @@ fun ChildrenBuilder.branchHeaderSlab(
                 this.icon = icon
                 this.description = description
                 this.title = title
+                this.mirroredGraphStore = mirroredGraphStore
             }
         }
 

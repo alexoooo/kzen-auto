@@ -15,6 +15,7 @@ import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.service.notation.NotationConventions
+import tech.kzen.lib.common.service.store.MirroredGraphStore
 import web.cssom.*
 
 
@@ -23,6 +24,7 @@ external interface StepNameEditorProps: react.Props {
     var objectLocation: ObjectLocation
     var description: String
     var title: String
+    var mirroredGraphStore: MirroredGraphStore
 }
 
 
@@ -199,6 +201,7 @@ class StepNameEditor(
             ObjectNameEditor::class.react {
                 objectLocation = props.objectLocation
                 onClose = ::onCloseEdit
+                mirroredGraphStore = props.mirroredGraphStore
             }
         }
     }

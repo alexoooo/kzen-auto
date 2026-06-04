@@ -11,7 +11,7 @@ import react.Key
 import react.RefObject
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
-import tech.kzen.auto.client.service.ClientContext
+import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RComponent
 import tech.kzen.auto.client.wrap.createRef
@@ -23,6 +23,7 @@ import tech.kzen.lib.common.model.document.DocumentName
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.structure.notation.cqrs.CreateDocumentCommand
 import tech.kzen.lib.common.service.notation.NotationConventions
+import tech.kzen.lib.common.service.store.MirroredGraphStore
 import tech.kzen.lib.common.util.naming.NextAvailableName
 import web.cssom.*
 import web.html.HTMLElement
@@ -34,6 +35,8 @@ import kotlin.random.Random
 external interface SidebarFolderProps: react.Props {
     var sidebarModel: SidebarModel
     var selectedDocumentPath: DocumentPath?
+    var navigationGlobal: NavigationGlobal
+    var mirroredGraphStore: MirroredGraphStore
 }
 
 
@@ -169,7 +172,7 @@ class SidebarFolder(
     ) {
         val newDocument = DocumentCreator.newDocument(archetype.location)
 
-        ClientContext.mirroredGraphStore.apply(
+        props.mirroredGraphStore.apply(
             CreateDocumentCommand(documentPath, newDocument))
     }
 
@@ -336,6 +339,8 @@ class SidebarFolder(
                 archetypeInfo = archetype
                 this.documentPath = documentPath
                 selected = (documentPath == props.selectedDocumentPath)
+                navigationGlobal = props.navigationGlobal
+                mirroredGraphStore = props.mirroredGraphStore
             }
         }
     }

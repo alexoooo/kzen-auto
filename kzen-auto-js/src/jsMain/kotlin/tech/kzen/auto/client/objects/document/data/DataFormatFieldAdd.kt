@@ -11,7 +11,6 @@ import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.onChange
 import tech.kzen.auto.client.objects.ProjectController
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.ClientInputUtils
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
@@ -20,6 +19,7 @@ import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.data.spec.FieldFormatListSpec
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.service.store.MirroredGraphError
+import tech.kzen.lib.common.service.store.MirroredGraphStore
 import web.cssom.Display
 import web.cssom.NamedColor
 import web.cssom.VerticalAlign
@@ -29,6 +29,7 @@ import web.html.HTMLInputElement
 //---------------------------------------------------------------------------------------------------------------------
 external interface DataFormatFieldAddProps: Props {
     var objectLocation: ObjectLocation
+    var mirroredGraphStore: MirroredGraphStore
 }
 
 
@@ -89,7 +90,7 @@ class DataFormatFieldAdd(
     private suspend fun addSync(fieldName: String) {
         val command = FieldFormatListSpec.addCommand(props.objectLocation, fieldName)
 
-        val result = ClientContext.mirroredGraphStore.apply(
+        val result = props.mirroredGraphStore.apply(
             command, ProjectController.suppressErrorDisplay)
 
         val error = (result as? MirroredGraphError)

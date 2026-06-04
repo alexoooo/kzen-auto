@@ -4,7 +4,6 @@ import kotlinx.coroutines.delay
 import tech.kzen.auto.client.objects.document.report.input.browse.model.InputBrowserStore
 import tech.kzen.auto.client.objects.document.report.input.select.model.InputSelectedStore
 import tech.kzen.auto.client.objects.document.report.model.ReportStore
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.ClientResult
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.common.objects.document.report.ReportConventions
@@ -111,7 +110,7 @@ class ReportInputStore(
 
 
     private suspend fun listColumnsRequest(): ClientResult<AnalysisColumnInfo> {
-        val result = ClientContext.restClient.performDetached(
+        val result = store.restClient.performDetached(
             store.mainLocation(),
             ReportConventions.paramAction to ReportConventions.actionListColumns)
 

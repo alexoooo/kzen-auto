@@ -3,7 +3,6 @@ package tech.kzen.auto.client.objects.document.common.attribute
 import react.ChildrenBuilder
 import react.State
 import tech.kzen.auto.client.api.ReactWrapper
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
@@ -13,6 +12,7 @@ import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.structure.metadata.AttributeMetadata
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.reflect.Service
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -43,13 +43,15 @@ class AttributeViewManager(
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
-        private val attributeViews: List<AttributeView>
+        private val attributeViews: List<AttributeView>,
+        @Service private val clientStateGlobal: ClientStateGlobal
     ):
         ReactWrapper<AttributeViewManagerProps>
     {
         override fun ChildrenBuilder.child(block: AttributeViewManagerProps.() -> Unit) {
             AttributeViewManager::class.react {
                 this.attributeViews = this@Wrapper.attributeViews
+                clientStateGlobal = this@Wrapper.clientStateGlobal
                 block()
             }
         }
@@ -58,12 +60,12 @@ class AttributeViewManager(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
-        ClientContext.clientStateGlobal.observe(this)
+        props.clientStateGlobal.observe(this)
     }
 
 
     override fun componentWillUnmount() {
-        ClientContext.clientStateGlobal.unobserve(this)
+        props.clientStateGlobal.unobserve(this)
     }
 
 

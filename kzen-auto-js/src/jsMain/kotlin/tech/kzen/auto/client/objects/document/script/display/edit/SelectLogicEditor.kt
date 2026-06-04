@@ -8,7 +8,7 @@ import react.State
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorProps
 import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
-import tech.kzen.auto.client.service.ClientContext
+import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RComponent
 import tech.kzen.auto.client.wrap.react
@@ -30,8 +30,10 @@ import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
 import tech.kzen.lib.common.model.structure.notation.cqrs.RenamedDocumentRefactorEvent
 import tech.kzen.lib.common.model.structure.notation.cqrs.UpsertAttributeCommand
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.common.service.store.LocalGraphStore
+import tech.kzen.lib.common.service.store.MirroredGraphStore
 import web.cssom.em
 
 
@@ -56,12 +58,16 @@ class SelectLogicEditor(
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
-        objectLocation: ObjectLocation
+        objectLocation: ObjectLocation,
+        @Service private val clientStateGlobal: ClientStateGlobal,
+        @Service private val mirroredGraphStore: MirroredGraphStore
     ):
         AttributeEditor(objectLocation)
     {
         override fun ChildrenBuilder.child(block: AttributeEditorProps.() -> Unit) {
             SelectLogicEditor::class.react {
+                clientStateGlobal = this@Wrapper.clientStateGlobal
+                mirroredGraphStore = this@Wrapper.mirroredGraphStore
                 block()
             }
         }
@@ -70,7 +76,7 @@ class SelectLogicEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun SelectLogicEditorState.init(props: AttributeEditorProps) {
-        val graphStructure = ClientContext.clientStateGlobal.current()!!.graphStructure()
+        val graphStructure = props.clientStateGlobal.current()!!.graphStructure()
         val graphNotation = graphStructure.graphNotation
         val graphMetadata = graphStructure.graphMetadata
 
@@ -139,13 +145,13 @@ class SelectLogicEditor(
 
     override fun componentDidMount() {
         async {
-            ClientContext.mirroredGraphStore.observe(this)
+            props.mirroredGraphStore.observe(this)
         }
     }
 
 
     override fun componentWillUnmount() {
-        ClientContext.mirroredGraphStore.unobserve(this)
+        props.mirroredGraphStore.unobserve(this)
     }
 
 
@@ -185,7 +191,7 @@ class SelectLogicEditor(
 
 
     private fun updateOptions() {
-        val graphStructure = ClientContext.clientStateGlobal.current()!!.graphStructure()
+        val graphStructure = props.clientStateGlobal.current()!!.graphStructure()
         val graphNotation = graphStructure.graphNotation
         val graphMetadata = graphStructure.graphMetadata
         setState {
@@ -213,7 +219,7 @@ class SelectLogicEditor(
         val value = state.value
                 ?: return
 
-        ClientContext.mirroredGraphStore.apply(UpsertAttributeCommand(
+        props.mirroredGraphStore.apply(UpsertAttributeCommand(
                 props.objectLocation,
                 props.attributeName,
                 ScalarAttributeNotation(value.asString())))

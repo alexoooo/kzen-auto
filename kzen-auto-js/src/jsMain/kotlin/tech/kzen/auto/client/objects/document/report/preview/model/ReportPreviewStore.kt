@@ -1,7 +1,6 @@
 package tech.kzen.auto.client.objects.document.report.preview.model
 
 import tech.kzen.auto.client.objects.document.report.model.ReportStore
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.ClientResult
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.common.objects.document.report.ReportConventions
@@ -12,11 +11,17 @@ import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
 import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.exec.ExecutionSuccess
+import tech.kzen.lib.common.service.store.MirroredGraphStore
 
 
 class ReportPreviewStore(
     private val store: ReportStore
 ) {
+    //-----------------------------------------------------------------------------------------------------------------
+    val mirroredGraphStore: MirroredGraphStore
+        get() = store.mirroredGraphStore
+
+
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun init() {
         lookupSummaryWithFallback()
@@ -86,7 +91,7 @@ class ReportPreviewStore(
         logicRunId: LogicRunId,
         logicExecutionId: LogicExecutionId
     ): ClientResult<TableSummary> {
-        val result = ClientContext.restClient.logicRequest(
+        val result = store.restClient.logicRequest(
             logicRunId,
             logicExecutionId,
             ReportConventions.paramAction to ReportConventions.actionSummaryOnline)
@@ -107,7 +112,7 @@ class ReportPreviewStore(
 
 
     private suspend fun summaryOffline(): ClientResult<TableSummary> {
-        val result = ClientContext.restClient.performDetached(
+        val result = store.restClient.performDetached(
             store.mainLocation(),
             ReportConventions.paramAction to ReportConventions.actionSummaryOffline)
 

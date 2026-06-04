@@ -2,11 +2,11 @@ package tech.kzen.auto.client.objects.document.custom.model
 
 import tech.kzen.auto.client.objects.document.custom.raw.CustomRawState
 import tech.kzen.auto.client.objects.document.custom.view.CustomViewState
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.common.objects.document.custom.CustomConventions
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.structure.notation.DocumentObjectNotation
+import tech.kzen.lib.common.service.parse.NotationParser
 
 
 data class CustomState(
@@ -15,7 +15,7 @@ data class CustomState(
     val viewMode: CustomViewMode,
     val raw: CustomRawState,
     val view: CustomViewState,
-    val cache: CustomStateCache = CustomStateCache.compute(raw.editorValue, serverNotation)
+    val cache: CustomStateCache
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -40,16 +40,18 @@ data class CustomState(
         fun initial(
             documentPath: DocumentPath,
             serverNotation: DocumentObjectNotation,
+            notationParser: NotationParser,
             viewMode: CustomViewMode = CustomViewMode.View
         ): CustomState {
-            val editorValue = ClientContext.notationParser.unparseDocument(serverNotation, "")
+            val editorValue = notationParser.unparseDocument(serverNotation, "")
             val raw = CustomRawState(editorValue = editorValue)
             return CustomState(
                 documentPath = documentPath,
                 serverNotation = serverNotation,
                 viewMode = viewMode,
                 raw = raw,
-                view = CustomViewState())
+                view = CustomViewState(),
+                cache = CustomStateCache.compute(editorValue, serverNotation, notationParser))
         }
     }
 
@@ -59,13 +61,13 @@ data class CustomState(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun withRaw(updater: (CustomRawState) -> CustomRawState): CustomState {
+    fun withRaw(notationParser: NotationParser, updater: (CustomRawState) -> CustomRawState): CustomState {
         val updated = updater(raw)
         return if (updated === raw) {
             this
         }
         else if (updated.editorValue != raw.editorValue) {
-            copy(raw = updated, cache = CustomStateCache.compute(updated.editorValue, serverNotation))
+            copy(raw = updated, cache = CustomStateCache.compute(updated.editorValue, serverNotation, notationParser))
         }
         else {
             copy(raw = updated)
@@ -94,21 +96,25 @@ data class CustomState(
     }
 
 
-    fun withServerNotation(serverNotation: DocumentObjectNotation): CustomState {
+    fun withServerNotation(
+        serverNotation: DocumentObjectNotation,
+        notationParser: NotationParser
+    ): CustomState {
         return if (serverNotation == this.serverNotation) {
             this
         }
         else {
             copy(
                 serverNotation = serverNotation,
-                cache = CustomStateCache.compute(raw.editorValue, serverNotation))
+                cache = CustomStateCache.compute(raw.editorValue, serverNotation, notationParser))
         }
     }
 
 
     fun withServerNotationAndEditor(
         serverNotation: DocumentObjectNotation,
-        editorValue: String
+        editorValue: String,
+        notationParser: NotationParser
     ): CustomState {
         if (serverNotation == this.serverNotation && editorValue == raw.editorValue) {
             return this
@@ -116,6 +122,6 @@ data class CustomState(
         return copy(
             serverNotation = serverNotation,
             raw = raw.copy(editorValue = editorValue),
-            cache = CustomStateCache.compute(editorValue, serverNotation))
+            cache = CustomStateCache.compute(editorValue, serverNotation, notationParser))
     }
 }

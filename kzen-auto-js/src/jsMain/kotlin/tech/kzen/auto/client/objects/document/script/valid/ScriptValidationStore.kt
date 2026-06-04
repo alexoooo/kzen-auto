@@ -1,7 +1,6 @@
 package tech.kzen.auto.client.objects.document.script.valid
 
 import tech.kzen.auto.client.objects.document.script.model.ScriptStore
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.ClientError
 import tech.kzen.auto.client.util.ClientResult
 import tech.kzen.auto.client.util.ClientSuccess
@@ -55,7 +54,7 @@ class ScriptValidationStore(
     ):
         ClientResult<ScriptValidation>
     {
-        val result = ClientContext.restClient.performDetached(
+        val result = scriptStore.restClient.performDetached(
             ScriptConventions.scriptValidatorLocation,
             CommonRestApi.paramHostDocumentPath to mainLocation.documentPath.asString())
 

@@ -6,10 +6,10 @@ Blackbox end-to-end self-test for kzen-auto. Dogfoods kzen-auto's own Script bro
 
 Two JVM processes participate; the tester's Script orchestrates the second.
 
-1. **Tester** — `tech.kzen.auto.test.TesterMain` (this module's entry point). Same Ktor surface as vanilla kzen-auto plus the SUT-lifecycle Step catalogue (Start/Stop). Runs with cwd = `kzen-auto/kzen-auto-test/`, hosting the test-suite Script YAMLs at `src/main/resources/notation/test-suite/`. Also hosts the Chrome WebDriver. Launched either from the **Tester (kzen-auto-test)** IntelliJ run config (interactive development) or by `SelfTestBase.startTester` inside the `selfTest` Gradle task (CI).
+1. **Tester** — `tech.kzen.auto.test.TesterMain` (this module's entry point). Same Ktor surface as vanilla kzen-auto plus the SUT-lifecycle Step catalogue (Start/Stop). Launch-context-independent: it locates the `kzen-auto-test/` module root from its own code source (classes dir or jar) and resolves the test-suite Script YAMLs at `src/main/resources/notation/test-suite/` against it, so the working directory doesn't matter. Also hosts the Chrome WebDriver. Launched from a bare IDE gutter run (interactive development; see Workflows) or by `SelfTestBase.startTester` inside the `selfTest` Gradle task (CI).
 2. **SUT (System Under Test)** — vanilla `kzen-auto-jvm-*.jar`, spawned by `StartKzenAutoStep` inside the tester's Script YAML. Cwd is a per-run temp dir copied from `fixtures/<name>/`. Killed by a matching `StopKzenAutoStep` (or the tester's JVM shutdown hook if the script aborts).
 
-The tester sees the test suite via kzen-lib's cwd-relative `GradleLocator` (`kzen-lib-jvm/.../GradleLocator.kt`), which scans `./src/main/resources/notation/`. The SUT sees only its (initially empty) fixture project, alongside kzen-auto's classpath-bundled system notation.
+The tester sees the test suite via kzen-lib's `GradleLocator` (`kzen-lib-jvm/.../GradleLocator.kt`) pointed at an explicit module root: `TesterMain` passes `--module.root=<located root>` (a general kzen-auto-jvm arg, parsed into `KzenAutoConfig.moduleRoot`), bypassing the locator's cwd heuristic. The SUT sees only its (initially empty) fixture project via the unchanged cwd heuristic (its cwd is the per-run fixture temp dir), alongside kzen-auto's classpath-bundled system notation.
 
 `TesterMain` pre-registers `KzenAutoTestModule` (KSP-generated from `@Reflect`-annotated step classes) into `ReflectionRegistry.global` before delegating to `tech.kzen.auto.server.main`, so the tester's notation loader can resolve `is: StartKzenAutoStep` / `is: StopKzenAutoStep` references in the test-suite YAMLs.
 
@@ -17,7 +17,7 @@ The tester sees the test suite via kzen-lib's cwd-relative `GradleLocator` (`kze
 
 Tester-only steps registered by this subproject:
 
-- **`StartKzenAutoStep`** (`name: String`, `fixture: String`, `port: Int`) — Copies `<fixture>` (resolved relative to the tester's cwd) to a temp dir, spawns `java -jar <kzenAutoJar> --server.port=<port>` against it, blocks until HTTP 200 on `/`. Registers the handle in `KzenAutoSubprocessRegistry` under `name`. Reads the SUT jar path from system property `kzenAutoJar` (set by the IDE run config or `selfTest` Gradle task).
+- **`StartKzenAutoStep`** (`name: String`, `fixture: String`, `port: Int`) — Copies `<fixture>` (resolved against the `@Service`-injected `KzenAutoConfig.moduleRoot`; cwd-relative only if no module root was given) to a temp dir, spawns `java -jar <kzenAutoJar> --server.port=<port>` against it, blocks until HTTP 200 on `/`. Registers the handle in `KzenAutoSubprocessRegistry` under `name`. Reads the SUT jar path from system property `kzenAutoJar` (set by the `selfTest`/`runTester` Gradle tasks; when absent, `TesterMain` defaults it to the newest locally-built `kzen-auto-jvm/build/libs/kzen-auto-jvm-*.jar`).
 - **`StopKzenAutoStep`** (`name: String`) — Looks up the named subprocess, `process.destroy()`s it (force-kills after 15s), deletes the temp dir. No-op if not found (traces a warning).
 
 The tester JVM installs a shutdown hook that calls `KzenAutoSubprocessRegistry.closeAll()` — orphan SUTs are reaped if the script aborts or the tester is killed via IDE Stop.
@@ -34,7 +34,7 @@ The kzen-auto fat jar is wired as an automatic `:kzen-auto-jvm:jar` task depende
 ### Interactive (IDE)
 
 1. Open kzen-auto in IntelliJ as its own project (not via the umbrella — composite breaks IDE run/debug; see umbrella AGENTS.md).
-2. Run the **Tester (kzen-auto-test)** run config (shared in `.idea/runConfigurations/`). It runs `tech.kzen.auto.test.TesterMain` with the `kzen-auto-test` module classpath, cwd = `kzen-auto-test/`, and `-DkzenAutoJar=$PROJECT_DIR$/kzen-auto-jvm/build/libs/kzen-auto-jvm-0.29.1-SNAPSHOT.jar`. The before-run task builds `:kzen-auto-jvm:jar`.
+2. Run `tech.kzen.auto.test.TesterMain` from the gutter — zero run-config setup. Everything launch-specific lives in code: the module root is located from the class's code source (any working directory works), the port defaults to `TesterMain.TESTER_PORT` (18081) when no `--server.port=` arg is given, and `kzenAutoJar` defaults to the newest locally-built `kzen-auto-jvm/build/libs/kzen-auto-jvm-*.jar` (build it once via `:kzen-auto-jvm:jar`, or add it as a before-run task). NB: run configs live in `.idea/` which is gitignored (machine-local, lost on a project-model reset — happened 2026-06-01), which is why none of this may depend on a "shared" run config.
 3. Open `http://127.0.0.1:18081/` in a browser. Navigate to `test-suite/smoke/OpenWelcome.yaml` and Run the Script — Start spawns the SUT, the Browser steps drive it, Stop tears down.
 4. Edit the Script in the browser (add steps, change parameters). Saves write through to `kzen-auto-test/src/main/resources/notation/test-suite/.../`, so edits land in the source-controlled tree.
 
@@ -56,7 +56,7 @@ Override the kzen-auto jar (e.g. point at a CI-cached jar to skip the local `:kz
 
 ## Port pinning
 
-`SelfTestBase.TESTER_PORT = 18081`. The SUT port is whatever the Script YAML's `StartKzenAutoStep` and the subsequent `BrowserGetStep.location` agree on — currently `18082` in the smoke test. Hardcoded because `BrowserGetStep.location` is a static YAML field with no Script-variable interpolation. If those ports are occupied locally, startup fails loudly (`ProcessAwaitUtil`-style HTTP poll times out after 90s). Free ports + variable injection is the deferred open issue.
+`TesterMain.TESTER_PORT = 18081` — the tester binds it by default when no `--server.port=` arg is given (`SelfTestBase` passes it explicitly). The SUT port is whatever the Script YAML's `StartKzenAutoStep` and the subsequent `BrowserGetStep.location` agree on — currently `18082` in the smoke test. Hardcoded because `BrowserGetStep.location` is a static YAML field with no Script-variable interpolation. If those ports are occupied locally, startup fails loudly (`ProcessAwaitUtil`-style HTTP poll times out after 90s). Free ports + variable injection is the deferred open issue.
 
 ## Adding a test
 
@@ -74,5 +74,6 @@ The kzen-auto `/logic/status` endpoint reports `active = "null"` once a run comp
 - **`/` returns 302**, so port-readiness polling relies on `HttpURLConnection` following redirects to `/index.html` → 200.
 - **Chrome is NOT headless** — `BrowserOpenStep` does not currently set headless mode. CI use needs a kzen-auto-side toggle (deferred open issue).
 - **Don't bind `selfTest` to `check`** — that would spawn Chrome on every `:kzen-auto:build` and umbrella `./gradlew build`.
-- **The IDE Run config and the `runTester` Gradle task pass `-DkzenAutoJar=...` pointing at the locally-built fat jar.** If you delete `kzen-auto-jvm/build/libs/kzen-auto-jvm-*.jar`, `StartKzenAutoStep` will fail with a clear error. The before-run / `dependsOn(":kzen-auto-jvm:jar")` wiring rebuilds it for you.
+- **`kzenAutoJar` resolution: explicit beats fallback.** The `runTester`/`selfTest` Gradle tasks pass `-DkzenAutoJar=...` (overridable via `-PkzenAutoJar`) pointing at the locally-built fat jar, and their `dependsOn(":kzen-auto-jvm:jar")` keeps it fresh. When the property is absent (bare IDE run), `TesterMain` falls back to the newest `kzen-auto-jvm/build/libs/kzen-auto-jvm-*.jar` — which can be stale, and if no jar was ever built, `StartKzenAutoStep` fails with a clear error at step-run time.
+- **Logback logs still follow the cwd.** A gutter-launched tester (cwd = repo root) writes `kzen-auto/logs/run.log`, not `kzen-auto-test/logs/` — check both when reconstructing which process ran where.
 - **`KzenAutoSubprocessRegistry` is per-tester-JVM.** Killing the tester via IDE Stop fires the shutdown hook → SUTs reaped. Killing the tester via `taskkill /F` skips the hook → orphan SUTs survive. Check `jps` if a port is suddenly bound.

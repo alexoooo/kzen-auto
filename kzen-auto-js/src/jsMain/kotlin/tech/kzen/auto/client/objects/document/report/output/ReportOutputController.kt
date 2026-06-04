@@ -364,6 +364,7 @@ class ReportOutputController(
 
                 objectLocation = props.outputStore.mainLocation()
                 attributePath = OutputSpec.workDirPath
+                mirroredGraphStore = props.outputStore.mirroredGraphStore
 
                 value = props.spec.workPath
                 type = TextAttributeEditor.Type.PlainText

@@ -15,16 +15,27 @@ import tech.kzen.auto.client.objects.document.report.model.ReportStore
 import tech.kzen.auto.client.objects.document.report.output.ReportOutputController
 import tech.kzen.auto.client.objects.document.report.preview.ReportPreviewController
 import tech.kzen.auto.client.objects.document.report.run.ReportRunController
+import tech.kzen.auto.client.service.global.ClientStateGlobal
+import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.report.output.OutputStatus
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.reflect.Service
+import tech.kzen.lib.common.service.store.MirroredGraphStore
 import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------
+external interface ReportControllerProps: react.Props {
+    var clientStateGlobal: ClientStateGlobal
+    var mirroredGraphStore: MirroredGraphStore
+    var restClient: ClientRestApi
+}
+
+
 external interface ReportControllerState: react.State {
     var reportState: ReportState?
 }
@@ -33,9 +44,9 @@ external interface ReportControllerState: react.State {
 //---------------------------------------------------------------------------------------------------------------------
 @Suppress("unused")
 class ReportController(
-    props: Props
+    props: ReportControllerProps
 ):
-    RPureComponent<Props, ReportControllerState>(props),
+    RPureComponent<ReportControllerProps, ReportControllerState>(props),
     ReportStore.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -49,7 +60,10 @@ class ReportController(
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
-        private val archetype: ObjectLocation
+        private val archetype: ObjectLocation,
+        @Service private val clientStateGlobal: ClientStateGlobal,
+        @Service private val mirroredGraphStore: MirroredGraphStore,
+        @Service private val restClient: ClientRestApi
     ):
         DocumentController
     {
@@ -69,6 +83,9 @@ class ReportController(
             return object: ReactWrapper<Props> {
                 override fun ChildrenBuilder.child(block: Props.() -> Unit) {
                     ReportController::class.react {
+                        clientStateGlobal = this@Wrapper.clientStateGlobal
+                        mirroredGraphStore = this@Wrapper.mirroredGraphStore
+                        restClient = this@Wrapper.restClient
                         block()
                     }
                 }
@@ -78,11 +95,14 @@ class ReportController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val store = ReportStore()
+    private val store = ReportStore(
+        props.clientStateGlobal,
+        props.mirroredGraphStore,
+        props.restClient)
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun ReportControllerState.init(props: Props) {
+    override fun ReportControllerState.init(props: ReportControllerProps) {
         reportState = null
     }
 

@@ -9,9 +9,9 @@ import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.hr
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
+import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.util.ClientResult
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
@@ -25,11 +25,20 @@ import tech.kzen.lib.common.exec.ExecutionSuccess
 import tech.kzen.lib.common.exec.ListExecutionValue
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.reflect.Service
+import tech.kzen.lib.common.service.store.MirroredGraphStore
 import web.cssom.NamedColor
 import web.cssom.em
 
 
 //---------------------------------------------------------------------------------------------------------------------
+external interface ObjectRegistryControllerProps: Props {
+    var clientStateGlobal: ClientStateGlobal
+    var restClient: ClientRestApi
+    var mirroredGraphStore: MirroredGraphStore
+}
+
+
 external interface ObjectRegistryControllerState: State {
     var objectLocation: ObjectLocation?
     var classes: ClassListSpec?
@@ -38,12 +47,14 @@ external interface ObjectRegistryControllerState: State {
 }
 
 
-class ObjectRegistryController:
-    RPureComponent<Props, ObjectRegistryControllerState>(),
+class ObjectRegistryController(
+    props: ObjectRegistryControllerProps
+):
+    RPureComponent<ObjectRegistryControllerProps, ObjectRegistryControllerState>(props),
     ClientStateGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
-    override fun ObjectRegistryControllerState.init(props: Props) {
+    override fun ObjectRegistryControllerState.init(props: ObjectRegistryControllerProps) {
         objectLocation = null
         classes = null
         reflection = null
@@ -52,12 +63,12 @@ class ObjectRegistryController:
 
 
     override fun componentDidMount() {
-        ClientContext.clientStateGlobal.observe(this)
+        props.clientStateGlobal.observe(this)
     }
 
 
     override fun componentWillUnmount() {
-        ClientContext.clientStateGlobal.unobserve(this)
+        props.clientStateGlobal.unobserve(this)
     }
 
 
@@ -101,7 +112,7 @@ class ObjectRegistryController:
 
     private suspend fun loadReflection(objectLocation: ObjectLocation): ClientResult<List<ObjectRegistryReflection>> {
         @Suppress("MoveVariableDeclarationIntoWhen", "RedundantSuppression")
-        val result = ClientContext.restClient.performDetached(objectLocation)
+        val result = props.restClient.performDetached(objectLocation)
 
         return when (result) {
             is ExecutionSuccess -> {
@@ -120,6 +131,9 @@ class ObjectRegistryController:
     @Reflect
     class Wrapper(
         private val archetype: ObjectLocation,
+        @Service private val clientStateGlobal: ClientStateGlobal,
+        @Service private val restClient: ClientRestApi,
+        @Service private val mirroredGraphStore: MirroredGraphStore
 //        private val stepDisplayManager: StepDisplayManager.Wrapper,
 //        private val scriptCommander: ScriptCommander,
 //        private val ribbonController: RibbonController.Wrapper
@@ -142,6 +156,9 @@ class ObjectRegistryController:
             return object: ReactWrapper<Props> {
                 override fun ChildrenBuilder.child(block: Props.() -> Unit) {
                     ObjectRegistryController::class.react {
+                        clientStateGlobal = this@Wrapper.clientStateGlobal
+                        restClient = this@Wrapper.restClient
+                        mirroredGraphStore = this@Wrapper.mirroredGraphStore
 //                        this.stepDisplayManager = this@Wrapper.stepDisplayManager
 //                        this.scriptCommander = this@Wrapper.scriptCommander
                         block()
@@ -184,6 +201,7 @@ class ObjectRegistryController:
                         this.className = className
 
                         this.reflection = reflection?.getOrNull(index)
+                        this.mirroredGraphStore = props.mirroredGraphStore
                     }
 
                     hr {}
@@ -192,6 +210,7 @@ class ObjectRegistryController:
 
             ObjectRegistryAdd::class.react {
                 this.objectLocation = objectLocation
+                this.mirroredGraphStore = props.mirroredGraphStore
             }
         }
     }

@@ -10,7 +10,6 @@ import react.*
 import react.dom.html.ReactHTML.a
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.util.NavigationRoute
 import tech.kzen.auto.client.util.async
@@ -22,6 +21,7 @@ import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.exec.RequestParams
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.structure.notation.cqrs.DeleteDocumentCommand
+import tech.kzen.lib.common.service.store.MirroredGraphStore
 import web.cssom.*
 import web.html.HTMLElement
 import kotlin.js.Date
@@ -32,6 +32,8 @@ external interface SidebarFileProps: Props {
     var archetypeInfo: SidebarModel.ArchetypeInfo
     var documentPath: DocumentPath
     var selected: Boolean
+    var navigationGlobal: NavigationGlobal
+    var mirroredGraphStore: MirroredGraphStore
 }
 
 
@@ -78,12 +80,12 @@ class SidebarFile(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
-        ClientContext.navigationGlobal.observe(this)
+        props.navigationGlobal.observe(this)
     }
 
 
     override fun componentWillUnmount() {
-        ClientContext.navigationGlobal.unobserve(this)
+        props.navigationGlobal.unobserve(this)
     }
 
 
@@ -172,7 +174,7 @@ class SidebarFile(
 
     private fun onRemove() {
         performOption {
-            ClientContext.mirroredGraphStore.apply(DeleteDocumentCommand(props.documentPath))
+            props.mirroredGraphStore.apply(DeleteDocumentCommand(props.documentPath))
         }
     }
 
@@ -281,6 +283,7 @@ class SidebarFile(
                 this.ref = nameEditorRef
 
                 this.documentPath = props.documentPath
+                mirroredGraphStore = props.mirroredGraphStore
 
                 initialEditing = state.editing
 

@@ -7,7 +7,6 @@ import react.State
 import react.createContext
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.api.ReactWrapper
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
@@ -23,7 +22,9 @@ import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.service.store.LocalGraphStore
+import tech.kzen.lib.common.service.store.MirroredGraphStore
 import web.cssom.Length
 import web.cssom.em
 import web.cssom.px
@@ -32,6 +33,8 @@ import web.cssom.px
 //---------------------------------------------------------------------------------------------------------------------
 external interface StageControllerProps: Props {
     var documentControllers: List<DocumentController>
+    var mirroredGraphStore: MirroredGraphStore
+    var navigationGlobal: NavigationGlobal
 }
 
 
@@ -69,11 +72,15 @@ class StageController(
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
-        private val documentControllers: List<DocumentController>
+        private val documentControllers: List<DocumentController>,
+        @Service private val mirroredGraphStore: MirroredGraphStore,
+        @Service private val navigationGlobal: NavigationGlobal
     ): ReactWrapper<Props> {
         override fun ChildrenBuilder.child(block: Props.() -> Unit) {
             StageController::class.react {
                 documentControllers = this@Wrapper.documentControllers
+                mirroredGraphStore = this@Wrapper.mirroredGraphStore
+                navigationGlobal = this@Wrapper.navigationGlobal
                 block()
             }
         }
@@ -112,15 +119,15 @@ class StageController(
 
     override fun componentDidMount() {
         async {
-            ClientContext.mirroredGraphStore.observe(this)
-            ClientContext.navigationGlobal.observe(this)
+            props.mirroredGraphStore.observe(this)
+            props.navigationGlobal.observe(this)
         }
     }
 
 
     override fun componentWillUnmount() {
-        ClientContext.mirroredGraphStore.unobserve(this)
-        ClientContext.navigationGlobal.unobserve(this)
+        props.mirroredGraphStore.unobserve(this)
+        props.navigationGlobal.unobserve(this)
     }
 
 

@@ -211,6 +211,7 @@ class ReportPreviewController(
 
             objectLocation = props.mainLocation
             attributePath = PreviewSpec.enabledAttributePath(props.afterFilter)
+            mirroredGraphStore = props.previewStore.mirroredGraphStore
 
             value = props.previewSpec.enabled
             disabled = props.runningOrLoading

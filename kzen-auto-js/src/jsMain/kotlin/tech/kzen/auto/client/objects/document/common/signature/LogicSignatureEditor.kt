@@ -6,7 +6,6 @@ import react.Props
 import react.State
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.common.edit.MultiTextAttributeEditor
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
@@ -15,6 +14,7 @@ import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.paradigm.logic.LogicConventions
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
+import tech.kzen.lib.common.service.store.MirroredGraphStore
 import web.cssom.em
 import web.cssom.minus
 import web.cssom.pct
@@ -23,6 +23,9 @@ import web.cssom.pct
 //---------------------------------------------------------------------------------------------------------------------
 external interface LogicSignatureEditorProps: Props {
     var objectLocation: ObjectLocation
+
+    var clientStateGlobal: ClientStateGlobal
+    var mirroredGraphStore: MirroredGraphStore
 }
 
 
@@ -44,12 +47,12 @@ class LogicSignatureEditor:
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
-        ClientContext.clientStateGlobal.observe(this)
+        props.clientStateGlobal.observe(this)
     }
 
 
     override fun componentWillUnmount() {
-        ClientContext.clientStateGlobal.unobserve(this)
+        props.clientStateGlobal.unobserve(this)
     }
 
 
@@ -99,6 +102,8 @@ class LogicSignatureEditor:
 
                 value = parameters
                 unique = true
+
+                mirroredGraphStore = props.mirroredGraphStore
             }
         }
     }

@@ -9,7 +9,6 @@ import react.State
 import react.dom.events.ChangeEvent
 import react.dom.onChange
 import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.FunctionWithDebounce
@@ -23,6 +22,7 @@ import tech.kzen.lib.common.model.structure.notation.AttributeNotation
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
+import tech.kzen.lib.common.service.store.MirroredGraphStore
 import tech.kzen.lib.platform.ClassNames
 import tech.kzen.lib.platform.collect.toPersistentList
 import web.cssom.NamedColor
@@ -44,6 +44,8 @@ external interface AttributePathValueEditorOldProps: PropsWithRef<AttributePathV
     var attributePath: AttributePath
 
     var valueType: TypeMetadata
+
+    var mirroredGraphStore: MirroredGraphStore
 }
 
 
@@ -238,7 +240,7 @@ class AttributePathValueEditorOld(
             props.objectLocation, props.attributePath, attributeNotation)
 
         // TODO: handle error
-        ClientContext.mirroredGraphStore.apply(command)
+        props.mirroredGraphStore.apply(command)
 
         setState {
             pending = false

@@ -4,13 +4,14 @@ import react.ChildrenBuilder
 import react.Props
 import react.State
 import tech.kzen.auto.client.api.ReactWrapper
-import tech.kzen.auto.client.service.ClientContext
+import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.reflect.Service
 import web.cssom.em
 
 
@@ -18,6 +19,7 @@ import web.cssom.em
 external interface StepDisplayManagerProps: Props {
     var stepDisplays: List<ScriptStepDisplayWrapper>
     var common: ScriptStepDisplayPropsCommon
+    var clientStateGlobal: ClientStateGlobal
 }
 
 
@@ -42,7 +44,8 @@ class StepDisplayManager(
     @Reflect
     class Wrapper(
         private val stepDisplays: List<ScriptStepDisplayWrapper>,
-        handle: Handle
+        handle: Handle,
+        @Service private val clientStateGlobal: ClientStateGlobal
     ):
         ReactWrapper<StepDisplayManagerProps>
     {
@@ -53,6 +56,7 @@ class StepDisplayManager(
         override fun ChildrenBuilder.child(block: StepDisplayManagerProps.() -> Unit) {
             StepDisplayManager::class.react {
                 stepDisplays = this@Wrapper.stepDisplays
+                clientStateGlobal = this@Wrapper.clientStateGlobal
                 block()
             }
         }
@@ -75,7 +79,7 @@ class StepDisplayManager(
 
 
     private fun findDisplayWrapper(props: StepDisplayManagerProps): ScriptStepDisplayWrapper {
-        val graphStructure = ClientContext.clientStateGlobal.current()?.graphStructure()
+        val graphStructure = props.clientStateGlobal.current()?.graphStructure()
             ?: throw IllegalStateException("Session not initialized")
 
         val displayWrapperName = ObjectName(

@@ -17,6 +17,8 @@ import tech.kzen.lib.common.model.structure.metadata.AttributeMetadata
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.model.structure.notation.AttributeNotation
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.reflect.Service
+import tech.kzen.lib.common.service.store.MirroredGraphStore
 import tech.kzen.lib.platform.ClassNames.topLevel
 
 
@@ -26,6 +28,8 @@ external interface DefaultAttributeEditorOldProps: AttributeEditorPropsOld {
     var disabled: Boolean
     var onChange: ((AttributeNotation) -> Unit)?
     var invalid: Boolean
+
+    var mirroredGraphStore: MirroredGraphStore
 }
 
 
@@ -47,12 +51,14 @@ class DefaultAttributeEditorOld(
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
-        objectLocation: ObjectLocation
+        objectLocation: ObjectLocation,
+        @Service private val mirroredGraphStore: MirroredGraphStore
     ):
         AttributeEditorOld(objectLocation)
     {
         override fun ChildrenBuilder.child(block: AttributeEditorPropsOld.() -> Unit) {
             DefaultAttributeEditorOld::class.react {
+                mirroredGraphStore = this@Wrapper.mirroredGraphStore
                 block()
             }
         }
@@ -159,6 +165,8 @@ class DefaultAttributeEditorOld(
             attributePath = AttributePath.ofName(props.attributeName)
 
             valueType = type
+
+            mirroredGraphStore = props.mirroredGraphStore
 
             onChange = {
                 props.onChange?.invoke(it)

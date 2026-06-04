@@ -15,12 +15,17 @@ import tech.kzen.auto.client.objects.document.custom.model.CustomViewMode
 import tech.kzen.auto.client.objects.document.custom.raw.CustomRaw
 import tech.kzen.auto.client.objects.document.custom.view.CustomView
 import tech.kzen.auto.client.objects.document.custom.view.CustomViewModel
-import tech.kzen.auto.client.service.ClientContext
+import tech.kzen.auto.client.service.global.ClientStateGlobal
+import tech.kzen.auto.client.service.rest.ClientRestApi
+import tech.kzen.auto.client.service.rest.ClientRestTaskRepository
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.reflect.Service
+import tech.kzen.lib.common.service.parse.NotationParser
+import tech.kzen.lib.common.service.store.MirroredGraphStore
 import web.cssom.Margin
 import web.cssom.em
 
@@ -28,6 +33,12 @@ import web.cssom.em
 //---------------------------------------------------------------------------------------------------------------------
 external interface CustomControllerProps: Props {
     var attributeEditorManager: AttributeEditorManager.Wrapper
+
+    var clientStateGlobal: ClientStateGlobal
+    var mirroredGraphStore: MirroredGraphStore
+    var notationParser: NotationParser
+    var restClient: ClientRestApi
+    var clientRestTaskRepository: ClientRestTaskRepository
 }
 
 
@@ -49,7 +60,12 @@ class CustomController(
     @Reflect
     class Wrapper(
         private val archetype: ObjectLocation,
-        private val attributeEditorManager: AttributeEditorManager.Wrapper
+        private val attributeEditorManager: AttributeEditorManager.Wrapper,
+        @Service private val clientStateGlobal: ClientStateGlobal,
+        @Service private val mirroredGraphStore: MirroredGraphStore,
+        @Service private val notationParser: NotationParser,
+        @Service private val restClient: ClientRestApi,
+        @Service private val clientRestTaskRepository: ClientRestTaskRepository
     ):
         DocumentController
     {
@@ -74,6 +90,11 @@ class CustomController(
                 override fun ChildrenBuilder.child(block: Props.() -> Unit) {
                     CustomController::class.react {
                         this.attributeEditorManager = this@Wrapper.attributeEditorManager
+                        this.clientStateGlobal = this@Wrapper.clientStateGlobal
+                        this.mirroredGraphStore = this@Wrapper.mirroredGraphStore
+                        this.notationParser = this@Wrapper.notationParser
+                        this.restClient = this@Wrapper.restClient
+                        this.clientRestTaskRepository = this@Wrapper.clientRestTaskRepository
                         block()
                     }
                 }
@@ -84,7 +105,13 @@ class CustomController(
 
     //-----------------------------------------------------------------------------------------------------------------
     // CustomHeader is mounted in a sibling slot and picks up this store via CustomGlobal — header and body share one store.
-    private val store = CustomStore().also { CustomGlobal.upsertWeak(it) }
+    private val store = CustomStore(
+        props.clientStateGlobal,
+        props.mirroredGraphStore,
+        props.notationParser,
+        props.restClient,
+        props.clientRestTaskRepository
+    ).also { CustomGlobal.upsertWeak(it) }
     private val viewModelBuilder = CustomViewModel.Builder()
 
 
@@ -109,7 +136,7 @@ class CustomController(
 
 
     override fun onCustomState(customState: CustomState) {
-        val graphStructure = ClientContext.clientStateGlobal.current()?.graphStructure()
+        val graphStructure = props.clientStateGlobal.current()?.graphStructure()
         val nextViewModel = graphStructure?.let {
             viewModelBuilder.update(customState.documentPath, customState.serverNotation, it)
         }
@@ -144,6 +171,8 @@ class CustomController(
                         this.customViewModel = state.customViewModel
                         this.viewStore = store.view
                         this.attributeEditorManager = props.attributeEditorManager
+                        this.clientStateGlobal = props.clientStateGlobal
+                        this.mirroredGraphStore = props.mirroredGraphStore
                     }
             }
         }

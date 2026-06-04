@@ -20,9 +20,9 @@ import tech.kzen.auto.client.objects.document.script.display.computeStepTraceInf
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
 import tech.kzen.auto.client.objects.document.script.model.ScriptStore
 import tech.kzen.auto.client.objects.document.script.model.ScriptStoreContext
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
+import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.contextValue
 import tech.kzen.auto.client.wrap.installContextType
@@ -34,6 +34,9 @@ import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.reflect.Service
+import tech.kzen.lib.common.service.store.MirroredGraphStore
+import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import web.cssom.Position
 
 
@@ -42,6 +45,11 @@ external interface MappingStepDisplayProps: ScriptStepDisplayProps {
     var attributeEditorManager: AttributeEditorManager.Wrapper
     var stepDisplayManager: StepDisplayManager.Wrapper
     var scriptCommander: ScriptCommander
+
+    var clientStateGlobal: ClientStateGlobal
+    var objectStableMapper: ObjectStableMapper
+    var mirroredGraphStore: MirroredGraphStore
+    var insertionGlobal: InsertionGlobal
 }
 
 
@@ -76,7 +84,11 @@ class MappingStepDisplay(
         objectLocation: ObjectLocation,
         private val attributeEditorManager: AttributeEditorManager.Wrapper,
         private val stepDisplayManager: StepDisplayManager.Handle,
-        private val scriptCommander: ScriptCommander
+        private val scriptCommander: ScriptCommander,
+        @Service private val clientStateGlobal: ClientStateGlobal,
+        @Service private val objectStableMapper: ObjectStableMapper,
+        @Service private val mirroredGraphStore: MirroredGraphStore,
+        @Service private val insertionGlobal: InsertionGlobal
     ):
         ScriptStepDisplayWrapper(objectLocation)
     {
@@ -85,6 +97,10 @@ class MappingStepDisplay(
                 attributeEditorManager = this@Wrapper.attributeEditorManager
                 stepDisplayManager = this@Wrapper.stepDisplayManager.wrapper!!
                 scriptCommander = this@Wrapper.scriptCommander
+                clientStateGlobal = this@Wrapper.clientStateGlobal
+                objectStableMapper = this@Wrapper.objectStableMapper
+                mirroredGraphStore = this@Wrapper.mirroredGraphStore
+                insertionGlobal = this@Wrapper.insertionGlobal
 
                 block()
             }
@@ -100,14 +116,14 @@ class MappingStepDisplay(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
-        ClientContext.clientStateGlobal.observe(this)
+        props.clientStateGlobal.observe(this)
         contextValue<ScriptStore?>()?.observe(this)
     }
 
 
     override fun componentWillUnmount() {
         contextValue<ScriptStore?>()?.unobserve(this)
-        ClientContext.clientStateGlobal.unobserve(this)
+        props.clientStateGlobal.unobserve(this)
     }
 
 
@@ -134,7 +150,7 @@ class MappingStepDisplay(
 
     override fun onScriptState(scriptState: ScriptState) {
         val info = computeStepTraceInfo(
-            scriptState, props.common.objectLocation, ClientContext.objectStableMapper)
+            scriptState, props.common.objectLocation, props.objectStableMapper)
 
         // NB: value compare (==) — computeStepTraceInfo rebuilds a fresh StepTrace each call (value-equal,
         //     not ===). Skip setState when THIS step is unchanged so a sibling's expand/collapse or trace
@@ -161,7 +177,8 @@ class MappingStepDisplay(
             description = state.description ?: "",
             title = state.title ?: "",
             trace = state.stepTrace,
-            isNextToRun = state.isNextToRun ?: false
+            isNextToRun = state.isNextToRun ?: false,
+            mirroredGraphStore = props.mirroredGraphStore
         ) {
             props.attributeEditorManager.child(this) {
                 this.objectLocation = props.common.objectLocation
@@ -198,6 +215,10 @@ class MappingStepDisplay(
             branchLocation = AttributeLocation(props.common.objectLocation, ScriptConventions.stepsAttributePath),
             stepDisplayManager = props.stepDisplayManager,
             scriptCommander = props.scriptCommander,
-            roundedBottom = true)
+            roundedBottom = true,
+            clientStateGlobal = props.clientStateGlobal,
+            insertionGlobal = props.insertionGlobal,
+            mirroredGraphStore = props.mirroredGraphStore,
+            objectStableMapper = props.objectStableMapper)
     }
 }

@@ -7,7 +7,6 @@ import react.dom.html.ReactHTML
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.common.AttributePathValueEditor
 import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
@@ -22,6 +21,8 @@ import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.model.structure.notation.AttributeNotation
 import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.reflect.Service
+import tech.kzen.lib.common.service.store.MirroredGraphStore
 import tech.kzen.lib.platform.ClassNames.topLevel
 
 
@@ -59,12 +60,16 @@ class DefaultAttributeEditor(
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
-        objectLocation: ObjectLocation
+        objectLocation: ObjectLocation,
+        @Service private val clientStateGlobal: ClientStateGlobal,
+        @Service private val mirroredGraphStore: MirroredGraphStore
     ):
         AttributeEditor(objectLocation)
     {
         override fun ChildrenBuilder.child(block: AttributeEditorProps.() -> Unit) {
             DefaultAttributeEditor::class.react {
+                clientStateGlobal = this@Wrapper.clientStateGlobal
+                mirroredGraphStore = this@Wrapper.mirroredGraphStore
                 block()
             }
         }
@@ -73,7 +78,7 @@ class DefaultAttributeEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
-        ClientContext.clientStateGlobal.observe(this)
+        props.clientStateGlobal.observe(this)
 //        async {
 //            ClientContext.executionRepository.observe(this)
 //        }
@@ -82,7 +87,7 @@ class DefaultAttributeEditor(
 
     override fun componentWillUnmount() {
 //        ClientContext.executionRepository.unobserve(this)
-        ClientContext.clientStateGlobal.unobserve(this)
+        props.clientStateGlobal.unobserve(this)
     }
 
 
@@ -204,6 +209,9 @@ class DefaultAttributeEditor(
             if (multiline) {
                 multilineOverride = true
             }
+
+            clientStateGlobal = props.clientStateGlobal
+            mirroredGraphStore = props.mirroredGraphStore
 
             ref = attributePathValueEditor
         }

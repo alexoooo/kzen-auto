@@ -10,7 +10,7 @@ import react.Props
 import react.State
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.custom.CustomTheme
-import tech.kzen.auto.client.service.ClientContext
+import tech.kzen.auto.client.service.rest.ClientRestTaskRepository
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.iconify.icon
@@ -28,7 +28,9 @@ import kotlin.time.Duration.Companion.milliseconds
 
 
 //---------------------------------------------------------------------------------------------------------------------
-class CustomObjectTaskRunner {
+class CustomObjectTaskRunner(
+    private val clientRestTaskRepository: ClientRestTaskRepository
+) {
     private val taskPollIntervalMillis = 1_000.milliseconds
     private val observers = mutableSetOf<() -> Unit>()
 
@@ -57,7 +59,7 @@ class CustomObjectTaskRunner {
         notifyObservers()
         async {
             val request = ExecutionRequest(RequestParams.empty, null)
-            val submitted = ClientContext.clientRestTaskRepository.submit(objectLocation, request)
+            val submitted = clientRestTaskRepository.submit(objectLocation, request)
             submitting = false
             taskModel = submitted
             notifyObservers()
@@ -72,7 +74,7 @@ class CustomObjectTaskRunner {
             return
         }
         async {
-            val cancelled = ClientContext.clientRestTaskRepository.cancel(current.taskId)
+            val cancelled = clientRestTaskRepository.cancel(current.taskId)
             if (cancelled != null) {
                 taskModel = cancelled
                 notifyObservers()
@@ -88,7 +90,7 @@ class CustomObjectTaskRunner {
             if (!isActiveState(current.state)) {
                 break
             }
-            val updated = ClientContext.clientRestTaskRepository.query(current.taskId) ?: break
+            val updated = clientRestTaskRepository.query(current.taskId) ?: break
             taskModel = updated
             notifyObservers()
         }

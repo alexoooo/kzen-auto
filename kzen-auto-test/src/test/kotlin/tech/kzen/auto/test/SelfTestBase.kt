@@ -10,14 +10,6 @@ import java.nio.file.Paths
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 abstract class SelfTestBase {
-    companion object {
-        // Hardcoded port — BrowserGetStep.location is a static YAML field that cannot
-        // yet interpolate Script parameters, so the tester URL must match what the
-        // test-suite YAMLs hard-code. Swap to FreePort once interpolation lands.
-        const val TESTER_PORT = 18081
-    }
-
-
     protected lateinit var tester: KzenAutoProcess
     protected lateinit var testerClient: TesterClient
 
@@ -36,9 +28,9 @@ abstract class SelfTestBase {
             classpath = testerClasspath,
             mainClass = testerMainClass,
             cwd = Paths.get("").toAbsolutePath(),
-            port = TESTER_PORT,
+            port = TesterMain.TESTER_PORT,
             jvmArgs = listOf("-DkzenAutoJar=$kzenAutoJar"))
-        testerClient = TesterClient(TESTER_PORT)
+        testerClient = TesterClient(TesterMain.TESTER_PORT)
     }
 
 

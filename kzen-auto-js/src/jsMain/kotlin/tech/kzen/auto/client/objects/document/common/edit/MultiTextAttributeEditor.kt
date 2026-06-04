@@ -8,13 +8,13 @@ import react.Props
 import react.ReactNode
 import react.State
 import react.dom.onChange
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
+import tech.kzen.lib.common.service.store.MirroredGraphStore
 import tech.kzen.lib.platform.collect.toPersistentList
 import web.html.HTMLTextAreaElement
 
@@ -38,6 +38,8 @@ external interface MultiTextAttributeEditorProps: Props {
     var invalid: Boolean
 
     var onChange: ((List<String>) -> Unit)?
+
+    var mirroredGraphStore: MirroredGraphStore
 }
 
 
@@ -136,7 +138,7 @@ class MultiTextAttributeEditor(
             props.objectLocation, props.attributePath, attributeNotation)
 
         // TODO: handle error
-        ClientContext.mirroredGraphStore.apply(command)
+        props.mirroredGraphStore.apply(command)
 
         setState {
             pending = false

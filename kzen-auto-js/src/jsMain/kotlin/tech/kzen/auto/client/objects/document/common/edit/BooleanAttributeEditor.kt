@@ -7,12 +7,12 @@ import mui.material.SwitchColor
 import react.ChildrenBuilder
 import react.Props
 import react.State
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
+import tech.kzen.lib.common.service.store.MirroredGraphStore
 import web.cssom.NamedColor
 import web.cssom.em
 
@@ -30,6 +30,8 @@ external interface BooleanAttributeEditorProps: Props {
     var disabled: Boolean
 
     var onChange: ((Boolean) -> Unit)?
+
+    var mirroredGraphStore: MirroredGraphStore
 }
 
 
@@ -58,7 +60,7 @@ class BooleanAttributeEditor(
             props.objectLocation, props.attributePath, attributeNotation)
 
         // TODO: handle error
-        ClientContext.mirroredGraphStore.apply(command)
+        props.mirroredGraphStore.apply(command)
 
         props.onChange?.invoke(newValue)
     }

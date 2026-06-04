@@ -20,6 +20,7 @@ import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.common.objects.document.custom.CustomConventions
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.ObjectMetadata
+import tech.kzen.lib.common.service.store.MirroredGraphStore
 import web.cssom.*
 import web.html.HTMLDivElement
 
@@ -30,6 +31,7 @@ external interface CustomObjectProps: Props {
     var info: CustomObjectInfo
     var viewStore: CustomViewStore
     var attributeEditorManager: AttributeEditorManager.Wrapper
+    var mirroredGraphStore: MirroredGraphStore
 
     var indexInDocument: Int
     var dropMarker: DropMarker?
@@ -53,7 +55,7 @@ class CustomObject(
         if (existing != null) {
             return existing
         }
-        val created = CustomObjectDetachedRunner()
+        val created = CustomObjectDetachedRunner(props.viewStore.restClient)
         detachedRunner = created
         return created
     }
@@ -64,7 +66,7 @@ class CustomObject(
         if (existing != null) {
             return existing
         }
-        val created = CustomObjectTaskRunner()
+        val created = CustomObjectTaskRunner(props.viewStore.clientRestTaskRepository)
         taskRunner = created
         return created
     }
@@ -149,6 +151,7 @@ class CustomObject(
                         objectLocation = props.objectLocation
                         info = props.info
                         viewStore = props.viewStore
+                        mirroredGraphStore = props.mirroredGraphStore
                         if (detached != null || task != null) {
                             headerExtra = { headerBuilder ->
                                 with(headerBuilder) {

@@ -8,7 +8,6 @@ import react.State
 import react.dom.html.ReactHTML.br
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.ProjectController
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.iconify.icon
@@ -17,6 +16,7 @@ import tech.kzen.auto.common.objects.document.registry.model.ObjectRegistryRefle
 import tech.kzen.auto.common.objects.document.registry.spec.ClassListSpec
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.service.store.MirroredGraphError
+import tech.kzen.lib.common.service.store.MirroredGraphStore
 import tech.kzen.lib.platform.ClassName
 import web.cssom.Display
 import web.cssom.VerticalAlign
@@ -28,6 +28,7 @@ external interface ObjectRegistryEditProps: Props {
     var index: Int
     var className: ClassName
     var reflection: ObjectRegistryReflection?
+    var mirroredGraphStore: MirroredGraphStore
 }
 
 
@@ -82,7 +83,7 @@ class ObjectRegistryEdit(
     private suspend fun removeSync() {
         val command = ClassListSpec.removeCommand(props.objectLocation, props.className)
 
-        val result = ClientContext.mirroredGraphStore.apply(
+        val result = props.mirroredGraphStore.apply(
             command, ProjectController.suppressErrorDisplay)
 
         val error = (result as? MirroredGraphError)

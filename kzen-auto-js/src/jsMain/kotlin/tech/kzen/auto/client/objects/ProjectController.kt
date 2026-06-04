@@ -15,7 +15,6 @@ import tech.kzen.auto.client.objects.ribbon.HeaderController
 import tech.kzen.auto.client.objects.ribbon.HeaderModel
 import tech.kzen.auto.client.objects.sidebar.SidebarController
 import tech.kzen.auto.client.objects.sidebar.SidebarModel
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
@@ -30,7 +29,9 @@ import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.service.store.LocalGraphStore
+import tech.kzen.lib.common.service.store.MirroredGraphStore
 import web.cssom.*
 import web.html.HTMLElement
 import kotlin.time.Duration.Companion.milliseconds
@@ -42,6 +43,8 @@ external interface ProjectControllerProps: Props {
     var headerController: HeaderController.Wrapper
     var stageController: StageController.Wrapper
     var archetypeLocations: List<ObjectLocation>
+    var mirroredGraphStore: MirroredGraphStore
+    var navigationGlobal: NavigationGlobal
 }
 
 
@@ -97,7 +100,9 @@ class ProjectController(
         private val sidebarController: SidebarController.Wrapper,
         private val headerController: HeaderController.Wrapper,
         private val stageController: StageController.Wrapper,
-        private val archetypeLocations: List<ObjectLocation>
+        private val archetypeLocations: List<ObjectLocation>,
+        @Service private val mirroredGraphStore: MirroredGraphStore,
+        @Service private val navigationGlobal: NavigationGlobal
     ): ReactWrapper<Props> {
         override fun ChildrenBuilder.child(block: Props.() -> Unit) {
             ProjectController::class.react {
@@ -105,6 +110,8 @@ class ProjectController(
                 headerController = this@Wrapper.headerController
                 stageController = this@Wrapper.stageController
                 archetypeLocations = this@Wrapper.archetypeLocations
+                mirroredGraphStore = this@Wrapper.mirroredGraphStore
+                navigationGlobal = this@Wrapper.navigationGlobal
                 block()
             }
         }
@@ -125,8 +132,8 @@ class ProjectController(
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
         async {
-            ClientContext.mirroredGraphStore.observe(this)
-            ClientContext.navigationGlobal.observe(this)
+            props.mirroredGraphStore.observe(this)
+            props.navigationGlobal.observe(this)
         }
 
         window.addEventListener("resize", handleResize)
@@ -134,8 +141,8 @@ class ProjectController(
 
 
     override fun componentWillUnmount() {
-        ClientContext.mirroredGraphStore.unobserve(this)
-        ClientContext.navigationGlobal.unobserve(this)
+        props.mirroredGraphStore.unobserve(this)
+        props.navigationGlobal.unobserve(this)
 
         window.addEventListener("resize", handleResize)
     }

@@ -1,7 +1,6 @@
 package tech.kzen.auto.client.objects.document.report.run.model
 
 import tech.kzen.auto.client.objects.document.report.model.ReportStore
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.ClientError
 import tech.kzen.auto.client.util.ClientResult
 import tech.kzen.auto.client.util.ClientSuccess
@@ -105,7 +104,7 @@ class ReportRunStore(
         logicExecutionId: LogicExecutionId,
         logicTraceQuery: LogicTraceQuery
     ): ClientResult<LogicTraceSnapshot> {
-        val result = ClientContext.restClient.performDetached(
+        val result = store.restClient.performDetached(
             LogicConventions.logicTraceEndpointLocation,
             CommonRestApi.paramAction to LogicConventions.actionLookup,
             CommonRestApi.paramRunId to logicRunId.value,

@@ -18,6 +18,7 @@ import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.service.store.MirroredGraphStore
 import web.cssom.*
 
 
@@ -26,6 +27,7 @@ external interface CustomObjectHeaderProps: Props {
     var objectLocation: ObjectLocation
     var info: CustomObjectInfo
     var viewStore: CustomViewStore
+    var mirroredGraphStore: MirroredGraphStore
     var headerExtra: ((ChildrenBuilder) -> Unit)?
 }
 
@@ -151,6 +153,7 @@ class CustomObjectHeader(
         ObjectNameEditor::class.react {
             objectLocation = props.objectLocation
             onClose = ::onCloseEdit
+            mirroredGraphStore = props.mirroredGraphStore
         }
     }
 

@@ -18,9 +18,10 @@ import tech.kzen.auto.client.objects.document.script.model.ScriptStoreContext
 import tech.kzen.auto.client.objects.document.script.progress.ScriptProgressController
 import tech.kzen.auto.client.objects.document.script.step.control.MultiStepDisplay
 import tech.kzen.auto.client.objects.ribbon.RibbonController
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
+import tech.kzen.auto.client.service.global.InsertionGlobal
+import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
@@ -32,6 +33,9 @@ import tech.kzen.lib.common.model.location.ObjectReferenceHost
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.reflect.Service
+import tech.kzen.lib.common.service.store.MirroredGraphStore
+import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import web.cssom.Position
 import web.cssom.em
 import web.cssom.px
@@ -41,6 +45,11 @@ import web.cssom.px
 external interface ScriptControllerProps: Props {
     var stepDisplayManager: StepDisplayManager.Wrapper
     var scriptCommander: ScriptCommander
+    var clientStateGlobal: ClientStateGlobal
+    var mirroredGraphStore: MirroredGraphStore
+    var restClient: ClientRestApi
+    var insertionGlobal: InsertionGlobal
+    var objectStableMapper: ObjectStableMapper
 }
 
 
@@ -92,7 +101,12 @@ class ScriptController:
         private val archetype: ObjectLocation,
         private val stepDisplayManager: StepDisplayManager.Wrapper,
         private val scriptCommander: ScriptCommander,
-        private val ribbonController: RibbonController.Wrapper
+        private val ribbonController: RibbonController.Wrapper,
+        @Service private val clientStateGlobal: ClientStateGlobal,
+        @Service private val mirroredGraphStore: MirroredGraphStore,
+        @Service private val restClient: ClientRestApi,
+        @Service private val insertionGlobal: InsertionGlobal,
+        @Service private val objectStableMapper: ObjectStableMapper
     ):
         DocumentController
     {
@@ -116,6 +130,11 @@ class ScriptController:
                     ScriptController::class.react {
                         this.stepDisplayManager = this@Wrapper.stepDisplayManager
                         this.scriptCommander = this@Wrapper.scriptCommander
+                        this.clientStateGlobal = this@Wrapper.clientStateGlobal
+                        this.mirroredGraphStore = this@Wrapper.mirroredGraphStore
+                        this.restClient = this@Wrapper.restClient
+                        this.insertionGlobal = this@Wrapper.insertionGlobal
+                        this.objectStableMapper = this@Wrapper.objectStableMapper
                         block()
                     }
                 }
@@ -125,7 +144,10 @@ class ScriptController:
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val store = ScriptStore()
+    // NB: lazy so the store is constructed from props (set by React after the no-arg ctor runs the field
+    //     initializers). First access is componentDidMount, by which point props are available; the lazy
+    //     value is computed once, keeping a stable reference for renders and the progress sub-store prop.
+    private val store by lazy { ScriptStore(props.clientStateGlobal, props.restClient) }
 
     // NB: stable references for MultiStepDisplay's props so it (RPureComponent) bails out whenever
     //     ScriptController re-renders without the step list changing. A fresh Handle/common per render
@@ -147,12 +169,12 @@ class ScriptController:
     override fun componentDidMount() {
         store.didMount()
         store.observe(this)
-        ClientContext.clientStateGlobal.observe(this)
+        props.clientStateGlobal.observe(this)
     }
 
 
     override fun componentWillUnmount() {
-        ClientContext.clientStateGlobal.unobserve(this)
+        props.clientStateGlobal.unobserve(this)
         store.unobserve(this)
         store.willUnmount()
     }
@@ -226,7 +248,9 @@ class ScriptController:
 
                 // NB: overlay is rendered BEFORE MultiStepDisplay so default stacking puts it behind
                 //     step cards; the cross-branch polylines visually pass behind the IfStep card.
-                ScriptDependencyOverlay::class.react {}
+                ScriptDependencyOverlay::class.react {
+                    clientStateGlobal = props.clientStateGlobal
+                }
 
                 renderMain(mainObjectLocation)
             }
@@ -240,6 +264,8 @@ class ScriptController:
     private fun ChildrenBuilder.renderSignature(mainObjectLocation: ObjectLocation) {
         LogicSignatureEditor::class.react {
             objectLocation = mainObjectLocation
+            clientStateGlobal = props.clientStateGlobal
+            mirroredGraphStore = props.mirroredGraphStore
         }
     }
 
@@ -253,6 +279,10 @@ class ScriptController:
             common = mainCommonFor(mainObjectLocation)
             stepDisplayManager = stepDisplayHandle
             scriptCommander = props.scriptCommander
+            clientStateGlobal = props.clientStateGlobal
+            insertionGlobal = props.insertionGlobal
+            mirroredGraphStore = props.mirroredGraphStore
+            objectStableMapper = props.objectStableMapper
         }
     }
 

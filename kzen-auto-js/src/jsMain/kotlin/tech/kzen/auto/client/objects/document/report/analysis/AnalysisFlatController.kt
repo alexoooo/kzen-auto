@@ -228,6 +228,7 @@ class AnalysisFlatController(
 
                 objectLocation = props.mainLocation
                 attributePath = AnalysisFlatDataSpec.allowAttributePath
+                mirroredGraphStore = props.reportOutputStore.mirroredGraphStore
 
                 value = props.spec.allowPatterns
                 unique = true
@@ -266,6 +267,7 @@ class AnalysisFlatController(
 
                 objectLocation = props.mainLocation
                 attributePath = AnalysisFlatDataSpec.excludeAttributePath
+                mirroredGraphStore = props.reportOutputStore.mirroredGraphStore
 
                 value = props.spec.excludePatterns
                 unique = true

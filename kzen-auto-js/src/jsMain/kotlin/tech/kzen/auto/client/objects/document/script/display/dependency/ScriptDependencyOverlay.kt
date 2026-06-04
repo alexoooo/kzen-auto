@@ -6,7 +6,6 @@ import react.Key
 import react.Props
 import react.State
 import react.dom.html.ReactHTML.div
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
@@ -24,7 +23,9 @@ import web.resize.ResizeObserver
 
 
 //---------------------------------------------------------------------------------------------------------------------
-external interface ScriptDependencyOverlayProps: Props
+external interface ScriptDependencyOverlayProps: Props {
+    var clientStateGlobal: ClientStateGlobal
+}
 
 
 external interface ScriptDependencyOverlayState: State {
@@ -66,7 +67,7 @@ class ScriptDependencyOverlay(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
-        ClientContext.clientStateGlobal.observe(this)
+        props.clientStateGlobal.observe(this)
         unsubscribeRegistry = StepRowRefRegistry.observe { scheduleRemeasure() }
         attachResizeObserver()
     }
@@ -83,7 +84,7 @@ class ScriptDependencyOverlay(
 
 
     override fun componentWillUnmount() {
-        ClientContext.clientStateGlobal.unobserve(this)
+        props.clientStateGlobal.unobserve(this)
         unsubscribeRegistry?.invoke()
         unsubscribeRegistry = null
         resizeObserver?.disconnect()

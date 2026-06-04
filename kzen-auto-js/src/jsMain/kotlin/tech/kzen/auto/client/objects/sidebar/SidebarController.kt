@@ -5,11 +5,13 @@ import react.ChildrenBuilder
 import react.State
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.api.ReactWrapper
-import tech.kzen.auto.client.service.ClientContext
+import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.reflect.Service
+import tech.kzen.lib.common.service.store.MirroredGraphStore
 import web.cssom.em
 
 
@@ -17,6 +19,8 @@ import web.cssom.em
 external interface SidebarControllerProps : react.Props {
     var sidebarModel: SidebarModel?
     var documentPath: DocumentPath?
+    var navigationGlobal: NavigationGlobal
+    var mirroredGraphStore: MirroredGraphStore
 }
 
 
@@ -34,9 +38,14 @@ class SidebarController(
 {
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
-    class Wrapper: ReactWrapper<SidebarControllerProps> {
+    class Wrapper(
+        @Service private val navigationGlobal: NavigationGlobal,
+        @Service private val mirroredGraphStore: MirroredGraphStore
+    ): ReactWrapper<SidebarControllerProps> {
         override fun ChildrenBuilder.child(block: SidebarControllerProps.() -> Unit) {
             SidebarController::class.react {
+                navigationGlobal = this@Wrapper.navigationGlobal
+                mirroredGraphStore = this@Wrapper.mirroredGraphStore
                 block()
             }
         }
@@ -67,7 +76,7 @@ class SidebarController(
         }
 
         if (model.mainDocumentPaths.isNotEmpty()) {
-            ClientContext.navigationGlobal.goto(model.mainDocumentPaths[0])
+            props.navigationGlobal.goto(model.mainDocumentPaths[0])
         }
     }
 
@@ -88,6 +97,8 @@ class SidebarController(
             SidebarFolder::class.react {
                 sidebarModel = model
                 selectedDocumentPath = props.documentPath
+                navigationGlobal = props.navigationGlobal
+                mirroredGraphStore = props.mirroredGraphStore
             }
         }
     }

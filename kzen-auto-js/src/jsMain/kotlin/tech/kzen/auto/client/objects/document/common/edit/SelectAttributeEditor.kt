@@ -7,7 +7,6 @@ import mui.material.InputLabel
 import react.ChildrenBuilder
 import react.Props
 import react.State
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.react
@@ -16,6 +15,7 @@ import tech.kzen.auto.client.wrap.select.ReactSelectOption
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
+import tech.kzen.lib.common.service.store.MirroredGraphStore
 import web.cssom.em
 import kotlin.js.Json
 import kotlin.js.json
@@ -35,6 +35,8 @@ external interface SelectAttributeEditorProps: Props {
     var invalid: Boolean
 
     var onChange: ((String) -> Unit)?
+
+    var mirroredGraphStore: MirroredGraphStore
 }
 
 
@@ -63,7 +65,7 @@ class SelectAttributeEditor(
             props.objectLocation, props.attributePath, attributeNotation)
 
         // TODO: handle error
-        ClientContext.mirroredGraphStore.apply(command)
+        props.mirroredGraphStore.apply(command)
 
         props.onChange?.invoke(attributeNotation.value)
     }

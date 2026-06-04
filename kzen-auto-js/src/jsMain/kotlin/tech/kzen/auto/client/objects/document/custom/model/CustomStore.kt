@@ -2,13 +2,22 @@ package tech.kzen.auto.client.objects.document.custom.model
 
 import tech.kzen.auto.client.objects.document.custom.raw.CustomRawStore
 import tech.kzen.auto.client.objects.document.custom.view.CustomViewStore
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
+import tech.kzen.auto.client.service.rest.ClientRestApi
+import tech.kzen.auto.client.service.rest.ClientRestTaskRepository
 import tech.kzen.auto.client.util.async
+import tech.kzen.lib.common.service.parse.NotationParser
+import tech.kzen.lib.common.service.store.MirroredGraphStore
 
 
-class CustomStore: ClientStateGlobal.Observer {
+class CustomStore(
+    val clientStateGlobal: ClientStateGlobal,
+    val mirroredGraphStore: MirroredGraphStore,
+    val notationParser: NotationParser,
+    val restClient: ClientRestApi,
+    val clientRestTaskRepository: ClientRestTaskRepository
+): ClientStateGlobal.Observer {
     //-----------------------------------------------------------------------------------------------------------------
     interface Observer {
         fun onCustomState(customState: CustomState)
@@ -47,7 +56,7 @@ class CustomStore: ClientStateGlobal.Observer {
     fun didMount() {
         mounted = true
         async {
-            ClientContext.clientStateGlobal.observe(this)
+            clientStateGlobal.observe(this)
         }
     }
 
@@ -55,7 +64,7 @@ class CustomStore: ClientStateGlobal.Observer {
     fun willUnmount() {
         mounted = false
         state = null
-        ClientContext.clientStateGlobal.unobserve(this)
+        clientStateGlobal.unobserve(this)
     }
 
 
@@ -72,18 +81,19 @@ class CustomStore: ClientStateGlobal.Observer {
         val previous = state
         val nextState = when {
             previous == null || previous.documentPath != documentPath ->
-                CustomState.initial(documentPath, serverNotation, previous?.viewMode ?: CustomViewMode.View)
+                CustomState.initial(
+                    documentPath, serverNotation, notationParser, previous?.viewMode ?: CustomViewMode.View)
 
             previous.serverNotation == serverNotation ->
                 previous
 
             !previous.editorModified -> {
-                val freshEditorValue = ClientContext.notationParser.unparseDocument(serverNotation, "")
-                previous.withServerNotationAndEditor(serverNotation, freshEditorValue)
+                val freshEditorValue = notationParser.unparseDocument(serverNotation, "")
+                previous.withServerNotationAndEditor(serverNotation, freshEditorValue, notationParser)
             }
 
             else ->
-                previous.withServerNotation(serverNotation)
+                previous.withServerNotation(serverNotation, notationParser)
         }
 
         updateIfChanged(nextState)

@@ -12,7 +12,6 @@ import react.Props
 import react.ReactNode
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeViewManager
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.iconify.icon
@@ -24,6 +23,7 @@ import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.cqrs.RemoveObjectInAttributeCommand
+import tech.kzen.lib.common.service.store.MirroredGraphStore
 import web.cssom.*
 
 
@@ -43,6 +43,8 @@ external interface StepHeaderProps: Props {
     var typeMetadata: String?
     var expanded: Boolean?
     var onToggleExpanded: (() -> Unit)?
+
+    var mirroredGraphStore: MirroredGraphStore
 }
 
 
@@ -82,7 +84,7 @@ class StepHeader(
         val objectAttributePath = attributePathInContainer()
 
         async {
-            ClientContext.mirroredGraphStore.apply(RemoveObjectInAttributeCommand(
+            props.mirroredGraphStore.apply(RemoveObjectInAttributeCommand(
                 containingObjectLocation, objectAttributePath))
         }
     }
@@ -170,6 +172,7 @@ class StepHeader(
                 objectLocation = props.objectLocation
                 title = props.title
                 description = props.description
+                mirroredGraphStore = props.mirroredGraphStore
             }
         }
     }

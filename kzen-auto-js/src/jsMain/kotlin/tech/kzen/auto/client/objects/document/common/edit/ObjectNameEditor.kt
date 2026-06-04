@@ -11,7 +11,6 @@ import react.State
 import react.dom.events.KeyboardEvent
 import react.dom.html.ReactHTML.div
 import react.dom.onChange
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.ClientInputUtils
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
@@ -21,6 +20,7 @@ import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.structure.notation.cqrs.RenameObjectRefactorCommand
+import tech.kzen.lib.common.service.store.MirroredGraphStore
 import web.cssom.*
 import web.html.HTMLInputElement
 
@@ -29,6 +29,8 @@ import web.html.HTMLInputElement
 external interface ObjectNameEditorProps: Props {
     var objectLocation: ObjectLocation
     var onClose: () -> Unit
+
+    var mirroredGraphStore: MirroredGraphStore
 }
 
 
@@ -105,7 +107,7 @@ class ObjectNameEditor(
 
         val newName = ObjectName(state.objectName)
         async {
-            ClientContext.mirroredGraphStore.apply(RenameObjectRefactorCommand(
+            props.mirroredGraphStore.apply(RenameObjectRefactorCommand(
                 props.objectLocation, newName))
         }
         props.onClose()

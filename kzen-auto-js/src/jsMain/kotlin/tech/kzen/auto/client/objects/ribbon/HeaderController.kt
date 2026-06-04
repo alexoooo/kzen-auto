@@ -8,8 +8,10 @@ import react.dom.html.ReactHTML.img
 import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
-import tech.kzen.auto.client.service.ClientContext
+import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.global.NavigationGlobal
+import tech.kzen.auto.client.service.logic.ClientLogicGlobal
+import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.react
@@ -20,6 +22,7 @@ import tech.kzen.lib.common.exec.RequestParams
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.reflect.Service
 import web.cssom.*
 
 
@@ -27,6 +30,10 @@ import web.cssom.*
 external interface HeaderControllerProps: react.Props {
     var documentControllers: List<DocumentController>
     var headerModel: HeaderModel?
+    var navigationGlobal: NavigationGlobal
+    var restClient: ClientRestApi
+    var clientStateGlobal: ClientStateGlobal
+    var clientLogicGlobal: ClientLogicGlobal
 }
 
 
@@ -56,11 +63,19 @@ class HeaderController(
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
-        private val documentControllers: List<DocumentController>
+        private val documentControllers: List<DocumentController>,
+        @Service private val navigationGlobal: NavigationGlobal,
+        @Service private val restClient: ClientRestApi,
+        @Service private val clientStateGlobal: ClientStateGlobal,
+        @Service private val clientLogicGlobal: ClientLogicGlobal
     ): ReactWrapper<HeaderControllerProps> {
         override fun ChildrenBuilder.child(block: HeaderControllerProps.() -> Unit) {
             HeaderController::class.react {
                 documentControllers = this@Wrapper.documentControllers
+                navigationGlobal = this@Wrapper.navigationGlobal
+                restClient = this@Wrapper.restClient
+                clientStateGlobal = this@Wrapper.clientStateGlobal
+                clientLogicGlobal = this@Wrapper.clientLogicGlobal
                 block()
             }
         }
@@ -76,13 +91,13 @@ class HeaderController(
 
     override fun componentDidMount() {
         async {
-            ClientContext.navigationGlobal.observe(this)
+            props.navigationGlobal.observe(this)
         }
     }
 
 
     override fun componentWillUnmount() {
-        ClientContext.navigationGlobal.unobserve(this)
+        props.navigationGlobal.unobserve(this)
     }
 
 
@@ -193,12 +208,13 @@ class HeaderController(
 
 
     private fun ChildrenBuilder.renderTitle() {
+        val baseUrl = props.restClient.baseUrl
         val projectTitle =
-            if (ClientContext.baseUrl.isEmpty()) {
+            if (baseUrl.isEmpty()) {
                 "Running in dev mode"
             }
             else {
-                decodeURIComponent(ClientContext.baseUrl).substringAfter("/")
+                decodeURIComponent(baseUrl).substringAfter("/")
             }
 
         div {
@@ -225,6 +241,8 @@ class HeaderController(
             }
 
             RibbonLogicRun::class.react {
+                clientStateGlobal = props.clientStateGlobal
+                clientLogicGlobal = props.clientLogicGlobal
 //            RibbonRun::class.react {
 //                navPath = state.documentPath
 //                parameters = state.parameters

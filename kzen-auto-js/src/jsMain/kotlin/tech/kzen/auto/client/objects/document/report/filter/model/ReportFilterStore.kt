@@ -1,7 +1,6 @@
 package tech.kzen.auto.client.objects.document.report.filter.model
 
 import tech.kzen.auto.client.objects.document.report.model.ReportStore
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
 import tech.kzen.auto.common.objects.document.report.output.OutputStatus
@@ -10,11 +9,17 @@ import tech.kzen.auto.common.objects.document.report.spec.filter.FilterSpec
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.service.store.MirroredGraphError
+import tech.kzen.lib.common.service.store.MirroredGraphStore
 
 
 class ReportFilterStore(
     private val store: ReportStore
 ) {
+    //-----------------------------------------------------------------------------------------------------------------
+    val mirroredGraphStore: MirroredGraphStore
+        get() = store.mirroredGraphStore
+
+
     //-----------------------------------------------------------------------------------------------------------------
     fun mainLocation(): ObjectLocation {
         return store.mainLocation()
@@ -183,7 +188,7 @@ class ReportFilterStore(
         command: NotationCommand
     ): String? {
         @Suppress("MoveVariableDeclarationIntoWhen")
-        val result = ClientContext.mirroredGraphStore.apply(command)
+        val result = store.mirroredGraphStore.apply(command)
 
         return (result as? MirroredGraphError)
             ?.error

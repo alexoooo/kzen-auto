@@ -11,7 +11,6 @@ import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.objects.document.graph.edge.BottomEgress
 import tech.kzen.auto.client.objects.document.graph.edge.TopIngress
 import tech.kzen.auto.client.objects.document.graph.edit.AttributeEditorManagerOld
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ExecutionIntentGlobal
 import tech.kzen.auto.client.util.async
@@ -36,6 +35,7 @@ import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.location.ObjectReference
 import tech.kzen.lib.common.model.structure.notation.cqrs.RemoveObjectInAttributeCommand
 import tech.kzen.lib.common.service.notation.NotationConventions
+import tech.kzen.lib.common.service.store.MirroredGraphStore
 import web.cssom.*
 import web.dom.Element
 import kotlin.js.Date
@@ -44,6 +44,8 @@ import kotlin.js.Date
 //---------------------------------------------------------------------------------------------------------------------
 external interface VertexControllerProps: Props {
     var attributeController: AttributeEditorManagerOld.Wrapper
+    var executionIntentGlobal: ExecutionIntentGlobal
+    var mirroredGraphStore: MirroredGraphStore
 
     var cellDescriptor: VertexDescriptor
 
@@ -106,12 +108,12 @@ class VertexController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
-        ClientContext.executionIntentGlobal.observe(this)
+        props.executionIntentGlobal.observe(this)
     }
 
 
     override fun componentWillUnmount() {
-        ClientContext.executionIntentGlobal.unobserve(this)
+        props.executionIntentGlobal.unobserve(this)
     }
 
 
@@ -204,7 +206,7 @@ class VertexController(
                 GraphDocument.verticesAttributeName,
                 props.attributeNesting)
 
-            ClientContext.mirroredGraphStore.apply(RemoveObjectInAttributeCommand(
+            props.mirroredGraphStore.apply(RemoveObjectInAttributeCommand(
                 sourceMain, objectAttributePath))
         }
     }

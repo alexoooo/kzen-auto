@@ -22,7 +22,6 @@ import tech.kzen.auto.client.objects.document.common.edit.TextAttributeEditor
 import tech.kzen.auto.client.objects.document.report.output.model.ReportOutputState
 import tech.kzen.auto.client.objects.document.report.output.model.ReportOutputStore
 import tech.kzen.auto.client.objects.document.report.run.model.ReportRunProgress
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.react
@@ -115,7 +114,7 @@ class OutputTableController(
             }
         }
         else if (showDownload) {
-            val linkAddress = ClientContext.restClient.linkDetachedDownload(
+            val linkAddress = props.outputStore.restClient.linkDetachedDownload(
                 props.outputStore.mainLocation())
 
             a {
@@ -199,6 +198,7 @@ class OutputTableController(
 
                     objectLocation = props.outputStore.mainLocation()
                     attributePath = OutputExploreSpec.previewStartPath
+                    mirroredGraphStore = props.outputStore.mirroredGraphStore
 
                     value = props.spec.explore.previewStart
                     type = TextAttributeEditor.Type.Number
@@ -220,6 +220,7 @@ class OutputTableController(
                 TextAttributeEditor::class.react {
                     objectLocation = props.outputStore.mainLocation()
                     attributePath = OutputExploreSpec.previewCountPath
+                    mirroredGraphStore = props.outputStore.mirroredGraphStore
 
                     value = props.spec.explore.previewCount
                     type = TextAttributeEditor.Type.Number

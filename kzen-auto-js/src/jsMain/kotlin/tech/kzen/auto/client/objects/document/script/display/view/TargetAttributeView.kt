@@ -7,9 +7,9 @@ import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.img
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeView
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeViewProps
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
+import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
@@ -22,10 +22,16 @@ import tech.kzen.lib.common.model.location.ObjectReferenceHost
 import tech.kzen.lib.common.model.location.ResourceLocation
 import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.reflect.Service
 import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------
+external interface TargetAttributeViewProps: AttributeViewProps {
+    var restClient: ClientRestApi
+}
+
+
 external interface TargetAttributeViewState: State {
     var targetType: TargetType?
     var targetValue: String?
@@ -37,20 +43,24 @@ external interface TargetAttributeViewState: State {
 //---------------------------------------------------------------------------------------------------------------------
 @Suppress("unused")
 class TargetAttributeView(
-    props: AttributeViewProps
+    props: TargetAttributeViewProps
 ):
-    RPureComponent<AttributeViewProps, TargetAttributeViewState>(props),
+    RPureComponent<TargetAttributeViewProps, TargetAttributeViewState>(props),
     ClientStateGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
-        objectLocation: ObjectLocation
+        objectLocation: ObjectLocation,
+        @Service private val clientStateGlobal: ClientStateGlobal,
+        @Service private val restClient: ClientRestApi
     ):
         AttributeView(objectLocation)
     {
         override fun ChildrenBuilder.child(block: AttributeViewProps.() -> Unit) {
             TargetAttributeView::class.react {
+                clientStateGlobal = this@Wrapper.clientStateGlobal
+                restClient = this@Wrapper.restClient
                 block()
             }
         }
@@ -59,12 +69,12 @@ class TargetAttributeView(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
-        ClientContext.clientStateGlobal.observe(this)
+        props.clientStateGlobal.observe(this)
     }
 
 
     override fun componentWillUnmount() {
-        ClientContext.clientStateGlobal.unobserve(this)
+        props.clientStateGlobal.unobserve(this)
     }
 
 
@@ -108,7 +118,7 @@ class TargetAttributeView(
                 val documentNotation = graphStructure.graphNotation.documents[documentPath]
                 val firstResource = documentNotation?.resources?.digests?.keys?.firstOrNull()
                 firstResource?.let {
-                    ClientContext.restClient.resourceUri(ResourceLocation(documentPath, it))
+                    props.restClient.resourceUri(ResourceLocation(documentPath, it))
                 }
             }
             else {

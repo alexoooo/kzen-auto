@@ -4,7 +4,6 @@ import emotion.react.css
 import react.ChildrenBuilder
 import react.State
 import react.dom.html.ReactHTML.div
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
@@ -13,6 +12,7 @@ import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.reflect.Service
 import web.cssom.*
 
 
@@ -33,12 +33,14 @@ class TextAttributeView(
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
-        objectLocation: ObjectLocation
+        objectLocation: ObjectLocation,
+        @Service private val clientStateGlobal: ClientStateGlobal
     ):
         AttributeView(objectLocation)
     {
         override fun ChildrenBuilder.child(block: AttributeViewProps.() -> Unit) {
             TextAttributeView::class.react {
+                clientStateGlobal = this@Wrapper.clientStateGlobal
                 block()
             }
         }
@@ -47,12 +49,12 @@ class TextAttributeView(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
-        ClientContext.clientStateGlobal.observe(this)
+        props.clientStateGlobal.observe(this)
     }
 
 
     override fun componentWillUnmount() {
-        ClientContext.clientStateGlobal.unobserve(this)
+        props.clientStateGlobal.unobserve(this)
     }
 
 

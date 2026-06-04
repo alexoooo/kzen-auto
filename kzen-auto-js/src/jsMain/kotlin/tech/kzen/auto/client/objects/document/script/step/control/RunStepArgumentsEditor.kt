@@ -10,7 +10,6 @@ import react.State
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorProps
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.util.async
@@ -36,7 +35,9 @@ import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
 import tech.kzen.lib.common.model.structure.notation.cqrs.RenamedObjectRefactorEvent
 import tech.kzen.lib.common.model.structure.notation.cqrs.UpsertAttributeCommand
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.service.store.LocalGraphStore
+import tech.kzen.lib.common.service.store.MirroredGraphStore
 import tech.kzen.lib.platform.collect.PersistentList
 import tech.kzen.lib.platform.collect.PersistentMap
 import tech.kzen.lib.platform.collect.toPersistentList
@@ -67,12 +68,16 @@ class RunStepArgumentsEditor(
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
-        objectLocation: ObjectLocation
+        objectLocation: ObjectLocation,
+        @Service private val clientStateGlobal: ClientStateGlobal,
+        @Service private val mirroredGraphStore: MirroredGraphStore
     ):
         AttributeEditor(objectLocation)
     {
         override fun ChildrenBuilder.child(block: AttributeEditorProps.() -> Unit) {
             RunStepArgumentsEditor::class.react {
+                clientStateGlobal = this@Wrapper.clientStateGlobal
+                mirroredGraphStore = this@Wrapper.mirroredGraphStore
                 block()
             }
         }
@@ -110,16 +115,16 @@ class RunStepArgumentsEditor(
 
 
     override fun componentDidMount() {
-        ClientContext.clientStateGlobal.observe(this)
+        props.clientStateGlobal.observe(this)
         async {
-            ClientContext.mirroredGraphStore.observe(this)
+            props.mirroredGraphStore.observe(this)
         }
     }
 
 
     override fun componentWillUnmount() {
-        ClientContext.mirroredGraphStore.unobserve(this)
-        ClientContext.clientStateGlobal.unobserve(this)
+        props.mirroredGraphStore.unobserve(this)
+        props.clientStateGlobal.unobserve(this)
     }
 
 
@@ -283,7 +288,7 @@ class RunStepArgumentsEditor(
             }
             .toPersistentMap()
 
-        ClientContext.mirroredGraphStore.apply(UpsertAttributeCommand(
+        props.mirroredGraphStore.apply(UpsertAttributeCommand(
                 props.objectLocation,
                 props.attributeName,
                 MapAttributeNotation(localReferences)))

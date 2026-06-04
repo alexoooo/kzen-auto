@@ -2,7 +2,6 @@ package tech.kzen.auto.client.objects.document.report.analysis.model
 
 import kotlinx.coroutines.delay
 import tech.kzen.auto.client.objects.document.report.model.ReportStore
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
 import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisSpec
@@ -123,7 +122,7 @@ class ReportAnalysisStore(
         delay(1)
         beforeNotationChange()
 
-        val result = ClientContext.mirroredGraphStore.apply(command)
+        val result = store.mirroredGraphStore.apply(command)
 
         val notationError = (result as? MirroredGraphError)?.error?.message
 

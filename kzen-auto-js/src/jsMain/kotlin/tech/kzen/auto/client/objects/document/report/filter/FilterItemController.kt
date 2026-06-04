@@ -396,6 +396,7 @@ class FilterItemController(
 
             objectLocation = props.filterStore.mainLocation()
             attributePath = FilterSpec.columnValuesAttributePath(props.columnName)
+            mirroredGraphStore = props.filterStore.mirroredGraphStore
 
             value = columnFilterSpec.values
             unique = true

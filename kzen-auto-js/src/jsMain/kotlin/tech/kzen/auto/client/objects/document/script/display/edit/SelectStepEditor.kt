@@ -11,7 +11,6 @@ import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
 import tech.kzen.auto.client.objects.document.script.model.ScriptStore
 import tech.kzen.auto.client.objects.document.script.model.ScriptStoreContext
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.util.async
@@ -33,7 +32,9 @@ import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
 import tech.kzen.lib.common.model.structure.notation.cqrs.RenamedObjectRefactorEvent
 import tech.kzen.lib.common.model.structure.notation.cqrs.UpsertAttributeCommand
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.service.store.LocalGraphStore
+import tech.kzen.lib.common.service.store.MirroredGraphStore
 import web.cssom.em
 
 
@@ -60,12 +61,16 @@ class SelectStepEditor(
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
-        objectLocation: ObjectLocation
+        objectLocation: ObjectLocation,
+        @Service private val clientStateGlobal: ClientStateGlobal,
+        @Service private val mirroredGraphStore: MirroredGraphStore
     ):
         AttributeEditor(objectLocation)
     {
         override fun ChildrenBuilder.child(block: AttributeEditorProps.() -> Unit) {
             SelectStepEditor::class.react {
+                clientStateGlobal = this@Wrapper.clientStateGlobal
+                mirroredGraphStore = this@Wrapper.mirroredGraphStore
                 block()
             }
         }
@@ -107,18 +112,18 @@ class SelectStepEditor(
 
 
     override fun componentDidMount() {
-        ClientContext.clientStateGlobal.observe(this)
+        props.clientStateGlobal.observe(this)
         contextValue<ScriptStore?>()?.observe(this)
         async {
-            ClientContext.mirroredGraphStore.observe(this)
+            props.mirroredGraphStore.observe(this)
         }
     }
 
 
     override fun componentWillUnmount() {
-        ClientContext.mirroredGraphStore.unobserve(this)
+        props.mirroredGraphStore.unobserve(this)
         contextValue<ScriptStore?>()?.unobserve(this)
-        ClientContext.clientStateGlobal.unobserve(this)
+        props.clientStateGlobal.unobserve(this)
     }
 
 
@@ -212,7 +217,7 @@ class SelectStepEditor(
         val localReference = value.toReference()
                 .crop(retainPath = false)
 
-        ClientContext.mirroredGraphStore.apply(UpsertAttributeCommand(
+        props.mirroredGraphStore.apply(UpsertAttributeCommand(
                 props.objectLocation,
                 props.attributeName,
                 ScalarAttributeNotation(localReference.asString())))

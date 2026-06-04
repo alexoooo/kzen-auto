@@ -9,7 +9,6 @@ import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.hr
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RComponent
@@ -19,10 +18,18 @@ import tech.kzen.auto.common.objects.document.data.DataFormatConventions
 import tech.kzen.auto.common.objects.document.data.spec.FieldFormatListSpec
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.reflect.Service
+import tech.kzen.lib.common.service.store.MirroredGraphStore
 import web.cssom.em
 
 
 //---------------------------------------------------------------------------------------------------------------------
+external interface DataFormatControllerProps: Props {
+    var clientStateGlobal: ClientStateGlobal
+    var mirroredGraphStore: MirroredGraphStore
+}
+
+
 external interface DataFormatControllerState: State {
     var objectLocation: ObjectLocation?
     var fields: FieldFormatListSpec?
@@ -31,15 +38,17 @@ external interface DataFormatControllerState: State {
 
 //---------------------------------------------------------------------------------------------------------------------
 class DataFormatController(
-    props: Props
+    props: DataFormatControllerProps
 ):
-    RComponent<Props, DataFormatControllerState>(props),
+    RComponent<DataFormatControllerProps, DataFormatControllerState>(props),
     ClientStateGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
-        private val archetype: ObjectLocation
+        private val archetype: ObjectLocation,
+        @Service private val clientStateGlobal: ClientStateGlobal,
+        @Service private val mirroredGraphStore: MirroredGraphStore
     ):
         DocumentController
     {
@@ -59,6 +68,8 @@ class DataFormatController(
             return object: ReactWrapper<Props> {
                 override fun ChildrenBuilder.child(block: Props.() -> Unit) {
                     DataFormatController::class.react {
+                        clientStateGlobal = this@Wrapper.clientStateGlobal
+                        mirroredGraphStore = this@Wrapper.mirroredGraphStore
                         block()
                     }
                 }
@@ -68,19 +79,19 @@ class DataFormatController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun DataFormatControllerState.init(props: Props) {
+    override fun DataFormatControllerState.init(props: DataFormatControllerProps) {
         objectLocation = null
         fields = null
     }
 
 
     override fun componentDidMount() {
-        ClientContext.clientStateGlobal.observe(this)
+        props.clientStateGlobal.observe(this)
     }
 
 
     override fun componentWillUnmount() {
-        ClientContext.clientStateGlobal.unobserve(this)
+        props.clientStateGlobal.unobserve(this)
     }
 
 
@@ -129,6 +140,7 @@ class DataFormatController(
 
             DataFormatFieldAdd::class.react {
                 this.objectLocation = objectLocation
+                this.mirroredGraphStore = props.mirroredGraphStore
             }
         }
     }

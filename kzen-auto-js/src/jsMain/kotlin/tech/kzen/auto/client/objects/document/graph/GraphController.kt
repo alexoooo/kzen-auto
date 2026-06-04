@@ -16,9 +16,9 @@ import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.objects.document.graph.edit.AttributeEditorManagerOld
 import tech.kzen.auto.client.objects.ribbon.RibbonController
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
+import tech.kzen.auto.client.service.global.ExecutionIntentGlobal
 import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
@@ -34,6 +34,7 @@ import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.CellCoordina
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.CellDescriptor
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.EdgeDescriptor
 import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.VertexDescriptor
+import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowLoop
 import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowRepository
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.attribute.AttributeName
@@ -45,7 +46,9 @@ import tech.kzen.lib.common.model.structure.notation.*
 import tech.kzen.lib.common.model.structure.notation.cqrs.InsertListItemInAttributeCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.InsertObjectInListAttributeCommand
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.service.notation.NotationConventions
+import tech.kzen.lib.common.service.store.MirroredGraphStore
 import tech.kzen.lib.platform.collect.persistentListOf
 import tech.kzen.lib.platform.collect.persistentMapOf
 import web.cssom.*
@@ -54,6 +57,13 @@ import web.cssom.*
 //---------------------------------------------------------------------------------------------------------------------
 external interface GraphControllerProps: Props {
     var attributeController: AttributeEditorManagerOld.Wrapper
+
+    var clientStateGlobal: ClientStateGlobal
+    var insertionGlobal: InsertionGlobal
+    var executionIntentGlobal: ExecutionIntentGlobal
+    var mirroredGraphStore: MirroredGraphStore
+    var visualDataflowRepository: VisualDataflowRepository
+    var visualDataflowLoop: VisualDataflowLoop
 }
 
 
@@ -86,7 +96,13 @@ class GraphController(
     class Wrapper(
         private val archetype: ObjectLocation,
         private val attributeController: AttributeEditorManagerOld.Wrapper,
-        private val ribbonController: RibbonController.Wrapper
+        private val ribbonController: RibbonController.Wrapper,
+        @Service private val clientStateGlobal: ClientStateGlobal,
+        @Service private val insertionGlobal: InsertionGlobal,
+        @Service private val executionIntentGlobal: ExecutionIntentGlobal,
+        @Service private val mirroredGraphStore: MirroredGraphStore,
+        @Service private val visualDataflowRepository: VisualDataflowRepository,
+        @Service private val visualDataflowLoop: VisualDataflowLoop
     ):
         DocumentController
     {
@@ -109,6 +125,12 @@ class GraphController(
                 override fun ChildrenBuilder.child(block: Props.() -> Unit) {
                     GraphController::class.react {
                         this.attributeController = this@Wrapper.attributeController
+                        this.clientStateGlobal = this@Wrapper.clientStateGlobal
+                        this.insertionGlobal = this@Wrapper.insertionGlobal
+                        this.executionIntentGlobal = this@Wrapper.executionIntentGlobal
+                        this.mirroredGraphStore = this@Wrapper.mirroredGraphStore
+                        this.visualDataflowRepository = this@Wrapper.visualDataflowRepository
+                        this.visualDataflowLoop = this@Wrapper.visualDataflowLoop
                         block()
                     }
                 }
@@ -121,12 +143,12 @@ class GraphController(
     override fun componentDidMount() {
 //        println("ProjectController - Subscribed")
         async {
-            ClientContext.clientStateGlobal.observe(this)
+            props.clientStateGlobal.observe(this)
 
 //            ClientContext.mirroredGraphStore.observe(this)
-            ClientContext.insertionGlobal.subscribe(this)
+            props.insertionGlobal.subscribe(this)
 //            ClientContext.navigationGlobal.observe(this)
-            ClientContext.visualDataflowRepository.observe(this)
+            props.visualDataflowRepository.observe(this)
         }
     }
 
@@ -135,10 +157,10 @@ class GraphController(
 //        println("ProjectController - Un-subscribed")
 //        ClientContext.mirroredGraphStore.unobserve(this)
 //        ClientContext.executionManager.unsubscribe(this)
-        ClientContext.insertionGlobal.unsubscribe(this)
+        props.insertionGlobal.unsubscribe(this)
 //        ClientContext.navigationGlobal.unobserve(this)
-        ClientContext.visualDataflowRepository.unobserve(this)
-        ClientContext.clientStateGlobal.unobserve(this)
+        props.visualDataflowRepository.unobserve(this)
+        props.clientStateGlobal.unobserve(this)
     }
 
 
@@ -160,7 +182,7 @@ class GraphController(
             }
             else {
                 async {
-                    val visualDataflowModel = ClientContext.visualDataflowRepository.get(documentPath)
+                    val visualDataflowModel = props.visualDataflowRepository.get(documentPath)
                     setState {
                         this.visualDataflowModel = visualDataflowModel
                     }
@@ -243,7 +265,7 @@ class GraphController(
         val documentNotation = documentNotation()
                 ?: return
 
-        val archetypeLocation = ClientContext.insertionGlobal.getAndClearSelection()
+        val archetypeLocation = props.insertionGlobal.getAndClearSelection()
                 ?: return
 
         val archetypeNotation = state.clientState!!.graphStructure().graphNotation.coalesce[archetypeLocation]!!
@@ -292,7 +314,7 @@ class GraphController(
                 }
 
         async {
-            ClientContext.mirroredGraphStore.apply(command)
+            props.mirroredGraphStore.apply(command)
         }
     }
 
@@ -487,6 +509,8 @@ class GraphController(
     ) {
         CellController::class.react {
             this.attributeController = props.attributeController
+            this.executionIntentGlobal = props.executionIntentGlobal
+            this.mirroredGraphStore = props.mirroredGraphStore
 
             this.cellDescriptor = cellDescriptor
 
@@ -518,6 +542,9 @@ class GraphController(
                 documentPath = state.clientState?.navigationRoute?.documentPath
                 graphStructure = state.clientState?.graphStructure()
                 visualDataflowModel = state.visualDataflowModel
+                executionIntentGlobal = props.executionIntentGlobal
+                visualDataflowRepository = props.visualDataflowRepository
+                visualDataflowLoop = props.visualDataflowLoop
             }
         }
     }

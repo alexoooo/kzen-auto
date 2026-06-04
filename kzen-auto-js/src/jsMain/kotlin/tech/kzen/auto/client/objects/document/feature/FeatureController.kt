@@ -16,8 +16,8 @@ import react.dom.html.ReactHTML.img
 import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.NavigationGlobal
+import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.createRef
@@ -40,7 +40,9 @@ import tech.kzen.lib.common.model.structure.resource.ResourceName
 import tech.kzen.lib.common.model.structure.resource.ResourceNesting
 import tech.kzen.lib.common.model.structure.resource.ResourcePath
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.service.store.LocalGraphStore
+import tech.kzen.lib.common.service.store.MirroredGraphStore
 import tech.kzen.lib.common.util.ImmutableByteArray
 import tech.kzen.lib.platform.DateTimeUtils
 import tech.kzen.lib.platform.IoUtils
@@ -48,6 +50,13 @@ import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------
+external interface FeatureControllerProps: Props {
+    var mirroredGraphStore: MirroredGraphStore
+    var navigationGlobal: NavigationGlobal
+    var restClient: ClientRestApi
+}
+
+
 external interface FeatureControllerState: State {
     var documentPath: DocumentPath?
     var graphStructure: GraphStructure?
@@ -62,16 +71,19 @@ external interface FeatureControllerState: State {
 //---------------------------------------------------------------------------------------------------------------------
 @Suppress("unused")
 class FeatureController(
-    props: Props
+    props: FeatureControllerProps
 ):
-    RPureComponent<Props, FeatureControllerState>(props),
+    RPureComponent<FeatureControllerProps, FeatureControllerState>(props),
     NavigationGlobal.Observer,
     LocalGraphStore.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
-        private val archetype: ObjectLocation
+        private val archetype: ObjectLocation,
+        @Service private val mirroredGraphStore: MirroredGraphStore,
+        @Service private val navigationGlobal: NavigationGlobal,
+        @Service private val restClient: ClientRestApi
     ):
         DocumentController
     {
@@ -92,6 +104,9 @@ class FeatureController(
             return object: ReactWrapper<Props> {
                 override fun ChildrenBuilder.child(block: Props.() -> Unit) {
                     FeatureController::class.react {
+                        mirroredGraphStore = this@Wrapper.mirroredGraphStore
+                        navigationGlobal = this@Wrapper.navigationGlobal
+                        restClient = this@Wrapper.restClient
                         block()
                     }
                 }
@@ -105,7 +120,7 @@ class FeatureController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun FeatureControllerState.init(props: Props) {
+    override fun FeatureControllerState.init(props: FeatureControllerProps) {
         documentPath = null
         graphStructure = null
 
@@ -118,8 +133,8 @@ class FeatureController(
 
     override fun componentDidMount() {
         async {
-            ClientContext.mirroredGraphStore.observe(this)
-            ClientContext.navigationGlobal.observe(this)
+            props.mirroredGraphStore.observe(this)
+            props.navigationGlobal.observe(this)
         }
 
         if (state.screenshotDataUrl == null) {
@@ -131,13 +146,13 @@ class FeatureController(
 
 
     override fun componentWillUnmount() {
-        ClientContext.mirroredGraphStore.unobserve(this)
-        ClientContext.navigationGlobal.unobserve(this)
+        props.mirroredGraphStore.unobserve(this)
+        props.navigationGlobal.unobserve(this)
     }
 
 
     override fun componentDidUpdate(
-        prevProps: Props,
+        prevProps: FeatureControllerProps,
         prevState: FeatureControllerState,
         snapshot: Any
     ) {
@@ -194,7 +209,7 @@ class FeatureController(
     private fun doRequestScreenshot() {
         async {
 //            console.log("doRequestScreenshot", screenshotTakerLocation.toString())
-            val result = ClientContext.restClient.performDetached(
+            val result = props.restClient.performDetached(
                 FeatureDocument.screenshotTakerLocation)
 
             if (result is ExecutionSuccess) {
@@ -223,7 +238,7 @@ class FeatureController(
     //-----------------------------------------------------------------------------------------------------------------
     private fun onRemove(resourcePath: ResourcePath) {
         async {
-            ClientContext.mirroredGraphStore.apply(RemoveResourceCommand(
+            props.mirroredGraphStore.apply(RemoveResourceCommand(
                 ResourceLocation(
                     state.documentPath!!,
                     resourcePath)
@@ -254,7 +269,7 @@ class FeatureController(
             }
 
             async {
-                ClientContext.mirroredGraphStore.apply(AddResourceCommand(
+                props.mirroredGraphStore.apply(AddResourceCommand(
                     ResourceLocation(
                         state.documentPath!!,
                         ResourcePath(
@@ -294,7 +309,7 @@ class FeatureController(
 
             for (resource in resources.digests) {
                 val resourceLocation = ResourceLocation(documentPath, resource.key)
-                val resourceUri = ClientContext.restClient.resourceUri(resourceLocation)
+                val resourceUri = props.restClient.resourceUri(resourceLocation)
 
                 img {
                     src = resourceUri

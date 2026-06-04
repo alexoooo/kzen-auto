@@ -37,7 +37,7 @@ import kotlin.js.Json
 
 
 class ClientRestApi(
-    private val baseUrl: String
+    val baseUrl: String
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {

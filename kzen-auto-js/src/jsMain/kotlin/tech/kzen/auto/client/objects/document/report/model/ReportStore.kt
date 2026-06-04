@@ -8,19 +8,24 @@ import tech.kzen.auto.client.objects.document.report.input.model.ReportInputStor
 import tech.kzen.auto.client.objects.document.report.output.model.ReportOutputStore
 import tech.kzen.auto.client.objects.document.report.preview.model.ReportPreviewStore
 import tech.kzen.auto.client.objects.document.report.run.model.ReportRunStore
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
+import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.FunctionWithDebounce
 import tech.kzen.auto.client.wrap.lodash
 import tech.kzen.lib.common.model.definition.ObjectDefinition
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.service.store.MirroredGraphStore
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Instant
 
 
-class ReportStore: ClientStateGlobal.Observer {
+class ReportStore(
+    val clientStateGlobal: ClientStateGlobal,
+    val mirroredGraphStore: MirroredGraphStore,
+    val restClient: ClientRestApi
+): ClientStateGlobal.Observer {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         const val debounceMillis = 1_500
@@ -57,7 +62,7 @@ class ReportStore: ClientStateGlobal.Observer {
         mounted = true
 
         async {
-            ClientContext.clientStateGlobal.observe(this)
+            clientStateGlobal.observe(this)
         }
     }
 
@@ -67,7 +72,7 @@ class ReportStore: ClientStateGlobal.Observer {
         mounted = false
         state = null
 
-        ClientContext.clientStateGlobal.unobserve(this)
+        clientStateGlobal.unobserve(this)
         cancelRefresh()
     }
 

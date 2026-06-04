@@ -1,18 +1,26 @@
 package tech.kzen.auto.server.context
 
 import tech.kzen.auto.common.api.staticResourcePath
+import java.nio.file.Path
+import java.nio.file.Paths
 
 
 data class KzenAutoConfig(
     val jsModuleName: String,
     val port: Int = 80,
-    val host: String = "127.0.0.1"
+    val host: String = "127.0.0.1",
+
+    // Directory containing src/main/resources/notation, for processes whose cwd is not the
+    //  module they serve (e.g. IDE-launched TesterMain); null = GradleLocator's cwd heuristic.
+    val moduleRoot: Path? = null
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private const val serverPortPrefix = "--server.port="
         private val serverPortRegex = Regex(
             Regex.escape(serverPortPrefix) + "\\d+")
+
+        const val moduleRootPrefix = "--module.root="
 
         fun readPort(args: Array<String>): Int? {
             val match = args
@@ -21,6 +29,14 @@ data class KzenAutoConfig(
 
             val portText = match.substring(serverPortPrefix.length)
             return portText.toInt()
+        }
+
+        fun readModuleRoot(args: Array<String>): Path? {
+            val match = args
+                .lastOrNull { it.startsWith(moduleRootPrefix) }
+                ?: return null
+
+            return Paths.get(match.substring(moduleRootPrefix.length))
         }
     }
 

@@ -2,7 +2,6 @@ package tech.kzen.auto.client.objects.document.report.input.select.model
 
 import kotlinx.coroutines.delay
 import tech.kzen.auto.client.objects.document.report.model.ReportStore
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.ClientError
 import tech.kzen.auto.client.util.ClientResult
 import tech.kzen.auto.client.util.ClientSuccess
@@ -79,7 +78,7 @@ class InputSelectedStore(
     private suspend fun selectionDefaultFormats(
         paths: List<DataLocation>
     ): ClientResult<List<InputDataSpec>> {
-        val result = ClientContext.restClient.performDetached(
+        val result = store.restClient.performDetached(
             store.mainLocation(),
             ReportConventions.paramAction to ReportConventions.actionDefaultFormat,
             *paths.map { ReportConventions.filesParameter to it.asString() }.toTypedArray())
@@ -152,7 +151,7 @@ class InputSelectedStore(
         val command = InputSpec.addSelectedCommand(store.mainLocation(), paths)
 
         @Suppress("MoveVariableDeclarationIntoWhen")
-        val result = ClientContext.mirroredGraphStore.apply(command)
+        val result = store.mirroredGraphStore.apply(command)
 
         return (result as? MirroredGraphError)?.error?.message
     }
@@ -199,7 +198,7 @@ class InputSelectedStore(
         val command = InputSpec.removeSelectedCommand(store.mainLocation(), paths)
 
         @Suppress("MoveVariableDeclarationIntoWhen")
-        val result = ClientContext.mirroredGraphStore.apply(command)
+        val result = store.mirroredGraphStore.apply(command)
 
         return (result as? MirroredGraphError)?.error?.message
     }
@@ -248,7 +247,7 @@ class InputSelectedStore(
 
 
     private suspend fun selectionInfo(): ClientResult<InputSelectedInfo> {
-        val result = ClientContext.restClient.performDetached(
+        val result = store.restClient.performDetached(
             store.mainLocation(),
             ReportConventions.paramAction to ReportConventions.actionInputInfo)
 
@@ -298,7 +297,7 @@ class InputSelectedStore(
             store.mainLocation(), groupBy)
 
         @Suppress("MoveVariableDeclarationIntoWhen")
-        val result = ClientContext.mirroredGraphStore.apply(command)
+        val result = store.mirroredGraphStore.apply(command)
 
         return (result as? MirroredGraphError)?.error?.message
     }
@@ -326,7 +325,7 @@ class InputSelectedStore(
 
 
     private suspend fun listDataTypes(): ClientResult<List<ClassName>> {
-        val result = ClientContext.restClient.performDetached(
+        val result = store.restClient.performDetached(
             store.mainLocation(),
             ReportConventions.paramAction to ReportConventions.actionDataTypes)
 
@@ -381,7 +380,7 @@ class InputSelectedStore(
         val command = InputSpec.selectDataTypeCommand(store.mainLocation(), dataType)
 
         @Suppress("MoveVariableDeclarationIntoWhen")
-        val result = ClientContext.mirroredGraphStore.apply(command)
+        val result = store.mirroredGraphStore.apply(command)
 
         return (result as? MirroredGraphError)?.error?.message
     }
@@ -409,7 +408,7 @@ class InputSelectedStore(
 
 
     private suspend fun listFormats(): ClientResult<List<ReportDefinerDetail>> {
-        val result = ClientContext.restClient.performDetached(
+        val result = store.restClient.performDetached(
             store.mainLocation(),
             ReportConventions.paramAction to ReportConventions.actionTypeFormats)
 
@@ -540,7 +539,7 @@ class InputSelectedStore(
             format)
 
         @Suppress("MoveVariableDeclarationIntoWhen")
-        val result = ClientContext.mirroredGraphStore.apply(command)
+        val result = store.mirroredGraphStore.apply(command)
 
         return (result as? MirroredGraphError)?.error?.message
     }
@@ -555,7 +554,7 @@ class InputSelectedStore(
             locationFormats)
 
         @Suppress("MoveVariableDeclarationIntoWhen")
-        val result = ClientContext.mirroredGraphStore.apply(command)
+        val result = store.mirroredGraphStore.apply(command)
 
         return (result as? MirroredGraphError)?.error?.message
     }

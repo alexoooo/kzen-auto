@@ -2,7 +2,7 @@ package tech.kzen.auto.client.objects.document.report.output.model
 
 import kotlinx.coroutines.delay
 import tech.kzen.auto.client.objects.document.report.model.ReportStore
-import tech.kzen.auto.client.service.ClientContext
+import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.util.ClientResult
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.common.api.CommonRestApi
@@ -17,11 +17,20 @@ import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.exec.ExecutionSuccess
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.service.store.MirroredGraphError
+import tech.kzen.lib.common.service.store.MirroredGraphStore
 
 
 class ReportOutputStore(
     private val store: ReportStore
 ) {
+    //-----------------------------------------------------------------------------------------------------------------
+    val mirroredGraphStore: MirroredGraphStore
+        get() = store.mirroredGraphStore
+
+    val restClient: ClientRestApi
+        get() = store.restClient
+
+
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun init() {
         lookupOutputWithFallback()
@@ -55,7 +64,7 @@ class ReportOutputStore(
         val command = OutputSpec.changeTypeCommand(
             store.mainLocation(), outputType)
 
-        val result = ClientContext.mirroredGraphStore.apply(command)
+        val result = store.mirroredGraphStore.apply(command)
 
         return (result as? MirroredGraphError)?.error?.message
     }
@@ -146,7 +155,7 @@ class ReportOutputStore(
         logicRunId: LogicRunId,
         logicExecutionId: LogicExecutionId
     ): ClientResult<OutputInfo> {
-        val result = ClientContext.restClient.performDetached(
+        val result = store.restClient.performDetached(
             store.mainLocation(),
             ReportConventions.paramAction to ReportConventions.actionOutputInfoOnline,
             CommonRestApi.paramRunId to logicRunId.value,
@@ -170,7 +179,7 @@ class ReportOutputStore(
 
 
     private suspend fun outputInfoOffline(): ClientResult<OutputInfo> {
-        val result = ClientContext.restClient.performDetached(
+        val result = store.restClient.performDetached(
             store.mainLocation(),
             ReportConventions.paramAction to ReportConventions.actionOutputInfoOffline)
 
@@ -219,7 +228,7 @@ class ReportOutputStore(
 
 
     private suspend fun resetRequest(): ClientResult<Unit> {
-        val result = ClientContext.restClient.performDetached(
+        val result = store.restClient.performDetached(
             store.mainLocation(),
             ReportConventions.paramAction to ReportConventions.actionReset)
 

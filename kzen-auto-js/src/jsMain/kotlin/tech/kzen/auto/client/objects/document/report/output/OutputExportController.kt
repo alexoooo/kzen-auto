@@ -79,6 +79,7 @@ class OutputExportController(
 
                 objectLocation = props.outputStore.mainLocation()
                 attributePath = OutputExportSpec.formatAttributePath
+                mirroredGraphStore = props.outputStore.mirroredGraphStore
 
                 value = props.outputExportSpec.format
                 disabled = props.runningOrLoading
@@ -102,6 +103,7 @@ class OutputExportController(
 
                 objectLocation = props.outputStore.mainLocation()
                 attributePath = OutputExportSpec.compressionAttributePath
+                mirroredGraphStore = props.outputStore.mirroredGraphStore
 
                 value = props.outputExportSpec.compression
                 disabled = props.runningOrLoading
@@ -130,6 +132,7 @@ class OutputExportController(
 
                 objectLocation = props.outputStore.mainLocation()
                 attributePath = OutputExportSpec.pathAttributePath
+                mirroredGraphStore = props.outputStore.mirroredGraphStore
 
                 value = props.outputExportSpec.pathPattern
                 type = TextAttributeEditor.Type.PlainText

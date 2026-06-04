@@ -4,9 +4,9 @@ import kotlinx.coroutines.delay
 import tech.kzen.auto.client.objects.document.script.progress.ScriptProgressStore
 import tech.kzen.auto.client.objects.document.script.valid.ScriptValidationState
 import tech.kzen.auto.client.objects.document.script.valid.ScriptValidationStore
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
+import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.common.objects.document.script.model.ScriptTree
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -15,7 +15,10 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Instant
 
 
-class ScriptStore: ClientStateGlobal.Observer {
+class ScriptStore(
+    val clientStateGlobal: ClientStateGlobal,
+    val restClient: ClientRestApi
+): ClientStateGlobal.Observer {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         // NB: yields the event loop so cascading onClientState → updateIfChanged → onScriptState
@@ -69,7 +72,7 @@ class ScriptStore: ClientStateGlobal.Observer {
     fun didMount() {
         mounted = true
         async {
-            ClientContext.clientStateGlobal.observe(this)
+            clientStateGlobal.observe(this)
         }
     }
 
@@ -77,7 +80,7 @@ class ScriptStore: ClientStateGlobal.Observer {
     fun willUnmount() {
         mounted = false
         state = null
-        ClientContext.clientStateGlobal.unobserve(this)
+        clientStateGlobal.unobserve(this)
     }
 
 

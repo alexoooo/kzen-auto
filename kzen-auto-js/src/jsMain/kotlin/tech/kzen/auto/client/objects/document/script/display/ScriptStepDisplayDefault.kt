@@ -12,7 +12,6 @@ import tech.kzen.auto.client.objects.document.script.model.ScriptState
 import tech.kzen.auto.client.objects.document.script.model.ScriptStore
 import tech.kzen.auto.client.objects.document.script.model.ScriptStoreContext
 import tech.kzen.auto.client.objects.document.script.step.header.StepHeader
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
@@ -28,6 +27,9 @@ import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.ObjectMetadata
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.reflect.Service
+import tech.kzen.lib.common.service.store.MirroredGraphStore
+import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import web.cssom.*
 
 
@@ -35,6 +37,9 @@ import web.cssom.*
 external interface ScriptStepDisplayDefaultProps: ScriptStepDisplayProps {
     var attributeEditorManager: AttributeEditorManager.Wrapper
     var attributeViewManager: AttributeViewManager.Wrapper
+    var clientStateGlobal: ClientStateGlobal
+    var objectStableMapper: ObjectStableMapper
+    var mirroredGraphStore: MirroredGraphStore
 }
 
 
@@ -134,7 +139,10 @@ class ScriptStepDisplayDefault(
     class Wrapper(
         objectLocation: ObjectLocation,
         private val attributeEditorManager: AttributeEditorManager.Wrapper,
-        private val attributeViewManager: AttributeViewManager.Wrapper
+        private val attributeViewManager: AttributeViewManager.Wrapper,
+        @Service private val clientStateGlobal: ClientStateGlobal,
+        @Service private val objectStableMapper: ObjectStableMapper,
+        @Service private val mirroredGraphStore: MirroredGraphStore
     ):
         ScriptStepDisplayWrapper(objectLocation)
     {
@@ -142,6 +150,9 @@ class ScriptStepDisplayDefault(
             ScriptStepDisplayDefault::class.react {
                 this.attributeEditorManager = this@Wrapper.attributeEditorManager
                 this.attributeViewManager = this@Wrapper.attributeViewManager
+                this.clientStateGlobal = this@Wrapper.clientStateGlobal
+                this.objectStableMapper = this@Wrapper.objectStableMapper
+                this.mirroredGraphStore = this@Wrapper.mirroredGraphStore
                 block()
             }
         }
@@ -156,7 +167,7 @@ class ScriptStepDisplayDefault(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
-        ClientContext.clientStateGlobal.observe(this)
+        props.clientStateGlobal.observe(this)
         contextValue<ScriptStore?>()?.observe(this)
     }
 
@@ -167,14 +178,14 @@ class ScriptStepDisplayDefault(
         // unmounting component; the still-mounted sibling preview collapses and the deleted step's
         // map entry is pruned. Idempotent — no-ops when already collapsed.
         scriptStore?.unobserve(this)
-        ClientContext.clientStateGlobal.unobserve(this)
+        props.clientStateGlobal.unobserve(this)
         scriptStore?.stepStore?.setExpanded(props.common.objectLocation, false)
     }
 
 
     override fun onScriptState(scriptState: ScriptState) {
         val traceInfo = computeStepTraceInfo(
-            scriptState, props.common.objectLocation, ClientContext.objectStableMapper)
+            scriptState, props.common.objectLocation, props.objectStableMapper)
 
         val stepValidation = scriptState
             .validationState
@@ -328,6 +339,8 @@ class ScriptStepDisplayDefault(
                 typeMetadata = state.stepValidation?.typeMetadata?.toSimple()
                 expanded = state.expanded
                 onToggleExpanded = ::onToggleExpanded
+
+                mirroredGraphStore = props.mirroredGraphStore
             }
 
 //            +"[x]"

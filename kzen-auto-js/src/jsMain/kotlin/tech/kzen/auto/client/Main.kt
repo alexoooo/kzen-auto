@@ -19,8 +19,6 @@ import web.window.window
 
 
 fun main() {
-    ClientContext.init()
-
     fun emptyRootElement(): HTMLElement {
         val rootElement = document.getElementById(ElementId(rootHtmlElementId))
             ?: throw IllegalStateException("'$rootHtmlElementId' element not found")
@@ -33,9 +31,17 @@ fun main() {
 
     window.onload = EventHandler {
         async {
-            ClientContext.initAsync()
+            val clientContext: ClientContext =
+                try {
+                    ClientContext.create()
+                }
+                catch (t: Throwable) {
+                    val rootElement = emptyRootElement()
+                    rootElement.textContent = "Error: ${t.message}"
+                    throw t
+                }
 
-            val clientGraphDefinition = ClientContext.mirroredGraphStore
+            val clientGraphDefinition = clientContext.mirroredGraphStore
                     .graphDefinition()
                     .successful()
                     .filterDefinitions(AutoConventions.clientUiAllowed)
@@ -43,8 +49,8 @@ fun main() {
 
             val clientGraphInstance: GraphInstance =
                 try {
-                    ClientContext.graphCreator
-                        .createGraph(clientGraphDefinition)
+                    clientContext.graphCreator.createGraph(
+                        clientGraphDefinition, clientContext.graphEnvironment)
                 }
                 catch (t: Throwable) {
                     val rootElement = emptyRootElement()

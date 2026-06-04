@@ -13,7 +13,7 @@ import tech.kzen.auto.client.objects.document.script.display.computeStepTraceInf
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
 import tech.kzen.auto.client.objects.document.script.model.ScriptStore
 import tech.kzen.auto.client.objects.document.script.model.ScriptStoreContext
-import tech.kzen.auto.client.service.ClientContext
+import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.contextValue
 import tech.kzen.auto.client.wrap.createRef
@@ -22,6 +22,7 @@ import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.exec.BinaryExecutionValue
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import web.cssom.*
 import web.html.HTMLImageElement
 
@@ -29,6 +30,8 @@ import web.html.HTMLImageElement
 //---------------------------------------------------------------------------------------------------------------------
 external interface StepImageThumbnailProps: Props {
     var objectLocation: ObjectLocation
+    var objectStableMapper: ObjectStableMapper
+    var clientStateGlobal: ClientStateGlobal
 }
 
 
@@ -136,7 +139,7 @@ class StepImageThumbnail(
     //-----------------------------------------------------------------------------------------------------------------
     override fun onScriptState(scriptState: ScriptState) {
         val traceInfo = computeStepTraceInfo(
-            scriptState, props.objectLocation, ClientContext.objectStableMapper)
+            scriptState, props.objectLocation, props.objectStableMapper)
         val nextScreenshot = traceInfo.trace?.detail as? BinaryExecutionValue
         val nextExpanded = scriptState.isStepExpanded(props.objectLocation)
 
@@ -296,6 +299,8 @@ class StepImageThumbnail(
             StepImageFullscreen::class.react {
                 initialLocation = props.objectLocation
                 onClose = { onFullscreenClose() }
+                objectStableMapper = props.objectStableMapper
+                clientStateGlobal = props.clientStateGlobal
             }
         }
     }

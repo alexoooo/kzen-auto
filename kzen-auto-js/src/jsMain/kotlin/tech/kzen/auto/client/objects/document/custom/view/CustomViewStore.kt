@@ -4,7 +4,8 @@ import tech.kzen.auto.client.objects.document.common.dragdrop.computeDropIndex
 import tech.kzen.auto.client.objects.document.custom.model.CustomState
 import tech.kzen.auto.client.objects.document.custom.model.CustomStore
 import tech.kzen.auto.client.objects.document.custom.view.obj.CustomObjectInfo
-import tech.kzen.auto.client.service.ClientContext
+import tech.kzen.auto.client.service.rest.ClientRestApi
+import tech.kzen.auto.client.service.rest.ClientRestTaskRepository
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.common.objects.document.custom.CustomConventions
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -23,6 +24,11 @@ import tech.kzen.lib.common.util.naming.NextAvailableName
 class CustomViewStore(
     private val parent: CustomStore
 ) {
+    //-----------------------------------------------------------------------------------------------------------------
+    val restClient: ClientRestApi get() = parent.restClient
+    val clientRestTaskRepository: ClientRestTaskRepository get() = parent.clientRestTaskRepository
+
+
     //-----------------------------------------------------------------------------------------------------------------
     fun toggleExport(objectLocation: ObjectLocation) {
         val snapshot = snapshot()
@@ -56,7 +62,7 @@ class CustomViewStore(
         val command = AddObjectCommand.ofParent(newLocation, endOfDocument, prototype.objectPath.name)
 
         async {
-            val result = ClientContext.mirroredGraphStore.apply(command)
+            val result = parent.mirroredGraphStore.apply(command)
             when (result) {
                 is MirroredGraphSuccess -> onResult(null)
                 is MirroredGraphError -> onResult(result.error.message ?: result.error.toString())
@@ -162,7 +168,7 @@ class CustomViewStore(
     private fun snapshot(): Snapshot {
         val state = parent.stateOrNull()
             ?: error("CustomViewStore: state unavailable")
-        val graphStructure = ClientContext.clientStateGlobal.current()?.graphStructure()
+        val graphStructure = parent.clientStateGlobal.current()?.graphStructure()
             ?: error("CustomViewStore: graphStructure unavailable")
         return Snapshot(state, graphStructure)
     }
@@ -171,7 +177,7 @@ class CustomViewStore(
     private fun dispatch(commands: List<NotationCommand>) {
         async {
             for (command in commands) {
-                ClientContext.mirroredGraphStore.apply(command)
+                parent.mirroredGraphStore.apply(command)
             }
         }
     }

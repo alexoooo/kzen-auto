@@ -17,7 +17,7 @@ import tech.kzen.auto.client.objects.document.script.display.computeStepTraceInf
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
 import tech.kzen.auto.client.objects.document.script.model.ScriptStore
 import tech.kzen.auto.client.objects.document.script.model.ScriptStoreContext
-import tech.kzen.auto.client.service.ClientContext
+import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.contextValue
 import tech.kzen.auto.client.wrap.installContextType
@@ -25,6 +25,7 @@ import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.exec.BinaryExecutionValue
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import web.cssom.*
 
 
@@ -32,6 +33,8 @@ import web.cssom.*
 external interface StepImageFullscreenProps: Props {
     var initialLocation: ObjectLocation
     var onClose: () -> Unit
+    var objectStableMapper: ObjectStableMapper
+    var clientStateGlobal: ClientStateGlobal
 }
 
 
@@ -106,7 +109,7 @@ class StepImageFullscreen(
 
 
     private fun hasScreenshot(scriptState: ScriptState, location: ObjectLocation): Boolean {
-        val trace = computeStepTraceInfo(scriptState, location, ClientContext.objectStableMapper).trace
+        val trace = computeStepTraceInfo(scriptState, location, props.objectStableMapper).trace
         return trace?.detail is BinaryExecutionValue
     }
 
@@ -141,7 +144,7 @@ class StepImageFullscreen(
             ?: return
 
         val location = state.location
-        val screenshot = computeStepTraceInfo(scriptState, location, ClientContext.objectStableMapper)
+        val screenshot = computeStepTraceInfo(scriptState, location, props.objectStableMapper)
             .trace?.detail as? BinaryExecutionValue
             ?: return
 
@@ -253,7 +256,7 @@ class StepImageFullscreen(
     private fun ChildrenBuilder.renderHeader(location: ObjectLocation, canNavigate: Boolean) {
         // Title follows `location` (navigation moves between steps); resolved from the current
         // client state.
-        val title = ClientContext.clientStateGlobal.current()
+        val title = props.clientStateGlobal.current()
             ?.let { computeStepHeaderInfo(it, location)?.title }
 
         div {

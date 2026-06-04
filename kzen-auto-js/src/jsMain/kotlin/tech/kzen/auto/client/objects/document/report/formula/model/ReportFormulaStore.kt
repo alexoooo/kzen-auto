@@ -2,7 +2,6 @@ package tech.kzen.auto.client.objects.document.report.formula.model
 
 import kotlinx.coroutines.delay
 import tech.kzen.auto.client.objects.document.report.model.ReportStore
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.util.ClientResult
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.common.objects.document.report.ReportConventions
@@ -136,7 +135,7 @@ class ReportFormulaStore(
             return ClientResult.ofSuccess(mapOf())
         }
 
-        val result = ClientContext.restClient.performDetached(
+        val result = store.restClient.performDetached(
             store.mainLocation(),
             ReportConventions.paramAction to ReportConventions.actionValidateFormulas)
 
@@ -186,7 +185,7 @@ class ReportFormulaStore(
     private suspend fun editNotation(
         command: NotationCommand
     ): String? {
-        val result = ClientContext.mirroredGraphStore.apply(command)
+        val result = store.mirroredGraphStore.apply(command)
 
         return (result as? MirroredGraphError)
             ?.error

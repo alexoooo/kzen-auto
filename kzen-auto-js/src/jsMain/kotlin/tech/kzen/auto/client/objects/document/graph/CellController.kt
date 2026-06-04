@@ -4,7 +4,6 @@ import react.ChildrenBuilder
 import react.Props
 import react.State
 import tech.kzen.auto.client.objects.document.graph.edit.AttributeEditorManagerOld
-import tech.kzen.auto.client.service.ClientContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ExecutionIntentGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
@@ -19,6 +18,7 @@ import tech.kzen.auto.common.paradigm.dataflow.model.structure.cell.VertexDescri
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.service.store.MirroredGraphStore
 import web.cssom.em
 import web.cssom.plus
 import web.cssom.times
@@ -27,6 +27,8 @@ import web.cssom.times
 //---------------------------------------------------------------------------------------------------------------------
 external interface CellControllerProps: Props {
     var attributeController: AttributeEditorManagerOld.Wrapper
+    var executionIntentGlobal: ExecutionIntentGlobal
+    var mirroredGraphStore: MirroredGraphStore
 
     var cellDescriptor: CellDescriptor
 
@@ -86,12 +88,12 @@ class CellController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
-        ClientContext.executionIntentGlobal.observe(this)
+        props.executionIntentGlobal.observe(this)
     }
 
 
     override fun componentWillUnmount() {
-        ClientContext.executionIntentGlobal.unobserve(this)
+        props.executionIntentGlobal.unobserve(this)
     }
 
 
@@ -114,6 +116,8 @@ class CellController(
         if (isVertex()) {
             VertexController::class.react {
                 attributeController = props.attributeController
+                executionIntentGlobal = props.executionIntentGlobal
+                mirroredGraphStore = props.mirroredGraphStore
 
                 cellDescriptor = props.cellDescriptor as VertexDescriptor
 
@@ -127,6 +131,8 @@ class CellController(
         }
         else {
             EdgeController::class.react {
+                mirroredGraphStore = props.mirroredGraphStore
+
                 cellDescriptor = props.cellDescriptor as EdgeDescriptor
 
                 documentPath = props.documentPath
