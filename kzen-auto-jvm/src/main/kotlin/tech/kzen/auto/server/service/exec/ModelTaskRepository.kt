@@ -20,6 +20,7 @@ import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
 import tech.kzen.lib.common.model.structure.notation.cqrs.RenamedDocumentRefactorEvent
 import tech.kzen.lib.common.service.context.GraphCreator
+import tech.kzen.lib.common.service.context.environment.GraphEnvironment
 import tech.kzen.lib.common.service.store.LocalGraphStore
 import java.time.Instant
 import java.util.*
@@ -30,7 +31,8 @@ import java.util.concurrent.atomic.AtomicReference
 
 class ModelTaskRepository(
     private val graphStore: LocalGraphStore,
-    private val graphCreator: GraphCreator
+    private val graphCreator: GraphCreator,
+    private val environment: () -> GraphEnvironment
 ):
     TaskRepository,
     LocalGraphStore.Observer
@@ -131,7 +133,7 @@ class ModelTaskRepository(
 
         // TODO: add GraphInstanceAttempt for error reporting
         val graphInstance =
-            graphCreator.createGraph(graphDefinition)
+            graphCreator.createGraph(graphDefinition, environment())
 
         val instance = graphInstance.objectInstances[taskLocation]?.reference
             ?: throw IllegalArgumentException("Not found: $taskLocation")

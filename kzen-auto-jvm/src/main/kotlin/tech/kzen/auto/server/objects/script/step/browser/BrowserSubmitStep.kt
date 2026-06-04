@@ -2,7 +2,6 @@ package tech.kzen.auto.server.objects.script.step.browser
 
 import org.openqa.selenium.OutputType
 import tech.kzen.auto.common.objects.document.feature.TargetSpec
-import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.objects.script.api.ScriptStepDefinition
 import tech.kzen.auto.server.objects.script.api.TracingScriptStep
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
@@ -13,14 +12,19 @@ import tech.kzen.lib.common.exec.logic.model.LogicResultSuccess
 import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.auto.server.service.vision.VisionUtils
 import tech.kzen.lib.common.exec.BinaryExecutionValue
+import tech.kzen.auto.server.service.webdriver.WebDriverContext
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.reflect.Service
+import tech.kzen.lib.common.service.media.NotationMedia
 
 
 @Reflect
 class BrowserSubmitStep(
     private val target: TargetSpec,
-    selfLocation: ObjectLocation
+    selfLocation: ObjectLocation,
+    @Service private val webDriverContext: WebDriverContext,
+    @Service private val notationMedia: NotationMedia
 ):
     TracingScriptStep(selfLocation)
 {
@@ -33,12 +37,12 @@ class BrowserSubmitStep(
     override fun continueOrStart(
         scriptExecutionContext: ScriptExecutionContext
     ): LogicResult {
-        val driver = KzenAutoContext.global().webDriverContext.get()
+        val driver = webDriverContext.get()
 
         val match = VisionUtils.locateElement(
             target,
             driver,
-            KzenAutoContext.global().notationMedia)
+            notationMedia)
 
         match.error?.let {
             return LogicResultFailed(it)

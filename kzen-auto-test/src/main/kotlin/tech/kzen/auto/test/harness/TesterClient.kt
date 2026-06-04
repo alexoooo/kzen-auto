@@ -40,68 +40,16 @@ class TesterClient(testerPort: Int):
      * Start a logic-run on the given Script ObjectLocation. Returns the run id on success.
      * Throws if the tester returns non-2xx (e.g. unknown ObjectLocation, graph errors).
      */
-    fun startRun(
-        documentPath: String,
-        objectPath: String = "main",
-        pauseOnError: Boolean = false
-    ): String = runBlocking {
+    fun startRun(documentPath: String, objectPath: String = "main"): String = runBlocking {
         val response = http.get("$baseUrl/logic/startRun") {
             parameter("path", documentPath)
             parameter("object", objectPath)
-            if (pauseOnError) {
-                parameter("pauseOnError", "true")
-            }
         }
         val body = response.bodyAsText()
         check(response.status == HttpStatusCode.OK) {
             "startRun failed (${response.status}): $body"
         }
         body.trim()
-    }
-
-
-    /**
-     * Block until status.active.state equals [targetState] (e.g. "Paused"), checking every
-     * [pollIntervalMs]. Returns the matching status payload. Throws on timeout — the message
-     * includes the last status so a run that ended (active == "null") instead of reaching the
-     * target state is easy to diagnose.
-     */
-    fun awaitState(
-        targetState: String,
-        timeoutMs: Long = 120_000,
-        pollIntervalMs: Long = 250
-    ): Map<String, Any?> {
-        val deadline = System.currentTimeMillis() + timeoutMs
-        while (System.currentTimeMillis() < deadline) {
-            val status = status()
-            val active = status["active"]
-            if (active != null && active != "null") {
-                @Suppress("UNCHECKED_CAST")
-                val activeMap = active as Map<String, Any?>
-                if (activeMap["state"] == targetState) {
-                    return status
-                }
-            }
-            Thread.sleep(pollIntervalMs)
-        }
-        throw IllegalStateException(
-            "logic run did not reach state '$targetState' within ${timeoutMs}ms; last status: ${status()}")
-    }
-
-
-    /** Single-step a paused run. Returns the LogicRunResponse name (e.g. "Submitted"). */
-    fun step(runId: String): String = runBlocking {
-        http.get("$baseUrl/logic/step") {
-            parameter("run", runId)
-        }.bodyAsText().trim()
-    }
-
-
-    /** Cancel a run by id (cleanup for paused runs). Returns the LogicRunResponse name. */
-    fun cancel(runId: String): String = runBlocking {
-        http.get("$baseUrl/logic/cancel") {
-            parameter("run", runId)
-        }.bodyAsText().trim()
     }
 
 

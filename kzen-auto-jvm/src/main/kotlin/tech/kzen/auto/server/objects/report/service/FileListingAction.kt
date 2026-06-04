@@ -9,17 +9,19 @@ import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.common.util.data.DataLocationInfo
 import tech.kzen.auto.common.util.data.FilePath
 import tech.kzen.auto.common.util.data.FilePathJvm.toPath
-import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.objects.plugin.PluginUtils.asPluginCoordinate
 import tech.kzen.auto.server.objects.report.model.GroupPattern
 import tech.kzen.auto.server.objects.report.service.ReportUtils.asCommon
+import tech.kzen.auto.server.service.plugin.ReportDefinitionRepository
 import java.nio.file.*
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.*
 import kotlin.time.Instant
 
 
-class FileListingAction {
+class FileListingAction(
+    private val definitionRepository: ReportDefinitionRepository
+) {
     private fun parseFilter(filter: String): (Path) -> Boolean {
         val trimmedFilter = filter.trim()
 
@@ -78,7 +80,7 @@ class FileListingAction {
             val path = inputDataSpec.location.filePath!!.toPath()
             val dataLocationInfo = toFileInfo(path)
 
-            val processorDefinitionMetadata = KzenAutoContext.global().definitionRepository.metadata(
+            val processorDefinitionMetadata = definitionRepository.metadata(
                 inputDataSpec.processorDefinitionCoordinate.asPluginCoordinate())
 
             val dataEncodingSpec = ReportUtils.encoding(inputDataSpec, processorDefinitionMetadata)

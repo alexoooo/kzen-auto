@@ -50,15 +50,11 @@ fun kzenAutoInit(args: Array<String>, jsModuleName: String): KzenAutoContext {
         port = port,
         host = "127.0.0.1")
 
-    val context = KzenAutoContext(config)
-
-    context.init()
+    val context = KzenAutoContext.create(config)
 
     Runtime.getRuntime().addShutdownHook(Thread {
         context.close()
     })
-
-    KzenAutoContext.setGlobal(context)
 
     return context
 }
@@ -130,12 +126,6 @@ private fun Routing.routeIcons() {
             ?.filter { it.isNotEmpty() }
             ?: emptyList()
 
-        // Icon data is a build artifact (the bundled material-symbols collection) — immutable for the life
-        // of this build, and a given name's glyph never changes within a published collection. Without an
-        // explicit lifetime the browser revalidates on every reload, and since Iconify caches icons only in
-        // memory (no localStorage layer in @iconify/react), every page reload re-fetches every glyph. A long
-        // max-age lets the browser serve identical batches from its own cache, so each batch is downloaded at
-        // most once per window; an icon-set dependency bump self-heals once the window lapses.
         call.response.header(HttpHeaders.CacheControl, "public, max-age=604800")
         call.respondText(IconCollectionHandler.query(set, icons), ContentType.Application.Json)
     }

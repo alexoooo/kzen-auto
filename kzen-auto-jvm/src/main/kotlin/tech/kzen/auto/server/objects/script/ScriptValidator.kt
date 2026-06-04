@@ -6,10 +6,13 @@ import tech.kzen.auto.common.objects.document.script.model.ScriptTree
 import tech.kzen.auto.common.objects.document.script.model.ScriptValidation
 import tech.kzen.auto.common.objects.document.script.model.StepValidation
 import tech.kzen.auto.common.paradigm.detached.DetachedAction
-import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.objects.registry.ObjectRegistryDocument
 import tech.kzen.auto.server.objects.script.api.ScriptStep
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
+import tech.kzen.lib.common.reflect.Service
+import tech.kzen.lib.common.service.context.GraphCreator
+import tech.kzen.lib.common.service.context.environment.GraphEnvironment
+import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.common.exec.tuple.TupleComponentName
 import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionResult
@@ -24,7 +27,11 @@ import tech.kzen.lib.common.reflect.Reflect
 
 
 @Reflect
-class ScriptValidator: DetachedAction {
+class ScriptValidator(
+    @Service private val graphStore: LocalGraphStore,
+    @Service private val graphCreator: GraphCreator,
+    @Service private val environment: GraphEnvironment
+): DetachedAction {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         fun validate(
@@ -127,14 +134,14 @@ class ScriptValidator: DetachedAction {
 
         val documentPath = DocumentPath.parse(documentPathValue)
 
-        val graphDefinitionAttempt = KzenAutoContext.global().graphStore.graphDefinition()
+        val graphDefinitionAttempt = graphStore.graphDefinition()
 
         val stepGraphDefinition = graphDefinitionAttempt
             .transitiveSuccessful
             .filterTransitive(documentPath)
 
-        val graphInstance = KzenAutoContext.global().graphCreator
-            .createGraph(stepGraphDefinition)
+        val graphInstance = graphCreator
+            .createGraph(stepGraphDefinition, environment)
 
         val scriptValidation = validate(
             documentPath,

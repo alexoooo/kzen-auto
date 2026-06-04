@@ -4,21 +4,23 @@ import io.github.bonigarcia.wdm.WebDriverManager
 import org.openqa.selenium.chrome.ChromeDriver
 import org.openqa.selenium.chrome.ChromeOptions
 import org.openqa.selenium.remote.RemoteWebDriver
-import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.objects.script.api.ScriptStepDefinition
 import tech.kzen.auto.server.objects.script.api.TracingScriptStep
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
 import tech.kzen.auto.server.objects.script.model.ScriptExecutionContext
+import tech.kzen.auto.server.service.webdriver.WebDriverContext
 import tech.kzen.lib.common.exec.logic.model.LogicResult
 import tech.kzen.lib.common.exec.logic.model.LogicResultSuccess
 import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.reflect.Service
 
 
 @Reflect
 class BrowserOpenStep(
-    selfLocation: ObjectLocation
+    selfLocation: ObjectLocation,
+    @Service private val webDriverContext: WebDriverContext
 ):
     TracingScriptStep(selfLocation)
 {
@@ -53,7 +55,7 @@ class BrowserOpenStep(
 //        ChromeDriverService.Builder().build()
         val driver: RemoteWebDriver = ChromeDriver(chromeOptions)
 
-        KzenAutoContext.global().webDriverContext.set(driver)
+        webDriverContext.set(driver)
 
         val infoText = WebDriverManager.chromedriver().browserPath.orElse(null)
         traceDetail(scriptExecutionContext, infoText.toString())

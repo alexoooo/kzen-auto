@@ -20,6 +20,7 @@ import tech.kzen.lib.common.exec.ExecutionResult
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.service.context.GraphCreator
+import tech.kzen.lib.common.service.context.environment.GraphEnvironment
 import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import tech.kzen.lib.common.util.ExceptionUtils
@@ -33,7 +34,8 @@ class ServerLogicController(
     private val graphStore: LocalGraphStore,
     private val graphCreator: GraphCreator,
     private val objectStableMapper: ObjectStableMapper,
-    private val logicTraceStore: LogicTraceStore
+    private val logicTraceStore: LogicTraceStore,
+    private val environment: () -> GraphEnvironment
 ):
     LogicController
 {
@@ -139,7 +141,7 @@ class ServerLogicController(
 
         val rootGraphInstance =
             try {
-                graphCreator.createGraph(transitiveDefinition)
+                graphCreator.createGraph(transitiveDefinition, environment())
             }
             catch (e: Exception) {
                 logger.info("Unable to create: {}", root, e)
@@ -172,7 +174,7 @@ class ServerLogicController(
                 }
 
                 val logicExecutionFacadeImpl = LogicExecutionFacadeImpl(
-                    successfulGraphDefinition, commonMutableLogicControl, listener, logicTraceStore)
+                    successfulGraphDefinition, commonMutableLogicControl, listener, logicTraceStore, environment)
 
                 val logicExecution = logicExecutionFacadeImpl.open(
                     runId, originalObjectLocation, this, graphCreator)

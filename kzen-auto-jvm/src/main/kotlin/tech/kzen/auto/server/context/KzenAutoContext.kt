@@ -32,17 +32,22 @@ import tech.kzen.auto.server.util.WorkUtils
 import tech.kzen.lib.common.codegen.KzenLibCommonModule
 import tech.kzen.lib.common.service.context.GraphCreator
 import tech.kzen.lib.common.service.context.GraphDefiner
+import tech.kzen.lib.common.service.context.environment.GraphEnvironment
 import tech.kzen.lib.common.service.media.LiteralNotationMedia
 import tech.kzen.lib.common.service.media.NotationMedia
 import tech.kzen.lib.common.service.media.ReadWriteNotationMedia
 import tech.kzen.lib.common.service.metadata.NotationMetadataReader
 import tech.kzen.lib.common.service.notation.NotationReducer
+import tech.kzen.lib.common.service.parse.NotationParser
 import tech.kzen.lib.common.service.parse.YamlNotationParser
 import tech.kzen.lib.common.service.store.DirectGraphStore
+import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import tech.kzen.lib.server.exec.logic.trace.LogicTraceStore
+import tech.kzen.lib.platform.ClassName
 import tech.kzen.lib.server.notation.ClasspathNotationMedia
 import tech.kzen.lib.server.notation.FileNotationMedia
+import tech.kzen.lib.server.notation.locate.FileNotationLocator
 import tech.kzen.lib.server.notation.locate.GradleLocator
 import java.lang.AutoCloseable
 
@@ -60,26 +65,17 @@ class KzenAutoContext(
             KzenAutoJvmModule.register()
         }
 
-        private var global: KzenAutoContext? = null
 
-        fun setGlobal(context: KzenAutoContext) {
-            check(global == null) { "Already set" }
-            global = context
-        }
-
-        fun clearGlobal() {
-            check(global != null) { "Not set" }
-            global = null
+        // Construction is self-initializing: callers get a ready context (observers wired,
+        // stable ids pre-warmed) rather than having to remember a separate init() step.
+        fun create(config: KzenAutoConfig): KzenAutoContext {
+            return KzenAutoContext(config).also { it.init() }
         }
 
 
-        /**
-         * Kzen implements a dynamic dependency injection container, but it can be useful to separately
-         *  perform static dependency injection (KzenAutoContext) as a bootstrap.
-         * This method allows Kzen-managed instances to access the KzenAutoContext.
-         */
-        fun global(): KzenAutoContext {
-            return global!!
+        // Defaulted config for tests that drive in-process logic and don't need a real port/host.
+        fun forTest(): KzenAutoContext {
+            return create(KzenAutoConfig(jsModuleName = "kzen-auto-js"))
         }
     }
 
@@ -87,8 +83,7 @@ class KzenAutoContext(
     //-----------------------------------------------------------------------------------------------------------------
     private val notationMetadataReader = NotationMetadataReader()
 
-    private val fileLocator = GradleLocator()
-
+    private val fileLocator: FileNotationLocator = GradleLocator()
     private val fileMedia = FileNotationMedia(fileLocator)
 
     private val readOnlyMedia: NotationMedia = runBlocking {
@@ -100,7 +95,7 @@ class KzenAutoContext(
     val notationMedia: NotationMedia = ReadWriteNotationMedia(
         fileMedia, readOnlyMedia)
 
-    val yamlParser = YamlNotationParser()
+    private val notationParser: NotationParser = YamlNotationParser()
 
     val graphDefiner = GraphDefiner
     val graphCreator = GraphCreator
@@ -108,16 +103,13 @@ class KzenAutoContext(
 
     val graphStore = DirectGraphStore(
         notationMedia,
-        yamlParser,
+        notationParser,
         notationMetadataReader,
         graphDefiner,
         notationReducer)
 
-    val detachedExecutor = ModelDetachedExecutor(
-        graphStore, graphCreator)
-
     val modelTaskRepository = ModelTaskRepository(
-        graphStore, graphCreator)
+        graphStore, graphCreator) { graphEnvironment }
 
     // Process-global stable-id ↔ location mapping. Observes graphStore from boot so
     // identity survives renames across the entire server lifetime — including the gap
@@ -127,8 +119,10 @@ class KzenAutoContext(
     val logicTraceStore = LogicTraceStore(objectStableMapper)
 
     private val graphInstanceCreator = GraphInstanceCreator(
-        graphStore, graphCreator)
+        graphStore, graphCreator) { graphEnvironment }
 
+
+    /// TODO: factor out
     private val dataflowMessageInspector = DataflowMessageInspector()
 
     private val activeDataflowRepository = ActiveDataflowRepository(
@@ -141,6 +135,7 @@ class KzenAutoContext(
 
     val visualDataflowRepository = VisualDataflowRepository(
         activeVisualProvider)
+    /// end of factor out
 
     val workUtils = WorkUtils.sibling
     val reportWorkPool = ReportWorkPool(workUtils)
@@ -148,10 +143,6 @@ class KzenAutoContext(
     val kotlinCompiler = ScriptKotlinCompiler()
     val cachedKotlinCompiler = CachedKotlinCompiler(kotlinCompiler, workUtils)
     val calculatedColumnEval = CalculatedColumnEval(cachedKotlinCompiler)
-
-    val fileListingAction = FileListingAction()
-    val filterIndex = FilterIndex(workUtils)
-    val columnListingAction = ColumnListingAction(filterIndex)
 
 
     private val basicDefinitionRepository = HostReportDefinitionRepository(listOf(
@@ -162,32 +153,65 @@ class KzenAutoContext(
     private val pluginProcessorDefinitionRepository = PluginReportDefinitionRepository(
          graphStore, graphDefiner, graphCreator)
 
+    // Built before fileListingAction, which now depends on it.
     val definitionRepository: ReportDefinitionRepository = MultiDefinitionRepository(listOf(
         basicDefinitionRepository, pluginProcessorDefinitionRepository))
 
+    val fileListingAction = FileListingAction(definitionRepository)
+    val filterIndex = FilterIndex(workUtils)
+    val columnListingAction = ColumnListingAction(filterIndex)
 
+
+    // The run/detached/task/dataflow createGraph callers receive the GraphEnvironment as a
+    // deferred provider `{ graphEnvironment }`: graphEnvironment (lazy, declared below) registers
+    // serverLogicController and definitionRepository themselves, so eager wiring would be cyclic.
+    // The provider is only invoked at request/run time, long after construction completes.
     val serverLogicController = ServerLogicController(
-        graphStore, graphCreator, objectStableMapper, logicTraceStore)
+        graphStore, graphCreator, objectStableMapper, logicTraceStore) { graphEnvironment }
+
+    val detachedExecutor = ModelDetachedExecutor(
+        graphStore, graphCreator) { graphEnvironment }
 
     val restHandler = RestHandler(
         notationMedia,
-        yamlParser,
+        notationParser,
         graphStore,
         detachedExecutor,
         visualDataflowRepository,
         modelTaskRepository,
-        serverLogicController)
+        serverLogicController,
+        objectStableMapper)
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    private val downloadClient = DownloadClient()
-//    val webDriverRepo = WebDriverOptionDao()
-//    val webDriverInstaller = WebDriverInstaller(downloadClient)
     val webDriverContext = WebDriverContext()
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun init() {
+    // Runtime services exposed to @Service constructor parameters of graph-instantiated objects,
+    // keyed by the type each consumer declares. Lazy so the cyclic members (serverLogicController,
+    // definitionRepository) are already built when it is first accessed at request/run time.
+    val graphEnvironment: GraphEnvironment by lazy {
+        GraphEnvironment.builder()
+            .put(ClassName(GraphCreator::class.qualifiedName!!), graphCreator)
+            .put(ClassName(ObjectStableMapper::class.qualifiedName!!), objectStableMapper)
+            .put(ClassName(CachedKotlinCompiler::class.qualifiedName!!), cachedKotlinCompiler)
+            .put(ClassName(WebDriverContext::class.qualifiedName!!), webDriverContext)
+            .put(ClassName(NotationMedia::class.qualifiedName!!), notationMedia)
+            .put(ClassName(LocalGraphStore::class.qualifiedName!!), graphStore)
+            .put(ClassName(LogicTraceStore::class.qualifiedName!!), logicTraceStore)
+            .put(ClassName(ReportWorkPool::class.qualifiedName!!), reportWorkPool)
+            .put(ClassName(ReportDefinitionRepository::class.qualifiedName!!), definitionRepository)
+            .put(ClassName(CalculatedColumnEval::class.qualifiedName!!), calculatedColumnEval)
+            .put(ClassName(FileListingAction::class.qualifiedName!!), fileListingAction)
+            .put(ClassName(ColumnListingAction::class.qualifiedName!!), columnListingAction)
+            .put(ClassName(ServerLogicController::class.qualifiedName!!), serverLogicController)
+            .build()
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun init() {
         runBlocking {
             graphStore.observe(activeDataflowRepository)
             graphStore.observe(visualDataflowRepository)

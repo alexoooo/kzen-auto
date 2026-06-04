@@ -6,11 +6,11 @@ import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.objects.document.registry.model.ObjectRegistryScan
 import tech.kzen.auto.common.objects.document.script.model.ScriptTree
 import tech.kzen.auto.common.objects.document.script.model.ScriptValidation
-import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.objects.script.api.ScriptStepDefinition
 import tech.kzen.auto.server.objects.script.api.TracingScriptStep
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
 import tech.kzen.auto.server.objects.script.model.ScriptExecutionContext
+import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.auto.server.service.compile.KotlinCode
 import tech.kzen.lib.common.exec.logic.model.LogicResult
 import tech.kzen.lib.common.exec.logic.model.LogicResultFailed
@@ -23,6 +23,7 @@ import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.platform.ClassName
 import tech.kzen.lib.platform.ClassNames
 import tech.kzen.lib.platform.ClassNames.simple
@@ -31,7 +32,8 @@ import tech.kzen.lib.platform.ClassNames.simple
 @Reflect
 class FormulaStep(
     private val code: String,
-    private val selfLocation: ObjectLocation
+    private val selfLocation: ObjectLocation,
+    @Service private val cachedKotlinCompiler: CachedKotlinCompiler
 ):
     TracingScriptStep(selfLocation)
 {
@@ -175,7 +177,7 @@ class FormulaStep(
     //-----------------------------------------------------------------------------------------------------------------
     @Suppress("FoldInitializerAndIfToElvis", "RedundantSuppression")
     override fun definition(scriptDefinitionContext: ScriptDefinitionContext): ScriptStepDefinition? {
-        val compiler = KzenAutoContext.global().cachedKotlinCompiler
+        val compiler = cachedKotlinCompiler
         val classLoader = ClassLoaderUtils.dynamicParentClassLoader()
 
         val predecessorTypesNullable = processorTypes(
@@ -253,8 +255,7 @@ class FormulaStep(
     ): LogicResult {
         logger.info("{} - value = {}", selfLocation, code)
 
-        val compiler = KzenAutoContext.global().cachedKotlinCompiler
-//        val graphDefinitionAttempt = KzenAutoContext.global().graphStore.graphDefinition()
+        val compiler = cachedKotlinCompiler
         val classLoader = ClassLoaderUtils.dynamicParentClassLoader()
 
         val predecessorTypesNullable = processorTypes(

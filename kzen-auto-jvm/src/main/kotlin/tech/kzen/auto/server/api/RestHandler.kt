@@ -12,7 +12,6 @@ import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunResponse
 import tech.kzen.lib.common.exec.task.model.TaskId
 import tech.kzen.lib.common.exec.task.model.TaskModel
-import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.paradigm.detached.ExecutionDownloadResult
 import tech.kzen.auto.server.service.exec.ModelDetachedExecutor
 import tech.kzen.auto.server.service.exec.ModelTaskRepository
@@ -36,8 +35,10 @@ import tech.kzen.lib.common.model.structure.notation.PositionRelation
 import tech.kzen.lib.common.model.structure.notation.cqrs.*
 import tech.kzen.lib.common.model.structure.resource.ResourcePath
 import tech.kzen.lib.common.service.media.NotationMedia
+import tech.kzen.lib.common.service.parse.NotationParser
 import tech.kzen.lib.common.service.parse.YamlNotationParser
 import tech.kzen.lib.common.service.store.DirectGraphStore
+import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import tech.kzen.lib.common.util.ImmutableByteArray
 import tech.kzen.lib.common.util.digest.Digest
 import java.net.URI
@@ -45,83 +46,14 @@ import java.net.URI
 
 class RestHandler(
     private val notationMedia: NotationMedia,
-    private val yamlNotationParser: YamlNotationParser,
+    private val yamlNotationParser: NotationParser,
     private val graphStore: DirectGraphStore,
-//    private val executionRepository: ExecutionRepository,
     private val detachedExecutor: ModelDetachedExecutor,
     private val visualDataflowRepository: VisualDataflowRepository,
     private val modelTaskRepository: ModelTaskRepository,
-    private val serverLogicController: ServerLogicController
+    private val serverLogicController: ServerLogicController,
+    private val objectStableMapper: ObjectStableMapper
 ) {
-    //-----------------------------------------------------------------------------------------------------------------
-    companion object {
-//        val classPathRoots = listOf(
-//            URI("classpath:/public/")
-//        )
-//
-//        val resourceDirectories = discoverResourceDirectories()
-
-//        private const val cssExtension = "css"
-
-//        val allowedExtensions = listOf(
-//            "html",
-//            "js",
-//            cssExtension,
-//            "svg",
-//            "png",
-//            "ico"
-//        )
-
-//        private val cssMediaType = MediaType.valueOf("text/css")
-
-
-//        private const val jvmSuffix = "-jvm"
-
-//        private fun discoverResourceDirectories(): List<Path> {
-//            val builder = mutableListOf<Path>()
-//
-//            // TODO: consolidate with GradleLocator?
-//
-//            val projectRoot =
-//                    if (Files.exists(Paths.get("src"))) {
-//                        ".."
-//                    }
-//                    else {
-//                        "."
-//                    }
-//
-//            val projectName: String? = Files.list(Paths.get(projectRoot)).use { files ->
-//                val list = files.collect(Collectors.toList())
-//
-//                val jvmModule = list.firstOrNull { it.fileName.toString().endsWith(jvmSuffix)}
-//                if (jvmModule == null) {
-//                    null
-//                }
-//                else {
-//                    val filename = jvmModule.fileName.toString()
-//
-//                    filename.substring(0 until filename.length - jvmSuffix.length)
-//                }
-//            }
-//
-//            if (projectName != null) {
-//                // IntelliJ and typical commandline working dir is project root
-//                builder.add(Paths.get("$projectName-jvm/src/main/resources/public/"))
-//                builder.add(Paths.get("$projectName-js/build/distributions/"))
-//
-//                // Eclipse and Gradle default active working directory is the module
-//                builder.add(Paths.get("src/main/resources/public/"))
-//                builder.add(Paths.get("../$projectName-js/build/distributions/"))
-//            }
-//            else {
-//                builder.add(Paths.get("static/"))
-//            }
-//
-//            return builder
-//        }
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     fun scan(parameters: Parameters): Map<String, Any> {
         val fresh = parameters[CommonRestApi.paramFresh] == "true"
@@ -1205,7 +1137,7 @@ class RestHandler(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun objectStableMapperSnapshot(): Map<String, String> {
-        val snapshot = KzenAutoContext.global().objectStableMapper.snapshot()
+        val snapshot = objectStableMapper.snapshot()
         return snapshot.entries.associate { (id, location) ->
             id.value to location.asString()
         }

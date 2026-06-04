@@ -3,7 +3,6 @@ package tech.kzen.auto.server.objects.script.step.eval
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import tech.kzen.auto.server.context.KzenAutoConfig
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.objects.script.ScriptValidator
 import tech.kzen.auto.server.util.AutoTestUtils
@@ -22,20 +21,12 @@ class FormulaStepTest {
 
     @Before
     fun setUp() {
-        val config = KzenAutoConfig(
-            jsModuleName = "kzen-auto-js",
-            port = 0,
-            host = "127.0.0.1")
-
-        context = KzenAutoContext(config)
-        context.init()
-        KzenAutoContext.setGlobal(context)
+        context = KzenAutoContext.forTest()
     }
 
 
     @After
     fun tearDown() {
-        KzenAutoContext.clearGlobal()
         context.close()
     }
 
@@ -68,7 +59,7 @@ class FormulaStepTest {
             .transitiveSuccessful
             .filterTransitive(documentPath)
 
-        val graphInstance = GraphCreator.createGraph(stepGraphDefinition)
+        val graphInstance = GraphCreator.createGraph(stepGraphDefinition, context.graphEnvironment)
 
         val scriptValidation = ScriptValidator.validate(
             documentPath,

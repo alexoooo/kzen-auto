@@ -4,7 +4,6 @@ import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.objects.document.script.model.ScriptTree
 import tech.kzen.auto.common.objects.document.script.model.StepTrace
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
-import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.lib.common.exec.logic.trace.LogicTraceHandle
 import tech.kzen.auto.server.objects.script.api.ScriptStep
 import tech.kzen.auto.server.objects.script.model.ActiveScriptModel
@@ -15,6 +14,8 @@ import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.service.context.GraphCreator
+import tech.kzen.lib.common.service.context.environment.GraphEnvironment
 import tech.kzen.lib.common.service.store.normal.ObjectStableId
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import tech.kzen.lib.common.util.ExceptionUtils
@@ -27,7 +28,9 @@ class ScriptExecution(
     private val logicHandle: LogicHandle,
     private val logicTraceHandle: LogicTraceHandle,
     private val runExecutionId: LogicRunExecutionId,
-    private val objectStableMapper: ObjectStableMapper
+    private val objectStableMapper: ObjectStableMapper,
+    private val graphCreator: GraphCreator,
+    private val environment: GraphEnvironment
 ):
     LogicExecution
 {
@@ -64,8 +67,8 @@ class ScriptExecution(
             return LogicResultCancelled
         }
 
-        val graphInstance = KzenAutoContext.global().graphCreator.createGraph(
-            graphDefinition.filterTransitive(documentPath))
+        val graphInstance = graphCreator.createGraph(
+            graphDefinition.filterTransitive(documentPath), environment)
 
         val liveStableIds = graphInstance.keys
             .map { objectStableMapper.objectStableId(it) }
@@ -93,7 +96,8 @@ class ScriptExecution(
         previousStatefulElements = nextPreviousStatefulElements
 
         val graphNotation = graphDefinition.graphStructure.graphNotation
-        val validation = ScriptValidator.validate(documentPath, graphNotation, graphDefinition, graphInstance)
+        val validation = ScriptValidator.validate(
+            documentPath, graphNotation, graphDefinition, graphInstance)
         val scriptTree = ScriptTree.read(documentPath, graphDefinition)
 
         val stepContext = ScriptExecutionContext(

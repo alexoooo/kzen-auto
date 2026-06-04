@@ -9,6 +9,7 @@ import tech.kzen.lib.common.model.definition.ListAttributeDefinition
 import tech.kzen.lib.common.model.definition.MapAttributeDefinition
 import tech.kzen.lib.common.model.definition.ObjectDefinition
 import tech.kzen.lib.common.model.definition.ReferenceAttributeDefinition
+import tech.kzen.lib.common.model.definition.ServiceAttributeDefinition
 import tech.kzen.lib.common.model.definition.ValueAttributeDefinition
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.AttributeLocation
@@ -217,6 +218,9 @@ data class ScriptDependencyAnalysis(
                         }
                     }
                 }
+
+                // A @Service parameter has no notation, so there is no scalar to walk.
+                is ServiceAttributeDefinition -> {}
             }
         }
     }

@@ -38,7 +38,7 @@ object ClientContext {
 
     val notationParser: NotationParser = YamlNotationParser()
 
-    val notationMetadataReader = NotationMetadataReader()
+    private val notationMetadataReader = NotationMetadataReader()
 
     val graphDefiner = GraphDefiner
     val graphCreator = GraphCreator
@@ -59,21 +59,6 @@ object ClientContext {
 
     val mirroredGraphStore = MirroredGraphStore(
             directGraphStore, remoteGraphStore)
-
-//    private val restExecutionInitializer = ClientRestExecutionInitializer(
-//            restClient)
-//
-//    private val restActionExecutor = ClientRestActionExecutor(
-//            restClient)
-//
-//    val executionRepository = ExecutionRepository(
-//            restExecutionInitializer,
-//            restActionExecutor)
-//
-//    val executionLoop = ExecutionLoop(
-//            mirroredGraphStore,
-//            executionRepository,
-//            125)
 
     val insertionGlobal = InsertionGlobal()
     val executionIntentGlobal = ExecutionIntentGlobal()
@@ -139,6 +124,6 @@ object ClientContext {
         mirroredGraphStore.observe(objectStableMapper)
 
         clientStateGlobal.postConstruct(
-                navigationGlobal, directGraphStore, clientLogicGlobal, /*restClient, executionRepository*/)
+                navigationGlobal, directGraphStore, clientLogicGlobal)
     }
 }

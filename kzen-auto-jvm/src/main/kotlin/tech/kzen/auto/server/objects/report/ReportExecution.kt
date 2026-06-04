@@ -15,7 +15,8 @@ import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
 import tech.kzen.auto.plugin.api.managed.PipelineOutput
 import tech.kzen.auto.plugin.definition.ReportDefinition
 import tech.kzen.auto.plugin.model.PluginCoordinate
-import tech.kzen.auto.server.context.KzenAutoContext
+import tech.kzen.auto.server.objects.report.exec.calc.CalculatedColumnEval
+import tech.kzen.auto.server.service.plugin.ReportDefinitionRepository
 import tech.kzen.lib.common.exec.logic.trace.LogicTraceHandle
 import tech.kzen.auto.server.objects.plugin.model.ClassLoaderHandle
 import tech.kzen.auto.server.objects.report.exec.ReportInputPipeline
@@ -57,7 +58,9 @@ class ReportExecution(
     private val initialReportRunContext: ReportRunContext,
     private val reportWorkPool: ReportWorkPool,
     private val trace: LogicTraceHandle,
-    private val runExecutionId: LogicRunExecutionId
+    private val runExecutionId: LogicRunExecutionId,
+    private val definitionRepository: ReportDefinitionRepository,
+    private val calculatedColumnEval: CalculatedColumnEval
 ):
     LogicExecution
 {
@@ -184,7 +187,7 @@ class ReportExecution(
 
     private fun <T> datasetDefinition(datasetInfo: DatasetInfo): DatasetDefinition<T> {
         val pluginCoordinates = datasetInfo.items.map { it.processorPluginCoordinate }.toSet()
-        val classLoaderHandle = KzenAutoContext.global().definitionRepository
+        val classLoaderHandle = definitionRepository
             .classLoaderHandle(pluginCoordinates, ClassLoaderUtils.dynamicParentClassLoader())
 
         val cache = mutableMapOf<PluginCoordinate, ReportDefinition<T>>()
@@ -215,7 +218,7 @@ class ReportExecution(
         processorDefinitionCoordinate: PluginCoordinate,
         classLoaderHandle: ClassLoaderHandle
     ): ReportDefinition<T> {
-        val definition = KzenAutoContext.global().definitionRepository.define(
+        val definition = definitionRepository.define(
             processorDefinitionCoordinate, classLoaderHandle)
 
         @Suppress("UNCHECKED_CAST")
@@ -418,7 +421,7 @@ class ReportExecution(
             initialReportRunContext.dataType,
             initialReportRunContext.formula,
             classLoaderHandle.classLoader,
-            KzenAutoContext.global().calculatedColumnEval)
+            calculatedColumnEval)
 
         var builder = recordDisruptor.handleEventsWith(formulas)
 

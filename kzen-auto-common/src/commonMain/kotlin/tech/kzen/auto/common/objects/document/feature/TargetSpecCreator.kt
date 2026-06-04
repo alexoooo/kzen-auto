@@ -11,6 +11,7 @@ import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.location.ObjectReferenceHost
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.service.context.environment.GraphEnvironment
 
 
 @Reflect
@@ -20,7 +21,8 @@ class TargetSpecCreator: AttributeCreator {
         attributeName: AttributeName,
         graphStructure: GraphStructure,
         objectDefinition: ObjectDefinition,
-        partialGraphInstance: GraphInstance
+        partialGraphInstance: GraphInstance,
+        environment: GraphEnvironment
     ): Any {
         val attributeDefinition = objectDefinition.attributeDefinitions[attributeName]
             as? MapAttributeDefinition

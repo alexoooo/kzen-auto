@@ -3,7 +3,6 @@ package tech.kzen.auto.server.objects.logic
 import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.paradigm.detached.DetachedAction
 import tech.kzen.auto.common.paradigm.logic.LogicConventions
-import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionResult
 import tech.kzen.lib.common.exec.ExecutionSuccess
@@ -16,13 +15,15 @@ import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.reflect.Service
+import tech.kzen.lib.server.exec.logic.trace.LogicTraceStore
 
 
 @Reflect
-object LogicTraceEndpoint: DetachedAction {
+class LogicTraceEndpoint(
+    @Service private val logicTraceStore: LogicTraceStore
+): DetachedAction {
     override suspend fun execute(request: ExecutionRequest): ExecutionResult {
-        val logicTraceStore = KzenAutoContext.global().logicTraceStore
-
         val action = request.getSingle(CommonRestApi.paramAction)
             ?: return ExecutionResult.failure("Action missing: '${CommonRestApi.paramAction}'")
 

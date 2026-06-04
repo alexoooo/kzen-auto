@@ -9,5 +9,4 @@ data class ScriptDefinitionContext(
     val scriptTree: ScriptTree,
     val scriptValidation: ScriptValidation,
     val objectRegistryScan: ObjectRegistryScan
-) {
-}
+)

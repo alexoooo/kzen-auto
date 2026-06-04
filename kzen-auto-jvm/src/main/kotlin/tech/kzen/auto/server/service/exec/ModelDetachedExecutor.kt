@@ -12,12 +12,14 @@ import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionResult
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.service.context.GraphCreator
+import tech.kzen.lib.common.service.context.environment.GraphEnvironment
 import tech.kzen.lib.common.service.store.LocalGraphStore
 
 
 class ModelDetachedExecutor(
     private val graphStore: LocalGraphStore,
-    private val graphCreator: GraphCreator
+    private val graphCreator: GraphCreator,
+    private val environment: () -> GraphEnvironment
 ):
     DetachedExecutor, DetachedDownloadExecutor
 {
@@ -36,7 +38,7 @@ class ModelDetachedExecutor(
             .filterDefinitions(AutoConventions.serverAllowed)
 
         val objectGraph = graphCreator
-            .createGraph(graphDefinition)
+            .createGraph(graphDefinition, environment())
 
         val instance = objectGraph.objectInstances[actionLocation]?.reference
             ?: return ExecutionFailure("Not found: $actionLocation")
@@ -64,7 +66,7 @@ class ModelDetachedExecutor(
             .filterDefinitions(AutoConventions.serverAllowed)
 
         val objectGraph = graphCreator
-            .createGraph(graphDefinition)
+            .createGraph(graphDefinition, environment())
 
         val instance = objectGraph.objectInstances[actionLocation]?.reference
             ?: error("Not found: $actionLocation")

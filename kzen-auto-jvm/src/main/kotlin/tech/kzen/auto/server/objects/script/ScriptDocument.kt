@@ -3,7 +3,6 @@ package tech.kzen.auto.server.objects.script
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
 import tech.kzen.lib.common.exec.logic.trace.LogicTraceHandle
-import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.objects.script.api.ScriptStep
 import tech.kzen.auto.server.objects.script.api.ScriptStepDefinition
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
@@ -21,6 +20,10 @@ import tech.kzen.lib.common.exec.tuple.TupleComponentName
 import tech.kzen.lib.common.exec.tuple.TupleDefinition
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.reflect.Service
+import tech.kzen.lib.common.service.context.GraphCreator
+import tech.kzen.lib.common.service.context.environment.GraphEnvironment
+import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 
 
 @Reflect
@@ -28,7 +31,11 @@ class ScriptDocument(
     steps: List<ObjectLocation>,
     private val parameters: List<String>,
     private val results: List<String>,
-    private val selfLocation: ObjectLocation
+    private val selfLocation: ObjectLocation,
+
+    @Service private val objectStableMapper: ObjectStableMapper,
+    @Service private val graphCreator: GraphCreator,
+    @Service private val environment: GraphEnvironment
 ):
     DocumentArchetype(),
     Logic,
@@ -56,11 +63,12 @@ class ScriptDocument(
         logicRunExecutionId: LogicRunExecutionId,
         logicControl: LogicControl
     ): LogicExecution {
-        val scriptExecution = ScriptExecution(
+        return ScriptExecution(
             selfLocation.documentPath, selfLocation,
             logicHandle, logicTraceHandle, logicRunExecutionId,
-            KzenAutoContext.global().objectStableMapper)
-        return scriptExecution
+            objectStableMapper,
+            graphCreator,
+            environment)
     }
 
 
