@@ -67,7 +67,7 @@ tasks.register<JavaExec>("runTester") {
     classpath = sourceSets["main"].runtimeClasspath
     mainClass.set("tech.kzen.auto.test.TesterMain")
     workingDir = projectDir
-    // No port arg: TesterMain defaults to TesterMain.TESTER_PORT (18081)
+    // No port arg: TesterMain defaults to TesterMain.TESTER_PORT
     systemProperty(
         "kzenAutoJar",
         project.findProperty("kzenAutoJar")?.toString()

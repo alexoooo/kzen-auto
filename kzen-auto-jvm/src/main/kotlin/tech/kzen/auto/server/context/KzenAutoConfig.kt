@@ -16,7 +16,7 @@ data class KzenAutoConfig(
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        private const val serverPortPrefix = "--server.port="
+        const val serverPortPrefix = "--server.port="
         private val serverPortRegex = Regex(
             Regex.escape(serverPortPrefix) + "\\d+")
 

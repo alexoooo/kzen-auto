@@ -3,9 +3,9 @@ package tech.kzen.auto.test
 import tech.kzen.auto.server.context.KzenAutoConfig
 import tech.kzen.auto.test.codegen.KzenAutoTestModule
 import tech.kzen.auto.test.server.process.KzenAutoSubprocessRegistry
+import tech.kzen.lib.server.notation.locate.GradleLocator
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.Paths
 import kotlin.io.path.listDirectoryEntries
 
 
@@ -25,14 +25,15 @@ object TesterMain {
         //  (via --module.root) and fixtures (via KzenAutoConfig.moduleRoot) resolve against the
         //  module root instead of the cwd.
         val explicitModuleRoot = KzenAutoConfig.readModuleRoot(args)
-        val moduleRoot = explicitModuleRoot ?: locateModuleRoot()
+        val moduleRoot = explicitModuleRoot
+            ?: GradleLocator.moduleRootOfCodeSource(TesterMain::class.java)
 
         val extraArgs = mutableListOf<String>()
         if (explicitModuleRoot == null) {
             extraArgs.add(KzenAutoConfig.moduleRootPrefix + moduleRoot)
         }
         if (KzenAutoConfig.readPort(args) == null) {
-            extraArgs.add("--server.port=$TESTER_PORT")
+            extraArgs.add(KzenAutoConfig.serverPortPrefix + TESTER_PORT)
         }
 
         if (System.getProperty(kzenAutoJarProperty) == null) {
@@ -48,26 +49,6 @@ object TesterMain {
         }, "kzen-auto-test-subprocess-cleanup"))
 
         tech.kzen.auto.server.main(args + extraArgs)
-    }
-
-
-    /**
-     * Walks up from this class's code source (classes dir in IDE/Gradle builds, jar under
-     *  build/libs in selfTest) to the directory hosting the test-suite notation.
-     */
-    private fun locateModuleRoot(): Path {
-        val codeSource = TesterMain::class.java.protectionDomain.codeSource?.location
-            ?: error("TesterMain code source unavailable")
-
-        var dir: Path? = Paths.get(codeSource.toURI()).parent
-        while (dir != null) {
-            if (Files.isDirectory(dir.resolve("src/main/resources/notation"))) {
-                return dir
-            }
-            dir = dir.parent
-        }
-
-        error("kzen-auto-test module root not found above: $codeSource")
     }
 
 
