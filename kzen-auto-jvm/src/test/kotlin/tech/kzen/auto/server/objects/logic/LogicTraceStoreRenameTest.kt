@@ -2,9 +2,7 @@ package tech.kzen.auto.server.objects.logic
 
 import org.junit.Test
 import tech.kzen.lib.common.exec.ExecutionValue
-import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
-import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceQuery
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -34,9 +32,7 @@ import kotlin.test.assertTrue
  */
 class LogicTraceStoreRenameTest {
     //-----------------------------------------------------------------------------------------------------------------
-    private val testRunId = LogicRunId("test-run-${System.nanoTime()}")
-    private val runExecutionId = LogicRunExecutionId(
-        testRunId, LogicExecutionId(testRunId.value))
+    private val runExecutionId = LogicRunExecutionId.random()
     private val rootLocation = objectLocation("a.yaml", "MyScript")
     private val stepLocation = objectLocation("a.yaml", "Step1")
 

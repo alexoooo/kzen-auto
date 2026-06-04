@@ -10,9 +10,7 @@ import tech.kzen.lib.common.exec.logic.LogicExecutionFacade
 import tech.kzen.lib.common.exec.logic.LogicHandle
 import tech.kzen.lib.common.exec.logic.model.LogicResultFailed
 import tech.kzen.lib.common.exec.logic.model.LogicResultPaused
-import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
-import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
 import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -24,7 +22,7 @@ import kotlin.test.assertIs
 
 
 /**
- * Pure-logic coverage for per-run "pause on error" — the failed-step branch of [MultiStep] (reached
+ * Coverage for per-run "pause on error" — the failed-step branch of [MultiStep] (reached
  * here via [ScriptExecution] over the Script root) and the convention that an Error step stays
  * runnable on resume.
  *
@@ -91,13 +89,10 @@ class ScriptExecutionPauseOnErrorTest {
 
 
     private fun newExecution(): LogicExecution {
-        val runId = LogicRunId("pause-on-error-test")
-        val runExecutionId = LogicRunExecutionId(runId, LogicExecutionId(runId.value))
-
         // Drive the live ScriptDocument.execute path (services resolved from the environment via
         // @Service) rather than hand-constructing ScriptExecution.
         val execution = AutoTestUtils.liveLogicExecution(
-            context, mainLocation, runExecutionId, UnusedLogicHandle)
+            context, mainLocation, UnusedLogicHandle)
 
         execution.beforeStart(TupleValue.empty)
         return execution

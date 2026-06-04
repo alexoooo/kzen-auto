@@ -129,9 +129,9 @@ class ServerLogicController(
             return null
         }
 
-        val runId = LogicRunId(LogicExecutionFacadeImpl.arbitraryId())
-        val executionId = LogicExecutionId(runId.value)
-        val runExecutionId = LogicRunExecutionId(runId, executionId)
+        val runExecutionId = LogicRunExecutionId.random()
+        val runId = runExecutionId.logicRunId
+        val executionId = runExecutionId.logicExecutionId
 
         val graphDefinition = graphDefinitionAttempt(snapshotGraphDefinitionAttempt)
 
@@ -164,7 +164,7 @@ class ServerLogicController(
                 val hostFrame = currentState.frame.find(executionId)
                 checkNotNull(hostFrame)
 
-                val guestExecutionId = LogicExecutionId(LogicExecutionFacadeImpl.arbitraryId())
+                val guestExecutionId = LogicExecutionId.random()
 
                 val dependencies = CopyOnWriteArrayList<LogicFrame>()
                 val listener = object: LogicExecutionListener {
@@ -177,7 +177,7 @@ class ServerLogicController(
                     successfulGraphDefinition, commonMutableLogicControl, listener, logicTraceStore, environment)
 
                 val logicExecution = logicExecutionFacadeImpl.open(
-                    runId, originalObjectLocation, this, graphCreator)
+                    LogicRunExecutionId(runId, guestExecutionId), originalObjectLocation, this, graphCreator)
 
                 val stableObjectLocation = objectStableMapper.objectStableId(originalObjectLocation)
                 hostFrame.dependencies.add(LogicFrame(

@@ -99,8 +99,8 @@ object AutoTestUtils {
     fun liveLogicExecution(
         context: KzenAutoContext,
         logicLocation: ObjectLocation,
-        runExecutionId: LogicRunExecutionId,
-        logicHandle: LogicHandle
+        logicHandle: LogicHandle,
+        runExecutionId: LogicRunExecutionId = LogicRunExecutionId.random()
     ): LogicExecution {
         val graphDefinition = graphDefinitionAttempt(readNotation())
             .transitiveSuccessful
