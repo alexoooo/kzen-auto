@@ -17,10 +17,14 @@ import tools.jackson.module.kotlin.kotlinModule
  * Minimal HTTP client over the tester kzen-auto's `/logic/...` REST surface.
  *
  * Endpoints used:
- *  - GET /logic/startRun?path={documentPath}&object={objectPath}  → runId text or HTTP 400
+ *  - GET /logic/startRun?path={documentPath}&object={objectPath}[&pauseOnError=true]
+ *      → runId text or HTTP 400
  *  - GET /logic/status                                            → JSON {time, active}
  *
  * `active == null` (serialized as the string "null" in the response) means the run completed.
+ * With `pauseOnError=true`, a step failure parks the run instead of ending it, so
+ * `active.state == "Paused"` means the run hit a step error — nothing else pauses runs in
+ * this harness (no pause commands are ever sent).
  */
 class TesterClient(testerPort: Int):
     AutoCloseable
@@ -40,10 +44,17 @@ class TesterClient(testerPort: Int):
      * Start a logic-run on the given Script ObjectLocation. Returns the run id on success.
      * Throws if the tester returns non-2xx (e.g. unknown ObjectLocation, graph errors).
      */
-    fun startRun(documentPath: String, objectPath: String = "main"): String = runBlocking {
+    fun startRun(
+        documentPath: String,
+        objectPath: String = "main",
+        pauseOnError: Boolean = false
+    ): String = runBlocking {
         val response = http.get("$baseUrl/logic/startRun") {
             parameter("path", documentPath)
             parameter("object", objectPath)
+            if (pauseOnError) {
+                parameter("pauseOnError", "true")
+            }
         }
         val body = response.bodyAsText()
         check(response.status == HttpStatusCode.OK) {
@@ -54,20 +65,21 @@ class TesterClient(testerPort: Int):
 
 
     /**
-     * Block until the current run completes (status.active becomes "null"), checking every
-     * [pollIntervalMs]. Returns the final non-active status payload for the caller to inspect.
+     * Block until the current run settles — completes (status.active becomes "null") or parks
+     * on a step error (active.state becomes "Paused" under pauseOnError) — checking every
+     * [pollIntervalMs]. Returns the final status payload for the caller to inspect.
      */
-    fun awaitCompletion(timeoutMs: Long = 120_000, pollIntervalMs: Long = 250): Map<String, Any?> {
+    fun awaitSettled(timeoutMs: Long = 120_000, pollIntervalMs: Long = 250): Map<String, Any?> {
         val deadline = System.currentTimeMillis() + timeoutMs
         while (System.currentTimeMillis() < deadline) {
             val status = status()
-            if (isCompleted(status)) {
+            if (isCompleted(status) || isPaused(status)) {
                 return status
             }
             Thread.sleep(pollIntervalMs)
         }
         throw IllegalStateException(
-            "logic run did not complete within ${timeoutMs}ms; last status: ${status()}")
+            "logic run did not settle within ${timeoutMs}ms; last status: ${status()}")
     }
 
 
@@ -86,6 +98,11 @@ class TesterClient(testerPort: Int):
         // Server serializes a missing active run as the JSON string "null" (see LogicStatus).
         val active = status["active"]
         return active == null || active == "null"
+    }
+
+
+    private fun isPaused(status: Map<String, Any?>): Boolean {
+        return (status["active"] as? Map<*, *>)?.get("state") == "Paused"
     }
 
 

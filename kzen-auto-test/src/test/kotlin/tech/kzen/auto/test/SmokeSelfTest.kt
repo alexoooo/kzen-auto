@@ -7,12 +7,18 @@ class SmokeSelfTest: SelfTestBase() {
     @Test
     fun openWelcome() {
         val runId = testerClient.startRun(
-            documentPath = "test-suite/smoke/OpenWelcome.yaml",
-            objectPath = "main")
+            documentPath = "main/FizzBuzz Script.yaml",
+            objectPath = "main",
+            pauseOnError = true)
 
         check(runId.isNotBlank()) { "expected a non-blank logic run id, got: '$runId'" }
 
-        val finalStatus = testerClient.awaitCompletion(timeoutMs = 120_000)
+        val finalStatus = testerClient.awaitSettled(timeoutMs = 120_000)
         println("[smoke] final tester status: $finalStatus")
+
+        val active = finalStatus["active"]
+        check(active == null || active == "null") {
+            "script run failed (paused on error): $finalStatus"
+        }
     }
 }

@@ -2,7 +2,7 @@ main:
   is: Script
   steps:
     - main.steps/Start SUT
-    - main.steps/Open x
+    - main.steps/Open
     - main.steps/Navigate
     - 'main.steps/Click "Project"'
     - 'main.steps/Click "Project options..." button'
@@ -19,7 +19,7 @@ main.steps/Start SUT:
   fixture: fixtures/empty-project
   port: 18082
 
-main.steps/Open x:
+main.steps/Open:
   is: BrowserOpenStep
 
 main.steps/Navigate:
