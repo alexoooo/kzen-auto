@@ -2,22 +2,15 @@ package tech.kzen.auto.client.objects.sidebar
 
 import emotion.react.css
 import js.objects.unsafeJso
-import mui.material.IconButton
-import mui.material.Menu
 import mui.material.MenuItem
-import mui.system.sx
 import react.ChildrenBuilder
 import react.Key
-import react.RefObject
 import react.dom.html.ReactHTML.div
-import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RComponent
-import tech.kzen.auto.client.wrap.createRef
 import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.react
-import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.DocumentCreator
 import tech.kzen.lib.common.model.document.DocumentName
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -26,8 +19,6 @@ import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.common.service.store.MirroredGraphStore
 import tech.kzen.lib.common.util.naming.NextAvailableName
 import web.cssom.*
-import web.html.HTMLElement
-import kotlin.js.Date
 import kotlin.random.Random
 
 
@@ -40,106 +31,17 @@ external interface SidebarFolderProps: react.Props {
 }
 
 
-external interface SidebarFolderState: react.State {
-    var hoverItem: Boolean
-    var hoverOptions: Boolean
-    var optionsOpen: Boolean
-}
-
-
 //---------------------------------------------------------------------------------------------------------------------
 class SidebarFolder(
     props: SidebarFolderProps
 ):
-    RComponent<SidebarFolderProps, SidebarFolderState>(props)
+    RComponent<SidebarFolderProps, react.State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private val documentBaseNesting = NotationConventions.mainDocumentNesting
-        private const val menuDanglingTimeout = 300
 
         val indent = (2).em.minus(4.px)
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    private var menuAnchorRef: RefObject<HTMLElement> = createRef()
-
-    // NB: workaround for open options icon remaining after click with drag away from item
-    private var processingOption: Boolean = false
-    private var optionCompletedTime: Double? = null
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun SidebarFolderState.init(props: SidebarFolderProps) {
-        optionsOpen = false
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    private fun onMouseOver(itemOrMenu: Boolean) {
-        if (state.optionsOpen || processingOption) {
-            return
-        }
-
-        optionCompletedTime?.let {
-            val now = Date.now()
-            val elapsed = now - it
-
-            if (elapsed < menuDanglingTimeout) {
-                return
-            }
-            else {
-                optionCompletedTime = null
-            }
-        }
-
-        if (itemOrMenu) {
-            setState {
-                hoverItem = true
-            }
-        }
-        else {
-            setState {
-                hoverOptions = true
-            }
-        }
-    }
-
-
-    private fun onMouseOut(itemOrMenu: Boolean) {
-        if (itemOrMenu) {
-            setState {
-                hoverItem = false
-            }
-        }
-        else {
-            setState {
-                hoverOptions = false
-            }
-        }
-    }
-
-
-    private fun onOptionsOpen() {
-        setState {
-            optionsOpen = true
-        }
-    }
-
-
-    private fun onOptionsClose() {
-        setState {
-            optionsOpen = false
-            hoverItem = false
-            hoverOptions = false
-        }
-    }
-
-
-    private fun onOptionsCancel() {
-        onOptionsClose()
-        optionCompletedTime = Date.now()
     }
 
 
@@ -177,16 +79,12 @@ class SidebarFolder(
     }
 
 
-    private fun onAdd(archetype: SidebarModel.ArchetypeInfo) {
-        processingOption = true
-        onOptionsClose()
+    private fun onAdd(archetype: SidebarModel.ArchetypeInfo, close: () -> Unit) {
+        close()
 
         async {
             val newBundleName = generateDocumentName(archetype.title, archetype.directory)
             createDocument(newBundleName, archetype)
-        }.then {
-            optionCompletedTime = Date.now()
-            processingOption = false
         }
     }
 
@@ -204,14 +102,10 @@ class SidebarFolder(
                 position = Position.relative
                 height = 2.em
                 width = 100.pct
-            }
 
-            onMouseOver = {
-                onMouseOver(true)
-            }
-
-            onMouseOut = {
-                onMouseOut(true)
+                SidebarItemMenu.revealOnHoverSelector {
+                    opacity = number(1.0)
+                }
             }
 
             val iconWidth = 24.px
@@ -242,66 +136,22 @@ class SidebarFolder(
                 +"Project"
             }
 
-            div {
-                css {
-                    position = Position.absolute
-                    top = 0.px
-                    right = 0.px
-                }
-                ref = this@SidebarFolder.menuAnchorRef
-                renderOptionsMenu()
-            }
-        }
-    }
-
-
-    private fun ChildrenBuilder.renderOptionsMenu() {
-        span {
-            css {
-                // NB: blinks in and out without this
-                backgroundColor = Color.transparent
-
-                if (!(state.hoverItem || state.hoverOptions)) {
-                    display = None.none
-                }
-            }
-
-            onMouseOver = {
-                onMouseOver(false)
-            }
-
-            onMouseOut = {
-                onMouseOut(false)
-            }
-
-            IconButton {
+            SidebarItemMenu::class.react {
                 title = "Project options..."
-                onClick = { onOptionsOpen() }
-
-                sx {
-                    marginTop = (-13).px
-                    marginRight = (-16).px
+                renderItems = { childrenBuilder, close ->
+                    childrenBuilder.renderMenuItems(close)
                 }
-
-                icon("material-symbols:more-vert") {}
             }
-        }
-
-        Menu {
-            open = state.optionsOpen
-            onClose = ::onOptionsCancel
-            anchorEl = menuAnchorRef.current?.let { { _ -> it } }
-            renderMenuItems()
         }
     }
 
 
-    private fun ChildrenBuilder.renderMenuItems() {
+    private fun ChildrenBuilder.renderMenuItems(close: () -> Unit) {
         for (archetype in props.sidebarModel.archetypes) {
             MenuItem {
                 key = Key(archetype.location.objectPath.name.value)
                 onClick = {
-                    onAdd(archetype)
+                    onAdd(archetype, close)
                 }
 
                 icon(archetype.icon) {

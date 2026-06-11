@@ -2,14 +2,10 @@ package tech.kzen.auto.client.objects.sidebar
 
 import emotion.react.css
 import js.objects.unsafeJso
-import mui.material.IconButton
-import mui.material.Menu
 import mui.material.MenuItem
-import mui.system.sx
 import react.*
 import react.dom.html.ReactHTML.a
 import react.dom.html.ReactHTML.div
-import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.util.NavigationRoute
 import tech.kzen.auto.client.util.async
@@ -23,8 +19,6 @@ import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.structure.notation.cqrs.DeleteDocumentCommand
 import tech.kzen.lib.common.service.store.MirroredGraphStore
 import web.cssom.*
-import web.html.HTMLElement
-import kotlin.js.Date
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -37,11 +31,7 @@ external interface SidebarFileProps: Props {
 }
 
 
-// TODO: centralize menu logic with SidebarFolder / ActionController
 external interface SidebarFileState: State {
-    var hoverItem: Boolean
-    var hoverOptions: Boolean
-    var optionsOpen: Boolean
     var editing: Boolean
     var parameters: RequestParams
 }
@@ -56,23 +46,16 @@ class SidebarFile(
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        private const val menuDanglingTimeout = 300
-
         private val iconWidth = 22.px
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private var menuAnchorRef: RefObject<HTMLElement> = createRef()
     private var nameEditorRef: RefObject<DocumentNameEditor> = createRef()
-
-    private var processingOption: Boolean = false
-    private var optionCompletedTime: Double? = null
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun SidebarFileState.init(props: SidebarFileProps) {
-        optionsOpen = false
         editing = false
         parameters = RequestParams.empty
     }
@@ -98,96 +81,25 @@ class SidebarFile(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun onMouseOver(itemOrMenu: Boolean) {
-        if (state.optionsOpen || processingOption) {
-            return
-        }
-
-        optionCompletedTime?.let {
-            val now = Date.now()
-            val elapsed = now - it
-
-            if (elapsed < menuDanglingTimeout) {
-                return
-            }
-            else {
-                optionCompletedTime = null
-            }
-        }
-
-        if (itemOrMenu) {
-            setState {
-                hoverItem = true
-            }
-        }
-        else {
-            setState {
-                hoverOptions = true
-            }
-        }
-    }
-
-
-    private fun onMouseOut(itemOrMenu: Boolean) {
-        if (itemOrMenu) {
-            setState {
-                hoverItem = false
-            }
-        }
-        else {
-            setState {
-                hoverOptions = false
-            }
-        }
-    }
-
-
-    private fun onOptionsOpen() {
-        setState {
-            optionsOpen = true
-        }
-    }
-
-
-    private fun onOptionsClose() {
-        setState {
-            optionsOpen = false
-            hoverItem = false
-            hoverOptions = false
-        }
-    }
-
-
-    private fun onOptionsCancel() {
-        onOptionsClose()
-        optionCompletedTime = Date.now()
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    private fun onRename() {
-        performOption {
+    private fun onRename(close: () -> Unit) {
+        performOption(close) {
             nameEditorRef.current?.onEdit()
         }
     }
 
 
-    private fun onRemove() {
-        performOption {
+    private fun onRemove(close: () -> Unit) {
+        performOption(close) {
             props.mirroredGraphStore.apply(DeleteDocumentCommand(props.documentPath))
         }
     }
 
 
-    private fun performOption(action: suspend () -> Unit) {
-        processingOption = true
-        onOptionsClose()
+    private fun performOption(close: () -> Unit, action: suspend () -> Unit) {
+        close()
 
         async {
             action.invoke()
-        }.then {
-            optionCompletedTime = Date.now()
-            processingOption = false
         }
     }
 
@@ -202,13 +114,10 @@ class SidebarFile(
                 height = 2.em
                 width = 100.pct.minus(SidebarFolder.indent)
                 marginLeft = SidebarFolder.indent
-            }
 
-            onMouseOver = {
-                onMouseOver(true)
-            }
-            onMouseOut = {
-                onMouseOut(true)
+                SidebarItemMenu.revealOnHoverSelector {
+                    opacity = number(1.0)
+                }
             }
 
             if (state.editing) {
@@ -232,16 +141,11 @@ class SidebarFile(
                 }
             }
 
-            div {
-                css {
-                    position = Position.absolute
-                    top = 0.px
-                    right = 0.px
+            SidebarItemMenu::class.react {
+                title = "Options..."
+                renderItems = { childrenBuilder, close ->
+                    childrenBuilder.renderMenuItems(close)
                 }
-
-                ref = this@SidebarFile.menuAnchorRef
-
-                renderOptionsMenu()
             }
         }
     }
@@ -298,54 +202,13 @@ class SidebarFile(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun ChildrenBuilder.renderOptionsMenu() {
-        span {
-            css {
-                // NB: blinks in and out without this
-                backgroundColor = Color.transparent
-
-                if (!(state.hoverItem || state.hoverOptions)) {
-                    display = None.none
-                }
-            }
-
-            onMouseOver = {
-                onMouseOver(false)
-            }
-
-            onMouseOut = {
-                onMouseOut(false)
-            }
-
-            IconButton {
-                title = "Options..."
-                onClick = { onOptionsOpen() }
-
-                sx {
-                    marginTop = (-13).px
-                    marginRight = (-16).px
-                }
-
-                icon("material-symbols:more-vert") {}
-            }
-        }
-
-        Menu {
-            open = state.optionsOpen
-            onClose = ::onOptionsCancel
-            anchorEl = menuAnchorRef.current?.let { { _ -> it } }
-            renderMenuItems()
-        }
-    }
-
-
-    private fun ChildrenBuilder.renderMenuItems() {
+    private fun ChildrenBuilder.renderMenuItems(close: () -> Unit) {
         val iconStyle: CSSProperties = unsafeJso {
             marginRight = 1.em
         }
 
         MenuItem {
-            onClick = { onRename() }
+            onClick = { onRename(close) }
             icon("material-symbols:edit") {
                 style = iconStyle
             }
@@ -353,7 +216,7 @@ class SidebarFile(
         }
 
         MenuItem {
-            onClick = { onRemove() }
+            onClick = { onRemove(close) }
             icon("material-symbols:delete") {
                 style = iconStyle
             }
