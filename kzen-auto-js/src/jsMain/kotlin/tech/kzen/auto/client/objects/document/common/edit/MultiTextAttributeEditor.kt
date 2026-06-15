@@ -45,7 +45,6 @@ external interface MultiTextAttributeEditorProps: Props {
 
 external interface MultiTextAttributeEditorState: State {
     var value: List<String>
-    var pending: Boolean
 }
 
 
@@ -66,7 +65,6 @@ class MultiTextAttributeEditor(
     //-----------------------------------------------------------------------------------------------------------------
     override fun MultiTextAttributeEditorState.init(props: MultiTextAttributeEditorProps) {
         this.value = props.value.toList()
-        pending = false
     }
 
 
@@ -81,15 +79,6 @@ class MultiTextAttributeEditor(
 
         setState {
             this.value = props.value.toList()
-        }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    suspend fun flush() {
-        submitDebounce.cancel()
-        if (state.pending) {
-            submitEdit()
         }
     }
 
@@ -113,7 +102,6 @@ class MultiTextAttributeEditor(
 
         setState {
             value = parsedValue
-            pending = true
         }
 
         submitDebounce.apply()
@@ -139,10 +127,6 @@ class MultiTextAttributeEditor(
 
         // TODO: handle error
         props.mirroredGraphStore.apply(command)
-
-        setState {
-            pending = false
-        }
 
         props.onChange?.invoke(adjustedValues)
     }
@@ -170,6 +154,10 @@ class MultiTextAttributeEditor(
                 val value = (it.target as HTMLTextAreaElement).value
                 onValueChange(value)
             }
+
+            // Commit the pending debounced edit on focus loss, so a following separate command is
+            // sequenced after this write rather than racing it (see AttributePathValueEditor).
+            onBlur = { submitDebounce.flush() }
 
             disabled = props.disabled
             error = props.invalid

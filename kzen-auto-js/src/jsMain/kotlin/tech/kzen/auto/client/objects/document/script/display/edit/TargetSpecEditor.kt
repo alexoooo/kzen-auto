@@ -388,6 +388,10 @@ class TargetSpecEditor(
                 val target = it.target as HTMLInputElement
                 onTextChange(target.value)
             }
+
+            // Commit the pending debounced edit on focus loss, so a following separate command is
+            // sequenced after this write rather than racing it (see AttributePathValueEditor).
+            onBlur = { submitDebounce.flush() }
         }
     }
 

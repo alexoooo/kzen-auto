@@ -1,7 +1,6 @@
 package tech.kzen.auto.client.objects.document.common.attribute
 
 import react.ChildrenBuilder
-import react.RefObject
 import react.State
 import react.dom.html.ReactHTML
 import react.dom.html.ReactHTML.div
@@ -10,7 +9,6 @@ import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.createRef
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.model.attribute.AttributePath
@@ -53,8 +51,6 @@ class DefaultAttributeEditor(
 
         private const val multilineKey = "multiline"
     }
-
-    private var attributePathValueEditor: RefObject<AttributePathValueEditor> = createRef()
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -133,15 +129,6 @@ class DefaultAttributeEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    override suspend fun beforeExecution(host: DocumentPath, objectLocation: ObjectLocation) {
-//        attributePathValueEditor.current?.flush()
-//    }
-//
-//
-//    override suspend fun onExecutionModel(host: DocumentPath, executionModel: ImperativeModel?) {}
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     private fun formattedLabel(): String {
         return CommonEditUtils.formattedLabel(
             AttributePath.ofName(props.attributeName),
@@ -212,8 +199,6 @@ class DefaultAttributeEditor(
 
             clientStateGlobal = props.clientStateGlobal
             mirroredGraphStore = props.mirroredGraphStore
-
-            ref = attributePathValueEditor
         }
     }
 }

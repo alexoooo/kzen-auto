@@ -175,6 +175,10 @@ class FormulaItemController(
                                 onValueChange(value)
                             }
 
+                            // Commit the pending debounced edit on focus loss, so a following
+                            // separate command is sequenced after this write rather than racing it.
+                            onBlur = { submitDebounce.flush() }
+
                             disabled = props.runningOrLoading
                             this.error = error != null
 

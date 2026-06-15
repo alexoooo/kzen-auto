@@ -3,7 +3,7 @@ package tech.kzen.auto.client.objects.document.common
 import mui.material.*
 import mui.system.sx
 import react.ChildrenBuilder
-import react.PropsWithRef
+import react.Props
 import react.ReactNode
 import react.State
 import react.dom.events.ChangeEvent
@@ -33,7 +33,7 @@ import web.html.HTMLTextAreaElement
 
 
 //---------------------------------------------------------------------------------------------------------------------
-external interface AttributePathValueEditorProps: PropsWithRef<AttributePathValueEditor> {
+external interface AttributePathValueEditorProps: Props {
     var labelOverride: String?
     var multilineOverride: Boolean?
     var disabled: Boolean
@@ -53,7 +53,6 @@ external interface AttributePathValueEditorProps: PropsWithRef<AttributePathValu
 external interface AttributePathValueEditorState: State {
     var value: String?
     var values: List<String>?
-    var pending: Boolean
 
     var attributeNotation: AttributeNotation?
 }
@@ -148,7 +147,6 @@ class AttributePathValueEditor(
 //        this.values = values
         value = null
         values = null
-        pending = false
     }
 
 
@@ -205,19 +203,9 @@ class AttributePathValueEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun flush() {
-        submitDebounce.cancel()
-        if (state.pending) {
-            submitEdit()
-        }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     private fun onValueChange(newValue: String) {
         setState {
             value = newValue
-            pending = true
         }
 
         submitDebounce.apply()
@@ -231,7 +219,6 @@ class AttributePathValueEditor(
 
         setState {
             values = newValues
-            pending = true
         }
 
         submitDebounce.apply()
@@ -264,10 +251,6 @@ class AttributePathValueEditor(
 
         // TODO: handle error
         props.mirroredGraphStore.apply(command)
-
-        setState {
-            pending = false
-        }
 
         props.onChange?.invoke(attributeNotation)
     }
@@ -339,6 +322,11 @@ class AttributePathValueEditor(
                 onValueChange(value)
             }
 
+            // Commit any pending debounced edit the instant focus leaves the field, so a
+            // subsequent separate command (e.g. renaming the step) is applied after this write
+            // rather than racing a stale one against the renamed object location.
+            onBlur = { submitDebounce.flush() }
+
             disabled = props.disabled
             error = props.invalid
         }
@@ -360,6 +348,8 @@ class AttributePathValueEditor(
                     val target = event.currentTarget
                     onValueChange(target.checked.toString())
                 }
+
+                onBlur = { submitDebounce.flush() }
 
                 color = SwitchColor.default
 
@@ -395,6 +385,8 @@ class AttributePathValueEditor(
 
                 onValuesChange(values)
             }
+
+            onBlur = { submitDebounce.flush() }
 
             disabled = props.disabled
             error = props.invalid

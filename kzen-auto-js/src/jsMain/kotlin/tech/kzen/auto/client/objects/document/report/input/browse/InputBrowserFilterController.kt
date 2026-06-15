@@ -112,6 +112,10 @@ class InputBrowserFilterController(
                 onValueChange(target.value)
             }
 
+            // Commit the pending debounced edit on focus loss, so a following separate command is
+            // sequenced after this write rather than racing it (parity with the Enter handler).
+            onBlur = { submitDebounce.flush() }
+
             value = state.filterText
 //                disabled = props.editDisabled
 

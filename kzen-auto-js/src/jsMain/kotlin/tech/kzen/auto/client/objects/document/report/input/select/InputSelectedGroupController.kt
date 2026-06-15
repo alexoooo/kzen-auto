@@ -101,6 +101,10 @@ class InputSelectedGroupController(
                 onValueChange(target.value)
             }
 
+            // Commit the pending debounced edit on focus loss, so a following separate command is
+            // sequenced after this write rather than racing it (parity with the Enter handler).
+            onBlur = { submitDebounce.flush() }
+
             value = state.groupByText
             disabled = props.editDisabled
             onKeyDown = { e -> handleEnter(e) }

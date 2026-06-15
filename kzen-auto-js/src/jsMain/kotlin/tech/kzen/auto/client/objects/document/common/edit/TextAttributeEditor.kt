@@ -43,7 +43,6 @@ external interface TextAttributeEditorProps: Props {
 
 external interface TextAttributeEditorState: State {
     var value: String
-    var pending: Boolean
 }
 
 
@@ -72,7 +71,6 @@ class TextAttributeEditor(
     //-----------------------------------------------------------------------------------------------------------------
     override fun TextAttributeEditorState.init(props: TextAttributeEditorProps) {
         value = stateText(props.value, props.type)
-        pending = false
     }
 
 
@@ -108,15 +106,6 @@ class TextAttributeEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun flush() {
-        submitDebounce.cancel()
-        if (state.pending) {
-            submitEdit()
-        }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     override fun componentWillUnmount() {
         submitDebounce.flush()
     }
@@ -126,7 +115,6 @@ class TextAttributeEditor(
     private fun onValueChange(newValue: String) {
         setState {
             value = newValue
-            pending = true
         }
 
         submitDebounce.apply()
@@ -141,10 +129,6 @@ class TextAttributeEditor(
 
         // TODO: handle error
         props.mirroredGraphStore.apply(command)
-
-        setState {
-            pending = false
-        }
 
         props.onChange?.invoke(attributeNotation.value)
     }
@@ -185,6 +169,10 @@ class TextAttributeEditor(
 
                 onValueChange(value)
             }
+
+            // Commit the pending debounced edit on focus loss, so a following separate command is
+            // sequenced after this write rather than racing it (see AttributePathValueEditor).
+            onBlur = { submitDebounce.flush() }
 
 //                if (valueType == Type.Number) {
 //                    type = InputType.number.name
