@@ -2,6 +2,7 @@ package tech.kzen.auto.client.objects.document.script.display.dependency
 
 import emotion.react.css
 import js.objects.unsafeJso
+import kotlinx.browser.window
 import mui.material.IconButton
 import react.ChildrenBuilder
 import react.Key
@@ -36,6 +37,7 @@ import tech.kzen.lib.common.model.structure.notation.PositionRelation
 import tech.kzen.lib.common.model.structure.notation.cqrs.ShiftInAttributeCommand
 import tech.kzen.lib.common.service.store.MirroredGraphStore
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
+import web.animations.requestAnimationFrame
 import web.cssom.AlignItems
 import web.cssom.Color
 import web.cssom.Display
@@ -115,6 +117,45 @@ class ScriptBranchDisplay(
     override fun componentWillUnmount() {
         props.insertionGlobal.unsubscribe(this)
         props.clientStateGlobal.unobserve(this)
+    }
+
+
+    // Capture window scroll just before React commits this branch's DOM mutations. The stage is
+    // window-scrolled (no overflow container — see ProjectController), so scrollY is the position
+    // to preserve.
+    override fun getSnapshotBeforeUpdate(
+        prevProps: StepListDisplayProps,
+        prevState: StepListDisplayState
+    ): Any {
+        return window.scrollY
+    }
+
+
+    // The browser does not reliably hold window scroll when step rows are added/removed (scroll
+    // anchoring fails on the structural change, jumping the viewport to the top); restore the
+    // captured position so it stays put. Gated on a row-count change so in-place updates (drag
+    // hover, dependency edges, attribute edits — which never moved scroll) are untouched.
+    override fun componentDidUpdate(
+        prevProps: StepListDisplayProps,
+        prevState: StepListDisplayState,
+        snapshot: Any
+    ) {
+        if (prevState.stepLocations?.size == state.stepLocations?.size) {
+            return
+        }
+
+        val targetScrollY = snapshot as Double
+
+        // Restore synchronously, then again on the next animation frame. ScriptDependencyOverlay
+        // (a sibling of the top-level branch) reacts to the row-ref churn by scheduling a remeasure
+        // in requestAnimationFrame; that remeasure calls getBoundingClientRect, forcing a layout in
+        // which the browser re-applies its failed anchoring and re-jumps the window — clobbering the
+        // synchronous restore. Our rAF is scheduled from here (commit layout phase, after the
+        // overlay's was scheduled during the mutation phase), so it runs last and has the final say
+        // before paint. Nested branches have no such sibling overlay, so the sync restore already
+        // sufficed there; the rAF restore is a harmless no-op for them.
+        window.scrollTo(window.scrollX, targetScrollY)
+        requestAnimationFrame { window.scrollTo(window.scrollX, targetScrollY) }
     }
 
 

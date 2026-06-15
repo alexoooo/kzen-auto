@@ -253,7 +253,10 @@ class StepHeader(
                     size = Size.small
 
                     // stopPropagation: this button handles its own click; don't also trip the card's click-to-expand.
-                    onClick = { it.stopPropagation(); onRemove() }
+                    onClick = {
+                        it.stopPropagation()
+                        onRemove()
+                    }
 
                     icon("material-symbols:delete") {}
                 }
@@ -267,7 +270,10 @@ class StepHeader(
                     size = Size.small
 
                     // stopPropagation: the chevron owns the toggle; don't let the click also reach the card's expand.
-                    onClick = { it.stopPropagation(); onToggleExpanded() }
+                    onClick = {
+                        it.stopPropagation()
+                        onToggleExpanded()
+                    }
 
                     icon(if (expanded) "KeyboardArrowUp" else "KeyboardArrowDown") {}
                 }
