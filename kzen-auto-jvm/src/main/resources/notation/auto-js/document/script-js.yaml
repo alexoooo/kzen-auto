@@ -200,6 +200,12 @@ WaitStepTool:
   delegate: WaitStep
 
 
+PauseStepTool:
+  is: RibbonTool
+  parent: ScriptGroup_LogicControl
+  delegate: PauseStep
+
+
 RunTool:
   is: RibbonTool
   parent: ScriptGroup_LogicControl

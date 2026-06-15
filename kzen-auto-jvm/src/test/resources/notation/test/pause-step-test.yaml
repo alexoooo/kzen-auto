@@ -1,0 +1,10 @@
+main:
+  is: Script
+  steps:
+    - main.steps/Pause
+
+# A single Pause step. On first run it pauses the run (LogicResultPaused); on resume it proceeds and,
+# being the only step, the run completes (LogicResultSuccess). Exercised by ScriptExecutionPauseTest
+# in-process — no server, no browser.
+main.steps/Pause:
+  is: PauseStep

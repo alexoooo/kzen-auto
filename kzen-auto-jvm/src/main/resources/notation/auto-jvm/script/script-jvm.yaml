@@ -216,6 +216,15 @@ WaitStep:
     selfLocation: SelfLocation
 
 
+PauseStep:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.server.objects.script.step.control.PauseStep
+  icon: "material-symbols:pause"
+  title: "Pause"
+  description: "Pause execution until resumed"
+
+
 IfStep:
   abstract: true
   is: ScriptStep
