@@ -285,5 +285,11 @@ BrowserEscapeStepTool:
   delegate: BrowserEscapeStep
 
 
+BrowserEnterStepTool:
+  is: RibbonTool
+  parent: ScriptGroup_Browser
+  delegate: BrowserEnterStep
+
+
 
 

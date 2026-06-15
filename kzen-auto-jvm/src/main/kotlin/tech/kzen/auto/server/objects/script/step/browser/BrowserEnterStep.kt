@@ -2,33 +2,25 @@ package tech.kzen.auto.server.objects.script.step.browser
 
 import org.openqa.selenium.Keys
 import org.openqa.selenium.OutputType
-import org.openqa.selenium.Platform
-import tech.kzen.auto.common.objects.document.feature.TargetSpec
+import org.openqa.selenium.interactions.Actions
 import tech.kzen.auto.server.objects.script.api.ScriptStepDefinition
 import tech.kzen.auto.server.objects.script.api.TracingScriptStep
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
 import tech.kzen.auto.server.objects.script.model.ScriptExecutionContext
 import tech.kzen.lib.common.exec.logic.model.LogicResult
-import tech.kzen.lib.common.exec.logic.model.LogicResultFailed
 import tech.kzen.lib.common.exec.logic.model.LogicResultSuccess
 import tech.kzen.lib.common.exec.tuple.TupleValue
-import tech.kzen.auto.server.service.vision.VisionUtils
 import tech.kzen.lib.common.exec.BinaryExecutionValue
 import tech.kzen.auto.server.service.webdriver.WebDriverContext
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
-import tech.kzen.lib.common.service.media.NotationMedia
 
 
 @Reflect
-class BrowserWriteStep(
-    private val text: String,
-    private val target: TargetSpec,
-    private val overwrite: Boolean,
+class BrowserEnterStep(
     selfLocation: ObjectLocation,
-    @Service private val webDriverContext: WebDriverContext,
-    @Service private val notationMedia: NotationMedia
+    @Service private val webDriverContext: WebDriverContext
 ):
     TracingScriptStep(selfLocation)
 {
@@ -43,31 +35,7 @@ class BrowserWriteStep(
     ): LogicResult {
         val driver = webDriverContext.get()
 
-        val match = VisionUtils.locateElement(
-            target,
-            driver,
-            notationMedia)
-
-        match.error?.let {
-            return LogicResultFailed(it)
-        }
-
-        val element = match.webElement!!
-
-        if (overwrite) {
-            // select existing content so the typed text replaces it
-            // (element.clear() is a no-op on contenteditable / custom inputs).
-            // macOS selects-all with Command, every other platform with Control
-            val selectAllModifier =
-                if (driver.capabilities.platformName?.`is`(Platform.MAC) == true) {
-                    Keys.COMMAND
-                }
-                else {
-                    Keys.CONTROL
-                }
-            element.sendKeys(Keys.chord(selectAllModifier, "a"))
-        }
-        element.sendKeys(text)
+        Actions(driver).sendKeys(Keys.ENTER).build().perform()
 
         val screenshotPng = driver.getScreenshotAs(OutputType.BYTES)
         traceDetail(scriptExecutionContext, BinaryExecutionValue(screenshotPng))

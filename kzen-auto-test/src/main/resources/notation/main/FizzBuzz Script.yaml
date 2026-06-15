@@ -9,12 +9,12 @@ main:
     - 'main.steps/Click "New Script..." menu option'
     - 'main.steps/Click "Number range" ribbon tool'
     - "main.steps/Click [add] target in script"
-    - main.steps/Click
-    - main.steps/Write
-    - main.steps/Click 2
-    - main.steps/Write 2
-    - main.steps/Submit
+    - "main.steps/Click [Expand]"
+    - 'main.steps/Append "0"'
+    - "main.steps/Click [Rename]"
+    - 'main.steps/Set name = "Range"'
     - main.steps/Pause
+    - main.steps/Enter
     - main.steps/Close Browser
     - main.steps/Stop SUT
 
@@ -70,14 +70,14 @@ main.steps/Stop SUT:
     value: "main/Plus Circle/~main.yaml#main"
     type: Visual
 
-main.steps/Write:
+'main.steps/Append "0"':
   is: BrowserWriteStep
   target:
     type: Xpath
     value: "//label[text()='To']/..//input"
   text: 0
 
-main.steps/Click:
+"main.steps/Click [Expand]":
   is: BrowserClickStep
   target:
     type: Xpath
@@ -86,15 +86,16 @@ main.steps/Click:
 main.steps/Pause:
   is: PauseStep
 
-main.steps/Click 2:
+"main.steps/Click [Rename]":
   is: BrowserClickStep
   target:
     type: Xpath
     value: "//button[@title='Rename']"
 
-main.steps/Write 2:
+'main.steps/Set name = "Range"':
   is: BrowserWriteStep
-  text: foo
+  text: Range
+  overwrite: true
 
-main.steps/Submit:
-  is: BrowserSubmitStep
+main.steps/Enter:
+  is: BrowserEnterStep
