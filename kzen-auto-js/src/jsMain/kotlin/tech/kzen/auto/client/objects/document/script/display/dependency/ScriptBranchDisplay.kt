@@ -40,7 +40,6 @@ import web.cssom.AlignItems
 import web.cssom.Color
 import web.cssom.Display
 import web.cssom.NamedColor
-import web.cssom.Position
 import web.cssom.em
 import web.cssom.number
 import web.cssom.pct
@@ -294,7 +293,7 @@ class ScriptBranchDisplay(
                         }
                     }
 
-                    firstOrLastInsertionPoint(0)
+                    firstOrLastInsertionPoint(0, StepDependencyEdges.EMPTY)
                 }
             }
             else {
@@ -308,10 +307,10 @@ class ScriptBranchDisplay(
     private fun ChildrenBuilder.nonEmptySteps(
         stepLocations: List<ObjectLocation>
     ) {
-        firstOrLastInsertionPoint(0)
-
         val edges = state.dependencyEdges
             ?: StepDependencyEdges.EMPTY
+
+        firstOrLastInsertionPoint(0, edges)
 
         div {
             for ((index, stepLocation) in stepLocations.withIndex()) {
@@ -329,7 +328,7 @@ class ScriptBranchDisplay(
             }
         }
 
-        firstOrLastInsertionPoint(stepLocations.size)
+        firstOrLastInsertionPoint(stepLocations.size, edges)
     }
 
 
@@ -377,42 +376,51 @@ class ScriptBranchDisplay(
 
 
     private fun ChildrenBuilder.betweenStepsInsertionPoint(index: Int) {
+        // NB: flex with a single child left-aligns by default; alignItems=center vertically centers
+        //     the +button in the 1.5em gap. left edge here is the step card's left edge (this body
+        //     cell is offset marginLeft=1.25em past the dependency gutter in renderRowWithGutter),
+        //     so the button stays clear of trunk lines drawn in the gutter to its left.
         div {
             css {
-                position = Position.relative
+                display = Display.flex
+                alignItems = AlignItems.center
                 height = 1.5.em
                 width = 100.pct
             }
 
-            div {
-                css {
-                    position = Position.absolute
-                    top = (-12).px
-                    left = 50.pct
-                    marginLeft = (-12).px
-                }
-
-                insertionButton(index)
-            }
+            insertionButton(index)
         }
     }
 
 
-    private fun ChildrenBuilder.firstOrLastInsertionPoint(index: Int) {
-        // NB: render the placeholder unconditionally so toggling insertion mode never shifts
-        //     layout. The 28px reservation also doubles as breathing room above/below the
-        //     step list. `insertionButton` itself is gated by `state.creating`, so the visible
-        //     "+" only appears when an archetype is selected. The branch-indent strip in
-        //     `scriptBranchContainer` uses `background-clip: content-box` with matching 28px
-        //     vertical padding so its white bg does NOT extend over these placeholder regions.
-        div {
-            css {
-                height = 26.px
-                marginTop = 2.px
-            }
+    private fun ChildrenBuilder.firstOrLastInsertionPoint(index: Int, edges: StepDependencyEdges) {
+        // NB: routed through renderRowWithGutter (like betweenStepsInsertionPoint) so the +button
+        //     lands in the same card-left column as the between-steps +buttons even when a
+        //     dependency gutter widens the rows — the gutter's empty lane/phantom boxes reserve the
+        //     identical left offset. `index - 1` is the step above this insertion point (mirrors
+        //     the between-steps `stepDependencyGutterCellForBetween(index, ...)` for insertion point
+        //     `index + 1`); at the first/last boundary no lane spans the gap, so it only reserves
+        //     width and draws no trunk line.
+        renderRowWithGutter(
+            stepLocation = null,
+            gutter = { stepDependencyGutterCellForBetween(index - 1, edges) },
+            body = {
+                // NB: render the placeholder unconditionally so toggling insertion mode never
+                //     shifts layout. The 32px reservation also doubles as breathing room above/
+                //     below the step list. `insertionButton` itself is gated by `state.creating`,
+                //     so the visible "+" only appears when an archetype is selected. The branch-
+                //     indent strip in `scriptBranchContainer` uses `background-clip: content-box`
+                //     with matching 32px vertical padding so its white bg does NOT extend over
+                //     these placeholder regions.
+                div {
+                    css {
+                        height = 30.px
+                        marginTop = 2.px
+                    }
 
-            insertionButton(index)
-        }
+                    insertionButton(index)
+                }
+            })
     }
 
 
@@ -425,8 +433,8 @@ class ScriptBranchDisplay(
             title = "Insert step here"
 
             css {
-                width = 24.px
-                height = 24.px
+                width = 32.px
+                height = 32.px
                 padding = 0.px
                 backgroundColor = NamedColor.white
 
@@ -441,7 +449,7 @@ class ScriptBranchDisplay(
 
             icon("material-symbols:add-circle-outline") {
                 style = unsafeJso {
-                    fontSize = 1.em
+                    fontSize = 1.5.em
                 }
             }
         }

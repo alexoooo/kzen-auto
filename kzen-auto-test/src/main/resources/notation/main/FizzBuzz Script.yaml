@@ -9,6 +9,7 @@ main:
     - 'main.steps/Click "New Script..." menu option'
     - 'main.steps/Click "Number range" ribbon tool'
     - "main.steps/Click [add] target in script"
+    - main.steps/Click
     - main.steps/Write
     - main.steps/Close Browser
     - main.steps/Stop SUT
@@ -21,7 +22,7 @@ main.steps/Start SUT:
 
 main.steps/Open Browser:
   is: BrowserOpenStep
-  closePolicy: keepOnFailure
+  closePolicy: manual
 
 main.steps/Navigate:
   is: BrowserGetStep
@@ -71,3 +72,9 @@ main.steps/Write:
     type: Xpath
     value: "//label[text()='To']/..//input"
   text: 0
+
+main.steps/Click:
+  is: BrowserClickStep
+  target:
+    type: Xpath
+    value: "//button[@title='Expand']"

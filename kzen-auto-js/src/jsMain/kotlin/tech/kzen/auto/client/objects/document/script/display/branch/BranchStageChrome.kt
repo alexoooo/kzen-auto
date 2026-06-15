@@ -133,7 +133,7 @@ fun ChildrenBuilder.branchStageBase() {
 //
 // The shadow is a separate absolute overlay (not a background on this content-wrapping div) so its
 // right edge can be faded with a mask without also clipping the overflowing step cards. It spans
-// the STAGE only (starts at the trunk's inner edge) and sits in the 28px insertion-reservation
+// the STAGE only (starts at the trunk's inner edge) and sits in the 32px insertion-reservation
 // strip at the top of the branch (no card content there — see firstOrLastInsertionPoint), so
 // painting it above content is invisible except over that empty strip. position:relative here just
 // scopes the overlay to the branch top; it sets no z-index, so it creates no stacking context (the

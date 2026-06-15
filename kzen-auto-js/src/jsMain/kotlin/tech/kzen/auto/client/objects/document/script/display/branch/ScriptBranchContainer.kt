@@ -20,8 +20,8 @@ import web.cssom.*
 // NB: shared branch-row layout for IfStep (Then/Else) and MappingStep (Each). Renders a narrow
 //     white "indent" column on the left holding just the label, paired with the branch's step list
 //     on the right. The strip stretches to the row's full height via flex `alignItems = stretch`
-//     plus 28px vertical padding — so the strip's white bg covers the right column's top/bottom
-//     28px placeholder reservations on the LEFT 4em, and adjacent branches' strips meet flush
+//     plus 32px vertical padding — so the strip's white bg covers the right column's top/bottom
+//     32px placeholder reservations on the LEFT 4em, and adjacent branches' strips meet flush
 //     forming one continuous F-shape trunk that extends to the bottom of the last branch's row.
 //
 //     The right column is deliberately transparent (page gray shows through around the steps) so
@@ -56,7 +56,7 @@ fun ChildrenBuilder.scriptBranchContainer(
                 // IfStepDisplay's vertical ledge line is positioned to that outer edge (keep in sync).
                 width = 3.em
                 flexShrink = number(0.0)
-                padding = Padding(28.px, 0.75.em)
+                padding = Padding(32.px, 0.75.em)
                 color = Color("rgba(0, 0, 0, 0.7)")
 
                 // Last branch of the construct: round the trunk's bottom corners so its white fill
