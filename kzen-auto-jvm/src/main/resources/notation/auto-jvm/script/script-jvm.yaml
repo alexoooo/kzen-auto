@@ -265,7 +265,11 @@ BrowserOpenStep:
   icon: "material-symbols:open-in-new"
   title: "Open browser"
   description: "Open a new browser window (existing one will be closed)"
+  closePolicy: auto
   meta:
+    closePolicy:
+      is: String
+      summary: TextAttributeView
     selfLocation: SelfLocation
 
 

@@ -17,6 +17,7 @@ import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.server.exec.logic.context.MutableLogicControl
+import tech.kzen.lib.server.exec.logic.context.MutableLogicResourceScope
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
@@ -55,7 +56,8 @@ class ScriptExecutionPauseOnErrorTest {
     @Test
     fun failingStepPausesWhenPauseOnError() {
         val execution = newExecution()
-        val result = execution.continueOrStart(MutableLogicControl(pauseOnError = true), graphDefinition())
+        val result = execution.continueOrStart(
+            MutableLogicControl(pauseOnError = true), MutableLogicResourceScope(), graphDefinition())
         assertEquals(LogicResultPaused, result)
     }
 
@@ -63,7 +65,8 @@ class ScriptExecutionPauseOnErrorTest {
     @Test
     fun failingStepEndsRunWhenNotPauseOnError() {
         val execution = newExecution()
-        val result = execution.continueOrStart(MutableLogicControl(pauseOnError = false), graphDefinition())
+        val result = execution.continueOrStart(
+            MutableLogicControl(pauseOnError = false), MutableLogicResourceScope(), graphDefinition())
         assertIs<LogicResultFailed>(result)
     }
 
@@ -74,10 +77,11 @@ class ScriptExecutionPauseOnErrorTest {
         // re-runs the still-failing step and pauses anew rather than treating it as completed.
         val execution = newExecution()
         val control = MutableLogicControl(pauseOnError = true)
+        val resourceScope = MutableLogicResourceScope()
         val graphDefinition = graphDefinition()
 
-        assertEquals(LogicResultPaused, execution.continueOrStart(control, graphDefinition))
-        assertEquals(LogicResultPaused, execution.continueOrStart(control, graphDefinition))
+        assertEquals(LogicResultPaused, execution.continueOrStart(control, resourceScope, graphDefinition))
+        assertEquals(LogicResultPaused, execution.continueOrStart(control, resourceScope, graphDefinition))
     }
 
 

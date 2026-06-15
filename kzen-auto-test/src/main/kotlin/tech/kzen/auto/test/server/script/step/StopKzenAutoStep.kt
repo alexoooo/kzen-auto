@@ -7,7 +7,6 @@ import tech.kzen.auto.server.objects.script.model.ScriptExecutionContext
 import tech.kzen.lib.common.exec.logic.model.LogicResult
 import tech.kzen.lib.common.exec.logic.model.LogicResultSuccess
 import tech.kzen.lib.common.exec.tuple.TupleValue
-import tech.kzen.auto.test.server.process.FixtureCopier
 import tech.kzen.auto.test.server.process.KzenAutoSubprocessRegistry
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
@@ -28,16 +27,16 @@ class StopKzenAutoStep(
     override fun continueOrStart(
         scriptExecutionContext: ScriptExecutionContext
     ): LogicResult {
-        val entry = KzenAutoSubprocessRegistry.remove(name)
-        if (entry == null) {
+        val stopped = KzenAutoSubprocessRegistry.removeAndClose(name)
+        scriptExecutionContext.resourceScope.deregister(
+            KzenAutoSubprocessRegistry.resourceKey(name))
+
+        if (!stopped) {
             traceDetail(
                 scriptExecutionContext,
                 "no SUT registered as '$name', nothing to stop")
             return LogicResultSuccess(TupleValue.empty)
         }
-
-        entry.process.close()
-        entry.tempDir?.let { FixtureCopier.deleteRecursively(it) }
 
         traceDetail(scriptExecutionContext, "stopped '$name'")
         return LogicResultSuccess(TupleValue.empty)

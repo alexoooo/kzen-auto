@@ -9,12 +9,16 @@ StartKzenAutoStep:
   name: "main"
   fixture: ""
   port: 18082
+  closePolicy: auto
   meta:
     name: String
     fixture:
       is: String
       summary: TextAttributeView
     port: Int
+    closePolicy:
+      is: String
+      summary: TextAttributeView
     selfLocation: SelfLocation
 
 

@@ -2,7 +2,7 @@ main:
   is: Script
   steps:
     - main.steps/Start SUT
-    - main.steps/Open
+    - main.steps/Open Browser
     - main.steps/Navigate
     - 'main.steps/Click "Project"'
     - 'main.steps/Click "Project options..." button'
@@ -10,8 +10,8 @@ main:
     - 'main.steps/Click "Number range" ribbon tool'
     - "main.steps/Click [add] target in script"
     - main.steps/Write
-    - main.steps/Close
-    - main.steps/StopSut
+    - main.steps/Close Browser
+    - main.steps/Stop SUT
 
 main.steps/Start SUT:
   is: StartKzenAutoStep
@@ -19,7 +19,7 @@ main.steps/Start SUT:
   fixture: fixtures/empty-project
   port: 18082
 
-main.steps/Open:
+main.steps/Open Browser:
   is: BrowserOpenStep
 
 main.steps/Navigate:
@@ -27,10 +27,10 @@ main.steps/Navigate:
   location: "http://127.0.0.1:18082/"
   screenshotDelayMilliseconds: 1000
 
-main.steps/Close:
+main.steps/Close Browser:
   is: BrowserCloseStep
 
-main.steps/StopSut:
+main.steps/Stop SUT:
   is: StopKzenAutoStep
   name: main
 

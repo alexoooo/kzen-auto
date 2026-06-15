@@ -31,6 +31,7 @@ class BrowserCloseStep(
     ): LogicResult {
         Thread.sleep(250)
         webDriverContext.quit()
+        scriptExecutionContext.resourceScope.deregister(WebDriverContext.resourceKey)
 
         traceDetail(scriptExecutionContext, "Browser closed")
 

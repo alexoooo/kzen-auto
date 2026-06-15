@@ -5,6 +5,7 @@ import tech.kzen.auto.server.objects.script.api.ScriptStepDefinition
 import tech.kzen.auto.server.objects.script.api.TracingScriptStep
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
 import tech.kzen.auto.server.objects.script.model.ScriptExecutionContext
+import tech.kzen.lib.common.exec.logic.ResourceClosePolicy
 import tech.kzen.lib.common.exec.logic.model.LogicResult
 import tech.kzen.lib.common.exec.logic.model.LogicResultSuccess
 import tech.kzen.lib.common.exec.tuple.TupleValue
@@ -22,6 +23,7 @@ class StartKzenAutoStep(
     private val name: String,
     private val fixture: String,
     private val port: Int,
+    private val closePolicy: String,
     selfLocation: ObjectLocation,
     @Service private val config: KzenAutoConfig
 ):
@@ -53,6 +55,12 @@ class StartKzenAutoStep(
             port = port)
 
         KzenAutoSubprocessRegistry.put(name, process, tempDir)
+
+        scriptExecutionContext.resourceScope.register(
+            KzenAutoSubprocessRegistry.resourceKey(name), ResourceClosePolicy.parse(closePolicy)
+        ) {
+            KzenAutoSubprocessRegistry.removeAndClose(name)
+        }
 
         traceDetail(
             scriptExecutionContext,

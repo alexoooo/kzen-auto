@@ -14,6 +14,7 @@ import tech.kzen.lib.common.service.context.environment.GraphEnvironment
 class LogicExecutionFacadeImpl(
     private val graphDefinition: GraphDefinition,
     private val logicControl: LogicControl,
+    private val resourceScope: LogicResourceScope,
     private val listener: LogicExecutionListener,
     private val logicTraceStore: LogicTraceStore,
     private val environment: () -> GraphEnvironment
@@ -60,7 +61,7 @@ class LogicExecutionFacadeImpl(
         // captured in the constructor field, which is only used by open() for first instantiation),
         // so editing a failed step inside this sub-script takes effect on resume.
         return logicExecution!!.continueOrStart(
-            logicControl, graphDefinition)
+            logicControl, resourceScope, graphDefinition)
     }
 
 

@@ -9,10 +9,12 @@ import tech.kzen.lib.common.exec.logic.Logic
 import tech.kzen.lib.common.exec.logic.LogicExecutionFacade
 import tech.kzen.lib.common.exec.logic.LogicExecutionListener
 import tech.kzen.lib.common.exec.logic.LogicHandle
+import tech.kzen.lib.common.exec.logic.LogicResourceScope
 import tech.kzen.lib.common.exec.logic.model.LogicCommand
 import tech.kzen.lib.common.exec.logic.model.LogicResultFailed
 import tech.kzen.lib.server.exec.logic.context.LogicFrame
 import tech.kzen.lib.server.exec.logic.context.MutableLogicControl
+import tech.kzen.lib.server.exec.logic.context.MutableLogicResourceScope
 import tech.kzen.lib.server.exec.logic.trace.LogicTraceStore
 import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.exec.ExecutionRequest
@@ -48,7 +50,8 @@ class ServerLogicController(
     //-----------------------------------------------------------------------------------------------------------------
     private data class LogicState(
         val runId: LogicRunId,
-        val frame: LogicFrame
+        val frame: LogicFrame,
+        val resourceScope: LogicResourceScope
     ) {
         var cancelRequested: Boolean = false
         var pauseRequested: Boolean = false
@@ -152,6 +155,7 @@ class ServerLogicController(
             ?: return null
 
         val commonMutableLogicControl = MutableLogicControl(pauseOnError)
+        val resourceScope = MutableLogicResourceScope()
 
         val logicHandle: LogicHandle = object: LogicHandle {
             override fun start(
@@ -174,7 +178,8 @@ class ServerLogicController(
                 }
 
                 val logicExecutionFacadeImpl = LogicExecutionFacadeImpl(
-                    successfulGraphDefinition, commonMutableLogicControl, listener, logicTraceStore, environment)
+                    successfulGraphDefinition, commonMutableLogicControl, resourceScope,
+                    listener, logicTraceStore, environment)
 
                 val logicExecution = logicExecutionFacadeImpl.open(
                     LogicRunExecutionId(runId, guestExecutionId), originalObjectLocation, this, graphCreator)
@@ -212,7 +217,8 @@ class ServerLogicController(
                 execution,
                 CopyOnWriteArrayList(),
                 commonMutableLogicControl
-            )
+            ),
+            resourceScope
         )
         return runId
     }
@@ -253,7 +259,7 @@ class ServerLogicController(
 
         if (state.paused) {
             state.frame.execution.close(false)
-            clearState()
+            clearState(false)
         }
         else {
             state.frame.control.commandCancel()
@@ -319,7 +325,7 @@ class ServerLogicController(
             val result =
                 try {
                     state.frame.execution.continueOrStart(
-                        state.frame.control, graphDefinitionAttempt.successful())
+                        state.frame.control, state.resourceScope, graphDefinitionAttempt.successful())
                 }
                 catch (t: Throwable) {
                     logger.warn("Execution failed", t)
@@ -331,7 +337,7 @@ class ServerLogicController(
 
                 if (result.isTerminal()) {
                     state.frame.execution.close(result is LogicResultFailed)
-                    clearState()
+                    clearState(result is LogicResultFailed)
                 }
                 else {
                     state.paused = true
@@ -383,7 +389,7 @@ class ServerLogicController(
             val result =
                 try {
                     state.frame.execution.continueOrStart(
-                        state.frame.control, graphDefinitionAttempt.successful())
+                        state.frame.control, state.resourceScope, graphDefinitionAttempt.successful())
                 }
                 catch (t: Throwable) {
                     logger.warn("Execution failed", t)
@@ -395,7 +401,7 @@ class ServerLogicController(
 
                 if (result.isTerminal()) {
                     state.frame.execution.close(result is LogicResultFailed)
-                    clearState()
+                    clearState(result is LogicResultFailed)
                 }
                 else {
                     // Re-affirm the paused-and-Pause-requested invariant (a step ending in a
@@ -426,11 +432,12 @@ class ServerLogicController(
 
 
     @Synchronized
-    private fun clearState() {
+    private fun clearState(error: Boolean) {
         val state = stateOrNull
             ?: return
 
         stateOrNull = null
+        state.resourceScope.disposeAll(error)
         state.frame.control.close()
     }
 
@@ -443,7 +450,7 @@ class ServerLogicController(
             val state = stateOrNull
             if (state != null && !state.running && !state.stepping) {
                 state.frame.execution.close(false)
-                clearState()
+                clearState(false)
             }
             else {
                 state?.cancelRequested = true
@@ -461,7 +468,7 @@ class ServerLogicController(
         // so no LogicControl publisher hangs past controller shutdown.
         synchronized(this) {
             if (stateOrNull != null) {
-                clearState()
+                clearState(false)
             }
         }
     }

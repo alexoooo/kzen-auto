@@ -24,6 +24,19 @@ object KzenAutoSubprocessRegistry {
     }
 
 
+    fun resourceKey(name: String): String {
+        return "sut:$name"
+    }
+
+
+    fun removeAndClose(name: String): Boolean {
+        val entry = remove(name)
+            ?: return false
+        closeQuietly(entry)
+        return true
+    }
+
+
     fun closeAll() {
         val snapshot = entries.values.toList()
         entries.clear()

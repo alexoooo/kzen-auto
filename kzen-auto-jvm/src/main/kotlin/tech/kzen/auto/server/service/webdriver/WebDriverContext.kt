@@ -5,6 +5,11 @@ import org.openqa.selenium.remote.UnreachableBrowserException
 
 
 class WebDriverContext {
+    companion object {
+        const val resourceKey = "browser"
+    }
+
+
     private var webDriver: RemoteWebDriver? = null
 
 

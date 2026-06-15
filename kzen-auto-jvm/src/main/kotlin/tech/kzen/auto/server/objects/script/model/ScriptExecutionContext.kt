@@ -5,6 +5,7 @@ import tech.kzen.auto.common.objects.document.script.model.ScriptValidation
 import tech.kzen.lib.common.exec.logic.trace.LogicTraceHandle
 import tech.kzen.lib.common.exec.logic.LogicControl
 import tech.kzen.lib.common.exec.logic.LogicHandleFacade
+import tech.kzen.lib.common.exec.logic.LogicResourceScope
 import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.instance.GraphInstance
@@ -14,6 +15,7 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 
 data class ScriptExecutionContext(
     val logicControl: LogicControl,
+    val resourceScope: LogicResourceScope,
     val activeScriptModel: ActiveScriptModel,
     val logicHandleFacade: LogicHandleFacade,
     val logicTraceHandle: LogicTraceHandle,

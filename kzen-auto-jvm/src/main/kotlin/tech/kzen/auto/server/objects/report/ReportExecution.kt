@@ -42,6 +42,7 @@ import tech.kzen.auto.server.objects.report.model.ReportRunContext
 import tech.kzen.auto.server.objects.report.service.ReportWorkPool
 import tech.kzen.lib.common.exec.logic.LogicControl
 import tech.kzen.lib.common.exec.logic.LogicExecution
+import tech.kzen.lib.common.exec.logic.LogicResourceScope
 import tech.kzen.lib.common.exec.logic.model.*
 import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.auto.server.util.ClassLoaderUtils
@@ -229,6 +230,7 @@ class ReportExecution(
     //-----------------------------------------------------------------------------------------------------------------
     override fun continueOrStart(
         logicControl: LogicControl,
+        resourceScope: LogicResourceScope,
         graphDefinition: GraphDefinition
     ): LogicResult {
         val datasetInfo = initialReportRunContext.datasetInfo

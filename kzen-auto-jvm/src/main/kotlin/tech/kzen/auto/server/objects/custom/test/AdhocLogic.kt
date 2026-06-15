@@ -6,6 +6,7 @@ import tech.kzen.lib.common.exec.logic.Logic
 import tech.kzen.lib.common.exec.logic.LogicControl
 import tech.kzen.lib.common.exec.logic.LogicExecution
 import tech.kzen.lib.common.exec.logic.LogicHandle
+import tech.kzen.lib.common.exec.logic.LogicResourceScope
 import tech.kzen.lib.common.exec.logic.model.LogicDefinition
 import tech.kzen.lib.common.exec.logic.model.LogicResult
 import tech.kzen.lib.common.exec.logic.model.LogicResultSuccess
@@ -56,6 +57,7 @@ class AdhocLogic(
 
         override fun continueOrStart(
             logicControl: LogicControl,
+            resourceScope: LogicResourceScope,
             graphDefinition: GraphDefinition
         ): LogicResult {
             val result = hello()

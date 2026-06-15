@@ -58,6 +58,7 @@ class ScriptExecution(
 
     override fun continueOrStart(
         logicControl: LogicControl,
+        resourceScope: LogicResourceScope,
         graphDefinition: GraphDefinition
     ): LogicResult {
         val command = logicControl.pollCommand()
@@ -102,6 +103,7 @@ class ScriptExecution(
 
         val stepContext = ScriptExecutionContext(
             logicControl,
+            resourceScope,
             activeScriptModel,
             logicHandleFacade,
             logicTraceHandle,
