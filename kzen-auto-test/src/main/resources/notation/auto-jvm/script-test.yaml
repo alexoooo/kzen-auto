@@ -1,7 +1,9 @@
 
 StartKzenAutoStep:
   abstract: true
-  is: ScriptStep
+  is:
+    - ScriptStep
+    - ScopedResource
   class: tech.kzen.auto.test.server.script.step.StartKzenAutoStep
   icon: PlayCircle
   title: "Start SUT"
@@ -9,15 +11,12 @@ StartKzenAutoStep:
   name: "main"
   fixture: ""
   port: 18082
-  closePolicy: auto
   meta:
     name: String
     fixture:
       is: String
       summary: TextAttributeView
     port: Int
-    closePolicy:
-      is: ResourceClosePolicy
     selfLocation: SelfLocation
 
 

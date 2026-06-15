@@ -21,6 +21,15 @@ ResourceClosePolicy:
 ResourceClosePolicyDefiner:
   class: tech.kzen.auto.common.objects.document.script.ResourceClosePolicyDefiner
 
+# Mix-in for any Logic that registers a run-scoped resource: contributes the `closePolicy` attribute
+# (default `auto`) bound to ResourceClosePolicy. Combined via multiple inheritance — e.g.
+# `is: [ScriptStep, ScopedResource]` — so the policy is not pinned to the script-step lineage.
+ScopedResource:
+  abstract: true
+  closePolicy: auto
+  meta:
+    closePolicy: ResourceClosePolicy
+
 
 #######################################################################################################################
 
@@ -290,15 +299,14 @@ MappingItemStep:
 
 BrowserOpenStep:
   abstract: true
-  is: ScriptStep
+  is:
+    - ScriptStep
+    - ScopedResource
   class: tech.kzen.auto.server.objects.script.step.browser.BrowserOpenStep
   icon: "material-symbols:open-in-new"
   title: "Open browser"
   description: "Open a new browser window (existing one will be closed)"
-  closePolicy: auto
   meta:
-    closePolicy:
-      is: ResourceClosePolicy
     selfLocation: SelfLocation
 
 

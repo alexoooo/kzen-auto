@@ -3,6 +3,7 @@ main:
   steps:
     - main.steps/Start SUT
     - main.steps/Open Browser
+    - main.steps/Pause
     - main.steps/Navigate
     - 'main.steps/Click "Project"'
     - 'main.steps/Click "Project options..." button'
@@ -13,7 +14,6 @@ main:
     - 'main.steps/Append "0"'
     - "main.steps/Click [Rename]"
     - 'main.steps/Set name = "Range"'
-    - main.steps/Pause
     - main.steps/Enter
     - main.steps/Close Browser
     - main.steps/Stop SUT
