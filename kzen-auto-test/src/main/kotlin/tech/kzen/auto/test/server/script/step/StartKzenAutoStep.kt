@@ -23,7 +23,7 @@ class StartKzenAutoStep(
     private val name: String,
     private val fixture: String,
     private val port: Int,
-    private val closePolicy: String,
+    private val closePolicy: ResourceClosePolicy,
     selfLocation: ObjectLocation,
     @Service private val config: KzenAutoConfig
 ):
@@ -57,7 +57,7 @@ class StartKzenAutoStep(
         KzenAutoSubprocessRegistry.put(name, process, tempDir)
 
         scriptExecutionContext.resourceScope.register(
-            KzenAutoSubprocessRegistry.resourceKey(name), ResourceClosePolicy.parse(closePolicy)
+            KzenAutoSubprocessRegistry.resourceKey(name), closePolicy
         ) {
             KzenAutoSubprocessRegistry.removeAndClose(name)
         }

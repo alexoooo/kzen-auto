@@ -126,6 +126,11 @@ TargetSpecEditor:
   class: tech.kzen.auto.client.objects.document.script.display.edit.TargetSpecEditor$Wrapper
 
 
+SelectClosePolicyEditor:
+  is: AttributeEditor
+  class: tech.kzen.auto.client.objects.document.script.display.edit.SelectClosePolicyEditor$Wrapper
+
+
 TargetAttributeView:
   is: AttributeView
   class: tech.kzen.auto.client.objects.document.script.display.view.TargetAttributeView$Wrapper

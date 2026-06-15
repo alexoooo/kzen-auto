@@ -17,8 +17,7 @@ StartKzenAutoStep:
       summary: TextAttributeView
     port: Int
     closePolicy:
-      is: String
-      summary: TextAttributeView
+      is: ResourceClosePolicy
     selfLocation: SelfLocation
 
 

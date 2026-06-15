@@ -21,6 +21,7 @@ main.steps/Start SUT:
 
 main.steps/Open Browser:
   is: BrowserOpenStep
+  closePolicy: keepOnFailure
 
 main.steps/Navigate:
   is: BrowserGetStep

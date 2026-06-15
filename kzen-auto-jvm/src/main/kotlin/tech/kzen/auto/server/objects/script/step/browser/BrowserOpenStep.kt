@@ -20,7 +20,7 @@ import tech.kzen.lib.common.reflect.Service
 
 @Reflect
 class BrowserOpenStep(
-    private val closePolicy: String,
+    private val closePolicy: ResourceClosePolicy,
     selfLocation: ObjectLocation,
     @Service private val webDriverContext: WebDriverContext
 ):
@@ -60,7 +60,7 @@ class BrowserOpenStep(
         webDriverContext.set(driver)
 
         scriptExecutionContext.resourceScope.register(
-            WebDriverContext.resourceKey, ResourceClosePolicy.parse(closePolicy)
+            WebDriverContext.resourceKey, closePolicy
         ) {
             webDriverContext.quit()
         }

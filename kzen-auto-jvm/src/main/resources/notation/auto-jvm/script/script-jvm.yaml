@@ -7,6 +7,23 @@ ScriptValidator:
 
 #######################################################################################################################
 
+# Run-scoped resource disposal policy (kzen-lib enum). Parsed once at definition time by the definer, so
+# an opening step's `closePolicy` constructor param receives the enum directly; rendered as a labelled
+# dropdown by the editor. Bound here at the type level so any `is: ResourceClosePolicy` attribute inherits both.
+ResourceClosePolicy:
+  abstract: true
+  class: tech.kzen.lib.common.exec.logic.ResourceClosePolicy
+  meta:
+    ref:
+      by: ResourceClosePolicyDefiner
+      editor: SelectClosePolicyEditor
+
+ResourceClosePolicyDefiner:
+  class: tech.kzen.auto.common.objects.document.script.ResourceClosePolicyDefiner
+
+
+#######################################################################################################################
+
 ArgumentStep:
   abstract: true
   is: ScriptStep
@@ -268,8 +285,7 @@ BrowserOpenStep:
   closePolicy: auto
   meta:
     closePolicy:
-      is: String
-      summary: TextAttributeView
+      is: ResourceClosePolicy
     selfLocation: SelfLocation
 
 
