@@ -36,8 +36,8 @@ data class SidebarModel(
 
     //-----------------------------------------------------------------------------------------------------------------
     // Nested sidebar tree. A document (file OR directory-document like Feature) is always a LEAF — it is opened,
-    // not expanded. A folder is a pure directory (DocumentForm.Folder): it has no document of its own and is
-    // derived either from an explicit empty-folder entry or implied by the nesting of the documents it contains.
+    // not expanded. A folder is a pure directory (DocumentForm.Folder) with its own explicit notation entry (one
+    // entry per directory) and no document of its own; its children are the paths nested directly under it.
     sealed interface SidebarNode
 
     data class SidebarFileNode(
@@ -127,9 +127,10 @@ data class SidebarModel(
         }
 
 
-        // Builds the tree level whose content lives at exactly `nesting`. Documents with that nesting are leaves;
-        // any deeper path (document or folder), and any explicit folder entry at this level, contributes an
-        // immediate child folder, recursed into at nesting + folderName.
+        // Builds the tree level whose content lives at exactly `nesting`. Only paths AT this level matter: a
+        // document is a leaf, an explicit folder entry is a child folder recursed into at nesting + folderName.
+        // Every folder has its own entry (see the folder-notation unification), so no deeper-path inference is
+        // needed — a folder's children surface when the recursion descends into its own content nesting.
         private fun buildLevel(
             nesting: DocumentNesting,
             allPaths: List<DocumentPath>,
@@ -138,33 +139,20 @@ data class SidebarModel(
             val files = mutableListOf<SidebarFileNode>()
             val folderNames = linkedSetOf<String>()
 
-            val depth = nesting.segments.size
-
             for (path in allPaths) {
-                if (path.folder) {
-                    when {
-                        // an explicit (empty) folder sitting directly at this level
-                        path.nesting == nesting ->
-                            folderNames.add(path.name.value)
+                if (path.nesting != nesting) {
+                    continue
+                }
 
-                        // a folder nested deeper implies the immediate child folder on the way down
-                        path.nesting.startsWith(nesting) && path.nesting.segments.size > depth ->
-                            folderNames.add(path.nesting.segments[depth].value)
-                    }
+                if (path.folder) {
+                    // an explicit folder entry directly at this level
+                    folderNames.add(path.name.value)
                 }
                 else {
-                    when {
-                        // a document at this level → leaf (file documents and directory-documents like Feature)
-                        path.nesting == nesting -> {
-                            val archetype = archetypeOfDocument[path]
-                            if (archetype != null) {
-                                files.add(SidebarFileNode(path, archetype))
-                            }
-                        }
-
-                        // a document nested deeper implies the immediate child folder containing it
-                        path.nesting.startsWith(nesting) && path.nesting.segments.size > depth ->
-                            folderNames.add(path.nesting.segments[depth].value)
+                    // a document at this level → leaf (file documents and directory-documents like Feature)
+                    val archetype = archetypeOfDocument[path]
+                    if (archetype != null) {
+                        files.add(SidebarFileNode(path, archetype))
                     }
                 }
             }

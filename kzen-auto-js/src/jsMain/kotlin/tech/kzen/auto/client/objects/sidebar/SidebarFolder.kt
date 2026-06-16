@@ -154,12 +154,14 @@ class SidebarFolder(
     private fun onRemoveFolder(node: SidebarModel.SidebarFolderNode, close: () -> Unit) {
         close()
 
+        // count nested documents only — every folder now has its own entry, so an unfiltered count would also
+        // tally intermediate sub-folders; the user cares about how many documents the cascade would delete
         val nestedCount = props.sidebarModel.existingDocumentPaths.count { path ->
-            path.nesting.startsWith(node.contentNesting)
+            !path.folder && path.nesting.startsWith(node.contentNesting)
         }
         if (nestedCount > 0) {
             val confirmed = window.confirm(
-                "Delete folder \"${node.name}\" and $nestedCount item(s) inside it?")
+                "Delete folder \"${node.name}\" and $nestedCount document(s) inside it?")
             if (!confirmed) {
                 return
             }
