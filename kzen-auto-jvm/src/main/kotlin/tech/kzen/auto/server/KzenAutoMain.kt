@@ -12,6 +12,7 @@ import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import kotlin.system.exitProcess
 import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.api.staticResourceDir
 import tech.kzen.auto.common.api.staticResourcePath
@@ -34,7 +35,51 @@ private const val indexFilePath = "/$indexFileName"
 //---------------------------------------------------------------------------------------------------------------------
 fun main(args: Array<String>) {
     val context = kzenAutoInit(args, kzenAutoJsModuleName)
+
+    if (context.config.managedLifeline) {
+        startManagedLifeline()
+    }
+    context.config.parentPid?.let { startParentWatchdog(it) }
+
     kzenAutoMain(context)
+}
+
+
+// Managed-child lifeline (intentionally duplicated in kzen-launcher's KzenLauncherMain — the
+//  launcher depends on neither kzen-lib nor kzen-auto, so there is no shared home worth the coupling
+//  for ~20 lines). The spawning parent keeps our stdin open as a PIPE; when it closes that stream
+//  (graceful stop) or dies (the OS then closes the inherited pipe on every platform) we observe EOF.
+//  The parent may also send a "SHUTDOWN" line. Either way exitProcess(0) runs the shutdown hook
+//  registered in kzenAutoInit (context.close()) for a graceful, resource-disposing exit —
+//  OS-agnostic, unlike Process.destroy() which is a hookless hard kill (TerminateProcess) on Windows.
+private fun startManagedLifeline() {
+    val thread = Thread({
+        try {
+            System.`in`.bufferedReader().use { reader ->
+                while (true) {
+                    val line = reader.readLine() ?: break  // null == EOF (pipe closed / parent gone)
+                    if (line.trim() == "SHUTDOWN") {
+                        break
+                    }
+                }
+            }
+        }
+        catch (ignored: Throwable) {
+            // A read failure (e.g. the parent vanished mid-read) is itself a death signal.
+        }
+        exitProcess(0)
+    }, "kzen-managed-lifeline")
+    thread.isDaemon = true
+    thread.start()
+}
+
+
+// Backup reaper: self-exit if the parent process exits, even if stdin EOF was somehow never
+//  delivered (e.g. a future stdin redirect, or a Windows handle-inheritance corner case).
+private fun startParentWatchdog(parentPid: Long) {
+    ProcessHandle.of(parentPid).ifPresent { parent ->
+        parent.onExit().thenRun { exitProcess(0) }
+    }
 }
 
 
@@ -49,7 +94,9 @@ fun kzenAutoInit(args: Array<String>, jsModuleName: String): KzenAutoContext {
         jsModuleName = jsModuleName,
         port = port,
         host = "127.0.0.1",
-        moduleRoot = KzenAutoConfig.readModuleRoot(args))
+        moduleRoot = KzenAutoConfig.readModuleRoot(args),
+        managedLifeline = KzenAutoConfig.readManagedLifeline(args),
+        parentPid = KzenAutoConfig.readParentPid(args))
 
     val context = KzenAutoContext.create(config)
 

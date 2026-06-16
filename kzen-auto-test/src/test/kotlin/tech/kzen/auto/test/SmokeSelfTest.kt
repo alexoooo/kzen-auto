@@ -4,7 +4,6 @@ import org.junit.jupiter.api.Test
 
 
 class SmokeSelfTest: SelfTestBase() {
-    // TODO: make this pass (currently assertion is commented out)
     @Test
     fun openWelcome() {
         val runId = testerClient.startRun(
@@ -18,8 +17,8 @@ class SmokeSelfTest: SelfTestBase() {
         println("[smoke] final tester status: $finalStatus")
 
         val active = finalStatus["active"]
-//        check(active == null || active == "null") {
-//            "script run failed (paused on error): $finalStatus"
-//        }
+        check(active == null || active == "null") {
+            "script run failed (paused on error): $finalStatus"
+        }
     }
 }

@@ -1,5 +1,7 @@
 package tech.kzen.auto.test.server.process
 
+import tech.kzen.auto.server.context.KzenAutoConfig
+import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URI
 import java.nio.file.Path
@@ -37,6 +39,7 @@ class KzenAutoProcess private constructor(
                 add("-jar")
                 add(jar.toAbsolutePath().normalize().toString())
                 add("--server.port=$port")
+                addAll(managedChildArgs())
             }
             return spawn(name, command, cwd, port)
         }
@@ -60,6 +63,7 @@ class KzenAutoProcess private constructor(
                 add(classpath)
                 add(mainClass)
                 add("--server.port=$port")
+                addAll(managedChildArgs())
             }
             return spawn(name, command, cwd, port)
         }
@@ -95,6 +99,15 @@ class KzenAutoProcess private constructor(
         private fun javaBin(): String =
             Path.of(System.getProperty("java.home"), "bin", "java")
                 .toAbsolutePath().toString()
+
+
+        // Bind the spawned child's lifetime to ours: it self-reaps on stdin EOF (our death closes
+        //  the inherited pipe on every OS) and, as a backup, when our pid's process exits.
+        //  See KzenAutoMain.startManagedLifeline. Our own stdin is left as the default PIPE so
+        //  signalShutdown() can close it.
+        private fun managedChildArgs(): List<String> = listOf(
+            KzenAutoConfig.managedLifelinePrefix + "stdin",
+            KzenAutoConfig.parentPidPrefix + ProcessHandle.current().pid())
 
 
         private fun drainTo(process: Process, name: String) {
@@ -144,11 +157,37 @@ class KzenAutoProcess private constructor(
 
 
     fun kill(forceAfter: Duration = Duration.ofSeconds(15)) {
-        process.destroy()
+        // Graceful first: signal via the stdin lifeline so the child self-exits, running its own
+        // shutdown hook (context.close()) for orderly resource disposal. OS-agnostic — works even on
+        // Windows where process.destroy() == TerminateProcess (a hookless hard kill).
+        signalShutdown()
+
         if (!process.waitFor(forceAfter.toMillis(), TimeUnit.MILLISECONDS)) {
-            process.destroyForcibly()
-            process.waitFor()
+            process.destroy()
+            if (!process.waitFor(forceAfter.toMillis(), TimeUnit.MILLISECONDS)) {
+                process.destroyForcibly()
+                process.waitFor()
+            }
         }
         drain.join(2_000)
+    }
+
+
+    private fun signalShutdown() {
+        // Best-effort: a child that already exited (e.g. an abandoned Paused run) gives a broken
+        // pipe — fine, a dead child needs no shutdown. Send the "SHUTDOWN" sentinel AND close the
+        // stream so the child sees a sentinel line and/or EOF; whichever it reads first wins.
+        val childStdin = process.outputStream
+
+        try {
+            childStdin.write("SHUTDOWN\n".toByteArray(Charsets.UTF_8))
+            childStdin.flush()
+        }
+        catch (_: IOException) {}
+
+        try {
+            childStdin.close()
+        }
+        catch (_: IOException) {}
     }
 }

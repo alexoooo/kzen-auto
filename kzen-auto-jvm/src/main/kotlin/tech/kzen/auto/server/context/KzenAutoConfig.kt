@@ -12,7 +12,15 @@ data class KzenAutoConfig(
 
     // Directory containing src/main/resources/notation, for processes whose cwd is not the
     //  module they serve (e.g. IDE-launched TesterMain); null = GradleLocator's cwd heuristic.
-    val moduleRoot: Path? = null
+    val moduleRoot: Path? = null,
+
+    // Managed-child lifeline flags, set only by a spawning harness (the kzen-auto-test tester,
+    //  kzen-shell), never for interactive `java -jar` runs. When managedLifeline is true the process
+    //  self-terminates on stdin EOF or a "SHUTDOWN" sentinel line; parentPid, when present, adds a
+    //  ProcessHandle.onExit backup that reaps this child if the parent dies. Together they bind this
+    //  child's lifetime to its parent's on every OS (see KzenAutoMain.startManagedLifeline).
+    val managedLifeline: Boolean = false,
+    val parentPid: Long? = null
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -21,6 +29,11 @@ data class KzenAutoConfig(
             Regex.escape(serverPortPrefix) + "\\d+")
 
         const val moduleRootPrefix = "--module.root="
+
+        const val managedLifelinePrefix = "--managed.lifeline="
+        private const val managedLifelineStdin = "stdin"
+
+        const val parentPidPrefix = "--parent.pid="
 
         fun readPort(args: Array<String>): Int? {
             val match = args
@@ -37,6 +50,22 @@ data class KzenAutoConfig(
                 ?: return null
 
             return Paths.get(match.substring(moduleRootPrefix.length))
+        }
+
+        fun readManagedLifeline(args: Array<String>): Boolean {
+            val match = args
+                .lastOrNull { it.startsWith(managedLifelinePrefix) }
+                ?: return false
+
+            return match.substring(managedLifelinePrefix.length) == managedLifelineStdin
+        }
+
+        fun readParentPid(args: Array<String>): Long? {
+            val match = args
+                .lastOrNull { it.startsWith(parentPidPrefix) }
+                ?: return null
+
+            return match.substring(parentPidPrefix.length).toLongOrNull()
         }
     }
 

@@ -3,7 +3,6 @@ main:
   steps:
     - main.steps/Start SUT
     - main.steps/Open Browser
-    - main.steps/Pause
     - main.steps/Navigate
     - 'main.steps/Click "Project"'
     - 'main.steps/Click "Project options..." button'
@@ -82,9 +81,6 @@ main.steps/Stop SUT:
   target:
     type: Xpath
     value: "//button[@title='Expand']"
-
-main.steps/Pause:
-  is: PauseStep
 
 "main.steps/Click [Rename]":
   is: BrowserClickStep
