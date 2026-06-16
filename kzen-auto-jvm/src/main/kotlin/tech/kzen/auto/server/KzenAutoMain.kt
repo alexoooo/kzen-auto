@@ -479,6 +479,10 @@ private fun Routing.routeNotationCommands(
         val response = restHandler.refactorDocumentName(call.parameters)
         call.respondText(response)
     }
+    get(CommonRestApi.commandRefactorMove) {
+        val response = restHandler.refactorMove(call.parameters)
+        call.respondText(response)
+    }
 }
 
 

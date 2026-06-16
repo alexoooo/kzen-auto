@@ -109,6 +109,28 @@ class NavigationGlobal(
             }
 
 
+            // A folder rename or move re-nests every document under it. When the selected document is one of
+            // those, follow it to its new path (the copiedDocuments carry old -> new) — otherwise the cascade
+            // delete of the old subtree would leave the selection dangling (unselected).
+            is RenamedFolderRefactorEvent -> {
+                val relocatedSelection = event.copiedDocuments
+                    .firstOrNull { it.documentPath == documentPath }
+
+                if (relocatedSelection != null) {
+                    val updatedParameters = parameters.replaceValues(
+                        relocatedSelection.documentPath.asString(),
+                        relocatedSelection.destination.asString())
+
+                    if (parameters == updatedParameters) {
+                        goto(relocatedSelection.destination)
+                    }
+                    else {
+                        goto(relocatedSelection.destination, updatedParameters)
+                    }
+                }
+            }
+
+
             is DeletedDocumentEvent ->
                 if (event.documentPath == documentPath) {
                     clear()

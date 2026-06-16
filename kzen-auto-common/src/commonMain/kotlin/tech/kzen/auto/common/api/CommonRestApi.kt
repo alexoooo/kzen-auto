@@ -41,6 +41,8 @@ object CommonRestApi {
     private const val commandRefactorPrefix = "${commandPrefix}refactor/"
     const val commandRefactorObjectRename = "${commandRefactorPrefix}rename"
     const val commandRefactorDocumentRename = "${commandRefactorPrefix}rename-doc"
+    // move a document or folder under a different parent folder (the path form distinguishes the two)
+    const val commandRefactorMove = "${commandRefactorPrefix}move"
 
     private const val commandResourcePrefix = "${commandPrefix}resource/"
     const val commandResourceAdd = "${commandResourcePrefix}add"
@@ -57,6 +59,7 @@ object CommonRestApi {
     const val paramObjectNotation = "body"
     const val paramObjectName = "name"
     const val paramDocumentName = "file"
+    const val paramDocumentNesting = "nesting"
     const val paramDocumentNotation = "document"
     const val paramRawObjectsYaml = "raw-objects-yaml"
     const val paramAttributeName = "attribute"

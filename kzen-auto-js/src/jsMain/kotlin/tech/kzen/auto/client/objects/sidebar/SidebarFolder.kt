@@ -2,6 +2,7 @@ package tech.kzen.auto.client.objects.sidebar
 
 import emotion.react.css
 import js.objects.unsafeJso
+import js.reflect.unsafeCast
 import kotlinx.browser.window
 import mui.material.Divider
 import mui.material.IconButton
@@ -10,12 +11,15 @@ import mui.system.sx
 import react.CSSProperties
 import react.ChildrenBuilder
 import react.Key
+import react.RefObject
 import react.State
+import react.dom.html.HTMLAttributes
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RComponent
+import tech.kzen.auto.client.wrap.createRef
 import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
@@ -24,13 +28,20 @@ import tech.kzen.lib.common.model.document.DocumentForm
 import tech.kzen.lib.common.model.document.DocumentName
 import tech.kzen.lib.common.model.document.DocumentNesting
 import tech.kzen.lib.common.model.document.DocumentPath
+import tech.kzen.lib.common.model.document.DocumentSegment
 import tech.kzen.lib.common.model.structure.notation.cqrs.CreateDocumentCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.CreateFolderCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.DeleteFolderCommand
+import tech.kzen.lib.common.model.structure.notation.cqrs.MoveDocumentRefactorCommand
+import tech.kzen.lib.common.model.structure.notation.cqrs.MoveFolderRefactorCommand
 import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.common.service.store.MirroredGraphStore
 import tech.kzen.lib.common.util.naming.NextAvailableName
 import web.cssom.*
+import web.data.DropEffect
+import web.data.move
+import web.dom.Node
+import web.html.HTMLDivElement
 import kotlin.random.Random
 
 
@@ -45,6 +56,11 @@ external interface SidebarFolderProps: react.Props {
     var navigationGlobal: NavigationGlobal
     var mirroredGraphStore: MirroredGraphStore
 
+    // drag-and-drop move: the live drag source (null when nothing is dragging) plus its publish/clear callbacks
+    var dragSourcePath: DocumentPath?
+    var onDragItemStart: (DocumentPath) -> Unit
+    var onDragItemEnd: () -> Unit
+
     // root-only: the whole-sidebar collapse toggle (the "Project" row's button)
     var collapsed: Boolean
     var onToggleCollapsed: (() -> Unit)?
@@ -54,6 +70,9 @@ external interface SidebarFolderProps: react.Props {
 external interface SidebarFolderState: State {
     // per-folder subtree expansion (nested folders only; the root uses the `collapsed` prop instead)
     var expanded: Boolean
+
+    // a valid move source is hovering over this folder's header row (drop target highlight)
+    var dragOver: Boolean
 }
 
 
@@ -67,8 +86,13 @@ class SidebarFolder(
     RComponent<SidebarFolderProps, SidebarFolderState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
+    private var nameEditorRef: RefObject<DocumentNameEditor> = createRef()
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     override fun SidebarFolderState.init(props: SidebarFolderProps) {
         expanded = true
+        dragOver = false
     }
 
 
@@ -151,6 +175,88 @@ class SidebarFolder(
     }
 
 
+    private fun onRenameFolder(close: () -> Unit) {
+        close()
+        nameEditorRef.current?.onEdit()
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    // This folder (incl. the synthetic root) is a drop target: a dragged document/folder dropped here moves into
+    // its content nesting. The same invalid destinations the old picker filtered are rejected here.
+    private fun canAcceptDrop(): Boolean {
+        val source = props.dragSourcePath
+            ?: return false
+
+        val targetContentNesting = contentNesting()
+
+        return when {
+            // already directly inside this folder (no-op)
+            source.nesting == targetContentNesting -> false
+            // a folder can't move into itself or one of its descendants
+            source.folder && targetContentNesting.startsWith(
+                source.nesting.plus(DocumentSegment(source.name.value))) -> false
+            // a same-named sibling already exists at the destination
+            source.copy(nesting = targetContentNesting) in props.sidebarModel.existingDocumentPaths -> false
+            else -> true
+        }
+    }
+
+
+    private fun HTMLAttributes<HTMLDivElement>.applyDropTarget() {
+        onDragOver = { event ->
+            if (canAcceptDrop()) {
+                // preventDefault on every dragover is what marks the element a valid drop target
+                event.preventDefault()
+                event.dataTransfer.dropEffect = DropEffect.move
+                if (!state.dragOver) {
+                    setState { dragOver = true }
+                }
+            }
+        }
+
+        onDragLeave = { event ->
+            // dragleave also fires when crossing into a child of the row; only clear when truly leaving it
+            val related = event.relatedTarget
+            val stillInside = related != null && event.currentTarget.contains(related.unsafeCast<Node>())
+            if (!stillInside && state.dragOver) {
+                setState { dragOver = false }
+            }
+        }
+
+        onDrop = { event ->
+            event.preventDefault()
+            if (state.dragOver) {
+                setState { dragOver = false }
+            }
+            onDropItem()
+        }
+    }
+
+
+    private fun onDropItem() {
+        val source = props.dragSourcePath
+            ?: return
+        if (!canAcceptDrop()) {
+            return
+        }
+
+        val targetContentNesting = contentNesting()
+        val command =
+            if (source.folder) {
+                MoveFolderRefactorCommand(source, targetContentNesting)
+            }
+            else {
+                MoveDocumentRefactorCommand(source, targetContentNesting)
+            }
+
+        async {
+            props.mirroredGraphStore.apply(command)
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     private fun onRemoveFolder(node: SidebarModel.SidebarFolderNode, close: () -> Unit) {
         close()
 
@@ -217,7 +323,17 @@ class SidebarFolder(
     private fun ChildrenBuilder.renderHeaderRow() {
         val node = props.node
 
-        sidebarRow(props.depth) {
+        sidebarRow(
+            props.depth,
+            highlighted = state.dragOver,
+            rowAttributes = {
+                applyDropTarget()
+                // the root "Project" folder is a drop target but not itself movable
+                if (node != null) {
+                    sidebarDragSource(node.folderPath, props.onDragItemStart, props.onDragItemEnd)
+                }
+            }
+        ) {
             if (node == null) {
                 renderRootHeaderContent()
             }
@@ -330,7 +446,14 @@ class SidebarFolder(
                     whiteSpace = WhiteSpace.nowrap
                     flexShrink = number(0.0)
                 }
-                +node.name
+
+                // inline rename editor (triggered from the folder menu); clicking the name still toggles expand
+                DocumentNameEditor::class.react {
+                    this.ref = nameEditorRef
+
+                    this.documentPath = node.folderPath
+                    mirroredGraphStore = props.mirroredGraphStore
+                }
             }
         }
 
@@ -374,6 +497,9 @@ class SidebarFolder(
                         selected = (child.path == props.selectedDocumentPath)
                         navigationGlobal = props.navigationGlobal
                         mirroredGraphStore = props.mirroredGraphStore
+
+                        onDragItemStart = props.onDragItemStart
+                        onDragItemEnd = props.onDragItemEnd
                     }
 
                 is SidebarModel.SidebarFolderNode ->
@@ -388,6 +514,10 @@ class SidebarFolder(
                         mirroredGraphStore = props.mirroredGraphStore
                         collapsed = false
                         onToggleCollapsed = null
+
+                        dragSourcePath = props.dragSourcePath
+                        onDragItemStart = props.onDragItemStart
+                        onDragItemEnd = props.onDragItemEnd
                     }
             }
         }
@@ -432,6 +562,16 @@ class SidebarFolder(
         renderCreateItems(close)
 
         Divider {}
+
+        MenuItem {
+            onClick = { onRenameFolder(close) }
+            icon("material-symbols:edit") {
+                style = unsafeJso {
+                    marginRight = 1.em
+                }
+            }
+            +"Rename"
+        }
 
         MenuItem {
             onClick = { onRemoveFolder(node, close) }

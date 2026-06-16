@@ -19,6 +19,7 @@ import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.document.DocumentName
+import tech.kzen.lib.common.model.document.DocumentNesting
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.document.DocumentPathMap
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -454,6 +455,17 @@ class ClientRestApi(
                 CommonRestApi.commandRefactorDocumentRename,
                 CommonRestApi.paramDocumentPath to documentPath.asString(),
                 CommonRestApi.paramDocumentName to documentName.value)
+    }
+
+
+    suspend fun refactorMove(
+            documentPath: DocumentPath,
+            newNesting: DocumentNesting
+    ): Digest {
+        return getOrPutDigest(
+                CommonRestApi.commandRefactorMove,
+                CommonRestApi.paramDocumentPath to documentPath.asString(),
+                CommonRestApi.paramDocumentNesting to newNesting.asString())
     }
 
 

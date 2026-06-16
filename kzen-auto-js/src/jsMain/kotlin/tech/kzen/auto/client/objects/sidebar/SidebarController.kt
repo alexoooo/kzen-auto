@@ -8,6 +8,7 @@ import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.react
+import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
@@ -28,7 +29,10 @@ external interface SidebarControllerProps : react.Props {
 }
 
 
-external interface SidebarControllerState : State
+external interface SidebarControllerState : State {
+    // the document/folder currently being dragged (move source), shared with every drop target in the tree
+    var dragSourcePath: DocumentPath?
+}
 
 
 //-----------------------------------------------------------------------------------------------------------------
@@ -40,6 +44,19 @@ class SidebarController(
 ):
     RPureComponent<SidebarControllerProps, SidebarControllerState>(props)
 {
+    //-----------------------------------------------------------------------------------------------------------------
+    // Stable instance references so SidebarDocument (RPureComponent) keeps bailing out — a fresh callback per
+    // render would defeat its shallow prop compare. The shared dragSourcePath lives in state (not in each row)
+    // so a drop target can validate against the live source while the source row stays decoupled from targets.
+    private val onDragItemStart: (DocumentPath) -> Unit = { path ->
+        setState { dragSourcePath = path }
+    }
+
+    private val onDragItemEnd: () -> Unit = {
+        setState { dragSourcePath = null }
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
@@ -53,6 +70,12 @@ class SidebarController(
                 block()
             }
         }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun SidebarControllerState.init(props: SidebarControllerProps) {
+        dragSourcePath = null
     }
 
 
@@ -125,6 +148,10 @@ class SidebarController(
                     mirroredGraphStore = props.mirroredGraphStore
                     collapsed = props.collapsed
                     onToggleCollapsed = props.onToggleCollapsed
+
+                    dragSourcePath = state.dragSourcePath
+                    onDragItemStart = this@SidebarController.onDragItemStart
+                    onDragItemEnd = this@SidebarController.onDragItemEnd
                 }
             }
         }

@@ -160,6 +160,18 @@ class ClientRestGraphStore(
                 restClient.refactorDocumentName(
                     command.documentPath, command.newName)
 
+            is RenameFolderRefactorCommand ->
+                restClient.refactorDocumentName(
+                    command.documentPath, command.newName)
+
+            is MoveDocumentRefactorCommand ->
+                restClient.refactorMove(
+                    command.documentPath, command.newNesting)
+
+            is MoveFolderRefactorCommand ->
+                restClient.refactorMove(
+                    command.documentPath, command.newNesting)
+
             is AddResourceCommand ->
                 restClient.addResource(
                     command.resourceLocation, command.resourceContent)

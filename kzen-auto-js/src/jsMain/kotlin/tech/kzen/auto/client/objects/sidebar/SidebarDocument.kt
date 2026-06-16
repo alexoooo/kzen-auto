@@ -29,6 +29,10 @@ external interface SidebarDocumentProps: Props {
     var selected: Boolean
     var navigationGlobal: NavigationGlobal
     var mirroredGraphStore: MirroredGraphStore
+
+    // drag-and-drop move: publish/clear this document as the drag source (drop targets are folders — see SidebarFolder)
+    var onDragItemStart: (DocumentPath) -> Unit
+    var onDragItemEnd: () -> Unit
 }
 
 
@@ -101,7 +105,12 @@ class SidebarDocument(
     override fun ChildrenBuilder.render() {
         val archetype = props.archetypeInfo
 
-        sidebarRow(props.depth) {
+        sidebarRow(
+            props.depth,
+            rowAttributes = {
+                sidebarDragSource(props.documentPath, props.onDragItemStart, props.onDragItemEnd)
+            }
+        ) {
             // empty leading slot keeps file icons aligned under sibling folders' icons (folders carry a chevron)
             div {
                 css {
@@ -122,6 +131,9 @@ class SidebarDocument(
                     textDecoration = Globals.initial
                     height = 100.pct
                 }
+
+                // a link is draggable by default (drags its URL); disable so the row-level move drag wins instead
+                draggable = false
 
                 href = NavigationRoute(
                     props.documentPath,

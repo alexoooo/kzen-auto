@@ -23,6 +23,7 @@ import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.model.document.DocumentName
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.structure.notation.cqrs.RenameDocumentRefactorCommand
+import tech.kzen.lib.common.model.structure.notation.cqrs.RenameFolderRefactorCommand
 import tech.kzen.lib.common.service.store.MirroredGraphStore
 import web.cssom.*
 import web.html.HTMLDivElement
@@ -150,16 +151,24 @@ class DocumentNameEditor(
             return
         }
 
-        val nameWithExtension = DocumentName(state.name)
+        val newName = DocumentName(state.name)
 
         setState {
             editing = false
             saving = true
         }
 
+        // a folder and a document rename through the same editor — the path form selects the refactor
+        val command =
+            if (props.documentPath.folder) {
+                RenameFolderRefactorCommand(props.documentPath, newName)
+            }
+            else {
+                RenameDocumentRefactorCommand(props.documentPath, newName)
+            }
+
         async {
-            props.mirroredGraphStore.apply(RenameDocumentRefactorCommand(
-                    props.documentPath, nameWithExtension))
+            props.mirroredGraphStore.apply(command)
 
             // NB: no need to set saving = false, the component will un-mount
         }

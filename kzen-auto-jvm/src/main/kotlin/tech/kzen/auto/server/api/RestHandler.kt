@@ -24,6 +24,7 @@ import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.document.DocumentName
+import tech.kzen.lib.common.model.document.DocumentNesting
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.location.ResourceLocation
@@ -651,8 +652,34 @@ class RestHandler(
         val newName: DocumentName = parameters.getParam(
             CommonRestApi.paramDocumentName, ::DocumentName)
 
-        val command = RenameDocumentRefactorCommand(
-            documentPath, newName)
+        // the path form (trailing slash) distinguishes a pure folder from a document — route accordingly
+        val command =
+            if (documentPath.folder) {
+                RenameFolderRefactorCommand(documentPath, newName)
+            }
+            else {
+                RenameDocumentRefactorCommand(documentPath, newName)
+            }
+
+        return applyCommand(command).asString()
+    }
+
+
+    fun refactorMove(parameters: Parameters): String {
+        val documentPath: DocumentPath = parameters.getParam(
+            CommonRestApi.paramDocumentPath, DocumentPath::parse)
+
+        val newNesting: DocumentNesting = parameters.getParam(
+            CommonRestApi.paramDocumentNesting, DocumentNesting::parse)
+
+        // the path form (trailing slash) distinguishes a pure folder from a document — route accordingly
+        val command =
+            if (documentPath.folder) {
+                MoveFolderRefactorCommand(documentPath, newNesting)
+            }
+            else {
+                MoveDocumentRefactorCommand(documentPath, newNesting)
+            }
 
         return applyCommand(command).asString()
     }
