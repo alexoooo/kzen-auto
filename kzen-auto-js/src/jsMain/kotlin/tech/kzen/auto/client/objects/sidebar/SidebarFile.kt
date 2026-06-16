@@ -32,17 +32,16 @@ external interface SidebarFileProps: Props {
 
 
 external interface SidebarFileState: State {
-    var editing: Boolean
     var parameters: RequestParams
 }
 
 
 //---------------------------------------------------------------------------------------------------------------------
 class SidebarFile(
-        props: SidebarFileProps
+    props: SidebarFileProps
 ):
-        RPureComponent<SidebarFileProps, SidebarFileState>(props),
-        NavigationGlobal.Observer
+    RPureComponent<SidebarFileProps, SidebarFileState>(props),
+    NavigationGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -56,7 +55,6 @@ class SidebarFile(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun SidebarFileState.init(props: SidebarFileProps) {
-        editing = false
         parameters = RequestParams.empty
     }
 
@@ -120,25 +118,22 @@ class SidebarFile(
                 }
             }
 
-            if (state.editing) {
-                renderIconAndName(archetype)
-            }
-            else {
-                a {
-                    css {
-                        color = Globals.inherit
-                        textDecoration = Globals.initial
-                        width = 100.pct
-                        height = 100.pct
-                    }
-
-                    href = NavigationRoute(
-                        props.documentPath,
-                        state.parameters
-                    ).toFragment()
-
-                    renderIconAndName(archetype)
+            // The row is always a link; the rename editor floats in a portal (DocumentNameEditor), and its
+            // Popover backdrop intercepts clicks while open, so the underlying link never navigates mid-edit.
+            a {
+                css {
+                    color = Globals.inherit
+                    textDecoration = Globals.initial
+                    width = 100.pct
+                    height = 100.pct
                 }
+
+                href = NavigationRoute(
+                    props.documentPath,
+                    state.parameters
+                ).toFragment()
+
+                renderIconAndName(archetype)
             }
 
             SidebarItemMenu::class.react {
@@ -188,14 +183,6 @@ class SidebarFile(
 
                 this.documentPath = props.documentPath
                 mirroredGraphStore = props.mirroredGraphStore
-
-                initialEditing = state.editing
-
-                onEditing = {
-                    setState {
-                        editing = it
-                    }
-                }
             }
         }
     }

@@ -1,10 +1,12 @@
 package tech.kzen.auto.client.objects.sidebar
 
 import emotion.react.css
+import js.objects.unsafeJso
 import mui.material.IconButton
+import mui.material.Popover
+import mui.material.PopoverOrigin
 import mui.material.Size
 import mui.material.TextField
-import mui.system.sx
 import react.ChildrenBuilder
 import react.PropsWithRef
 import react.RefObject
@@ -23,6 +25,7 @@ import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.structure.notation.cqrs.RenameDocumentRefactorCommand
 import tech.kzen.lib.common.service.store.MirroredGraphStore
 import web.cssom.*
+import web.html.HTMLDivElement
 import web.html.HTMLInputElement
 
 
@@ -30,9 +33,6 @@ import web.html.HTMLInputElement
 external interface DocumentNameEditorProps : PropsWithRef<DocumentNameEditor> {
     var documentPath: DocumentPath
     var mirroredGraphStore: MirroredGraphStore
-
-    var initialEditing: Boolean
-    var onEditing: (Boolean) -> Unit
 }
 
 
@@ -51,8 +51,20 @@ class DocumentNameEditor(
         RPureComponent<DocumentNameEditorProps, DocumentNameEditorState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        // Left inset (px) of the TextField's text within the card — card padding + input border + input
+        // padding. The popover is shifted left by this much so the editable text overlays the plain name.
+        private const val textFieldTextInset = 18
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
 //    private var inputRef: HTMLInputElement? = null
     private var inputRef: RefObject<HTMLInputElement> = createRef()
+
+    // The in-row name text doubles as the popover anchor, so the floating edit card lifts out of
+    // exactly the row it replaces (and overhangs right, escaping the sidebar's overflow clip).
+    private var readerRef: RefObject<HTMLDivElement> = createRef()
 
 
 
@@ -61,7 +73,7 @@ class DocumentNameEditor(
 //        console.log("ObjectNameEditor | State.init - ${props.objectName}", Date.now())
         name = displayPath()
 
-        editing = props.initialEditing
+        editing = false
         saving = false
 //        readerHover = false
     }
@@ -94,7 +106,6 @@ class DocumentNameEditor(
         setState {
             editing = true
         }
-        props.onEditing(true)
     }
 
 
@@ -130,7 +141,6 @@ class DocumentNameEditor(
             editing = false
             name = displayPath()
         }
-        props.onEditing(false)
     }
 
 
@@ -146,7 +156,6 @@ class DocumentNameEditor(
             editing = false
             saving = true
         }
-        props.onEditing(false)
 
         async {
             props.mirroredGraphStore.apply(RenameDocumentRefactorCommand(
@@ -171,11 +180,10 @@ class DocumentNameEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
+        renderReader()
+
         if (state.editing) {
-            renderEditor()
-        }
-        else {
-            renderReader()
+            renderEditorPopover()
         }
     }
 
@@ -187,73 +195,86 @@ class DocumentNameEditor(
                 width = 100.pct
             }
 
+            ref = readerRef
+
             +state.name
         }
     }
 
 
-    private fun ChildrenBuilder.renderEditor() {
-        div {
-            css {
-                display = Display.inlineBlock
-
-                width = 100.pct.minus((4.7).em)
-            }
-
-            TextField {
-                size = Size.small
-                sx {
-                    marginTop = (-5).px
-                }
-
-                fullWidth = true
-                autoFocus = true
-
-//                inputRef = { onInputRef() }
-                this.inputRef = inputRef
-
-                value = state.name
-
-                onChange = {
-                    val target = it.target as HTMLInputElement
-                    onNameChange(target.value)
-                }
-
-                onKeyDown = ::handleEnterAndEscape
-            }
+    // The editor floats in a portal anchored to the reader row. A portal is required (not just nicer):
+    // the sidebar column has overflow:auto, so an in-flow card that overhangs its right edge would be
+    // clipped. Vertical centre on both the anchor and the card lines the centred TextField up with the
+    // plain name (self-adjusting to padding). Horizontally the anchor is the row's left, but the card's
+    // origin is inset by the TextField's text decoration (border + padding) so the editable text — not
+    // the card edge — overlays the plain name it pops over.
+    private fun ChildrenBuilder.renderEditorPopover() {
+        val anchorPoint: PopoverOrigin = unsafeJso {
+            asDynamic().vertical = "center"
+            asDynamic().horizontal = "left"
+        }
+        val cardPoint: PopoverOrigin = unsafeJso {
+            asDynamic().vertical = "center"
+            asDynamic().horizontal = textFieldTextInset
         }
 
-        div {
-            css {
-//                float = Float.right
-                marginTop = (-12).px
-            }
+        Popover {
+            open = state.editing
+            onClose = { _, _ -> onCancel() }
+            anchorEl = readerRef.current
+            anchorOrigin = anchorPoint
+            transformOrigin = cardPoint
 
-            IconButton {
-                title = "Cancel name edit (keyboard shortcut: Escape)"
-
+            div {
                 css {
-                    marginLeft = (-3.7).em
+                    display = Display.flex
+                    alignItems = AlignItems.center
+
+                    width = 22.em
+                    padding = 4.px
                 }
 
-                onClick = { onCancel() }
+                div {
+                    css {
+                        flexGrow = number(1.0)
+                    }
 
-                icon("material-symbols:cancel") {}
-            }
+                    TextField {
+                        size = Size.small
 
-            IconButton {
-                title = "Save name (keyboard shortcut: Enter)"
+                        fullWidth = true
+                        autoFocus = true
 
-                css {
-                    marginLeft = (-0.75).em
-                    marginRight = (-1).em
+                        this.inputRef = inputRef
+
+                        value = state.name
+
+                        onChange = {
+                            val target = it.target as HTMLInputElement
+                            onNameChange(target.value)
+                        }
+
+                        onKeyDown = ::handleEnterAndEscape
+                    }
                 }
 
-                onClick = { onRename() }
+                IconButton {
+                    title = "Cancel name edit (keyboard shortcut: Escape)"
 
-                disabled = !isModified()
+                    onClick = { onCancel() }
 
-                icon("material-symbols:save") {}
+                    icon("material-symbols:cancel") {}
+                }
+
+                IconButton {
+                    title = "Save name (keyboard shortcut: Enter)"
+
+                    onClick = { onRename() }
+
+                    disabled = !isModified()
+
+                    icon("material-symbols:save") {}
+                }
             }
         }
     }

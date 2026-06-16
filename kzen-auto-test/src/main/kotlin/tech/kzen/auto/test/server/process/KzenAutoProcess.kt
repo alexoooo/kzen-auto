@@ -10,8 +10,6 @@ import java.util.concurrent.TimeUnit
 
 
 class KzenAutoProcess private constructor(
-    val name: String,
-    val port: Int,
     private val process: Process,
     private val drain: Thread
 ):
@@ -92,7 +90,7 @@ class KzenAutoProcess private constructor(
                 throw e
             }
 
-            return KzenAutoProcess(name, port, process, drain)
+            return KzenAutoProcess(process, drain)
         }
 
 
