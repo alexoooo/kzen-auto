@@ -40,7 +40,7 @@ data class SidebarModel(
     // entry per directory) and no document of its own; its children are the paths nested directly under it.
     sealed interface SidebarNode
 
-    data class SidebarFileNode(
+    data class SidebarDocumentNode(
         val path: DocumentPath,
         val archetype: ArchetypeInfo
     ): SidebarNode
@@ -136,7 +136,7 @@ data class SidebarModel(
             allPaths: List<DocumentPath>,
             archetypeOfDocument: Map<DocumentPath, ArchetypeInfo>
         ): List<SidebarNode> {
-            val files = mutableListOf<SidebarFileNode>()
+            val files = mutableListOf<SidebarDocumentNode>()
             val folderNames = linkedSetOf<String>()
 
             for (path in allPaths) {
@@ -152,7 +152,7 @@ data class SidebarModel(
                     // a document at this level → leaf (file documents and directory-documents like Feature)
                     val archetype = archetypeOfDocument[path]
                     if (archetype != null) {
-                        files.add(SidebarFileNode(path, archetype))
+                        files.add(SidebarDocumentNode(path, archetype))
                     }
                 }
             }

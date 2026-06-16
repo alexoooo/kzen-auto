@@ -22,7 +22,7 @@ import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------
-external interface SidebarFileProps: Props {
+external interface SidebarDocumentProps: Props {
     var depth: Int
     var archetypeInfo: SidebarModel.ArchetypeInfo
     var documentPath: DocumentPath
@@ -32,16 +32,16 @@ external interface SidebarFileProps: Props {
 }
 
 
-external interface SidebarFileState: State {
+external interface SidebarDocumentState: State {
     var parameters: RequestParams
 }
 
 
 //---------------------------------------------------------------------------------------------------------------------
-class SidebarFile(
-    props: SidebarFileProps
+class SidebarDocument(
+    props: SidebarDocumentProps
 ):
-    RPureComponent<SidebarFileProps, SidebarFileState>(props),
+    RPureComponent<SidebarDocumentProps, SidebarDocumentState>(props),
     NavigationGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -49,7 +49,7 @@ class SidebarFile(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun SidebarFileState.init(props: SidebarFileProps) {
+    override fun SidebarDocumentState.init(props: SidebarDocumentProps) {
         parameters = RequestParams.empty
     }
 

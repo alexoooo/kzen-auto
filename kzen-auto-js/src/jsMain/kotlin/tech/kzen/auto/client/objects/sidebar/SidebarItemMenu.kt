@@ -26,8 +26,9 @@ import web.html.HTMLElement
 // rule (see usage in sidebarRow) — the reveal trigger is the whole row, which the host owns.
 //
 // The menu is the last (sticky) child of the flex row: position: sticky + right: 0 pins it to the visible right
-// edge of the sidebar's scrollport, so a horizontally-scrolled long name slides UNDER it (the white background
-// occludes the text) rather than pushing it off-screen.
+// edge of the sidebar's scrollport, so a horizontally-scrolled long name slides UNDER the ⋮ icon rather than
+// pushing it off-screen. The zone has no background — the hover-revealed (opacity-gated) icon simply overlays the
+// text, so an unhovered row shows its full name to the very edge instead of leaving a blank occluded strip.
 external interface SidebarItemMenuProps: react.Props {
     var title: String
 
@@ -95,12 +96,8 @@ class SidebarItemMenu(
                 alignSelf = AlignSelf.stretch
                 display = Display.flex
                 alignItems = AlignItems.center
-                // small gap from the scrollbar/edge; the white background still covers to the very edge
+                // small gap from the scrollbar/edge so the hover-revealed ⋮ icon doesn't butt against it
                 paddingRight = 6.px
-
-                // occludes scrolled-under text so the menu zone stays clean when the row overflows horizontally;
-                // invisible against the white sidebar when there's nothing behind it
-                backgroundColor = NamedColor.white
             }
             ref = anchorRef
 

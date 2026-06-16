@@ -60,7 +60,7 @@ external interface SidebarFolderState: State {
 //---------------------------------------------------------------------------------------------------------------------
 // Renders one folder and its subtree: the synthetic root "Project" folder when `node` is null, otherwise a nested
 // pure folder. Only folders are expandable (chevron); every document — including directory-documents like Feature
-// — is a leaf rendered by SidebarFile. "New ..." creates under this folder's content nesting.
+// — is a leaf rendered by SidebarDocument. "New ..." creates under this folder's content nesting.
 class SidebarFolder(
     props: SidebarFolderProps
 ):
@@ -88,7 +88,7 @@ class SidebarFolder(
     private fun siblingNames(): Set<String> =
         children().mapTo(mutableSetOf()) { child ->
             when (child) {
-                is SidebarModel.SidebarFileNode -> child.path.name.value
+                is SidebarModel.SidebarDocumentNode -> child.path.name.value
                 is SidebarModel.SidebarFolderNode -> child.name
             }
         }
@@ -364,8 +364,8 @@ class SidebarFolder(
         //     indentation is the per-row depth pad (see SidebarRow).
         for (child in children) {
             when (child) {
-                is SidebarModel.SidebarFileNode ->
-                    SidebarFile::class.react {
+                is SidebarModel.SidebarDocumentNode ->
+                    SidebarDocument::class.react {
                         key = Key(child.path.asString())
 
                         depth = childDepth
