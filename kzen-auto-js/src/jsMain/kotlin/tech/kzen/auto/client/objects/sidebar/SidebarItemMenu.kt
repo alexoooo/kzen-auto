@@ -23,13 +23,21 @@ import web.html.HTMLElement
 // The icon is revealed on hover via pure CSS rather than a hover-state field: a state toggle re-renders the host
 // row on every mouse move and can leave the icon stuck hidden after a click-away (the menu backdrop swallows the
 // boundary-crossing mouseover that would re-reveal it). The host row must therefore carry the revealOnHoverSelector
-// rule (see usage in SidebarFolder / SidebarFile) — the reveal trigger is the whole row, which the host owns.
+// rule (see usage in sidebarRow) — the reveal trigger is the whole row, which the host owns.
+//
+// The menu is the last (sticky) child of the flex row: position: sticky + right: 0 pins it to the visible right
+// edge of the sidebar's scrollport, so a horizontally-scrolled long name slides UNDER it (the white background
+// occludes the text) rather than pushing it off-screen.
 external interface SidebarItemMenuProps: react.Props {
     var title: String
 
     // NB: plain (non-receiver) function — external declarations can't hold a receiver function type. The host
     //     applies it to the supplied ChildrenBuilder (e.g. childrenBuilder.renderMenuItems(close)).
     var renderItems: (childrenBuilder: ChildrenBuilder, close: () -> Unit) -> Unit
+
+    // optional content rendered inside the sticky zone, just left of the ⋮ (e.g. the root row's collapse button)
+    // so it stays pinned to the visible right edge during horizontal scroll instead of being pushed off-screen.
+    var leadingContent: ((childrenBuilder: ChildrenBuilder) -> Unit)?
 }
 
 
@@ -82,18 +90,28 @@ class SidebarItemMenu(
     override fun ChildrenBuilder.render() {
         div {
             css {
-                position = Position.absolute
-                top = 0.px
+                position = Position.sticky
                 right = 0.px
+                alignSelf = AlignSelf.stretch
+                display = Display.flex
+                alignItems = AlignItems.center
+                // small gap from the scrollbar/edge; the white background still covers to the very edge
+                paddingRight = 6.px
+
+                // occludes scrolled-under text so the menu zone stays clean when the row overflows horizontally;
+                // invisible against the white sidebar when there's nothing behind it
+                backgroundColor = NamedColor.white
             }
             ref = anchorRef
+
+            props.leadingContent?.invoke(this)
 
             span {
                 asDynamic()["data-options-button"] = ""
 
                 css {
-                    // NB: blinks in and out without this
-                    backgroundColor = Color.transparent
+                    display = Display.flex
+                    alignItems = AlignItems.center
 
                     // NB: hidden by default; the host row's revealOnHoverSelector rule reveals it. Stays visible
                     //     while the menu is open so it doesn't vanish under the menu backdrop.
@@ -105,8 +123,7 @@ class SidebarItemMenu(
                     onClick = { openMenu() }
 
                     sx {
-                        marginTop = (-13).px
-                        marginRight = (-16).px
+                        padding = 2.px
                     }
 
                     icon("material-symbols:more-vert") {}

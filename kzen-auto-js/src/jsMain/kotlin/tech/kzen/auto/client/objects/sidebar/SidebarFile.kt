@@ -23,6 +23,7 @@ import web.cssom.*
 
 //---------------------------------------------------------------------------------------------------------------------
 external interface SidebarFileProps: Props {
+    var depth: Int
     var archetypeInfo: SidebarModel.ArchetypeInfo
     var documentPath: DocumentPath
     var selected: Boolean
@@ -43,12 +44,6 @@ class SidebarFile(
     RPureComponent<SidebarFileProps, SidebarFileState>(props),
     NavigationGlobal.Observer
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    companion object {
-        private val iconWidth = 22.px
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     private var nameEditorRef: RefObject<DocumentNameEditor> = createRef()
 
@@ -106,25 +101,25 @@ class SidebarFile(
     override fun ChildrenBuilder.render() {
         val archetype = props.archetypeInfo
 
-        div {
-            css {
-                position = Position.relative
-                height = 2.em
-                width = 100.pct.minus(SidebarFolder.indent)
-                marginLeft = SidebarFolder.indent
-
-                SidebarItemMenu.revealOnHoverSelector {
-                    opacity = number(1.0)
+        sidebarRow(props.depth) {
+            // empty leading slot keeps file icons aligned under sibling folders' icons (folders carry a chevron)
+            div {
+                css {
+                    flexShrink = number(0.0)
+                    width = SidebarRow.leadingSlot
                 }
             }
 
-            // The row is always a link; the rename editor floats in a portal (DocumentNameEditor), and its
+            // The clickable area is a link; the rename editor floats in a portal (DocumentNameEditor), and its
             // Popover backdrop intercepts clicks while open, so the underlying link never navigates mid-edit.
             a {
                 css {
+                    display = Display.flex
+                    alignItems = AlignItems.center
+                    flexGrow = number(1.0)
+
                     color = Globals.inherit
                     textDecoration = Globals.initial
-                    width = 100.pct
                     height = 100.pct
                 }
 
@@ -151,11 +146,12 @@ class SidebarFile(
     ) {
         div {
             css {
-                position = Position.absolute
-                top = 0.px
-                left = 0.px
+                display = Display.flex
+                alignItems = AlignItems.center
+                flexShrink = number(0.0)
 
-                height = iconWidth
+                width = SidebarRow.iconWidth
+                height = SidebarRow.iconWidth
             }
 
             icon(archetype.icon) {
@@ -165,17 +161,13 @@ class SidebarFile(
 
         div {
             css {
-                position = Position.absolute
-                top = 0.px
-                left = iconWidth
-                width = 100.pct.minus(iconWidth)
                 marginLeft = 6.px
+                whiteSpace = WhiteSpace.nowrap
+                flexShrink = number(0.0)
 
                 if (props.selected) {
                     fontWeight = FontWeight.bold
                 }
-
-                height = 2.em
             }
 
             DocumentNameEditor::class.react {

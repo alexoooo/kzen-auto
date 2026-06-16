@@ -143,6 +143,11 @@ class RestHandler(
         val documentPath: DocumentPath = parameters.getParam(
             CommonRestApi.paramDocumentPath, DocumentPath::parse)
 
+        // the path form (trailing slash) distinguishes a pure folder from a document — route accordingly
+        if (documentPath.folder) {
+            return applyCommand(CreateFolderCommand(documentPath)).asString()
+        }
+
         val documentBody = parameters.getParam(CommonRestApi.paramDocumentNotation) {
             yamlNotationParser.parseDocumentObjects(it)
         }
@@ -156,7 +161,13 @@ class RestHandler(
         val documentPath: DocumentPath = parameters.getParam(
             CommonRestApi.paramDocumentPath, DocumentPath::parse)
 
-        val command = DeleteDocumentCommand(documentPath)
+        val command =
+            if (documentPath.folder) {
+                DeleteFolderCommand(documentPath)
+            }
+            else {
+                DeleteDocumentCommand(documentPath)
+            }
         return applyCommand(command).asString()
     }
 

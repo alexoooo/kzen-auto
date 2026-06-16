@@ -4,6 +4,7 @@ import emotion.react.css
 import kotlinx.browser.window
 import kotlinx.coroutines.delay
 import org.w3c.dom.events.Event
+import org.w3c.dom.events.MouseEvent
 import react.ChildrenBuilder
 import react.Props
 import react.RefObject
@@ -16,6 +17,7 @@ import tech.kzen.auto.client.objects.ribbon.HeaderModel
 import tech.kzen.auto.client.objects.sidebar.SidebarController
 import tech.kzen.auto.client.objects.sidebar.SidebarModel
 import tech.kzen.auto.client.service.global.NavigationGlobal
+import tech.kzen.auto.client.service.storage.SidebarPreferences
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.createRef
@@ -56,6 +58,8 @@ external interface ProjectControllerState: State {
     var commandErrorMessage: String?
     var commandErrorRequest: NotationCommand?
     var headerHeight: Int?
+    var sidebarWidthPx: Double
+    var sidebarCollapsed: Boolean
 }
 
 
@@ -73,7 +77,15 @@ class ProjectController(
         @Suppress("ConstPropertyName")
         private const val shadowWidth = 6
 
-        private val sidebarWidth = 16.em
+        // sidebar layout widths, in px (resizable + persisted; see SidebarPreferences)
+        @Suppress("ConstPropertyName")
+        private const val defaultSidebarWidth = 256.0
+        @Suppress("ConstPropertyName")
+        private const val minSidebarWidth = 140.0
+        @Suppress("ConstPropertyName")
+        private const val maxSidebarWidthCap = 640.0
+        @Suppress("ConstPropertyName")
+        private const val collapsedSidebarWidth = 52.0
 
         @Suppress("ConstPropertyName")
         private const val suppressErrorDisplayKey = "suppress-error-display"
@@ -126,6 +138,51 @@ class ProjectController(
                 headerHeight = height
             }
         }
+    }
+
+
+    // dragging the right-edge handle resizes the sidebar; listeners live on window so the drag keeps tracking
+    // even when the cursor leaves the thin handle
+    private val onResizeMove: (Event?) -> Unit = onResizeMove@ { event ->
+        val mouseEvent = event as? MouseEvent
+            ?: return@onResizeMove
+        val upper = maxOf(minSidebarWidth, maxSidebarWidth())
+        val clamped = mouseEvent.clientX.toDouble().coerceIn(minSidebarWidth, upper)
+        if (clamped != state.sidebarWidthPx) {
+            setState {
+                sidebarWidthPx = clamped
+            }
+        }
+    }
+
+    private val onResizeEnd: (Event?) -> Unit = { _ ->
+        window.removeEventListener("mousemove", onResizeMove)
+        window.removeEventListener("mouseup", onResizeEnd)
+        SidebarPreferences.saveWidth(state.sidebarWidthPx)
+    }
+
+    private fun onResizeStart() {
+        window.addEventListener("mousemove", onResizeMove)
+        window.addEventListener("mouseup", onResizeEnd)
+    }
+
+    private fun maxSidebarWidth(): Double {
+        return minOf(window.innerWidth.toDouble() * 0.6, maxSidebarWidthCap)
+    }
+
+    private fun toggleCollapsed() {
+        val next = !state.sidebarCollapsed
+        setState {
+            sidebarCollapsed = next
+        }
+        SidebarPreferences.saveCollapsed(next)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun ProjectControllerState.init(props: ProjectControllerProps) {
+        sidebarWidthPx = SidebarPreferences.loadWidth(defaultSidebarWidth)
+        sidebarCollapsed = SidebarPreferences.loadCollapsed(false)
     }
 
 
@@ -241,6 +298,10 @@ class ProjectController(
 
 
     private fun ChildrenBuilder.renderBody() {
+        val collapsed = state.sidebarCollapsed
+        val effectiveWidth = (if (collapsed) collapsedSidebarWidth else state.sidebarWidthPx).px
+        val headerHeight = (state.headerHeight ?: 64).px
+
         div {
             css {
                 position = Position.fixed
@@ -270,7 +331,7 @@ class ProjectController(
             div {
                 css {
                     backgroundColor = NamedColor.white
-                    width = sidebarWidth
+                    width = effectiveWidth
 
                     borderTopWidth = 1.px
                     borderTopStyle = LineStyle.solid
@@ -278,20 +339,55 @@ class ProjectController(
 
                     flexGrow = number(1.0)
                     overflow = Auto.auto
+
+                    // reveal the "Project" row's collapse button whenever the mouse is anywhere over the sidebar.
+                    // this scroll container fills the full sidebar height (flex-grow), so it covers the empty area
+                    // below the rows too — unlike a child whose percentage height can't resolve against a flex
+                    // parent. CSS :hover (not a React hover-state field) so there's no re-render on mouse move.
+                    "&:hover [data-collapse-button]" {
+                        opacity = number(1.0)
+                    }
                 }
 
                 props.sidebarController.child(this) {
                     sidebarModel = state.sidebarModel
                     documentPath = state.documentPath
+                    this.collapsed = collapsed
+                    onToggleCollapsed = ::toggleCollapsed
+                }
+            }
+
+            // drag-to-resize handle pinned to the sidebar's right edge; outside the overflow:auto column so it
+            // doesn't scroll with sidebar content. Hidden while collapsed.
+            if (!collapsed) {
+                div {
+                    css {
+                        position = Position.absolute
+                        top = headerHeight
+                        bottom = 0.px
+                        left = effectiveWidth
+                        width = 6.px
+                        marginLeft = (-3).px
+                        cursor = Cursor.colResize
+                        zIndex = integer(1000)
+
+                        "&:hover" {
+                            backgroundColor = NamedColor.lightgray
+                        }
+                    }
+
+                    onMouseDown = { event ->
+                        event.preventDefault()
+                        onResizeStart()
+                    }
                 }
             }
         }
 
-        val headerHeight = (state.headerHeight ?: 64).px
         div {
             css {
                 marginTop = headerHeight
-                marginLeft = sidebarWidth
+                marginLeft = effectiveWidth
             }
 
             div {
@@ -308,7 +404,7 @@ class ProjectController(
 
             val context = StageController.CoordinateContext(
                 stageTop = headerHeight,
-                stageLeft = sidebarWidth)
+                stageLeft = effectiveWidth)
 
             StageController.StageContext.Provider(context) {
                 props.stageController.child(this) {}

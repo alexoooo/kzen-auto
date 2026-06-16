@@ -203,6 +203,7 @@ class StageController(
                 .structure
                 ?.graphNotation
                 ?.let { AutoConventions.mainDocuments(it) }
+                ?.filter { path -> !path.folder }
                 ?: listOf()
 
             div {

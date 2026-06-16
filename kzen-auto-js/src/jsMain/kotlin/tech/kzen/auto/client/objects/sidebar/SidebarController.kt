@@ -12,7 +12,7 @@ import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.service.store.MirroredGraphStore
-import web.cssom.em
+import web.cssom.*
 
 
 //-----------------------------------------------------------------------------------------------------------------
@@ -21,6 +21,10 @@ external interface SidebarControllerProps : react.Props {
     var documentPath: DocumentPath?
     var navigationGlobal: NavigationGlobal
     var mirroredGraphStore: MirroredGraphStore
+
+    // whole-sidebar collapse, owned by ProjectController (which also drives the layout width)
+    var collapsed: Boolean
+    var onToggleCollapsed: () -> Unit
 }
 
 
@@ -75,9 +79,10 @@ class SidebarController(
             return
         }
 
-        if (model.mainDocumentPaths.isNotEmpty()) {
-            props.navigationGlobal.goto(model.mainDocumentPaths[0])
-        }
+        val first = model.firstNavigableDocument()
+            ?: return
+
+        props.navigationGlobal.goto(first)
     }
 
 
@@ -89,16 +94,38 @@ class SidebarController(
         div {
             css {
                 paddingTop = 1.em
-                paddingRight = 1.em
                 paddingBottom = 0.5.em
-                paddingLeft = 1.em
+
+                // collapsed strip is narrow — trim the horizontal padding so the "Project" affordances fit
+                if (props.collapsed) {
+                    paddingLeft = 4.px
+                    paddingRight = 4.px
+                }
+                else {
+                    paddingLeft = 1.em
+                    paddingRight = 0.5.em
+                }
             }
 
-            SidebarFolder::class.react {
-                sidebarModel = model
-                selectedDocumentPath = props.documentPath
-                navigationGlobal = props.navigationGlobal
-                mirroredGraphStore = props.mirroredGraphStore
+            // inline-block shrink-wraps to the widest row (its max-content) while staying at least the visible
+            // width, giving every row one shared width — that's what keeps the sticky ⋮ menus glued to the right
+            // edge uniformly while scrolling horizontally (see SidebarRow).
+            div {
+                css {
+                    display = Display.inlineBlock
+                    minWidth = 100.pct
+                }
+
+                SidebarFolder::class.react {
+                    node = null
+                    depth = 0
+                    sidebarModel = model
+                    selectedDocumentPath = props.documentPath
+                    navigationGlobal = props.navigationGlobal
+                    mirroredGraphStore = props.mirroredGraphStore
+                    collapsed = props.collapsed
+                    onToggleCollapsed = props.onToggleCollapsed
+                }
             }
         }
     }
