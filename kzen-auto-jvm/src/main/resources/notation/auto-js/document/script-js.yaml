@@ -291,5 +291,15 @@ BrowserEnterStepTool:
   delegate: BrowserEnterStep
 
 
+################################################################
+
+# View tab (no insertion actions): selecting it switches the stage to the raw YAML editor.
+ScriptGroup_Raw:
+  is: RibbonGroup
+  title: "Raw"
+  archetype: Script
+  viewMode: Raw
+
+
 
 

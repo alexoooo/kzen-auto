@@ -42,9 +42,11 @@ RibbonGroup:
   is: ChildContainer
   class: tech.kzen.auto.client.objects.ribbon.RibbonGroup
   title: ''
+  viewMode: ''
   archetype: Document
   meta:
     title: String
+    viewMode: String
     children:
       is: List
       of: RibbonTool

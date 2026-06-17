@@ -11,6 +11,7 @@ import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.service.global.NavigationGlobal
+import tech.kzen.auto.client.service.global.ViewModeGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.iconify.icon
@@ -39,6 +40,7 @@ external interface RibbonControllerProps: react.Props {
     var actionTypes: List<ObjectLocation>
     var ribbonGroups: List<RibbonGroup>
     var insertionGlobal: InsertionGlobal
+    var viewModeGlobal: ViewModeGlobal
     var navigationGlobal: NavigationGlobal
     var mirroredGraphStore: MirroredGraphStore
 }
@@ -73,6 +75,7 @@ class RibbonController(
         private val actionTypes: List<ObjectLocation>,
         private val ribbonGroups: List<RibbonGroup>,
         @Service private val insertionGlobal: InsertionGlobal,
+        @Service private val viewModeGlobal: ViewModeGlobal,
         @Service private val navigationGlobal: NavigationGlobal,
         @Service private val mirroredGraphStore: MirroredGraphStore
     ): ReactWrapper<RibbonControllerProps> {
@@ -81,6 +84,7 @@ class RibbonController(
                 actionTypes = this@Wrapper.actionTypes
                 ribbonGroups = this@Wrapper.ribbonGroups
                 insertionGlobal = this@Wrapper.insertionGlobal
+                viewModeGlobal = this@Wrapper.viewModeGlobal
                 navigationGlobal = this@Wrapper.navigationGlobal
                 mirroredGraphStore = this@Wrapper.mirroredGraphStore
                 block()
@@ -228,6 +232,11 @@ class RibbonController(
 
 
     private fun onTab(index: Int) {
+        // Publish the selected tab's view to the active document (empty = default structured view;
+        // a view group like "Raw" switches the stage). Documents that don't subscribe simply ignore it.
+        val viewMode = state.currentRibbonGroups.getOrNull(index)?.viewMode ?: ""
+        props.viewModeGlobal.set(viewMode)
+
         setState {
             tabIndex = index
         }

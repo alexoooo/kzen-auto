@@ -9,6 +9,7 @@ import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.global.ExecutionIntentGlobal
 import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.service.global.NavigationGlobal
+import tech.kzen.auto.client.service.global.ViewModeGlobal
 import tech.kzen.auto.client.service.logic.ClientLogicGlobal
 import tech.kzen.auto.client.service.rest.*
 import tech.kzen.auto.client.wrap.iconify.IconLoader
@@ -80,6 +81,7 @@ class ClientContext private constructor() {
             directGraphStore, remoteGraphStore)
 
     val insertionGlobal = InsertionGlobal()
+    val viewModeGlobal = ViewModeGlobal()
     val executionIntentGlobal = ExecutionIntentGlobal()
 
     private val clientRestVisualDataflowProvider = ClientRestVisualDataflowProvider(
@@ -129,6 +131,7 @@ class ClientContext private constructor() {
             .put(ClassName("tech.kzen.auto.client.service.global.ClientStateGlobal"), clientStateGlobal)
             .put(ClassName("tech.kzen.auto.client.service.global.NavigationGlobal"), navigationGlobal)
             .put(ClassName("tech.kzen.auto.client.service.global.InsertionGlobal"), insertionGlobal)
+            .put(ClassName("tech.kzen.auto.client.service.global.ViewModeGlobal"), viewModeGlobal)
             .put(ClassName("tech.kzen.auto.client.service.global.ExecutionIntentGlobal"), executionIntentGlobal)
             .put(ClassName("tech.kzen.auto.client.service.logic.ClientLogicGlobal"), clientLogicGlobal)
             .put(ClassName("tech.kzen.auto.client.service.rest.ClientRestApi"), restClient)
