@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.objects.document.script.model
 
-import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.exec.BinaryExecutionValue
 
 
 // Per-step transient UI state. Held under ScriptState.steps, keyed by ObjectLocation — the one
@@ -8,9 +8,9 @@ import tech.kzen.lib.common.model.location.ObjectLocation
 // fixed sections). NOT progress/validation: those are distinct server-backed network calls kept
 // beside this so the client stays aligned with the server.
 //
-// hoveredScreenshot is set only for a RunStep: the sub-script step whose frame its right-of-step
-// floating preview should show while a strip thumbnail is hovered (null = show the latest frame).
+// hoveredScreenshot is set only for a RunStep: the screenshot a hovered detail-strip frame wants the
+// RunStep's right-of-step floating preview to show (null = show the latest representative frame).
 data class ScriptStepState(
     val expanded: Boolean = false,
-    val hoveredScreenshot: ObjectLocation? = null
+    val hoveredScreenshot: BinaryExecutionValue? = null
 )

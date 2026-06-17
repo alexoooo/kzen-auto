@@ -28,6 +28,8 @@ object LogicConventions {
 
 
     const val actionLookup = "lookup"
+    const val actionLookupRun = "lookup-run"
+    const val actionLookupRunHistory = "lookup-run-history"
     const val actionMostRecent = "recent"
     const val actionReset = "reset"
 
@@ -35,6 +37,7 @@ object LogicConventions {
     const val paramSubObjectPath = "sub-object"
 
     const val paramQuery = "query"
+    const val paramSinceSequence = "since-sequence"
 
     val parametersAttributeName = AttributeName("parameters")
     val parametersAttributePath = AttributePath.ofName(parametersAttributeName)

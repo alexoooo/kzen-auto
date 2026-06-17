@@ -177,7 +177,7 @@ class OutputTableController(
 
         val outputCount =
             if (props.runningOrLoading) {
-                props.progress?.snapshot?.values?.get(ReportConventions.outputTracePath)?.get()?.let { it as Long }
+                props.progress?.snapshot?.values?.get(ReportConventions.outputTracePath)?.value?.get()?.let { it as Long }
             }
             else {
                 props.outputState.outputInfo?.table?.rowCount

@@ -354,6 +354,7 @@ class InputSelectedTableController(
             ?.snapshot
             ?.values
             ?.get(ReportConventions.inputTracePath(dataLocation))
+            ?.value
             ?.get()
             ?.let {
                 @Suppress("UNCHECKED_CAST")

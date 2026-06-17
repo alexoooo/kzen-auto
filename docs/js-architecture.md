@@ -136,8 +136,25 @@ deleted* (the parent hasn't yet handed it the new location). Two consequences:
   `inheritanceParents` raise `IllegalArgumentException("Missing: <location>")` for a location absent from
   `coalesce`. So any observer callback that does a notation lookup on its *own* `objectLocation` must
   guard first — `if (objectLocation !in graphNotation.coalesce) return` (or fall back to the location
-  unchanged). `RunStepArgumentsEditor`, `RunStepDisplay`, and `representativeScreenshotLocation` all do
-  this. Symptom when missed: `Observer error in ScriptStore: Missing: …` on rename/delete.
+  unchanged). `RunStepArgumentsEditor` and `RunStepDisplay` both do this. Symptom when missed:
+  `Observer error in ScriptStore: Missing: …` on rename/delete. This is also why per-RunStep
+  representative-screenshot resolution lives in `ScriptProgressStore` (which derives RunStep subtree
+  roots from the *current* notation each refresh and keys results by stable id), not in the
+  thumbnail's observer keyed off a possibly-stale `props.objectLocation`.
+
+### RunStep screenshot detail = the trace timeline, not per-step latest
+
+A RunStep's detail is a **film strip of every screenshot under it** (all nested sub-scripts, all loop
+iterations), in execution order, grouped/labelled by sub-script execution. It is built from the
+**retained trace-event timeline** (kzen-lib's `lookupRunHistory`, value-agnostic — see
+[kzen-lib trace](../../kzen-lib/docs/architecture.md)), not from per-step "latest frame" lookups: a
+loop's `clearAll` deletes per-path frames each iteration, so only the history retains them.
+`ScriptProgressStore` fetches the run's history incrementally (by a sequence watermark, resetting on a
+new run), publishes the accumulated `traceEvents`, and computes each RunStep's representative (latest
+binary-valued event in its `RunStepInstructions.subtreeInstructionRoots`). `RunStepDisplay` filters
+`traceEvents` to its subtree and groups them by `executionId`; each frame is a `ScreenshotThumbnail`
+(its own `ScreenshotFullscreen`), distinct from the location-keyed `StepImageThumbnail` /
+`StepImageFullscreen` used for a single step's current frame on the main canvas.
 
 ## 3. Document folder convention
 

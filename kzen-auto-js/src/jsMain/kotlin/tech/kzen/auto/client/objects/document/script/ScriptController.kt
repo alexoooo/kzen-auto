@@ -159,7 +159,7 @@ class ScriptController:
     //     initializers). First access is componentDidMount, by which point props are available; the lazy
     //     value is computed once, keeping a stable reference for renders and the progress sub-store prop.
     private val store by lazy {
-        ScriptStore(props.clientStateGlobal, props.restClient, props.notationParser, props.mirroredGraphStore)
+        ScriptStore(props.clientStateGlobal, props.restClient, props.notationParser, props.mirroredGraphStore, props.objectStableMapper)
     }
 
     // NB: stable references for MultiStepDisplay's props so it (RPureComponent) bails out whenever

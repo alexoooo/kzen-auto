@@ -18,6 +18,7 @@ import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.DocumentNotation
 import tech.kzen.lib.common.service.parse.NotationParser
 import tech.kzen.lib.common.service.store.MirroredGraphStore
+import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Instant
 
@@ -26,7 +27,8 @@ class ScriptStore(
     val clientStateGlobal: ClientStateGlobal,
     val restClient: ClientRestApi,
     override val notationParser: NotationParser,
-    override val mirroredGraphStore: MirroredGraphStore
+    override val mirroredGraphStore: MirroredGraphStore,
+    val objectStableMapper: ObjectStableMapper
 ): ClientStateGlobal.Observer, DocumentRawHost {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {

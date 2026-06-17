@@ -7,19 +7,19 @@ import tech.kzen.auto.client.util.ClientSuccess
 import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.objects.document.script.model.RunStepInstructions
 import tech.kzen.auto.common.paradigm.logic.LogicConventions
-import tech.kzen.lib.common.exec.ExecutionValue
-import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
+import tech.kzen.lib.common.exec.BinaryExecutionValue
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
+import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceEvent
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceQuery
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceSnapshot
 import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.exec.ExecutionSuccess
-import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
+import tech.kzen.lib.common.service.store.normal.ObjectStableId
 
 
 class ScriptProgressStore(
@@ -28,19 +28,29 @@ class ScriptProgressStore(
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         // Backstop against pathological instruction graphs; the visited-set already prevents cycles,
-        // so this only bounds the per-refresh REST fan-out depth.
+        // so this only bounds the per-refresh sub-script recursion depth.
         private const val maxSubScriptDepth = 8
     }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    // Accumulated history for the current run, held here (not read back from state) so each refresh
+    // only fetches events newer than the watermark. Reset when the run id changes or on clear().
+    private var historyRunId: LogicRunId? = null
+    private val historyEvents = mutableListOf<LogicTraceEvent>()
 
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun refresh() {
         val logicRunExecutionId = mostRecent()
         if (logicRunExecutionId == null) {
+            resetHistory()
             scriptStore.update { state -> state
                 .withProgressSuccess {
                     it.copy(
                         logicTraceSnapshot = null,
+                        traceEvents = listOf(),
+                        runStepRepresentative = mapOf(),
                         loaded = true
                     )
                 }
@@ -48,11 +58,11 @@ class ScriptProgressStore(
             return
         }
 
-        val logicTraceQuery = LogicTraceQuery(LogicTracePath.root)
+        val logicRunId = logicRunExecutionId.logicRunId
 
+        // The per-path merged snapshot drives live step state / next-step and non-RunStep thumbnails.
         @Suppress("MoveVariableDeclarationIntoWhen", "RedundantSuppression")
-        val progressResult = progressQuery(
-            logicRunExecutionId.logicRunId, logicRunExecutionId.logicExecutionId, logicTraceQuery)
+        val progressResult = lookupRunQuery(logicRunId, LogicTraceQuery(LogicTracePath.root))
 
         when (progressResult) {
             is ClientError -> {
@@ -61,6 +71,8 @@ class ScriptProgressStore(
                     .withProgressSuccess {
                         it.copy(
                             logicTraceSnapshot = null,
+                            traceEvents = listOf(),
+                            runStepRepresentative = mapOf(),
                             loaded = true
                         )
                     }
@@ -68,16 +80,29 @@ class ScriptProgressStore(
             }
 
             is ClientSuccess -> {
-                // Fold in the screenshots from every reachable sub-script (RunStep -> instructions),
-                // keyed by their own ObjectStableIds. Main entries are applied last so the parent wins
-                // any key collision (notably the fixed `next-step` pointer).
-                val subScriptValues = collectSubScriptValues()
-                val mergedSnapshot = LogicTraceSnapshot(subScriptValues + progressResult.value.values)
+                val snapshot = progressResult.value
+
+                // Incremental history: a new run resets the accumulation; otherwise pull only events
+                // past the current watermark and append. The retained timeline survives loop clears.
+                if (historyRunId != logicRunId) {
+                    historyRunId = logicRunId
+                    historyEvents.clear()
+                }
+                val sinceSequence = historyEvents.maxOfOrNull { it.sequence } ?: 0L
+                val historyResult = lookupRunHistoryQuery(logicRunId, sinceSequence)
+                if (historyResult is ClientSuccess) {
+                    historyEvents.addAll(historyResult.value)
+                }
+                val events = historyEvents.sortedBy { it.sequence }
+
+                val runStepRepresentative = computeRunStepRepresentative(events)
 
                 scriptStore.update { state -> state
                     .withProgressSuccess {
                         it.copy(
-                            logicTraceSnapshot = mergedSnapshot,
+                            logicTraceSnapshot = snapshot,
+                            traceEvents = events,
+                            runStepRepresentative = runStepRepresentative,
                             loaded = true
                         )
                     }
@@ -88,34 +113,39 @@ class ScriptProgressStore(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    // Walk the current document's RunSteps to their instructions sub-scripts (recursively), and for
-    // each already-run sub-script pull its trace snapshot. Every step is independently guarded — a
-    // sub-script that never ran (null mostRecent), an evicted buffer, or an unresolvable link simply
-    // contributes nothing and never aborts the main snapshot.
-    private suspend fun collectSubScriptValues(): Map<LogicTracePath, ExecutionValue> {
+    // For every reachable RunStep, the latest screenshot-bearing event anywhere in its subtree
+    // (instructions sub-script + nested RunSteps). Keyed stable-id -> event so the right-of-step
+    // thumbnail can show it and survive a rename mid-run (see ScriptProgressState).
+    private fun computeRunStepRepresentative(
+        events: List<LogicTraceEvent>
+    ): Map<ObjectStableId, LogicTraceEvent> {
         val clientState = scriptStore.clientStateGlobal.current()
             ?: return mapOf()
         val graphNotation = clientState.graphStructure().graphNotation
-        val graphDefinition = clientState.graphDefinitionAttempt.successful()
 
-        val out = mutableMapOf<LogicTracePath, ExecutionValue>()
+        val binaryEvents = events.filter { it.value is BinaryExecutionValue }
+        if (binaryEvents.isEmpty()) {
+            return mapOf()
+        }
+
+        val out = mutableMapOf<ObjectStableId, LogicTraceEvent>()
         val visited = mutableSetOf<DocumentPath>()
         visited.add(scriptStore.mainLocation().documentPath)
 
-        walkSubScripts(
-            scriptStore.mainLocation().documentPath, 0, visited, out, graphNotation, graphDefinition)
+        walkRunStepRepresentative(
+            scriptStore.mainLocation().documentPath, 0, visited, out, graphNotation, binaryEvents)
 
         return out
     }
 
 
-    private suspend fun walkSubScripts(
+    private fun walkRunStepRepresentative(
         documentPath: DocumentPath,
         depth: Int,
         visited: MutableSet<DocumentPath>,
-        out: MutableMap<LogicTracePath, ExecutionValue>,
+        out: MutableMap<ObjectStableId, LogicTraceEvent>,
         graphNotation: GraphNotation,
-        graphDefinition: GraphDefinition
+        binaryEvents: List<LogicTraceEvent>
     ) {
         if (depth >= maxSubScriptDepth) {
             return
@@ -125,41 +155,38 @@ class ScriptProgressStore(
             val instructionsLocation = RunStepInstructions.instructionsLocation(graphNotation, runStepLocation)
                 ?: continue
 
+            val subtreeRoots = RunStepInstructions
+                .subtreeInstructionRoots(graphNotation, runStepLocation)
+                .mapTo(mutableSetOf()) { scriptStore.objectStableMapper.objectStableId(it) }
+
+            val representative = binaryEvents
+                .filter { it.rootStableId in subtreeRoots }
+                .maxByOrNull { it.sequence }
+            if (representative != null) {
+                out[scriptStore.objectStableMapper.objectStableId(runStepLocation)] = representative
+            }
+
+            // Recurse for nested RunSteps (so they get their own entry); the visited-set dedups shared
+            // sub-scripts and guards cycles.
             val instructionsDocumentPath = instructionsLocation.documentPath
-            if (instructionsDocumentPath in visited) {
-                // Cycle guard / shared sub-script dedup — its traces were (or are being) folded in already.
-                continue
+            if (instructionsDocumentPath !in visited) {
+                visited.add(instructionsDocumentPath)
+                walkRunStepRepresentative(
+                    instructionsDocumentPath, depth + 1, visited, out, graphNotation, binaryEvents)
             }
-            visited.add(instructionsDocumentPath)
-
-            val recent = mostRecentQuery(instructionsDocumentPath, instructionsLocation.objectPath)
-            val runExecutionId = (recent as? ClientSuccess)?.value?.logicRunExecutionId
-            if (runExecutionId != null) {
-                val progressResult = progressQuery(
-                    runExecutionId.logicRunId,
-                    runExecutionId.logicExecutionId,
-                    LogicTraceQuery(LogicTracePath.root))
-                if (progressResult is ClientSuccess) {
-                    out.putAll(progressResult.value.values)
-                }
-            }
-
-            walkSubScripts(
-                instructionsDocumentPath, depth + 1, visited, out, graphNotation, graphDefinition)
         }
     }
 
 
-    private suspend fun progressQuery(
+    //-----------------------------------------------------------------------------------------------------------------
+    private suspend fun lookupRunQuery(
         logicRunId: LogicRunId,
-        logicExecutionId: LogicExecutionId,
         logicTraceQuery: LogicTraceQuery
     ): ClientResult<LogicTraceSnapshot> {
         val result = scriptStore.restClient.performDetached(
             LogicConventions.logicTraceEndpointLocation,
-            CommonRestApi.paramAction to LogicConventions.actionLookup,
+            CommonRestApi.paramAction to LogicConventions.actionLookupRun,
             CommonRestApi.paramRunId to logicRunId.value,
-            CommonRestApi.paramExecutionId to logicExecutionId.value,
             LogicConventions.paramQuery to logicTraceQuery.asString()
         )
 
@@ -167,9 +194,31 @@ class ScriptProgressStore(
             is ExecutionSuccess -> {
                 @Suppress("UNCHECKED_CAST")
                 val resultValue = result.value.get() as Map<String, Map<String, Any>>
+                ClientResult.ofSuccess(LogicTraceSnapshot.ofCollection(resultValue))
+            }
 
-                val inputBrowserInfo = LogicTraceSnapshot.ofCollection(resultValue)
-                ClientResult.ofSuccess(inputBrowserInfo)
+            is ExecutionFailure ->
+                ClientResult.ofError(result.errorMessage)
+        }
+    }
+
+
+    private suspend fun lookupRunHistoryQuery(
+        logicRunId: LogicRunId,
+        sinceSequence: Long
+    ): ClientResult<List<LogicTraceEvent>> {
+        val result = scriptStore.restClient.performDetached(
+            LogicConventions.logicTraceEndpointLocation,
+            CommonRestApi.paramAction to LogicConventions.actionLookupRunHistory,
+            CommonRestApi.paramRunId to logicRunId.value,
+            LogicConventions.paramSinceSequence to sinceSequence.toString()
+        )
+
+        return when (result) {
+            is ExecutionSuccess -> {
+                @Suppress("UNCHECKED_CAST")
+                val resultValue = result.value.get() as List<Map<String, Any>>
+                ClientResult.ofSuccess(resultValue.map { LogicTraceEvent.ofCollection(it) })
             }
 
             is ExecutionFailure ->
@@ -239,14 +288,23 @@ class ScriptProgressStore(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private fun resetHistory() {
+        historyRunId = null
+        historyEvents.clear()
+    }
+
+
     suspend fun clear() {
         val logicRunExecutionId = mostRecent()
         if (logicRunExecutionId == null) {
+            resetHistory()
             scriptStore.update { state -> state
                 .withProgressSuccess {
                     it.copy(
                         logicRunExecutionId = null,
-                        logicTraceSnapshot = null)
+                        logicTraceSnapshot = null,
+                        traceEvents = listOf(),
+                        runStepRepresentative = mapOf())
                 }
             }
             return
@@ -263,11 +321,14 @@ class ScriptProgressStore(
             }
 
             is ClientSuccess -> {
+                resetHistory()
                 scriptStore.update { state -> state
                     .withProgressSuccess {
                         it.copy(
                             logicRunExecutionId = null,
-                            logicTraceSnapshot = null)
+                            logicTraceSnapshot = null,
+                            traceEvents = listOf(),
+                            runStepRepresentative = mapOf())
                     }
                 }
             }

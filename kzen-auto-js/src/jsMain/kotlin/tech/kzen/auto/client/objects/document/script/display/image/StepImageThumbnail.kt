@@ -9,7 +9,6 @@ import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.img
 import tech.kzen.auto.client.objects.document.script.display.computeStepTraceInfo
-import tech.kzen.auto.client.objects.document.script.display.representativeScreenshotLocation
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
 import tech.kzen.auto.client.objects.document.script.model.ScriptStore
 import tech.kzen.auto.client.objects.document.script.model.ScriptStoreContext
@@ -32,12 +31,6 @@ external interface StepImageThumbnailProps: Props {
     var objectLocation: ObjectLocation
     var objectStableMapper: ObjectStableMapper
     var clientStateGlobal: ClientStateGlobal
-
-    // Optional preview-delegation hook. When set (strip usage inside a RunStep), this thumbnail does
-    // NOT render its own floating preview; instead it reports the hovered screenshot location (null on
-    // leave) so a host — the RunStep's right-of-step thumbnail — shows it. NB: plain (non-receiver)
-    // function type; receiver function types are prohibited in external declarations.
-    var onPreviewHover: ((ObjectLocation?) -> Unit)?
 }
 
 
@@ -125,12 +118,6 @@ class StepImageThumbnail(
         val scriptStore = contextValue<ScriptStore?>()
         scriptStore?.unobserve(this)
         stopPositionLoop()
-
-        // Strip thumbnail removed mid-hover (e.g. the RunStep collapsed) → clear the host's override
-        // so it doesn't strand a stale frame in the preview on re-expand.
-        if (state.hovered) {
-            props.onPreviewHover?.invoke(null)
-        }
     }
 
 
@@ -163,34 +150,39 @@ class StepImageThumbnail(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun onScriptState(scriptState: ScriptState) {
-        // For a RunStep this redirects to the last screenshot-bearing sub-script step (else it's
-        // props.objectLocation unchanged), so the collapsed RunStep previews the latest sub-script frame.
-        val clientState = props.clientStateGlobal.current()
-        val resolvedLocation =
-            if (clientState != null) {
-                representativeScreenshotLocation(
-                    scriptState,
-                    props.objectLocation,
-                    clientState.graphStructure().graphNotation,
-                    clientState.graphDefinitionAttempt.successful(),
-                    props.objectStableMapper)
-            }
-            else {
-                props.objectLocation
-            }
+        // For a RunStep, the representative is the latest screenshot anywhere in its subtree, resolved
+        // by ScriptProgressStore and keyed by stable id; show that frame directly. For any other step
+        // there's no entry, so fall back to the step's own latest frame from the trace snapshot.
+        val runStepStableId = props.objectStableMapper.objectStableId(props.objectLocation)
+        val representative = scriptState.progress.representativeFrame(runStepStableId)
 
-        val traceInfo = computeStepTraceInfo(
-            scriptState, resolvedLocation, props.objectStableMapper)
-        val nextScreenshot = traceInfo.trace?.detail as? BinaryExecutionValue
+        val nextScreenshot: BinaryExecutionValue?
+        val resolvedLocation: ObjectLocation
+        if (representative != null) {
+            nextScreenshot = representative.value as? BinaryExecutionValue
+            // Full-screen opens on the capturing step (the representative is its latest frame).
+            resolvedLocation =
+                try {
+                    props.objectStableMapper.objectLocation(representative.objectStableId)
+                }
+                catch (_: IllegalArgumentException) {
+                    props.objectLocation
+                }
+        }
+        else {
+            nextScreenshot = computeStepTraceInfo(scriptState, props.objectLocation, props.objectStableMapper)
+                .trace?.detail as? BinaryExecutionValue
+            resolvedLocation = props.objectLocation
+        }
+
         // Expansion follows the step the thumbnail is attached to (props.objectLocation), not the
         // redirected screenshot location.
         val nextExpanded = scriptState.isStepExpanded(props.objectLocation)
 
-        // For a RunStep, a hovered strip thumbnail requests a specific frame via ScriptState; show it
-        // in the floating preview only. Always null for non-RunSteps (nobody sets their key).
-        val hoveredLocation = scriptState.hoveredScreenshot(props.objectLocation)
-        val nextPreviewScreenshot = hoveredLocation
-            ?.let { computeStepTraceInfo(scriptState, it, props.objectStableMapper).trace?.detail as? BinaryExecutionValue }
+        // A hovered detail-strip frame requests a specific frame via ScriptState; show it in the
+        // floating preview only (the small thumbnail stays on the latest representative). Always null
+        // for non-RunSteps (nobody sets their key).
+        val nextPreviewScreenshot = scriptState.hoveredScreenshot(props.objectLocation)
 
         val screenshotChanged = state.screenshot !== nextScreenshot
         val expandedChanged = state.expanded != nextExpanded
@@ -265,17 +257,6 @@ class StepImageThumbnail(
 
 
     private fun onThumbnailEnter() {
-        val onPreviewHover = props.onPreviewHover
-        if (onPreviewHover != null) {
-            // Strip usage: no own floating preview — hand the host the frame to show, and keep the
-            // border highlight. No position computation (the host owns the preview placement).
-            onPreviewHover(state.resolvedLocation ?: props.objectLocation)
-            if (!state.hovered) {
-                setState { hovered = true }
-            }
-            return
-        }
-
         val (left, top) = floatingPosition()
             ?: return
 
@@ -292,8 +273,6 @@ class StepImageThumbnail(
             setState {
                 hovered = false
             }
-            // Strip usage: drop the host's override so the preview reverts to the latest frame.
-            props.onPreviewHover?.invoke(null)
         }
     }
 
@@ -358,12 +337,11 @@ class StepImageThumbnail(
 
         renderThumbnail(screenshotPngUrl)
 
-        // Strip usage delegates its preview to the host (the RunStep's right-of-step thumbnail), so it
-        // renders no floating preview of its own. Otherwise the floating preview shows on hover AND
-        // while the step is expanded (a persistent "as if hovered" view to the right; expansion
-        // arrives via onScriptState). A hovered strip thumbnail overrides the shown frame via
-        // previewScreenshot; the small thumbnail stays on the latest (screenshot).
-        if (props.onPreviewHover == null && (state.hovered || state.expanded)) {
+        // The floating preview shows on hover AND while the step is expanded (a persistent "as if
+        // hovered" view to the right; expansion arrives via onScriptState). A hovered detail-strip
+        // frame overrides the shown frame via previewScreenshot; the small thumbnail stays on the
+        // latest representative (screenshot).
+        if (state.hovered || state.expanded) {
             val previewPngUrl = state.previewScreenshot?.let { pngUrl(it) } ?: screenshotPngUrl
             renderFloatingPreview(previewPngUrl)
         }

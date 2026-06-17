@@ -1,12 +1,10 @@
 package tech.kzen.auto.common.objects.document.script.model
 
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
-import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.location.ObjectReference
 import tech.kzen.lib.common.model.location.ObjectReferenceHost
-import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 
@@ -46,31 +44,6 @@ object RunStepInstructions {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    // The instructions' step locations in document order (nested included), or empty when the target
-    // isn't a Script document's main object (e.g. a RunStep pointing at an AdhocLogic/Custom object).
-    fun subScriptStepLocations(
-        graphDefinition: GraphDefinition,
-        instructionsLocation: ObjectLocation
-    ): List<ObjectLocation> {
-        if (instructionsLocation.objectPath != ObjectPath.main) {
-            return listOf()
-        }
-
-        val documentPath = instructionsLocation.documentPath
-        val documentNotation = graphDefinition.graphStructure.graphNotation.documents[documentPath]
-            ?: return listOf()
-        if (!ScriptConventions.isScript(documentNotation)) {
-            return listOf()
-        }
-
-        return ScriptTree
-            .read(documentPath, graphDefinition)
-            .orderedDescendantObjectPaths()
-            .map { documentPath.toObjectLocation(it) }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     // Every RunStep object in a document (nested included), used to discover sub-scripts to fetch traces for.
     fun runStepLocations(
         graphNotation: GraphNotation,
@@ -86,5 +59,42 @@ object RunStepInstructions {
             .keys
             .map { documentPath.toObjectLocation(it) }
             .filter { isRunStep(graphNotation, it) }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    // The instructions roots reachable from this RunStep — its own instructions sub-script plus,
+    // recursively, every nested RunStep's instructions. Trace events are keyed by their execution's
+    // root object, so this is the set used to attribute the whole subtree's events to the RunStep.
+    // The visited-set guards cycles / shared sub-scripts.
+    fun subtreeInstructionRoots(
+        graphNotation: GraphNotation,
+        runStepLocation: ObjectLocation
+    ): List<ObjectLocation> {
+        val out = mutableListOf<ObjectLocation>()
+        collectSubtreeInstructionRoots(graphNotation, runStepLocation, mutableSetOf(), out)
+        return out
+    }
+
+
+    private fun collectSubtreeInstructionRoots(
+        graphNotation: GraphNotation,
+        runStepLocation: ObjectLocation,
+        visited: MutableSet<DocumentPath>,
+        out: MutableList<ObjectLocation>
+    ) {
+        val instructionsLocation = instructionsLocation(graphNotation, runStepLocation)
+            ?: return
+        out.add(instructionsLocation)
+
+        val instructionsDocumentPath = instructionsLocation.documentPath
+        if (instructionsDocumentPath in visited) {
+            return
+        }
+        visited.add(instructionsDocumentPath)
+
+        for (nested in runStepLocations(graphNotation, instructionsDocumentPath)) {
+            collectSubtreeInstructionRoots(graphNotation, nested, visited, out)
+        }
     }
 }

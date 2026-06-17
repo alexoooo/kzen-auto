@@ -62,7 +62,7 @@ class LogicTraceStoreRenameTest {
         // resolves it to the current location via its own mapper.
         val snapshot = store.lookup(runExecutionId, LogicTraceQuery(LogicTracePath.root))
         checkNotNull(snapshot)
-        assertEquals(ExecutionValue.of("done"), snapshot.values[stablePath])
+        assertEquals(ExecutionValue.of("done"), snapshot.values[stablePath]?.value)
 
         // Server no longer emits location-keyed paths (neither old nor new name)
         assertNull(snapshot.values[LogicTracePath.ofObjectLocation(stepLocation)])
@@ -88,7 +88,7 @@ class LogicTraceStoreRenameTest {
         // Still resolvable (object exists under "Final"), so still retained under its stable id
         val snapshot = store.lookup(runExecutionId, LogicTraceQuery(LogicTracePath.root))
         checkNotNull(snapshot)
-        assertEquals(ExecutionValue.of("done"), snapshot.values[stablePath])
+        assertEquals(ExecutionValue.of("done"), snapshot.values[stablePath]?.value)
     }
 
 
