@@ -1,5 +1,6 @@
 package tech.kzen.auto.client.objects.document.script.command
 
+import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -7,7 +8,7 @@ import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.ObjectNotation
 import tech.kzen.lib.common.model.structure.notation.PositionRelation
-import tech.kzen.lib.common.model.structure.notation.cqrs.InsertObjectInListAttributeCommand
+import tech.kzen.lib.common.model.structure.notation.cqrs.AddObjectCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.util.naming.NextAvailableName
@@ -71,43 +72,68 @@ class ScriptCommander(
         archetypeObjectLocation: ObjectLocation,
         graphStructure: GraphStructure
     ): List<NotationCommand> {
-        val newName = findNextAvailable(
-            containingAttributeLocation.objectLocation, archetypeObjectLocation, graphStructure)
+        val containingObjectLocation = containingAttributeLocation.objectLocation
 
-        // NB: +1 offset for main Script object
-        val endOfDocumentPosition = graphStructure
-            .graphNotation
-            .documents[containingAttributeLocation.objectLocation.documentPath]!!
-            .objects
-            .notations
-            .map
-            .size
+        val newName = findNextAvailable(
+            containingObjectLocation, archetypeObjectLocation, graphStructure)
+
+        // The step is a child object nested under the branch attribute; its order in the branch is its
+        // position in the document, so insert it at the document index for the requested branch slot.
+        val newObjectLocation = ObjectLocation(
+            containingObjectLocation.documentPath,
+            containingObjectLocation.objectPath.nest(
+                containingAttributeLocation.attributePath, newName))
+
+        val insertDocumentIndex = insertionDocumentIndex(
+            graphStructure, containingAttributeLocation, indexInContainingAttribute)
 
         val objectNotation = ObjectNotation.ofParent(
-//            archetypeObjectLocation.toReference().name)
             archetypeObjectLocation.objectPath.name)
 
-        val command = InsertObjectInListAttributeCommand(
-            containingAttributeLocation.objectLocation,
-            containingAttributeLocation.attributePath,
-            PositionRelation.at(indexInContainingAttribute),
-            newName,
-            PositionRelation.at(endOfDocumentPosition),
+        val command = AddObjectCommand(
+            newObjectLocation,
+            PositionRelation.at(insertDocumentIndex),
             objectNotation)
 
         val stepCommander = byArchetype[archetypeObjectLocation]
 
-        val commands =
-            if (stepCommander != null) {
-                val additionalCommands =
-                    stepCommander.additionalCommands(command, graphStructure)
+        return if (stepCommander != null) {
+            listOf(command) + stepCommander.additionalCommands(
+                newObjectLocation, insertDocumentIndex, graphStructure)
+        }
+        else {
+            listOf(command)
+        }
+    }
 
-                listOf(command) + additionalCommands
-            }
-            else {
-                listOf(command)
-            }
 
-        return commands
+    // The document index at which to insert a new step so it lands at the requested branch slot: before
+    // the sibling currently occupying that slot, or after the last sibling's whole subtree, or right
+    // after the containing object when the branch is empty.
+    private fun insertionDocumentIndex(
+        graphStructure: GraphStructure,
+        containingAttributeLocation: AttributeLocation,
+        indexInContainingAttribute: Int
+    ): Int {
+        val documentPath = containingAttributeLocation.objectLocation.documentPath
+        val documentNotation = graphStructure.graphNotation.documents[documentPath]!!
+        val siblings = ScriptConventions.orderedDirectChildLocations(
+            graphStructure.graphNotation, containingAttributeLocation)
+
+        return when {
+            siblings.isEmpty() ->
+                documentNotation.indexOf(
+                    containingAttributeLocation.objectLocation.objectPath).value + 1
+
+            indexInContainingAttribute < siblings.size ->
+                documentNotation.indexOf(siblings[indexInContainingAttribute].objectPath).value
+
+            else -> {
+                val lastSibling = siblings.last().objectPath
+                documentNotation.objects.notations.map.keys.indexOfLast {
+                    it == lastSibling || it.startsWith(lastSibling)
+                } + 1
+            }
+        }
     }
 }

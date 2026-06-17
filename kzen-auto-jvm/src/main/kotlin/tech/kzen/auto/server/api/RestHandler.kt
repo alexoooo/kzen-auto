@@ -240,6 +240,24 @@ class RestHandler(
     }
 
 
+    fun shiftObjectTree(parameters: Parameters): String {
+        val documentPath: DocumentPath = parameters.getParam(
+            CommonRestApi.paramDocumentPath, DocumentPath::parse)
+
+        val objectPath: ObjectPath = parameters.getParam(
+            CommonRestApi.paramObjectPath, ObjectPath::parse)
+
+        val indexInDocument: PositionRelation = parameters.getParam(
+            CommonRestApi.paramPositionIndex, PositionRelation::parse)
+
+        val command = ShiftObjectTreeCommand(
+            ObjectLocation(documentPath, objectPath),
+            indexInDocument)
+
+        return applyCommand(command).asString()
+    }
+
+
     fun renameObject(parameters: Parameters): String {
         val documentPath: DocumentPath = parameters.getParam(
             CommonRestApi.paramDocumentPath, DocumentPath::parse)

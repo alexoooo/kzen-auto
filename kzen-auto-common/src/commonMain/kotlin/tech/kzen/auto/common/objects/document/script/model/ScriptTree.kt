@@ -1,14 +1,10 @@
 package tech.kzen.auto.common.objects.document.script.model
 
 import tech.kzen.lib.common.model.attribute.AttributeName
-import tech.kzen.lib.common.model.definition.*
+import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.document.DocumentPath
-import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.lib.common.model.location.ObjectLocator
-import tech.kzen.lib.common.model.location.ObjectReference
-import tech.kzen.lib.common.model.location.ObjectReferenceHost
 import tech.kzen.lib.common.model.obj.ObjectPath
-import tech.kzen.lib.common.model.structure.notation.*
+import tech.kzen.lib.common.model.structure.notation.DocumentNotation
 
 
 data class ScriptTree(
@@ -22,20 +18,15 @@ data class ScriptTree(
                 ?: throw IllegalStateException("Not found: $documentPath")
 
             val objectPaths = documentNotation.objects.notations.map.keys
-            return read(objectPaths, ObjectPath.main, documentPath, documentNotation, graphDefinition)
+            return read(objectPaths, ObjectPath.main, documentNotation)
         }
 
 
         private fun read(
             objectPaths: Set<ObjectPath>,
             objectPath: ObjectPath,
-            documentPath: DocumentPath,
-            documentNotation: DocumentNotation,
-            graphDefinition: GraphDefinition
+            documentNotation: DocumentNotation
         ): ScriptTree {
-            val objectLocation = documentPath.toObjectLocation(objectPath)
-            val objectReferenceHost = ObjectReferenceHost.ofLocation(objectLocation)
-
             val subPaths = objectPaths.filter { it.startsWith(objectPath) && it != objectPath }
 
             val buffer = mutableMapOf<AttributeName, MutableSet<ObjectPath>>()
@@ -52,141 +43,16 @@ data class ScriptTree(
                     .filter { it.nesting.segments.size == objectPath.nesting.segments.size + 1 }
 
                 val attributeTrees: List<ScriptTree> = directAttributePaths
-                    .map { read(attributePaths, it, documentPath, documentNotation, graphDefinition) }
+                    .map { read(attributePaths, it, documentNotation) }
 
-                val attributeNotation = graphDefinition
-                    .graphStructure
-                    .graphNotation
-                    .firstAttribute(objectLocation, attributeName)
-
-                // used for ordering the steps within a branch
-                val attributeDefinitionOrNull = graphDefinition[objectLocation]
-                    ?.attributeDefinitions
-                    ?.get(attributeName)
-
-                val pathToIndex: Map<ObjectPath, Int> =
-                    attributeTrees.associate {
-                        it.objectPath to indexOf(
-                            documentPath.toObjectLocation(it.objectPath),
-                            attributeNotation,
-                            attributeDefinitionOrNull,
-                            objectReferenceHost,
-                            graphDefinition.graphStructure.graphNotation.coalesce)
-                    }
-
-                val sortedTrees = attributeTrees.sortedBy { pathToIndex[it.objectPath] ?: -2 }
+                // Step order within a branch is the document position of the step objects.
+                val sortedTrees = attributeTrees
+                    .sortedBy { documentNotation.indexOf(it.objectPath).value }
 
                 builder[attributeName] = sortedTrees
             }
 
             return ScriptTree(objectPath, builder)
-        }
-
-
-        private fun indexOf(
-            objectLocation: ObjectLocation,
-            attributeNotation: AttributeNotation,
-            attributeDefinitionOrNull: AttributeDefinition?,
-            objectReferenceHost: ObjectReferenceHost,
-            objectLocator: ObjectLocator
-        ): Int {
-            return when {
-                attributeDefinitionOrNull != null ->
-                    indexOfByDefinition(objectLocation, attributeDefinitionOrNull, objectReferenceHost, objectLocator)
-
-                else ->
-                    indexOfByNotation(objectLocation, attributeNotation, objectReferenceHost, objectLocator)
-            }
-        }
-
-
-        private fun indexOfByNotation(
-            objectLocation: ObjectLocation,
-            attributeNotation: AttributeNotation,
-            objectReferenceHost: ObjectReferenceHost,
-            objectLocator: ObjectLocator
-        ): Int {
-            return when (attributeNotation) {
-                is ScalarAttributeNotation -> {
-                    val objectReference = ObjectReference.tryParse(attributeNotation.value)
-                        ?: return -1
-                    val referenceLocation = objectLocator.locateOptional(objectReference, objectReferenceHost)
-                        ?: return -1
-                    if (referenceLocation != objectLocation) {
-                        return -1
-                    }
-                    0
-                }
-
-                is ListAttributeNotation -> {
-                    for ((index, itemNotation) in attributeNotation.values.withIndex()) {
-                        val itemIndex = indexOfByNotation(
-                            objectLocation, itemNotation, objectReferenceHost, objectLocator)
-                        if (itemIndex != -1) {
-                            return index + itemIndex
-                        }
-                    }
-                    -1
-                }
-
-                is MapAttributeNotation -> {
-                    for ((index, entry) in attributeNotation.map.entries.withIndex()) {
-                        val itemIndex = indexOfByNotation(
-                            objectLocation, entry.value, objectReferenceHost, objectLocator)
-                        if (itemIndex != -1) {
-                            return index + itemIndex
-                        }
-                    }
-                    -1
-                }
-            }
-        }
-
-
-        private fun indexOfByDefinition(
-            objectLocation: ObjectLocation,
-            attributeDefinition: AttributeDefinition,
-            objectReferenceHost: ObjectReferenceHost,
-            objectLocator: ObjectLocator
-        ): Int {
-            return when (attributeDefinition) {
-                is ReferenceAttributeDefinition -> {
-                    val objectReference = attributeDefinition.objectReference
-                        ?: return -1
-                    val referenceLocation = objectLocator.locateOptional(objectReference, objectReferenceHost)
-                        ?: return -1
-                    if (referenceLocation != objectLocation) {
-                        return -1
-                    }
-                    0
-                }
-
-                is ListAttributeDefinition -> {
-                    for (index in attributeDefinition.values.indices) {
-                        val itemDefinition = attributeDefinition.values[index]
-                        val itemIndex = indexOfByDefinition(
-                            objectLocation, itemDefinition, objectReferenceHost, objectLocator)
-                        if (itemIndex != -1) {
-                            return index + itemIndex
-                        }
-                    }
-                    -1
-                }
-
-                is MapAttributeDefinition -> {
-                    for ((index, entry) in attributeDefinition.map.entries.withIndex()) {
-                        val itemIndex = indexOfByDefinition(
-                            objectLocation, entry.value, objectReferenceHost, objectLocator)
-                        if (itemIndex != -1) {
-                            return index + itemIndex
-                        }
-                    }
-                    -1
-                }
-
-                else ->
-                    -1
-            }
         }
     }
 

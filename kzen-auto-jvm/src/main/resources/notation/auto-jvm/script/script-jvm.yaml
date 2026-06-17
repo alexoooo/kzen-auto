@@ -184,12 +184,11 @@ MultiScriptStep:
   display: MultiStepDisplay
   icon: "material-symbols:toggle-on"
   title: "Sub-script"
-  steps: []
   meta:
     steps:
       is: List
       of: ScriptStep
-      by: Nominal
+      by: NestedList
 
 
 RunStep:
@@ -247,8 +246,6 @@ IfStep:
   title: "If"
   description: "Do one thing or another based on condition"
   condition: ""
-  then: []
-  else: []
   meta:
     condition:
       is: ObjectLocation
@@ -257,11 +254,11 @@ IfStep:
     then:
       is: List
       of: ScriptStep
-      by: Nominal
+      by: NestedList
     else:
       is: List
       of: ScriptStep
-      by: Nominal
+      by: NestedList
 
 
 MappingStep:
@@ -273,7 +270,6 @@ MappingStep:
   title: "Loop"
   description: "Use each item in a list"
   items: ""
-  steps: []
   meta:
     items:
       is: ObjectLocation
@@ -282,7 +278,7 @@ MappingStep:
     steps:
       is: List
       of: ScriptStep
-      by: Nominal
+      by: NestedList
     selfLocation: SelfLocation
 
 MappingItemStep:

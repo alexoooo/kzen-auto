@@ -18,11 +18,9 @@ import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.attribute.AttributeName
-import tech.kzen.lib.common.model.attribute.AttributePath
-import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.GraphStructure
-import tech.kzen.lib.common.model.structure.notation.cqrs.RemoveObjectInAttributeCommand
+import tech.kzen.lib.common.model.structure.notation.cqrs.RemoveObjectCommand
 import tech.kzen.lib.common.service.store.MirroredGraphStore
 import web.cssom.*
 
@@ -30,7 +28,6 @@ import web.cssom.*
 //---------------------------------------------------------------------------------------------------------------------
 external interface StepHeaderProps: Props {
     var objectLocation: ObjectLocation
-    var indexInParent: Int
 
     var managed: Boolean
 
@@ -80,21 +77,23 @@ class StepHeader(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onRemove() {
-        val containingObjectLocation = props.objectLocation.parent()!!
-        val objectAttributePath = attributePathInContainer()
+        val objectLocation = props.objectLocation
 
         async {
-            props.mirroredGraphStore.apply(RemoveObjectInAttributeCommand(
-                containingObjectLocation, objectAttributePath))
+            val documentNotation = props.mirroredGraphStore.graphNotation()
+                .documents[objectLocation.documentPath]
+                ?: return@async
+
+            // Remove the step and its whole nested subtree, deepest-first so each object is a leaf when removed.
+            val subtreePaths = documentNotation.objects.notations.map.keys
+                .filter { it == objectLocation.objectPath || it.startsWith(objectLocation.objectPath) }
+                .sortedByDescending { it.nesting.segments.size }
+
+            for (objectPath in subtreePaths) {
+                props.mirroredGraphStore.apply(RemoveObjectCommand(
+                    ObjectLocation(objectLocation.documentPath, objectPath)))
+            }
         }
-    }
-
-
-    private fun attributePathInContainer(): AttributePath {
-        val containingAttribute = props.objectLocation.objectPath.nesting.segments.last().attributePath
-        return AttributePath(
-            containingAttribute.attribute,
-            containingAttribute.nesting.push(AttributeSegment.ofIndex(props.indexInParent)))
     }
 
 

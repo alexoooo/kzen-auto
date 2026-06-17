@@ -21,7 +21,6 @@ import web.cssom.px
 // row over an attribute-editor row, both wrapped in a white card with bottom padding so the next
 // branch slab meets it flush.
 fun ChildrenBuilder.branchHeaderSlab(
-    indexInParent: Int,
     objectLocation: ObjectLocation,
     icon: String,
     description: String,
@@ -61,7 +60,6 @@ fun ChildrenBuilder.branchHeaderSlab(
             }
 
             StepHeader::class.react {
-                this.indexInParent = indexInParent
                 this.objectLocation = objectLocation
                 managed = false
                 this.icon = icon

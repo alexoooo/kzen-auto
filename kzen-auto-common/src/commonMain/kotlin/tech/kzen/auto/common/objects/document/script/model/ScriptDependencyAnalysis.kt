@@ -14,7 +14,6 @@ import tech.kzen.lib.common.model.definition.ValueAttributeDefinition
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.lib.common.model.location.ObjectReference
 import tech.kzen.lib.common.model.location.ObjectReferenceHost
 import tech.kzen.lib.common.model.structure.notation.AttributeNotation
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
@@ -132,27 +131,12 @@ data class ScriptDependencyAnalysis(
             graphDefinitionAttempt: GraphDefinitionAttempt,
             branchOfStep: MutableMap<ObjectLocation, AttributeLocation>
         ) {
-            // NB: nullable firstAttribute(objectLocation, attributePath) form, not ScriptController.stepLocations
-            //     which delegates through the throwing 1-arg form and would crash when probing attribute names
-            //     a step doesn't have (e.g. Run.steps).
+            // Steps are the objects nested under this branch attribute, in document order — probing a branch
+            // a step doesn't have (e.g. Run.steps) just yields an empty list.
             val graphNotation = graphDefinitionAttempt.graphStructure.graphNotation
-            val listNotation = graphNotation.firstAttribute(
-                branchAttributeLocation.objectLocation,
-                branchAttributeLocation.attributePath
-            ) as? ListAttributeNotation
-                ?: return
+            val steps = ScriptConventions.orderedDirectChildLocations(
+                graphNotation, branchAttributeLocation)
 
-            val host = ObjectReferenceHost.ofLocation(branchAttributeLocation.objectLocation)
-            val steps = listNotation.values.mapNotNull { value ->
-                val asString = value.asString()
-                    ?: return@mapNotNull null
-                val ref = try {
-                    ObjectReference.parse(asString)
-                } catch (_: Throwable) {
-                    return@mapNotNull null
-                }
-                graphNotation.coalesce.locateOptional(ref, host)
-            }
             for (step in steps) {
                 branchOfStep[step] = branchAttributeLocation
             }

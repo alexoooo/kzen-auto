@@ -2,14 +2,6 @@ main:
   is: Script
   parameters:
     - main
-  steps:
-    - main.steps/Argument
-    - main.steps/Formula
-    - main.steps/True or false
-    - main.steps/If
-    - main.steps/Number range
-    - main.steps/Loop
-    - main.steps/Formula 2
 
 main.steps/Argument:
   is: ArgumentStep
@@ -25,33 +17,14 @@ main.steps/True or false:
 main.steps/If:
   is: IfStep
   condition: main.steps/True or false
-  then:
-    - main.steps/If.then/Text
-    - main.steps/If.then/Formula 3
-  else:
-    - main.steps/If.else/Text 2
 
 main.steps/If.then/Text:
   is: TextLiteralStep
   value: foo
 
-main.steps/Formula 2:
-  is: FormulaStep
-  code: "Argument.toString().length * 2 + 2"
-
 main.steps/If.then/Formula 3:
   is: FormulaStep
   code: "Text.length + Argument.toString().length + Formula.toString().length"
-
-main.steps/Loop:
-  is: MappingStep
-  steps:
-    - main.steps/Loop.steps/Item
-    - main.steps/Loop.steps/Text 3
-  items: main.steps/Number range
-
-main.steps/Loop.steps/Item:
-  is: MappingItemStep
 
 main.steps/If.else/Text 2:
   is: TextLiteralStep
@@ -59,5 +32,16 @@ main.steps/If.else/Text 2:
 main.steps/Number range:
   is: NumberRangeStep
 
+main.steps/Loop:
+  is: MappingStep
+  items: main.steps/Number range
+
+main.steps/Loop.steps/Item:
+  is: MappingItemStep
+
 main.steps/Loop.steps/Text 3:
   is: TextLiteralStep
+
+main.steps/Formula 2:
+  is: FormulaStep
+  code: "Argument.toString().length * 2 + 2"

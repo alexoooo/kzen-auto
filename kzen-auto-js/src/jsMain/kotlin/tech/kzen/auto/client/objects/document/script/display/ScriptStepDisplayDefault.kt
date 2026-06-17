@@ -325,7 +325,6 @@ class ScriptStepDisplayDefault(
             onClick = { onToggleExpanded() }
 
             StepHeader::class.react {
-                indexInParent = props.common.indexInParent
                 objectLocation = props.common.objectLocation
 
                 managed = false

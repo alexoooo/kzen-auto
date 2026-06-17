@@ -1,11 +1,6 @@
 main:
   is: Script
-  steps:
-    - main.steps/Boom
 
-# A single step that throws at runtime. With pauseOnError the run pauses at this step instead of
-# ending; without it the run fails. Exercised by ScriptExecutionPauseOnErrorTest in-process — no
-# server, no browser.
 main.steps/Boom:
   is: FormulaStep
   code: 'throw RuntimeException("intentional pause-on-error failure")'

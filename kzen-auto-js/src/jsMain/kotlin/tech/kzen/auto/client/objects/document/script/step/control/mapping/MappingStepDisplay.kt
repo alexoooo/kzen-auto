@@ -171,7 +171,6 @@ class MappingStepDisplay(
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
         branchHeaderSlab(
-            indexInParent = props.common.indexInParent,
             objectLocation = props.common.objectLocation,
             icon = state.icon ?: "",
             description = state.description ?: "",

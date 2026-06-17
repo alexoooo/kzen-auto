@@ -23,14 +23,13 @@ Script:
   class: tech.kzen.auto.server.objects.script.ScriptDocument
   title: "Script"
   icon: "material-symbols:playlist-play"
-  steps: []
   parameters: []
   results: []
   meta:
     steps:
       is: List
       of: ScriptStep
-      by: Nominal
+      by: NestedList
     parameters:
       is: List
       of: String

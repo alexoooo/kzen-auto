@@ -1,12 +1,5 @@
 main:
   is: Script
-  steps:
-    - main.steps/Open browser
-    - main.steps/Browse to URL
-    - 'main.steps/Click "New Script..." menu option'
-    - main.steps/Click
-    - main.steps/Write
-    - main.steps/Close browser
 
 main.steps/Open browser:
   is: BrowserOpenStep
@@ -22,9 +15,6 @@ main.steps/Browse to URL:
     type: Visual
     value: "main/Action Target/~main.yaml#main"
 
-main.steps/Close browser:
-  is: BrowserCloseStep
-
 main.steps/Click:
   is: BrowserClickStep
   target:
@@ -35,3 +25,6 @@ main.steps/Write:
   target:
     type: Focus
   text: hhhhhj
+
+main.steps/Close browser:
+  is: BrowserCloseStep

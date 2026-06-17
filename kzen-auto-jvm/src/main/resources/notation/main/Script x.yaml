@@ -1,9 +1,5 @@
 main:
   is: Script
-  steps:
-    - main.steps/Run
-    - main.steps/Run 2
-    - main.steps/Formula
 
 main.steps/Run:
   is: RunStep

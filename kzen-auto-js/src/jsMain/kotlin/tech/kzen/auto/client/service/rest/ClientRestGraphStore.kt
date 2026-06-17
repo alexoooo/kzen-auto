@@ -52,6 +52,10 @@ class ClientRestGraphStore(
                 restClient.shiftObject(
                     command.objectLocation, command.newPositionInDocument)
 
+            is ShiftObjectTreeCommand ->
+                restClient.shiftObjectTree(
+                    command.objectLocation, command.newPositionInDocument)
+
             is RenameObjectCommand ->
                 restClient.renameObject(
                     command.objectLocation, command.newName)

@@ -10,8 +10,9 @@ import kotlin.test.assertEquals
 
 class ScriptTreeTest {
     //-----------------------------------------------------------------------------------------------------------------
+    // Step order (and therefore branch predecessors) is derived from the document position of the step objects.
     @Test
-    fun treeOrderByDefinition() {
+    fun treeOrder() {
         val graphNotation = AutoTestUtils.readNotation()
         val graphDefinitionAttempt = AutoTestUtils.graphDefinitionAttempt(graphNotation)
 
@@ -49,40 +50,5 @@ class ScriptTreeTest {
                 ObjectPath.parse("main.steps/Mapping")),
             tree.predecessors(
                 ObjectPath.parse("main.steps/Display")))
-    }
-
-
-    @Test
-    fun treeOrderByNotation() {
-        val graphNotation = AutoTestUtils.readNotation()
-        val graphDefinitionAttempt = AutoTestUtils.graphDefinitionAttempt(graphNotation)
-
-        val documentPath = DocumentPath.parse("test/script-tree-undefined-test.yaml")
-
-        val tree = ScriptTree.read(documentPath, graphDefinitionAttempt.successful())
-
-        assertEquals(
-            listOf(),
-            tree.predecessors(
-                ObjectPath.parse("main.steps/Formula")))
-
-        assertEquals(
-            listOf(
-                ObjectPath.parse("main.steps/Formula")),
-            tree.predecessors(
-                ObjectPath.parse("main.steps/Loop")))
-
-        assertEquals(
-            listOf(
-                ObjectPath.parse("main.steps/Formula")),
-            tree.predecessors(
-                ObjectPath.parse("main.steps/Loop.steps/Item")))
-
-        assertEquals(
-            listOf(
-                ObjectPath.parse("main.steps/Formula"),
-                ObjectPath.parse("main.steps/Loop.steps/Item")),
-            tree.predecessors(
-                ObjectPath.parse("main.steps/Loop.steps/Display")))
     }
 }

@@ -191,6 +191,18 @@ class ClientRestApi(
     }
 
 
+    suspend fun shiftObjectTree(
+        objectLocation: ObjectLocation,
+        newPositionInDocument: PositionRelation
+    ): Digest {
+        return getOrPutDigest(
+            CommonRestApi.commandObjectShiftTree,
+            CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
+            CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
+            CommonRestApi.paramPositionIndex to newPositionInDocument.asString())
+    }
+
+
     suspend fun renameObject(
         objectLocation: ObjectLocation,
         newName: ObjectName

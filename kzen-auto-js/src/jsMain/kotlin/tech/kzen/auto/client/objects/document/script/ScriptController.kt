@@ -28,10 +28,7 @@ import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.lib.common.model.location.ObjectReference
-import tech.kzen.lib.common.model.location.ObjectReferenceHost
 import tech.kzen.lib.common.model.structure.GraphStructure
-import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.service.store.MirroredGraphStore
@@ -79,18 +76,14 @@ class ScriptController:
             graphStructure: GraphStructure,
             attributeLocation: AttributeLocation
         ): List<ObjectLocation>? {
-            val stepsNotation = graphStructure
-                .graphNotation
-                .firstAttribute(attributeLocation)
-                as? ListAttributeNotation
-                ?: return null
+            if (attributeLocation.objectLocation !in graphStructure.graphNotation.coalesce) {
+                // NB: deleted or renamed (this is a stale objectLocation)
+                return null
+            }
 
-            val objectReferenceHost = ObjectReferenceHost.ofLocation(attributeLocation.objectLocation)
-
-            return stepsNotation
-                    .values
-                    .map { ObjectReference.parse(it.asString()!!) }
-                    .map { graphStructure.graphNotation.coalesce.locate(it, objectReferenceHost) }
+            // Steps in document order — the step objects nested under this branch attribute.
+            return ScriptConventions.orderedDirectChildLocations(
+                graphStructure.graphNotation, attributeLocation)
         }
     }
 

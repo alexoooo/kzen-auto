@@ -62,6 +62,11 @@ object AutoTestUtils {
                 notationMedia, readOnlyMedia)
 
             for (notationPath in combinedNotationMedia.scan().documents.map) {
+                // folders are bare directories with no document body — skip them (mirrors SeededNotationMedia),
+                // otherwise readDocument tries to read a directory and fails
+                if (notationPath.key.folder) {
+                    continue
+                }
                 val notationModule = combinedNotationMedia.readDocument(notationPath.key)
                 val objects = notationParser.parseDocumentObjects(notationModule)
                 notationProjectBuilder[notationPath.key] = DocumentNotation(

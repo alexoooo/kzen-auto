@@ -1,31 +1,24 @@
-# unusual ordering for testing purposes
-
-main.steps/Mapping:
-  is: MappingStep
-  steps:
-    - main.steps/Mapping.steps/Item
-    - main.steps/Mapping.steps/Is divisible by
-  items: main.steps/Formula
+# Step order is now the document order of the step objects (no explicit step lists).
 
 main:
   is: Script
-  steps:
-    - main.steps/Formula
-    - main.steps/Mapping
-    - main.steps/Display
 
-main.steps/Display:
-  is: DisplayValueStep
-  text: main.steps/Mapping
+main.steps/Formula:
+  is: FormulaStep
+  code: 1..10
+
+main.steps/Mapping:
+  is: MappingStep
+  items: main.steps/Formula
+
+main.steps/Mapping.steps/Item:
+  is: MappingItemStep
 
 main.steps/Mapping.steps/Is divisible by:
   is: DivisibleCheckStep
   number: main.steps/Mapping.steps/Item
   divisor: 2
 
-main.steps/Formula:
-  is: FormulaStep
-  code: 1..10
-
-main.steps/Mapping.steps/Item:
-  is: MappingItemStep
+main.steps/Display:
+  is: DisplayValueStep
+  text: main.steps/Mapping

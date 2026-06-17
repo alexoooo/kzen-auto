@@ -28,13 +28,11 @@ import tech.kzen.auto.client.wrap.refCallback
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.objects.document.script.model.ScriptDependencyAnalysis
-import tech.kzen.lib.common.model.attribute.AttributePath
-import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.PositionRelation
-import tech.kzen.lib.common.model.structure.notation.cqrs.ShiftInAttributeCommand
+import tech.kzen.lib.common.model.structure.notation.cqrs.ShiftObjectTreeCommand
 import tech.kzen.lib.common.service.store.MirroredGraphStore
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import web.animations.requestAnimationFrame
@@ -291,15 +289,40 @@ class ScriptBranchDisplay(
             return
         }
 
-        val sourceAttributePath = AttributePath(
-            props.attributeLocation.attributePath.attribute,
-            props.attributeLocation.attributePath.nesting.push(AttributeSegment.ofIndex(source)))
+        val stepLocations = state.stepLocations
+            ?: return
+        val graphStructure = props.clientStateGlobal.current()?.graphStructure()
+            ?: return
+        val documentPath = props.attributeLocation.objectLocation.documentPath
+        val documentNotation = graphStructure.graphNotation.documents[documentPath]
+            ?: return
+
+        val draggedLocation = stepLocations[source]
+        val draggedRoot = draggedLocation.objectPath
+
+        // Document order with the dragged subtree removed — the frame the relocate index resolves against.
+        val remainingPaths = documentNotation.objects.notations.map.keys.filter {
+            it != draggedRoot && !it.startsWith(draggedRoot)
+        }
+
+        // The sibling that should follow the dragged step in its new branch slot (null = it goes last);
+        // place the subtree just before that sibling, or just after the last sibling's subtree.
+        val others = stepLocations.filterIndexed { i, _ -> i != source }
+        val anchor = others.getOrNull(newIndex)?.objectPath
+
+        val targetDocumentIndex =
+            if (anchor != null) {
+                remainingPaths.indexOf(anchor)
+            }
+            else {
+                val lastSibling = others.last().objectPath
+                remainingPaths.indexOfLast { it == lastSibling || it.startsWith(lastSibling) } + 1
+            }
 
         async {
-            props.mirroredGraphStore.apply(ShiftInAttributeCommand(
-                props.attributeLocation.objectLocation,
-                sourceAttributePath,
-                PositionRelation.at(newIndex)))
+            props.mirroredGraphStore.apply(ShiftObjectTreeCommand(
+                draggedLocation,
+                PositionRelation.at(targetDocumentIndex)))
         }
     }
 
