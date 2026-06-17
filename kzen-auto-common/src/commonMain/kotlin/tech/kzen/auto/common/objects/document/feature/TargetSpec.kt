@@ -8,15 +8,15 @@ data object FocusTarget: TargetSpec()
 
 
 data class TextTarget(
-        val text: String
+    val text: String
 ): TargetSpec()
 
 
 data class XpathTarget(
-        val xpath: String
+    val xpath: String
 ): TargetSpec()
 
 
 data class VisualTarget(
-        val feature: FeatureDocument
+    val feature: FeatureDocument
 ): TargetSpec()

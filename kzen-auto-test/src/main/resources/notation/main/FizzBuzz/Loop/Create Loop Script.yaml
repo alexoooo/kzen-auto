@@ -1,0 +1,46 @@
+main:
+  is: Script
+
+'main.steps/Click "Project"':
+  is: BrowserClickStep
+  target:
+    type: Text
+    value: Project
+
+'main.steps/Click "Project options..." button':
+  is: BrowserClickStep
+  target:
+    type: Xpath
+    value: "//button[@title='Project options...']"
+
+'main.steps/Click "New Script..." menu option':
+  is: BrowserClickStep
+  target:
+    type: Text
+    value: New Script...
+
+main.steps/Click:
+  is: BrowserClickStep
+  target:
+    type: Text
+    value: Script
+
+'main.steps/Click "Options..." button':
+  is: BrowserClickStep
+  target:
+    type: Xpath
+    value: "//button[@title='Options...']"
+
+main.steps/Click 2:
+  is: BrowserClickStep
+  target:
+    type: Text
+    value: Rename
+
+main.steps/Write:
+  is: BrowserWriteStep
+  text: FizzBuzz
+  overwrite: true
+
+main.steps/Enter:
+  is: BrowserEnterStep

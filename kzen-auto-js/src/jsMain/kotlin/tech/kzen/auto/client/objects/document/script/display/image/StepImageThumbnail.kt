@@ -10,6 +10,7 @@ import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.img
 import tech.kzen.auto.client.objects.document.script.display.computeStepTraceInfo
+import tech.kzen.auto.client.objects.document.script.display.representativeScreenshotLocation
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
 import tech.kzen.auto.client.objects.document.script.model.ScriptStore
 import tech.kzen.auto.client.objects.document.script.model.ScriptStoreContext
@@ -37,6 +38,10 @@ external interface StepImageThumbnailProps: Props {
 
 external interface StepImageThumbnailState: State {
     var screenshot: BinaryExecutionValue?
+
+    // The location whose screenshot is shown — usually props.objectLocation, but for a RunStep it
+    // redirects to the last screenshot-bearing step of its sub-script. Drives the full-screen target.
+    var resolvedLocation: ObjectLocation?
 
     var hovered: Boolean
     var expanded: Boolean
@@ -128,6 +133,7 @@ class StepImageThumbnail(
     //-----------------------------------------------------------------------------------------------------------------
     override fun StepImageThumbnailState.init(props: StepImageThumbnailProps) {
         screenshot = null
+        resolvedLocation = null
         hovered = false
         expanded = false
         floatingTop = 0.0
@@ -138,14 +144,33 @@ class StepImageThumbnail(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun onScriptState(scriptState: ScriptState) {
+        // For a RunStep this redirects to the last screenshot-bearing sub-script step (else it's
+        // props.objectLocation unchanged), so the collapsed RunStep previews the latest sub-script frame.
+        val clientState = props.clientStateGlobal.current()
+        val resolvedLocation =
+            if (clientState != null) {
+                representativeScreenshotLocation(
+                    scriptState,
+                    props.objectLocation,
+                    clientState.graphStructure().graphNotation,
+                    clientState.graphDefinitionAttempt.successful(),
+                    props.objectStableMapper)
+            }
+            else {
+                props.objectLocation
+            }
+
         val traceInfo = computeStepTraceInfo(
-            scriptState, props.objectLocation, props.objectStableMapper)
+            scriptState, resolvedLocation, props.objectStableMapper)
         val nextScreenshot = traceInfo.trace?.detail as? BinaryExecutionValue
+        // Expansion follows the step the thumbnail is attached to (props.objectLocation), not the
+        // redirected screenshot location.
         val nextExpanded = scriptState.isStepExpanded(props.objectLocation)
 
         val screenshotChanged = state.screenshot !== nextScreenshot
         val expandedChanged = state.expanded != nextExpanded
-        if (!screenshotChanged && !expandedChanged) {
+        val resolvedChanged = state.resolvedLocation != resolvedLocation
+        if (!screenshotChanged && !expandedChanged && !resolvedChanged) {
             return
         }
 
@@ -163,6 +188,7 @@ class StepImageThumbnail(
         setState {
             this.screenshot = nextScreenshot
             this.expanded = nextExpanded
+            this.resolvedLocation = resolvedLocation
         }
     }
 
@@ -297,7 +323,8 @@ class StepImageThumbnail(
 
         if (state.fullscreenOpen) {
             StepImageFullscreen::class.react {
-                initialLocation = props.objectLocation
+                // For a RunStep, open on the resolved sub-script frame so navigation walks the sub-script.
+                initialLocation = state.resolvedLocation ?: props.objectLocation
                 onClose = { onFullscreenClose() }
                 objectStableMapper = props.objectStableMapper
                 clientStateGlobal = props.clientStateGlobal

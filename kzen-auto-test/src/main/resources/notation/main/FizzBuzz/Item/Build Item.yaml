@@ -1,0 +1,6 @@
+main:
+  is: Script
+
+main.steps/Run:
+  is: RunStep
+  instructions: "main/FizzBuzz/Item/Create Item Script.yaml#main"

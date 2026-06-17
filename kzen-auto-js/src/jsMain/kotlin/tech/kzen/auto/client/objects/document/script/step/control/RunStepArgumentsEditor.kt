@@ -20,6 +20,7 @@ import tech.kzen.auto.client.wrap.select.ReactSelectOption
 import tech.kzen.auto.client.wrap.select.reactSelectField
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
+import tech.kzen.auto.common.objects.document.script.model.RunStepInstructions
 import tech.kzen.auto.common.paradigm.logic.LogicConventions
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
@@ -138,18 +139,8 @@ class RunStepArgumentsEditor(
 
         val objectReferenceHost = ObjectReferenceHost.ofLocation(props.objectLocation)
 
-        val instructionsNotation = graphNotation
-            .firstAttribute(props.objectLocation, ScriptConventions.instructionsAttributeName)
-
-        val instructionsObjectLocation =
-            if (instructionsNotation is ScalarAttributeNotation && instructionsNotation.value.isNotEmpty()) {
-                val reference = ObjectReference.parse(instructionsNotation.value)
-                val objectLocation = graphNotation.coalesce.locateOptional(reference, objectReferenceHost)
-                objectLocation
-            }
-            else {
-                null
-            }
+        val instructionsObjectLocation = RunStepInstructions.instructionsLocation(
+            graphNotation, props.objectLocation)
         val instructionsParametersNotation =
             if (instructionsObjectLocation != null) {
                 graphNotation

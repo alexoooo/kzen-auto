@@ -16,6 +16,7 @@ import tech.kzen.auto.client.objects.document.script.display.computeStepHeaderIn
 import tech.kzen.auto.client.objects.document.script.display.computeStepTraceInfo
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
 import tech.kzen.auto.client.objects.document.script.model.ScriptStore
+import tech.kzen.auto.common.objects.document.script.model.ScriptTree
 import tech.kzen.auto.client.objects.document.script.model.ScriptStoreContext
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
@@ -99,9 +100,15 @@ class StepImageFullscreen(
 
 
     // Step locations that currently have a screenshot, in document order — the navigation sequence.
+    // Navigation spans the initialLocation's OWN document (which may be a sub-script opened from a
+    // RunStep thumbnail), not the current ScriptStore document — so build that document's tree from
+    // the global graph rather than reading scriptState.scriptTree (the current document only).
     private fun screenshotLocations(scriptState: ScriptState): List<ObjectLocation> {
         val documentPath = props.initialLocation.documentPath
-        return scriptState.scriptTree
+        val graphDefinition = props.clientStateGlobal.current()?.graphDefinitionAttempt?.successful()
+            ?: return listOf()
+        return ScriptTree
+            .read(documentPath, graphDefinition)
             .orderedDescendantObjectPaths()
             .map { documentPath.toObjectLocation(it) }
             .filter { hasScreenshot(scriptState, it) }

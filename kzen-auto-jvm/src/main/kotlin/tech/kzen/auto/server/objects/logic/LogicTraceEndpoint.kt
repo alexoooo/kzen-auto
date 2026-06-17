@@ -17,12 +17,21 @@ import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.server.exec.logic.trace.LogicTraceStore
+import org.slf4j.LoggerFactory
 
 
 @Reflect
 class LogicTraceEndpoint(
     @Service private val logicTraceStore: LogicTraceStore
 ): DetachedAction {
+    // TEMP DIAGNOSTIC (screenshots-missing-for-sub-script bug): logs how a document's run is
+    // resolved (mostRecent) and what its trace lookup returns, so a poisoned-process reproduction
+    // reveals which of the three server-side failure modes is in play. Remove once root-caused.
+    companion object {
+        private val logger = LoggerFactory.getLogger(LogicTraceEndpoint::class.java)
+    }
+
+
     override suspend fun execute(request: ExecutionRequest): ExecutionResult {
         val action = request.getSingle(CommonRestApi.paramAction)
             ?: return ExecutionResult.failure("Action missing: '${CommonRestApi.paramAction}'")
@@ -39,6 +48,12 @@ class LogicTraceEndpoint(
 
                 val objectLocation = ObjectLocation(documentPath, objectPath)
                 val mostRecent = logicTraceStore.mostRecent(objectLocation)
+
+                logger.info(
+                    "[trace-diag] mostRecent({}) -> runId={} executionId={}",
+                    objectLocation.asString(),
+                    mostRecent?.logicRunId?.value,
+                    mostRecent?.logicExecutionId?.value)
 
                 ExecutionSuccess.ofValue(ExecutionValue.of(
                     mostRecent?.let { LogicConventions.runExecutionAsCollection(it) }
@@ -57,8 +72,19 @@ class LogicTraceEndpoint(
 
                 val runExecutionId = LogicRunExecutionId(logicRunId, logicExecutionId)
                 val snapshot = logicTraceStore.lookup(runExecutionId, logicTraceQuery)
-                    ?: return ExecutionResult.failure(
+
+                logger.info(
+                    "[trace-diag] lookup(runId={} executionId={} query={}) -> {}",
+                    logicRunId.value,
+                    logicExecutionId.value,
+                    logicTraceQuery.asString(),
+                    snapshot?.let { "${it.values.size} value(s): keys=${it.values.keys.map { p -> p.asString() }}" }
+                        ?: "NULL (buffer not found / evicted)")
+
+                if (snapshot == null) {
+                    return ExecutionResult.failure(
                         "Logic Trace not found: $logicRunId / $logicExecutionId / $logicTraceQuery")
+                }
 
                 ExecutionSuccess.ofValue(ExecutionValue.of(
                     snapshot.asCollection()))

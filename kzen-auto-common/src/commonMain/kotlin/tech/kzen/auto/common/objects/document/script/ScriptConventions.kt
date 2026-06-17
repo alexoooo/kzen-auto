@@ -17,6 +17,7 @@ object ScriptConventions {
 
     val objectName = ObjectName("Script")
     val stepObjectName = ObjectName("ScriptStep")
+    val runStepObjectName = ObjectName("RunStep")
 
     val stepsAttributeName = AttributeName("steps")
     val stepsAttributePath = AttributePath.ofName(stepsAttributeName)

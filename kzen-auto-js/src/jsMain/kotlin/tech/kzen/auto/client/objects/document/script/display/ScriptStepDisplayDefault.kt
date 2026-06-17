@@ -40,6 +40,12 @@ external interface ScriptStepDisplayDefaultProps: ScriptStepDisplayProps {
     var clientStateGlobal: ClientStateGlobal
     var objectStableMapper: ObjectStableMapper
     var mirroredGraphStore: MirroredGraphStore
+
+    // Optional extra content rendered at the bottom of the expanded body (inside the click-guarded
+    // body region). Null for ordinary steps; RunStepDisplay uses it for the sub-script screenshot
+    // strip. NB: plain (non-receiver) function type — receiver function types are prohibited in
+    // external declarations; the callee invokes it with the body's ChildrenBuilder.
+    var expandedBodyExtra: ((ChildrenBuilder) -> Unit)?
 }
 
 
@@ -358,6 +364,7 @@ class ScriptStepDisplayDefault(
 
                     renderBody(objectMetadata, trace)
                     renderValidation()
+                    props.expandedBodyExtra?.invoke(this)
                 }
             }
             else if (trace != null) {

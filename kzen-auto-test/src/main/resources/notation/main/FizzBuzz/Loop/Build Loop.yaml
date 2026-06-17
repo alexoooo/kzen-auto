@@ -1,0 +1,38 @@
+main:
+  is: Script
+
+main.steps/Create Script:
+  is: RunStep
+  instructions: "main/FizzBuzz/Loop/Create Loop Script.yaml#main"
+
+main.steps/Insert Range:
+  is: RunStep
+  instructions: "main/FizzBuzz/Loop/Insert Range.yaml#main"
+
+main.steps/Insert Loop:
+  is: RunStep
+  instructions: "main/FizzBuzz/Loop/Insert Loop.yaml#main"
+
+main.steps/Click:
+  is: BrowserClickStep
+  target:
+    type: Text
+    value: Logic / Control
+
+main.steps/Click 5:
+  is: BrowserClickStep
+  target:
+    type: Text
+    value: Input / Output
+
+main.steps/Click 6:
+  is: BrowserClickStep
+  target:
+    type: Text
+    value: Formula
+
+main.steps/Click 7:
+  is: BrowserClickStep
+  target:
+    type: Xpath
+    value: "(//button[@title='Insert step here'])[last() - 1]"

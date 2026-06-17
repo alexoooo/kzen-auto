@@ -1,0 +1,33 @@
+main:
+  is: Script
+
+main.steps/Click:
+  is: BrowserClickStep
+  target:
+    type: Text
+    value: Logic / Control
+
+main.steps/Click 2:
+  is: BrowserClickStep
+  target:
+    type: Text
+    value: Loop
+
+main.steps/Click 3:
+  is: BrowserClickStep
+  target:
+    type: Xpath
+    value: "(//button[@title='Insert step here'])[last()]"
+
+main.steps/Click 4:
+  is: BrowserClickStep
+  target:
+    type: Visual
+    value: "main/Features/Select/~main.yaml#main"
+
+main.steps/Write:
+  is: BrowserWriteStep
+  text: Range
+
+main.steps/Enter:
+  is: BrowserEnterStep

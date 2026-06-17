@@ -123,6 +123,22 @@ targeting is invasive, and per-observer scoping (1–3) achieves the same end. T
 `ReportController` still stores the whole `ReportState` (older style); the script controllers above are
 the reference for this scoping and the preferred shape for new and refactored components.
 
+### Observer callbacks can fire with a stale `ObjectLocation`
+
+A store `publish()` runs **before** the parent re-renders its children, so a child's `onScriptState` /
+`onClientState` can fire while `props.objectLocation` still points at a step that was *just renamed or
+deleted* (the parent hasn't yet handed it the new location). Two consequences:
+
+- **Stable-id-keyed reads tolerate it.** `computeStepTraceInfo` / `objectStableMapper.objectStableId(…)`
+  resolve a stale location fine — that's the point of stable ids (see
+  [kzen-lib stable identity](../../kzen-lib/docs/architecture.md#stable-identity-objectstablemapper)).
+- **Notation lookups throw.** `GraphNotation.inheritanceChain` / `firstAttribute` /
+  `inheritanceParents` raise `IllegalArgumentException("Missing: <location>")` for a location absent from
+  `coalesce`. So any observer callback that does a notation lookup on its *own* `objectLocation` must
+  guard first — `if (objectLocation !in graphNotation.coalesce) return` (or fall back to the location
+  unchanged). `RunStepArgumentsEditor`, `RunStepDisplay`, and `representativeScreenshotLocation` all do
+  this. Symptom when missed: `Observer error in ScriptStore: Missing: …` on rename/delete.
+
 ## 3. Document folder convention
 
 Every document type under `objects/document/<type>/` follows this layout:

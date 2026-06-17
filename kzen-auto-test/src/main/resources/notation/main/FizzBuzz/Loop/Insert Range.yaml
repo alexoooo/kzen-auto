@@ -1,9 +1,6 @@
 main:
   is: Script
 
-main.steps/Pause:
-  is: PauseStep
-
 'main.steps/Click "Number range" ribbon tool':
   is: BrowserClickStep
   target:

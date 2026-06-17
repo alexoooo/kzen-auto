@@ -195,6 +195,7 @@ RunStep:
   abstract: true
   is: ScriptStep
   class: tech.kzen.auto.server.objects.script.step.control.RunStep
+  display: RunStepDisplay
   icon: "material-symbols:play-arrow"
   title: "Run"
   instructions: ""
