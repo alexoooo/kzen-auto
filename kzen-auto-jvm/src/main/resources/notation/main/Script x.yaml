@@ -14,3 +14,7 @@ main.steps/Run 2:
 main.steps/Formula:
   is: FormulaStep
   code: "2+2"
+
+main.steps/Formula2:
+  is: FormulaStep
+  code: "2+2"

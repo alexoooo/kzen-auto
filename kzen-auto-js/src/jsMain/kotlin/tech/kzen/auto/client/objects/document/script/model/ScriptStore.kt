@@ -1,6 +1,11 @@
 package tech.kzen.auto.client.objects.document.script.model
 
 import kotlinx.coroutines.delay
+import tech.kzen.auto.client.objects.document.common.raw.DocumentRawHost
+import tech.kzen.auto.client.objects.document.common.raw.DocumentRawSnapshot
+import tech.kzen.auto.client.objects.document.common.raw.DocumentRawState
+import tech.kzen.auto.client.objects.document.common.raw.DocumentRawStore
+import tech.kzen.auto.client.objects.document.common.raw.DocumentViewMode
 import tech.kzen.auto.client.objects.document.script.progress.ScriptProgressStore
 import tech.kzen.auto.client.objects.document.script.valid.ScriptValidationState
 import tech.kzen.auto.client.objects.document.script.valid.ScriptValidationStore
@@ -11,14 +16,18 @@ import tech.kzen.auto.client.util.async
 import tech.kzen.auto.common.objects.document.script.model.ScriptTree
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.DocumentNotation
+import tech.kzen.lib.common.service.parse.NotationParser
+import tech.kzen.lib.common.service.store.MirroredGraphStore
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Instant
 
 
 class ScriptStore(
     val clientStateGlobal: ClientStateGlobal,
-    val restClient: ClientRestApi
-): ClientStateGlobal.Observer {
+    val restClient: ClientRestApi,
+    override val notationParser: NotationParser,
+    override val mirroredGraphStore: MirroredGraphStore
+): ClientStateGlobal.Observer, DocumentRawHost {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         // NB: yields the event loop so cascading onClientState → updateIfChanged → onScriptState
@@ -44,6 +53,7 @@ class ScriptStore(
     val progressStore = ScriptProgressStore(this)
     val validationStore = ScriptValidationStore(this)
     val stepStore = ScriptStepStore(this)
+    val raw = DocumentRawStore(this)
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -101,24 +111,18 @@ class ScriptStore(
             previousState == null || mainLocation != previousState.mainLocation -> {
                 val scriptTree = ScriptTree.read(
                     mainLocation.documentPath, clientState.graphDefinitionAttempt.successful())
-                ScriptState(
+                ScriptState.initial(
                     mainLocation,
                     documentNotation,
-                    scriptTree)
+                    scriptTree,
+                    notationParser,
+                    previousState?.viewMode ?: DocumentViewMode.View)
             }
 
             documentNotation != previousState.documentNotation -> {
                 val scriptTree = ScriptTree.read(
                     mainLocation.documentPath, clientState.graphDefinitionAttempt.successful())
-                if (previousState.scriptTree == scriptTree) {
-                    previousState.copy(
-                        documentNotation = documentNotation)
-                }
-                else {
-                    previousState.copy(
-                        documentNotation = documentNotation,
-                        scriptTree = scriptTree)
-                }
+                previousState.withDocumentNotation(documentNotation, scriptTree, notationParser)
             }
 
             else ->
@@ -233,5 +237,24 @@ class ScriptStore(
         update { state -> state
             .withValidation(updater)
         }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    fun setViewMode(viewMode: DocumentViewMode) {
+        update { it.withViewMode(viewMode) }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun rawSnapshot(): DocumentRawSnapshot? {
+        val snapshot = state
+            ?: return null
+        return DocumentRawSnapshot(snapshot.mainLocation.documentPath, snapshot.raw, snapshot.editorModified)
+    }
+
+
+    override fun updateRaw(updater: (DocumentRawState) -> DocumentRawState) {
+        update { it.withRaw(notationParser, updater) }
     }
 }

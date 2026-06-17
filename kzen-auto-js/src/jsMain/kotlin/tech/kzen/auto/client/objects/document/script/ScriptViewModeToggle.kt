@@ -1,6 +1,5 @@
-package tech.kzen.auto.client.objects.document.custom
+package tech.kzen.auto.client.objects.document.script
 
-import emotion.react.css
 import mui.material.Size
 import mui.material.ToggleButton
 import mui.material.ToggleButtonGroup
@@ -10,37 +9,37 @@ import react.ChildrenBuilder
 import react.Props
 import react.ReactNode
 import react.State
-import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.objects.document.common.raw.DocumentViewMode
-import tech.kzen.auto.client.objects.document.custom.model.CustomGlobal
-import tech.kzen.auto.client.objects.document.custom.model.CustomState
-import tech.kzen.auto.client.objects.document.custom.model.CustomStore
+import tech.kzen.auto.client.objects.document.script.model.ScriptGlobal
+import tech.kzen.auto.client.objects.document.script.model.ScriptState
+import tech.kzen.auto.client.objects.document.script.model.ScriptStore
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.setState
 import web.cssom.NamedColor
-import web.cssom.Padding
-import web.cssom.em
 import web.cssom.px
 
 
 //---------------------------------------------------------------------------------------------------------------------
-external interface CustomHeaderState: State {
+external interface ScriptViewModeToggleState: State {
     var viewMode: DocumentViewMode?
     var editorModified: Boolean
 }
 
 
 //---------------------------------------------------------------------------------------------------------------------
+// View / Raw toggle for the Script header. Mounted alongside the ribbon in ScriptController.header()
+// (a sibling subtree to the body), so it reaches the store via ScriptGlobal rather than context.
+// Mirrors the toggle portion of CustomHeader.
 @Suppress("unused")
-class CustomHeader(
+class ScriptViewModeToggle(
     props: Props
 ):
-    RPureComponent<Props, CustomHeaderState>(props),
-    CustomStore.Observer
+    RPureComponent<Props, ScriptViewModeToggleState>(props),
+    ScriptStore.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
-    override fun CustomHeaderState.init(props: Props) {
+    override fun ScriptViewModeToggleState.init(props: Props) {
         viewMode = null
         editorModified = false
     }
@@ -48,19 +47,19 @@ class CustomHeader(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
-        CustomGlobal.get().observe(this)
+        ScriptGlobal.get().observe(this)
     }
 
 
     override fun componentWillUnmount() {
-        CustomGlobal.get().unobserve(this)
+        ScriptGlobal.get().unobserve(this)
     }
 
 
-    override fun onCustomState(customState: CustomState) {
+    override fun onScriptState(scriptState: ScriptState) {
         setState {
-            viewMode = customState.viewMode
-            editorModified = customState.editorModified
+            viewMode = scriptState.viewMode
+            editorModified = scriptState.editorModified
         }
     }
 
@@ -70,7 +69,7 @@ class CustomHeader(
         if (viewMode == DocumentViewMode.View && state.editorModified) {
             return
         }
-        CustomGlobal.get().setViewMode(viewMode)
+        ScriptGlobal.get().setViewMode(viewMode)
     }
 
 
@@ -80,33 +79,27 @@ class CustomHeader(
             ?: return
         val editorModified = state.editorModified
 
-        div {
-            css {
-                padding = Padding(0.5.em, 1.em)
+        ToggleButtonGroup {
+            value = viewMode.name
+            exclusive = true
+
+            asDynamic()["onChange"] = { _, v ->
+                (v as? String)?.let { onModeChange(DocumentViewMode.valueOf(it)) }
             }
 
-            ToggleButtonGroup {
-                value = viewMode.name
-                exclusive = true
+            renderViewButton(editorModified)
 
-                asDynamic()["onChange"] = { _, v ->
-                    (v as? String)?.let { onModeChange(DocumentViewMode.valueOf(it)) }
+            ToggleButton {
+                value = DocumentViewMode.Raw.name
+                size = Size.medium
+
+                sx {
+                    height = 34.px
+                    color = NamedColor.black
+                    borderWidth = 2.px
                 }
 
-                renderViewButton(editorModified)
-
-                ToggleButton {
-                    value = DocumentViewMode.Raw.name
-                    size = Size.medium
-
-                    sx {
-                        height = 34.px
-                        color = NamedColor.black
-                        borderWidth = 2.px
-                    }
-
-                    +"Raw"
-                }
+                +"Raw"
             }
         }
     }
@@ -119,7 +112,7 @@ class CustomHeader(
                 size = Size.medium
                 this.disabled = editorModified
 
-                css {
+                sx {
                     height = 34.px
                     color = NamedColor.black
                     borderWidth = 2.px

@@ -7,11 +7,15 @@ import react.State
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
+import tech.kzen.auto.client.objects.document.common.raw.DocumentRaw
+import tech.kzen.auto.client.objects.document.common.raw.DocumentRawState
+import tech.kzen.auto.client.objects.document.common.raw.DocumentViewMode
 import tech.kzen.auto.client.objects.document.common.signature.LogicSignatureEditor
 import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
 import tech.kzen.auto.client.objects.document.script.display.dependency.ScriptDependencyOverlay
 import tech.kzen.auto.client.objects.document.script.display.ScriptStepDisplayPropsCommon
 import tech.kzen.auto.client.objects.document.script.display.StepDisplayManager
+import tech.kzen.auto.client.objects.document.script.model.ScriptGlobal
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
 import tech.kzen.auto.client.objects.document.script.model.ScriptStore
 import tech.kzen.auto.client.objects.document.script.model.ScriptStoreContext
@@ -31,19 +35,22 @@ import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
+import tech.kzen.lib.common.service.parse.NotationParser
 import tech.kzen.lib.common.service.store.MirroredGraphStore
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
+import web.cssom.Display
 import web.cssom.Position
 import web.cssom.em
 import web.cssom.px
 
 
-//-----------------------------------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 external interface ScriptControllerProps: Props {
     var stepDisplayManager: StepDisplayManager.Wrapper
     var scriptCommander: ScriptCommander
     var clientStateGlobal: ClientStateGlobal
     var mirroredGraphStore: MirroredGraphStore
+    var notationParser: NotationParser
     var restClient: ClientRestApi
     var insertionGlobal: InsertionGlobal
     var objectStableMapper: ObjectStableMapper
@@ -59,10 +66,16 @@ external interface ScriptControllerState: State {
     var scriptLoaded: Boolean
     var globalError: String?
     var hasProgress: Boolean
+
+    // Raw-view state. In View mode raw/editorModified are static (no typing), so they don't trigger
+    // extra re-renders; in Raw mode they drive the editor and so are correctly render-consumed.
+    var viewMode: DocumentViewMode
+    var raw: DocumentRawState?
+    var editorModified: Boolean
 }
 
 
-//-----------------------------------------------------------------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------
 class ScriptController:
     RPureComponent<ScriptControllerProps, ScriptControllerState>(),
     ScriptStore.Observer,
@@ -97,6 +110,7 @@ class ScriptController:
         private val ribbonController: RibbonController.Wrapper,
         @Service private val clientStateGlobal: ClientStateGlobal,
         @Service private val mirroredGraphStore: MirroredGraphStore,
+        @Service private val notationParser: NotationParser,
         @Service private val restClient: ClientRestApi,
         @Service private val insertionGlobal: InsertionGlobal,
         @Service private val objectStableMapper: ObjectStableMapper
@@ -108,9 +122,18 @@ class ScriptController:
         }
 
 
+        // Composite header: the shared ribbon (Insert/Modify step actions) plus a View/Raw toggle
+        // floated to the top-right. The toggle reaches the body's store via ScriptGlobal (sibling slot).
         override fun header(): ReactWrapper<Props> {
             return object: ReactWrapper<Props> {
                 override fun ChildrenBuilder.child(block: Props.() -> Unit) {
+                    div {
+                        css {
+                            float = web.cssom.Float.right
+                            display = Display.inlineBlock
+                        }
+                        ScriptViewModeToggle::class.react {}
+                    }
                     ribbonController.child(this) {}
                 }
             }
@@ -125,6 +148,7 @@ class ScriptController:
                         this.scriptCommander = this@Wrapper.scriptCommander
                         this.clientStateGlobal = this@Wrapper.clientStateGlobal
                         this.mirroredGraphStore = this@Wrapper.mirroredGraphStore
+                        this.notationParser = this@Wrapper.notationParser
                         this.restClient = this@Wrapper.restClient
                         this.insertionGlobal = this@Wrapper.insertionGlobal
                         this.objectStableMapper = this@Wrapper.objectStableMapper
@@ -138,9 +162,12 @@ class ScriptController:
 
     //-----------------------------------------------------------------------------------------------------------------
     // NB: lazy so the store is constructed from props (set by React after the no-arg ctor runs the field
-    //     initializers). First access is componentDidMount, by which point props are available; the lazy
-    //     value is computed once, keeping a stable reference for renders and the progress sub-store prop.
-    private val store by lazy { ScriptStore(props.clientStateGlobal, props.restClient) }
+    //     initializers). First access is render() (see the ScriptGlobal wiring there), by which point props
+    //     are available; the lazy value is computed once, keeping a stable reference for renders and the
+    //     progress sub-store prop.
+    private val store by lazy {
+        ScriptStore(props.clientStateGlobal, props.restClient, props.notationParser, props.mirroredGraphStore)
+    }
 
     // NB: stable references for MultiStepDisplay's props so it (RPureComponent) bails out whenever
     //     ScriptController re-renders without the step list changing. A fresh Handle/common per render
@@ -155,6 +182,9 @@ class ScriptController:
         scriptLoaded = false
         globalError = null
         hasProgress = false
+        viewMode = DocumentViewMode.View
+        raw = null
+        editorModified = false
     }
 
 
@@ -181,6 +211,9 @@ class ScriptController:
             this.scriptLoaded = true
             this.globalError = scriptState.globalError
             this.hasProgress = scriptState.progress.hasProgress()
+            this.viewMode = scriptState.viewMode
+            this.raw = scriptState.raw
+            this.editorModified = scriptState.editorModified
         }
     }
 
@@ -200,6 +233,12 @@ class ScriptController:
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
+        // NB: wire ScriptGlobal during the render phase, before the header-slot ScriptViewModeToggle's
+        //     commit-phase componentDidMount reads it. Touching the lazy store here constructs it; runs
+        //     before the early returns so the global is set even on the pre-load render. This is the
+        //     mount-timing hazard the HeaderController NB also guards against.
+        ScriptGlobal.upsertWeak(store)
+
         val clientState = state.clientState
             ?: return
 
@@ -214,6 +253,11 @@ class ScriptController:
         }
 
         if (!state.scriptLoaded) {
+            return
+        }
+
+        if (state.viewMode == DocumentViewMode.Raw) {
+            renderRaw()
             return
         }
 
@@ -249,6 +293,27 @@ class ScriptController:
             }
 
             renderRunController(clientState)
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun ChildrenBuilder.renderRaw() {
+        val raw = state.raw
+            ?: return
+
+        div {
+            css {
+                paddingTop = 1.em
+                marginLeft = 2.em
+                marginRight = 2.em
+            }
+
+            DocumentRaw::class.react {
+                rawStore = store.raw
+                rawState = raw
+                editorModified = state.editorModified
+            }
         }
     }
 

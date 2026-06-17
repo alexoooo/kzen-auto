@@ -1,6 +1,10 @@
 package tech.kzen.auto.client.objects.document.custom.model
 
-import tech.kzen.auto.client.objects.document.custom.raw.CustomRawStore
+import tech.kzen.auto.client.objects.document.common.raw.DocumentRawHost
+import tech.kzen.auto.client.objects.document.common.raw.DocumentRawSnapshot
+import tech.kzen.auto.client.objects.document.common.raw.DocumentRawState
+import tech.kzen.auto.client.objects.document.common.raw.DocumentRawStore
+import tech.kzen.auto.client.objects.document.common.raw.DocumentViewMode
 import tech.kzen.auto.client.objects.document.custom.view.CustomViewStore
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
@@ -13,11 +17,11 @@ import tech.kzen.lib.common.service.store.MirroredGraphStore
 
 class CustomStore(
     val clientStateGlobal: ClientStateGlobal,
-    val mirroredGraphStore: MirroredGraphStore,
-    val notationParser: NotationParser,
+    override val mirroredGraphStore: MirroredGraphStore,
+    override val notationParser: NotationParser,
     val restClient: ClientRestApi,
     val clientRestTaskRepository: ClientRestTaskRepository
-): ClientStateGlobal.Observer {
+): ClientStateGlobal.Observer, DocumentRawHost {
     //-----------------------------------------------------------------------------------------------------------------
     interface Observer {
         fun onCustomState(customState: CustomState)
@@ -29,7 +33,7 @@ class CustomStore(
     private var mounted = false
     private var state: CustomState? = null
 
-    val raw = CustomRawStore(this)
+    val raw = DocumentRawStore(this)
     val view = CustomViewStore(this)
 
 
@@ -82,7 +86,7 @@ class CustomStore(
         val nextState = when {
             previous == null || previous.documentPath != documentPath ->
                 CustomState.initial(
-                    documentPath, serverNotation, notationParser, previous?.viewMode ?: CustomViewMode.View)
+                    documentPath, serverNotation, notationParser, previous?.viewMode ?: DocumentViewMode.View)
 
             previous.serverNotation == serverNotation ->
                 previous
@@ -128,7 +132,20 @@ class CustomStore(
     }
 
 
-    fun setViewMode(viewMode: CustomViewMode) {
+    fun setViewMode(viewMode: DocumentViewMode) {
         update { it.withViewMode(viewMode) }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun rawSnapshot(): DocumentRawSnapshot? {
+        val snapshot = state
+            ?: return null
+        return DocumentRawSnapshot(snapshot.documentPath, snapshot.raw, snapshot.editorModified)
+    }
+
+
+    override fun updateRaw(updater: (DocumentRawState) -> DocumentRawState) {
+        update { it.withRaw(notationParser, updater) }
     }
 }

@@ -1,6 +1,8 @@
 package tech.kzen.auto.client.objects.document.custom.model
 
-import tech.kzen.auto.client.objects.document.custom.raw.CustomRawState
+import tech.kzen.auto.client.objects.document.common.raw.DocumentRawModified
+import tech.kzen.auto.client.objects.document.common.raw.DocumentRawState
+import tech.kzen.auto.client.objects.document.common.raw.DocumentViewMode
 import tech.kzen.auto.client.objects.document.custom.view.CustomViewState
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.common.objects.document.custom.CustomConventions
@@ -12,10 +14,10 @@ import tech.kzen.lib.common.service.parse.NotationParser
 data class CustomState(
     val documentPath: DocumentPath,
     val serverNotation: DocumentObjectNotation,
-    val viewMode: CustomViewMode,
-    val raw: CustomRawState,
+    val viewMode: DocumentViewMode,
+    val raw: DocumentRawState,
     val view: CustomViewState,
-    val cache: CustomStateCache
+    val editorModified: Boolean
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -41,33 +43,31 @@ data class CustomState(
             documentPath: DocumentPath,
             serverNotation: DocumentObjectNotation,
             notationParser: NotationParser,
-            viewMode: CustomViewMode = CustomViewMode.View
+            viewMode: DocumentViewMode = DocumentViewMode.View
         ): CustomState {
             val editorValue = notationParser.unparseDocument(serverNotation, "")
-            val raw = CustomRawState(editorValue = editorValue)
+            val raw = DocumentRawState(editorValue = editorValue)
             return CustomState(
                 documentPath = documentPath,
                 serverNotation = serverNotation,
                 viewMode = viewMode,
                 raw = raw,
                 view = CustomViewState(),
-                cache = CustomStateCache.compute(editorValue, serverNotation, notationParser))
+                editorModified = DocumentRawModified.compute(editorValue, serverNotation, notationParser))
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    val editorModified: Boolean get() = cache.editorModified
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    fun withRaw(notationParser: NotationParser, updater: (CustomRawState) -> CustomRawState): CustomState {
+    fun withRaw(notationParser: NotationParser, updater: (DocumentRawState) -> DocumentRawState): CustomState {
         val updated = updater(raw)
         return if (updated === raw) {
             this
         }
         else if (updated.editorValue != raw.editorValue) {
-            copy(raw = updated, cache = CustomStateCache.compute(updated.editorValue, serverNotation, notationParser))
+            copy(
+                raw = updated,
+                editorModified = DocumentRawModified.compute(updated.editorValue, serverNotation, notationParser))
         }
         else {
             copy(raw = updated)
@@ -86,7 +86,7 @@ data class CustomState(
     }
 
 
-    fun withViewMode(viewMode: CustomViewMode): CustomState {
+    fun withViewMode(viewMode: DocumentViewMode): CustomState {
         return if (viewMode == this.viewMode) {
             this
         }
@@ -106,7 +106,7 @@ data class CustomState(
         else {
             copy(
                 serverNotation = serverNotation,
-                cache = CustomStateCache.compute(raw.editorValue, serverNotation, notationParser))
+                editorModified = DocumentRawModified.compute(raw.editorValue, serverNotation, notationParser))
         }
     }
 
@@ -122,6 +122,6 @@ data class CustomState(
         return copy(
             serverNotation = serverNotation,
             raw = raw.copy(editorValue = editorValue),
-            cache = CustomStateCache.compute(editorValue, serverNotation, notationParser))
+            editorModified = DocumentRawModified.compute(editorValue, serverNotation, notationParser))
     }
 }

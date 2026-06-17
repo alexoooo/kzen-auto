@@ -8,11 +8,11 @@ import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
+import tech.kzen.auto.client.objects.document.common.raw.DocumentRaw
+import tech.kzen.auto.client.objects.document.common.raw.DocumentViewMode
 import tech.kzen.auto.client.objects.document.custom.model.CustomGlobal
 import tech.kzen.auto.client.objects.document.custom.model.CustomState
 import tech.kzen.auto.client.objects.document.custom.model.CustomStore
-import tech.kzen.auto.client.objects.document.custom.model.CustomViewMode
-import tech.kzen.auto.client.objects.document.custom.raw.CustomRaw
 import tech.kzen.auto.client.objects.document.custom.view.CustomView
 import tech.kzen.auto.client.objects.document.custom.view.CustomViewModel
 import tech.kzen.auto.client.service.global.ClientStateGlobal
@@ -158,14 +158,14 @@ class CustomController(
             }
 
             when (customState.viewMode) {
-                CustomViewMode.Raw ->
-                    CustomRaw::class.react {
+                DocumentViewMode.Raw ->
+                    DocumentRaw::class.react {
                         rawStore = store.raw
                         rawState = customState.raw
                         editorModified = customState.editorModified
                     }
 
-                CustomViewMode.View ->
+                DocumentViewMode.View ->
                     CustomView::class.react {
                         this.customState = customState
                         this.customViewModel = state.customViewModel
