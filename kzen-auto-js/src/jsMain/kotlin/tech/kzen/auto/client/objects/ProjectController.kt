@@ -36,6 +36,7 @@ import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.common.service.store.MirroredGraphStore
 import web.cssom.*
 import web.html.HTMLElement
+import web.resize.ResizeObserver
 import kotlin.time.Duration.Companion.milliseconds
 
 
@@ -101,6 +102,8 @@ class ProjectController(
 
     //-----------------------------------------------------------------------------------------------------------------
     private var headerElement: RefObject<HTMLElement> = createRef()
+    private var headerResizeObserver: ResizeObserver? = null
+    private var observedHeaderElement: HTMLElement? = null
 
     private val headerModelBuilder = HeaderModel.Builder()
     private val sidebarModelBuilder = SidebarModel.Builder(props.archetypeLocations)
@@ -194,6 +197,7 @@ class ProjectController(
         }
 
         window.addEventListener("resize", handleResize)
+        attachHeaderResizeObserver()
     }
 
 
@@ -201,7 +205,11 @@ class ProjectController(
         props.mirroredGraphStore.unobserve(this)
         props.navigationGlobal.unobserve(this)
 
-        window.addEventListener("resize", handleResize)
+        // NB: was addEventListener (copy-paste slip) — that re-added the handler on unmount and leaked it.
+        window.removeEventListener("resize", handleResize)
+        headerResizeObserver?.disconnect()
+        headerResizeObserver = null
+        observedHeaderElement = null
     }
 
 
@@ -210,6 +218,10 @@ class ProjectController(
         prevState: ProjectControllerState,
         snapshot: Any
     ) {
+        // NB: the header element first attaches once graphNotation loads (render shows "Loading..." until
+        //     then), and React can swap it on later renders — (re)bind the observer whenever it changes.
+        attachHeaderResizeObserver()
+
         val height = headerElement.current?.clientHeight ?: 0
 
         if (height != prevState.headerHeight) {
@@ -217,6 +229,30 @@ class ProjectController(
                 headerHeight = height
             }
         }
+    }
+
+
+    // Observe the header's own height directly. The header grows/shrinks independently of this component —
+    // switching ribbon tabs or entering/leaving Raw view changes which (and how many rows of) insertion-tool
+    // buttons the ribbon shows. Those changes re-render the ribbon, not ProjectController, so componentDidUpdate
+    // alone leaves headerHeight (the body's marginTop) stale and the body overlaps/gaps under the fixed header.
+    private fun attachHeaderResizeObserver() {
+        val element = headerElement.current
+        if (element === observedHeaderElement) {
+            return
+        }
+
+        headerResizeObserver?.disconnect()
+        observedHeaderElement = element
+
+        if (element == null) {
+            headerResizeObserver = null
+            return
+        }
+
+        val observer = ResizeObserver { _, _ -> handleResize(null) }
+        observer.observe(element)
+        headerResizeObserver = observer
     }
 
 

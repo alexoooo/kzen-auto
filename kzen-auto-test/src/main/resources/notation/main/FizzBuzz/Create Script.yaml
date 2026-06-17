@@ -1,0 +1,20 @@
+main:
+  is: Script
+
+'main.steps/Click "Project"':
+  is: BrowserClickStep
+  target:
+    type: Text
+    value: Project
+
+'main.steps/Click "Project options..." button':
+  is: BrowserClickStep
+  target:
+    type: Xpath
+    value: "//button[@title='Project options...']"
+
+'main.steps/Click "New Script..." menu option':
+  is: BrowserClickStep
+  target:
+    type: Text
+    value: New Script...

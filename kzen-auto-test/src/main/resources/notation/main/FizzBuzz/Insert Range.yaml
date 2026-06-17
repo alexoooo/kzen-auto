@@ -1,0 +1,44 @@
+main:
+  is: Script
+
+main.steps/Pause:
+  is: PauseStep
+
+'main.steps/Click "Number range" ribbon tool':
+  is: BrowserClickStep
+  target:
+    type: Text
+    value: Number range
+
+"main.steps/Click [add] target in script":
+  is: BrowserClickStep
+  target:
+    value: "main/Features/Plus Circle/~main.yaml#main"
+    type: Visual
+
+"main.steps/Click [Expand]":
+  is: BrowserClickStep
+  target:
+    type: Xpath
+    value: "//button[@title='Expand']"
+
+'main.steps/Append "0"':
+  is: BrowserWriteStep
+  target:
+    type: Xpath
+    value: "//label[text()='To']/..//input"
+  text: 0
+
+"main.steps/Click [Rename]":
+  is: BrowserClickStep
+  target:
+    type: Xpath
+    value: "//button[@title='Rename']"
+
+'main.steps/Set name = "Range"':
+  is: BrowserWriteStep
+  text: Range
+  overwrite: true
+
+main.steps/Enter:
+  is: BrowserEnterStep

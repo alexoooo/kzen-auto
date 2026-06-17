@@ -204,6 +204,7 @@ RunStep:
       is: ObjectLocation
       by: Nominal
       editor: SelectLogicEditor
+      summary: TextAttributeView
     arguments:
       is: Map
       of:

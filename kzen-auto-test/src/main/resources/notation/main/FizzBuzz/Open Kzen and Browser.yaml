@@ -1,0 +1,17 @@
+main:
+  is: Script
+
+main.steps/Start SUT:
+  is: StartKzenAutoStep
+  name: main
+  fixture: fixtures/empty-project
+  port: 18082
+
+main.steps/Open Browser:
+  is: BrowserOpenStep
+  closePolicy: manual
+
+main.steps/Navigate:
+  is: BrowserGetStep
+  location: "http://127.0.0.1:18082/"
+  screenshotDelayMilliseconds: 1000

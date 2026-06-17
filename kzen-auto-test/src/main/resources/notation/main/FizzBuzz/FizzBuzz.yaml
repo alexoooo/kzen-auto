@@ -1,0 +1,18 @@
+main:
+  is: Script
+
+main.steps/Open Kzen and Browser:
+  is: RunStep
+  instructions: "main/FizzBuzz/Open Kzen and Browser.yaml#main"
+
+main.steps/Create Script:
+  is: RunStep
+  instructions: "main/FizzBuzz/Create Script.yaml#main"
+
+main.steps/Insert Range:
+  is: RunStep
+  instructions: "main/FizzBuzz/Insert Range.yaml#main"
+
+main.steps/Close Browser and Kzen:
+  is: RunStep
+  instructions: "main/FizzBuzz/Close Browser and Kzen.yaml#main"
