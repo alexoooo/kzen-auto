@@ -98,6 +98,13 @@ data class ScriptState(
     }
 
 
+    // The sub-script step whose frame this RunStep's right-of-step preview should show (null = the
+    // latest/representative frame). Driven by hovering a strip thumbnail; see ScriptStepStore.
+    fun hoveredScreenshot(objectLocation: ObjectLocation): ObjectLocation? {
+        return steps[objectLocation]?.hoveredScreenshot
+    }
+
+
     // Thin plumbing (mirrors withValidation): ScriptStepStore owns the step-state management and
     // passes the new map in. No globalError reset — step UI is unrelated to errors.
     fun withSteps(

@@ -1,0 +1,22 @@
+main:
+  is: Script
+
+main.steps/Click:
+  is: BrowserClickStep
+  target:
+    type: Xpath
+    value: "//label[text()='Parameters (one per line)']/..//textarea"
+
+main.steps/Write:
+  is: BrowserWriteStep
+  text: number
+
+main.steps/Click 2:
+  is: BrowserClickStep
+  target:
+    type: Text
+    value: Argument
+
+main.steps/Run:
+  is: RunStep
+  instructions: "main/Actions/Insert Last.yaml#main"

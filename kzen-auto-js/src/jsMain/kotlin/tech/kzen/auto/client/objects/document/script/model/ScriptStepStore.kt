@@ -9,12 +9,25 @@ import tech.kzen.lib.common.model.location.ObjectLocation
 // StepImageThumbnail via the existing onScriptState channel.
 class ScriptStepStore(private val store: ScriptStore) {
     fun setExpanded(objectLocation: ObjectLocation, expanded: Boolean) {
+        update(objectLocation) { it.copy(expanded = expanded) }
+    }
+
+
+    // hoveredScreenshot is the sub-script step whose frame the RunStep's right-of-step preview shows
+    // (null on mouse-leave → revert to the latest frame). Pure synchronous toggle like setExpanded;
+    // the publish drives the RunStep's sibling StepImageThumbnail via the onScriptState channel.
+    fun setHoveredScreenshot(runStepLocation: ObjectLocation, subStepLocation: ObjectLocation?) {
+        update(runStepLocation) { it.copy(hoveredScreenshot = subStepLocation) }
+    }
+
+
+    private fun update(objectLocation: ObjectLocation, updater: (ScriptStepState) -> ScriptStepState) {
         store.update { state ->
             state.withSteps { steps ->
-                // copy() preserves any future ScriptStepState fields; pruning entries equal to the
+                // copy() preserves any other ScriptStepState fields; pruning entries equal to the
                 // default keeps `steps` holding only non-default steps, so it never accumulates
-                // orphans as steps are collapsed or edited away.
-                val updated = (steps[objectLocation] ?: ScriptStepState()).copy(expanded = expanded)
+                // orphans as steps are collapsed, un-hovered, or edited away.
+                val updated = updater(steps[objectLocation] ?: ScriptStepState())
                 if (updated == ScriptStepState()) {
                     steps - objectLocation
                 }

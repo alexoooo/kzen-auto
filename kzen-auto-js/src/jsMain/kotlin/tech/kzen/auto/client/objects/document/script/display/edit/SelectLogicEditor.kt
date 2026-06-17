@@ -2,15 +2,19 @@ package tech.kzen.auto.client.objects.document.script.display.edit
 
 import emotion.react.css
 import js.objects.unsafeJso
+import mui.material.IconButton
 import mui.material.InputLabel
 import react.ChildrenBuilder
 import react.State
+import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorProps
 import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
 import tech.kzen.auto.client.service.global.ClientStateGlobal
+import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RComponent
+import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.select.ReactSelectOption
 import tech.kzen.auto.client.wrap.select.reactSelectField
@@ -34,10 +38,19 @@ import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.common.service.store.MirroredGraphStore
+import web.cssom.AlignItems
+import web.cssom.Display
 import web.cssom.em
+import web.cssom.number
+import web.cssom.px
 
 
 //---------------------------------------------------------------------------------------------------------------------
+external interface SelectLogicEditorProps: AttributeEditorProps {
+    var navigationGlobal: NavigationGlobal
+}
+
+
 external interface SelectLogicEditorState: State {
     var value: ObjectLocation?
     var renaming: Boolean
@@ -50,9 +63,9 @@ external interface SelectLogicEditorState: State {
 // TODO: convert to RPureComponent
 @Suppress("unused")
 class SelectLogicEditor(
-    props: AttributeEditorProps
+    props: SelectLogicEditorProps
 ):
-    RComponent<AttributeEditorProps, SelectLogicEditorState>(props),
+    RComponent<SelectLogicEditorProps, SelectLogicEditorState>(props),
     LocalGraphStore.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -60,7 +73,8 @@ class SelectLogicEditor(
     class Wrapper(
         objectLocation: ObjectLocation,
         @Service private val clientStateGlobal: ClientStateGlobal,
-        @Service private val mirroredGraphStore: MirroredGraphStore
+        @Service private val mirroredGraphStore: MirroredGraphStore,
+        @Service private val navigationGlobal: NavigationGlobal
     ):
         AttributeEditor(objectLocation)
     {
@@ -68,6 +82,7 @@ class SelectLogicEditor(
             SelectLogicEditor::class.react {
                 clientStateGlobal = this@Wrapper.clientStateGlobal
                 mirroredGraphStore = this@Wrapper.mirroredGraphStore
+                navigationGlobal = this@Wrapper.navigationGlobal
                 block()
             }
         }
@@ -75,7 +90,7 @@ class SelectLogicEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun SelectLogicEditorState.init(props: AttributeEditorProps) {
+    override fun SelectLogicEditorState.init(props: SelectLogicEditorProps) {
         val graphStructure = props.clientStateGlobal.current()!!.graphStructure()
         val graphNotation = graphStructure.graphNotation
         val graphMetadata = graphStructure.graphMetadata
@@ -126,7 +141,7 @@ class SelectLogicEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidUpdate(
-        prevProps: AttributeEditorProps,
+        prevProps: SelectLogicEditorProps,
         prevState: SelectLogicEditorState,
         snapshot: Any
     ) {
@@ -208,6 +223,13 @@ class SelectLogicEditor(
     }
 
 
+    private fun onNavigateToSelected() {
+        val value = state.value
+            ?: return
+        props.navigationGlobal.goto(value.documentPath)
+    }
+
+
     private fun editAttributeCommandAsync() {
         async {
             editAttributeCommand()
@@ -248,10 +270,43 @@ class SelectLogicEditor(
 
             +formattedLabel()
 
-            reactSelectField(
-                selectedOption = selectOptions.find { it.value == state.value?.asString() },
-                options = selectOptions,
-                onSelect = { onValueChange(ObjectLocation.parse(it.value)) })
+            div {
+                css {
+                    display = Display.flex
+                    alignItems = AlignItems.center
+                }
+
+                // The select grows; minWidth 0 lets it shrink so the launch button never overflows.
+                div {
+                    css {
+                        flexGrow = number(1.0)
+                        minWidth = 0.px
+                    }
+
+                    reactSelectField(
+                        selectedOption = selectOptions.find { it.value == state.value?.asString() },
+                        options = selectOptions,
+                        onSelect = { onValueChange(ObjectLocation.parse(it.value)) })
+                }
+
+                IconButton {
+                    css {
+                        marginLeft = 0.25.em
+                    }
+                    title = "Open the selected script"
+                    disabled = state.value == null
+
+                    onClick = {
+                        onNavigateToSelected()
+                    }
+
+                    icon("material-symbols:open-in-new") {
+                        style = unsafeJso {
+                            fontSize = 1.25.em
+                        }
+                    }
+                }
+            }
         }
     }
 

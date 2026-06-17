@@ -11,9 +11,13 @@ import tech.kzen.auto.client.objects.document.script.display.ScriptStepDisplayDe
 import tech.kzen.auto.client.objects.document.script.display.ScriptStepDisplayProps
 import tech.kzen.auto.client.objects.document.script.display.ScriptStepDisplayWrapper
 import tech.kzen.auto.client.objects.document.script.display.image.StepImageThumbnail
+import tech.kzen.auto.client.objects.document.script.model.ScriptStore
+import tech.kzen.auto.client.objects.document.script.model.ScriptStoreContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.client.wrap.contextValue
+import tech.kzen.auto.client.wrap.installContextType
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.script.model.RunStepInstructions
@@ -84,6 +88,14 @@ class RunStepDisplay(
                 block()
             }
         }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    init {
+        // Reach the ScriptStore (its stepStore) so strip-thumbnail hovers can set this RunStep's
+        // preview override — the same context the sibling StepImageThumbnail reads.
+        installContextType(ScriptStoreContext)
     }
 
 
@@ -174,6 +186,15 @@ class RunStepDisplay(
                     objectLocation = subStepLocation
                     objectStableMapper = props.objectStableMapper
                     clientStateGlobal = props.clientStateGlobal
+
+                    // Delegate the preview: hovering a strip thumbnail sets this RunStep's preview
+                    // override (the frame the right-of-step thumbnail shows); null on leave reverts
+                    // it to the latest frame.
+                    onPreviewHover = { hoveredLocation ->
+                        contextValue<ScriptStore?>()
+                            ?.stepStore
+                            ?.setHoveredScreenshot(props.common.objectLocation, hoveredLocation)
+                    }
                 }
             }
         }

@@ -10,7 +10,7 @@ main:
 "main.steps/Click [add] target in script":
   is: BrowserClickStep
   target:
-    value: "main/Features/Plus Circle/~main.yaml#main"
+    value: "main/Actions/Plus Circle/~main.yaml#main"
     type: Visual
 
 "main.steps/Click [Expand]":

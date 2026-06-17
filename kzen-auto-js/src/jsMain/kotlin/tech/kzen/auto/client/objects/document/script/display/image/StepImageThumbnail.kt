@@ -2,7 +2,6 @@ package tech.kzen.auto.client.objects.document.script.display.image
 
 import emotion.react.css
 import kotlinx.browser.window
-import org.w3c.dom.events.Event
 import react.ChildrenBuilder
 import react.Props
 import react.RefObject
@@ -33,6 +32,12 @@ external interface StepImageThumbnailProps: Props {
     var objectLocation: ObjectLocation
     var objectStableMapper: ObjectStableMapper
     var clientStateGlobal: ClientStateGlobal
+
+    // Optional preview-delegation hook. When set (strip usage inside a RunStep), this thumbnail does
+    // NOT render its own floating preview; instead it reports the hovered screenshot location (null on
+    // leave) so a host — the RunStep's right-of-step thumbnail — shows it. NB: plain (non-receiver)
+    // function type; receiver function types are prohibited in external declarations.
+    var onPreviewHover: ((ObjectLocation?) -> Unit)?
 }
 
 
@@ -42,6 +47,11 @@ external interface StepImageThumbnailState: State {
     // The location whose screenshot is shown — usually props.objectLocation, but for a RunStep it
     // redirects to the last screenshot-bearing step of its sub-script. Drives the full-screen target.
     var resolvedLocation: ObjectLocation?
+
+    // For a RunStep only: the frame a hovered strip thumbnail is requesting (via ScriptState). When
+    // non-null it overrides what the floating preview shows — the small thumbnail keeps showing
+    // `screenshot` (the latest), only the large preview tracks the hover.
+    var previewScreenshot: BinaryExecutionValue?
 
     var hovered: Boolean
     var expanded: Boolean
@@ -86,11 +96,13 @@ class StepImageThumbnail(
     //-----------------------------------------------------------------------------------------------------------------
     private val imgRef: RefObject<HTMLImageElement> = createRef()
 
-    // NB: stable handler reference so add/removeEventListener pair up. Active only while a preview is
-    //     persistently shown (its step expanded) — keeps it glued to the thumbnail as the page or
-    //     step-list scrolls/resizes (a fixed-positioned overlay otherwise detaches on scroll).
-    private val onViewportChange: (Event?) -> Unit = { recomputeFloatingPosition() }
-    private var viewportListenersAttached = false
+    // A persistent (expanded) preview is position:fixed, anchored to the thumbnail's viewport rect.
+    // While it's shown, re-measure that rect every animation frame so the preview follows the thumbnail
+    // through ANY layout shift — page/panel scroll, window resize, AND reflows that fire no scroll or
+    // resize event (notably the sidebar collapsing/expanding, which slides the thumbnail sideways).
+    // recomputeFloatingPosition is guarded, so an idle frame costs one getBoundingClientRect and no
+    // setState. Active only while expanded (the only time the preview is persistent).
+    private var positionLoopActive = false
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -112,7 +124,13 @@ class StepImageThumbnail(
     override fun componentWillUnmount() {
         val scriptStore = contextValue<ScriptStore?>()
         scriptStore?.unobserve(this)
-        detachViewportListeners()
+        stopPositionLoop()
+
+        // Strip thumbnail removed mid-hover (e.g. the RunStep collapsed) → clear the host's override
+        // so it doesn't strand a stale frame in the preview on re-expand.
+        if (state.hovered) {
+            props.onPreviewHover?.invoke(null)
+        }
     }
 
 
@@ -134,6 +152,7 @@ class StepImageThumbnail(
     override fun StepImageThumbnailState.init(props: StepImageThumbnailProps) {
         screenshot = null
         resolvedLocation = null
+        previewScreenshot = null
         hovered = false
         expanded = false
         floatingTop = 0.0
@@ -167,21 +186,28 @@ class StepImageThumbnail(
         // redirected screenshot location.
         val nextExpanded = scriptState.isStepExpanded(props.objectLocation)
 
+        // For a RunStep, a hovered strip thumbnail requests a specific frame via ScriptState; show it
+        // in the floating preview only. Always null for non-RunSteps (nobody sets their key).
+        val hoveredLocation = scriptState.hoveredScreenshot(props.objectLocation)
+        val nextPreviewScreenshot = hoveredLocation
+            ?.let { computeStepTraceInfo(scriptState, it, props.objectStableMapper).trace?.detail as? BinaryExecutionValue }
+
         val screenshotChanged = state.screenshot !== nextScreenshot
         val expandedChanged = state.expanded != nextExpanded
         val resolvedChanged = state.resolvedLocation != resolvedLocation
-        if (!screenshotChanged && !expandedChanged && !resolvedChanged) {
+        val previewChanged = state.previewScreenshot !== nextPreviewScreenshot
+        if (!screenshotChanged && !expandedChanged && !resolvedChanged && !previewChanged) {
             return
         }
 
-        // Keep the persistent (expanded) preview glued to its thumbnail across scroll/resize only
-        // while expanded — attach on the false→true transition, detach on true→false.
+        // Keep the persistent (expanded) preview glued to its thumbnail — run the per-frame position
+        // tracker only while expanded (start on the false→true transition, stop on true→false).
         if (expandedChanged) {
             if (nextExpanded) {
-                attachViewportListeners()
+                startPositionLoop()
             }
             else {
-                detachViewportListeners()
+                stopPositionLoop()
             }
         }
 
@@ -189,30 +215,34 @@ class StepImageThumbnail(
             this.screenshot = nextScreenshot
             this.expanded = nextExpanded
             this.resolvedLocation = resolvedLocation
+            this.previewScreenshot = nextPreviewScreenshot
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun attachViewportListeners() {
-        if (viewportListenersAttached) {
+    private fun startPositionLoop() {
+        if (positionLoopActive) {
             return
         }
-        viewportListenersAttached = true
-        // NB: capture phase ("scroll" doesn't bubble) so scrolling the inner step-list panel — not
-        //     just the window — repositions the preview.
-        window.addEventListener("scroll", onViewportChange, true)
-        window.addEventListener("resize", onViewportChange)
+        positionLoopActive = true
+        schedulePositionFrame()
     }
 
 
-    private fun detachViewportListeners() {
-        if (!viewportListenersAttached) {
-            return
+    private fun stopPositionLoop() {
+        positionLoopActive = false
+    }
+
+
+    private fun schedulePositionFrame() {
+        window.requestAnimationFrame {
+            if (!positionLoopActive) {
+                return@requestAnimationFrame
+            }
+            recomputeFloatingPosition()
+            schedulePositionFrame()
         }
-        viewportListenersAttached = false
-        window.removeEventListener("scroll", onViewportChange, true)
-        window.removeEventListener("resize", onViewportChange)
     }
 
 
@@ -235,6 +265,17 @@ class StepImageThumbnail(
 
 
     private fun onThumbnailEnter() {
+        val onPreviewHover = props.onPreviewHover
+        if (onPreviewHover != null) {
+            // Strip usage: no own floating preview — hand the host the frame to show, and keep the
+            // border highlight. No position computation (the host owns the preview placement).
+            onPreviewHover(state.resolvedLocation ?: props.objectLocation)
+            if (!state.hovered) {
+                setState { hovered = true }
+            }
+            return
+        }
+
         val (left, top) = floatingPosition()
             ?: return
 
@@ -251,6 +292,8 @@ class StepImageThumbnail(
             setState {
                 hovered = false
             }
+            // Strip usage: drop the host's override so the preview reverts to the latest frame.
+            props.onPreviewHover?.invoke(null)
         }
     }
 
@@ -315,10 +358,14 @@ class StepImageThumbnail(
 
         renderThumbnail(screenshotPngUrl)
 
-        // Floating preview shows on hover AND while the step is expanded (a persistent "as if
-        // hovered" view to the right; expansion arrives via onScriptState).
-        if (state.hovered || state.expanded) {
-            renderFloatingPreview(screenshotPngUrl)
+        // Strip usage delegates its preview to the host (the RunStep's right-of-step thumbnail), so it
+        // renders no floating preview of its own. Otherwise the floating preview shows on hover AND
+        // while the step is expanded (a persistent "as if hovered" view to the right; expansion
+        // arrives via onScriptState). A hovered strip thumbnail overrides the shown frame via
+        // previewScreenshot; the small thumbnail stays on the latest (screenshot).
+        if (props.onPreviewHover == null && (state.hovered || state.expanded)) {
+            val previewPngUrl = state.previewScreenshot?.let { pngUrl(it) } ?: screenshotPngUrl
+            renderFloatingPreview(previewPngUrl)
         }
 
         if (state.fullscreenOpen) {

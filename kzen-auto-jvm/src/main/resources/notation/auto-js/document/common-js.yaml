@@ -49,6 +49,11 @@ TextAttributeView:
   class: tech.kzen.auto.client.objects.document.common.attribute.TextAttributeView$Wrapper
 
 
+ReferenceLinkAttributeView:
+  is: AttributeView
+  class: tech.kzen.auto.client.objects.document.common.attribute.ReferenceLinkAttributeView$Wrapper
+
+
 ################################################################
 
 

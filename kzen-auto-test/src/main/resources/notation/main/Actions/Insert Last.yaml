@@ -1,0 +1,8 @@
+main:
+  is: Script
+
+'main.steps/Click last "Insert step here"':
+  is: BrowserClickStep
+  target:
+    type: Xpath
+    value: "(//button[@title='Insert step here'])[last()]"

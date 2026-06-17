@@ -22,8 +22,8 @@ main.steps/Click 3:
 main.steps/Click 4:
   is: BrowserClickStep
   target:
+    value: "main/FizzBuzz/Select/~main.yaml#main"
     type: Visual
-    value: "main/Features/Select/~main.yaml#main"
 
 main.steps/Write:
   is: BrowserWriteStep
