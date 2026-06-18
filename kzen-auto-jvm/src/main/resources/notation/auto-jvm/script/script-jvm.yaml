@@ -398,6 +398,22 @@ BrowserClickStep:
     selfLocation: SelfLocation
 
 
+BrowserReadStep:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.server.objects.script.step.browser.BrowserReadStep
+  icon: "material-symbols:text-fields"
+  title: "Read"
+  description: "Read the visible text of a target element"
+  target:
+    type: Focus
+  meta:
+    target:
+      is: TargetSpec
+      summary: TargetAttributeView
+    selfLocation: SelfLocation
+
+
 BrowserWriteStep:
   abstract: true
   is: ScriptStep

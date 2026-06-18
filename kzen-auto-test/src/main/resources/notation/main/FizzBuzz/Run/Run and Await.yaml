@@ -22,3 +22,9 @@ main.steps/Loop.steps/Escape:
 
 main.steps/Loop.item/Item:
   is: MappingItemBinding
+
+main.steps/Read Display:
+  is: BrowserReadStep
+  target:
+    type: Xpath
+    value: "(//div[@title='Detail'])[last()]"

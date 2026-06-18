@@ -20,6 +20,10 @@ kotlin {
 dependencies {
     implementation(kotlin("reflect"))
     implementation(project(":kzen-auto-jvm"))
+    // Harness reads back logic-trace values over REST (TesterClient), so it needs the shared
+    // wire/convention types (CommonRestApi, LogicConventions, StepTrace). kzen-auto-jvm depends on
+    // kzen-auto-common via `implementation`, so it isn't exposed transitively — declare it directly.
+    implementation(project(":kzen-auto-common"))
     implementation("tech.kzen.lib:kzen-lib-common-jvm:$kzenLibVersion")
     implementation("tech.kzen.lib:kzen-lib-jvm:$kzenLibVersion")
 

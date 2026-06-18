@@ -8,6 +8,20 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.jackson.*
 import kotlinx.coroutines.runBlocking
+import tech.kzen.auto.common.api.CommonRestApi
+import tech.kzen.auto.common.objects.document.script.model.StepTrace
+import tech.kzen.auto.common.paradigm.logic.LogicConventions
+import tech.kzen.lib.common.exec.ExecutionFailure
+import tech.kzen.lib.common.exec.ExecutionResult
+import tech.kzen.lib.common.exec.ExecutionSuccess
+import tech.kzen.lib.common.exec.TextExecutionValue
+import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
+import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceQuery
+import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceSnapshot
+import tech.kzen.lib.common.model.document.DocumentPath
+import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.model.obj.ObjectPath
+import tech.kzen.lib.common.service.store.normal.ObjectStableId
 import tools.jackson.databind.ObjectMapper
 import tools.jackson.databind.json.JsonMapper
 import tools.jackson.module.kotlin.kotlinModule
@@ -91,6 +105,73 @@ class TesterClient(testerPort: Int):
         }
         @Suppress("UNCHECKED_CAST")
         mapper.readValue(body, Map::class.java) as Map<String, Any?>
+    }
+
+
+    /**
+     * Read the display value a step traced during the most recent run, via the `LogicTraceEndpoint`
+     * detached action (same surface the browser UI uses). [documentPath] is the sub-script the step
+     * lives in (its `#main` root is a logic execution root); [objectPath] is the step within it.
+     *
+     * No-rename run ⇒ a step's stable id equals its `ObjectLocation.asString()` (see ObjectStableMapper),
+     * so the step's trace path is reconstructable here without the server's stable-id mapper.
+     */
+    fun readDisplayedValue(documentPath: String, objectPath: String): String {
+        val subScriptRoot = ObjectLocation(DocumentPath.parse(documentPath), ObjectPath.parse("main"))
+
+        val mostRecent = detached(
+            CommonRestApi.paramAction to LogicConventions.actionMostRecent,
+            LogicConventions.paramSubDocumentPath to subScriptRoot.documentPath.asString(),
+            LogicConventions.paramSubObjectPath to subScriptRoot.objectPath.asString())
+        check(mostRecent is ExecutionSuccess) {
+            "mostRecent failed: ${(mostRecent as? ExecutionFailure)?.errorMessage}"
+        }
+        @Suppress("UNCHECKED_CAST")
+        val runExecutionCollection = mostRecent.value.get() as? Map<String, String>
+            ?: error("no run found for $documentPath#main")
+        val runId = LogicConventions.runExecutionFromCollection(runExecutionCollection).logicRunId
+
+        val stepLocation = ObjectLocation(DocumentPath.parse(documentPath), ObjectPath.parse(objectPath))
+        val stepTracePath = LogicTracePath.ofObjectStableId(ObjectStableId(stepLocation.asString()))
+
+        val lookup = detached(
+            CommonRestApi.paramAction to LogicConventions.actionLookupRun,
+            CommonRestApi.paramRunId to runId.value,
+            LogicConventions.paramQuery to LogicTraceQuery(stepTracePath).asString())
+        check(lookup is ExecutionSuccess) {
+            "lookupRun failed: ${(lookup as? ExecutionFailure)?.errorMessage}"
+        }
+        @Suppress("UNCHECKED_CAST")
+        val snapshotCollection = lookup.value.get() as Map<String, Map<String, Any>>
+        val snapshot = LogicTraceSnapshot.ofCollection(snapshotCollection)
+
+        val entry = snapshot.values.values.singleOrNull()
+            ?: error("expected exactly one trace entry for $objectPath, got: ${snapshot.values.keys}")
+
+        val displayValue = StepTrace.ofExecutionValue(entry.value).displayValue
+        check(displayValue is TextExecutionValue) {
+            "expected a text display value for $objectPath, got: $displayValue"
+        }
+        return displayValue.value
+    }
+
+
+    private fun detached(vararg params: Pair<String, String>): ExecutionResult = runBlocking {
+        val endpoint = LogicConventions.logicTraceEndpointLocation
+        val response = http.get("$baseUrl${CommonRestApi.actionDetached}") {
+            parameter(CommonRestApi.paramDocumentPath, endpoint.documentPath.asString())
+            parameter(CommonRestApi.paramObjectPath, endpoint.objectPath.asString())
+            for ((key, value) in params) {
+                parameter(key, value)
+            }
+        }
+        val body = response.bodyAsText()
+        check(response.status == HttpStatusCode.OK) {
+            "detached failed (${response.status}): $body"
+        }
+        @Suppress("UNCHECKED_CAST")
+        val collection = mapper.readValue(body, Map::class.java) as Map<String, Any?>
+        ExecutionResult.fromJsonCollection(collection)
     }
 
 
