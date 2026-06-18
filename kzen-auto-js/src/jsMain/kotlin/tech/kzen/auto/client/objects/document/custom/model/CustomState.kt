@@ -3,6 +3,7 @@ package tech.kzen.auto.client.objects.document.custom.model
 import tech.kzen.auto.client.objects.document.common.raw.DocumentRawModified
 import tech.kzen.auto.client.objects.document.common.raw.DocumentRawState
 import tech.kzen.auto.client.objects.document.common.raw.DocumentViewMode
+import tech.kzen.auto.client.objects.document.common.raw.unparseDocumentForRawEditor
 import tech.kzen.auto.client.objects.document.custom.view.CustomViewState
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.common.objects.document.custom.CustomConventions
@@ -45,7 +46,7 @@ data class CustomState(
             notationParser: NotationParser,
             viewMode: DocumentViewMode = DocumentViewMode.View
         ): CustomState {
-            val editorValue = notationParser.unparseDocument(serverNotation, "")
+            val editorValue = notationParser.unparseDocumentForRawEditor(serverNotation)
             val raw = DocumentRawState(editorValue = editorValue)
             return CustomState(
                 documentPath = documentPath,

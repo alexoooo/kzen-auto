@@ -13,17 +13,15 @@ main.steps/Click 2:
     type: Text
     value: Loop
 
+main.steps/Run:
+  is: RunStep
+  instructions: "main/Actions/Insert Last.yaml#main"
+
 main.steps/Click 3:
   is: BrowserClickStep
   target:
-    type: Xpath
-    value: "(//button[@title='Insert step here'])[last()]"
-
-main.steps/Click 4:
-  is: BrowserClickStep
-  target:
-    value: "main/FizzBuzz/Select/~main.yaml#main"
     type: Visual
+    value: "main/Actions/Select placeholder/~main.yaml#main"
 
 main.steps/Write:
   is: BrowserWriteStep

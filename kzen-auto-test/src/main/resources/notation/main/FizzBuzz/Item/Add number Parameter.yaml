@@ -5,7 +5,7 @@ main.steps/Click:
   is: BrowserClickStep
   target:
     type: Xpath
-    value: "//label[text()='Parameters (one per line)']/..//textarea"
+    value: "//input[@placeholder='new parameter name']"
 
 main.steps/Write:
   is: BrowserWriteStep
@@ -15,8 +15,17 @@ main.steps/Click 2:
   is: BrowserClickStep
   target:
     type: Text
-    value: Argument
+    value: Add parameter
 
-main.steps/Run:
-  is: RunStep
-  instructions: "main/Actions/Insert Last.yaml#main"
+main.steps/Click 3:
+  is: BrowserClickStep
+  target:
+    type: Visual
+    value: "main/Actions/Any Selection/~main.yaml#main"
+
+main.steps/Write 2:
+  is: BrowserWriteStep
+  text: Int
+
+main.steps/Enter:
+  is: BrowserEnterStep

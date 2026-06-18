@@ -13,6 +13,10 @@ main.steps/Build Loop:
   is: RunStep
   instructions: "main/FizzBuzz/Loop/Build Loop.yaml#main"
 
+main.steps/Run:
+  is: RunStep
+  instructions: "main/FizzBuzz/Run/Run and Await.yaml#main"
+
 main.steps/Close Browser and Kzen:
   is: RunStep
   instructions: "main/FizzBuzz/Close Browser and Kzen.yaml#main"

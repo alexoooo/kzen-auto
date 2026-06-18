@@ -1,0 +1,28 @@
+main:
+  is: Script
+
+main.steps/Click:
+  is: BrowserClickStep
+  target:
+    type: Text
+    value: Formula
+
+main.steps/Run:
+  is: RunStep
+  instructions: "main/Actions/Insert Last.yaml#main"
+
+main.steps/Click 2:
+  is: BrowserClickStep
+  target:
+    type: Xpath
+    value: "//button[@title='Expand']"
+
+main.steps/Click 3:
+  is: BrowserClickStep
+  target:
+    type: Xpath
+    value: "//label[text()='Code']/..//textarea"
+
+main.steps/Write:
+  is: BrowserWriteStep
+  text: 'if (number % 3 == 0 && number % 5 == 0) "fizzbuzz"\nelse if (number % 3 == 0) "fizz"\nelse if (number % 5 == 0) "buzz"\nelse number.toString()'

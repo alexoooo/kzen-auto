@@ -5,6 +5,7 @@ import tech.kzen.auto.client.objects.document.common.raw.DocumentRawSnapshot
 import tech.kzen.auto.client.objects.document.common.raw.DocumentRawState
 import tech.kzen.auto.client.objects.document.common.raw.DocumentRawStore
 import tech.kzen.auto.client.objects.document.common.raw.DocumentViewMode
+import tech.kzen.auto.client.objects.document.common.raw.unparseDocumentForRawEditor
 import tech.kzen.auto.client.objects.document.custom.view.CustomViewStore
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
@@ -92,7 +93,7 @@ class CustomStore(
                 previous
 
             !previous.editorModified -> {
-                val freshEditorValue = notationParser.unparseDocument(serverNotation, "")
+                val freshEditorValue = notationParser.unparseDocumentForRawEditor(serverNotation)
                 previous.withServerNotationAndEditor(serverNotation, freshEditorValue, notationParser)
             }
 

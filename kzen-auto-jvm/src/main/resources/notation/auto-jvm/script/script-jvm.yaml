@@ -412,6 +412,7 @@ BrowserWriteStep:
   meta:
     text:
       is: String
+      multiline: true
       summary: TextAttributeView
     target:
       is: TargetSpec

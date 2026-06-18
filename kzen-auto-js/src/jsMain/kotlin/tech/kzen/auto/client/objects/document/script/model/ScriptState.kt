@@ -3,6 +3,7 @@ package tech.kzen.auto.client.objects.document.script.model
 import tech.kzen.auto.client.objects.document.common.raw.DocumentRawModified
 import tech.kzen.auto.client.objects.document.common.raw.DocumentRawState
 import tech.kzen.auto.client.objects.document.common.raw.DocumentViewMode
+import tech.kzen.auto.client.objects.document.common.raw.unparseDocumentForRawEditor
 import tech.kzen.auto.client.objects.document.script.progress.ScriptProgressState
 import tech.kzen.auto.client.objects.document.script.valid.ScriptValidationState
 import tech.kzen.auto.client.service.global.ClientState
@@ -61,7 +62,7 @@ data class ScriptState(
             viewMode: DocumentViewMode = DocumentViewMode.View
         ): ScriptState {
             val objects = documentNotation.objects
-            val editorValue = notationParser.unparseDocument(objects, "")
+            val editorValue = notationParser.unparseDocumentForRawEditor(objects)
             return ScriptState(
                 mainLocation = mainLocation,
                 documentNotation = documentNotation,
@@ -156,7 +157,7 @@ data class ScriptState(
         //     RPureComponents keyed on it don't re-render on attribute-only edits.
         val nextTree = if (scriptTree == this.scriptTree) this.scriptTree else scriptTree
         return if (!editorModified) {
-            val freshEditor = notationParser.unparseDocument(objects, "")
+            val freshEditor = notationParser.unparseDocumentForRawEditor(objects)
             copy(
                 documentNotation = documentNotation,
                 scriptTree = nextTree,

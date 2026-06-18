@@ -67,7 +67,20 @@ class BrowserWriteStep(
                 }
             element.sendKeys(Keys.chord(selectAllModifier, "a"))
         }
-        element.sendKeys(text)
+
+        // Write the text one line at a time, pressing Enter between lines, so a multi-line
+        // `text` is written as multiple lines (e.g. into a textarea) rather than relying on the
+        // driver to map a raw newline character. String.lines() normalises \r\n, \r and \n breaks.
+        val lines = text.lines()
+        val keystrokes = buildList<CharSequence> {
+            lines.forEachIndexed { index, line ->
+                if (index != 0) {
+                    add(Keys.ENTER)
+                }
+                add(line)
+            }
+        }
+        element.sendKeys(*keystrokes.toTypedArray())
 
         val screenshotPng = driver.getScreenshotAs(OutputType.BYTES)
         traceDetail(scriptExecutionContext, BinaryExecutionValue(screenshotPng))

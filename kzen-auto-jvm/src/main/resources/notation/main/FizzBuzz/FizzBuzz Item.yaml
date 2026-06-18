@@ -8,14 +8,6 @@ main.parameters/number:
     generics: []
     nullable: false
 
-main.steps/Display:
-  is: DisplayValueStep
-  text: main.parameters/number
-
-main.steps/Formula 3:
-  is: FormulaStep
-  code: number
-
 main.steps/Divisible By 3:
   is: FormulaStep
   code: "number % 3 == 0"

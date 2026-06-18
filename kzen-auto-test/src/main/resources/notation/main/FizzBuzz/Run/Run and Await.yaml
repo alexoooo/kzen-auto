@@ -1,0 +1,24 @@
+main:
+  is: Script
+
+main.steps/Click:
+  is: BrowserClickStep
+  target:
+    type: Xpath
+    value: "//button[@title='Run']"
+
+main.steps/Number range:
+  is: NumberRangeStep
+
+main.steps/Loop:
+  is: MappingStep
+  items: main.steps/Number range
+
+main.steps/Loop.steps/Wait 2:
+  is: WaitStep
+
+main.steps/Loop.steps/Escape:
+  is: BrowserEscapeStep
+
+main.steps/Loop.item/Item:
+  is: MappingItemBinding

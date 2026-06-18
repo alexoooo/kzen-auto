@@ -8,3 +8,7 @@ main.steps/Create Item Script:
 'main.steps/Add "number" parameter':
   is: RunStep
   instructions: "main/FizzBuzz/Item/Add number Parameter.yaml#main"
+
+main.steps/Run:
+  is: RunStep
+  instructions: "main/FizzBuzz/Item/FizzBuzz Formula.yaml#main"

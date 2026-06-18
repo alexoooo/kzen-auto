@@ -29,7 +29,7 @@ main.steps/Click:
   is: BrowserClickStep
   target:
     type: Xpath
-    value: "//button[@title='Options...']"
+    value: "(//button[@title='Options...'])[last()]"
 
 main.steps/Click 2:
   is: BrowserClickStep
