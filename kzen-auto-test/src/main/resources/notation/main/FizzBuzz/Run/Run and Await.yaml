@@ -7,21 +7,26 @@ main.steps/Click:
     type: Xpath
     value: "//button[@title='Run']"
 
-main.steps/Number range:
-  is: NumberRangeStep
+main.steps/Await:
+  is: DoWhileStep
+  condition: 'State == "Pause"'
 
-main.steps/Loop:
-  is: MappingStep
-  items: main.steps/Number range
-
-main.steps/Loop.steps/Wait 2:
+main.steps/Await.steps/Wait:
   is: WaitStep
+  milliseconds: 250
 
-main.steps/Loop.steps/Escape:
-  is: BrowserEscapeStep
+main.steps/Await.steps/State:
+  is: BrowserReadStep
+  target:
+    type: Xpath
+    value: "//button[@title='Run' or @title='Pause' or @title='Continue running']"
+  attribute: title
 
-main.steps/Loop.item/Item:
-  is: MappingItemBinding
+# The reactive Await exits the instant the run-state flips to idle, but the SUT client paints the
+# Display step's Detail one poll cycle later — brief, bounded settle so the read below sees it.
+main.steps/Settle:
+  is: WaitStep
+  milliseconds: 2000
 
 main.steps/Read Display:
   is: BrowserReadStep

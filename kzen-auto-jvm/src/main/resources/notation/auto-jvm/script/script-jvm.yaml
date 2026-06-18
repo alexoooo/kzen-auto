@@ -339,6 +339,27 @@ MappingItemStep:
   meta:
     selfLocation: SelfLocation
 
+
+DoWhileStep:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.server.objects.script.step.control.DoWhileStep
+  display: DoWhileStepDisplay
+  icon: "material-symbols:repeat"
+  title: "Do While"
+  description: "Repeat steps while a Kotlin condition (over the body's values) holds true"
+  condition: ""
+  meta:
+    condition:
+      is: String
+      multiline: true
+      summary: TextAttributeView
+    steps:
+      is: List
+      of: ScriptStep
+      by: NestedList
+    selfLocation: SelfLocation
+
 #######################################################################################################################
 
 
@@ -404,13 +425,17 @@ BrowserReadStep:
   class: tech.kzen.auto.server.objects.script.step.browser.BrowserReadStep
   icon: "material-symbols:text-fields"
   title: "Read"
-  description: "Read the visible text of a target element"
+  description: "Read the visible text (or a named attribute) of a target element"
   target:
     type: Focus
+  attribute: ""
   meta:
     target:
       is: TargetSpec
       summary: TargetAttributeView
+    attribute:
+      is: String
+      summary: TextAttributeView
     selfLocation: SelfLocation
 
 

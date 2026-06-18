@@ -96,6 +96,13 @@ MappingStepDisplay:
   stepDisplayManager: StepDisplayManagerHandle
   scriptCommander: ScriptCommander
 
+DoWhileStepDisplay:
+  is: ScriptStepDisplay
+  class: tech.kzen.auto.client.objects.document.script.step.control.DoWhileStepDisplay$Wrapper
+  attributeEditorManager: AttributeEditorManager
+  stepDisplayManager: StepDisplayManagerHandle
+  scriptCommander: ScriptCommander
+
 MappingStepCommander:
   is: ScriptStepCommander
   class: tech.kzen.auto.client.objects.document.script.step.control.mapping.MappingStepCommander
@@ -229,6 +236,12 @@ MappingTool:
   is: RibbonTool
   parent: ScriptGroup_LogicControl
   delegate: MappingStep
+
+
+DoWhileTool:
+  is: RibbonTool
+  parent: ScriptGroup_LogicControl
+  delegate: DoWhileStep
 
 
 DivisibleCheckStepTool:

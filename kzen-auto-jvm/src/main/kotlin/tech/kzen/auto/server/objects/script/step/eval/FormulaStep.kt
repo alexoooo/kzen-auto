@@ -331,59 +331,8 @@ class FormulaStep(
         returnType: String,
         predecessorTypes: Map<ObjectPath, TypeMetadata>
     ): KotlinCode {
-        val sanitizedName = sanitizeName(selfLocation.objectPath.name.value)
-        val mainClassName = "Eval_$sanitizedName"
-
-        val imports = generateImports(predecessorTypes.values)
-
-        val predecessorAccessors = predecessorTypes
-            .entries
-            .withIndex()
-            .map {
-                val entry = it.value
-                "val `${entry.key.name.value}` get(): ${entry.value.toSimple()} {" +
-                "    return predecessorValues[${it.index}] as ${entry.value.toSimple()}" +
-                "}"
-            }
-
-        val generatedCode = """
-$imports
-
-class $mainClassName: ${ StepExpression::class.java.simpleName } {
-    private var predecessorValues: List<Any?> = listOf()
-
-    ${predecessorAccessors.joinToString("\n")}
-
-    override fun evaluate(predecessorValues: List<Any?>): $returnType {
-        this.predecessorValues = predecessorValues
-        return run {
-$code
-        }
-    }
-}
-"""
-        return KotlinCode(
-            mainClassName,
-            generatedCode)
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    private fun generateImports(importTypeMetadata: Collection<TypeMetadata>): String {
-        val classNames = importTypeMetadata.flatMap { it.classNames() }.toSet()
-
-        val basicClassNames = setOf(
-            StepExpression::class.java.name)
-
-        val classImports = basicClassNames + classNames
-
-        return classImports.joinToString("\n") {
-            "import $it"
-        }
-    }
-
-
-    private fun sanitizeName(text: String): String {
-        return text.replace(Regex("\\W+"), "_")
+        val mainClassName = "Eval_" + StepExpressionCompiler.sanitizeName(selfLocation.objectPath.name.value)
+        return StepExpressionCompiler.generateCode(
+            mainClassName, returnType, code, predecessorTypes)
     }
 }
