@@ -23,7 +23,6 @@ Script:
   class: tech.kzen.auto.server.objects.script.ScriptDocument
   title: "Script"
   icon: "material-symbols:playlist-play"
-  parameters: []
   results: []
   meta:
     steps:
@@ -32,7 +31,8 @@ Script:
       by: NestedList
     parameters:
       is: List
-      of: String
+      of: ParameterBinding
+      by: NestedList
     results:
       is: List
       of: String

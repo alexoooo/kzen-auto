@@ -101,7 +101,7 @@ MappingStepCommander:
   class: tech.kzen.auto.client.objects.document.script.step.control.mapping.MappingStepCommander
   parent: ScriptCommander
   mappingStepArchetype: MappingStep
-  itemArchetype: MappingItemStep
+  itemArchetype: MappingItemBinding
   meta:
     mappingStepArchetype:
       is: ObjectLocation

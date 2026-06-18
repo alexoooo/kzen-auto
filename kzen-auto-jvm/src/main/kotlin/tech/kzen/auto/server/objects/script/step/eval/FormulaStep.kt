@@ -293,8 +293,7 @@ class FormulaStep(
 
         val predecessorValues = nonUnitPredecessorTypes.map {
             val objectLocation = selfLocation.documentPath.toObjectLocation(it.key)
-            val step = scriptExecutionContext.stepModel(objectLocation)
-            step?.value?.mainComponentValue()
+            scriptExecutionContext.referencedValue(objectLocation)
         }
 
         val value = instance.evaluate(predecessorValues)
@@ -313,9 +312,13 @@ class FormulaStep(
         Map<ObjectPath, TypeMetadata?>
     {
         val builder = mutableMapOf<ObjectPath, TypeMetadata?>()
-        val predecessors = scriptTree.predecessors(selfLocation.objectPath)
 
-        for (predecessor in predecessors) {
+        // Body predecessors plus the parameters / loop items in scope — both are addressable, typed
+        // values this formula can reference by name (the bindings without occupying a body row).
+        val predecessors = scriptTree.predecessors(selfLocation.objectPath)
+        val bindings = scriptTree.inScopeBindingPaths(selfLocation.objectPath)
+
+        for (predecessor in predecessors + bindings) {
             val typeMetadata = scriptValidation.stepValidations[predecessor]?.typeMetadata
             builder[predecessor] = typeMetadata
         }

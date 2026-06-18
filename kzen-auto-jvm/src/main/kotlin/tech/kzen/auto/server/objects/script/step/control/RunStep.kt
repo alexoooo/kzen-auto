@@ -64,7 +64,7 @@ class RunStep(
                 val argumentTupleComponents = arguments.map {
                     TupleComponentValue(
                         TupleComponentName(it.key),
-                        scriptExecutionContext.stepModel(it.value)?.value?.mainComponentValue())
+                        scriptExecutionContext.referencedValue(it.value))
                 }
 
                 val argumentValue = TupleValue(argumentTupleComponents)

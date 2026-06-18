@@ -156,9 +156,12 @@ class SelectStepEditor(
 
     override fun onScriptState(scriptState: ScriptState) {
         val scriptTree = scriptState.scriptTree
+        val targetPath = props.objectLocation.objectPath
 
-        val predecessorObjectPaths = scriptTree.predecessors(props.objectLocation.objectPath)
-        val predecessors = predecessorObjectPaths.map { props.objectLocation.documentPath.toObjectLocation(it) }
+        // Prior body steps plus the in-scope value bindings (parameters / loop items) — any of which this
+        // input can reference, since a binding is an addressable, typed value just like a step output.
+        val candidatePaths = scriptTree.predecessors(targetPath) + scriptTree.inScopeBindingPaths(targetPath)
+        val predecessors = candidatePaths.map { props.objectLocation.documentPath.toObjectLocation(it) }
 
         if (state.predecessors != predecessors) {
             setState {

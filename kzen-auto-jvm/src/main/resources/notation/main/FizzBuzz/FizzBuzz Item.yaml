@@ -1,0 +1,53 @@
+main:
+  is: Script
+
+main.parameters/number:
+  is: ParameterBinding
+  type:
+    class: kotlin.Int
+    generics: []
+    nullable: false
+
+main.steps/Display:
+  is: DisplayValueStep
+  text: main.parameters/number
+
+main.steps/Formula 3:
+  is: FormulaStep
+  code: number
+
+main.steps/Divisible By 3:
+  is: FormulaStep
+  code: "number % 3 == 0"
+
+main.steps/Divisible By 5:
+  is: FormulaStep
+  code: "number % 5 == 0"
+
+main.steps/div 3:
+  is: IfStep
+  condition: main.steps/Divisible By 3
+
+main.steps/div 3.else/div 5:
+  is: IfStep
+  condition: main.steps/Divisible By 5
+
+main.steps/div 3.else/div 5.else/Formula 2:
+  is: FormulaStep
+  code: number
+
+main.steps/div 3.else/div 5.then/Text 2:
+  is: TextLiteralStep
+  value: buzz
+
+main.steps/div 3.then/div 3 and 5:
+  is: IfStep
+  condition: main.steps/Divisible By 5
+
+main.steps/div 3.then/div 3 and 5.else/Text:
+  is: TextLiteralStep
+  value: fizz
+
+main.steps/div 3.then/div 3 and 5.then/Formula:
+  is: FormulaStep
+  code: '"fizzbuzz"'

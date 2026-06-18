@@ -2,6 +2,7 @@ package tech.kzen.auto.server.objects.script.model
 
 import tech.kzen.auto.common.objects.document.script.model.ScriptTree
 import tech.kzen.auto.common.objects.document.script.model.ScriptValidation
+import tech.kzen.auto.server.objects.script.api.ScriptValueBinding
 import tech.kzen.lib.common.exec.logic.trace.LogicTraceHandle
 import tech.kzen.lib.common.exec.logic.LogicControl
 import tech.kzen.lib.common.exec.logic.LogicHandleFacade
@@ -30,6 +31,21 @@ data class ScriptExecutionContext(
 ) {
     fun stepModel(objectLocation: ObjectLocation): ActiveStepModel? {
         return activeScriptModel.steps[objectStableMapper.objectStableId(objectLocation)]
+    }
+
+
+    /**
+     * Resolve the value produced by a referenced object. For an executed body step this is its step
+     * model's main value (the long-standing path). For a [ScriptValueBinding] (a parameter or loop item,
+     * which is never executed) the value is resolved on demand from the binding itself — so a step can
+     * reference a binding by ObjectLocation exactly like it references a prior step.
+     */
+    fun referencedValue(objectLocation: ObjectLocation): Any? {
+        val binding = graphInstance[objectLocation]?.reference as? ScriptValueBinding
+        if (binding != null) {
+            return binding.resolveValue(this)
+        }
+        return stepModel(objectLocation)?.value?.mainComponentValue()
     }
 
     fun getOrPutStepModel(objectLocation: ObjectLocation): ActiveStepModel {

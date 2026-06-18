@@ -29,14 +29,12 @@ class LogicalAndStep(
 
 
     override fun continueOrStart(scriptExecutionContext: ScriptExecutionContext): LogicResult {
-        val conditionStep = scriptExecutionContext.stepModel(condition)
-        val conditionValue = conditionStep?.value?.mainComponentValue()
+        val conditionValue = scriptExecutionContext.referencedValue(condition)
         check(conditionValue is Boolean) {
             "Boolean expected: $condition = $conditionValue"
         }
 
-        val andStep = scriptExecutionContext.stepModel(and)
-        val andValue = andStep?.value?.mainComponentValue()
+        val andValue = scriptExecutionContext.referencedValue(and)
         check(andValue is Boolean) {
             "Boolean expected: $and = $andValue"
         }

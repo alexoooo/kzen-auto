@@ -1,0 +1,23 @@
+main:
+  is: Script
+
+main.steps/Range:
+  is: FormulaStep
+  code: 1..100
+
+main.steps/Loop:
+  is: MappingStep
+  items: main.steps/Range
+
+main.steps/Loop.steps/Run:
+  is: RunStep
+  instructions: "main/FizzBuzz/FizzBuzz Item.yaml#main"
+  arguments:
+    number: main.steps/Loop.item/Item
+
+main.steps/Loop.item/Item:
+  is: MappingItemBinding
+
+main.steps/Display:
+  is: DisplayValueStep
+  text: main.steps/Loop

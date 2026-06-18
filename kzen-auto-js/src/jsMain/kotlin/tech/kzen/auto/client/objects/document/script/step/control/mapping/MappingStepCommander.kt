@@ -32,7 +32,7 @@ class MappingStepCommander(
         val itemObjectLocation = ObjectLocation(
             insertedObjectLocation.documentPath,
             insertedObjectLocation.objectPath.nest(
-                ScriptConventions.stepsAttributePath, ObjectName("Item")))
+                ScriptConventions.itemAttributePath, ObjectName("Item")))
 
         val itemNotation = ObjectNotation.ofParent(
             itemArchetype.objectPath.name)

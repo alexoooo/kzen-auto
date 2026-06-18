@@ -21,14 +21,12 @@ import tech.kzen.auto.client.wrap.select.reactSelectField
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.objects.document.script.model.RunStepInstructions
-import tech.kzen.auto.common.paradigm.logic.LogicConventions
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.location.ObjectReference
 import tech.kzen.lib.common.model.location.ObjectReferenceHost
 import tech.kzen.lib.common.model.structure.notation.AttributeNotation
-import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
@@ -141,17 +139,22 @@ class RunStepArgumentsEditor(
 
         val instructionsObjectLocation = RunStepInstructions.instructionsLocation(
             graphNotation, props.objectLocation)
-        val instructionsParametersNotation =
+
+        // The target script's parameters are nested ParameterBinding objects under its `parameters` branch,
+        // named by their object name — enumerate those rather than the obsolete `parameters: List<String>`
+        // scalar (which no longer exists, so the old read found nothing and rendered no argument rows).
+        val instructionsParameters: List<String>? =
             if (instructionsObjectLocation != null) {
                 graphNotation
-                    .firstAttribute(instructionsObjectLocation, LogicConventions.parametersAttributePath)
-                    as? ListAttributeNotation
+                    .documents[instructionsObjectLocation.documentPath]
+                    ?.directNestedObjectPaths(
+                        instructionsObjectLocation.objectPath,
+                        ScriptConventions.parametersAttributeName)
+                    ?.map { it.name.value }
             }
             else {
                 null
             }
-        val instructionsParameters: List<String>? =
-            instructionsParametersNotation?.values?.mapNotNull { i -> i.asString() }
 
         val attributeNotation = graphNotation
             .firstAttribute(props.objectLocation, props.attributeName)

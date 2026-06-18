@@ -1,5 +1,6 @@
 package tech.kzen.auto.common.objects.document.script.model
 
+import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -75,6 +76,44 @@ data class ScriptTree(
                 childTree.collectDescendants(buffer)
             }
         }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    // Value bindings in scope for the step at `target` (must be called on the root tree): every Script
+    // parameter (root `parameters` branch, script-wide), plus the `item` of each enclosing MappingStep
+    // on the path to `target`. These are named typed values usable by `target` without being predecessors
+    // in the body — the rowless counterpart to ScriptTree.predecessors.
+    fun inScopeBindingPaths(target: ObjectPath): List<ObjectPath> {
+        val buffer = mutableListOf<ObjectPath>()
+
+        children[ScriptConventions.parametersAttributeName]
+            ?.forEach { buffer.add(it.objectPath) }
+
+        collectEnclosingItems(target, buffer)
+
+        return buffer
+    }
+
+
+    // Adds the `item` binding of every node that (transitively) contains `target`. When a child subtree
+    // contains the target, this node encloses it, so this node's item branch (if any) is in scope.
+    private fun collectEnclosingItems(target: ObjectPath, buffer: MutableList<ObjectPath>): Boolean {
+        if (objectPath == target) {
+            return true
+        }
+
+        for (childTrees in children.values) {
+            for (childTree in childTrees) {
+                if (childTree.collectEnclosingItems(target, buffer)) {
+                    children[ScriptConventions.itemAttributeName]
+                        ?.forEach { buffer.add(it.objectPath) }
+                    return true
+                }
+            }
+        }
+
+        return false
     }
 
 

@@ -1,0 +1,27 @@
+main:
+  is: Script
+
+main.parameters/threshold:
+  is: ParameterBinding
+  type:
+    class: kotlin.Int
+    generics: []
+    nullable: false
+
+main.parameters/tags:
+  is: ParameterBinding
+  type:
+    class: kotlin.collections.List
+    generics:
+      - class: kotlin.String
+        generics: []
+        nullable: false
+    nullable: false
+
+main.steps/Doubled:
+  is: FormulaStep
+  code: threshold * 2
+
+main.steps/FirstTag:
+  is: FormulaStep
+  code: tags.first()

@@ -1,0 +1,18 @@
+main:
+  is: Script
+
+main.steps/Range:
+  is: NumberRangeStep
+  from: 1
+  to: 3
+
+main.steps/Loop:
+  is: MappingStep
+  items: main.steps/Range
+
+main.steps/Loop.item/Item:
+  is: MappingItemBinding
+
+main.steps/Loop.steps/Doubled:
+  is: FormulaStep
+  code: Item * 2

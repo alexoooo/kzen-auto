@@ -58,21 +58,28 @@ class MappingStep(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun definition(scriptDefinitionContext: ScriptDefinitionContext): ScriptStepDefinition {
+    override fun definition(scriptDefinitionContext: ScriptDefinitionContext): ScriptStepDefinition? {
+        // Output is a List whose element type matches the `items` collection's element type; defer (null)
+        // until items has been validated so the element type can refine past Any (the loop item binding
+        // reads this element type). ScriptValidator iterates to a fixpoint.
+        val itemsType = scriptDefinitionContext.scriptValidation
+            .stepValidations[items.objectPath]?.typeMetadata
+            ?: return null
+
+        val elementType = itemsType.generics.firstOrNull() ?: TypeMetadata.any
+
         return ScriptStepDefinition.of(
             TupleDefinition.ofMain(LogicType(
                 TypeMetadata(
                     ClassNames.kotlinList,
-                    listOf(TypeMetadata.any),
+                    listOf(elementType),
                     false))))
     }
 
 
     override fun continueOrStart(scriptExecutionContext: ScriptExecutionContext): LogicResult {
         if (iterator == null) {
-            val step = scriptExecutionContext.stepModel(items)
-
-            val value = step?.value?.mainComponentValue()
+            val value = scriptExecutionContext.referencedValue(items)
             check(value is Iterable<*>) {
                 "Data items expected: $items = $value"
             }

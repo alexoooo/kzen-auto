@@ -22,6 +22,15 @@ object ScriptConventions {
     val stepsAttributeName = AttributeName("steps")
     val stepsAttributePath = AttributePath.ofName(stepsAttributeName)
 
+    // Branches that hold value bindings (named typed values) rather than executed body steps:
+    // the Script's `parameters`, and a MappingStep's per-iteration `item`. Bindings live here so they
+    // are addressable/validated like steps but are rendered outside the body and never executed.
+    val parametersAttributeName = AttributeName("parameters")
+    val parametersAttributePath = AttributePath.ofName(parametersAttributeName)
+
+    val itemAttributeName = AttributeName("item")
+    val itemAttributePath = AttributePath.ofName(itemAttributeName)
+
     val instructionsAttributeName = AttributeName("instructions")
     val instructionsAttributePath = AttributePath.ofName(instructionsAttributeName)
 

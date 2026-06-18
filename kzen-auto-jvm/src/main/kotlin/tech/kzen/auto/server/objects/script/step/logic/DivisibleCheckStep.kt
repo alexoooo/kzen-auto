@@ -29,9 +29,7 @@ class DivisibleCheckStep(
 
 
     override fun continueOrStart(scriptExecutionContext: ScriptExecutionContext): LogicResult {
-        val step = scriptExecutionContext.stepModel(number)
-
-        val value = step?.value?.mainComponentValue()
+        val value = scriptExecutionContext.referencedValue(number)
         check(value is Number) {
             "Number expected: $number = $value"
         }

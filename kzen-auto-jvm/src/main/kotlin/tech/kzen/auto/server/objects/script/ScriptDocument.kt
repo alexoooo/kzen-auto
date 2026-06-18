@@ -29,7 +29,7 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 @Reflect
 class ScriptDocument(
     steps: List<ObjectLocation>,
-    private val parameters: List<String>,
+    parameters: List<ObjectLocation>,
     private val results: List<String>,
     private val selfLocation: ObjectLocation,
 
@@ -42,8 +42,15 @@ class ScriptDocument(
     ScriptStep
 {
     //-----------------------------------------------------------------------------------------------------------------
+    // Each parameter is a ParameterBinding object in the `parameters` branch; its name is the object's
+    // own name. The declared per-parameter TypeMetadata powers in-script typing via each binding's own
+    // definition() (-> ScriptValidation -> FormulaStep); the external Logic signature stays `any` for now
+    // since nothing consumes LogicDefinition.inputs yet (caller-side argument type-checking is future work).
+    private val parameterNames = parameters.map { it.objectPath.name.value }
+
+
     override fun define(): LogicDefinition {
-        val inputs = parameters.map {
+        val inputs = parameterNames.map {
             TupleComponentDefinition(TupleComponentName(it), LogicType.any)
         }
 
