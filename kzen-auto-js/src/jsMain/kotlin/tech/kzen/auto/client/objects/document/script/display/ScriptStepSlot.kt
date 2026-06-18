@@ -4,15 +4,11 @@ import emotion.react.css
 import react.ChildrenBuilder
 import react.Props
 import react.State
-import react.dom.events.DragEvent
 import react.dom.html.ReactHTML.div
-import tech.kzen.auto.client.objects.document.common.dragdrop.DropMarker
 import tech.kzen.auto.client.objects.document.common.dragdrop.dragHandle
-import tech.kzen.auto.client.objects.document.common.dragdrop.dropIndicator
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.lib.common.model.location.ObjectLocation
 import web.cssom.*
-import web.html.HTMLDivElement
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -22,17 +18,15 @@ external interface ScriptStepSlotProps: Props {
     var first: Boolean
     var last: Boolean
 
-    var dropMarker: DropMarker?
     var isDragSource: Boolean
 
     var stepDisplayManager: StepDisplayManager.Wrapper
     var handleColor: Color
 
-    // NB: the two index-dependent handlers take the slot's index so the parent can hold a single stable
-    //     reference for all slots (the slot threads its own indexInParent back in) — see ScriptBranchDisplay.
+    // NB: onDragStart takes the slot's index so the parent can hold a single stable reference for all slots
+    //     (the slot threads its own indexInParent back in) — see ScriptBranchDisplay. Drag-over and drop are
+    //     handled at the branch level (one drop zone), not per slot.
     var onDragStart: (Int) -> Unit
-    var onDragOver: (Int, DragEvent<HTMLDivElement>) -> Unit
-    var onDrop: (DragEvent<HTMLDivElement>) -> Unit
     var onDragEnd: () -> Unit
 }
 
@@ -92,16 +86,12 @@ class ScriptStepSlot(
                 }
             }
 
-            onDragOver = { event -> props.onDragOver(props.indexInParent, event) }
-            onDrop = props.onDrop
-
             dragHandle(
                 isVisible = props.isDragSource,
                 handleColor = props.handleColor,
                 onStart = { props.onDragStart(props.indexInParent) },
                 onEnd = props.onDragEnd,
                 frosted = true)
-            dropIndicator(props.dropMarker)
 
             props.stepDisplayManager.child(this) {
                 common = commonForProps()

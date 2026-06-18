@@ -370,6 +370,10 @@ private fun Routing.routeNotationCommands(
         val response = restHandler.shiftObjectTree(call.parameters)
         call.respondText(response)
     }
+    get(CommonRestApi.commandObjectRelocateTree) {
+        val response = restHandler.relocateObjectTree(call.parameters)
+        call.respondText(response)
+    }
     get(CommonRestApi.commandObjectRename) {
         val response = restHandler.renameObject(call.parameters)
         call.respondText(response)

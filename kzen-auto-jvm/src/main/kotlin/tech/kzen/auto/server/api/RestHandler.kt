@@ -29,6 +29,7 @@ import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.location.ResourceLocation
 import tech.kzen.lib.common.model.obj.ObjectName
+import tech.kzen.lib.common.model.obj.ObjectNesting
 import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.model.structure.notation.AttributeNotation
 import tech.kzen.lib.common.model.structure.notation.ObjectNotation
@@ -252,6 +253,28 @@ class RestHandler(
 
         val command = ShiftObjectTreeCommand(
             ObjectLocation(documentPath, objectPath),
+            indexInDocument)
+
+        return applyCommand(command).asString()
+    }
+
+
+    fun relocateObjectTree(parameters: Parameters): String {
+        val documentPath: DocumentPath = parameters.getParam(
+            CommonRestApi.paramDocumentPath, DocumentPath::parse)
+
+        val objectPath: ObjectPath = parameters.getParam(
+            CommonRestApi.paramObjectPath, ObjectPath::parse)
+
+        val newObjectNesting: ObjectNesting = parameters.getParam(
+            CommonRestApi.paramObjectNesting, ObjectNesting::parse)
+
+        val indexInDocument: PositionRelation = parameters.getParam(
+            CommonRestApi.paramPositionIndex, PositionRelation::parse)
+
+        val command = RelocateObjectTreeRefactorCommand(
+            ObjectLocation(documentPath, objectPath),
+            newObjectNesting,
             indexInDocument)
 
         return applyCommand(command).asString()

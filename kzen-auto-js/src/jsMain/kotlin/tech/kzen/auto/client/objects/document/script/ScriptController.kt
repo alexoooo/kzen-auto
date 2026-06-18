@@ -13,11 +13,13 @@ import tech.kzen.auto.client.objects.document.common.raw.DocumentViewMode
 import tech.kzen.auto.client.objects.document.common.signature.LogicSignatureEditor
 import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
 import tech.kzen.auto.client.objects.document.script.display.dependency.ScriptDependencyOverlay
+import tech.kzen.auto.client.objects.document.script.display.dependency.ScriptStepDragStore
 import tech.kzen.auto.client.objects.document.script.display.ScriptStepDisplayPropsCommon
 import tech.kzen.auto.client.objects.document.script.display.StepDisplayManager
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
 import tech.kzen.auto.client.objects.document.script.model.ScriptStore
 import tech.kzen.auto.client.objects.document.script.model.ScriptStoreContext
+import tech.kzen.auto.client.objects.document.script.model.ScriptStepDragStoreContext
 import tech.kzen.auto.client.objects.document.script.progress.ScriptProgressController
 import tech.kzen.auto.client.objects.document.script.step.control.MultiStepDisplay
 import tech.kzen.auto.client.objects.ribbon.RibbonController
@@ -168,6 +170,10 @@ class ScriptController:
     private val stepDisplayHandle = StepDisplayManager.Handle()
     private var cachedMainCommon: ScriptStepDisplayPropsCommon? = null
 
+    // Shared drag source for cross-branch step drag/drop; provided via context to every ScriptBranchDisplay
+    // in this script's subtree. One per mounted controller (per open script).
+    private val dragStore = ScriptStepDragStore()
+
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ScriptControllerState.init(props: ScriptControllerProps) {
@@ -261,36 +267,38 @@ class ScriptController:
 
         val mainObjectLocation = documentPath.toMainObjectLocation()
         ScriptStoreContext.Provider(store) {
-            div {
-                css {
-                    paddingTop = 1.em
-                }
-                renderSignature(mainObjectLocation)
-            }
-
-            val globalError = state.globalError
-            if (globalError != null) {
+            ScriptStepDragStoreContext.Provider(dragStore) {
                 div {
-                    +"Error: $globalError"
+                    css {
+                        paddingTop = 1.em
+                    }
+                    renderSignature(mainObjectLocation)
                 }
+
+                val globalError = state.globalError
+                if (globalError != null) {
+                    div {
+                        +"Error: $globalError"
+                    }
+                }
+
+                div {
+                    css {
+                        marginLeft = 2.em
+                        position = Position.relative
+                    }
+
+                    // NB: overlay is rendered BEFORE MultiStepDisplay so default stacking puts it behind
+                    //     step cards; the cross-branch polylines visually pass behind the IfStep card.
+                    ScriptDependencyOverlay::class.react {
+                        clientStateGlobal = props.clientStateGlobal
+                    }
+
+                    renderMain(mainObjectLocation)
+                }
+
+                renderRunController(clientState)
             }
-
-            div {
-                css {
-                    marginLeft = 2.em
-                    position = Position.relative
-                }
-
-                // NB: overlay is rendered BEFORE MultiStepDisplay so default stacking puts it behind
-                //     step cards; the cross-branch polylines visually pass behind the IfStep card.
-                ScriptDependencyOverlay::class.react {
-                    clientStateGlobal = props.clientStateGlobal
-                }
-
-                renderMain(mainObjectLocation)
-            }
-
-            renderRunController(clientState)
         }
     }
 

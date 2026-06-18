@@ -10,19 +10,21 @@ import react.Props
 import react.State
 import react.dom.events.DragEvent
 import react.dom.html.ReactHTML.div
-import tech.kzen.auto.client.objects.document.common.dragdrop.computeDropIndex
-import tech.kzen.auto.client.objects.document.common.dragdrop.dropMarkerFor
+import tech.kzen.auto.client.objects.document.common.dragdrop.dropZoneRegion
 import tech.kzen.auto.client.objects.document.script.ScriptController
 import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
 import tech.kzen.auto.client.objects.document.script.display.ScriptStepSlot
 import tech.kzen.auto.client.objects.document.script.display.StepDisplayManager
 import tech.kzen.auto.client.objects.document.script.display.image.StepImageThumbnail
+import tech.kzen.auto.client.objects.document.script.model.ScriptStepDragStoreContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.client.wrap.contextValue
 import tech.kzen.auto.client.wrap.iconify.icon
+import tech.kzen.auto.client.wrap.installContextType
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.refCallback
 import tech.kzen.auto.client.wrap.setState
@@ -30,8 +32,12 @@ import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.objects.document.script.model.ScriptDependencyAnalysis
 import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.model.obj.ObjectName
+import tech.kzen.lib.common.model.obj.ObjectNesting
+import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.PositionRelation
+import tech.kzen.lib.common.model.structure.notation.cqrs.RelocateObjectTreeRefactorCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.ShiftObjectTreeCommand
 import tech.kzen.lib.common.service.store.MirroredGraphStore
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
@@ -40,6 +46,7 @@ import web.cssom.AlignItems
 import web.cssom.Color
 import web.cssom.Display
 import web.cssom.NamedColor
+import web.cssom.Position
 import web.cssom.em
 import web.cssom.number
 import web.cssom.pct
@@ -68,9 +75,12 @@ external interface StepListDisplayState: State {
 
     var creating: Boolean
 
-    var dragSourceIndex: Int?
-    var dragOverIndex: Int?
-    var dropAfter: Boolean
+    // Shared across branches (set from ScriptStepDragStore); null when no drag is in progress.
+    var dragSource: ScriptStepDragStore.DragSource?
+    // The canonical insertion index (0..stepCount) for a drop in THIS branch, or null when the cursor is over
+    // some other branch. The branch is one drop zone; the index is computed from cursor Y vs step midpoints,
+    // so the whole vertical extent (cards, gaps, insertion strips, empty space) maps to a single line.
+    var dropInsertionIndex: Int?
 }
 
 
@@ -80,7 +90,8 @@ class ScriptBranchDisplay(
 ):
     RPureComponent<StepListDisplayProps, StepListDisplayState>(props),
     ClientStateGlobal.Observer,
-    InsertionGlobal.Subscriber
+    InsertionGlobal.Subscriber,
+    ScriptStepDragStore.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -92,16 +103,20 @@ class ScriptBranchDisplay(
     // Constructed once per instance, so these are ===-stable across renders and let each ScriptStepSlot
     // (RPureComponent) bail when only a sibling changed. The slot threads its own indexInParent back in,
     // so a single shared reference serves every slot rather than a fresh closure per slot per render.
+    // Drag-over / drop are handled at the BRANCH level (one drop zone), not per slot — see onBranchDragOver.
     private val onSlotDragStart: (Int) -> Unit = { index -> onDragStart(index) }
-    private val onSlotDragOver: (Int, DragEvent<HTMLDivElement>) -> Unit = { index, event -> onDragOver(index, event) }
-    private val onSlotDrop: (DragEvent<HTMLDivElement>) -> Unit = { event -> onDrop(event) }
     private val onSlotDragEnd: () -> Unit = { onDragEnd() }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    init {
+        installContextType(ScriptStepDragStoreContext)
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun StepListDisplayState.init(props: StepListDisplayProps) {
         creating = false
-        dropAfter = false
     }
 
 
@@ -109,12 +124,42 @@ class ScriptBranchDisplay(
     override fun componentDidMount() {
         props.clientStateGlobal.observe(this)
         props.insertionGlobal.subscribe(this)
+        dragStore()?.observe(this)
     }
 
 
     override fun componentWillUnmount() {
+        dragStore()?.unobserve(this)
         props.insertionGlobal.unsubscribe(this)
         props.clientStateGlobal.unobserve(this)
+    }
+
+
+    private fun dragStore(): ScriptStepDragStore? =
+        contextValue<ScriptStepDragStore?>()
+
+
+    // Derive only this branch's slice from the shared store and skip setState when unchanged, so a hover move
+    // re-renders at most the branch losing the marker and the branch gaining it (see ScriptStepDragStore).
+    override fun onDragStateChanged() {
+        val store = dragStore()
+            ?: return
+
+        val dragSource = store.dragSource
+        val dropInsertionIndex = store.dropHover
+            ?.takeIf { it.branchLocation == props.attributeLocation }
+            ?.insertionIndex
+
+        if (state.dragSource == dragSource &&
+            state.dropInsertionIndex == dropInsertionIndex
+        ) {
+            return
+        }
+
+        setState {
+            this.dragSource = dragSource
+            this.dropInsertionIndex = dropInsertionIndex
+        }
     }
 
 
@@ -227,77 +272,102 @@ class ScriptBranchDisplay(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onDragStart(sourceIndex: Int) {
-        setState {
-            dragSourceIndex = sourceIndex
-            dragOverIndex = null
-            dropAfter = false
-        }
+        val stepLocations = state.stepLocations
+            ?: return
+        val draggedLocation = stepLocations.getOrNull(sourceIndex)
+            ?: return
+
+        // Publishing through the shared store notifies every branch (incl. this one, via onDragStateChanged).
+        dragStore()?.begin(ScriptStepDragStore.DragSource(
+            draggedLocation, props.attributeLocation, sourceIndex))
     }
 
 
-    private fun onDragOver(targetIndex: Int, event: DragEvent<HTMLDivElement>) {
+    // The whole branch is one drop zone: claim a single canonical insertion index from the cursor's Y
+    // against the step-row midpoints (cards, gaps, insertion strips, and empty space all map to one region).
+    // Bound to BOTH dragenter and dragover: dragover is continuous but Chrome can be slow to re-fire it on
+    // the inner branch right after an enclosing region handled it, whereas dragenter fires once, guaranteed,
+    // on the boundary crossing — so the sibling branch claims the hover even on the "hover the If body first"
+    // path. (dragleave is deliberately not used — it's flaky; hand-off happens by the next branch re-claiming
+    // and by the window dragend in ScriptStepDragStore.)
+    private fun onBranchDragOver(event: DragEvent<HTMLDivElement>) {
+        claimDropHover(event)
+    }
+
+
+    private fun onBranchDragEnter(event: DragEvent<HTMLDivElement>) {
+        claimDropHover(event)
+    }
+
+
+    private fun claimDropHover(event: DragEvent<HTMLDivElement>) {
         event.preventDefault()
 
-        if (state.dragSourceIndex == null) {
+        // Read the drag source from the STORE (set synchronously in begin()), not React state — state
+        // arrives asynchronously via the observer → setState path, so a branch could otherwise receive an
+        // event before its own dragSource state has committed and bail without claiming the hover (the
+        // cross-branch "via the header first" failure). onBranchDrop reads the store for the same reason.
+        val store = dragStore()
+            ?: return
+        val dragSource = store.dragSource
+            ?: return
+        if (isInsideDraggedSubtree(dragSource)) {
+            // This branch lives inside the dragged subtree — a drop here would be a cycle, so don't accept it.
             return
         }
 
-        val rect = event.currentTarget.getBoundingClientRect()
-        val nextDropAfter = event.clientY > rect.top + rect.height / 2
+        // Claim the event so it doesn't bubble to an enclosing branch (a nested branch is DOM-nested inside
+        // its container step's row in the parent branch). Without this the parent branch's handler fires next
+        // and overwrites the hover back to itself — so a step could never be dropped INTO a nested branch.
+        event.stopPropagation()
 
-        if (state.dragOverIndex == targetIndex && state.dropAfter == nextDropAfter) {
-            return
-        }
+        val stepLocations = state.stepLocations
+            ?: return
+        val insertionIndex = computeInsertionFromCursor(event.clientY, stepLocations)
 
-        setState {
-            dragOverIndex = targetIndex
-            dropAfter = nextDropAfter
-        }
+        // Push to the shared hover so other branches drop their stale region; our own slice flows back via
+        // onDragStateChanged.
+        store.hover(ScriptStepDragStore.DropHover(props.attributeLocation, insertionIndex))
     }
 
 
     private fun onDragEnd() {
-        if (state.dragSourceIndex == null && state.dragOverIndex == null) {
-            return
-        }
-        setState {
-            dragSourceIndex = null
-            dragOverIndex = null
-            dropAfter = false
-        }
+        dragStore()?.clear()
     }
 
 
-    private fun onDrop(event: DragEvent<HTMLDivElement>) {
+    private fun onBranchDrop(event: DragEvent<HTMLDivElement>) {
         event.preventDefault()
+        // Innermost branch under the cursor handles the drop; don't let it bubble to the enclosing branch.
+        event.stopPropagation()
 
-        val source = state.dragSourceIndex
-        val target = state.dragOverIndex
-        val dropAfterValue = state.dropAfter
+        // Read straight from the store (not React state) so the drop doesn't depend on the last dragover's
+        // setState having committed; the store is updated synchronously on every dragover.
+        val store = dragStore()
+        val dragSource = store?.dragSource
+        val hover = store?.dropHover
+        store?.clear()
 
-        setState {
-            dragSourceIndex = null
-            dragOverIndex = null
-            dropAfter = false
-        }
-
-        if (source == null || target == null) {
+        if (dragSource == null || hover == null) {
             return
         }
-        val newIndex = computeDropIndex(source, target, dropAfterValue)
-        if (newIndex == source) {
+        // The drop landed on this branch's element, so the live hover should be ours; bail if not (defensive).
+        if (hover.branchLocation != props.attributeLocation) {
+            return
+        }
+        if (isInsideDraggedSubtree(dragSource)) {
             return
         }
 
-        val stepLocations = state.stepLocations
-            ?: return
+        val insertionIndex = hover.insertionIndex
+
         val graphStructure = props.clientStateGlobal.current()?.graphStructure()
             ?: return
         val documentPath = props.attributeLocation.objectLocation.documentPath
         val documentNotation = graphStructure.graphNotation.documents[documentPath]
             ?: return
 
-        val draggedLocation = stepLocations[source]
+        val draggedLocation = dragSource.objectLocation
         val draggedRoot = draggedLocation.objectPath
 
         // Document order with the dragged subtree removed — the frame the relocate index resolves against.
@@ -305,25 +375,103 @@ class ScriptBranchDisplay(
             it != draggedRoot && !it.startsWith(draggedRoot)
         }
 
-        // The sibling that should follow the dragged step in its new branch slot (null = it goes last);
-        // place the subtree just before that sibling, or just after the last sibling's subtree.
-        val others = stepLocations.filterIndexed { i, _ -> i != source }
-        val anchor = others.getOrNull(newIndex)?.objectPath
+        val sameBranch = dragSource.branchLocation == props.attributeLocation
 
-        val targetDocumentIndex =
-            if (anchor != null) {
-                remainingPaths.indexOf(anchor)
+        if (sameBranch) {
+            // Reorder within this branch. insertionIndex is in the pre-removal list, so dropping at the
+            // dragged step's own two edges (source / source+1) is a no-op; otherwise account for the step
+            // leaving its slot when it sits above the target.
+            val source = dragSource.indexInBranch
+            if (insertionIndex == source || insertionIndex == source + 1) {
+                return
             }
-            else {
-                val lastSibling = others.last().objectPath
-                remainingPaths.indexOfLast { it == lastSibling || it.startsWith(lastSibling) } + 1
-            }
+            val newIndex = if (insertionIndex > source) insertionIndex - 1 else insertionIndex
+            val siblings = (state.stepLocations ?: return).filterIndexed { i, _ -> i != source }
+            val targetDocumentIndex = resolveTargetDocumentIndex(remainingPaths, siblings, newIndex)
 
-        async {
-            props.mirroredGraphStore.apply(ShiftObjectTreeCommand(
-                draggedLocation,
-                PositionRelation.at(targetDocumentIndex)))
+            async {
+                props.mirroredGraphStore.apply(ShiftObjectTreeCommand(
+                    draggedLocation,
+                    PositionRelation.at(targetDocumentIndex)))
+            }
         }
+        else {
+            // Re-parent into this branch: the dragged step isn't in this list, so insertionIndex is direct.
+            val siblings = state.stepLocations ?: listOf()
+            val targetDocumentIndex = resolveTargetDocumentIndex(remainingPaths, siblings, insertionIndex)
+
+            val newNesting = newBranchNesting(draggedLocation.objectPath.name)
+
+            async {
+                props.mirroredGraphStore.apply(RelocateObjectTreeRefactorCommand(
+                    draggedLocation,
+                    newNesting,
+                    PositionRelation.at(targetDocumentIndex)))
+            }
+        }
+    }
+
+
+    // Insertion index (0..size) = the number of step rows whose vertical midpoint is above the cursor; rows
+    // come from StepRowRefRegistry, in document order. An unregistered row is skipped (shouldn't happen for a
+    // visible row); an empty branch yields 0.
+    private fun computeInsertionFromCursor(
+        clientY: Double,
+        stepLocations: List<ObjectLocation>
+    ): Int {
+        var index = 0
+        for (stepLocation in stepLocations) {
+            val element = StepRowRefRegistry.get(stepLocation)
+                ?: continue
+            val rect = element.getBoundingClientRect()
+            if (clientY < rect.top + rect.height / 2) {
+                break
+            }
+            index++
+        }
+        return index
+    }
+
+
+    // True when this branch's containing object is the dragged subtree itself or one of its descendants —
+    // dropping here would nest a container inside its own subtree (a cycle), which we reject.
+    private fun isInsideDraggedSubtree(dragSource: ScriptStepDragStore.DragSource): Boolean {
+        val container = props.attributeLocation.objectLocation
+        if (container.documentPath != dragSource.objectLocation.documentPath) {
+            return false
+        }
+        val draggedRoot = dragSource.objectLocation.objectPath
+        return container.objectPath == draggedRoot || container.objectPath.startsWith(draggedRoot)
+    }
+
+
+    // The dragged root's nesting once re-parented under this branch's attribute.
+    private fun newBranchNesting(draggedName: ObjectName): ObjectNesting {
+        return props.attributeLocation.objectLocation.objectPath
+            .nest(props.attributeLocation.attributePath, draggedName)
+            .nesting
+    }
+
+
+    // The document insertion index (resolved against the doc with the dragged subtree removed) for placing the
+    // subtree at newIndex among siblings. anchor = the sibling it should precede; null = goes after the last
+    // sibling's subtree, or — for an empty branch — after this branch's containing object's whole subtree so it
+    // serializes inside the branch region.
+    private fun resolveTargetDocumentIndex(
+        remainingPaths: List<ObjectPath>,
+        siblings: List<ObjectLocation>,
+        newIndex: Int
+    ): Int {
+        val anchor = siblings.getOrNull(newIndex)?.objectPath
+        if (anchor != null) {
+            return remainingPaths.indexOf(anchor)
+        }
+        if (siblings.isNotEmpty()) {
+            val lastSibling = siblings.last().objectPath
+            return remainingPaths.indexOfLast { it == lastSibling || it.startsWith(lastSibling) } + 1
+        }
+        val containerPath = props.attributeLocation.objectLocation.objectPath
+        return remainingPaths.indexOfLast { it == containerPath || it.startsWith(containerPath) } + 1
     }
 
 
@@ -338,10 +486,25 @@ class ScriptBranchDisplay(
             //     + CSS — no ref/registry, so mouse movement over the branch triggers no React re-render.
             asDynamic()["data-step-branch"] = ""
 
+            // The whole branch is the drop zone (one region, computed from cursor Y in claimDropHover). A
+            // nested branch's own zone is inside this one; it stopPropagation()s so the innermost branch wins.
+            onDragEnter = { event -> onBranchDragEnter(event) }
+            onDragOver = { event -> onBranchDragOver(event) }
+            onDrop = { event -> onBranchDrop(event) }
+
             if (stepLocations.isEmpty()) {
                 div {
+                    // position:relative anchors the drop region shown when dragging into this empty branch.
                     css {
+                        position = Position.relative
                         paddingTop = 2.em
+                    }
+
+                    // The empty region ITSELF is the drop zone: fill it rather than draw a line at the top.
+                    // (An empty branch is never the drag source, so no no-op suppression is needed here, and
+                    // the nested firstOrLastInsertionPoint suppresses its own band so they don't double up.)
+                    if (state.dropInsertionIndex == 0) {
+                        dropZoneRegion()
                     }
 
                     div {
@@ -357,7 +520,7 @@ class ScriptBranchDisplay(
                         }
                     }
 
-                    firstOrLastInsertionPoint(0, StepDependencyEdges.EMPTY)
+                    firstOrLastInsertionPoint(0, StepDependencyEdges.EMPTY, showDropZone = false)
                 }
             }
             else {
@@ -444,12 +607,19 @@ class ScriptBranchDisplay(
         //     the +button in the 1.5em gap. left edge here is the step card's left edge (this body
         //     cell is offset marginLeft=1.25em past the dependency gutter in renderRowWithGutter),
         //     so the button stays clear of trunk lines drawn in the gutter to its left.
+        // position:relative anchors the drop region (which fills this gap strip — the space between
+        // the two cards — when this is the active insertion point).
         div {
             css {
+                position = Position.relative
                 display = Display.flex
                 alignItems = AlignItems.center
                 height = 1.5.em
                 width = 100.pct
+            }
+
+            if (isActiveDropGap(index)) {
+                dropZoneRegion()
             }
 
             insertionButton(index)
@@ -457,7 +627,11 @@ class ScriptBranchDisplay(
     }
 
 
-    private fun ChildrenBuilder.firstOrLastInsertionPoint(index: Int, edges: StepDependencyEdges) {
+    private fun ChildrenBuilder.firstOrLastInsertionPoint(
+        index: Int,
+        edges: StepDependencyEdges,
+        showDropZone: Boolean = true
+    ) {
         // NB: routed through renderRowWithGutter (like betweenStepsInsertionPoint) so the +button
         //     lands in the same card-left column as the between-steps +buttons even when a
         //     dependency gutter widens the rows — the gutter's empty lane/phantom boxes reserve the
@@ -476,15 +650,41 @@ class ScriptBranchDisplay(
                 //     indent strip in `scriptBranchContainer` uses `background-clip: content-box`
                 //     with matching 32px vertical padding so its white bg does NOT extend over
                 //     these placeholder regions.
+                // position:relative anchors the drop region for the top/bottom insertion points.
+                // showDropZone=false in the empty-branch case, where the whole region is filled instead.
                 div {
                     css {
+                        position = Position.relative
                         height = 30.px
                         marginTop = 2.px
+                    }
+
+                    if (showDropZone && isActiveDropGap(index)) {
+                        dropZoneRegion()
                     }
 
                     insertionButton(index)
                 }
             })
+    }
+
+
+    // The gap at this insertion index is the active drop target. Source-branch no-op suppression: when
+    // this branch is the drag source, the dragged step's own two edges (source / source+1) are no-ops
+    // (mirrors onBranchDrop's same-branch guard), so don't highlight them.
+    private fun isActiveDropGap(gapIndex: Int): Boolean {
+        val insertionIndex = state.dropInsertionIndex
+            ?: return false
+        if (insertionIndex != gapIndex) {
+            return false
+        }
+        val source = state.dragSource
+            ?.takeIf { it.branchLocation == props.attributeLocation }
+            ?.indexInBranch
+        if (source != null && (insertionIndex == source || insertionIndex == source + 1)) {
+            return false
+        }
+        return true
     }
 
 
@@ -526,8 +726,12 @@ class ScriptBranchDisplay(
         objectLocation: ObjectLocation,
         stepCount: Int
     ) {
-        val marker = dropMarkerFor(
-            state.dragSourceIndex, state.dragOverIndex, state.dropAfter, index)
+        val dragSource = state.dragSource
+
+        // This branch is the source iff the active drag began here; its index is the slot being dragged.
+        val sourceIndexInThisBranch = dragSource
+            ?.takeIf { it.branchLocation == props.attributeLocation }
+            ?.indexInBranch
 
         ScriptStepSlot::class.react {
             key = Key(objectLocation.toReference().asString())
@@ -537,15 +741,12 @@ class ScriptBranchDisplay(
             this.first = index == 0
             this.last = index == stepCount - 1
 
-            this.dropMarker = marker
-            this.isDragSource = state.dragSourceIndex == index
+            this.isDragSource = sourceIndexInThisBranch == index
 
             this.stepDisplayManager = props.stepDisplayManager
             this.handleColor = dragHandleColor
 
             this.onDragStart = onSlotDragStart
-            this.onDragOver = onSlotDragOver
-            this.onDrop = onSlotDrop
             this.onDragEnd = onSlotDragEnd
         }
     }

@@ -86,6 +86,29 @@ fun ChildrenBuilder.dragHandle(
 }
 
 
+// A filled "drop here" REGION (not a hairline): a rounded translucent-blue fill with a solid blue
+// border. Absolutely positioned to fill its parent exactly (inset 0), so the caller must give the
+// immediate parent position:relative (an inter-step gap strip, or a whole empty-branch region) and
+// size/align it to the step-card column. pointer-events none so it never interferes with the branch's
+// own drag-over hit-testing.
+fun ChildrenBuilder.dropZoneRegion() {
+    div {
+        css {
+            position = Position.absolute
+            top = 0.px
+            bottom = 0.px
+            left = 0.px
+            right = 0.px
+            pointerEvents = None.none
+            boxSizing = BoxSizing.borderBox
+            borderRadius = 4.px
+            backgroundColor = Color("rgba(41, 121, 255, 0.14)")
+            border = Border(2.px, LineStyle.solid, Color("#2979ff"))
+        }
+    }
+}
+
+
 fun ChildrenBuilder.dropIndicator(marker: DropMarker?) {
     if (marker == null) {
         return
@@ -95,12 +118,16 @@ fun ChildrenBuilder.dropIndicator(marker: DropMarker?) {
             position = Position.absolute
             left = 0.px
             right = 0.px
-            height = 2.px
-            backgroundColor = Color("#649fff")
+            // Thicker, rounded, and glowing so the drop position reads clearly while dragging (a 2px hairline
+            // was hard to see and pick precisely).
+            height = 4.px
+            borderRadius = 2.px
+            backgroundColor = Color("#2979ff")
+            boxShadow = BoxShadow(0.px, 0.px, 6.px, 1.px, Color("rgba(41, 121, 255, 0.55)"))
             pointerEvents = None.none
             when (marker) {
-                DropMarker.Above -> top = (-0.5).em
-                DropMarker.Below -> bottom = (-0.5).em
+                DropMarker.Above -> top = (-0.4).em
+                DropMarker.Below -> bottom = (-0.4).em
             }
         }
     }

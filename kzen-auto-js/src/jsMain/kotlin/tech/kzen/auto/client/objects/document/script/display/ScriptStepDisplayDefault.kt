@@ -327,7 +327,7 @@ class ScriptStepDisplayDefault(
             // Click-to-toggle lives on the card so its padding ring is clickable too. The handled controls —
             // the name text & pencil (edit), the delete/chevron buttons, and (when expanded) the whole body —
             // stop propagation, so only "chrome" clicks (padding, header gaps, summary, collapsed trace) reach
-            // here. The drag handle / drop indicator are slot siblings outside this div, so they never bubble in.
+            // here. The drag handle is a slot sibling outside this div, so it never bubbles in.
             onClick = { onToggleExpanded() }
 
             StepHeader::class.react {

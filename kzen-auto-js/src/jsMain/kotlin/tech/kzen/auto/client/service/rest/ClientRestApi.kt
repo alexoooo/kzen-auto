@@ -25,6 +25,7 @@ import tech.kzen.lib.common.model.document.DocumentPathMap
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.location.ResourceLocation
 import tech.kzen.lib.common.model.obj.ObjectName
+import tech.kzen.lib.common.model.obj.ObjectNesting
 import tech.kzen.lib.common.model.structure.notation.PositionRelation
 import tech.kzen.lib.common.model.structure.resource.ResourceListing
 import tech.kzen.lib.common.model.structure.resource.ResourcePath
@@ -199,6 +200,20 @@ class ClientRestApi(
             CommonRestApi.commandObjectShiftTree,
             CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
             CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
+            CommonRestApi.paramPositionIndex to newPositionInDocument.asString())
+    }
+
+
+    suspend fun relocateObjectTree(
+        objectLocation: ObjectLocation,
+        newObjectNesting: ObjectNesting,
+        newPositionInDocument: PositionRelation
+    ): Digest {
+        return getOrPutDigest(
+            CommonRestApi.commandObjectRelocateTree,
+            CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
+            CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
+            CommonRestApi.paramObjectNesting to newObjectNesting.asString(),
             CommonRestApi.paramPositionIndex to newPositionInDocument.asString())
     }
 
