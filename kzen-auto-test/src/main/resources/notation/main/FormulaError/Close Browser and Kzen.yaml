@@ -1,0 +1,9 @@
+main:
+  is: Script
+
+main.steps/Close Browser:
+  is: BrowserCloseStep
+
+main.steps/Stop SUT:
+  is: StopKzenAutoStep
+  name: formula-error-sut

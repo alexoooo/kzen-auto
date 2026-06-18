@@ -1,0 +1,19 @@
+main:
+  is: Script
+
+# Distinct port/name from the FizzBuzz SUT (18082/main) so the two smoke tests never collide when they
+# share one tester JVM. The fixture preloads "Throwing Formula" into the SUT.
+main.steps/Start SUT:
+  is: StartKzenAutoStep
+  name: formula-error-sut
+  fixture: fixtures/formula-error
+  port: 18083
+
+main.steps/Open Browser:
+  is: BrowserOpenStep
+  closePolicy: manual
+
+main.steps/Navigate:
+  is: BrowserGetStep
+  location: "http://127.0.0.1:18083/"
+  screenshotDelayMilliseconds: 1000

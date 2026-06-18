@@ -1,0 +1,8 @@
+main:
+  is: Script
+
+# A Formula that throws at run time (type Nothing, so it compiles cleanly — no validation error blocks
+# the run — then fails when evaluated). This is the SUT-side failure the self-test must detect.
+main.steps/Throw:
+  is: FormulaStep
+  code: 'error("intentional failure")'

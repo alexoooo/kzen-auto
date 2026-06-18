@@ -1,0 +1,54 @@
+main:
+  is: Script
+
+# Open the preloaded failing Script from the SUT navigation tree (it shows by its document name).
+main.steps/Open Script:
+  is: BrowserClickStep
+  target:
+    type: Text
+    value: Throwing Formula
+
+main.steps/Click Run:
+  is: BrowserClickStep
+  target:
+    type: Xpath
+    value: "//button[@title='Run']"
+
+# Reactive await: poll the Run/Pause toggle's @title and loop while the run is still executing ("Pause").
+# When the Formula throws, the run leaves the executing state and the title is no longer "Pause".
+main.steps/Await:
+  is: DoWhileStep
+  condition: 'State == "Pause"'
+
+main.steps/Await.steps/Wait:
+  is: WaitStep
+  milliseconds: 250
+
+main.steps/Await.steps/State:
+  is: BrowserReadStep
+  target:
+    type: Xpath
+    value: "//button[@title='Run' or @title='Pause' or @title='Continue running']"
+  attribute: title
+
+# Expand the failed step: its Error section (ScriptStepDisplayDefault.renderError) renders ONLY in the
+# expanded body — the collapsed card shows just Result/Detail. The failing Script has one step, so its
+# header chevron is the sole "Expand" button.
+main.steps/Expand Step:
+  is: BrowserClickStep
+  target:
+    type: Xpath
+    value: "//button[@title='Expand']"
+
+# Let the error trace arrive from the run and the expanded body render.
+main.steps/Settle:
+  is: WaitStep
+  milliseconds: 2000
+
+# Read the failed step's rendered error (div title='Error', text "Error: intentional failure"). If the
+# error isn't present/visible this read fails the run — surfaced loudly by awaitSuccess, never a false pass.
+main.steps/Read Error:
+  is: BrowserReadStep
+  target:
+    type: Xpath
+    value: "(//div[@title='Error'])[last()]"

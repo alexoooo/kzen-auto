@@ -60,13 +60,15 @@ Override the kzen-auto jar (e.g. point at a CI-cached jar to skip the local `:kz
 
 ## Adding a test
 
-1. Add a Script YAML under `src/main/resources/notation/test-suite/<area>/<Name>.yaml`. Mirror `test-suite/smoke/OpenWelcome.yaml`: lead with `StartKzenAutoStep`, end with `StopKzenAutoStep`, put browser interactions in between.
-2. Add a `@Test` to a `*SelfTest` class that calls `testerClient.startRun("test-suite/<area>/<Name>.yaml", "main")` and `awaitCompletion()`. No Kotlin SUT plumbing — the script owns it.
-3. For a non-empty SUT, create `fixtures/<fixture-name>/src/main/resources/notation/...` and point `StartKzenAutoStep.fixture` at the new path.
+1. Add a Script YAML tree under `src/main/resources/notation/main/<Area>/`. Mirror `main/FizzBuzz/`: a root Script of `RunStep`s that leads with an "Open" sub-script (`StartKzenAutoStep` + `BrowserOpenStep` + `BrowserGetStep`), drives the SUT via Browser steps in the middle, and ends with a "Close" sub-script (`BrowserCloseStep` + `StopKzenAutoStep`).
+2. Add a `@Test` to a `*SelfTest` class that calls `testerClient.startRun("main/<Area>/<Root>.yaml", "main")` then `testerClient.awaitSuccess("main/<Area>/<Root>.yaml")` (asserts no step errored — see Pass/fail semantics). Read any value the orchestration captured with `testerClient.readDisplayedValue(...)` and assert on it. No Kotlin SUT plumbing — the script owns it.
+3. For a non-empty SUT, create `fixtures/<fixture-name>/src/main/resources/notation/main/...` and point `StartKzenAutoStep.fixture` at `fixtures/<fixture-name>`. Give the SUT a port + `name` distinct from sibling tests so two `@Test`s can share one tester JVM (each opens and closes its own SUT). Example: `main/FormulaError/` preloads a throwing-Formula Script via `fixtures/formula-error` and asserts the failure is surfaced.
 
-## Pass/fail semantics — known limitation
+## Pass/fail semantics
 
-The kzen-auto `/logic/status` endpoint reports `active = "null"` once a run completes, regardless of whether constituent steps threw. A step throwing inside the tester still flips `active` to null shortly after, so silent test passes are possible. Until a typed `Assert*Step` exists (deferred open issue), inspect tester stdout for exceptions and consider a custom step that asserts on browser state.
+The kzen-auto `/logic/status` endpoint reports `active = "null"` once a run completes, regardless of whether constituent steps threw — so a bare `active == null` check can silently pass on a failed run. Use `TesterClient.awaitSuccess(documentPath)` / `awaitFailure(documentPath)` instead: they await settle, then inspect every step's traced `StepTrace.error` across the whole run (via the `LogicTraceEndpoint` `lookup-run` action with an empty-prefix `LogicTraceQuery`, which merges all sub-script executions). This identifies success/failure from the actual traces, independent of the run's `pauseOnError` mode and at any nesting depth; `runStepErrors(documentPath)` returns the raw list if you need it.
+
+This covers failures in the **tester orchestration's own steps**. A failure inside the **SUT** lives in the SUT process's trace store, not the tester's, so it is observed via the browser (read the SUT's `div[title='Error']`, rendered by `ScriptStepDisplayDefault.renderError`) and re-traced as an orchestration read-step value — see `main/FormulaError/`, the negative self-test.
 
 ## Gotchas
 
