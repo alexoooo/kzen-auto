@@ -1,0 +1,168 @@
+
+
+FlowController:
+  is: DocumentController
+  class: tech.kzen.auto.client.objects.document.flow.FlowController$Wrapper
+  archetype: Flow
+  attributeController: AttributeEditorManagerOld
+  ribbonController: RibbonController
+
+
+#######################################################################################################################
+
+
+FlowInsertGroup:
+  is: RibbonGroup
+  title: "Insert"
+  archetype: Flow
+
+
+FlowPipeGroup:
+  is: RibbonGroup
+  title: "Pipes"
+  archetype: Flow
+
+
+###########################################################
+# Signature vertices (input parameters / result) first, then sources / processors / sinks.
+
+
+FlowInputTool:
+  is: RibbonTool
+  parent: FlowInsertGroup
+  delegate: FlowInput
+
+
+FlowOutputTool:
+  is: RibbonTool
+  parent: FlowInsertGroup
+  delegate: FlowOutput
+
+
+FlowIntRangeSourceTool:
+  is: RibbonTool
+  parent: FlowInsertGroup
+  delegate: IntRangeSource
+
+
+FlowDivisibleFilterTool:
+  is: RibbonTool
+  parent: FlowInsertGroup
+  delegate: DivisibleFilter
+
+
+FlowReplaceProcessorTool:
+  is: RibbonTool
+  parent: FlowInsertGroup
+  delegate: ReplaceProcessor
+
+
+FlowRepeatProcessorTool:
+  is: RibbonTool
+  parent: FlowInsertGroup
+  delegate: RepeatProcessor
+
+
+FlowCountSinkTool:
+  is: RibbonTool
+  parent: FlowInsertGroup
+  delegate: CountSink
+
+
+FlowAccumulateSinkTool:
+  is: RibbonTool
+  parent: FlowInsertGroup
+  delegate: AccumulateSink
+
+
+FlowAppendTextTool:
+  is: RibbonTool
+  parent: FlowInsertGroup
+  delegate: AppendText
+
+
+FlowSelectLastTool:
+  is: RibbonTool
+  parent: FlowInsertGroup
+  delegate: SelectLast
+
+
+###########################################################
+
+
+FlowTopToBottomPipeTool:
+  is: RibbonTool
+  parent: FlowPipeGroup
+  delegate: TopToBottomPipe
+
+
+FlowTopToLeftPipeTool:
+  is: RibbonTool
+  parent: FlowPipeGroup
+  delegate: TopToLeftPipe
+
+
+FlowTopToRightPipeTool:
+  is: RibbonTool
+  parent: FlowPipeGroup
+  delegate: TopToRightPipe
+
+
+FlowTopToLeftAndRightPipeTool:
+  is: RibbonTool
+  parent: FlowPipeGroup
+  delegate: TopToLeftAndRightPipe
+
+
+FlowTopToBottomAndLeftPipeTool:
+  is: RibbonTool
+  parent: FlowPipeGroup
+  delegate: TopToBottomAndLeftPipe
+
+
+FlowTopToBottomAndRightPipeTool:
+  is: RibbonTool
+  parent: FlowPipeGroup
+  delegate: TopToBottomAndRightPipe
+
+
+FlowTopToBottomAndLeftAndRightPipeTool:
+  is: RibbonTool
+  parent: FlowPipeGroup
+  delegate: TopToBottomAndLeftAndRightPipe
+
+
+FlowLeftToRightPipeTool:
+  is: RibbonTool
+  parent: FlowPipeGroup
+  delegate: LeftToRightPipe
+
+
+FlowLeftToBottomPipeTool:
+  is: RibbonTool
+  parent: FlowPipeGroup
+  delegate: LeftToBottomPipe
+
+
+FlowLeftToBottomAndRightPipeTool:
+  is: RibbonTool
+  parent: FlowPipeGroup
+  delegate: LeftToBottomAndRightPipe
+
+
+FlowRightToLeftPipeTool:
+  is: RibbonTool
+  parent: FlowPipeGroup
+  delegate: RightToLeftPipe
+
+
+FlowRightToBottomPipeTool:
+  is: RibbonTool
+  parent: FlowPipeGroup
+  delegate: RightToBottomPipe
+
+
+FlowRightToLeftAndBottomPipeTool:
+  is: RibbonTool
+  parent: FlowPipeGroup
+  delegate: RightToLeftAndBottomPipe

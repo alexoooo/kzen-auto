@@ -1,0 +1,18 @@
+main:
+  is: Flow
+  vertices:
+  - FerrInput
+  - FerrDivide
+  edges: []
+
+FerrInput:
+  is: FlowInput
+  parameter: "n"
+  row: 0
+  column: 0
+
+FerrDivide:
+  is: DivisibleFilter
+  divisor: 0
+  row: 1
+  column: 0

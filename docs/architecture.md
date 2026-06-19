@@ -4,7 +4,7 @@ What kzen-auto adds on top of kzen-lib. Read [`../../kzen-lib/docs/architecture.
 
 ## What kzen-auto is
 
-A web-based RPA / office-automation platform. Users open kzen-auto in a browser, edit declarative documents (reports, dataflows, scripts, etc.) in a graph editor, and execute them server-side. Plugins drop in extra report definitions via a small JAR-based SPI.
+A web-based RPA / office-automation platform. Users open kzen-auto in a browser, edit declarative documents (reports, flows, scripts, etc.) in a graph editor, and execute them server-side. Plugins drop in extra report definitions via a small JAR-based SPI.
 
 The non-obvious parts — and what this doc covers — are:
 
@@ -31,14 +31,16 @@ The four paradigms:
 
 | Paradigm | Subpackage | Execution model | Typical document |
 |----------|-----------|-----------------|------------------|
-| **Dataflow** | `paradigm/dataflow/` | Lazy, pull-based pipeline. `Dataflow<State>` vertices have `RequiredInput`/`OptionalInput` and emit via `RequiredOutput`/`OptionalOutput`. Stateless, `StatelessDataflow`, and `StreamDataflow` variants exist. | Visual graph documents |
+| **Dataflow** | `paradigm/flow/` | Lazy, pull-based pipeline. `FlowVertex<State>` vertices have `RequiredInput`/`OptionalInput` and emit via `RequiredOutput`/`OptionalOutput`. Stateless, `StatelessFlowVertex`, and `StreamFlowVertex` variants exist. | Flow document vertices (`document/flow/`), executed under the Logic paradigm — see Flow note below |
 | **Logic** | kzen-lib `exec/logic/` (was `paradigm/logic/`) | Step-through, traceable execution. `LogicController` coordinates pause/resume/step; produces a `LogicTrace`. | Script / procedural documents |
 | **Task** | kzen-lib `exec/task/` (was `paradigm/task/`) | Async, long-running, fire-and-forget. `ManagedTask` wraps `ExecutionRequest`; runs to completion under `TaskModel` tracking. | Background reports, automation runs |
 | **Detached** | `paradigm/detached/` | One-shot request/response. `DetachedAction` executes one `ExecutionRequest` and returns `ExecutionResult` synchronously. No state tracking. | Quick administrative actions (e.g. plugin upload) |
 
 **Rule of thumb when reading code:** if you see `TaskModel`, you're in the Task paradigm. `LogicTrace` / step controllers ⇒ Logic. `RequiredInput`/`RequiredOutput` ⇒ Dataflow. Plain `ExecutionRequest`/`ExecutionResult` with no wrapper ⇒ Detached.
 
-> **Relocation (2026-05-28).** The `Logic` / `Task` / `Trace` / `Tuple` *types* moved to kzen-lib `tech.kzen.lib.common.exec.*` — see [`../../kzen-lib/docs/architecture.md`](../../kzen-lib/docs/architecture.md#execution-model-logic--task--trace). What stays in kzen-auto is the paradigm *binding*: the REST wire surface (`paradigm/logic/LogicConventions`, the `/logic` and `/task` paths in `CommonRestApi`), the `ServerLogicController` / `ModelTaskRepository` server impls, and the documents themselves — e.g. a Script document implements kzen-lib's `Logic`. `paradigm/dataflow/` and `paradigm/detached/` did not move.
+> **Relocation (2026-05-28).** The `Logic` / `Task` / `Trace` / `Tuple` *types* moved to kzen-lib `tech.kzen.lib.common.exec.*` — see [`../../kzen-lib/docs/architecture.md`](../../kzen-lib/docs/architecture.md#execution-model-logic--task--trace). What stays in kzen-auto is the paradigm *binding*: the REST wire surface (`paradigm/logic/LogicConventions`, the `/logic` and `/task` paths in `CommonRestApi`), the `ServerLogicController` / `ModelTaskRepository` server impls, and the documents themselves — e.g. a Script document implements kzen-lib's `Logic`. `paradigm/flow/` (the renamed dataflow paradigm) and `paradigm/detached/` did not move.
+
+> **Flow (2026-06-19).** The former **Graph** / "Time Series" visual document (`GraphDocument`, driven by the bespoke `/dataflow/*` engine) was modernized into **Flow** (`server/objects/flow/FlowDocument`), which implements kzen-lib's `Logic`: one vertex execution = one step, run through `ServerLogicController` + `/logic/*`, with dedicated input/output vertices supplying parameters and a return value (see `FlowExecution`). The standalone dataflow execution engine — `ActiveDataflowRepository`, `VisualDataflowRepository`, `VisualDataflowLoop`, the `ActiveVisualProvider`/`VisualDataflowProvider`, and the `/dataflow/*` routes — was **retired** (clean rename, no `Graph` compat archetype). The low-level vertex/topology SPI (`FlowVertex`, `FlowMatrix`, `FlowDag`, `FlowUtils`, `VisualVertexModel`) and the vertex/edge rendering (`CellController`, `EdgeController`, `VertexController`) are **reused** by Flow — only the execution and visual-service layers were removed. The client `document/flow/FlowController` rebuilds per-vertex visual state from the logic trace store (`FlowProgressStore`), like `ScriptProgressStore`. **Full rename (2026-06-19):** the `paradigm.dataflow` and `objects.document.graph` / `server.objects.graph` packages and all `Dataflow*` class names were renamed to `paradigm.flow` / `objects.document.flow` / `server.objects.flow.vertex` and `Flow*` (`Dataflow`→`FlowVertex`, `DataflowMatrix`→`FlowMatrix`, `DataflowWiring`→`FlowWiring`, `VisualDataflowModel`→`VisualFlowModel`, etc.); notation archetype `Dataflow`→`FlowVertex`, `StreamDataflow`→`StreamFlowVertex`, `DataflowWiring`→`FlowWiring`. The unused `FolderDocument` was also removed.
 
 ## 2. Client-server graph synchronization
 
@@ -56,7 +58,7 @@ Browser                                          Server
                                         per-command endpoint, YAML-serialized payload)
 ```
 
-`MirroredGraphStore` (from kzen-lib's `service/store/`) is the client-side composition: it forwards each `apply(command)` to both stores. The local store updates immediately (UI reads from it); the REST store ships the command to the server. Both stores emit `NotationEvent` to their observers, so UI repositories (`VisualDataflowLoop`, etc.) recompute derived state.
+`MirroredGraphStore` (from kzen-lib's `service/store/`) is the client-side composition: it forwards each `apply(command)` to both stores. The local store updates immediately (UI reads from it); the REST store ships the command to the server. Both stores emit `NotationEvent` to their observers, so UI repositories recompute derived state.
 
 **Concrete data flow — user edits a text attribute in the browser:**
 
@@ -74,12 +76,12 @@ The **observer pattern in kzen-lib** is what makes this work — both sides subs
 
 Two consequences:
 
-- Observers should compute derived state from the event payload + their own local cache only. Don't call back to the server inside `onCommandSuccess`. Concrete example: `VisualDataflowRepository.applySingular`'s `AddedObjectEvent` branch constructs `VisualVertexModel.empty` locally rather than calling `provider.inspectVertex`.
-- If an observer invalidates its cached state in response to an event, it must also publish the new state to *its* observers (typically the UI), or downstream consumers stay frozen on the pre-event model. The `if (host in models) publishModel(...)` gate in `VisualDataflowRepository.onCommandSuccess` is fine — but only because the current code never invalidates (it always `put`s an empty entry instead).
+- Observers should compute derived state from the event payload + their own local cache only. Don't call back to the server inside `onCommandSuccess` (e.g. construct a fresh empty model locally on an `AddedObjectEvent` rather than fetching it from the server).
+- If an observer invalidates its cached state in response to an event, it must also publish the new state to *its* observers (typically the UI), or downstream consumers stay frozen on the pre-event model.
 
 ## 3. REST API surface
 
-Routes are declared in `KzenAutoMain.kt` (`routeNotationQuery`, `routeNotationCommands`, `routeDetached`, `routeTask`, `routeLogic`, `routeDataflow`) and dispatch into `RestHandler` (`kzen-auto-jvm/.../server/api/RestHandler.kt`). All path constants live in `CommonRestApi` (`kzen-auto-common/.../api/CommonRestApi.kt`), shared by both server and JS client so the two sides cannot drift.
+Routes are declared in `KzenAutoMain.kt` (`routeNotationQuery`, `routeNotationCommands`, `routeDetached`, `routeTask`, `routeLogic`) and dispatch into `RestHandler` (`kzen-auto-jvm/.../server/api/RestHandler.kt`). All path constants live in `CommonRestApi` (`kzen-auto-common/.../api/CommonRestApi.kt`), shared by both server and JS client so the two sides cannot drift.
 
 | Group | Prefix | Example paths | Purpose |
 |----|----|----|----|
@@ -87,8 +89,7 @@ Routes are declared in `KzenAutoMain.kt` (`routeNotationQuery`, `routeNotationCo
 | Notation commands | `/command/...` | `/command/document/create`, `/command/object/add`, `/command/attribute/upsert`, `/command/refactor/rename`, `/command/resource/add` | CQRS commands against the notation graph |
 | Detached | `/action/...` | `/action/detached`, `/action/download` | Detached-paradigm one-shot actions; `/action/download` returns a file body with `Content-Disposition` |
 | Task | `/task/...` | `/task/submit`, `/task/query`, `/task/cancel`, `/task/lookup` | Long-running background jobs (Task paradigm) |
-| Logic | `/logic/...` | `/logic/status`, `/logic/startRun`, `/logic/startStep`, `/logic/run`, `/logic/step`, `/logic/pause`, `/logic/cancel`, `/logic/request` | Step/pause/resume of a logic-paradigm run |
-| Dataflow | `/dataflow/...` | `/dataflow/model`, `/dataflow/reset`, `/dataflow/perform` | Ad-hoc visual-dataflow vertex execution |
+| Logic | `/logic/...` | `/logic/status`, `/logic/startRun`, `/logic/startStep`, `/logic/run`, `/logic/step`, `/logic/pause`, `/logic/cancel`, `/logic/request` | Step/pause/resume of a logic-paradigm run (Script **and Flow**) |
 
 Most endpoints are GET (idempotent commands carry their payload in the query string); large or text-heavy command bodies — notation upserts, list inserts, multi-value updates — also have PUT variants taking form parameters. There are no WebSocket or SSE channels.
 
@@ -106,8 +107,8 @@ The companion-object `init` block registers SPI metadata with kzen-lib's `Reflec
 | `graphStore` | `DirectGraphStore` | In-process notation store; the canonical mirror target for `ClientRestGraphStore` |
 | `detachedExecutor` | `ModelDetachedExecutor` | Detached-paradigm runner |
 | `modelTaskRepository` | `ModelTaskRepository` | Task-paradigm registry + runner (observer on `graphStore`) |
-| `activeDataflowRepository`, `visualDataflowRepository` | dataflow paradigm | Server-side execution + visual-state model (observers on `graphStore`) |
-| `serverLogicController` | `ServerLogicController` | Logic-paradigm state machine (see § 3 gotcha) |
+| `serverLogicController` | `ServerLogicController` | Logic-paradigm state machine (see § 3 gotcha); runs Script **and Flow** |
+| `flowMessageInspector` | `FlowMessageInspector` | Injected (via `graphEnvironment`) into Flow vertices for message inspection / tracing |
 | `objectStableMapper` | `ObjectStableMapper` (kzen-lib) | Process-global `ObjectLocation ↔ ObjectStableId` bimap; `graphStore.observe(...)` at boot + pre-warmed over the initial notation (see [`../../kzen-lib/docs/architecture.md`](../../kzen-lib/docs/architecture.md#stable-identity-objectstablemapper)) |
 | `logicTraceStore` | `LogicTraceStore` (kzen-lib) | In-memory, stable-id-keyed trace store; constructed with `objectStableMapper` |
 | `restHandler` | `RestHandler` | Dispatch target for every route in `KzenAutoMain` |
@@ -115,7 +116,7 @@ The companion-object `init` block registers SPI metadata with kzen-lib's `Reflec
 | `definitionRepository` | `MultiDefinitionRepository` | Report-definer pool: built-in (`CsvReportDefiner` / `TsvReportDefiner` / `TextReportDefiner`) plus `PluginReportDefinitionRepository` for JAR-loaded plugins |
 | `webDriverContext` | `WebDriverContext` | Selenium / WebDriver lifecycle for browser-automation script steps |
 
-Construction is self-initializing: the private `init()` (run by `create()`/`forTest()`) subscribes the dataflow/task repositories **and `objectStableMapper`** to the graph store via `graphStore.observe(...)` — the same observer mechanism described in § 2 — then pre-warms the mapper by iterating the boot notation. The shutdown hook calls `context.close()`, which currently only quits the WebDriver pool.
+Construction is self-initializing: the private `init()` (run by `create()`/`forTest()`) subscribes the task repository **and `objectStableMapper`** to the graph store via `graphStore.observe(...)` — the same observer mechanism described in § 2 — then pre-warms the mapper by iterating the boot notation. The shutdown hook calls `context.close()`, which currently only quits the WebDriver pool.
 
 ## 5. Backend execution model
 
@@ -153,7 +154,7 @@ Each subdirectory under `kzen-auto-js/src/jsMain/kotlin/tech/kzen/auto/client/ob
 | Subdir | Document type | What it edits |
 |--------|---------------|---------------|
 | `report/` | Report | Interactive data queries: input selection, filtering, pivot, export |
-| `graph/` | Visual dataflow | Node-and-edge graph; each node is a `Dataflow` instance |
+| `flow/` | Flow | Node-and-edge DAG, run via the Logic paradigm (Run/Step/Pause); each node is a `FlowVertex`. `FlowController` + `FlowProgressStore` plus the shared vertex/edge rendering (`CellController`, `EdgeController`, `VertexController`) all live here (the legacy `GraphController` was retired) |
 | `script/` | Script | Step-by-step procedural execution; trace view |
 | `data/` | Data schema | Field definitions / format |
 | `plugin/` | Plugin registry | Upload / register plugin JARs |
@@ -232,7 +233,7 @@ reflectionRegistry.put(
 
 If you're new to kzen-auto, read these in order — they anchor the patterns above:
 
-1. `kzen-auto-common/.../paradigm/dataflow/Dataflow.kt` — the cleanest paradigm.
+1. `kzen-auto-common/.../paradigm/flow/api/FlowVertex.kt` — the cleanest paradigm.
 2. `kzen-lib-common/.../exec/task/ManagedTask.kt` and `exec/task/model/TaskModel.kt` — long-running execution (relocated from kzen-auto 2026-05-28).
 3. `kzen-auto-common/.../api/CommonRestApi.kt` — every wire endpoint as a constant; shared by client and server.
 4. `kzen-auto-js/.../service/rest/ClientRestGraphStore.kt` — the client-side REST proxy.

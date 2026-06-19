@@ -1,0 +1,19 @@
+main:
+  is: Flow
+  vertices:
+  - FstreamSource
+  - FstreamResult
+  edges: []
+
+FstreamSource:
+  is: IntRangeSource
+  from: 1
+  to: 3
+  row: 0
+  column: 0
+
+FstreamResult:
+  is: FlowOutput
+  result: "last"
+  row: 1
+  column: 0

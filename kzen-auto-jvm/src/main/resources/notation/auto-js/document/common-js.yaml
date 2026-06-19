@@ -58,7 +58,7 @@ ReferenceLinkAttributeView:
 
 
 AttributeEditorManagerOld:
-  class: tech.kzen.auto.client.objects.document.graph.edit.AttributeEditorManagerOld$Wrapper
+  class: tech.kzen.auto.client.objects.document.flow.edit.AttributeEditorManagerOld$Wrapper
   meta:
     attributeEditors:
       is: List
@@ -67,7 +67,7 @@ AttributeEditorManagerOld:
 
 AttributeEditorOld:
   abstract: true
-  class: tech.kzen.auto.client.objects.document.graph.edit.AttributeEditorOld
+  class: tech.kzen.auto.client.objects.document.flow.edit.AttributeEditorOld
   meta:
     objectLocation:
       is: ObjectLocation
@@ -75,6 +75,6 @@ AttributeEditorOld:
 
 DefaultAttributeEditorOld:
   is: AttributeEditorOld
-  class: tech.kzen.auto.client.objects.document.graph.edit.DefaultAttributeEditorOld$Wrapper
+  class: tech.kzen.auto.client.objects.document.flow.edit.DefaultAttributeEditorOld$Wrapper
 
 

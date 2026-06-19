@@ -2,11 +2,7 @@ package tech.kzen.auto.server.context
 
 import kotlinx.coroutines.runBlocking
 import tech.kzen.auto.common.codegen.KzenAutoCommonModule
-import tech.kzen.auto.common.paradigm.dataflow.service.active.ActiveDataflowRepository
-import tech.kzen.auto.common.paradigm.dataflow.service.active.ActiveVisualProvider
-import tech.kzen.auto.common.paradigm.dataflow.service.format.DataflowMessageInspector
-import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowRepository
-import tech.kzen.auto.common.service.GraphInstanceCreator
+import tech.kzen.auto.common.paradigm.flow.service.format.FlowMessageInspector
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.auto.server.api.RestHandler
 import tech.kzen.auto.server.codegen.KzenAutoJvmModule
@@ -119,24 +115,8 @@ class KzenAutoContext(
 
     val logicTraceStore = LogicTraceStore(objectStableMapper)
 
-    private val graphInstanceCreator = GraphInstanceCreator(
-        graphStore, graphCreator) { graphEnvironment }
-
-
-    /// TODO: factor out
-    private val dataflowMessageInspector = DataflowMessageInspector()
-
-    private val activeDataflowRepository = ActiveDataflowRepository(
-        graphInstanceCreator,
-        dataflowMessageInspector,
-        graphStore)
-
-    private val activeVisualProvider = ActiveVisualProvider(
-        activeDataflowRepository)
-
-    val visualDataflowRepository = VisualDataflowRepository(
-        activeVisualProvider)
-    /// end of factor out
+    // Injected (via graphEnvironment) into Flow dataflow vertices for message inspection / tracing.
+    private val flowMessageInspector = FlowMessageInspector()
 
     val workUtils = WorkUtils.sibling
     val reportWorkPool = ReportWorkPool(workUtils)
@@ -178,7 +158,6 @@ class KzenAutoContext(
         notationParser,
         graphStore,
         detachedExecutor,
-        visualDataflowRepository,
         modelTaskRepository,
         serverLogicController,
         objectStableMapper)
@@ -205,6 +184,7 @@ class KzenAutoContext(
             .put(ClassName(ReportWorkPool::class.qualifiedName!!), reportWorkPool)
             .put(ClassName(ReportDefinitionRepository::class.qualifiedName!!), definitionRepository)
             .put(ClassName(CalculatedColumnEval::class.qualifiedName!!), calculatedColumnEval)
+            .put(ClassName(FlowMessageInspector::class.qualifiedName!!), flowMessageInspector)
             .put(ClassName(FileListingAction::class.qualifiedName!!), fileListingAction)
             .put(ClassName(ColumnListingAction::class.qualifiedName!!), columnListingAction)
             .put(ClassName(ServerLogicController::class.qualifiedName!!), serverLogicController)
@@ -215,8 +195,6 @@ class KzenAutoContext(
     //-----------------------------------------------------------------------------------------------------------------
     private fun init() {
         runBlocking {
-            graphStore.observe(activeDataflowRepository)
-            graphStore.observe(visualDataflowRepository)
             graphStore.observe(modelTaskRepository)
             graphStore.observe(objectStableMapper)
 

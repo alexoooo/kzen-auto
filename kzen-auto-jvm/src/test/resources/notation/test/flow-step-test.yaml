@@ -1,0 +1,25 @@
+main:
+  is: Flow
+  vertices:
+  - FsAlpha
+  - FsBeta
+  - FsOmega
+  edges: []
+
+FsAlpha:
+  is: FlowInput
+  parameter: "x"
+  row: 0
+  column: 0
+
+FsBeta:
+  is: ReplaceProcessor
+  replacement: "Z"
+  row: 1
+  column: 0
+
+FsOmega:
+  is: FlowOutput
+  result: "out"
+  row: 2
+  column: 0

@@ -105,12 +105,6 @@ object CommonRestApi {
     const val logicContinueStep = "${logicPrefix}step"
     const val logicStartAndStep = "${logicPrefix}startStep"
 
-    // dataflow (ad hoc)
-    private const val dataflowPrefix = "/dataflow/"
-    const val dataflowModel = "${dataflowPrefix}model"
-    const val dataflowReset = "${dataflowPrefix}reset"
-    const val dataflowPerform = "${dataflowPrefix}perform"
-
     // stable object id mapping
     const val objectStableMapperSnapshot = "/object-stable/snapshot"
 

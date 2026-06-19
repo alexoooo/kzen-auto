@@ -1,0 +1,203 @@
+
+###########################################################
+
+
+#CsvSource:
+#  abstract: true
+#  is: Action
+#  class: tech.kzen.auto.server.objects.query.CsvSource
+#  icon: TripOrigin
+#  title: "CSV Source"
+#  description: "CSV: Comma-separated value"
+#  filePath: "C:/path/to/file.csv"
+#  meta:
+#    filePath: String
+
+
+#######################################################################################################################
+
+
+IntRangeSource:
+  abstract: true
+  is: FlowVertex
+  class: tech.kzen.auto.server.objects.flow.vertex.IntRangeSource
+  icon: "material-symbols:trip-origin"
+  title: "Number Range"
+  description: "Range of integers, starting at 'from' and ending at 'to' (inclusively)"
+  from: 1
+  to: 10
+  meta:
+    output:
+      is: StreamOutput
+      by: FlowWiring
+    from: Int
+    to: Int
+
+
+#PrimeFilter:
+#  abstract: true
+#  is: FlowVertex
+#  class: tech.kzen.auto.server.objects.query.PrimeFilter
+#  icon: FilterList
+#  title: "Prime Filter"
+#  description: "Filter prime numbers"
+#  meta:
+#    input:
+#      is: RequiredInput
+#      by: FlowWiring
+#    output:
+#      is: OptionalOutput
+#      by: FlowWiring
+
+
+DivisibleFilter:
+  abstract: true
+  is: FlowVertex
+  class: tech.kzen.auto.server.objects.flow.vertex.DivisibleFilter
+  icon: "material-symbols:filter-list"
+  title: "Divisible Filter"
+  description: "Filter divisible by"
+  divisor: 1
+  meta:
+    input:
+      is: RequiredInput
+      by: FlowWiring
+    output:
+      is: OptionalOutput
+      by: FlowWiring
+    divisor: Int
+
+
+ReplaceProcessor:
+  abstract: true
+  is: FlowVertex
+  class: tech.kzen.auto.server.objects.flow.vertex.ReplaceProcessor
+  icon: "material-symbols:forward"
+  title: "Replace"
+  description: "Substitute the input value (which is ignored) with the given replacement"
+  replacement: ""
+  meta:
+    input:
+      is: RequiredInput
+      by: FlowWiring
+    output:
+      is: OptionalOutput
+      by: FlowWiring
+    replacement: String
+
+
+RepeatProcessor:
+  abstract: true
+  is: FlowVertex
+  class: tech.kzen.auto.server.objects.flow.vertex.RepeatProcessor
+  icon: "material-symbols:file-copy"
+  title: "Repeat"
+  description: "Repeat the input value a given number of times"
+  times: 2
+  meta:
+    input:
+      is: RequiredInput
+      by: FlowWiring
+    output:
+      is: BatchOutput
+      by: FlowWiring
+    times: Int
+
+
+CountSink:
+  abstract: true
+  is: FlowVertex
+  class: tech.kzen.auto.server.objects.flow.vertex.CountSink
+  icon: "material-symbols:exposure-plus-1"
+  title: "Count"
+  description: "Counter"
+  meta:
+    input:
+      is: RequiredInput
+      by: FlowWiring
+
+
+AccumulateSink:
+  abstract: true
+  is: FlowVertex
+  class: tech.kzen.auto.server.objects.flow.vertex.AccumulateSink
+#  icon: PlaylistAdd
+  icon: "material-symbols:print"
+  title: "Display"
+  description: "List of all seen values"
+  meta:
+    input:
+      is: RequiredInput
+      by: FlowWiring
+
+
+AppendText:
+  abstract: true
+  is: FlowVertex
+  class: tech.kzen.auto.server.objects.flow.vertex.AppendText
+  icon: "material-symbols:add"
+  title: "Append Text"
+  description: "Concatenate two (or possibly one) text inputs"
+  meta:
+    prefix:
+      is: OptionalInput
+      by: FlowWiring
+    suffix:
+      is: OptionalInput
+      by: FlowWiring
+    output:
+      is: RequiredOutput
+      by: FlowWiring
+
+
+SelectLast:
+  abstract: true
+  is: FlowVertex
+  class: tech.kzen.auto.server.objects.flow.vertex.SelectLast
+  icon: "material-symbols:compare-arrows"
+  title: "Select Last"
+  description: "Second if it's available, otherwise first"
+  meta:
+    first:
+      is: OptionalInput
+      by: FlowWiring
+    second:
+      is: OptionalInput
+      by: FlowWiring
+    output:
+      is: RequiredOutput
+      by: FlowWiring
+
+
+#######################################################################################################################
+# Flow signature vertices: input parameters (source) and result (sink).
+
+
+FlowInput:
+  abstract: true
+  is: FlowVertex
+  class: tech.kzen.auto.server.objects.flow.vertex.FlowInputVertex
+  icon: "material-symbols:login"
+  title: "Input"
+  description: "Flow input parameter (value supplied as a run argument)"
+  parameter: ""
+  meta:
+    parameter: String
+
+
+FlowOutput:
+  abstract: true
+  is: FlowVertex
+  class: tech.kzen.auto.server.objects.flow.vertex.FlowOutputVertex
+  icon: "material-symbols:logout"
+  title: "Output"
+  description: "Flow result (contributes to the run's return value)"
+  result: ""
+  meta:
+    input:
+      is: RequiredInput
+      by: FlowWiring
+    output:
+      is: RequiredOutput
+      by: FlowWiring
+    result: String

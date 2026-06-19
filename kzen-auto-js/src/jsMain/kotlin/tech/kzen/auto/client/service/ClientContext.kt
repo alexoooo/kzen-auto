@@ -12,8 +12,6 @@ import tech.kzen.auto.client.service.logic.ClientLogicGlobal
 import tech.kzen.auto.client.service.rest.*
 import tech.kzen.auto.client.wrap.iconify.IconLoader
 import tech.kzen.auto.common.codegen.KzenAutoCommonModule
-import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowLoop
-import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowRepository
 import tech.kzen.lib.common.codegen.KzenLibCommonModule
 import tech.kzen.lib.common.service.context.GraphCreator
 import tech.kzen.lib.common.service.context.GraphDefiner
@@ -80,25 +78,11 @@ class ClientContext private constructor() {
 
     val executionIntentGlobal = ExecutionIntentGlobal()
 
-    private val clientRestVisualDataflowProvider = ClientRestVisualDataflowProvider(
-            restClient)
-
-    val visualDataflowRepository = VisualDataflowRepository(
-            clientRestVisualDataflowProvider)
-
-    val visualDataflowLoop = VisualDataflowLoop(
-            mirroredGraphStore,
-            visualDataflowRepository,
-            250,
-            200)
-
-
     val clientRestTaskRepository = ClientRestTaskRepository(
         restClient)
 
 
-    val navigationGlobal = NavigationGlobal(
-            visualDataflowLoop)
+    val navigationGlobal = NavigationGlobal()
 
     val clientLogicGlobal = ClientLogicGlobal(
         restClient)
@@ -130,8 +114,6 @@ class ClientContext private constructor() {
             .put(ClassName("tech.kzen.auto.client.service.logic.ClientLogicGlobal"), clientLogicGlobal)
             .put(ClassName("tech.kzen.auto.client.service.rest.ClientRestApi"), restClient)
             .put(ClassName("tech.kzen.auto.client.service.rest.ClientRestTaskRepository"), clientRestTaskRepository)
-            .put(ClassName("tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowRepository"), visualDataflowRepository)
-            .put(ClassName("tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowLoop"), visualDataflowLoop)
             .build()
     }
 
@@ -142,12 +124,6 @@ class ClientContext private constructor() {
         IconLoader.preload(baseUrl)
 
         navigationGlobal.postConstruct(mirroredGraphStore)
-
-//        mirroredGraphStore.observe(executionRepository)
-        mirroredGraphStore.observe(visualDataflowRepository)
-
-//        executionRepository.observe(executionLoop)
-        visualDataflowRepository.observe(visualDataflowLoop)
 
         clientLogicGlobal.init()
 

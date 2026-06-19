@@ -1,0 +1,17 @@
+package tech.kzen.auto.common.paradigm.flow.model.exec
+
+
+class ActiveVertexModel(
+        var state: Any?,
+        var message: Any?,
+        val remainingBatch: MutableList<Any>,
+        var streamHasNext: Boolean,
+        var epoch: Long,
+
+        // TODO: factor out to be visual-only for performance?
+        var error: String?
+) {
+    fun hasNext(): Boolean {
+        return remainingBatch.isNotEmpty() || streamHasNext
+    }
+}

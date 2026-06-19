@@ -156,8 +156,6 @@ private fun Routing.routeRequests(
     routeTask(context.restHandler)
     routeLogic(context.restHandler)
 
-    routeDataflow(context.restHandler)
-
     routeObjectStable(context.restHandler)
 }
 
@@ -273,24 +271,6 @@ private fun Routing.routeTask(
     }
     get(CommonRestApi.taskLookup) {
         val response = restHandler.taskLookup(call.parameters)
-        call.respond(response)
-    }
-}
-
-
-private fun Routing.routeDataflow(
-    restHandler: RestHandler
-) {
-    get(CommonRestApi.dataflowModel) {
-        val response = restHandler.dataflowModel(call.parameters)
-        call.respond(response)
-    }
-    get(CommonRestApi.dataflowReset) {
-        val response = restHandler.dataflowReset(call.parameters)
-        call.respond(response)
-    }
-    get(CommonRestApi.dataflowPerform) {
-        val response = restHandler.dataflowPerform(call.parameters)
         call.respond(response)
     }
 }

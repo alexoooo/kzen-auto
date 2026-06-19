@@ -1,0 +1,9 @@
+package tech.kzen.auto.common.paradigm.flow.api.output
+
+
+interface OptionalOutput<in T> {
+    /**
+     * Must be called at most (and in some cases exactly) one time.
+     */
+    fun set(payload: T)
+}

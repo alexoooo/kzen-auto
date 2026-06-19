@@ -6,7 +6,7 @@ import react.State
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeViewManager
-import tech.kzen.auto.client.objects.document.graph.EdgeController
+import tech.kzen.auto.client.objects.document.flow.EdgeController
 import tech.kzen.auto.client.objects.document.script.ScriptController
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
 import tech.kzen.auto.client.objects.document.script.model.ScriptStore

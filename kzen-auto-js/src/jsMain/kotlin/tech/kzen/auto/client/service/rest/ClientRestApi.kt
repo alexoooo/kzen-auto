@@ -2,9 +2,6 @@ package tech.kzen.auto.client.service.rest
 
 import tech.kzen.auto.client.util.*
 import tech.kzen.auto.common.api.CommonRestApi
-import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
-import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexModel
-import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexTransition
 import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunResponse
@@ -561,67 +558,6 @@ class ClientRestApi(
             CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
             CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
             *parameters)
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    suspend fun visualDataflowModel(
-        host: DocumentPath
-    ): VisualDataflowModel {
-        val responseJson = getOrPutJson(
-            CommonRestApi.dataflowModel,
-            CommonRestApi.paramDocumentPath to host.asString())
-
-        val responseCollection = ClientJsonUtils.toMap(responseJson)
-
-        @Suppress("UNCHECKED_CAST")
-        return VisualDataflowModel.fromCollection(
-                responseCollection as Map<String, Any>)
-    }
-
-
-    suspend fun visualVertexModel(
-        host: DocumentPath,
-        vertexLocation: ObjectLocation
-    ): VisualVertexModel {
-        val responseJson = getOrPutJson(
-            CommonRestApi.dataflowModel,
-            CommonRestApi.paramDocumentPath to host.asString(),
-            CommonRestApi.paramObjectPath to vertexLocation.objectPath.asString())
-
-        val responseCollection = ClientJsonUtils.toMap(responseJson)
-
-        return VisualVertexModel.fromCollection(
-            responseCollection)
-    }
-
-
-    suspend fun resetDataflowExecution(
-        host: DocumentPath
-    ): VisualDataflowModel {
-        val responseJson = getOrPutJson(
-            CommonRestApi.dataflowReset,
-            CommonRestApi.paramDocumentPath to host.asString())
-
-        @Suppress("UNCHECKED_CAST")
-        val responseCollection = ClientJsonUtils.toMap(responseJson) as Map<String, Any>
-
-        return VisualDataflowModel.fromCollection(
-            responseCollection)
-    }
-
-
-    suspend fun execDataflow(
-        objectLocation: ObjectLocation
-    ): VisualVertexTransition {
-        val responseJson = getOrPutJson(
-            CommonRestApi.dataflowPerform,
-            CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
-            CommonRestApi.paramObjectPath to objectLocation.objectPath.asString())
-
-        val responseCollection = ClientJsonUtils.toMap(responseJson)
-
-        return VisualVertexTransition.fromCollection(responseCollection)
     }
 
 

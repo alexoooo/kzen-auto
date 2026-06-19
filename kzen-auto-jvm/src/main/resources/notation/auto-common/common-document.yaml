@@ -56,22 +56,25 @@ ScriptStep:
 ################################################################
 
 
-Graph:
+Flow:
   abstract: true
   is: Document
-  class: tech.kzen.auto.common.objects.document.graph.GraphDocument
-  title: "Time Series"
+  class: tech.kzen.auto.server.objects.flow.FlowDocument
+  title: "Flow"
   icon: "material-symbols:device-hub"
   vertices: []
   edges: []
   meta:
     vertices:
       is: List
-      of: Dataflow
+      of: FlowVertex
     edges:
       is: List
       of: EdgeDescriptor
       by: EdgesDefiner
+    selfLocation:
+      is: ObjectLocation
+      by: Self
 
 
 #################################################################

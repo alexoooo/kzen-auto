@@ -2,7 +2,6 @@ package tech.kzen.auto.client.service.global
 
 import kotlinx.browser.window
 import tech.kzen.auto.client.util.NavigationRoute
-import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowLoop
 import tech.kzen.auto.platform.decodeURI
 import tech.kzen.lib.common.exec.RequestParams
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
@@ -12,10 +11,7 @@ import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.common.service.store.MirroredGraphStore
 
 
-class NavigationGlobal(
-//        private val executionLoop: ExecutionLoop,
-        private val visualDataflowLoop: VisualDataflowLoop
-):
+class NavigationGlobal:
         LocalGraphStore.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -49,13 +45,8 @@ class NavigationGlobal(
 
 
     private fun publish() {
-        if (returnPending) {
-            // TODO: consolidate loops
-//            executionLoop.pauseAll()
-            visualDataflowLoop.pauseAll()
-
-            returnPending = false
-        }
+        // NB: previously paused the retired dataflow run-loop here on a pending "return" navigation.
+        returnPending = false
 
         val observersCopy = observers.toList()
         for (observer in observersCopy) {

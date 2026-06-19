@@ -1,5 +1,6 @@
 package tech.kzen.auto.common.util
 
+import tech.kzen.auto.common.objects.document.flow.FlowConventions
 import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.lib.common.model.attribute.AttributeName
@@ -74,6 +75,7 @@ object AutoConventions {
 
     fun isLogic(documentNotation: DocumentNotation): Boolean {
         return ScriptConventions.isScript(documentNotation) ||
+            FlowConventions.isFlow(documentNotation) ||
             ReportConventions.isReport(documentNotation)
     }
 }

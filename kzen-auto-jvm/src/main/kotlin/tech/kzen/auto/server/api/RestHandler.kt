@@ -3,10 +3,6 @@ package tech.kzen.auto.server.api
 import io.ktor.http.*
 import kotlinx.coroutines.runBlocking
 import tech.kzen.auto.common.api.CommonRestApi
-import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualDataflowModel
-import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexModel
-import tech.kzen.auto.common.paradigm.dataflow.model.exec.VisualVertexTransition
-import tech.kzen.auto.common.paradigm.dataflow.service.visual.VisualDataflowRepository
 import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunResponse
@@ -51,7 +47,6 @@ class RestHandler(
     private val yamlNotationParser: NotationParser,
     private val graphStore: DirectGraphStore,
     private val detachedExecutor: ModelDetachedExecutor,
-    private val visualDataflowRepository: VisualDataflowRepository,
     private val modelTaskRepository: ModelTaskRepository,
     private val serverLogicController: ServerLogicController,
     private val objectStableMapper: ObjectStableMapper
@@ -948,63 +943,6 @@ class RestHandler(
         }
 
         return execution
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    fun dataflowModel(parameters: Parameters): Map<String, Any?> {
-        val documentPath: DocumentPath = parameters.getParam(
-            CommonRestApi.paramDocumentPath, DocumentPath::parse)
-
-        val objectPath: ObjectPath? = parameters.getParamOrNull(
-            CommonRestApi.paramObjectPath, ObjectPath::parse)
-
-        val visualDataflowModel = runBlocking {
-            visualDataflowRepository.get(documentPath)
-        }
-
-        val result =
-            if (objectPath == null) {
-                VisualDataflowModel.toJsonCollection(visualDataflowModel)
-            }
-            else {
-                val objectLocation = ObjectLocation(documentPath, objectPath)
-                val visualVertexModel = visualDataflowModel.vertices[objectLocation]
-                    ?: throw IllegalArgumentException("Object location not found: $objectLocation")
-
-                VisualVertexModel.toJsonCollection(visualVertexModel)
-            }
-
-        return result
-    }
-
-
-    fun dataflowReset(parameters: Parameters): Map<String, Any> {
-        val documentPath: DocumentPath = parameters.getParam(
-            CommonRestApi.paramDocumentPath, DocumentPath::parse)
-
-        val visualDataflowModel = runBlocking {
-            visualDataflowRepository.reset(documentPath)
-        }
-
-        return VisualDataflowModel.toJsonCollection(visualDataflowModel)
-    }
-
-
-    fun dataflowPerform(parameters: Parameters): Map<String, Any?> {
-        val documentPath: DocumentPath = parameters.getParam(
-            CommonRestApi.paramDocumentPath, DocumentPath::parse)
-
-        val objectPath: ObjectPath = parameters.getParam(
-            CommonRestApi.paramObjectPath, ObjectPath::parse)
-
-        val objectLocation = ObjectLocation(documentPath, objectPath)
-
-        val transition: VisualVertexTransition = runBlocking {
-            visualDataflowRepository.execute(documentPath, objectLocation)
-        }
-
-        return VisualVertexTransition.toCollection(transition)
     }
 
 

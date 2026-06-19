@@ -1,0 +1,29 @@
+# Line-ending policy for kzen-auto.
+#
+# The repo previously had core.autocrlf=true and no .gitattributes, while the
+# working tree was a mix of LF and CRLF. Any tool that rewrote a file (e.g. a
+# bulk `sed -i`) would trip git's autocrlf round-trip check and flag the file as
+# modified with a phantom LF<->CRLF change, even when content was unchanged.
+#
+# Pinning LF everywhere (the natural choice for a cross-platform JVM/Gradle/JS
+# project) removes that ambiguity: git stores LF and checks out LF regardless of
+# the contributor's core.autocrlf setting.
+
+# Auto-detect text vs binary; store and check out text as LF.
+* text=auto eol=lf
+
+# Windows scripts must keep CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary assets: never apply EOL normalization (text=auto usually detects these,
+# but be explicit so screenshots/jars/fonts can never be corrupted).
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.jar  binary
+*.woff binary
+*.woff2 binary
+*.ttf  binary

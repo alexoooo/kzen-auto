@@ -10,7 +10,7 @@ import react.dom.html.ReactHTML.h2
 import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
-import tech.kzen.auto.client.objects.document.graph.edit.AttributePathValueEditorOld
+import tech.kzen.auto.client.objects.document.flow.edit.AttributePathValueEditorOld
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.rest.ClientRestApi

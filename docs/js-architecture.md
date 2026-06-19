@@ -203,7 +203,7 @@ object ClientContext {
     private val remoteGraphStore = ClientRestGraphStore(restClient, notationParser)
     val mirroredGraphStore = MirroredGraphStore(directGraphStore, remoteGraphStore)
 
-    val navigationGlobal = NavigationGlobal(visualDataflowLoop)
+    val navigationGlobal = NavigationGlobal()
     val clientLogicGlobal = ClientLogicGlobal(restClient)
     val clientStateGlobal = ClientStateGlobal()
 
