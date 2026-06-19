@@ -5,12 +5,13 @@ import mui.material.*
 import mui.system.sx
 import react.*
 import react.dom.html.ReactHTML.div
-import react.dom.html.ReactHTML.hr
 import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
+import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.service.logic.ClientLogicGlobal
 import tech.kzen.auto.client.service.logic.ClientLogicState
+import tech.kzen.auto.client.service.logic.LogicRunFrames
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.createRef
@@ -18,10 +19,9 @@ import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunFrameInfo
 import tech.kzen.auto.common.util.AutoConventions
+import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
-import web.cssom.NamedColor
-import web.cssom.em
-import web.cssom.px
+import web.cssom.*
 import web.html.HTMLElement
 
 
@@ -29,6 +29,7 @@ import web.html.HTMLElement
 external interface HeaderRunControllerProps: Props {
     var clientStateGlobal: ClientStateGlobal
     var clientLogicGlobal: ClientLogicGlobal
+    var navigationGlobal: NavigationGlobal
 }
 
 
@@ -273,6 +274,11 @@ class HeaderRunController (
 //            ?: return
 
         div {
+            css {
+                display = Display.flex
+                alignItems = AlignItems.center
+            }
+
             renderControls(/*clientState.clientLogicState*/)
         }
 
@@ -289,12 +295,17 @@ class HeaderRunController (
         val executing = state.executing
         val runnable = state.runnable
 
+        // Transport: momentary actions (Step / Run-Pause / Stop) as an exclusive group.
         ToggleButtonGroup {
 //                value = actionRun
             exclusive = true
 
             asDynamic()["onChange"] = { _, v ->
-                onAction(v as String, active, executing)
+                // An exclusive group emits null when the active button is re-clicked (deselect); ignore it.
+                val action = v as? String
+                if (action != null) {
+                    onAction(action, active, executing)
+                }
             }
 
             if (!active && !runnable) {
@@ -307,10 +318,30 @@ class HeaderRunController (
             renderStopButton(active)
         }
 
+        renderControlsDivider()
+
+        // Run modes: persistent on/off toggles. Kept OUT of the exclusive group so a deselect can't feed
+        // the `v as String` cast above, and so they read as a distinct "how to run" cluster.
         renderSlowRunButton(active, executing, runnable)
-        renderClearButton(active, runnable)
         renderPauseOnErrorToggle(active, runnable)
+
+        renderControlsDivider()
+
+        // Reset + inspect.
+        renderClearButton(active, runnable)
         renderDetailsToggle(active)
+    }
+
+
+    private fun ChildrenBuilder.renderControlsDivider() {
+        Divider {
+            orientation = Orientation.vertical
+            flexItem = true
+            sx {
+                marginLeft = 0.5.em
+                marginRight = 0.25.em
+            }
+        }
     }
 
 
@@ -471,6 +502,11 @@ class HeaderRunController (
             if (executing) {
                 title = "Pause"
             }
+            else if (state.slowLooping && active) {
+                // During slow-motion the loop holds the run Paused between steps; Run here means
+                // "stop dwelling and finish at full speed" (continueRunAsync cancels the slow loop).
+                title = "Run at full speed"
+            }
             else if (runnable) {
                 title =
                     if (active) {
@@ -538,8 +574,6 @@ class HeaderRunController (
 
             IconButton {
                 sx {
-                    marginTop = (-13).px
-
                     if (active) {
                         color = NamedColor.black
                     }
@@ -576,35 +610,73 @@ class HeaderRunController (
                     +"<Frame missing>"
                 }
                 else {
-                    renderFrame(frame)
+                    renderFrameTree(frame)
                 }
             }
         }
     }
 
 
-    private fun ChildrenBuilder.renderFrame(frame: LogicRunFrameInfo) {
-        +"${frame.objectLocation.documentPath.name}"
+    private fun onNavigateToFrame(documentPath: DocumentPath) {
+        props.navigationGlobal.goto(documentPath)
+        onOptionsClose()
+    }
 
-        val dependencies = frame.dependencies
-        if (dependencies.size == 1) {
-            hr {}
-            renderFrame(dependencies.single())
-        }
-        else if (dependencies.size > 1) {
-            for (dependency in dependencies) {
-                div {
-                    key = Key(dependency.objectLocation.asString())
 
-                    css {
-                        marginLeft = 0.5.em
-                    }
+    // The run's call stack as an indented tree of clickable rows; the deepest currently-executing
+    // document (the active leaf) is marked. Clicking a row navigates to that document and closes the menu.
+    private fun ChildrenBuilder.renderFrameTree(frame: LogicRunFrameInfo) {
+        val activeLeaf = LogicRunFrames.deepestLeaf(frame).objectLocation
+        renderFrameNode(frame, 0, activeLeaf)
+    }
 
-                    hr {}
 
-                    renderFrame(dependency)
+    private fun ChildrenBuilder.renderFrameNode(
+        frame: LogicRunFrameInfo,
+        depth: Int,
+        activeLeaf: ObjectLocation
+    ) {
+        val documentPath = frame.objectLocation.documentPath
+        val isActiveLeaf = frame.objectLocation == activeLeaf
+
+        div {
+            key = Key(frame.executionId.value)
+
+            css {
+                display = Display.flex
+                alignItems = AlignItems.center
+                paddingTop = 0.25.em
+                paddingBottom = 0.25.em
+                paddingLeft = (0.5 + depth * 1.0).em
+                cursor = Cursor.pointer
+
+                if (isActiveLeaf) {
+                    fontWeight = FontWeight.bold
+                }
+
+                "&:hover" {
+                    backgroundColor = Color("rgba(100, 159, 255, 0.18)")
                 }
             }
+
+            onClick = { onNavigateToFrame(documentPath) }
+
+            if (isActiveLeaf) {
+                span {
+                    css {
+                        display = Display.inlineFlex
+                        alignItems = AlignItems.center
+                        marginRight = 0.25.em
+                    }
+                    icon("material-symbols:play-arrow") {}
+                }
+            }
+
+            +documentPath.name.value
+        }
+
+        for (dependency in frame.dependencies) {
+            renderFrameNode(dependency, depth + 1, activeLeaf)
         }
     }
 
