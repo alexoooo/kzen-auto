@@ -126,16 +126,21 @@ class FlowExecution(
 
             if (next == null) {
                 if (activeVertices.values.none { it.hasNext() }) {
-                    // Nothing left to run and no stream/batch remainder: the run is complete. Final
-                    // vertex messages are left intact (no clearing) so the result values stay visible.
+                    // Run complete (nothing routable, no stream/batch remainder): clear the last item's
+                    // lingering in-flight messages — but keep displayed state (e.g. Display's list) — so
+                    // the finished graph shows results without stale message envelopes / ingress highlight.
+                    clearMessagesAtEnd(matrix, graphDefinition)
                     return LogicResultSuccess(outputTuple())
                 }
 
                 // A source still has buffered items (stream/batch): clear the in-flight layer + reset
                 // downstream so the next iteration re-flows, then re-select.
-                clearIterationForLoop(dag)
+                clearIterationForLoop(dag, graphDefinition)
                 next = FlowUtils.next(matrix, dag, snapshotVisual(matrix))
-                    ?: return LogicResultSuccess(outputTuple())
+                if (next == null) {
+                    clearMessagesAtEnd(matrix, graphDefinition)
+                    return LogicResultSuccess(outputTuple())
+                }
             }
 
             val command = logicControl.pollCommand()
@@ -297,11 +302,11 @@ class FlowExecution(
     /**
      * Start the next loop iteration when a source still has buffered stream/batch items: clear the
      * messages on the last layer that still hasNext (so it re-emits) and reset epochs on the layers
-     * below it (so they re-run). Migrated verbatim from ActiveDataflowRepository.clearIteration's
-     * "lastRowWithNextMessage != -1" branch — the "-1" branch (full reset at end of run) is replaced by
-     * the terminal LogicResultSuccess in [continueOrStart].
+     * below it (so they re-run). Ports ActiveDataflowRepository.clearIteration's "lastRowWithNextMessage
+     * != -1" branch; its "-1" (end-of-run) branch is [clearMessagesAtEnd], called before the terminal
+     * LogicResultSuccess in [continueOrStart].
      */
-    private fun clearIterationForLoop(dag: FlowDag) {
+    private fun clearIterationForLoop(dag: FlowDag, graphDefinition: GraphDefinition) {
         val lastRowWithNext = dag.layers.indexOfLast { layer ->
             layer.any { activeVertices[stableId(it)]?.hasNext() ?: false }
         }
@@ -309,12 +314,28 @@ class FlowExecution(
             return
         }
 
+        // Each reset vertex is re-traced (below) from its now-mutated in-memory model, so the client
+        // repaints the change WITHOUT losing the vertex's displayed state. Ports ActiveDataflowRepository,
+        // whose in-memory ActiveVertexModel was reset (message / epoch, NOT state) and served directly; a
+        // logicTraceHandle.clearAll here would drop state too (a reported regression).
+        val toRetrace = mutableListOf<Pair<ObjectLocation, ObjectStableId>>()
+
+        // Source layer (last that still hasNext): clear the in-flight message so it re-emits, but keep
+        // epoch + state. Re-tracing it is what stops a just-finished item's message from lingering on the
+        // source and looking like it's still flowing forward while the source waits to emit the next item.
         for (vertexLocation in dag.layers[lastRowWithNext]) {
-            val model = activeVertices[stableId(vertexLocation)]
+            val sourceStableId = stableId(vertexLocation)
+            val model = activeVertices[sourceStableId]
                 ?: continue
-            model.message = null
+            if (model.message != null) {
+                model.message = null
+                toRetrace.add(vertexLocation to sourceStableId)
+            }
         }
 
+        // Strictly-downstream layers: reset epoch + message (so they re-run and drop the previous cycle's
+        // in-flight message), but deliberately NOT state — an accumulating vertex (e.g. Display's running
+        // list) keeps it.
         for (followingLayer in dag.layers.subList(lastRowWithNext + 1, dag.layers.size)) {
             for (vertexLocation in followingLayer) {
                 val downstreamStableId = stableId(vertexLocation)
@@ -323,13 +344,57 @@ class FlowExecution(
                 if (model.epoch > 0) {
                     model.epoch = 0
                     model.message = null
-
-                    // New clock cycle: drop the downstream vertex's live trace so the client repaints
-                    // it neutral instead of lingering on the previous cycle's message (mirrors
-                    // DoWhileStep.resetSteps' logicTraceHandle.clearAll per loop iteration).
-                    logicTraceHandle.clearAll(LogicTracePath.ofObjectStableId(downstreamStableId))
+                    toRetrace.add(vertexLocation to downstreamStableId)
                 }
             }
+        }
+
+        retrace(toRetrace, graphDefinition)
+    }
+
+
+    /**
+     * The run is complete (nothing routable, no source hasNext): clear every lingering in-flight message
+     * but keep each vertex's state (e.g. Display's accumulated list) and epoch, then re-trace so the
+     * client drops the last item's message envelopes and ingress highlighting while displayed results
+     * stay. Ports ActiveDataflowRepository.clearIteration's "lastRowWithNextMessage == -1" (end-of-run)
+     * branch, which the Flow migration had dropped (left the final messages stuck on screen).
+     */
+    private fun clearMessagesAtEnd(matrix: FlowMatrix, graphDefinition: GraphDefinition) {
+        val toRetrace = mutableListOf<Pair<ObjectLocation, ObjectStableId>>()
+        for (vertexLocation in matrix.verticesByLocation.keys) {
+            val vertexStableId = stableId(vertexLocation)
+            val model = activeVertices[vertexStableId]
+                ?: continue
+            if (model.message != null) {
+                model.message = null
+                toRetrace.add(vertexLocation to vertexStableId)
+            }
+        }
+
+        retrace(toRetrace, graphDefinition)
+    }
+
+
+    /**
+     * Re-record the trace of each given vertex from its (already mutated) in-memory model, so the client
+     * repaints the change without losing the vertex's displayed state — what a logicTraceHandle.clearAll
+     * would wipe. One graph build per call (lazy, reused) suffices: inspectState is pure in its argument.
+     */
+    private fun retrace(
+        toRetrace: List<Pair<ObjectLocation, ObjectStableId>>,
+        graphDefinition: GraphDefinition
+    ) {
+        if (toRetrace.isEmpty()) {
+            return
+        }
+
+        val graphInstance = graphCreator.createGraph(
+            graphDefinition.filterTransitive(documentPath), environment)
+        for ((vertexLocation, vertexStableId) in toRetrace) {
+            val instance = graphInstance[vertexLocation]
+                ?: continue
+            traceVertex(vertexLocation, vertexStableId, instance, running = false)
         }
     }
 

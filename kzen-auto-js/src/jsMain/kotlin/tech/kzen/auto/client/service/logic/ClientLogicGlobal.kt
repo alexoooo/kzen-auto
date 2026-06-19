@@ -10,6 +10,7 @@ import tech.kzen.auto.common.paradigm.logic.LogicConventions
 import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.exec.ExecutionSuccess
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunResponse
+import tech.kzen.lib.common.exec.logic.run.model.LogicRunState
 import tech.kzen.lib.common.model.location.ObjectLocation
 
 
@@ -19,6 +20,12 @@ class ClientLogicGlobal(
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private const val debounceMillis = 1_500
+
+        // "Slow motion" auto-step pacing: the visible dwell between auto-issued steps, and the cadence /
+        // cap used to wait for each step to settle back to Paused before issuing the next.
+        private const val slowPacingMillis = 750
+        private const val slowSettlePollMillis = 50
+        private const val slowSettleMaxMillis = 30_000
     }
 
 
@@ -120,6 +127,7 @@ class ClientLogicGlobal(
         require(!clientLogicState.isActive()) {
             "Already running"
         }
+        cancelSlowLoop()
 
         clientLogicState = clientLogicState.copy(
             pending = ClientLogicState.Pending.Start,
@@ -156,6 +164,7 @@ class ClientLogicGlobal(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun pauseAsync() {
+        cancelSlowLoop()
         val logicRunId = clientLogicState.logicStatus?.active?.id
             ?: return
 
@@ -188,6 +197,7 @@ class ClientLogicGlobal(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun continueRunAsync() {
+        cancelSlowLoop()
         val logicRunId = clientLogicState.logicStatus?.active?.id
             ?: return
 
@@ -220,6 +230,7 @@ class ClientLogicGlobal(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun stepAsync() {
+        cancelSlowLoop()
         val logicRunId = clientLogicState.logicStatus?.active?.id
             ?: return
 
@@ -251,7 +262,120 @@ class ClientLogicGlobal(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    // "Slow motion" run: the browser auto-issues Step repeatedly with a fixed dwell between steps, so
+    // each step's result is visible before the next (reintroduces the old paced dataflow run-loop). Pure
+    // client pacing — no server/REST change; the run is just a normal stepped run.
+    //
+    // Termination: the loop stops when the run finishes (status active == null — covers success and,
+    // with pause-on-error off, a failing step that terminates the run) or when any manual control or
+    // pauseSlowAsync() clears the slowLooping flag. KNOWN LIMITATION: with pause-on-error ON, a step
+    // that deterministically fails stays paused (non-terminal) and is re-issued each cycle; the loop is
+    // slow and fully cancellable (Pause/Stop/etc.), not a hang, and this cannot occur with the default
+    // pause-on-error off.
+    fun slowRunAsync(mainLocation: ObjectLocation, pauseOnError: Boolean) {
+        if (clientLogicState.slowLooping) {
+            return
+        }
+
+        clientLogicState = clientLogicState.copy(
+            slowLooping = true,
+            controlError = null)
+        publish()
+
+        async {
+            if (! clientLogicState.isActive()) {
+                // Start a fresh run in stepping (paused) mode; this also executes the first step.
+                val logicRunId = restClient.logicStartAndStep(mainLocation, pauseOnError)
+                if (logicRunId == null) {
+                    clientLogicState = clientLogicState.copy(
+                        slowLooping = false,
+                        controlError = "Unable to start")
+                    publish()
+                    return@async
+                }
+                delay(10)
+                lookupStatus()
+                awaitStepSettled()
+                publish()
+            }
+
+            runSlowLoop()
+        }
+    }
+
+
+    // Stop the slow-motion loop after its current step; the run stays Paused (so the user can then Step,
+    // continue at full speed, resume slow-motion, or Stop).
+    fun pauseSlowAsync() {
+        if (! clientLogicState.slowLooping) {
+            return
+        }
+        clientLogicState = clientLogicState.copy(slowLooping = false)
+        publish()
+    }
+
+
+    private suspend fun runSlowLoop() {
+        while (clientLogicState.slowLooping) {
+            // Stop once the run finished / was cancelled.
+            if (! clientLogicState.isActive()) {
+                break
+            }
+
+            // The visible dwell between steps.
+            delay(slowPacingMillis.toLong())
+
+            // The user may have toggled slow-motion off (or taken manual control) during the dwell.
+            if (! clientLogicState.slowLooping || ! clientLogicState.isActive()) {
+                break
+            }
+
+            val logicRunId = clientLogicState.logicStatus?.active?.id
+                ?: break
+            val response = restClient.logicStep(logicRunId)
+            if (response != LogicRunResponse.Submitted) {
+                break
+            }
+
+            awaitStepSettled()
+            publish()
+        }
+
+        if (clientLogicState.slowLooping) {
+            clientLogicState = clientLogicState.copy(slowLooping = false)
+        }
+        publish()
+    }
+
+
+    // Poll status until the in-flight step has settled back to Paused (no longer Stepping) or the run
+    // finished (active == null), bounded by a defensive cap.
+    private suspend fun awaitStepSettled() {
+        var waited = 0
+        while (waited < slowSettleMaxMillis) {
+            delay(slowSettlePollMillis.toLong())
+            waited += slowSettlePollMillis
+
+            lookupStatus()
+
+            val active = clientLogicState.logicStatus?.active
+            if (active == null || active.state != LogicRunState.Stepping) {
+                return
+            }
+        }
+    }
+
+
+    private fun cancelSlowLoop() {
+        if (clientLogicState.slowLooping) {
+            clientLogicState = clientLogicState.copy(slowLooping = false)
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     fun stopAsync() {
+        cancelSlowLoop()
         val logicRunId = clientLogicState.logicStatus?.active?.id
             ?: return
 

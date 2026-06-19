@@ -241,7 +241,7 @@ class HeaderController(
                 display = Display.inlineBlock
             }
 
-            RibbonLogicRun::class.react {
+            HeaderRunController::class.react {
                 clientStateGlobal = props.clientStateGlobal
                 clientLogicGlobal = props.clientLogicGlobal
 //            RibbonRun::class.react {

@@ -26,13 +26,13 @@ import web.html.HTMLElement
 
 
 //---------------------------------------------------------------------------------------------------------------------
-external interface RibbonLogicRunProps: Props {
+external interface HeaderRunControllerProps: Props {
     var clientStateGlobal: ClientStateGlobal
     var clientLogicGlobal: ClientLogicGlobal
 }
 
 
-external interface RibbonLogicRunState: State {
+external interface HeaderRunControllerState: State {
     var runnable: Boolean
     var active: Boolean
     var executing: Boolean
@@ -46,15 +46,18 @@ external interface RibbonLogicRunState: State {
     // Run-start mode: when set, a failed step pauses the run (to fix + continue) instead of ending
     // it. Read at start only; locked while a run is active.
     var pauseOnError: Boolean
+
+    // Whether the client-paced "slow motion" auto-step loop is currently driving the run.
+    var slowLooping: Boolean
 }
 
 
 //---------------------------------------------------------------------------------------------------------------------
 @Suppress("ConstPropertyName")
-class RibbonLogicRun (
-    props: RibbonLogicRunProps
+class HeaderRunController (
+    props: HeaderRunControllerProps
 ):
-    RPureComponent<RibbonLogicRunProps, RibbonLogicRunState>(props),
+    RPureComponent<HeaderRunControllerProps, HeaderRunControllerState>(props),
     ClientStateGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -79,7 +82,7 @@ class RibbonLogicRun (
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun RibbonLogicRunState.init(props: RibbonLogicRunProps) {
+    override fun HeaderRunControllerState.init(props: HeaderRunControllerProps) {
         runnable = false
         active = false
         executing = false
@@ -87,6 +90,7 @@ class RibbonLogicRun (
         frame = null
         pauseOnError = false
         hasTrace = false
+        slowLooping = false
     }
 
 
@@ -136,6 +140,7 @@ class RibbonLogicRun (
             runnable = isLogic
             active = clientLogicState.isActive()
             executing = clientLogicState.isExecuting()
+            slowLooping = clientLogicState.slowLooping
             if (dropdownWasOpen) {
                 frame = nextFrame
             }
@@ -250,6 +255,18 @@ class RibbonLogicRun (
     }
 
 
+    private fun onSlowToggle() {
+        val mainObjectLocation = this.mainObjectLocation
+            ?: return
+        if (state.slowLooping) {
+            props.clientLogicGlobal.pauseSlowAsync()
+        }
+        else {
+            props.clientLogicGlobal.slowRunAsync(mainObjectLocation, state.pauseOnError)
+        }
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
 //        val clientState = state.clientState
@@ -290,6 +307,7 @@ class RibbonLogicRun (
             renderStopButton(active)
         }
 
+        renderSlowRunButton(active, executing, runnable)
         renderClearButton(active, runnable)
         renderPauseOnErrorToggle(active, runnable)
         renderDetailsToggle(active)
@@ -322,6 +340,51 @@ class RibbonLogicRun (
                     marginBottom = (-0.25).em
                 }
                 icon("material-symbols:replay") {}
+            }
+        }
+    }
+
+
+    private fun ChildrenBuilder.renderSlowRunButton(
+        active: Boolean,
+        executing: Boolean,
+        runnable: Boolean
+    ) {
+        // Standalone toggle (not in the exclusive Step/Run/Stop group): slow-motion is a persistent
+        // on/off state, like Pause-on-error, rather than a momentary action.
+        ToggleButton {
+            value = "slowRun"
+            selected = state.slowLooping
+
+            // Same availability as Step (start fresh, or continue from a pause); stays enabled while
+            // looping so it can be toggled off.
+            disabled = !(state.slowLooping || active && !executing || !active && runnable)
+            size = Size.medium
+
+            sx {
+                height = 34.px
+                marginLeft = 0.5.em
+                color = NamedColor.black
+            }
+
+            title =
+                if (state.slowLooping) {
+                    "Pause slow-motion run"
+                }
+                else {
+                    "Slow-motion run (auto-step)"
+                }
+
+            // ToggleButton's onClick is (event, value) -> Unit; ignore both and just toggle.
+            onClick = { _, _ -> onSlowToggle() }
+
+            span {
+                css {
+                    fontSize = 1.5.em
+                    marginRight = 0.25.em
+                    marginBottom = (-0.25).em
+                }
+                icon("material-symbols:slow-motion-video") {}
             }
         }
     }
