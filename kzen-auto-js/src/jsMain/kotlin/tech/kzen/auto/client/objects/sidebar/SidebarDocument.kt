@@ -6,6 +6,7 @@ import mui.material.MenuItem
 import react.*
 import react.dom.html.ReactHTML.a
 import react.dom.html.ReactHTML.div
+import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.util.NavigationRoute
 import tech.kzen.auto.client.util.async
@@ -27,6 +28,10 @@ external interface SidebarDocumentProps: Props {
     var archetypeInfo: SidebarModel.ArchetypeInfo
     var documentPath: DocumentPath
     var selected: Boolean
+
+    // stack depth (root = 0) when this document is part of the active logic run; null when not executing
+    var executingDepth: Int?
+
     var navigationGlobal: NavigationGlobal
     var mirroredGraphStore: MirroredGraphStore
 
@@ -107,6 +112,7 @@ class SidebarDocument(
 
         sidebarRow(
             props.depth,
+            executing = (props.executingDepth != null),
             rowAttributes = {
                 sidebarDragSource(props.documentPath, props.onDragItemStart, props.onDragItemEnd)
             }
@@ -187,6 +193,26 @@ class SidebarDocument(
 
                 this.documentPath = props.documentPath
                 mirroredGraphStore = props.mirroredGraphStore
+            }
+        }
+
+        // depth badge: nested executing documents show how deep in the call stack they are (root = depth 0,
+        // tinted row only). Mirrors the green run indicator on the row.
+        val executingDepth = props.executingDepth
+        if (executingDepth != null && executingDepth > 0) {
+            span {
+                css {
+                    marginLeft = 4.px
+                    paddingLeft = 5.px
+                    paddingRight = 5.px
+                    borderRadius = 8.px
+                    fontSize = 0.7.em
+                    flexShrink = number(0.0)
+                    backgroundColor = Color("#4caf50")
+                    color = NamedColor.white
+                }
+                title = "Stack depth $executingDepth"
+                +executingDepth.toString()
             }
         }
     }

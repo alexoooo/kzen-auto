@@ -18,7 +18,10 @@ import tech.kzen.auto.client.objects.ribbon.HeaderController
 import tech.kzen.auto.client.objects.ribbon.HeaderModel
 import tech.kzen.auto.client.objects.sidebar.SidebarController
 import tech.kzen.auto.client.objects.sidebar.SidebarModel
+import tech.kzen.auto.client.service.global.ClientState
+import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.global.NavigationGlobal
+import tech.kzen.auto.client.service.logic.LogicRunFrames
 import tech.kzen.auto.client.service.storage.SidebarPreferences
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
@@ -26,6 +29,8 @@ import tech.kzen.auto.client.wrap.createRef
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.exec.RequestParams
+import tech.kzen.lib.common.exec.logic.run.model.LogicRunFrameInfo
+import tech.kzen.lib.common.exec.logic.run.model.LogicRunState
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -50,6 +55,7 @@ external interface ProjectControllerProps: Props {
     var archetypeLocations: List<ObjectLocation>
     var mirroredGraphStore: MirroredGraphStore
     var navigationGlobal: NavigationGlobal
+    var clientStateGlobal: ClientStateGlobal
 }
 
 
@@ -63,6 +69,10 @@ external interface ProjectControllerState: State {
     var headerHeight: Int?
     var sidebarWidthPx: Double
     var sidebarCollapsed: Boolean
+
+    // documentPath → stack depth for documents in the active run's frame tree (root = 0); empty when
+    // nothing is running. Threaded to the sidebar so executing documents are highlighted by depth.
+    var executingDepths: Map<DocumentPath, Int>
 }
 
 
@@ -73,7 +83,8 @@ class ProjectController(
 ):
     RPureComponent<ProjectControllerProps, ProjectControllerState>(props),
     LocalGraphStore.Observer,
-    NavigationGlobal.Observer
+    NavigationGlobal.Observer,
+    ClientStateGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -117,6 +128,12 @@ class ProjectController(
     private var documentBridge = DocumentBridge()
     private var bridgeDocumentPath: DocumentPath? = null
 
+    // Auto-follow bookkeeping (plain fields — they must not trigger a render; they mutate on the publish
+    // path). `followingRun` = are we currently shadowing the run's deepest executing document?
+    // `lastAutoNavigated` = the document WE last goto'd, used to break the goto→hashchange→publish loop.
+    private var followingRun: Boolean = false
+    private var lastAutoNavigated: DocumentPath? = null
+
 
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
@@ -126,7 +143,8 @@ class ProjectController(
         private val stageController: StageController.Wrapper,
         private val archetypeLocations: List<ObjectLocation>,
         @Service private val mirroredGraphStore: MirroredGraphStore,
-        @Service private val navigationGlobal: NavigationGlobal
+        @Service private val navigationGlobal: NavigationGlobal,
+        @Service private val clientStateGlobal: ClientStateGlobal
     ): ReactWrapper<Props> {
         override fun ChildrenBuilder.child(block: Props.() -> Unit) {
             ProjectController::class.react {
@@ -136,6 +154,7 @@ class ProjectController(
                 archetypeLocations = this@Wrapper.archetypeLocations
                 mirroredGraphStore = this@Wrapper.mirroredGraphStore
                 navigationGlobal = this@Wrapper.navigationGlobal
+                clientStateGlobal = this@Wrapper.clientStateGlobal
                 block()
             }
         }
@@ -195,6 +214,7 @@ class ProjectController(
     override fun ProjectControllerState.init(props: ProjectControllerProps) {
         sidebarWidthPx = SidebarPreferences.loadWidth(defaultSidebarWidth)
         sidebarCollapsed = SidebarPreferences.loadCollapsed(false)
+        executingDepths = emptyMap()
     }
 
 
@@ -203,6 +223,7 @@ class ProjectController(
         async {
             props.mirroredGraphStore.observe(this)
             props.navigationGlobal.observe(this)
+            props.clientStateGlobal.observe(this)
         }
 
         window.addEventListener("resize", handleResize)
@@ -213,6 +234,7 @@ class ProjectController(
     override fun componentWillUnmount() {
         props.mirroredGraphStore.unobserve(this)
         props.navigationGlobal.unobserve(this)
+        props.clientStateGlobal.unobserve(this)
 
         // NB: was addEventListener (copy-paste slip) — that re-added the handler on unmount and leaked it.
         window.removeEventListener("resize", handleResize)
@@ -337,6 +359,71 @@ class ProjectController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    override fun onClientState(clientState: ClientState) {
+        val frame = clientState.clientLogicState.logicStatus?.active?.frame
+        val nextDepths = LogicRunFrames.depthByDocument(frame)
+
+        // Value-equality guard: identical executing-set short-circuits, so the prop reference handed to
+        // the sidebar stays stable and unrelated rows (RPureComponent) don't re-render.
+        if (nextDepths != state.executingDepths) {
+            setState {
+                executingDepths = nextDepths
+            }
+        }
+
+        autoFollow(clientState, frame, nextDepths)
+    }
+
+
+    // Make navigation follow the deepest currently-executing document as a stepped / slow-motion run
+    // chains across documents. Never during a full-speed Run (the frame tree changes too fast — it would
+    // thrash the hash and remount document subtrees).
+    private fun autoFollow(
+        clientState: ClientState,
+        frame: LogicRunFrameInfo?,
+        runDepths: Map<DocumentPath, Int>
+    ) {
+        if (frame == null) {
+            followingRun = false
+            lastAutoNavigated = null
+            return
+        }
+
+        val runState = clientState.clientLogicState.logicStatus?.active?.state
+        val stepwise = clientState.clientLogicState.slowLooping ||
+                runState == LogicRunState.Paused ||
+                runState == LogicRunState.Stepping
+        if (! stepwise) {
+            return
+        }
+
+        val current = clientState.navigationRoute.documentPath
+
+        // Engage following while viewing a document that's part of the run; disengage if the user manually
+        // navigates to an unrelated document (one we didn't send them to).
+        if (current != null && current in runDepths) {
+            followingRun = true
+        }
+        else if (current != null && current != lastAutoNavigated) {
+            followingRun = false
+        }
+        if (! followingRun) {
+            return
+        }
+
+        val target = LogicRunFrames.deepestLeaf(frame).objectLocation.documentPath
+
+        // Idempotence: only navigate when the target differs from BOTH the current path and the one we
+        // last auto-navigated to, so the goto→hashchange→clientState cycle can't loop (and so the user can
+        // click back to a parent frame without being immediately yanked to the same leaf).
+        if (target != current && target != lastAutoNavigated) {
+            lastAutoNavigated = target
+            props.navigationGlobal.goto(target)
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
         val graphNotation = state.structure?.graphNotation
         if (graphNotation == null) {
@@ -407,6 +494,7 @@ class ProjectController(
                 props.sidebarController.child(this) {
                     sidebarModel = state.sidebarModel
                     documentPath = state.documentPath
+                    executingDepths = state.executingDepths
                     this.collapsed = collapsed
                     onToggleCollapsed = ::toggleCollapsed
                 }

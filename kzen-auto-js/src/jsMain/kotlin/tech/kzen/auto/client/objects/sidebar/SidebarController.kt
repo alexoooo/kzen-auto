@@ -20,6 +20,7 @@ import web.cssom.*
 external interface SidebarControllerProps : react.Props {
     var sidebarModel: SidebarModel?
     var documentPath: DocumentPath?
+    var executingDepths: Map<DocumentPath, Int>
     var navigationGlobal: NavigationGlobal
     var mirroredGraphStore: MirroredGraphStore
 
@@ -144,6 +145,7 @@ class SidebarController(
                     depth = 0
                     sidebarModel = model
                     selectedDocumentPath = props.documentPath
+                    executingDepths = props.executingDepths
                     navigationGlobal = props.navigationGlobal
                     mirroredGraphStore = props.mirroredGraphStore
                     collapsed = props.collapsed

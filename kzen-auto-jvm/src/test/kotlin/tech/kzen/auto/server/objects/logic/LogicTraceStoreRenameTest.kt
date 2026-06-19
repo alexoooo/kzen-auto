@@ -2,6 +2,7 @@ package tech.kzen.auto.server.objects.logic
 
 import org.junit.Test
 import tech.kzen.lib.common.exec.ExecutionValue
+import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceQuery
@@ -130,6 +131,50 @@ class LogicTraceStoreRenameTest {
         assertEquals(runExecutionId, store.mostRecent(renamedRoot))
         assertTrue(store.clear(renamedRoot))
         assertNull(store.mostRecent(renamedRoot))
+    }
+
+
+    @Test
+    fun `re-invoked sub-logic clears the previous iteration's live values but keeps history`() {
+        val mapper = ObjectStableMapper()
+        val store = LogicTraceStore(mapper)
+
+        val runId = LogicRunExecutionId.random().logicRunId
+        val itemRoot = objectLocation("item.yaml", "Item")
+        val itemStep = objectLocation("item.yaml", "ItemStep")
+        mapper.objectStableId(itemRoot)
+        val stepStableId = mapper.objectStableId(itemStep)
+        val stepPath = LogicTracePath.ofObjectStableId(stepStableId)
+
+        // Iteration 1: the sub-logic runs under its own execution id and traces a step value + event.
+        val iter1 = LogicRunExecutionId(runId, LogicExecutionId.random())
+        val handle1 = store.handle(iter1, itemRoot)
+        handle1.set(stepPath, ExecutionValue.of("iter1"))
+        handle1.append(stepStableId, ExecutionValue.of("iter1"))
+
+        val afterIter1 = store.lookupRun(runId, LogicTraceQuery(LogicTracePath.root))
+        checkNotNull(afterIter1)
+        assertEquals(ExecutionValue.of("iter1"), afterIter1.values[stepPath]?.value)
+
+        // Iteration 2: the same sub-logic is re-invoked (fresh execution id, same run). Before it traces
+        // anything, the whole-run merge must NOT still show iteration 1's finished value.
+        val iter2 = LogicRunExecutionId(runId, LogicExecutionId.random())
+        val handle2 = store.handle(iter2, itemRoot)
+
+        val betweenIterations = store.lookupRun(runId, LogicTraceQuery(LogicTracePath.root))
+        checkNotNull(betweenIterations)
+        assertNull(betweenIterations.values[stepPath])
+
+        // But the append-only event history is retained across the iteration boundary (film strip).
+        val historyEvents = store.lookupRunHistory(runId, 0L)
+        assertEquals(1, historyEvents.size)
+        assertEquals(ExecutionValue.of("iter1"), historyEvents.single().value)
+
+        // Iteration 2 traces its own value, which then drives the live view.
+        handle2.set(stepPath, ExecutionValue.of("iter2"))
+        val afterIter2 = store.lookupRun(runId, LogicTraceQuery(LogicTracePath.root))
+        checkNotNull(afterIter2)
+        assertEquals(ExecutionValue.of("iter2"), afterIter2.values[stepPath]?.value)
     }
 
 

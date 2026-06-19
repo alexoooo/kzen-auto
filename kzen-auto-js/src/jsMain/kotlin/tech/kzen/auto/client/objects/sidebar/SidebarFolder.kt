@@ -53,6 +53,7 @@ external interface SidebarFolderProps: react.Props {
 
     var sidebarModel: SidebarModel
     var selectedDocumentPath: DocumentPath?
+    var executingDepths: Map<DocumentPath, Int>
     var navigationGlobal: NavigationGlobal
     var mirroredGraphStore: MirroredGraphStore
 
@@ -495,6 +496,9 @@ class SidebarFolder(
                         archetypeInfo = child.archetype
                         documentPath = child.path
                         selected = (child.path == props.selectedDocumentPath)
+                        // primitive Int? — null (not executing) compares === across renders, so non-executing
+                        // rows keep bailing out of RPureComponent's shallow update
+                        executingDepth = props.executingDepths[child.path]
                         navigationGlobal = props.navigationGlobal
                         mirroredGraphStore = props.mirroredGraphStore
 
@@ -510,6 +514,7 @@ class SidebarFolder(
                         depth = childDepth
                         sidebarModel = props.sidebarModel
                         selectedDocumentPath = props.selectedDocumentPath
+                        executingDepths = props.executingDepths
                         navigationGlobal = props.navigationGlobal
                         mirroredGraphStore = props.mirroredGraphStore
                         collapsed = false

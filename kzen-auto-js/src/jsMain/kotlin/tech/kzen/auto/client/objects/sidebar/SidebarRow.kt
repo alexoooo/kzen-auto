@@ -40,6 +40,8 @@ fun ChildrenBuilder.sidebarRow(
     depth: Int,
     // highlighted = this row is the active drag-and-drop target (a folder a document/folder is hovering over)
     highlighted: Boolean = false,
+    // executing = this document is part of the active logic run's frame tree (green run indicator)
+    executing: Boolean = false,
     // hook to set drag-and-drop attributes (draggable / handlers) directly on the row div — see sidebarDragSource
     rowAttributes: (HTMLAttributes<HTMLDivElement>.() -> Unit)? = null,
     block: ChildrenBuilder.() -> Unit
@@ -53,6 +55,15 @@ fun ChildrenBuilder.sidebarRow(
             width = 100.pct
             boxSizing = BoxSizing.borderBox
             paddingLeft = SidebarRow.indent(depth)
+
+            // green = currently executing; a drag-over highlight (blue, below) overrides it while dragging
+            if (executing) {
+                backgroundColor = Color("rgba(76, 175, 80, 0.16)")
+                outlineWidth = 2.px
+                outlineStyle = LineStyle.solid
+                outlineColor = Color("#4caf50")
+                outlineOffset = (-2).px
+            }
 
             if (highlighted) {
                 backgroundColor = Color("rgba(100, 159, 255, 0.18)")

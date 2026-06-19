@@ -244,10 +244,7 @@ class HeaderController(
             HeaderRunController::class.react {
                 clientStateGlobal = props.clientStateGlobal
                 clientLogicGlobal = props.clientLogicGlobal
-//            RibbonRun::class.react {
-//                navPath = state.documentPath
-//                parameters = state.parameters
-//                notation = props.notation
+                navigationGlobal = props.navigationGlobal
             }
         }
     }
