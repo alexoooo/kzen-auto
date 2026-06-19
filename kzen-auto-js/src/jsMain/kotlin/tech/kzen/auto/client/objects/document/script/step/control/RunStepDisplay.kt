@@ -14,7 +14,9 @@ import tech.kzen.auto.client.objects.document.script.display.ScriptStepDisplayWr
 import tech.kzen.auto.client.objects.document.script.display.image.ScreenshotThumbnail
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
 import tech.kzen.auto.client.objects.document.script.model.ScriptStore
-import tech.kzen.auto.client.objects.document.script.model.ScriptStoreContext
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
+import tech.kzen.auto.client.objects.document.script.model.ScriptStoreKey
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.contextValue
@@ -115,19 +117,19 @@ class RunStepDisplay(
 
     //-----------------------------------------------------------------------------------------------------------------
     init {
-        installContextType(ScriptStoreContext)
+        installContextType(DocumentBridgeContext)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
         // observe replays onScriptState synchronously with the current state.
-        contextValue<ScriptStore?>()?.observe(this)
+        contextValue<DocumentBridge?>()?.lookup(ScriptStoreKey)?.observe(this)
     }
 
 
     override fun componentWillUnmount() {
-        contextValue<ScriptStore?>()?.unobserve(this)
+        contextValue<DocumentBridge?>()?.lookup(ScriptStoreKey)?.unobserve(this)
     }
 
 
@@ -307,7 +309,7 @@ class RunStepDisplay(
                             // Hovering a frame drives this RunStep's right-of-step big preview; null on
                             // leave reverts it to the latest representative frame.
                             onPreviewHover = { hovered ->
-                                contextValue<ScriptStore?>()
+                                contextValue<DocumentBridge?>()?.lookup(ScriptStoreKey)
                                     ?.stepStore
                                     ?.setHoveredScreenshot(props.common.objectLocation, hovered)
                             }

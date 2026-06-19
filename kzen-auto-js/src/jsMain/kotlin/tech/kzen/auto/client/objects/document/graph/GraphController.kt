@@ -14,6 +14,9 @@ import react.dom.html.ReactHTML.td
 import react.dom.html.ReactHTML.tr
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
+import tech.kzen.auto.client.objects.document.bridge.InsertionKey
 import tech.kzen.auto.client.objects.document.graph.edit.AttributeEditorManagerOld
 import tech.kzen.auto.client.objects.ribbon.RibbonController
 import tech.kzen.auto.client.service.global.ClientState
@@ -22,7 +25,9 @@ import tech.kzen.auto.client.service.global.ExecutionIntentGlobal
 import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.client.wrap.contextValue
 import tech.kzen.auto.client.wrap.iconify.icon
+import tech.kzen.auto.client.wrap.installContextType
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.graph.DataflowWiring
@@ -59,7 +64,6 @@ external interface GraphControllerProps: Props {
     var attributeController: AttributeEditorManagerOld.Wrapper
 
     var clientStateGlobal: ClientStateGlobal
-    var insertionGlobal: InsertionGlobal
     var executionIntentGlobal: ExecutionIntentGlobal
     var mirroredGraphStore: MirroredGraphStore
     var visualDataflowRepository: VisualDataflowRepository
@@ -98,7 +102,6 @@ class GraphController(
         private val attributeController: AttributeEditorManagerOld.Wrapper,
         private val ribbonController: RibbonController.Wrapper,
         @Service private val clientStateGlobal: ClientStateGlobal,
-        @Service private val insertionGlobal: InsertionGlobal,
         @Service private val executionIntentGlobal: ExecutionIntentGlobal,
         @Service private val mirroredGraphStore: MirroredGraphStore,
         @Service private val visualDataflowRepository: VisualDataflowRepository,
@@ -126,7 +129,6 @@ class GraphController(
                     GraphController::class.react {
                         this.attributeController = this@Wrapper.attributeController
                         this.clientStateGlobal = this@Wrapper.clientStateGlobal
-                        this.insertionGlobal = this@Wrapper.insertionGlobal
                         this.executionIntentGlobal = this@Wrapper.executionIntentGlobal
                         this.mirroredGraphStore = this@Wrapper.mirroredGraphStore
                         this.visualDataflowRepository = this@Wrapper.visualDataflowRepository
@@ -140,13 +142,23 @@ class GraphController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    init {
+        // Single per-document context; the graph body reads the ribbon's insertion channel from it.
+        installContextType(DocumentBridgeContext)
+    }
+
+    private fun bridge(): DocumentBridge? =
+        contextValue<DocumentBridge?>()
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
 //        println("ProjectController - Subscribed")
         async {
             props.clientStateGlobal.observe(this)
 
 //            ClientContext.mirroredGraphStore.observe(this)
-            props.insertionGlobal.subscribe(this)
+            bridge()?.channel(InsertionKey)?.subscribe(this)
 //            ClientContext.navigationGlobal.observe(this)
             props.visualDataflowRepository.observe(this)
         }
@@ -157,7 +169,7 @@ class GraphController(
 //        println("ProjectController - Un-subscribed")
 //        ClientContext.mirroredGraphStore.unobserve(this)
 //        ClientContext.executionManager.unsubscribe(this)
-        props.insertionGlobal.unsubscribe(this)
+        bridge()?.channel(InsertionKey)?.unsubscribe(this)
 //        ClientContext.navigationGlobal.unobserve(this)
         props.visualDataflowRepository.unobserve(this)
         props.clientStateGlobal.unobserve(this)
@@ -265,7 +277,7 @@ class GraphController(
         val documentNotation = documentNotation()
                 ?: return
 
-        val archetypeLocation = props.insertionGlobal.getAndClearSelection()
+        val archetypeLocation = bridge()?.channel(InsertionKey)?.getAndClearSelection()
                 ?: return
 
         val archetypeNotation = state.clientState!!.graphStructure().graphNotation.coalesce[archetypeLocation]!!

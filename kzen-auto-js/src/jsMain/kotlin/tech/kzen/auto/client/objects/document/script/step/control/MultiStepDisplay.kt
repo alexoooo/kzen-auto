@@ -8,7 +8,6 @@ import tech.kzen.auto.client.objects.document.script.display.ScriptStepDisplayWr
 import tech.kzen.auto.client.objects.document.script.display.StepDisplayManager
 import tech.kzen.auto.client.objects.document.script.display.dependency.ScriptBranchDisplay
 import tech.kzen.auto.client.service.global.ClientStateGlobal
-import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
@@ -26,7 +25,6 @@ external interface MultiStepDisplayProps: ScriptStepDisplayProps {
     var scriptCommander: ScriptCommander
 
     var clientStateGlobal: ClientStateGlobal
-    var insertionGlobal: InsertionGlobal
     var mirroredGraphStore: MirroredGraphStore
     var objectStableMapper: ObjectStableMapper
 }
@@ -45,7 +43,6 @@ class MultiStepDisplay(
         private val stepDisplayManager: StepDisplayManager.Handle,
         private val scriptCommander: ScriptCommander,
         @Service private val clientStateGlobal: ClientStateGlobal,
-        @Service private val insertionGlobal: InsertionGlobal,
         @Service private val mirroredGraphStore: MirroredGraphStore,
         @Service private val objectStableMapper: ObjectStableMapper
     ):
@@ -56,7 +53,6 @@ class MultiStepDisplay(
                 stepDisplayManager = this@Wrapper.stepDisplayManager
                 scriptCommander = this@Wrapper.scriptCommander
                 clientStateGlobal = this@Wrapper.clientStateGlobal
-                insertionGlobal = this@Wrapper.insertionGlobal
                 mirroredGraphStore = this@Wrapper.mirroredGraphStore
                 objectStableMapper = this@Wrapper.objectStableMapper
                 block()
@@ -78,7 +74,6 @@ class MultiStepDisplay(
             this.stepDisplayManager = stepDisplayManager
             scriptCommander = props.scriptCommander
             clientStateGlobal = props.clientStateGlobal
-            insertionGlobal = props.insertionGlobal
             mirroredGraphStore = props.mirroredGraphStore
             objectStableMapper = props.objectStableMapper
         }

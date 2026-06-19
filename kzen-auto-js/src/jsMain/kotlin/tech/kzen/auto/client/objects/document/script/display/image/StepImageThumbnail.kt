@@ -11,7 +11,9 @@ import react.dom.html.ReactHTML.img
 import tech.kzen.auto.client.objects.document.script.display.computeStepTraceInfo
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
 import tech.kzen.auto.client.objects.document.script.model.ScriptStore
-import tech.kzen.auto.client.objects.document.script.model.ScriptStoreContext
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
+import tech.kzen.auto.client.objects.document.script.model.ScriptStoreKey
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.contextValue
@@ -100,13 +102,13 @@ class StepImageThumbnail(
 
     //-----------------------------------------------------------------------------------------------------------------
     init {
-        installContextType(ScriptStoreContext)
+        installContextType(DocumentBridgeContext)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
-        val scriptStore = contextValue<ScriptStore?>()
+        val scriptStore = contextValue<DocumentBridge?>()?.lookup(ScriptStoreKey)
         // ScriptStore.observe replays onScriptState synchronously with the current state, which
         // carries the step's expansion — so a thumbnail (re)mounting while its step is already
         // expanded is handled there (attaches viewport listeners; componentDidUpdate then positions).
@@ -115,7 +117,7 @@ class StepImageThumbnail(
 
 
     override fun componentWillUnmount() {
-        val scriptStore = contextValue<ScriptStore?>()
+        val scriptStore = contextValue<DocumentBridge?>()?.lookup(ScriptStoreKey)
         scriptStore?.unobserve(this)
         stopPositionLoop()
     }

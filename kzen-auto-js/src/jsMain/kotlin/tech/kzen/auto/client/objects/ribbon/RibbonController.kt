@@ -9,11 +9,16 @@ import react.Key
 import react.ReactNode
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.api.ReactWrapper
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
+import tech.kzen.auto.client.objects.document.bridge.InsertionKey
+import tech.kzen.auto.client.objects.document.bridge.ViewModeKey
 import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.service.global.NavigationGlobal
-import tech.kzen.auto.client.service.global.ViewModeGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.client.wrap.contextValue
+import tech.kzen.auto.client.wrap.installContextType
 import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
@@ -39,8 +44,6 @@ import web.cssom.em
 external interface RibbonControllerProps: react.Props {
     var actionTypes: List<ObjectLocation>
     var ribbonGroups: List<RibbonGroup>
-    var insertionGlobal: InsertionGlobal
-    var viewModeGlobal: ViewModeGlobal
     var navigationGlobal: NavigationGlobal
     var mirroredGraphStore: MirroredGraphStore
 }
@@ -74,8 +77,6 @@ class RibbonController(
     class Wrapper(
         private val actionTypes: List<ObjectLocation>,
         private val ribbonGroups: List<RibbonGroup>,
-        @Service private val insertionGlobal: InsertionGlobal,
-        @Service private val viewModeGlobal: ViewModeGlobal,
         @Service private val navigationGlobal: NavigationGlobal,
         @Service private val mirroredGraphStore: MirroredGraphStore
     ): ReactWrapper<RibbonControllerProps> {
@@ -83,14 +84,22 @@ class RibbonController(
             RibbonController::class.react {
                 actionTypes = this@Wrapper.actionTypes
                 ribbonGroups = this@Wrapper.ribbonGroups
-                insertionGlobal = this@Wrapper.insertionGlobal
-                viewModeGlobal = this@Wrapper.viewModeGlobal
                 navigationGlobal = this@Wrapper.navigationGlobal
                 mirroredGraphStore = this@Wrapper.mirroredGraphStore
                 block()
             }
         }
     }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    init {
+        // Single per-document context; the ribbon reads it to reach the active document's channels.
+        installContextType(DocumentBridgeContext)
+    }
+
+    private fun bridge(): DocumentBridge? =
+        contextValue<DocumentBridge?>()
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -107,7 +116,7 @@ class RibbonController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
-        props.insertionGlobal.subscribe(this)
+        bridge()?.channel(InsertionKey)?.subscribe(this)
         props.navigationGlobal.observe(this)
         async {
             props.mirroredGraphStore.observe(this)
@@ -116,7 +125,7 @@ class RibbonController(
 
 
     override fun componentWillUnmount() {
-        props.insertionGlobal.unsubscribe(this)
+        bridge()?.channel(InsertionKey)?.unsubscribe(this)
         props.navigationGlobal.unobserve(this)
         props.mirroredGraphStore.unobserve(this)
     }
@@ -222,12 +231,12 @@ class RibbonController(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onUnSelect() {
-        props.insertionGlobal.clearSelection()
+        bridge()?.channel(InsertionKey)?.clearSelection()
     }
 
 
     private fun onSelect(actionType: ObjectLocation) {
-        props.insertionGlobal.setSelected(actionType)
+        bridge()?.channel(InsertionKey)?.setSelected(actionType)
     }
 
 
@@ -235,7 +244,7 @@ class RibbonController(
         // Publish the selected tab's view to the active document (empty = default structured view;
         // a view group like "Raw" switches the stage). Documents that don't subscribe simply ignore it.
         val viewMode = state.currentRibbonGroups.getOrNull(index)?.viewMode ?: ""
-        props.viewModeGlobal.set(viewMode)
+        bridge()?.channel(ViewModeKey)?.set(viewMode)
 
         setState {
             tabIndex = index

@@ -15,9 +15,10 @@ import react.dom.html.ReactHTML.img
 import tech.kzen.auto.client.objects.document.script.display.computeStepHeaderInfo
 import tech.kzen.auto.client.objects.document.script.display.computeStepTraceInfo
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
-import tech.kzen.auto.client.objects.document.script.model.ScriptStore
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.common.objects.document.script.model.ScriptTree
-import tech.kzen.auto.client.objects.document.script.model.ScriptStoreContext
+import tech.kzen.auto.client.objects.document.script.model.ScriptStoreKey
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.contextValue
@@ -73,7 +74,7 @@ class StepImageFullscreen(
 
     //-----------------------------------------------------------------------------------------------------------------
     init {
-        installContextType(ScriptStoreContext)
+        installContextType(DocumentBridgeContext)
     }
 
 
@@ -96,7 +97,7 @@ class StepImageFullscreen(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun scriptState(): ScriptState? =
-        contextValue<ScriptStore?>()?.stateOrNull()
+        contextValue<DocumentBridge?>()?.lookup(ScriptStoreKey)?.stateOrNull()
 
 
     // Step locations that currently have a screenshot, in document order — the navigation sequence.

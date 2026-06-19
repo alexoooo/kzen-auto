@@ -19,10 +19,11 @@ import tech.kzen.auto.client.objects.document.script.display.computeStepHeaderIn
 import tech.kzen.auto.client.objects.document.script.display.computeStepTraceInfo
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
 import tech.kzen.auto.client.objects.document.script.model.ScriptStore
-import tech.kzen.auto.client.objects.document.script.model.ScriptStoreContext
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
+import tech.kzen.auto.client.objects.document.script.model.ScriptStoreKey
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
-import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.contextValue
 import tech.kzen.auto.client.wrap.installContextType
@@ -49,7 +50,6 @@ external interface MappingStepDisplayProps: ScriptStepDisplayProps {
     var clientStateGlobal: ClientStateGlobal
     var objectStableMapper: ObjectStableMapper
     var mirroredGraphStore: MirroredGraphStore
-    var insertionGlobal: InsertionGlobal
 }
 
 
@@ -87,8 +87,7 @@ class MappingStepDisplay(
         private val scriptCommander: ScriptCommander,
         @Service private val clientStateGlobal: ClientStateGlobal,
         @Service private val objectStableMapper: ObjectStableMapper,
-        @Service private val mirroredGraphStore: MirroredGraphStore,
-        @Service private val insertionGlobal: InsertionGlobal
+        @Service private val mirroredGraphStore: MirroredGraphStore
     ):
         ScriptStepDisplayWrapper(objectLocation)
     {
@@ -100,7 +99,6 @@ class MappingStepDisplay(
                 clientStateGlobal = this@Wrapper.clientStateGlobal
                 objectStableMapper = this@Wrapper.objectStableMapper
                 mirroredGraphStore = this@Wrapper.mirroredGraphStore
-                insertionGlobal = this@Wrapper.insertionGlobal
 
                 block()
             }
@@ -110,19 +108,19 @@ class MappingStepDisplay(
 
     //-----------------------------------------------------------------------------------------------------------------
     init {
-        installContextType(ScriptStoreContext)
+        installContextType(DocumentBridgeContext)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
         props.clientStateGlobal.observe(this)
-        contextValue<ScriptStore?>()?.observe(this)
+        contextValue<DocumentBridge?>()?.lookup(ScriptStoreKey)?.observe(this)
     }
 
 
     override fun componentWillUnmount() {
-        contextValue<ScriptStore?>()?.unobserve(this)
+        contextValue<DocumentBridge?>()?.lookup(ScriptStoreKey)?.unobserve(this)
         props.clientStateGlobal.unobserve(this)
     }
 
@@ -216,7 +214,6 @@ class MappingStepDisplay(
             scriptCommander = props.scriptCommander,
             roundedBottom = true,
             clientStateGlobal = props.clientStateGlobal,
-            insertionGlobal = props.insertionGlobal,
             mirroredGraphStore = props.mirroredGraphStore,
             objectStableMapper = props.objectStableMapper)
     }

@@ -10,7 +10,9 @@ import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorPr
 import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
 import tech.kzen.auto.client.objects.document.script.model.ScriptStore
-import tech.kzen.auto.client.objects.document.script.model.ScriptStoreContext
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
+import tech.kzen.auto.client.objects.document.script.model.ScriptStoreKey
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.util.async
@@ -88,7 +90,7 @@ class SelectStepEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     init {
-        installContextType(ScriptStoreContext)
+        installContextType(DocumentBridgeContext)
     }
 
 
@@ -113,7 +115,7 @@ class SelectStepEditor(
 
     override fun componentDidMount() {
         props.clientStateGlobal.observe(this)
-        contextValue<ScriptStore?>()?.observe(this)
+        contextValue<DocumentBridge?>()?.lookup(ScriptStoreKey)?.observe(this)
         async {
             props.mirroredGraphStore.observe(this)
         }
@@ -122,7 +124,7 @@ class SelectStepEditor(
 
     override fun componentWillUnmount() {
         props.mirroredGraphStore.unobserve(this)
-        contextValue<ScriptStore?>()?.unobserve(this)
+        contextValue<DocumentBridge?>()?.lookup(ScriptStoreKey)?.unobserve(this)
         props.clientStateGlobal.unobserve(this)
     }
 

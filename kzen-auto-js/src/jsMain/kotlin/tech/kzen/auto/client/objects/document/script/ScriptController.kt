@@ -7,6 +7,9 @@ import react.State
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
+import tech.kzen.auto.client.objects.document.bridge.ViewModeKey
 import tech.kzen.auto.client.objects.document.common.raw.DocumentRaw
 import tech.kzen.auto.client.objects.document.common.raw.DocumentRawState
 import tech.kzen.auto.client.objects.document.common.raw.DocumentViewMode
@@ -16,19 +19,20 @@ import tech.kzen.auto.client.objects.document.script.display.dependency.ScriptDe
 import tech.kzen.auto.client.objects.document.script.display.dependency.ScriptStepDragStore
 import tech.kzen.auto.client.objects.document.script.display.ScriptStepDisplayPropsCommon
 import tech.kzen.auto.client.objects.document.script.display.StepDisplayManager
+import tech.kzen.auto.client.objects.document.script.model.ScriptDragStoreKey
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
 import tech.kzen.auto.client.objects.document.script.model.ScriptStore
-import tech.kzen.auto.client.objects.document.script.model.ScriptStoreContext
-import tech.kzen.auto.client.objects.document.script.model.ScriptStepDragStoreContext
+import tech.kzen.auto.client.objects.document.script.model.ScriptStoreKey
 import tech.kzen.auto.client.objects.document.script.progress.ScriptProgressController
 import tech.kzen.auto.client.objects.document.script.step.control.MultiStepDisplay
 import tech.kzen.auto.client.objects.ribbon.RibbonController
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
-import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.service.global.ViewModeGlobal
 import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.client.wrap.contextValue
+import tech.kzen.auto.client.wrap.installContextType
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
@@ -53,8 +57,6 @@ external interface ScriptControllerProps: Props {
     var mirroredGraphStore: MirroredGraphStore
     var notationParser: NotationParser
     var restClient: ClientRestApi
-    var insertionGlobal: InsertionGlobal
-    var viewModeGlobal: ViewModeGlobal
     var objectStableMapper: ObjectStableMapper
 }
 
@@ -115,8 +117,6 @@ class ScriptController:
         @Service private val mirroredGraphStore: MirroredGraphStore,
         @Service private val notationParser: NotationParser,
         @Service private val restClient: ClientRestApi,
-        @Service private val insertionGlobal: InsertionGlobal,
-        @Service private val viewModeGlobal: ViewModeGlobal,
         @Service private val objectStableMapper: ObjectStableMapper
     ):
         DocumentController
@@ -145,8 +145,6 @@ class ScriptController:
                         this.mirroredGraphStore = this@Wrapper.mirroredGraphStore
                         this.notationParser = this@Wrapper.notationParser
                         this.restClient = this@Wrapper.restClient
-                        this.insertionGlobal = this@Wrapper.insertionGlobal
-                        this.viewModeGlobal = this@Wrapper.viewModeGlobal
                         this.objectStableMapper = this@Wrapper.objectStableMapper
                         block()
                     }
@@ -170,9 +168,16 @@ class ScriptController:
     private val stepDisplayHandle = StepDisplayManager.Handle()
     private var cachedMainCommon: ScriptStepDisplayPropsCommon? = null
 
-    // Shared drag source for cross-branch step drag/drop; provided via context to every ScriptBranchDisplay
-    // in this script's subtree. One per mounted controller (per open script).
+    // Shared drag source for cross-branch step drag/drop; provided into the per-document bridge so every
+    // ScriptBranchDisplay in this script's subtree reads the same instance. One per mounted controller.
     private val dragStore = ScriptStepDragStore()
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    init {
+        // Single per-document context; ScriptController reads it to provide its stores (see render).
+        installContextType(DocumentBridgeContext)
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -192,12 +197,12 @@ class ScriptController:
         store.didMount()
         store.observe(this)
         props.clientStateGlobal.observe(this)
-        props.viewModeGlobal.subscribe(this)
+        contextValue<DocumentBridge?>()?.channel(ViewModeKey)?.subscribe(this)
     }
 
 
     override fun componentWillUnmount() {
-        props.viewModeGlobal.unsubscribe(this)
+        contextValue<DocumentBridge?>()?.channel(ViewModeKey)?.unsubscribe(this)
         props.clientStateGlobal.unobserve(this)
         store.unobserve(this)
         store.willUnmount()
@@ -266,40 +271,45 @@ class ScriptController:
         }
 
         val mainObjectLocation = documentPath.toMainObjectLocation()
-        ScriptStoreContext.Provider(store) {
-            ScriptStepDragStoreContext.Provider(dragStore) {
-                div {
-                    css {
-                        paddingTop = 1.em
-                    }
-                    renderSignature(mainObjectLocation)
-                }
 
-                val globalError = state.globalError
-                if (globalError != null) {
-                    div {
-                        +"Error: $globalError"
-                    }
-                }
+        // Provide this script's stores into the per-document bridge so the step-display subtree reaches them
+        // by key (each display installs only DocumentBridgeContext). Idempotent map writes — no re-render —
+        // that also re-provide into a fresh bridge after a same-archetype document switch (ScriptController
+        // isn't remounted then), and run before any child's componentDidMount.
+        val bridge = contextValue<DocumentBridge?>()
+        bridge?.provide(ScriptStoreKey, store)
+        bridge?.provide(ScriptDragStoreKey, dragStore)
 
-                div {
-                    css {
-                        marginLeft = 2.em
-                        position = Position.relative
-                    }
+        div {
+            css {
+                paddingTop = 1.em
+            }
+            renderSignature(mainObjectLocation)
+        }
 
-                    // NB: overlay is rendered BEFORE MultiStepDisplay so default stacking puts it behind
-                    //     step cards; the cross-branch polylines visually pass behind the IfStep card.
-                    ScriptDependencyOverlay::class.react {
-                        clientStateGlobal = props.clientStateGlobal
-                    }
-
-                    renderMain(mainObjectLocation)
-                }
-
-                renderRunController(clientState)
+        val globalError = state.globalError
+        if (globalError != null) {
+            div {
+                +"Error: $globalError"
             }
         }
+
+        div {
+            css {
+                marginLeft = 2.em
+                position = Position.relative
+            }
+
+            // NB: overlay is rendered BEFORE MultiStepDisplay so default stacking puts it behind
+            //     step cards; the cross-branch polylines visually pass behind the IfStep card.
+            ScriptDependencyOverlay::class.react {
+                clientStateGlobal = props.clientStateGlobal
+            }
+
+            renderMain(mainObjectLocation)
+        }
+
+        renderRunController(clientState)
     }
 
 
@@ -344,7 +354,6 @@ class ScriptController:
             stepDisplayManager = stepDisplayHandle
             scriptCommander = props.scriptCommander
             clientStateGlobal = props.clientStateGlobal
-            insertionGlobal = props.insertionGlobal
             mirroredGraphStore = props.mirroredGraphStore
             objectStableMapper = props.objectStableMapper
         }

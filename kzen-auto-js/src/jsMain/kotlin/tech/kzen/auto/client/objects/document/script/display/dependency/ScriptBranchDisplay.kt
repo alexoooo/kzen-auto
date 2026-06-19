@@ -16,7 +16,10 @@ import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
 import tech.kzen.auto.client.objects.document.script.display.ScriptStepSlot
 import tech.kzen.auto.client.objects.document.script.display.StepDisplayManager
 import tech.kzen.auto.client.objects.document.script.display.image.StepImageThumbnail
-import tech.kzen.auto.client.objects.document.script.model.ScriptStepDragStoreContext
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
+import tech.kzen.auto.client.objects.document.bridge.InsertionKey
+import tech.kzen.auto.client.objects.document.script.model.ScriptDragStoreKey
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.global.InsertionGlobal
@@ -63,7 +66,6 @@ external interface StepListDisplayProps: Props {
     var scriptCommander: ScriptCommander
 
     var clientStateGlobal: ClientStateGlobal
-    var insertionGlobal: InsertionGlobal
     var mirroredGraphStore: MirroredGraphStore
     var objectStableMapper: ObjectStableMapper
 }
@@ -110,7 +112,7 @@ class ScriptBranchDisplay(
 
     //-----------------------------------------------------------------------------------------------------------------
     init {
-        installContextType(ScriptStepDragStoreContext)
+        installContextType(DocumentBridgeContext)
     }
 
 
@@ -123,20 +125,24 @@ class ScriptBranchDisplay(
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
         props.clientStateGlobal.observe(this)
-        props.insertionGlobal.subscribe(this)
+        insertion()?.subscribe(this)
         dragStore()?.observe(this)
     }
 
 
     override fun componentWillUnmount() {
         dragStore()?.unobserve(this)
-        props.insertionGlobal.unsubscribe(this)
+        insertion()?.unsubscribe(this)
         props.clientStateGlobal.unobserve(this)
     }
 
 
     private fun dragStore(): ScriptStepDragStore? =
-        contextValue<ScriptStepDragStore?>()
+        contextValue<DocumentBridge?>()?.lookup(ScriptDragStoreKey)
+
+
+    private fun insertion(): InsertionGlobal? =
+        contextValue<DocumentBridge?>()?.channel(InsertionKey)
 
 
     // Derive only this branch's slice from the shared store and skip setState when unchanged, so a hover move
@@ -251,8 +257,8 @@ class ScriptBranchDisplay(
         val graphStructure = props.clientStateGlobal.current()?.graphStructure()
             ?: return
 
-        val archetypeObjectLocation = props.insertionGlobal
-            .getAndClearSelection()
+        val archetypeObjectLocation = insertion()
+            ?.getAndClearSelection()
             ?: return
 
         val commands = props.scriptCommander.createCommands(

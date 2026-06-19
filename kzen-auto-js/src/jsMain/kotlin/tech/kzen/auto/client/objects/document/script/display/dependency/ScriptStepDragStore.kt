@@ -6,7 +6,7 @@ import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.model.location.ObjectLocation
 
 
-// Shared across all ScriptBranchDisplay instances of one script (via ScriptStepDragStoreContext) so a drag
+// Shared across all ScriptBranchDisplay instances of one script (via the DocumentBridge under ScriptDragStoreKey) so a drag
 // begun in one branch can be dropped into another. Holds the active drag SOURCE (set on drag start) and the
 // single current drop HOVER (which branch + slot the cursor is over). Centralizing the hover means only one
 // branch ever shows a drop indicator — the previously-hovered branch clears as the cursor moves on, instead

@@ -10,7 +10,9 @@ import tech.kzen.auto.client.objects.document.graph.EdgeController
 import tech.kzen.auto.client.objects.document.script.ScriptController
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
 import tech.kzen.auto.client.objects.document.script.model.ScriptStore
-import tech.kzen.auto.client.objects.document.script.model.ScriptStoreContext
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
+import tech.kzen.auto.client.objects.document.script.model.ScriptStoreKey
 import tech.kzen.auto.client.objects.document.script.step.header.StepHeader
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
@@ -167,19 +169,19 @@ class ScriptStepDisplayDefault(
 
     //-----------------------------------------------------------------------------------------------------------------
     init {
-        installContextType(ScriptStoreContext)
+        installContextType(DocumentBridgeContext)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
         props.clientStateGlobal.observe(this)
-        contextValue<ScriptStore?>()?.observe(this)
+        contextValue<DocumentBridge?>()?.lookup(ScriptStoreKey)?.observe(this)
     }
 
 
     override fun componentWillUnmount() {
-        val scriptStore = contextValue<ScriptStore?>()
+        val scriptStore = contextValue<DocumentBridge?>()?.lookup(ScriptStoreKey)
         // Unobserve first so clearing expansion below doesn't publish onScriptState back into this
         // unmounting component; the still-mounted sibling preview collapses and the deleted step's
         // map entry is pruned. Idempotent — no-ops when already collapsed.
@@ -283,7 +285,7 @@ class ScriptStepDisplayDefault(
         // Single source of truth: write expansion to ScriptState via the sub-store. Both this step
         // body and its sibling StepImageThumbnail (no prop path between them) re-render from the
         // resulting onScriptState publish, so there's no local setState here.
-        contextValue<ScriptStore?>()?.stepStore?.setExpanded(props.common.objectLocation, !state.expanded)
+        contextValue<DocumentBridge?>()?.lookup(ScriptStoreKey)?.stepStore?.setExpanded(props.common.objectLocation, !state.expanded)
     }
 
 

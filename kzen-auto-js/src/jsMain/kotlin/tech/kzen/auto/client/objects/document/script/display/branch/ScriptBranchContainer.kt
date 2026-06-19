@@ -8,7 +8,6 @@ import tech.kzen.auto.client.objects.document.script.display.ScriptStepDisplayDe
 import tech.kzen.auto.client.objects.document.script.display.StepDisplayManager
 import tech.kzen.auto.client.objects.document.script.display.dependency.ScriptBranchDisplay
 import tech.kzen.auto.client.service.global.ClientStateGlobal
-import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.service.store.MirroredGraphStore
@@ -38,7 +37,6 @@ fun ChildrenBuilder.scriptBranchContainer(
     scriptCommander: ScriptCommander,
     roundedBottom: Boolean,
     clientStateGlobal: ClientStateGlobal,
-    insertionGlobal: InsertionGlobal,
     mirroredGraphStore: MirroredGraphStore,
     objectStableMapper: ObjectStableMapper
 ) {
@@ -83,7 +81,6 @@ fun ChildrenBuilder.scriptBranchContainer(
                 this.stepDisplayManager = stepDisplayManager
                 this.scriptCommander = scriptCommander
                 this.clientStateGlobal = clientStateGlobal
-                this.insertionGlobal = insertionGlobal
                 this.mirroredGraphStore = mirroredGraphStore
                 this.objectStableMapper = objectStableMapper
             }

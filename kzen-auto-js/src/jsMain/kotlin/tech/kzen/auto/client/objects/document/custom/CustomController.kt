@@ -7,18 +7,22 @@ import react.State
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
 import tech.kzen.auto.client.objects.document.common.raw.DocumentRaw
 import tech.kzen.auto.client.objects.document.common.raw.DocumentViewMode
-import tech.kzen.auto.client.objects.document.custom.model.CustomGlobal
 import tech.kzen.auto.client.objects.document.custom.model.CustomState
 import tech.kzen.auto.client.objects.document.custom.model.CustomStore
+import tech.kzen.auto.client.objects.document.custom.model.CustomStoreKey
 import tech.kzen.auto.client.objects.document.custom.view.CustomView
 import tech.kzen.auto.client.objects.document.custom.view.CustomViewModel
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.service.rest.ClientRestTaskRepository
 import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.client.wrap.contextValue
+import tech.kzen.auto.client.wrap.installContextType
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -104,14 +108,22 @@ class CustomController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    // CustomHeader is mounted in a sibling slot and picks up this store via CustomGlobal — header and body share one store.
+    init {
+        // Single per-document context; CustomController reads it in render to provide its store.
+        installContextType(DocumentBridgeContext)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    // CustomHeader is mounted in a sibling slot and picks up this store from the DocumentBridge (CustomStoreKey,
+    // provided in render below) — header and body share one store.
     private val store = CustomStore(
         props.clientStateGlobal,
         props.mirroredGraphStore,
         props.notationParser,
         props.restClient,
         props.clientRestTaskRepository
-    ).also { CustomGlobal.upsertWeak(it) }
+    )
     private val viewModelBuilder = CustomViewModel.Builder()
 
 
@@ -149,6 +161,10 @@ class CustomController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
+        // Provide the store into the bridge BEFORE the early return, so the sibling CustomHeader (header slot)
+        // resolves it in its componentDidMount (which runs after this render)
+        contextValue<DocumentBridge?>()?.provide(CustomStoreKey, store)
+
         val customState = state.customState
             ?: return
 

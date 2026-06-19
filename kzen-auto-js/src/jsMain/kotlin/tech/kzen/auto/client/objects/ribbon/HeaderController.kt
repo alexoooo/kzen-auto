@@ -51,9 +51,10 @@ external interface HeaderControllerState: react.State {
 // NB: documentPath is observed locally rather than received as a prop. Synchronous prop delivery
 // from the parent's first observer-fired setState would mount the document's CustomHeader before
 // the sibling StageController had a chance to mount the matching CustomController — and
-// CustomHeader.componentDidMount calls CustomGlobal.get(), which CustomController.<init> sets.
-// Subscribing locally puts handleNavigation into the same async microtask batch as StageController's
-// subscribe, so both children render in one React phase and the global is wired before commit.
+// CustomHeader.componentDidMount looks up the shared store from the DocumentBridge, which
+// CustomController provides in its render(). Subscribing locally puts handleNavigation into the same
+// async microtask batch as StageController's subscribe, so both children render in one React phase
+// and the store is provided (render runs before any componentDidMount) before commit.
 class HeaderController(
     props: HeaderControllerProps
 ):

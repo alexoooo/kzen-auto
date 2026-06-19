@@ -12,6 +12,8 @@ import react.State
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.StageController
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.objects.ribbon.HeaderController
 import tech.kzen.auto.client.objects.ribbon.HeaderModel
 import tech.kzen.auto.client.objects.sidebar.SidebarController
@@ -107,6 +109,13 @@ class ProjectController(
 
     private val headerModelBuilder = HeaderModel.Builder()
     private val sidebarModelBuilder = SidebarModel.Builder(props.archetypeLocations)
+
+    // Per-document hub bridging the header (ribbon) and stage (body) sibling subtrees; provided to both
+    // via DocumentBridgeContext in render(). Recreated when the mounted document changes (handleNavigation)
+    // so channel/store state never leaks across documents, but stable between renders of the same document
+    // so consumers don't needlessly re-render.
+    private var documentBridge = DocumentBridge()
+    private var bridgeDocumentPath: DocumentPath? = null
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -309,6 +318,12 @@ class ProjectController(
         documentPath: DocumentPath?,
         parameters: RequestParams
     ) {
+        // Switching to a different document gets a fresh bridge; a same-document param change keeps it.
+        if (documentPath != bridgeDocumentPath) {
+            bridgeDocumentPath = documentPath
+            documentBridge = DocumentBridge()
+        }
+
         setState {
             this.documentPath = documentPath
         }
@@ -328,7 +343,11 @@ class ProjectController(
             +"Loading..."
         }
         else {
-            renderBody(/*graphNotation*/)
+            // One provider wraps both the header and stage subtrees renderBody emits, so each side
+            // reaches the same per-document bridge by key.
+            DocumentBridgeContext.Provider(documentBridge) {
+                renderBody()
+            }
         }
     }
 

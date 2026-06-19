@@ -3,10 +3,10 @@ package tech.kzen.auto.client.objects.document.script.model
 import tech.kzen.lib.common.model.location.ObjectLocation
 
 
-// Per-document UI state: which Script steps are currently expanded. Lives on ScriptStore (provided
-// via ScriptStoreContext) so the step display (ScriptStepDisplayDefault — the writer) and its
-// sibling StepScreenshotPreview (the reader) can coordinate. The two share only objectLocation, not
-// a prop path, but both already observe this context store. Deliberately NOT part of ScriptState:
+// Per-document UI state: which Script steps are currently expanded. Lives on ScriptStore (reached via
+// the DocumentBridge under ScriptStoreKey) so the step display (ScriptStepDisplayDefault — the writer)
+// and its sibling StepScreenshotPreview (the reader) can coordinate. The two share only objectLocation,
+// not a prop path, but both already observe this bridged store. Deliberately NOT part of ScriptState:
 // expansion is transient UI, not document/trace state, so it must not ride the
 // onClientState → updateIfChanged → publish flow (which rebuilds — and would clobber — it).
 class StepExpansionStore {

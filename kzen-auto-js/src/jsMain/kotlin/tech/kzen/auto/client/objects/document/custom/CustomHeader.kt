@@ -12,11 +12,15 @@ import react.ReactNode
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.objects.document.common.raw.DocumentViewMode
-import tech.kzen.auto.client.objects.document.custom.model.CustomGlobal
 import tech.kzen.auto.client.objects.document.custom.model.CustomState
 import tech.kzen.auto.client.objects.document.custom.model.CustomStore
+import tech.kzen.auto.client.objects.document.custom.model.CustomStoreKey
 import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.client.wrap.contextValue
+import tech.kzen.auto.client.wrap.installContextType
 import tech.kzen.auto.client.wrap.setState
 import web.cssom.NamedColor
 import web.cssom.Padding
@@ -47,13 +51,24 @@ class CustomHeader(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    init {
+        installContextType(DocumentBridgeContext)
+    }
+
+
+    // The body's store, shared via the per-document bridge (provided by CustomController in render).
+    private fun store(): CustomStore? =
+        contextValue<DocumentBridge?>()?.lookup(CustomStoreKey)
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
-        CustomGlobal.get().observe(this)
+        store()?.observe(this)
     }
 
 
     override fun componentWillUnmount() {
-        CustomGlobal.get().unobserve(this)
+        store()?.unobserve(this)
     }
 
 
@@ -70,7 +85,7 @@ class CustomHeader(
         if (viewMode == DocumentViewMode.View && state.editorModified) {
             return
         }
-        CustomGlobal.get().setViewMode(viewMode)
+        store()?.setViewMode(viewMode)
     }
 
 
