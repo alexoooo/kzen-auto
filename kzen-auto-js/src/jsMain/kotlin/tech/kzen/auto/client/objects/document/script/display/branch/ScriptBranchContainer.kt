@@ -16,7 +16,7 @@ import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------
-// NB: shared branch-row layout for IfStep (Then/Else) and MappingStep (Each). Renders a narrow
+// NB: shared branch-row layout for IfStep (Then/Else) and ForEachStep (Each). Renders a narrow
 //     white "indent" column on the left holding just the label, paired with the branch's step list
 //     on the right. The strip stretches to the row's full height via flex `alignItems = stretch`
 //     plus 32px vertical padding — so the strip's white bg covers the right column's top/bottom
@@ -27,7 +27,7 @@ import web.cssom.*
 //     each step card reads as a discrete white card on gray, not as part of one solid slab.
 //
 //     Top/edge decorations (seam line, down-shadow, vertical ledge) are rendered by the caller
-//     (IfStepDisplay / MappingStepDisplay) via the shared branchStage* helpers in
+//     (IfStepDisplay / ForEachStepDisplay) via the shared branchStage* helpers in
 //     BranchStageChrome.kt — not by this helper, since branches differ in their top visuals
 //     (e.g. the If's Then branch adds a bottom fade-to-white lip the others don't).
 fun ChildrenBuilder.scriptBranchContainer(

@@ -89,9 +89,9 @@ IfStepDisplay:
 #      is: ObjectLocation
 #      by: Nominal
 
-MappingStepDisplay:
+ForEachStepDisplay:
   is: ScriptStepDisplay
-  class: tech.kzen.auto.client.objects.document.script.step.control.mapping.MappingStepDisplay$Wrapper
+  class: tech.kzen.auto.client.objects.document.script.step.control.foreach.ForEachStepDisplay$Wrapper
   attributeEditorManager: AttributeEditorManager
   stepDisplayManager: StepDisplayManagerHandle
   scriptCommander: ScriptCommander
@@ -103,14 +103,14 @@ DoWhileStepDisplay:
   stepDisplayManager: StepDisplayManagerHandle
   scriptCommander: ScriptCommander
 
-MappingStepCommander:
+ForEachStepCommander:
   is: ScriptStepCommander
-  class: tech.kzen.auto.client.objects.document.script.step.control.mapping.MappingStepCommander
+  class: tech.kzen.auto.client.objects.document.script.step.control.foreach.ForEachStepCommander
   parent: ScriptCommander
-  mappingStepArchetype: MappingStep
-  itemArchetype: MappingItemBinding
+  forEachStepArchetype: ForEachStep
+  itemArchetype: ForEachItemBinding
   meta:
-    mappingStepArchetype:
+    forEachStepArchetype:
       is: ObjectLocation
       by: Nominal
     itemArchetype:
@@ -232,10 +232,10 @@ IfTool:
   delegate: IfStep
 
 
-MappingTool:
+ForEachTool:
   is: RibbonTool
   parent: ScriptGroup_LogicControl
-  delegate: MappingStep
+  delegate: ForEachStep
 
 
 DoWhileTool:

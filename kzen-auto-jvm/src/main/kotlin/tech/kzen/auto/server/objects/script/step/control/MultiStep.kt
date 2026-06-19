@@ -38,28 +38,37 @@ class MultiStep(
 
 
     override fun continueOrStart(scriptExecutionContext: ScriptExecutionContext): LogicResult {
-        // TODO: handle step-into via RunStep while paused
-//        var executeNextIfPaused = stepContext.topLevel
-        var executeNextIfPaused = true
-
         var lastSuccessValue: TupleValue = TupleValue.empty
+
+        val logicControl = scriptExecutionContext.logicControl
 
         while (true) {
             val nextToRun = getAndPublishNextToRun(scriptExecutionContext)
                 ?: return LogicResultSuccess(lastSuccessValue)
 
-            val logicCommand = scriptExecutionContext.logicControl.pollCommand()
+            val stepModel = scriptExecutionContext.getOrPutStepModel(nextToRun)
+
+            // Cancel always wins. Otherwise: a step already Running paused mid-execution (its nested
+            // child paused) — it's on the resume spine, so re-enter it to resume regardless of any
+            // pause/budget. A fresh step (Idle, or Error under pause-on-error) is a pausable boundary:
+            // while a Pause command is in effect it runs only if the shared per-tick step budget allows
+            // it (so a single Step / slow-motion tick advances exactly one fresh boundary across the
+            // whole frame tree), unless pause is suppressed (Step Over running a sub-tree to completion).
+            // nextStepTracePath was just published, so a fresh step that pauses shows as "next to run".
+            val logicCommand = logicControl.pollCommand()
             if (logicCommand == LogicCommand.Cancel) {
                 return LogicResultCancelled
             }
-            else if (!executeNextIfPaused && logicCommand == LogicCommand.Pause) {
+
+            val onResumeSpine = stepModel.traceState == StepTrace.State.Running
+            if (! onResumeSpine &&
+                    logicCommand == LogicCommand.Pause &&
+                    ! logicControl.suppressPause() &&
+                    ! logicControl.consumeStepBudget()
+            ) {
                 return LogicResultPaused
             }
-            else {
-                executeNextIfPaused = false
-            }
 
-            val stepModel = scriptExecutionContext.getOrPutStepModel(nextToRun)
             val step = scriptExecutionContext.graphInstance[nextToRun]?.reference as? ScriptStep
                 ?: throw IllegalStateException("Next step not found: $nextToRun")
 

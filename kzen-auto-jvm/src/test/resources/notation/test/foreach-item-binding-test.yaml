@@ -7,11 +7,11 @@ main.steps/Range:
   to: 3
 
 main.steps/Loop:
-  is: MappingStep
+  is: ForEachStep
   items: main.steps/Range
 
 main.steps/Loop.item/Item:
-  is: MappingItemBinding
+  is: ForEachItemBinding
 
 main.steps/Loop.steps/Doubled:
   is: FormulaStep

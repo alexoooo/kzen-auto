@@ -299,13 +299,13 @@ IfStep:
       by: NestedList
 
 
-MappingStep:
+ForEachStep:
   abstract: true
   is: ScriptStep
-  class: tech.kzen.auto.server.objects.script.step.control.mapping.MappingStep
-  display: MappingStepDisplay
+  class: tech.kzen.auto.server.objects.script.step.control.foreach.ForEachStep
+  display: ForEachStepDisplay
   icon: "material-symbols:forward"
-  title: "Loop"
+  title: "ForEach"
   description: "Use each item in a list"
   items: ""
   meta:
@@ -319,21 +319,21 @@ MappingStep:
       by: NestedList
     selfLocation: SelfLocation
 
-MappingItemBinding:
+ForEachItemBinding:
   abstract: true
   is: ScriptStep
-  class: tech.kzen.auto.server.objects.script.binding.MappingItemBinding
+  class: tech.kzen.auto.server.objects.script.binding.ForEachItemBinding
   icon: "material-symbols:label"
   title: "Item"
   meta:
     selfLocation: SelfLocation
 
-# Deprecated: superseded by MappingItemBinding (rowless typed loop item). Retained until existing loops
-# that still contain a MappingItemStep body row are migrated to the item binding.
-MappingItemStep:
+# Deprecated: superseded by ForEachItemBinding (rowless typed loop item). Retained until existing loops
+# that still contain a ForEachItemStep body row are migrated to the item binding.
+ForEachItemStep:
   abstract: true
   is: ScriptStep
-  class: tech.kzen.auto.server.objects.script.step.control.mapping.MappingItemStep
+  class: tech.kzen.auto.server.objects.script.step.control.foreach.ForEachItemStep
   icon: "material-symbols:share"
   title: "Item"
   meta:

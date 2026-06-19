@@ -54,6 +54,7 @@ external interface SidebarFolderProps: react.Props {
     var sidebarModel: SidebarModel
     var selectedDocumentPath: DocumentPath?
     var executingDepths: Map<DocumentPath, Int>
+    var tracedDocuments: Set<DocumentPath>
     var navigationGlobal: NavigationGlobal
     var mirroredGraphStore: MirroredGraphStore
 
@@ -499,6 +500,9 @@ class SidebarFolder(
                         // primitive Int? — null (not executing) compares === across renders, so non-executing
                         // rows keep bailing out of RPureComponent's shallow update
                         executingDepth = props.executingDepths[child.path]
+                        // primitive Boolean — false (no trace) compares === across renders, so untraced
+                        // rows keep bailing out of RPureComponent's shallow update
+                        hasTrace = child.path in props.tracedDocuments
                         navigationGlobal = props.navigationGlobal
                         mirroredGraphStore = props.mirroredGraphStore
 
@@ -515,6 +519,7 @@ class SidebarFolder(
                         sidebarModel = props.sidebarModel
                         selectedDocumentPath = props.selectedDocumentPath
                         executingDepths = props.executingDepths
+                        tracedDocuments = props.tracedDocuments
                         navigationGlobal = props.navigationGlobal
                         mirroredGraphStore = props.mirroredGraphStore
                         collapsed = false

@@ -99,7 +99,7 @@ reason a component must always re-render:**
    it is value-equal (`==`) but **not** `===`. A fresh reference in state defeats `RPureComponent`'s
    `===` shallow-equal, so the guard must skip the `setState` entirely when the slice is value-equal (a
    `===`/reference guard would never bail). The step-body displays (`ScriptStepDisplayDefault`,
-   `IfStepDisplay`, `MappingStepDisplay`) — which subscribe directly to the broadcast `ScriptStore` —
+   `IfStepDisplay`, `ForEachStepDisplay`) — which subscribe directly to the broadcast `ScriptStore` —
    show the pattern:
    ```kotlin
    // ScriptStepDisplayDefault.onScriptState — value-compare (==), not ===

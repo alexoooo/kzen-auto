@@ -91,6 +91,16 @@ class LogicTraceEndpoint(
                     events.map { it.toCollection() }))
             }
 
+            LogicConventions.actionTraced -> {
+                // Every document with a retained trace (run roots + sub-logic roots), as documentPath
+                // strings — the sidebar keys its "has trace" indicator by DocumentPath.
+                val documentPaths = logicTraceStore.tracedLocations()
+                    .map { it.documentPath.asString() }
+                    .distinct()
+
+                ExecutionSuccess.ofValue(ExecutionValue.of(documentPaths))
+            }
+
             LogicConventions.actionReset -> {
                 val documentPath: DocumentPath = request.getSingle(LogicConventions.paramSubDocumentPath)
                     ?.let { DocumentPath.parse(it) }
@@ -104,6 +114,12 @@ class LogicTraceEndpoint(
                 val cleared = logicTraceStore.clear(objectLocation)
 
                 ExecutionSuccess.ofValue(ExecutionValue.of(cleared))
+            }
+
+            LogicConventions.actionResetAll -> {
+                // Global clear: the run controls are global, so Clear wipes every retained trace.
+                logicTraceStore.clearAll()
+                ExecutionSuccess.ofValue(ExecutionValue.of(true))
             }
 
             else ->

@@ -25,14 +25,14 @@ import kotlin.test.assertIs
 
 
 /**
- * A MappingStep's loop item is exposed to nested steps by name without a body row: a
- * [tech.kzen.auto.server.objects.script.binding.MappingItemBinding] in the mapping's `item` branch is
- * typed to the element type of the items collection (inferred via the mapping's List output), is in
+ * A ForEachStep's loop item is exposed to nested steps by name without a body row: a
+ * [tech.kzen.auto.server.objects.script.binding.ForEachItemBinding] in the ForEach's `item` branch is
+ * typed to the element type of the items collection (inferred via the ForEach's List output), is in
  * scope for the loop body, and resolves the current iteration value on demand.
  */
-class MappingItemBindingTest {
+class ForEachItemBindingTest {
     //-----------------------------------------------------------------------------------------------------------------
-    private val documentPath = DocumentPath.parse("test/mapping-item-binding-test.yaml")
+    private val documentPath = DocumentPath.parse("test/foreach-item-binding-test.yaml")
     private val mainLocation = ObjectLocation(documentPath, ObjectPath.parse("main"))
 
     private lateinit var context: KzenAutoContext
@@ -52,7 +52,7 @@ class MappingItemBindingTest {
 
     //-----------------------------------------------------------------------------------------------------------------
     @Test
-    fun mappingInfersListElementType() {
+    fun forEachInfersListElementType() {
         assertEquals(
             TypeMetadata(ClassNames.kotlinList, listOf(TypeMetadata.int), false),
             typeMetadataFor("main.steps/Loop"))
@@ -69,7 +69,7 @@ class MappingItemBindingTest {
 
     @Test
     fun bodyFormulaInfersTypeFromItemByName() {
-        // `Item * 2` over an Int loop item, referenced by name, with no MappingItemStep row.
+        // `Item * 2` over an Int loop item, referenced by name, with no ForEachItemStep row.
         assertEquals(
             TypeMetadata(ClassNames.kotlinInt, listOf(), false),
             typeMetadataFor("main.steps/Loop.steps/Doubled"))

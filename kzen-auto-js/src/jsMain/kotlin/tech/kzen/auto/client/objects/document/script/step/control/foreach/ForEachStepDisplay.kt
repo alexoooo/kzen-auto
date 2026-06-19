@@ -1,9 +1,10 @@
-package tech.kzen.auto.client.objects.document.script.step.control.mapping
+package tech.kzen.auto.client.objects.document.script.step.control.foreach
 
 import emotion.react.css
 import react.ChildrenBuilder
 import react.State
 import react.dom.html.ReactHTML.div
+import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
 import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
 import tech.kzen.auto.client.objects.document.script.display.ScriptStepDisplayProps
@@ -31,6 +32,10 @@ import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.objects.document.script.model.StepTrace
+import tech.kzen.lib.common.exec.ExecutionValue
+import tech.kzen.lib.common.exec.ListExecutionValue
+import tech.kzen.lib.common.exec.NullExecutionValue
+import tech.kzen.lib.common.exec.ScalarExecutionValue
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -38,11 +43,15 @@ import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.service.store.MirroredGraphStore
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
+import web.cssom.Color
+import web.cssom.FontWeight
+import web.cssom.NamedColor
 import web.cssom.Position
+import web.cssom.em
 
 
 //---------------------------------------------------------------------------------------------------------------------
-external interface MappingStepDisplayProps: ScriptStepDisplayProps {
+external interface ForEachStepDisplayProps: ScriptStepDisplayProps {
     var attributeEditorManager: AttributeEditorManager.Wrapper
     var stepDisplayManager: StepDisplayManager.Wrapper
     var scriptCommander: ScriptCommander
@@ -53,7 +62,7 @@ external interface MappingStepDisplayProps: ScriptStepDisplayProps {
 }
 
 
-external interface MappingStepDisplayState: State {
+external interface ForEachStepDisplayState: State {
     var stepTrace: StepTrace?
     var isNextToRun: Boolean?
 
@@ -65,10 +74,10 @@ external interface MappingStepDisplayState: State {
 
 //---------------------------------------------------------------------------------------------------------------------
 @Suppress("unused")
-class MappingStepDisplay(
-    props: MappingStepDisplayProps
+class ForEachStepDisplay(
+    props: ForEachStepDisplayProps
 ):
-    RPureComponent<MappingStepDisplayProps, MappingStepDisplayState>(props),
+    RPureComponent<ForEachStepDisplayProps, ForEachStepDisplayState>(props),
     ClientStateGlobal.Observer,
     ScriptStore.Observer
 {
@@ -92,7 +101,7 @@ class MappingStepDisplay(
         ScriptStepDisplayWrapper(objectLocation)
     {
         override fun ChildrenBuilder.child(block: ScriptStepDisplayProps.() -> Unit) {
-            MappingStepDisplay::class.react {
+            ForEachStepDisplay::class.react {
                 attributeEditorManager = this@Wrapper.attributeEditorManager
                 stepDisplayManager = this@Wrapper.stepDisplayManager.wrapper!!
                 scriptCommander = this@Wrapper.scriptCommander
@@ -181,6 +190,8 @@ class MappingStepDisplay(
                 this.objectLocation = props.common.objectLocation
                 this.attributeName = itemsAttributeName
             }
+
+            renderCurrentItem()
         }
 
         // Recessed-stage chrome wrapper, mirroring the page-level header/sidebar casting a shadow
@@ -202,6 +213,43 @@ class MappingStepDisplay(
             branchStageTopShadow {
                 renderSteps()
             }
+        }
+    }
+
+
+    // The current iteration's item value, surfaced live as the ForEach runs (traced as the step's
+    // detail by ForEachStep). Hidden until there's an item to show.
+    private fun ChildrenBuilder.renderCurrentItem() {
+        val detail = state.stepTrace?.detail
+        if (detail == null || detail is NullExecutionValue) {
+            return
+        }
+
+        div {
+            css {
+                marginTop = 0.25.em
+                marginBottom = 0.5.em
+                fontSize = 0.85.em
+                color = Color("gray")
+            }
+
+            +"item: "
+            span {
+                css {
+                    fontWeight = FontWeight.bold
+                    color = NamedColor.black
+                }
+                +executionValueText(detail)
+            }
+        }
+    }
+
+
+    private fun executionValueText(value: ExecutionValue): String {
+        return when (value) {
+            is ScalarExecutionValue -> value.get().toString()
+            is ListExecutionValue -> value.values.map { it.get() }.toString()
+            else -> value.toString()
         }
     }
 

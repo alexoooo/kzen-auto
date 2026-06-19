@@ -29,25 +29,25 @@ class ScriptTreeTest {
             listOf(
                 ObjectPath.parse("main.steps/Formula")),
             tree.predecessors(
-                ObjectPath.parse("main.steps/Mapping")))
+                ObjectPath.parse("main.steps/ForEach")))
 
         assertEquals(
             listOf(
                 ObjectPath.parse("main.steps/Formula")),
             tree.predecessors(
-                ObjectPath.parse("main.steps/Mapping.steps/Item")))
+                ObjectPath.parse("main.steps/ForEach.steps/Item")))
 
         assertEquals(
             listOf(
                 ObjectPath.parse("main.steps/Formula"),
-                ObjectPath.parse("main.steps/Mapping.steps/Item")),
+                ObjectPath.parse("main.steps/ForEach.steps/Item")),
             tree.predecessors(
-                ObjectPath.parse("main.steps/Mapping.steps/Is divisible by")))
+                ObjectPath.parse("main.steps/ForEach.steps/Is divisible by")))
 
         assertEquals(
             listOf(
                 ObjectPath.parse("main.steps/Formula"),
-                ObjectPath.parse("main.steps/Mapping")),
+                ObjectPath.parse("main.steps/ForEach")),
             tree.predecessors(
                 ObjectPath.parse("main.steps/Display")))
     }

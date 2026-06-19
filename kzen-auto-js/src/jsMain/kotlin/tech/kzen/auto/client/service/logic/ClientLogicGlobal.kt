@@ -11,6 +11,7 @@ import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.exec.ExecutionSuccess
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunResponse
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunState
+import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 
 
@@ -262,6 +263,41 @@ class ClientLogicGlobal(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    // Step Over: like Step, but the server runs any sub-document (RunStep child) entered on this tick to
+    // completion instead of descending into it, pausing at the next step of the current frame.
+    fun stepOverAsync() {
+        cancelSlowLoop()
+        val logicRunId = clientLogicState.logicStatus?.active?.id
+            ?: return
+
+        clientLogicState = clientLogicState.copy(
+            pending = ClientLogicState.Pending.Step,
+            controlError = null)
+        publish()
+
+        async {
+            delay(1)
+            val response = restClient.logicStepOver(logicRunId)
+
+            clientLogicState = clientLogicState.copy(
+                pending = ClientLogicState.Pending.None)
+
+            if (response != LogicRunResponse.Submitted) {
+                clientLogicState = clientLogicState.copy(
+                    controlError = "Unable to step over")
+            }
+            else {
+                delay(10)
+                lookupStatus()
+                scheduleRefresh()
+            }
+
+            publish()
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     // "Slow motion" run: the browser auto-issues Step repeatedly with a fixed dwell between steps, so
     // each step's result is visible before the next (reintroduces the old paced dataflow run-loop). Pure
     // client pacing — no server/REST change; the run is just a normal stepped run.
@@ -441,6 +477,55 @@ class ClientLogicGlobal(
                 CommonRestApi.paramAction to LogicConventions.actionReset,
                 LogicConventions.paramSubDocumentPath to mainLocation.documentPath.asString(),
                 LogicConventions.paramSubObjectPath to mainLocation.objectPath.asString()
+            )
+
+            if (result is ExecutionFailure) {
+                clientLogicState = clientLogicState.copy(
+                    controlError = result.errorMessage)
+            }
+
+            lookupStatus()
+            publish()
+        }
+    }
+
+
+    // Every document that currently holds a retained logic trace (run roots + RunStep sub-logic roots).
+    // Drives the sidebar's "has trace" indicator. Empty on failure.
+    suspend fun tracedDocuments(): Set<DocumentPath> {
+        val result = restClient.performDetached(
+            LogicConventions.logicTraceEndpointLocation,
+            CommonRestApi.paramAction to LogicConventions.actionTraced
+        )
+
+        return when (result) {
+            is ExecutionSuccess -> {
+                val documentPathStrings = result.value.get() as? List<*>
+                    ?: emptyList<Any?>()
+
+                documentPathStrings
+                    .mapNotNull { it as? String }
+                    .map { DocumentPath.parse(it) }
+                    .toSet()
+            }
+
+            is ExecutionFailure ->
+                emptySet()
+        }
+    }
+
+
+    // Clear ALL retained traces (the run controls are global). Mirrors clearTraceAsync but resets every
+    // document; the fresh LogicStatus.time then makes every Logic document's progress repaint to empty.
+    fun clearAllTracesAsync() {
+        if (clientLogicState.isActive()) {
+            return
+        }
+
+        async {
+            val result = restClient.performDetached(
+                LogicConventions.logicTraceEndpointLocation,
+                CommonRestApi.paramAction to LogicConventions.actionResetAll
             )
 
             if (result is ExecutionFailure) {

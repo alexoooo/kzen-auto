@@ -1,10 +1,10 @@
-package tech.kzen.auto.server.objects.script.step.control.mapping
+package tech.kzen.auto.server.objects.script.step.control.foreach
 
 import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
-import tech.kzen.auto.server.objects.script.api.ScriptStep
 import tech.kzen.auto.server.objects.script.api.ScriptStepDefinition
+import tech.kzen.auto.server.objects.script.api.TracingScriptStep
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
 import tech.kzen.auto.server.objects.script.model.ScriptExecutionContext
 import tech.kzen.auto.server.objects.script.step.control.MultiStep
@@ -20,21 +20,22 @@ import tech.kzen.lib.platform.ClassNames
 
 
 @Reflect
-class MappingStep(
+class ForEachStep(
     private val items: ObjectLocation,
     steps: List<ObjectLocation>,
     private val selfLocation: ObjectLocation
 ):
-    ScriptStep,
-    StatefulLogicElement<MappingStep>
+    TracingScriptStep(selfLocation),
+    StatefulLogicElement<ForEachStep>
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        private val logger = LoggerFactory.getLogger(MappingStep::class.java)
+        private val logger = LoggerFactory.getLogger(ForEachStep::class.java)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private val bodySteps = steps
     private val stepsDelegate = MultiStep(steps)
 
     private val stepsLocationPrefix = LogicTracePath
@@ -49,7 +50,7 @@ class MappingStep(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun loadState(previous: MappingStep) {
+    override fun loadState(previous: ForEachStep) {
         iterator = previous.iterator
         output = previous.output
         delegatePaused = previous.delegatePaused
@@ -102,6 +103,11 @@ class MappingStep(
             }
             checkNotNull(next)
 
+            // Surface the current iteration item in the UI (the ForEach card's detail), updated each
+            // iteration. Written to this step's own trace path; the parent MultiStep's state writes
+            // preserve the detail (StepTrace carries state + detail together).
+            traceDetail(scriptExecutionContext, next)
+
             if (!wasPaused) {
                 resetSteps(scriptExecutionContext)
             }
@@ -111,7 +117,7 @@ class MappingStep(
                     stepsDelegate.continueOrStart(scriptExecutionContext)
                 }
                 catch (t: Throwable) {
-                    logger.warn("Mapping error - {}", stepsDelegate, t)
+                    logger.warn("ForEach error - {}", stepsDelegate, t)
                     return LogicResultFailed(ExceptionUtils.message(t))
                 }
 
@@ -131,11 +137,19 @@ class MappingStep(
                     output.add(result.value.mainComponentValue() ?: "<empty>")
             }
 
+            // Interruptibility between iterations. Cancel always wins. A Pause is honoured here only for
+            // a degenerate empty body (no body step to stop at); for a normal body the body MultiStep's
+            // step-budget gate already pauses at the next iteration's first step — so stepping advances
+            // one fresh boundary without an extra "iteration complete" tick. Respect suppressPause so
+            // Step Over runs the whole loop to completion.
             val logicCommand = scriptExecutionContext.logicControl.pollCommand()
             if (logicCommand == LogicCommand.Cancel) {
                 return LogicResultCancelled
             }
-            else if (logicCommand == LogicCommand.Pause) {
+            else if (bodySteps.isEmpty() &&
+                    logicCommand == LogicCommand.Pause &&
+                    ! scriptExecutionContext.logicControl.suppressPause()
+            ) {
                 return LogicResultPaused
             }
         }

@@ -7,18 +7,18 @@ main.steps/Formula:
   is: FormulaStep
   code: 1..10
 
-main.steps/Mapping:
-  is: MappingStep
+main.steps/ForEach:
+  is: ForEachStep
   items: main.steps/Formula
 
-main.steps/Mapping.steps/Item:
-  is: MappingItemStep
+main.steps/ForEach.steps/Item:
+  is: ForEachItemStep
 
-main.steps/Mapping.steps/Is divisible by:
+main.steps/ForEach.steps/Is divisible by:
   is: DivisibleCheckStep
-  number: main.steps/Mapping.steps/Item
+  number: main.steps/ForEach.steps/Item
   divisor: 2
 
 main.steps/Display:
   is: DisplayValueStep
-  text: main.steps/Mapping
+  text: main.steps/ForEach

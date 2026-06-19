@@ -309,6 +309,9 @@ class ServerLogicController(
         check(!state.cancelRequested) { "Can't run, stop already requested" }
         state.pauseRequested = false
         state.paused = false
+        // Full-speed run: clear any leftover step budget / step-over mode (the command is None below,
+        // so the budget path isn't consulted anyway — this just keeps the control state tidy).
+        state.frame.control.grantStepBudget(0)
         state.frame.control.commandUnpause()
 
 //        val topLevel = state.frame.dependencies.isEmpty()
@@ -360,6 +363,24 @@ class ServerLogicController(
         runId: LogicRunId,
         snapshotGraphDefinitionAttempt: GraphDefinitionAttempt?
     ): LogicRunResponse {
+        return stepInternal(runId, snapshotGraphDefinitionAttempt, stepOver = false)
+    }
+
+
+    @Synchronized
+    override fun stepOver(
+        runId: LogicRunId,
+        snapshotGraphDefinitionAttempt: GraphDefinitionAttempt?
+    ): LogicRunResponse {
+        return stepInternal(runId, snapshotGraphDefinitionAttempt, stepOver = true)
+    }
+
+
+    private fun stepInternal(
+        runId: LogicRunId,
+        snapshotGraphDefinitionAttempt: GraphDefinitionAttempt?,
+        stepOver: Boolean
+    ): LogicRunResponse {
         val state = stateOrNull
             ?: return LogicRunResponse.NotFound
 
@@ -376,6 +397,11 @@ class ServerLogicController(
 
         val command = state.frame.control.pollCommand()
         check(command == LogicCommand.Pause) { "Must be paused in order to step" }
+
+        // Grant a single fresh-step budget for this tick; for Step Over also flag the mode so a fresh
+        // RunStep descent runs its sub-document to completion (see MultiStep / RunStep). One tick =
+        // exactly one fresh boundary advanced.
+        state.frame.control.grantStepBudget(1, stepOver)
 
 //        val topLevel = state.frame.dependencies.isEmpty()
         val ready = state.frame.execution.beforeStart(TupleValue.empty/*, topLevel*/)

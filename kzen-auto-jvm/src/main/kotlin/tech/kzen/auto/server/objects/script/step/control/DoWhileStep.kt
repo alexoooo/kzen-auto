@@ -33,7 +33,7 @@ import tech.kzen.lib.platform.ClassNames
  * parameters / enclosing loop items). Loop semantics are do-while: the body always runs at least once and
  * the condition is checked after each pass.
  *
- * The loop machinery mirrors [tech.kzen.auto.server.objects.script.step.control.mapping.MappingStep] minus
+ * The loop machinery mirrors [tech.kzen.auto.server.objects.script.step.control.foreach.ForEachStep] minus
  * the iterator (pause/resume via [delegatePaused], a fresh per-iteration trace via [resetSteps], and a
  * Cancel/Pause poll each pass so a runaway loop stays interruptible).
  */
@@ -75,7 +75,7 @@ class DoWhileStep(
         val scopeNullable = conditionScopeTypes(
             scriptDefinitionContext.scriptTree, scriptDefinitionContext.scriptValidation)
 
-        // Defer (null) until every in-scope value's type is known — like MappingStep defers on `items`.
+        // Defer (null) until every in-scope value's type is known — like ForEachStep defers on `items`.
         // The ScriptValidator iterates to a fixpoint, so a later pass resolves the body step types.
         if (scopeNullable.values.any { it == null }) {
             return null
@@ -143,11 +143,19 @@ class DoWhileStep(
                 break
             }
 
+            // Interruptibility between iterations. Cancel always wins. A Pause is honoured here only for
+            // a degenerate empty body (no body step to stop at); for a normal body the body MultiStep's
+            // step-budget gate already pauses at the next iteration's first step — so stepping advances
+            // one fresh boundary without an extra "iteration complete" tick. Respect suppressPause so
+            // Step Over runs the whole loop to completion.
             val logicCommand = scriptExecutionContext.logicControl.pollCommand()
             if (logicCommand == LogicCommand.Cancel) {
                 return LogicResultCancelled
             }
-            else if (logicCommand == LogicCommand.Pause) {
+            else if (bodySteps.isEmpty() &&
+                    logicCommand == LogicCommand.Pause &&
+                    ! scriptExecutionContext.logicControl.suppressPause()
+            ) {
                 return LogicResultPaused
             }
         }

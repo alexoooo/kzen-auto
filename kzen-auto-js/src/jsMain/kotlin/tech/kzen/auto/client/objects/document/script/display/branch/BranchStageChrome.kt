@@ -19,7 +19,7 @@ import web.cssom.stop
 
 
 //---------------------------------------------------------------------------------------------------------------------
-// Shared "recessed-stage chrome" for branch-bearing steps (If's Then/Else, Mapping's Each),
+// Shared "recessed-stage chrome" for branch-bearing steps (If's Then/Else, ForEach's Each),
 // mirroring the page-level header/sidebar casting a soft shadow onto the gray stage: a crisp
 // 1px gray line at each chrome→stage boundary plus a soft shadow, running both horizontally
 // (under a white slab) and vertically (down the white trunk's right edge). All effects are

@@ -21,6 +21,7 @@ import tech.kzen.auto.client.objects.sidebar.SidebarModel
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.global.NavigationGlobal
+import tech.kzen.auto.client.service.logic.ClientLogicGlobal
 import tech.kzen.auto.client.service.logic.LogicRunFrames
 import tech.kzen.auto.client.service.storage.SidebarPreferences
 import tech.kzen.auto.client.util.async
@@ -56,6 +57,7 @@ external interface ProjectControllerProps: Props {
     var mirroredGraphStore: MirroredGraphStore
     var navigationGlobal: NavigationGlobal
     var clientStateGlobal: ClientStateGlobal
+    var clientLogicGlobal: ClientLogicGlobal
 }
 
 
@@ -73,6 +75,10 @@ external interface ProjectControllerState: State {
     // documentPath → stack depth for documents in the active run's frame tree (root = 0); empty when
     // nothing is running. Threaded to the sidebar so executing documents are highlighted by depth.
     var executingDepths: Map<DocumentPath, Int>
+
+    // documents that hold a retained logic trace (run roots + sub-logic roots); threaded to the sidebar
+    // so finished runs still show which documents have an inspectable trace.
+    var tracedDocuments: Set<DocumentPath>
 }
 
 
@@ -134,6 +140,9 @@ class ProjectController(
     private var followingRun: Boolean = false
     private var lastAutoNavigated: DocumentPath? = null
 
+    // Debounces the traced-document query: re-check only when the run status actually changes.
+    private var lastTraceFetchKey: String? = null
+
 
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
@@ -144,7 +153,8 @@ class ProjectController(
         private val archetypeLocations: List<ObjectLocation>,
         @Service private val mirroredGraphStore: MirroredGraphStore,
         @Service private val navigationGlobal: NavigationGlobal,
-        @Service private val clientStateGlobal: ClientStateGlobal
+        @Service private val clientStateGlobal: ClientStateGlobal,
+        @Service private val clientLogicGlobal: ClientLogicGlobal
     ): ReactWrapper<Props> {
         override fun ChildrenBuilder.child(block: Props.() -> Unit) {
             ProjectController::class.react {
@@ -155,6 +165,7 @@ class ProjectController(
                 mirroredGraphStore = this@Wrapper.mirroredGraphStore
                 navigationGlobal = this@Wrapper.navigationGlobal
                 clientStateGlobal = this@Wrapper.clientStateGlobal
+                clientLogicGlobal = this@Wrapper.clientLogicGlobal
                 block()
             }
         }
@@ -215,6 +226,7 @@ class ProjectController(
         sidebarWidthPx = SidebarPreferences.loadWidth(defaultSidebarWidth)
         sidebarCollapsed = SidebarPreferences.loadCollapsed(false)
         executingDepths = emptyMap()
+        tracedDocuments = emptySet()
     }
 
 
@@ -371,7 +383,29 @@ class ProjectController(
             }
         }
 
+        refreshTracedDocumentsIfNeeded(clientState)
         autoFollow(clientState, frame, nextDepths)
+    }
+
+
+    // Re-query which documents hold a retained trace whenever the run status changes (a fresh
+    // LogicStatus.time after a run finishes / a clear), so the sidebar's "has trace" markers stay current
+    // once a run is no longer executing. Value-equality guard keeps the prop reference stable otherwise.
+    private fun refreshTracedDocumentsIfNeeded(clientState: ClientState) {
+        val fetchKey = "${clientState.clientLogicState.logicStatus?.time}"
+        if (fetchKey == lastTraceFetchKey) {
+            return
+        }
+        lastTraceFetchKey = fetchKey
+
+        async {
+            val traced = props.clientLogicGlobal.tracedDocuments()
+            if (traced != state.tracedDocuments) {
+                setState {
+                    tracedDocuments = traced
+                }
+            }
+        }
     }
 
 
@@ -495,6 +529,7 @@ class ProjectController(
                     sidebarModel = state.sidebarModel
                     documentPath = state.documentPath
                     executingDepths = state.executingDepths
+                    tracedDocuments = state.tracedDocuments
                     this.collapsed = collapsed
                     onToggleCollapsed = ::toggleCollapsed
                 }

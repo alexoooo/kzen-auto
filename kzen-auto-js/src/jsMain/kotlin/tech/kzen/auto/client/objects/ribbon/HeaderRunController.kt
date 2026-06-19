@@ -66,6 +66,7 @@ class HeaderRunController (
 //        const val runningKey = "running"
 
         private const val actionStep = "step"
+        private const val actionStepOver = "step-over"
         private const val actionRunOrPause = "run-pause"
         private const val actionStop = "stop"
     }
@@ -147,33 +148,23 @@ class HeaderRunController (
             }
         }
 
-        refreshHasTraceIfNeeded(isLogic, mainLocation, clientLogicState)
+        refreshHasTraceIfNeeded(clientLogicState)
     }
 
 
-    // Re-check whether a logic trace exists for the current document when the document changes or after
-    // any run/clear (a fresh LogicStatus.time), so the Clear button enables/disables itself accordingly.
+    // Re-check whether ANY document holds a retained trace (Clear is global), after a run/clear bumps the
+    // status, so the Clear button enables/disables itself accordingly.
     private fun refreshHasTraceIfNeeded(
-        isLogic: Boolean,
-        mainLocation: ObjectLocation,
         clientLogicState: ClientLogicState
     ) {
-        if (! isLogic) {
-            lastTraceFetchKey = null
-            if (state.hasTrace) {
-                setState { hasTrace = false }
-            }
-            return
-        }
-
-        val fetchKey = "${mainLocation.documentPath.asString()}|${clientLogicState.logicStatus?.time}"
+        val fetchKey = "${clientLogicState.logicStatus?.time}"
         if (fetchKey == lastTraceFetchKey) {
             return
         }
         lastTraceFetchKey = fetchKey
 
         async {
-            val present = props.clientLogicGlobal.traceMostRecentPresent(mainLocation)
+            val present = props.clientLogicGlobal.tracedDocuments().isNotEmpty()
             setState {
                 hasTrace = present
             }
@@ -240,6 +231,14 @@ class HeaderRunController (
                 }
             }
 
+            actionStepOver -> {
+                // Only meaningful while paused mid-run (run a nested sub-document to completion); no
+                // start-fresh path like Step.
+                if (active) {
+                    props.clientLogicGlobal.stepOverAsync()
+                }
+            }
+
             else -> {
                 throw IllegalArgumentException("Unknown action: $action")
             }
@@ -250,9 +249,8 @@ class HeaderRunController (
 
 
     private fun onClear() {
-        val mainObjectLocation = this.mainObjectLocation
-            ?: return
-        props.clientLogicGlobal.clearTraceAsync(mainObjectLocation)
+        // Global: clear every retained trace, not just the focused document's.
+        props.clientLogicGlobal.clearAllTracesAsync()
     }
 
 
@@ -314,6 +312,7 @@ class HeaderRunController (
             }
 
             renderStepButton(active, executing, runnable)
+            renderStepOverButton(active, executing)
             renderRunPauseButton(active, executing, runnable)
             renderStopButton(active)
         }
@@ -328,7 +327,7 @@ class HeaderRunController (
         renderControlsDivider()
 
         // Reset + inspect.
-        renderClearButton(active, runnable)
+        renderClearButton(active)
         renderDetailsToggle(active)
     }
 
@@ -345,12 +344,13 @@ class HeaderRunController (
     }
 
 
-    private fun ChildrenBuilder.renderClearButton(active: Boolean, runnable: Boolean) {
+    private fun ChildrenBuilder.renderClearButton(active: Boolean) {
         ToggleButton {
             value = "clear"
 
-            // Only when there is a retained trace for an idle logic document (nothing to clear otherwise).
-            disabled = !runnable || active || !state.hasTrace
+            // Enabled whenever some trace is retained and nothing is running (Clear is global — see
+            // onClear / hasTrace, which reflect ANY document's trace).
+            disabled = active || !state.hasTrace
             size = Size.medium
 
             sx {
@@ -359,7 +359,7 @@ class HeaderRunController (
                 color = NamedColor.black
             }
 
-            title = "Clear trace"
+            title = "Clear all traces"
 
             // ToggleButton's onClick is (event, value) -> Unit; ignore both and just clear.
             onClick = { _, _ -> onClear() }
@@ -479,6 +479,38 @@ class HeaderRunController (
                     marginBottom = (-0.25).em
                 }
                 icon("material-symbols:redo") {}
+            }
+        }
+    }
+
+
+    private fun ChildrenBuilder.renderStepOverButton(
+        active: Boolean,
+        executing: Boolean
+    ) {
+        ToggleButton {
+            value = actionStepOver
+
+            // Only while paused mid-run: steps the current frame but runs any sub-document entered on
+            // this step to completion instead of descending into it.
+            disabled = !(active && !executing)
+
+            size = Size.medium
+
+            sx {
+                height = 34.px
+                color = NamedColor.black
+            }
+
+            title = "Step over (run nested sub-documents to completion)"
+
+            span {
+                css {
+                    fontSize = 1.5.em
+                    marginRight = 0.25.em
+                    marginBottom = (-0.25).em
+                }
+                icon("material-symbols:step-over") {}
             }
         }
     }

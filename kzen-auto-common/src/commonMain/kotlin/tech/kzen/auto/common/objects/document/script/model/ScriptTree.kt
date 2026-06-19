@@ -81,7 +81,7 @@ data class ScriptTree(
 
     //-----------------------------------------------------------------------------------------------------------------
     // Value bindings in scope for the step at `target` (must be called on the root tree): every Script
-    // parameter (root `parameters` branch, script-wide), plus the `item` of each enclosing MappingStep
+    // parameter (root `parameters` branch, script-wide), plus the `item` of each enclosing ForEachStep
     // on the path to `target`. These are named typed values usable by `target` without being predecessors
     // in the body — the rowless counterpart to ScriptTree.predecessors.
     fun inScopeBindingPaths(target: ObjectPath): List<ObjectPath> {

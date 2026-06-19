@@ -45,7 +45,9 @@ class RunStep(
 
 
     override fun continueOrStart(scriptExecutionContext: ScriptExecutionContext): LogicResult {
-        val command = scriptExecutionContext.logicControl.pollCommand()
+        val logicControl = scriptExecutionContext.logicControl
+
+        val command = logicControl.pollCommand()
         if (command == LogicCommand.Cancel) {
             pausedExecution?.close()
             pausedExecution = null
@@ -53,6 +55,12 @@ class RunStep(
         }
 
         val existing = pausedExecution
+
+        // Step Over: on a fresh descent (no paused child to resume) during a step-over tick, run the
+        // child sub-document to completion instead of descending into it — the parent then pauses at its
+        // next step. A non-null pausedExecution means we're on the resume spine (a normal step-into that
+        // paused deeper), so resume it normally.
+        val stepOverChild = logicControl.stepOverActive() && existing == null
 
         val execution =
             if (existing != null) {
@@ -79,7 +87,19 @@ class RunStep(
             }
 
         try {
-            val runResult = execution.continueOrStart(scriptExecutionContext.graphDefinition)
+            val runResult =
+                if (stepOverChild) {
+                    logicControl.pushSuppressPause()
+                    try {
+                        execution.continueOrStart(scriptExecutionContext.graphDefinition)
+                    }
+                    finally {
+                        logicControl.popSuppressPause()
+                    }
+                }
+                else {
+                    execution.continueOrStart(scriptExecutionContext.graphDefinition)
+                }
 
             pausedExecution =
                 if (runResult is LogicResultPaused) {

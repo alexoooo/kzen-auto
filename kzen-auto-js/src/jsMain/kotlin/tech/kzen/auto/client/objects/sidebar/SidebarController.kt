@@ -21,6 +21,7 @@ external interface SidebarControllerProps : react.Props {
     var sidebarModel: SidebarModel?
     var documentPath: DocumentPath?
     var executingDepths: Map<DocumentPath, Int>
+    var tracedDocuments: Set<DocumentPath>
     var navigationGlobal: NavigationGlobal
     var mirroredGraphStore: MirroredGraphStore
 
@@ -146,6 +147,7 @@ class SidebarController(
                     sidebarModel = model
                     selectedDocumentPath = props.documentPath
                     executingDepths = props.executingDepths
+                    tracedDocuments = props.tracedDocuments
                     navigationGlobal = props.navigationGlobal
                     mirroredGraphStore = props.mirroredGraphStore
                     collapsed = props.collapsed

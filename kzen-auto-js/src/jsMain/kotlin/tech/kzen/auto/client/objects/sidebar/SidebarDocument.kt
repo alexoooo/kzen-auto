@@ -32,6 +32,9 @@ external interface SidebarDocumentProps: Props {
     // stack depth (root = 0) when this document is part of the active logic run; null when not executing
     var executingDepth: Int?
 
+    // true when this document has a retained logic trace (shown once a run finishes, while not executing)
+    var hasTrace: Boolean
+
     var navigationGlobal: NavigationGlobal
     var mirroredGraphStore: MirroredGraphStore
 
@@ -213,6 +216,23 @@ class SidebarDocument(
                 }
                 title = "Stack depth $executingDepth"
                 +executingDepth.toString()
+            }
+        }
+
+        // Retained-trace marker: shown once a run has finished (executing rows already carry the green
+        // run highlight + depth badge, so suppress it while executing).
+        if (props.hasTrace && executingDepth == null) {
+            span {
+                css {
+                    display = Display.inlineFlex
+                    alignItems = AlignItems.center
+                    marginLeft = 4.px
+                    fontSize = 0.9.em
+                    flexShrink = number(0.0)
+                    color = Color("rgba(0, 0, 0, 0.38)")
+                }
+                title = "Has run trace"
+                icon("material-symbols:history") {}
             }
         }
     }

@@ -6,7 +6,7 @@ main.steps/Range:
   code: 1..100
 
 main.steps/Loop:
-  is: MappingStep
+  is: ForEachStep
   items: main.steps/Range
 
 main.steps/Loop.steps/Run:
@@ -16,7 +16,7 @@ main.steps/Loop.steps/Run:
     number: main.steps/Loop.item/Item
 
 main.steps/Loop.item/Item:
-  is: MappingItemBinding
+  is: ForEachItemBinding
 
 main.steps/Display:
   is: DisplayValueStep

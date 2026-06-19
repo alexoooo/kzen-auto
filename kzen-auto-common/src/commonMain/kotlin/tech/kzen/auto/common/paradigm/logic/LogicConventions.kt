@@ -33,7 +33,9 @@ object LogicConventions {
     const val actionLookupRun = "lookup-run"
     const val actionLookupRunHistory = "lookup-run-history"
     const val actionMostRecent = "recent"
+    const val actionTraced = "traced"
     const val actionReset = "reset"
+    const val actionResetAll = "reset-all"
 
     const val paramSubDocumentPath = "sub-path"
     const val paramSubObjectPath = "sub-object"

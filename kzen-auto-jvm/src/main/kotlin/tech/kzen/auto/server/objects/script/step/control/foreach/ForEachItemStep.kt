@@ -1,4 +1,4 @@
-package tech.kzen.auto.server.objects.script.step.control.mapping
+package tech.kzen.auto.server.objects.script.step.control.foreach
 
 import tech.kzen.auto.server.objects.script.api.ScriptStepDefinition
 import tech.kzen.auto.server.objects.script.api.TracingScriptStep
@@ -15,7 +15,7 @@ import tech.kzen.lib.common.reflect.Reflect
 
 
 @Reflect
-class MappingItemStep(
+class ForEachItemStep(
     private val selfLocation: ObjectLocation
 ):
     TracingScriptStep(selfLocation)
@@ -30,11 +30,11 @@ class MappingItemStep(
         val parentLocation = selfLocation.parent()
             ?: return LogicResultFailed("Parent location not found")
 
-        val parentMapping = scriptExecutionContext.graphInstance[parentLocation]!!.reference as? MappingStep
-            ?: return LogicResultFailed("Parent mapping expected: $parentLocation")
+        val parentForEach = scriptExecutionContext.graphInstance[parentLocation]!!.reference as? ForEachStep
+            ?: return LogicResultFailed("Parent ForEach expected: $parentLocation")
 
-        val next = parentMapping.next
-            ?: return LogicResultFailed("Next mapping not found: $parentLocation")
+        val next = parentForEach.next
+            ?: return LogicResultFailed("Next item not found: $parentLocation")
 
         traceDetail(scriptExecutionContext, next)
 

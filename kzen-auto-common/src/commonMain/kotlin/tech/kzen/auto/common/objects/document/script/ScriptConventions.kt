@@ -23,7 +23,7 @@ object ScriptConventions {
     val stepsAttributePath = AttributePath.ofName(stepsAttributeName)
 
     // Branches that hold value bindings (named typed values) rather than executed body steps:
-    // the Script's `parameters`, and a MappingStep's per-iteration `item`. Bindings live here so they
+    // the Script's `parameters`, and a ForEachStep's per-iteration `item`. Bindings live here so they
     // are addressable/validated like steps but are rendered outside the body and never executed.
     val parametersAttributeName = AttributeName("parameters")
     val parametersAttributePath = AttributePath.ofName(parametersAttributeName)
@@ -38,7 +38,7 @@ object ScriptConventions {
 
 
     // The steps of a branch in document order: the objects nested directly under attributeLocation's
-    // object at its attribute (e.g. main.steps, an IfStep's then/else, a MappingStep's steps). Order is
+    // object at its attribute (e.g. main.steps, an IfStep's then/else, a ForEachStep's steps). Order is
     // the document position of the step objects — the single source of truth now that the explicit step
     // lists are gone. Mirrors NestedListAttributeDefiner, which feeds the same list to the executor.
     fun orderedDirectChildLocations(
