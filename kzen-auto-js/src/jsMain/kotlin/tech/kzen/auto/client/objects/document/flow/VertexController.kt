@@ -321,10 +321,9 @@ class VertexController(
                     NamedColor.red
 
                 null ->
-                    NamedColor.gray
-
-//                else ->
-//                    throw IllegalStateException()
+                    // No visual model yet (never run, or downstream cleared on a new clock cycle):
+                    // render the neutral, not-started state as white rather than grey.
+                    NamedColor.white
             }
         }
 
@@ -394,10 +393,11 @@ class VertexController(
             isNextToRun: Boolean,
             visualVertexModel: VisualVertexModel?
     ) {
+        val inputHasMessage = hasInputMessage(inputName)
         val ingressColor =
             if ((visualVertexModel?.epoch ?: 0) == 0 &&
                     (isNextToRun || visualVertexModel?.phase() == VisualVertexPhase.Running) &&
-                    hasInputMessage(inputName)
+                    inputHasMessage
             ) {
                 if (isRunning) {
                     EdgeController.goldLight25
@@ -405,6 +405,11 @@ class VertexController(
                 else {
                     NamedColor.gold
                 }
+            }
+            else if (inputHasMessage) {
+                // Input received a message the vertex has already consumed (epoch > 0): tint to match the
+                // carrying upstream pipe (between gold and white) so the active path stays continuous.
+                EdgeController.goldLight50
             }
             else {
                 NamedColor.white

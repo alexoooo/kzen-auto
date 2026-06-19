@@ -317,11 +317,17 @@ class FlowExecution(
 
         for (followingLayer in dag.layers.subList(lastRowWithNext + 1, dag.layers.size)) {
             for (vertexLocation in followingLayer) {
-                val model = activeVertices[stableId(vertexLocation)]
+                val downstreamStableId = stableId(vertexLocation)
+                val model = activeVertices[downstreamStableId]
                     ?: continue
                 if (model.epoch > 0) {
                     model.epoch = 0
                     model.message = null
+
+                    // New clock cycle: drop the downstream vertex's live trace so the client repaints
+                    // it neutral instead of lingering on the previous cycle's message (mirrors
+                    // DoWhileStep.resetSteps' logicTraceHandle.clearAll per loop iteration).
+                    logicTraceHandle.clearAll(LogicTracePath.ofObjectStableId(downstreamStableId))
                 }
             }
         }

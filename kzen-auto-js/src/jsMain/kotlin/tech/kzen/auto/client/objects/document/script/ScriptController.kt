@@ -23,7 +23,6 @@ import tech.kzen.auto.client.objects.document.script.model.ScriptDragStoreKey
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
 import tech.kzen.auto.client.objects.document.script.model.ScriptStore
 import tech.kzen.auto.client.objects.document.script.model.ScriptStoreKey
-import tech.kzen.auto.client.objects.document.script.progress.ScriptProgressController
 import tech.kzen.auto.client.objects.document.script.step.control.MultiStepDisplay
 import tech.kzen.auto.client.objects.ribbon.RibbonController
 import tech.kzen.auto.client.service.global.ClientState
@@ -69,7 +68,6 @@ external interface ScriptControllerState: State {
     //     expand/collapse) — otherwise storing the whole ScriptState re-renders the entire Script subtree.
     var scriptLoaded: Boolean
     var globalError: String?
-    var hasProgress: Boolean
 
     // Raw-view state. In View mode raw/editorModified are static (no typing), so they don't trigger
     // extra re-renders; in Raw mode they drive the editor and so are correctly render-consumed.
@@ -185,7 +183,6 @@ class ScriptController:
         clientState = null
         scriptLoaded = false
         globalError = null
-        hasProgress = false
         viewMode = DocumentViewMode.View
         raw = null
         editorModified = false
@@ -225,7 +222,6 @@ class ScriptController:
         setState {
             this.scriptLoaded = true
             this.globalError = scriptState.globalError
-            this.hasProgress = scriptState.progress.hasProgress()
             this.viewMode = scriptState.viewMode
             this.raw = scriptState.raw
             this.editorModified = scriptState.editorModified
@@ -308,8 +304,6 @@ class ScriptController:
 
             renderMain(mainObjectLocation)
         }
-
-        renderRunController(clientState)
     }
 
 
@@ -374,27 +368,5 @@ class ScriptController:
             last = true)
         cachedMainCommon = fresh
         return fresh
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    private fun ChildrenBuilder.renderRunController(
-        clientState: ClientState
-    ) {
-        div {
-            css {
-                position = Position.fixed
-                bottom = 0.px
-                right = 0.px
-                marginRight = 2.em
-                marginBottom = 2.em
-            }
-
-            ScriptProgressController::class.react {
-                active = clientState.clientLogicState.isActive()
-                hasProgress = state.hasProgress
-                scriptProgressStore = store.progressStore
-            }
-        }
     }
 }

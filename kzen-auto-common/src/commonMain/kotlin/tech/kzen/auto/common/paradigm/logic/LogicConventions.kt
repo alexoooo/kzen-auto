@@ -15,6 +15,8 @@ import tech.kzen.lib.common.model.obj.ObjectPath
 
 @Suppress("ConstPropertyName")
 object LogicConventions {
+    // TODO: promote Trace to top-level concept (it's even in kzen-lib) instead of routing through Detached?
+
     // NB: referenced in logic-trace.yaml
     private val logicTraceEndpointName = ObjectName("LogicTraceEndpoint")
 

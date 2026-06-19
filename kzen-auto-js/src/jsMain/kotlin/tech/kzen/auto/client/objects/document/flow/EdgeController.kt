@@ -247,6 +247,48 @@ class EdgeController(
     }
 
 
+    // Every edge currently carrying a message: leading to any vertex (pending or already-run) fed by a
+    // source that still holds its message. Superset of the sending / in-flight / available sets; the
+    // colour when-chains test those stronger categories first, so this only colours the "already
+    // traversed" upstream segments of the active path — the message went down them but its consumer has
+    // already run (epoch > 0), which the pending-only sets miss and leave white.
+    private fun edgesCarryingMessage(): Set<EdgeDescriptor> {
+        val builder = mutableSetOf<EdgeDescriptor>()
+        for (vertexDescriptor in props.flowMatrix.verticesByLocation.values) {
+            builder.addAll(edgesLeadingTo(vertexDescriptor))
+        }
+        return builder
+    }
+
+
+    private fun hasMessageHoldingPredecessor(
+            vertexLocation: ObjectLocation
+    ): Boolean {
+        val predecessors = props.flowDag.predecessors[vertexLocation]
+                ?: return false
+        return predecessors.any { props.visualFlowModel.vertices[it]?.message != null }
+    }
+
+
+    private fun isEgressCarrying(
+            edgeDirection: EdgeDirection,
+            offsetCoordinate: CellCoordinate,
+            edgesCarryingMessage: Set<EdgeDescriptor>
+    ): Boolean {
+        val carryingEdgeAtOffset = edgesCarryingMessage.find { it.coordinate == offsetCoordinate }
+        if (carryingEdgeAtOffset != null) {
+            return carryingEdgeAtOffset.orientation.hasIngress(edgeDirection.reverse())
+        }
+
+        val vertexDescriptor = props.flowMatrix.get(offsetCoordinate) as? VertexDescriptor
+                ?: return false
+
+        // Egress flowing down into a vertex that received a message (whether it has consumed it yet or not).
+        return edgeDirection == EdgeDirection.Bottom &&
+                hasMessageHoldingPredecessor(vertexDescriptor.objectLocation)
+    }
+
+
     private fun isEgressActive(
             edgeDirection: EdgeDirection,
             nextCoordinate: CellCoordinate,
@@ -295,6 +337,7 @@ class EdgeController(
             edgesLeadingToNextToRun: Set<EdgeDescriptor>,
             edgesInFlightToPending: Set<EdgeDescriptor>,
             edgesAvailableToPending: Set<EdgeDescriptor>,
+            edgesCarryingMessage: Set<EdgeDescriptor>,
             pendingWithAvailableMessage: Set<ObjectLocation>
     ): Color {
         if (nextToRun == null || !hasMessage) {
@@ -312,6 +355,9 @@ class EdgeController(
         val isEdgeMessageAvailable = isEgressAvailable(
                 edgeDirection, nextCoordinate, edgesAvailableToPending, pendingWithAvailableMessage)
 
+        val isCarrying = isEgressCarrying(
+                edgeDirection, nextCoordinate, edgesCarryingMessage)
+
         return when {
             isSending ->
                 if (isRunning) goldLight20
@@ -322,6 +368,10 @@ class EdgeController(
 
             isEdgeMessageAvailable ->
                 goldLight90
+
+            // Already-traversed upstream of the active path: between gold and white.
+            isCarrying ->
+                goldLight50
 
             else ->
                 NamedColor.white
@@ -380,7 +430,11 @@ class EdgeController(
         val edgesAvailableToPending = edgesAvailableToPending(pendingWithAvailableMessage)
         val isEdgeMessageAvailable = props.cellDescriptor in edgesAvailableToPending
 
-        val hasMessage = isEdgeSendingMessage || isEdgeInFlightMessage || isEdgeMessageAvailable
+        val edgesCarryingMessage = edgesCarryingMessage()
+        val isEdgeCarryingMessage = nextToRun != null && props.cellDescriptor in edgesCarryingMessage
+
+        val hasMessage = isEdgeSendingMessage || isEdgeInFlightMessage ||
+                isEdgeMessageAvailable || isEdgeCarryingMessage
 
         val ingressAndCentreColor = when {
             isEdgeSendingMessage ->
@@ -396,6 +450,10 @@ class EdgeController(
 
             isEdgeMessageAvailable ->
                 goldLight90
+
+            // Already-traversed upstream of the active path: between gold and white.
+            isEdgeCarryingMessage ->
+                goldLight50
 
             else ->
                 NamedColor.white
@@ -433,6 +491,7 @@ class EdgeController(
                             edgesLeadingToNextToRun,
                             edgesInFlightToPending,
                             edgesAvailableToPending,
+                            edgesCarryingMessage,
                             pendingWithAvailableMessage)
                     renderEgressLeft(edgeColor)
                 }
@@ -483,6 +542,7 @@ class EdgeController(
                         edgesLeadingToNextToRun,
                         edgesInFlightToPending,
                         edgesAvailableToPending,
+                        edgesCarryingMessage,
                         pendingWithAvailableMessage)
                 renderEgressRight(edgeColor)
             }
@@ -500,6 +560,7 @@ class EdgeController(
                     edgesLeadingToNextToRun,
                     edgesInFlightToPending,
                     edgesAvailableToPending,
+                    edgesCarryingMessage,
                     pendingWithAvailableMessage)
             BottomEgress::class.react {
                 egressColor = edgeColor

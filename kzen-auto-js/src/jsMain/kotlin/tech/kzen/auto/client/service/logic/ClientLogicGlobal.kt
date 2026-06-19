@@ -5,6 +5,10 @@ import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.FunctionWithDebounce
 import tech.kzen.auto.client.wrap.lodash
+import tech.kzen.auto.common.api.CommonRestApi
+import tech.kzen.auto.common.paradigm.logic.LogicConventions
+import tech.kzen.lib.common.exec.ExecutionFailure
+import tech.kzen.lib.common.exec.ExecutionSuccess
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunResponse
 import tech.kzen.lib.common.model.location.ObjectLocation
 
@@ -273,6 +277,54 @@ class ClientLogicGlobal(
                 scheduleRefresh()
             }
 
+            publish()
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    // Whether the logic trace store has a most-recent run retained for this document (i.e. there is
+    // something to clear). Mirrors FlowProgressStore.mostRecent / ScriptProgressStore.mostRecentQuery.
+    suspend fun traceMostRecentPresent(mainLocation: ObjectLocation): Boolean {
+        val result = restClient.performDetached(
+            LogicConventions.logicTraceEndpointLocation,
+            CommonRestApi.paramAction to LogicConventions.actionMostRecent,
+            LogicConventions.paramSubDocumentPath to mainLocation.documentPath.asString(),
+            LogicConventions.paramSubObjectPath to mainLocation.objectPath.asString()
+        )
+
+        return when (result) {
+            is ExecutionSuccess ->
+                result.value.get() != null
+
+            is ExecutionFailure ->
+                false
+        }
+    }
+
+
+    // Clear the retained logic trace for this document via the generic LogicTraceEndpoint reset, then
+    // re-poll status and publish: the fresh LogicStatus.time bumps every Logic document's progress
+    // fetch key (ScriptStore / FlowController), so they repaint to the now-empty trace.
+    fun clearTraceAsync(mainLocation: ObjectLocation) {
+        if (clientLogicState.isActive()) {
+            return
+        }
+
+        async {
+            val result = restClient.performDetached(
+                LogicConventions.logicTraceEndpointLocation,
+                CommonRestApi.paramAction to LogicConventions.actionReset,
+                LogicConventions.paramSubDocumentPath to mainLocation.documentPath.asString(),
+                LogicConventions.paramSubObjectPath to mainLocation.objectPath.asString()
+            )
+
+            if (result is ExecutionFailure) {
+                clientLogicState = clientLogicState.copy(
+                    controlError = result.errorMessage)
+            }
+
+            lookupStatus()
             publish()
         }
     }

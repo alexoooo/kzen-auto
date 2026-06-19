@@ -10,6 +10,8 @@ import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.logic.ClientLogicGlobal
+import tech.kzen.auto.client.service.logic.ClientLogicState
+import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.createRef
 import tech.kzen.auto.client.wrap.iconify.icon
@@ -36,6 +38,10 @@ external interface RibbonLogicRunState: State {
     var executing: Boolean
     var dropdownOpen: Boolean
     var frame: LogicRunFrameInfo?
+
+    // Whether the current document has a retained logic trace (i.e. the Clear button has something to
+    // do). Detected per document via ClientLogicGlobal.traceMostRecentPresent.
+    var hasTrace: Boolean
 
     // Run-start mode: when set, a failed step pauses the run (to fix + continue) instead of ending
     // it. Read at start only; locked while a run is active.
@@ -68,6 +74,9 @@ class RibbonLogicRun (
     private var mainObjectLocation: ObjectLocation? = null
     private var latestFrame: LogicRunFrameInfo? = null
 
+    // Debounces the trace-presence query: re-check only when the document or run status actually changes.
+    private var lastTraceFetchKey: String? = null
+
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun RibbonLogicRunState.init(props: RibbonLogicRunProps) {
@@ -77,6 +86,7 @@ class RibbonLogicRun (
         dropdownOpen = false
         frame = null
         pauseOnError = false
+        hasTrace = false
     }
 
 
@@ -117,7 +127,8 @@ class RibbonLogicRun (
         val clientLogicState = clientState.clientLogicState
         val nextFrame = clientLogicState.logicStatus?.active?.frame
 
-        mainObjectLocation = documentPath.toMainObjectLocation()
+        val mainLocation = documentPath.toMainObjectLocation()
+        mainObjectLocation = mainLocation
         latestFrame = nextFrame
 
         val dropdownWasOpen = state.dropdownOpen
@@ -129,26 +140,42 @@ class RibbonLogicRun (
                 frame = nextFrame
             }
         }
+
+        refreshHasTraceIfNeeded(isLogic, mainLocation, clientLogicState)
+    }
+
+
+    // Re-check whether a logic trace exists for the current document when the document changes or after
+    // any run/clear (a fresh LogicStatus.time), so the Clear button enables/disables itself accordingly.
+    private fun refreshHasTraceIfNeeded(
+        isLogic: Boolean,
+        mainLocation: ObjectLocation,
+        clientLogicState: ClientLogicState
+    ) {
+        if (! isLogic) {
+            lastTraceFetchKey = null
+            if (state.hasTrace) {
+                setState { hasTrace = false }
+            }
+            return
+        }
+
+        val fetchKey = "${mainLocation.documentPath.asString()}|${clientLogicState.logicStatus?.time}"
+        if (fetchKey == lastTraceFetchKey) {
+            return
+        }
+        lastTraceFetchKey = fetchKey
+
+        async {
+            val present = props.clientLogicGlobal.traceMostRecentPresent(mainLocation)
+            setState {
+                hasTrace = present
+            }
+        }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    private fun onInitialRunning(host: DocumentPath) {
-//        ClientContext.navigationGlobal.parameterize(
-//            RequestParams(
-//                mapOf(runningKey to listOf(host.asString())))
-//        )
-//    }
-//
-//
-//    private fun onStoppedRunning() {
-//        ClientContext.navigationGlobal.parameterize(
-//            RequestParams(
-//                mapOf())
-//        )
-//    }
-
-
     private fun onOptionsOpen() {
         val frameAtOpen = latestFrame
         setState {
@@ -216,6 +243,13 @@ class RibbonLogicRun (
     }
 
 
+    private fun onClear() {
+        val mainObjectLocation = this.mainObjectLocation
+            ?: return
+        props.clientLogicGlobal.clearTraceAsync(mainObjectLocation)
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
 //        val clientState = state.clientState
@@ -256,8 +290,40 @@ class RibbonLogicRun (
             renderStopButton(active)
         }
 
+        renderClearButton(active, runnable)
         renderPauseOnErrorToggle(active, runnable)
         renderDetailsToggle(active)
+    }
+
+
+    private fun ChildrenBuilder.renderClearButton(active: Boolean, runnable: Boolean) {
+        ToggleButton {
+            value = "clear"
+
+            // Only when there is a retained trace for an idle logic document (nothing to clear otherwise).
+            disabled = !runnable || active || !state.hasTrace
+            size = Size.medium
+
+            sx {
+                height = 34.px
+                marginLeft = 0.5.em
+                color = NamedColor.black
+            }
+
+            title = "Clear trace"
+
+            // ToggleButton's onClick is (event, value) -> Unit; ignore both and just clear.
+            onClick = { _, _ -> onClear() }
+
+            span {
+                css {
+                    fontSize = 1.5.em
+                    marginRight = 0.25.em
+                    marginBottom = (-0.25).em
+                }
+                icon("material-symbols:replay") {}
+            }
+        }
     }
 
 
