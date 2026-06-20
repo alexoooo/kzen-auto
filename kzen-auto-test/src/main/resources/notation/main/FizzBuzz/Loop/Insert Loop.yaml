@@ -11,7 +11,7 @@ main.steps/Click 2:
   is: BrowserClickStep
   target:
     type: Text
-    value: Loop
+    value: ForEach
 
 main.steps/Run:
   is: RunStep

@@ -8,17 +8,25 @@ import react.ChildrenBuilder
 import react.Key
 import react.State
 import react.dom.html.ReactHTML.div
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorProps
+import tech.kzen.auto.client.objects.document.script.model.ScriptState
+import tech.kzen.auto.client.objects.document.script.model.ScriptStore
+import tech.kzen.auto.client.objects.document.script.model.ScriptStoreKey
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.client.wrap.contextValue
 import tech.kzen.auto.client.wrap.iconify.icon
+import tech.kzen.auto.client.wrap.installContextType
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.select.ReactSelectOption
 import tech.kzen.auto.client.wrap.select.reactSelectField
 import tech.kzen.auto.client.wrap.setState
+import tech.kzen.auto.common.objects.document.flow.FlowConventions
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.objects.document.script.model.RunStepInstructions
 import tech.kzen.lib.common.model.attribute.AttributeSegment
@@ -62,7 +70,8 @@ class RunStepArgumentsEditor(
 ):
     RPureComponent<AttributeEditorProps, RunStepArgumentsEditorState>(props),
     LocalGraphStore.Observer,
-    ClientStateGlobal.Observer
+    ClientStateGlobal.Observer,
+    ScriptStore.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
@@ -80,6 +89,12 @@ class RunStepArgumentsEditor(
                 block()
             }
         }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    init {
+        installContextType(DocumentBridgeContext)
     }
 
 
@@ -115,6 +130,7 @@ class RunStepArgumentsEditor(
 
     override fun componentDidMount() {
         props.clientStateGlobal.observe(this)
+        contextValue<DocumentBridge?>()?.lookup(ScriptStoreKey)?.observe(this)
         async {
             props.mirroredGraphStore.observe(this)
         }
@@ -123,6 +139,7 @@ class RunStepArgumentsEditor(
 
     override fun componentWillUnmount() {
         props.mirroredGraphStore.unobserve(this)
+        contextValue<DocumentBridge?>()?.lookup(ScriptStoreKey)?.unobserve(this)
         props.clientStateGlobal.unobserve(this)
     }
 
@@ -140,17 +157,24 @@ class RunStepArgumentsEditor(
         val instructionsObjectLocation = RunStepInstructions.instructionsLocation(
             graphNotation, props.objectLocation)
 
-        // The target script's parameters are nested ParameterBinding objects under its `parameters` branch,
-        // named by their object name — enumerate those rather than the obsolete `parameters: List<String>`
-        // scalar (which no longer exists, so the old read found nothing and rendered no argument rows).
+        // Enumerate the callee Logic's parameter names. A Script keeps them as nested ParameterBinding
+        // objects under its `parameters` branch (named by object name); a Flow keeps them as FlowInput
+        // vertices in its `vertices` list (each carrying a `parameter` name) — so dispatch on the
+        // callee's document type rather than assuming the Script shape (which found nothing for a Flow
+        // and rendered no argument rows).
         val instructionsParameters: List<String>? =
             if (instructionsObjectLocation != null) {
-                graphNotation
-                    .documents[instructionsObjectLocation.documentPath]
-                    ?.directNestedObjectPaths(
-                        instructionsObjectLocation.objectPath,
-                        ScriptConventions.parametersAttributeName)
-                    ?.map { it.name.value }
+                val documentNotation = graphNotation.documents[instructionsObjectLocation.documentPath]
+                if (documentNotation != null && FlowConventions.isFlow(documentNotation)) {
+                    FlowConventions.inputParameterNames(graphNotation, instructionsObjectLocation)
+                }
+                else {
+                    documentNotation
+                        ?.directNestedObjectPaths(
+                            instructionsObjectLocation.objectPath,
+                            ScriptConventions.parametersAttributeName)
+                        ?.map { it.name.value }
+                }
             }
             else {
                 null
@@ -178,31 +202,33 @@ class RunStepArgumentsEditor(
             }
         }
 
-        val host = props.objectLocation.documentPath
-        val documentNotation = graphNotation.documents[host]!!
-
-        val documentObjectNotations = documentNotation.objects.notations.map
-
-        val steps = documentObjectNotations
-            .keys
-            .filter { objectPath ->
-                graphNotation.inheritanceChain(
-                    host.toObjectLocation(objectPath)
-                ).any {
-                    it.objectPath.name == ScriptConventions.stepObjectName
-                }
-            }
-
-        val predecessors = steps
-            .filter { it != props.objectLocation.objectPath }
-            .map { host.toObjectLocation(it) }
-
         setState {
             initialized = true
 
             this.values = values.toPersistentMap()
-            this.predecessors = predecessors.toPersistentList()
             parameterNames = instructionsParameters?.toPersistentList()
+        }
+    }
+
+
+    // The bindable values offered per parameter come from the ScriptStore's lexical step tree, not a
+    // flat "every step in the document" list: a value bound to a callee parameter must be a step/binding
+    // actually in scope at this RunStep — prior steps up the tree plus the enclosing ForEach items /
+    // Script parameters — NOT a step buried inside a sibling branch (standard block scoping). Mirrors
+    // SelectStepEditor.
+    override fun onScriptState(scriptState: ScriptState) {
+        val scriptTree = scriptState.scriptTree
+        val targetPath = props.objectLocation.objectPath
+
+        val candidatePaths = scriptTree.predecessors(targetPath) + scriptTree.inScopeBindingPaths(targetPath)
+        val predecessors = candidatePaths
+            .map { props.objectLocation.documentPath.toObjectLocation(it) }
+            .toPersistentList()
+
+        if (state.predecessors != predecessors) {
+            setState {
+                this.predecessors = predecessors
+            }
         }
     }
 

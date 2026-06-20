@@ -2,8 +2,11 @@ package tech.kzen.auto.common.objects.document.flow
 
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
+import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.structure.notation.DocumentNotation
+import tech.kzen.lib.common.model.structure.notation.GraphNotation
+import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.service.notation.NotationConventions
 
 
@@ -21,6 +24,11 @@ object FlowConventions {
     val edgesAttributeName = AttributeName("edges")
     val edgesAttributePath = AttributePath.ofName(edgesAttributeName)
 
+    // A Flow's input parameters are FlowInput vertices in the `vertices` list, each carrying its name
+    // in a scalar `parameter` attribute (see notation/auto-jvm/flow/flow-vertex.yaml).
+    val inputVertexName = ObjectName("FlowInput")
+    val parameterAttributeName = AttributeName("parameter")
+
 
     fun isFlow(documentNotation: DocumentNotation): Boolean {
         val mainObjectNotation =
@@ -32,5 +40,28 @@ object FlowConventions {
                 ?: return false
 
         return mainObjectIs == objectName.value
+    }
+
+
+    // The Flow's input parameter names, in notation order — the client-side analogue of
+    // FlowDocument.define()'s input derivation (vertices.filterIsInstance<FlowInputVertex>()...), for
+    // callers that read notation directly and can't invoke the server-side define().
+    fun inputParameterNames(
+        graphNotation: GraphNotation,
+        flowMainLocation: ObjectLocation
+    ): List<String> {
+        val documentNotation = graphNotation.documents[flowMainLocation.documentPath]
+            ?: return listOf()
+
+        return documentNotation
+            .directNestedObjectPaths(flowMainLocation.objectPath, verticesAttributeName)
+            .map { flowMainLocation.documentPath.toObjectLocation(it) }
+            .filter { vertexLocation ->
+                graphNotation.inheritanceChain(vertexLocation).any { it.objectPath.name == inputVertexName }
+            }
+            .mapNotNull {
+                (graphNotation.firstAttribute(it, parameterAttributeName) as? ScalarAttributeNotation)?.value
+            }
+            .filter { it.isNotEmpty() }
     }
 }
