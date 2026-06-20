@@ -343,13 +343,22 @@ class ClientLogicGlobal(
     // that deterministically fails stays paused (non-terminal) and is re-issued each cycle; the loop is
     // slow and fully cancellable (Pause/Stop/etc.), not a hang, and this cannot occur with the default
     // pause-on-error off.
-    fun slowRunAsync(mainLocation: ObjectLocation, pauseOnError: Boolean) {
+    //
+    // The loop auto-issues Step by default; with stepOver = true it issues Step Over instead, so it
+    // paces step-by-step WITHIN the current document without descending into nested logic. Toggling the
+    // other variant while already looping just switches the mode in-flight (the loop reads the flag).
+    fun slowRunAsync(mainLocation: ObjectLocation, pauseOnError: Boolean, stepOver: Boolean = false) {
         if (clientLogicState.slowLooping) {
+            if (clientLogicState.slowStepOver != stepOver) {
+                clientLogicState = clientLogicState.copy(slowStepOver = stepOver)
+                publish()
+            }
             return
         }
 
         clientLogicState = clientLogicState.copy(
             slowLooping = true,
+            slowStepOver = stepOver,
             controlError = null)
         publish()
 
@@ -381,7 +390,7 @@ class ClientLogicGlobal(
         if (! clientLogicState.slowLooping) {
             return
         }
-        clientLogicState = clientLogicState.copy(slowLooping = false)
+        clientLogicState = clientLogicState.copy(slowLooping = false, slowStepOver = false)
         publish()
     }
 
@@ -403,7 +412,13 @@ class ClientLogicGlobal(
 
             val logicRunId = clientLogicState.logicStatus?.active?.id
                 ?: break
-            val response = restClient.logicStep(logicRunId)
+            val response =
+                if (clientLogicState.slowStepOver) {
+                    restClient.logicStepOver(logicRunId)
+                }
+                else {
+                    restClient.logicStep(logicRunId)
+                }
             if (response != LogicRunResponse.Submitted) {
                 break
             }
@@ -413,7 +428,7 @@ class ClientLogicGlobal(
         }
 
         if (clientLogicState.slowLooping) {
-            clientLogicState = clientLogicState.copy(slowLooping = false)
+            clientLogicState = clientLogicState.copy(slowLooping = false, slowStepOver = false)
         }
         publish()
     }
@@ -439,7 +454,7 @@ class ClientLogicGlobal(
 
     private fun cancelSlowLoop() {
         if (clientLogicState.slowLooping) {
-            clientLogicState = clientLogicState.copy(slowLooping = false)
+            clientLogicState = clientLogicState.copy(slowLooping = false, slowStepOver = false)
         }
     }
 

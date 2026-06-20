@@ -11,6 +11,8 @@ main:
     - main.vertices/__ANON__20260619_100107_604
     - main.vertices/__ANON__20260619_202808_169
     - main.vertices/__ANON__20260619_202816_204
+    - main.vertices/__ANON__20260619_204010_633
+    - main.vertices/__ANON__20260619_204022_090
   edges:
     - orientation: TopToBottomAndRight
       row: 1
@@ -30,15 +32,18 @@ main:
     - orientation: LeftToRightAndBottom
       row: 1
       column: 2
-    - orientation: LeftToBottom
-      row: 1
-      column: 3
     - orientation: TopToBottom
       row: 2
       column: 3
     - orientation: TopToBottom
       row: 3
       column: 3
+    - orientation: LeftToRightAndBottom
+      row: 1
+      column: 3
+    - orientation: LeftToBottom
+      row: 1
+      column: 4
 
 main.vertices/__ANON__20260618_232721_233:
   is: IntRangeSource
@@ -95,3 +100,14 @@ main.vertices/__ANON__20260619_202816_204:
   is: AccumulateSink
   row: 5
   column: 3
+
+main.vertices/__ANON__20260619_204010_633:
+  is: RunLogic
+  row: 2
+  column: 4
+  instructions: "main/FizzBuzz/FizzBuzz Flow Item.yaml#main"
+
+main.vertices/__ANON__20260619_204022_090:
+  is: AccumulateSink
+  row: 3
+  column: 4

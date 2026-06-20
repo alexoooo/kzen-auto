@@ -10,7 +10,11 @@ data class ClientLogicState(
 
     // True while a client-paced "slow motion" auto-step loop is driving this run (see
     // ClientLogicGlobal.slowRunAsync). Surfaced so the run controls can render the loop's on/off state.
-    val slowLooping: Boolean = false
+    val slowLooping: Boolean = false,
+
+    // When slowLooping, whether the loop auto-issues Step Over (stays within the current document)
+    // instead of Step (descends into nested logic). Only meaningful while slowLooping.
+    val slowStepOver: Boolean = false
 ) {
     enum class Pending {
         Initialize,

@@ -50,6 +50,10 @@ external interface HeaderRunControllerState: State {
 
     // Whether the client-paced "slow motion" auto-step loop is currently driving the run.
     var slowLooping: Boolean
+
+    // While slowLooping, whether the loop is the Step-Over variant (stays within the current document)
+    // rather than the Step variant (descends into nested logic).
+    var slowStepOver: Boolean
 }
 
 
@@ -94,6 +98,7 @@ class HeaderRunController (
         pauseOnError = false
         hasTrace = false
         slowLooping = false
+        slowStepOver = false
     }
 
 
@@ -144,6 +149,7 @@ class HeaderRunController (
             active = clientLogicState.isActive()
             executing = clientLogicState.isExecuting()
             slowLooping = clientLogicState.slowLooping
+            slowStepOver = clientLogicState.slowStepOver
             if (dropdownWasOpen) {
                 frame = nextFrame
             }
@@ -263,14 +269,16 @@ class HeaderRunController (
     }
 
 
-    private fun onSlowToggle() {
+    private fun onSlowToggle(stepOver: Boolean) {
         val mainObjectLocation = this.mainObjectLocation
             ?: return
-        if (state.slowLooping) {
+        // Clicking the variant that is already looping turns slow-motion off; clicking the other
+        // variant (or starting fresh) runs/switches into it.
+        if (state.slowLooping && state.slowStepOver == stepOver) {
             props.clientLogicGlobal.pauseSlowAsync()
         }
         else {
-            props.clientLogicGlobal.slowRunAsync(mainObjectLocation, state.pauseOnError)
+            props.clientLogicGlobal.slowRunAsync(mainObjectLocation, state.pauseOnError, stepOver)
         }
     }
 
@@ -332,6 +340,7 @@ class HeaderRunController (
         // Run modes: persistent on/off toggles. Kept OUT of the exclusive group so a deselect can't feed
         // the `v as String` cast above, and so they read as a distinct "how to run" cluster.
         renderSlowRunButton(active, executing, runnable)
+        renderSlowStepOverButton(active, executing, runnable)
         renderPauseOnErrorToggle(active, runnable)
 
         renderControlsDivider()
@@ -395,7 +404,7 @@ class HeaderRunController (
         // on/off state, like Pause-on-error, rather than a momentary action.
         ToggleButton {
             value = "slowRun"
-            selected = state.slowLooping
+            selected = state.slowLooping && !state.slowStepOver
 
             // Same availability as Step (start fresh, or continue from a pause); stays enabled while
             // looping so it can be toggled off.
@@ -409,15 +418,15 @@ class HeaderRunController (
             }
 
             title =
-                if (state.slowLooping) {
+                if (state.slowLooping && !state.slowStepOver) {
                     "Pause slow-motion run"
                 }
                 else {
-                    "Slow-motion run (auto-step)"
+                    "Slow-motion run (auto-step, descends into nested logic)"
                 }
 
             // ToggleButton's onClick is (event, value) -> Unit; ignore both and just toggle.
-            onClick = { _, _ -> onSlowToggle() }
+            onClick = { _, _ -> onSlowToggle(false) }
 
             span {
                 css {
@@ -426,6 +435,48 @@ class HeaderRunController (
                     marginBottom = (-0.25).em
                 }
                 icon("material-symbols:slow-motion-video") {}
+            }
+        }
+    }
+
+
+    private fun ChildrenBuilder.renderSlowStepOverButton(
+        active: Boolean,
+        executing: Boolean,
+        runnable: Boolean
+    ) {
+        // Slow-motion variant that auto-issues Step Over instead of Step: it paces step-by-step within
+        // the current document without descending into nested logic.
+        ToggleButton {
+            value = "slowStepOver"
+            selected = state.slowLooping && state.slowStepOver
+
+            disabled = !(state.slowLooping || active && !executing || !active && runnable)
+            size = Size.medium
+
+            sx {
+                height = 34.px
+                marginLeft = 0.5.em
+                color = NamedColor.black
+            }
+
+            title =
+                if (state.slowLooping && state.slowStepOver) {
+                    "Pause slow-motion run"
+                }
+                else {
+                    "Slow-motion run, stepping over nested logic (stays in this document)"
+                }
+
+            onClick = { _, _ -> onSlowToggle(true) }
+
+            span {
+                css {
+                    fontSize = 1.5.em
+                    marginRight = 0.25.em
+                    marginBottom = (-0.25).em
+                }
+                icon("material-symbols:autoplay") {}
             }
         }
     }

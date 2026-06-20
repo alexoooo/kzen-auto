@@ -1,0 +1,76 @@
+main:
+  is: Flow
+  vertices:
+    - main.vertices/__ANON__20260619_203758_884
+    - main.vertices/__ANON__20260619_203837_000
+    - main.vertices/__ANON__20260619_203839_152
+    - main.vertices/__ANON__20260619_203907_857
+    - main.vertices/__ANON__20260619_203918_620
+    - main.vertices/__ANON__20260619_203925_677
+    - main.vertices/__ANON__20260619_203941_742
+    - main.vertices/__ANON__20260619_203946_122
+  edges:
+    - orientation: TopToBottomAndRight
+      row: 1
+      column: 0
+    - orientation: LeftToRightAndBottom
+      row: 1
+      column: 1
+    - orientation: LeftToBottom
+      row: 1
+      column: 2
+    - orientation: TopToBottom
+      row: 2
+      column: 0
+    - orientation: TopToBottom
+      row: 3
+      column: 0
+    - orientation: TopToBottom
+      row: 4
+      column: 0
+
+main.vertices/__ANON__20260619_203758_884:
+  is: FlowInput
+  row: 0
+  column: 0
+  parameter: number
+
+main.vertices/__ANON__20260619_203837_000:
+  is: DivisibleFilter
+  row: 2
+  column: 1
+  divisor: 3
+
+main.vertices/__ANON__20260619_203839_152:
+  is: DivisibleFilter
+  row: 2
+  column: 2
+  divisor: 5
+
+main.vertices/__ANON__20260619_203907_857:
+  is: ReplaceProcessor
+  row: 3
+  column: 1
+  replacement: Fizz
+
+main.vertices/__ANON__20260619_203918_620:
+  is: ReplaceProcessor
+  row: 3
+  column: 2
+  replacement: Buzz
+
+main.vertices/__ANON__20260619_203925_677:
+  is: AppendText
+  row: 4
+  column: 1
+
+main.vertices/__ANON__20260619_203941_742:
+  is: SelectLast
+  row: 5
+  column: 0
+
+main.vertices/__ANON__20260619_203946_122:
+  is: FlowOutput
+  row: 6
+  column: 0
+  result: main

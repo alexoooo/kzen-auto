@@ -174,7 +174,7 @@ RunLogic:
   is: FlowVertex
   class: tech.kzen.auto.server.objects.flow.vertex.RunLogicVertex
   icon: "material-symbols:play-arrow"
-  title: "Run Logic"
+  title: "Run"
   description: "Invoke another Logic (e.g. a Script), passing the input as its first parameter and emitting its result"
   instructions: ""
   meta:
@@ -185,6 +185,9 @@ RunLogic:
       summary: ReferenceLinkAttributeView
     input:
       is: RequiredInput
+      by: FlowWiring
+    output:
+      is: RequiredOutput
       by: FlowWiring
 
 
@@ -202,6 +205,9 @@ FlowInput:
   parameter: ""
   meta:
     parameter: String
+    output:
+      is: RequiredOutput
+      by: FlowWiring
 
 
 FlowOutput:
@@ -215,8 +221,5 @@ FlowOutput:
   meta:
     input:
       is: RequiredInput
-      by: FlowWiring
-    output:
-      is: RequiredOutput
       by: FlowWiring
     result: String

@@ -197,6 +197,11 @@ class ServerLogicController(
             }
         }
 
+        // A new run starts from a clean slate: drop every prior run's retained trace (values + the
+        // append-only film-strip) so stale per-vertex/per-step displays don't bleed into this run.
+        // Same global wipe as the manual "Clear all traces" control, made implicit at run start.
+        logicTraceStore.clearAll()
+
         val logicTraceHandle = logicTraceStore.handle(runExecutionId, root)
 
         val logic = rootInstance as Logic

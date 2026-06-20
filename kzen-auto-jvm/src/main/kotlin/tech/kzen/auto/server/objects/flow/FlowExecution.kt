@@ -397,6 +397,14 @@ class FlowExecution(
             return
         }
 
+        // Output (sink) vertices have no output channel: capture the single upstream input as this
+        // vertex's message, which continueOrStart then harvests into the run's result tuple.
+        if (reference is FlowOutputVertex) {
+            activeVertexModel.message = singleInputMessage(vertexLocation, matrix)
+            activeVertexModel.epoch++
+            return
+        }
+
         @Suppress("UNCHECKED_CAST")
         val flowVertex = reference as FlowVertex<Any?>
 
