@@ -376,10 +376,20 @@ class ServerLogicController(
     }
 
 
+    @Synchronized
+    override fun stepOut(
+        runId: LogicRunId,
+        snapshotGraphDefinitionAttempt: GraphDefinitionAttempt?
+    ): LogicRunResponse {
+        return stepInternal(runId, snapshotGraphDefinitionAttempt, stepOut = true)
+    }
+
+
     private fun stepInternal(
         runId: LogicRunId,
         snapshotGraphDefinitionAttempt: GraphDefinitionAttempt?,
-        stepOver: Boolean
+        stepOver: Boolean = false,
+        stepOut: Boolean = false
     ): LogicRunResponse {
         val state = stateOrNull
             ?: return LogicRunResponse.NotFound
@@ -398,10 +408,17 @@ class ServerLogicController(
         val command = state.frame.control.pollCommand()
         check(command == LogicCommand.Pause) { "Must be paused in order to step" }
 
-        // Grant a single fresh-step budget for this tick; for Step Over also flag the mode so a fresh
-        // RunStep descent runs its sub-document to completion (see MultiStep / RunStep). One tick =
-        // exactly one fresh boundary advanced.
-        state.frame.control.grantStepBudget(1, stepOver)
+        // Step Out: run the deepest currently-paused frame (and its descendants) to completion, pausing
+        // back at the caller's next step — no fresh-step budget, but frames at depth >= the deepest run
+        // free (see LogicControl.inStepOutRegion). Otherwise grant a single fresh-step budget for this
+        // tick; for Step Over also flag the mode so a fresh RunStep descent runs its sub-document to
+        // completion. One tick = exactly one fresh boundary advanced.
+        if (stepOut) {
+            state.frame.control.grantStepOut(deepestFrameDepth(state.frame))
+        }
+        else {
+            state.frame.control.grantStepBudget(1, stepOver)
+        }
 
 //        val topLevel = state.frame.dependencies.isEmpty()
         val ready = state.frame.execution.beforeStart(TupleValue.empty/*, topLevel*/)
@@ -444,6 +461,18 @@ class ServerLogicController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    // Depth of the deepest frame on the (paused) spine: when paused the frame tree still holds the
+    // cached child frames (RunStep keeps its pausedExecution), so this is the depth of the frame the
+    // user is paused in — the one Step Out runs to completion.
+    private fun deepestFrameDepth(frame: LogicFrame): Int {
+        val dependencies = frame.dependencies
+        if (dependencies.isEmpty()) {
+            return 0
+        }
+        return 1 + dependencies.maxOf { deepestFrameDepth(it) }
+    }
+
+
     private fun graphDefinitionAttempt(
         snapshot: GraphDefinitionAttempt?
     ): GraphDefinitionAttempt {

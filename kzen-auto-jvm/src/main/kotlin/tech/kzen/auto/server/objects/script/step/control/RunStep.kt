@@ -87,19 +87,29 @@ class RunStep(
             }
 
         try {
-            val runResult =
-                if (stepOverChild) {
-                    logicControl.pushSuppressPause()
-                    try {
+            // Track the frame boundary so Step Out can run a frame (and its descendants) to completion
+            // by depth (see LogicControl.inStepOutRegion); depth reflects "inside the child" only while
+            // the child runs, so the parent's post-return work happens back at the parent's depth.
+            val runResult = run {
+                logicControl.enterFrame()
+                try {
+                    if (stepOverChild) {
+                        logicControl.pushSuppressPause()
+                        try {
+                            execution.continueOrStart(scriptExecutionContext.graphDefinition)
+                        }
+                        finally {
+                            logicControl.popSuppressPause()
+                        }
+                    }
+                    else {
                         execution.continueOrStart(scriptExecutionContext.graphDefinition)
                     }
-                    finally {
-                        logicControl.popSuppressPause()
-                    }
                 }
-                else {
-                    execution.continueOrStart(scriptExecutionContext.graphDefinition)
+                finally {
+                    logicControl.exitFrame()
                 }
+            }
 
             pausedExecution =
                 if (runResult is LogicResultPaused) {

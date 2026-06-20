@@ -20,6 +20,10 @@ import tech.kzen.auto.client.wrap.select.ReactSelectOption
 import tech.kzen.auto.client.wrap.select.reactSelectField
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
+import tech.kzen.lib.common.exec.ExecutionValue
+import tech.kzen.lib.common.exec.ListExecutionValue
+import tech.kzen.lib.common.exec.NullExecutionValue
+import tech.kzen.lib.common.exec.ScalarExecutionValue
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -46,6 +50,10 @@ external interface LogicSignatureEditorProps: Props {
 
     var clientStateGlobal: ClientStateGlobal
     var mirroredGraphStore: MirroredGraphStore
+
+    // Optional per-parameter run-time values (name -> traced value); rendered next to each row while a
+    // run is active. Null/absent when not running (purely presentational — supplied by the controller).
+    var parameterValues: Map<String, ExecutionValue>?
 }
 
 
@@ -317,6 +325,35 @@ class LogicSignatureEditor:
                 onClick = { onRemoveParameter(parameter.location) }
                 +"×"
             }
+
+            // Run-time value (when running as a sub-logic with arguments); blank otherwise.
+            val value = props.parameterValues?.get(parameter.name)
+            if (value != null && value !is NullExecutionValue) {
+                span {
+                    css {
+                        marginLeft = 0.75.em
+                        fontSize = 0.85.em
+                        color = web.cssom.Color("gray")
+                    }
+                    +"= "
+                    span {
+                        css {
+                            fontWeight = web.cssom.FontWeight.bold
+                            color = web.cssom.NamedColor.black
+                        }
+                        +executionValueText(value)
+                    }
+                }
+            }
+        }
+    }
+
+
+    private fun executionValueText(value: ExecutionValue): String {
+        return when (value) {
+            is ScalarExecutionValue -> value.get().toString()
+            is ListExecutionValue -> value.values.map { it.get() }.toString()
+            else -> value.toString()
         }
     }
 

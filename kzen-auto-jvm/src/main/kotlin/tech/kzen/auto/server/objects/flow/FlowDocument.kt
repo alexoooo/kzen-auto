@@ -10,6 +10,7 @@ import tech.kzen.lib.common.exec.logic.Logic
 import tech.kzen.lib.common.exec.logic.LogicControl
 import tech.kzen.lib.common.exec.logic.LogicExecution
 import tech.kzen.lib.common.exec.logic.LogicHandle
+import tech.kzen.lib.common.exec.logic.LogicHandleFacade
 import tech.kzen.lib.common.exec.logic.model.LogicDefinition
 import tech.kzen.lib.common.exec.logic.model.LogicType
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
@@ -76,6 +77,8 @@ class FlowDocument(
         return FlowExecution(
             selfLocation.documentPath,
             logicTraceHandle,
+            // RunLogicVertex invokes a child Logic via this handle (like a Script's RunStep).
+            LogicHandleFacade(logicRunExecutionId, logicHandle),
             objectStableMapper,
             graphCreator,
             environment,

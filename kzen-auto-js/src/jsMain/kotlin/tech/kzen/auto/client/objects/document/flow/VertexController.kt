@@ -10,7 +10,7 @@ import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.objects.document.flow.edge.BottomEgress
 import tech.kzen.auto.client.objects.document.flow.edge.TopIngress
-import tech.kzen.auto.client.objects.document.flow.edit.AttributeEditorManagerOld
+import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ExecutionIntentGlobal
 import tech.kzen.auto.client.util.async
@@ -43,7 +43,7 @@ import kotlin.js.Date
 
 //---------------------------------------------------------------------------------------------------------------------
 external interface VertexControllerProps: Props {
-    var attributeController: AttributeEditorManagerOld.Wrapper
+    var attributeController: AttributeEditorManager.Wrapper
     var executionIntentGlobal: ExecutionIntentGlobal
     var mirroredGraphStore: MirroredGraphStore
 
@@ -538,7 +538,6 @@ class VertexController(
             attributeName: AttributeName
     ) {
         props.attributeController.child(this) {
-            this.clientState = props.clientState
             this.objectLocation = props.cellDescriptor.objectLocation
             this.attributeName = attributeName
         }

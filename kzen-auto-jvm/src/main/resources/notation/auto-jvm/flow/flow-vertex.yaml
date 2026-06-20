@@ -169,6 +169,25 @@ SelectLast:
       by: FlowWiring
 
 
+RunLogic:
+  abstract: true
+  is: FlowVertex
+  class: tech.kzen.auto.server.objects.flow.vertex.RunLogicVertex
+  icon: "material-symbols:play-arrow"
+  title: "Run Logic"
+  description: "Invoke another Logic (e.g. a Script), passing the input as its first parameter and emitting its result"
+  instructions: ""
+  meta:
+    instructions:
+      is: ObjectLocation
+      by: Nominal
+      editor: SelectLogicEditor
+      summary: ReferenceLinkAttributeView
+    input:
+      is: RequiredInput
+      by: FlowWiring
+
+
 #######################################################################################################################
 # Flow signature vertices: input parameters (source) and result (sink).
 

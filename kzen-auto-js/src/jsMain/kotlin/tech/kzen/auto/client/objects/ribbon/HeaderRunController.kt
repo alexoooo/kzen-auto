@@ -67,6 +67,7 @@ class HeaderRunController (
 
         private const val actionStep = "step"
         private const val actionStepOver = "step-over"
+        private const val actionStepOut = "step-out"
         private const val actionRunOrPause = "run-pause"
         private const val actionStop = "stop"
     }
@@ -239,6 +240,14 @@ class HeaderRunController (
                 }
             }
 
+            actionStepOut -> {
+                // Only while paused mid-run: run the current document to its end and pause at the
+                // caller's next step (or finish, at the run root).
+                if (active) {
+                    props.clientLogicGlobal.stepOutAsync()
+                }
+            }
+
             else -> {
                 throw IllegalArgumentException("Unknown action: $action")
             }
@@ -313,6 +322,7 @@ class HeaderRunController (
 
             renderStepButton(active, executing, runnable)
             renderStepOverButton(active, executing)
+            renderStepOutButton(active, executing)
             renderRunPauseButton(active, executing, runnable)
             renderStopButton(active)
         }
@@ -511,6 +521,38 @@ class HeaderRunController (
                     marginBottom = (-0.25).em
                 }
                 icon("material-symbols:step-over") {}
+            }
+        }
+    }
+
+
+    private fun ChildrenBuilder.renderStepOutButton(
+        active: Boolean,
+        executing: Boolean
+    ) {
+        ToggleButton {
+            value = actionStepOut
+
+            // Only while paused mid-run: run the current document to its end, pausing at the caller's
+            // next step (or finish, at the run root).
+            disabled = !(active && !executing)
+
+            size = Size.medium
+
+            sx {
+                height = 34.px
+                color = NamedColor.black
+            }
+
+            title = "Step out (run to end of current document)"
+
+            span {
+                css {
+                    fontSize = 1.5.em
+                    marginRight = 0.25.em
+                    marginBottom = (-0.25).em
+                }
+                icon("material-symbols:step-out") {}
             }
         }
     }

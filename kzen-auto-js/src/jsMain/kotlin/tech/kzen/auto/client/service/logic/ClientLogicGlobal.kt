@@ -298,6 +298,41 @@ class ClientLogicGlobal(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    // Step Out: run the deepest currently-paused frame (the current document) to completion, then pause
+    // at the caller's next step — or, if at the run root, run to the end.
+    fun stepOutAsync() {
+        cancelSlowLoop()
+        val logicRunId = clientLogicState.logicStatus?.active?.id
+            ?: return
+
+        clientLogicState = clientLogicState.copy(
+            pending = ClientLogicState.Pending.Step,
+            controlError = null)
+        publish()
+
+        async {
+            delay(1)
+            val response = restClient.logicStepOut(logicRunId)
+
+            clientLogicState = clientLogicState.copy(
+                pending = ClientLogicState.Pending.None)
+
+            if (response != LogicRunResponse.Submitted) {
+                clientLogicState = clientLogicState.copy(
+                    controlError = "Unable to step out")
+            }
+            else {
+                delay(10)
+                lookupStatus()
+                scheduleRefresh()
+            }
+
+            publish()
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     // "Slow motion" run: the browser auto-issues Step repeatedly with a fixed dwell between steps, so
     // each step's result is visible before the next (reintroduces the old paced dataflow run-loop). Pure
     // client pacing — no server/REST change; the run is just a normal stepped run.

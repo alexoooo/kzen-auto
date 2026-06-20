@@ -148,7 +148,8 @@ class ForEachStep(
             }
             else if (bodySteps.isEmpty() &&
                     logicCommand == LogicCommand.Pause &&
-                    ! scriptExecutionContext.logicControl.suppressPause()
+                    ! scriptExecutionContext.logicControl.suppressPause() &&
+                    ! scriptExecutionContext.logicControl.inStepOutRegion()
             ) {
                 return LogicResultPaused
             }

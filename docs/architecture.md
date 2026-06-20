@@ -89,7 +89,7 @@ Routes are declared in `KzenAutoMain.kt` (`routeNotationQuery`, `routeNotationCo
 | Notation commands | `/command/...` | `/command/document/create`, `/command/object/add`, `/command/attribute/upsert`, `/command/refactor/rename`, `/command/resource/add` | CQRS commands against the notation graph |
 | Detached | `/action/...` | `/action/detached`, `/action/download` | Detached-paradigm one-shot actions; `/action/download` returns a file body with `Content-Disposition` |
 | Task | `/task/...` | `/task/submit`, `/task/query`, `/task/cancel`, `/task/lookup` | Long-running background jobs (Task paradigm) |
-| Logic | `/logic/...` | `/logic/status`, `/logic/startRun`, `/logic/startStep`, `/logic/run`, `/logic/step`, `/logic/pause`, `/logic/cancel`, `/logic/request` | Step/pause/resume of a logic-paradigm run (Script **and Flow**) |
+| Logic | `/logic/...` | `/logic/status`, `/logic/startRun`, `/logic/startStep`, `/logic/run`, `/logic/step`, `/logic/stepOver`, `/logic/stepOut`, `/logic/pause`, `/logic/cancel`, `/logic/request` | Step / step-over / step-out / pause / resume of a logic-paradigm run (Script **and Flow**) |
 
 Most endpoints are GET (idempotent commands carry their payload in the query string); large or text-heavy command bodies — notation upserts, list inserts, multi-value updates — also have PUT variants taking form parameters. There are no WebSocket or SSE channels.
 

@@ -64,6 +64,7 @@ class MultiStep(
             if (! onResumeSpine &&
                     logicCommand == LogicCommand.Pause &&
                     ! logicControl.suppressPause() &&
+                    ! logicControl.inStepOutRegion() &&
                     ! logicControl.consumeStepBudget()
             ) {
                 return LogicResultPaused

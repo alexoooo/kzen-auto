@@ -241,6 +241,10 @@ private fun Routing.routeLogic(
         val response = restHandler.logicStepOver(call.parameters)
         call.respondText(response)
     }
+    get(CommonRestApi.logicStepOut) {
+        val response = restHandler.logicStepOut(call.parameters)
+        call.respondText(response)
+    }
 }
 
 

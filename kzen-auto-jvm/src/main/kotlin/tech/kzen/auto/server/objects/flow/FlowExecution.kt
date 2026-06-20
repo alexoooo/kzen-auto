@@ -14,10 +14,14 @@ import tech.kzen.auto.common.paradigm.flow.service.format.FlowMessageInspector
 import tech.kzen.auto.common.paradigm.flow.util.FlowUtils
 import tech.kzen.auto.server.objects.flow.vertex.FlowInputVertex
 import tech.kzen.auto.server.objects.flow.vertex.FlowOutputVertex
+import tech.kzen.auto.server.objects.flow.vertex.RunLogicVertex
 import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.NullExecutionValue
+import tech.kzen.lib.common.exec.logic.Logic
 import tech.kzen.lib.common.exec.logic.LogicControl
 import tech.kzen.lib.common.exec.logic.LogicExecution
+import tech.kzen.lib.common.exec.logic.LogicExecutionFacade
+import tech.kzen.lib.common.exec.logic.LogicHandleFacade
 import tech.kzen.lib.common.exec.logic.LogicResourceScope
 import tech.kzen.lib.common.exec.logic.model.LogicCommand
 import tech.kzen.lib.common.exec.logic.model.LogicResult
@@ -60,6 +64,7 @@ import tech.kzen.lib.platform.collect.toPersistentMap
 class FlowExecution(
     private val documentPath: DocumentPath,
     private val logicTraceHandle: LogicTraceHandle,
+    private val logicHandleFacade: LogicHandleFacade,
     private val objectStableMapper: ObjectStableMapper,
     private val graphCreator: GraphCreator,
     private val environment: GraphEnvironment,
@@ -79,6 +84,10 @@ class FlowExecution(
 
     // Output vertices' captured values, harvested into the result TupleValue on terminal success.
     private val outputAccumulator = mutableMapOf<TupleComponentName, Any?>()
+
+    // Paused child executions of RunLogicVertex steps (keyed by vertex stable id), cached across
+    // pause/resume so a Step Into can descend and a later step resumes the same sub-logic.
+    private val pausedChildren = mutableMapOf<ObjectStableId, LogicExecutionFacade>()
 
     private var arguments = TupleValue.empty
 
@@ -147,7 +156,10 @@ class FlowExecution(
             if (command == LogicCommand.Cancel) {
                 return LogicResultCancelled
             }
-            else if (!executeNextIfPaused && command == LogicCommand.Pause) {
+            // suppressPause / inStepOutRegion: a Flow that is itself a child being Stepped Over or
+            // Stepped Out of runs every vertex to completion instead of pausing per-vertex.
+            else if (!executeNextIfPaused && command == LogicCommand.Pause &&
+                    ! logicControl.suppressPause() && ! logicControl.inStepOutRegion()) {
                 return LogicResultPaused
             }
             executeNextIfPaused = false
@@ -157,6 +169,35 @@ class FlowExecution(
             seedIfAbsent(nextStableId, instance)
 
             traceVertex(next, nextStableId, instance, running = true)
+
+            // RunLogicVertex invokes another Logic as a child frame (steppable — see runChildLogic);
+            // it can pause/resume, unlike the synchronous runOneVertex path used by every other vertex.
+            val runLogicVertex = instance.reference
+            if (runLogicVertex is RunLogicVertex) {
+                when (val childResult =
+                    runChildLogic(next, nextStableId, instance, runLogicVertex, matrix, graphDefinition, logicControl)
+                ) {
+                    LogicResultPaused -> {
+                        // Keep the vertex "running"; its message is still unset, so FlowUtils.next
+                        // re-selects it next pass and runChildLogic resumes the cached child.
+                        return LogicResultPaused
+                    }
+
+                    LogicResultCancelled ->
+                        return LogicResultCancelled
+
+                    is LogicResultFailed -> {
+                        activeVertices[nextStableId]?.error = childResult.message
+                        traceVertex(next, nextStableId, instance, running = false)
+                        return if (logicControl.pauseOnError()) LogicResultPaused else childResult
+                    }
+
+                    is LogicResultSuccess -> {
+                        traceVertex(next, nextStableId, instance, running = false)
+                        continue
+                    }
+                }
+            }
 
             try {
                 runOneVertex(next, nextStableId, instance, matrix)
@@ -188,7 +229,146 @@ class FlowExecution(
 
 
     override fun close(error: Boolean) {
+        for (child in pausedChildren.values) {
+            try {
+                child.close()
+            }
+            catch (t: Throwable) {
+                logger.warn("Child close error", t)
+            }
+        }
+        pausedChildren.clear()
         logger.info("{} - close - {}", documentPath, error)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    /**
+     * Invoke a [RunLogicVertex]'s target Logic as a child frame — the Flow analogue of [RunStep]
+     * [tech.kzen.auto.server.objects.script.step.control.RunStep]. On a fresh descent the single upstream
+     * input is passed as the callee's first declared parameter; the call is bracketed by enter/exitFrame
+     * (so Step Out can run a frame by depth) and, under Step Over, wrapped in suppressPause so the child
+     * runs to completion. A paused child is cached in [pausedChildren] and resumed on the next pass; on
+     * success the callee's main result becomes the vertex message.
+     */
+    private fun runChildLogic(
+        vertexLocation: ObjectLocation,
+        stableId: ObjectStableId,
+        @Suppress("UNUSED_PARAMETER") instance: ObjectInstance,
+        vertex: RunLogicVertex,
+        matrix: FlowMatrix,
+        graphDefinition: GraphDefinition,
+        logicControl: LogicControl
+    ): LogicResult {
+        val activeVertexModel = activeVertices[stableId]!!
+
+        val existing = pausedChildren[stableId]
+        val stepOverChild = logicControl.stepOverActive() && existing == null
+
+        val child =
+            if (existing != null) {
+                existing
+            }
+            else {
+                val argumentMessage = singleInputMessage(vertexLocation, matrix)
+                val parameterName = calleeFirstParameterName(vertex.instructions, graphDefinition)
+
+                val created = logicHandleFacade.start(vertex.instructions)
+                val argumentValue =
+                    if (parameterName != null) {
+                        TupleValue(listOf(TupleComponentValue(parameterName, argumentMessage)))
+                    }
+                    else {
+                        TupleValue.empty
+                    }
+
+                val ready = created.beforeStart(argumentValue)
+                if (! ready) {
+                    created.close()
+                    return LogicResultFailed("Unable to initialize ${vertex.instructions}")
+                }
+
+                // Mirror RunStep: consume the per-tick budget on a fresh descent so a Step Into pauses
+                // *before* the callee's first step. No-op during a full run / Step Over (the child runs
+                // free below regardless).
+                logicControl.consumeStepBudget()
+
+                created
+            }
+
+        val result =
+            try {
+                logicControl.enterFrame()
+                try {
+                    if (stepOverChild) {
+                        logicControl.pushSuppressPause()
+                        try {
+                            child.continueOrStart(graphDefinition)
+                        }
+                        finally {
+                            logicControl.popSuppressPause()
+                        }
+                    }
+                    else {
+                        child.continueOrStart(graphDefinition)
+                    }
+                }
+                finally {
+                    logicControl.exitFrame()
+                }
+            }
+            catch (t: Throwable) {
+                pausedChildren.remove(stableId)
+                child.close()
+                logger.warn("Run-logic vertex error - {}", vertexLocation, t)
+                return LogicResultFailed(ExceptionUtils.message(t))
+            }
+
+        when (result) {
+            LogicResultPaused ->
+                pausedChildren[stableId] = child
+
+            is LogicResultSuccess -> {
+                activeVertexModel.message = result.value.mainComponentValue()
+                activeVertexModel.epoch++
+                pausedChildren.remove(stableId)
+                child.close()
+            }
+
+            else -> {
+                pausedChildren.remove(stableId)
+                child.close()
+            }
+        }
+
+        return result
+    }
+
+
+    // The single upstream input message for a RunLogicVertex (its sole wired input), used as the
+    // callee's argument. Null when nothing is wired / no message has arrived yet.
+    private fun singleInputMessage(vertexLocation: ObjectLocation, matrix: FlowMatrix): Any? {
+        val vertexDescriptor = matrix.verticesByLocation[vertexLocation]
+            ?: return null
+        val inputAttribute = vertexDescriptor.inputNames.firstOrNull()
+            ?: return null
+        val sourceVertex = matrix.traceVertexBackFrom(vertexDescriptor, inputAttribute)
+            ?: return null
+        return activeVertices[stableId(sourceVertex.objectLocation)]?.message
+    }
+
+
+    // The name of the callee Logic's first declared parameter (input), so the single Flow input maps to
+    // it by name (general for Script / Flow callees). Null when the callee declares no parameters.
+    private fun calleeFirstParameterName(
+        instructions: ObjectLocation,
+        graphDefinition: GraphDefinition
+    ): TupleComponentName? {
+        val calleeGraph = graphCreator.createGraph(
+            graphDefinition.filterTransitive(instructions.documentPath), environment)
+        val calleeLogic = calleeGraph[instructions]?.reference as? Logic
+            ?: return null
+        return calleeLogic.define().inputs.components.firstOrNull()?.name
     }
 
 

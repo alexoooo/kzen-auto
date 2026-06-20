@@ -3,7 +3,7 @@ package tech.kzen.auto.client.objects.document.flow
 import react.ChildrenBuilder
 import react.Props
 import react.State
-import tech.kzen.auto.client.objects.document.flow.edit.AttributeEditorManagerOld
+import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ExecutionIntentGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
@@ -26,7 +26,7 @@ import web.cssom.times
 
 //---------------------------------------------------------------------------------------------------------------------
 external interface CellControllerProps: Props {
-    var attributeController: AttributeEditorManagerOld.Wrapper
+    var attributeController: AttributeEditorManager.Wrapper
     var executionIntentGlobal: ExecutionIntentGlobal
     var mirroredGraphStore: MirroredGraphStore
 

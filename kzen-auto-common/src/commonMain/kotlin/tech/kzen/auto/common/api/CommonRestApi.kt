@@ -104,6 +104,7 @@ object CommonRestApi {
     const val logicContinueRun = "${logicPrefix}run"
     const val logicContinueStep = "${logicPrefix}step"
     const val logicStepOver = "${logicPrefix}stepOver"
+    const val logicStepOut = "${logicPrefix}stepOut"
     const val logicStartAndStep = "${logicPrefix}startStep"
 
     // stable object id mapping

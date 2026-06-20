@@ -423,10 +423,13 @@ class ProjectController(
             return
         }
 
+        // Follow only on the *settled* Paused state (and slow-motion, which settles to Paused between
+        // ticks via awaitStepSettled), NOT the transient Stepping status. A Step Over / Step Out briefly
+        // pushes a child frame on the stack mid-step; following Stepping would dive into it and bounce
+        // back out. Step Into still follows into the child because it settles Paused there.
         val runState = clientState.clientLogicState.logicStatus?.active?.state
         val stepwise = clientState.clientLogicState.slowLooping ||
-                runState == LogicRunState.Paused ||
-                runState == LogicRunState.Stepping
+                runState == LogicRunState.Paused
         if (! stepwise) {
             return
         }

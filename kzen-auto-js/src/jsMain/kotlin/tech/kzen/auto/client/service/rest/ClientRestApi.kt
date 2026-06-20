@@ -737,6 +737,17 @@ class ClientRestApi(
     }
 
 
+    suspend fun logicStepOut(
+        runId: LogicRunId
+    ): LogicRunResponse {
+        val response = getOrPut(
+            CommonRestApi.logicStepOut,
+            CommonRestApi.paramRunId to runId.value)
+
+        return LogicRunResponse.valueOf(response)
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun objectStableMapperSnapshot(): Map<ObjectStableId, ObjectLocation> {
         val responseJson = getOrPutJson(CommonRestApi.objectStableMapperSnapshot)

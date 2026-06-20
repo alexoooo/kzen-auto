@@ -17,8 +17,8 @@ import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
 import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.objects.document.bridge.InsertionKey
+import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
 import tech.kzen.auto.client.objects.document.flow.CellController
-import tech.kzen.auto.client.objects.document.flow.edit.AttributeEditorManagerOld
 import tech.kzen.auto.client.objects.ribbon.RibbonController
 import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.service.global.ClientState
@@ -65,7 +65,7 @@ import web.cssom.*
 
 //---------------------------------------------------------------------------------------------------------------------
 external interface FlowControllerProps: Props {
-    var attributeController: AttributeEditorManagerOld.Wrapper
+    var attributeController: AttributeEditorManager.Wrapper
 
     var clientStateGlobal: ClientStateGlobal
     var executionIntentGlobal: ExecutionIntentGlobal
@@ -106,7 +106,7 @@ class FlowController(
     @Reflect
     class Wrapper(
         private val archetype: ObjectLocation,
-        private val attributeController: AttributeEditorManagerOld.Wrapper,
+        private val attributeController: AttributeEditorManager.Wrapper,
         private val ribbonController: RibbonController.Wrapper,
         @Service private val clientStateGlobal: ClientStateGlobal,
         @Service private val executionIntentGlobal: ExecutionIntentGlobal,

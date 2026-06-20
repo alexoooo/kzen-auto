@@ -6,9 +6,13 @@ import tech.kzen.auto.common.objects.document.script.model.StepTrace
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
 import tech.kzen.lib.common.exec.logic.trace.LogicTraceHandle
 import tech.kzen.auto.server.objects.script.api.ScriptStep
+import tech.kzen.auto.server.objects.script.binding.ParameterBinding
 import tech.kzen.auto.server.objects.script.model.ActiveScriptModel
 import tech.kzen.auto.server.objects.script.model.ScriptExecutionContext
+import tech.kzen.lib.common.exec.ExecutionValue
+import tech.kzen.lib.common.exec.NullExecutionValue
 import tech.kzen.lib.common.exec.logic.*
+import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
 import tech.kzen.lib.common.exec.logic.model.*
 import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.model.definition.GraphDefinition
@@ -114,6 +118,8 @@ class ScriptExecution(
             validation,
             objectStableMapper)
 
+        traceParameterValues(stepContext)
+
         val step = graphInstance[objectLocation]!!.reference as ScriptStep
         val stepModel = stepContext.getOrPutStepModel(objectLocation)
 
@@ -147,6 +153,32 @@ class ScriptExecution(
         }
 
         return logicResult
+    }
+
+
+    // Surface each parameter's run-time value in the Script UI (the signature editor), traced exactly
+    // like a step's value — a StepTrace at the parameter's stable-id path — so the client reads it with
+    // the existing computeStepTraceInfo. The value is resolved from the run arguments: null (so blank)
+    // for a top-level run with no arguments, populated when this Script runs as a sub-logic.
+    private fun traceParameterValues(stepContext: ScriptExecutionContext) {
+        for (location in stepContext.graphInstance.keys) {
+            stepContext.graphInstance[location]?.reference as? ParameterBinding
+                ?: continue
+
+            val value = stepContext.referencedValue(location)
+            val displayValue =
+                if (value == null) {
+                    NullExecutionValue
+                }
+                else {
+                    ExecutionValue.ofArbitrary(value) ?: ExecutionValue.of(value.toString())
+                }
+
+            val stableId = stepContext.objectStableMapper.objectStableId(location)
+            stepContext.logicTraceHandle.set(
+                LogicTracePath.ofObjectStableId(stableId),
+                StepTrace(StepTrace.State.Done, displayValue, NullExecutionValue, null).asExecutionValue())
+        }
     }
 
 

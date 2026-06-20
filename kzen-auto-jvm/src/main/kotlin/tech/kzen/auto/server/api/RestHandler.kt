@@ -1165,6 +1165,19 @@ class RestHandler(
     }
 
 
+    fun logicStepOut(parameters: Parameters): String {
+        val runId: LogicRunId = parameters.getParam(CommonRestApi.paramRunId) {
+            value -> LogicRunId(value)
+        }
+
+        val response = runBlocking {
+            serverLogicController.stepOut(runId)
+        }
+
+        return response.name
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     fun objectStableMapperSnapshot(): Map<String, String> {
         val snapshot = objectStableMapper.snapshot()

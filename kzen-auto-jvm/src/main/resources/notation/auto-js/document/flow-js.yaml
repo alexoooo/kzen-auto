@@ -4,7 +4,7 @@ FlowController:
   is: DocumentController
   class: tech.kzen.auto.client.objects.document.flow.FlowController$Wrapper
   archetype: Flow
-  attributeController: AttributeEditorManagerOld
+  attributeController: AttributeEditorManager
   ribbonController: RibbonController
 
 
@@ -85,6 +85,12 @@ FlowSelectLastTool:
   is: RibbonTool
   parent: FlowInsertGroup
   delegate: SelectLast
+
+
+FlowRunLogicTool:
+  is: RibbonTool
+  parent: FlowInsertGroup
+  delegate: RunLogic
 
 
 ###########################################################
