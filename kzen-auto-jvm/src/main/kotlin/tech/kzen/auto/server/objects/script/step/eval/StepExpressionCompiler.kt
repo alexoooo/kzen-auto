@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.objects.script.step.eval
 
+import tech.kzen.auto.common.util.ExpressionUtils
 import tech.kzen.auto.server.service.compile.KotlinCode
 import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
@@ -29,7 +30,11 @@ object StepExpressionCompiler {
             .withIndex()
             .map {
                 val entry = it.value
-                "val `${entry.key.name.value}` get(): ${entry.value.toSimple()} {" +
+                // The accessor name is the canonical escape of the step/binding name (plain when it is a valid
+                // identifier, back-ticked otherwise), so the identifier a user writes in the expression is exactly
+                // what KotlinExpressionAnalyzer extracts and rewrites. Both forms compile to the same property.
+                val accessorName = ExpressionUtils.escapeKotlinVariableName(entry.key.name.value)
+                "val $accessorName get(): ${entry.value.toSimple()} {" +
                 "    return predecessorValues[${it.index}] as ${entry.value.toSimple()}" +
                 "}"
             }

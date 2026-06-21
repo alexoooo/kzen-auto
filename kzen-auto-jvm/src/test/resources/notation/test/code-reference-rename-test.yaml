@@ -1,0 +1,25 @@
+# Formula steps that reference prior steps by their variable identifier inside `code`, for exercising
+# KzenAutoCodeReferenceRewriter (rename of a step rewrites the dependent expressions).
+
+main:
+  is: Script
+
+main.steps/Source:
+  is: FormulaStep
+  code: 42
+
+main.steps/Derived:
+  is: FormulaStep
+  code: Source + 1
+
+main.steps/My Source:
+  is: FormulaStep
+  code: 7
+
+main.steps/Backtick User:
+  is: FormulaStep
+  code: '`My Source` + 2'
+
+main.steps/String Literal:
+  is: FormulaStep
+  code: '"Source stays in this string"'

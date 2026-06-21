@@ -1,6 +1,8 @@
 package tech.kzen.auto.common.objects.document.script.model
 
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
+import tech.kzen.auto.common.util.ExpressionUtils
+import tech.kzen.auto.common.util.KotlinExpressionAnalyzer
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.definition.*
@@ -25,8 +27,6 @@ data class ScriptDependencyAnalysis(
     companion object {
         val EMPTY = ScriptDependencyAnalysis(emptyMap(), emptySet())
 
-
-        private val identifierRegex = Regex("^[A-Za-z_][A-Za-z0-9_]*$")
 
         // NB: the IfStep "then" / "else" branch names are owned by IfStep, but the analyzer needs
         //     to recurse through every branch type the script supports, including nested IfSteps.
@@ -56,14 +56,17 @@ data class ScriptDependencyAnalysis(
                 return EMPTY
             }
 
-            val locationByIdentifier = coalesce.map.keys
+            // Key every in-document object by the bare identifier content its name maps to, so a step named
+            // "my step" (referenced as `` `my step` ``) is matched — the old plain-identifier regex missed it.
+            // Collisions (two names escaping to the same identifier) keep the last, a documented limitation.
+            val locationByIdentifierContent = coalesce.map.keys
                 .asSequence()
                 .filter { it.documentPath == documentPath }
-                .mapNotNull { location ->
-                    val name = location.objectPath.name.value
-                    if (identifierRegex.matches(name)) name to location else null
+                .associate { location ->
+                    ExpressionUtils.identifierContent(
+                        ExpressionUtils.escapeKotlinVariableName(location.objectPath.name.value)
+                    ) to location
                 }
-                .toMap()
 
             val edges = mutableSetOf<ScriptStepDependency>()
 
@@ -100,13 +103,15 @@ data class ScriptDependencyAnalysis(
                 val objectNotation = coalesce[targetLocation]
                     ?: continue
                 walkValueScalars(objectDefinition, objectNotation) { stringValue ->
-                    for ((identifier, sourceLocation) in locationByIdentifier) {
+                    // Lexer-derived references: respects strings/comments/back-ticks and skips member selectors,
+                    // unlike the previous word-boundary regex (see KotlinExpressionAnalyzer).
+                    for (referencedIdentifier in KotlinExpressionAnalyzer.referencedIdentifiers(stringValue)) {
+                        val sourceLocation = locationByIdentifierContent[referencedIdentifier]
+                            ?: continue
                         if (sourceLocation == targetLocation) {
                             continue
                         }
-                        if (containsWord(stringValue, identifier)) {
-                            classifyEdge(sourceLocation, targetLocation)
-                        }
+                        classifyEdge(sourceLocation, targetLocation)
                     }
                 }
             }
@@ -135,11 +140,6 @@ data class ScriptDependencyAnalysis(
                     walkBranch(nestedAttrLocation, graphDefinitionAttempt, branchOfStep)
                 }
             }
-        }
-
-
-        private fun containsWord(haystack: String, needle: String): Boolean {
-            return Regex("\\b" + Regex.escape(needle) + "\\b").containsMatchIn(haystack)
         }
 
 

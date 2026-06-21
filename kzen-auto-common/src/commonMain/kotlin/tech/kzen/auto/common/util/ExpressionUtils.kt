@@ -10,7 +10,10 @@ object ExpressionUtils {
         "null", "true", "false", "is", "in", "throw", "return", "break", "continue", "object",
         "if", "try", "else", "while", "do", "when", "interface", "typeof")
 
-    private val simpleVariablePattern = Regex("[a-zA-Z][a-zA-Z0-9_]+")
+    // True Kotlin (ASCII) identifier grammar: a single letter/underscore start, then any letter/digit/underscore.
+    // NB: the `+` quantifier in the previous form needed >= 2 chars and forbade a leading `_`, so names like
+    //  `x` and `_foo` were needlessly back-ticked — and disagreed with the back-tick stripping in identifierContent.
+    private val simpleVariablePattern = Regex("[a-zA-Z_][a-zA-Z0-9_]*")
     private val backticksPattern = Regex("""[^\[(,)/;\\]+""")
 
     private val escapedPattern = Regex("[^a-zA-Z0-9_]+")
@@ -55,5 +58,21 @@ object ExpressionUtils {
     private fun backticksQuote(identifier: String): String {
         val backticksEscaped = identifier.replace(backticksEscaped, "_")
         return "`$backticksEscaped`"
+    }
+
+
+    /**
+     * The bare identifier text of a (possibly back-tick-quoted) Kotlin identifier: the content inside the
+     * back-ticks if quoted, else the identifier itself. This is the canonical key for comparing an identifier
+     * token found in an expression (see [tech.kzen.auto.common.util.KotlinExpressionAnalyzer]) against a step
+     * name mapped through [escapeKotlinVariableName] — `foo` and `` `foo` `` both reduce to `foo`.
+     */
+    fun identifierContent(identifier: String): String {
+        return if (identifier.length >= 2 && identifier.first() == '`' && identifier.last() == '`') {
+            identifier.substring(1, identifier.length - 1)
+        }
+        else {
+            identifier
+        }
     }
 }

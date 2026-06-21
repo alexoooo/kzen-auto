@@ -22,6 +22,7 @@ import tech.kzen.lib.common.service.context.environment.GraphEnvironment
 import tech.kzen.lib.common.service.media.NotationMedia
 import tech.kzen.lib.common.service.media.SeededNotationMedia
 import tech.kzen.lib.common.service.metadata.NotationMetadataReader
+import tech.kzen.auto.common.objects.document.script.model.KzenAutoCodeReferenceRewriter
 import tech.kzen.lib.common.service.notation.NotationReducer
 import tech.kzen.lib.common.service.parse.NotationParser
 import tech.kzen.lib.common.service.parse.YamlNotationParser
@@ -61,7 +62,7 @@ class ClientContext private constructor() {
 
     val graphDefiner = GraphDefiner
     val graphCreator = GraphCreator
-    val notationReducer = NotationReducer
+    val notationReducer = NotationReducer(listOf(KzenAutoCodeReferenceRewriter))
 
     val seededNotationMedia = SeededNotationMedia(
             restNotationMedia)
