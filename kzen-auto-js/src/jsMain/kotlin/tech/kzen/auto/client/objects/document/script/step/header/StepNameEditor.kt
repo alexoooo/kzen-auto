@@ -111,22 +111,19 @@ class StepNameEditor(
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
         div {
-            // NB: the rename button is revealed on hover via pure CSS (see [data-rename-button] below) rather than
-            //     a hover state field — a state toggle here would re-reconcile this step's sibling slots on every
-            //     mouse move and flash them in React DevTools' "Highlight updates" overlay (a false positive).
             css {
                 display = Display.flex
                 alignItems = AlignItems.center
                 minWidth = 0.px
-
-                "&:hover [data-rename-button]" {
-                    opacity = number(1.0)
-                }
             }
 
             // NB: no stopPropagation on this (full-width) name-area div — the empty space around a short name
             //     must fall through to the header's expand/collapse toggle (StepHeader). Only the genuinely
-            //     handled bits stop: the title text and pencil (edit), and the whole editor while editing.
+            //     handled bits stop: the edit-affordance group (name text + pencil) and the whole editor while
+            //     editing. The hover highlight + pencil-reveal live on that group (renderReader) — NOT here — via
+            //     pure CSS (not a hover state field, which would re-reconcile sibling slots on every mouse move and
+            //     flash them in React DevTools' "Highlight updates" overlay). Scoping them to the group means the
+            //     "click to edit" cue only appears over the region that actually edits, never the fall-through space.
 
             if (state.editing) {
                 renderEditor()
@@ -139,49 +136,78 @@ class StepNameEditor(
 
 
     private fun ChildrenBuilder.renderReader() {
-        span {
-            css {
-                fontSize = 1.5.em
-                fontWeight = FontWeight.bold
-                whiteSpace = WhiteSpace.nowrap
-                overflow = Overflow.hidden
-                textOverflow = TextOverflow.ellipsis
-                minWidth = 0.px
-                cursor = Cursor.pointer
-            }
-
-            // NB: clicking the name text starts editing (in addition to the pencil) — same onStartEdit the
-            //     RenameButton drives. stopPropagation so the text edits rather than toggling the header.
-            onClick = { it.stopPropagation(); onStartEdit() }
-
-            title = props.description
-
-            val objectName = props.objectLocation.objectPath.name
-
-            if (AutoConventions.isAnonymous(objectName)) {
-                +props.title
-            }
-            else {
-                +objectName.value
-            }
-        }
-
-        // NB: hidden by default; the enclosing name area's &:hover rule reveals it (data-rename-button hook).
+        // The "edit affordance" group binds the name text + pencil into one clickable unit. The whole card already
+        // shows a pointer cursor and toggles expand/collapse on click, so a bare pointer over the name signals
+        // nothing distinct — the user can't tell that clicking HERE edits rather than toggles. Hovering this group
+        // (over the name OR the pencil) tints its background and fades the pencil in: a single, reliable cue that a
+        // click opens the name editor. Clicking anywhere in the group starts editing and stops propagation so the
+        // header doesn't also toggle; the empty space OUTSIDE the group still falls through to expand/collapse.
         div {
-            asDynamic()["data-rename-button"] = ""
-
             css {
                 display = Display.inlineFlex
                 alignItems = AlignItems.center
-                marginLeft = 0.25.em
-                opacity = number(0.0)
+                minWidth = 0.px
+                maxWidth = 100.pct
+                borderRadius = 4.px
+                paddingTop = 0.1.em
+                paddingBottom = 0.1.em
+                paddingLeft = 0.25.em
+                paddingRight = 0.25.em
+                // offset the left padding so the name's resting position stays aligned with the summary row below;
+                // the tint then bleeds 0.25em left into the icon gap, reading as a button hit-area on hover.
+                marginLeft = (-0.25).em
+                cursor = Cursor.pointer
+                transition = "background-color 120ms ease-out".unsafeCast<Transition>()
+
+                "&:hover" {
+                    backgroundColor = Color("rgba(0, 0, 0, 0.06)")
+                }
+                "&:hover [data-rename-button]" {
+                    opacity = number(1.0)
+                }
             }
 
-            // stopPropagation so the pencil edits without also toggling the header's expand/collapse.
-            onClick = { it.stopPropagation() }
+            onClick = { it.stopPropagation(); onStartEdit() }
 
-            RenameButton::class.react {
-                onAction = onStartEditCallback
+            span {
+                css {
+                    fontSize = 1.5.em
+                    fontWeight = FontWeight.bold
+                    whiteSpace = WhiteSpace.nowrap
+                    overflow = Overflow.hidden
+                    textOverflow = TextOverflow.ellipsis
+                    minWidth = 0.px
+                }
+
+                title = props.description
+
+                val objectName = props.objectLocation.objectPath.name
+
+                if (AutoConventions.isAnonymous(objectName)) {
+                    +props.title
+                }
+                else {
+                    +objectName.value
+                }
+            }
+
+            // NB: hidden by default; the group's &:hover rule fades it in (data-rename-button hook). The button
+            //     still drives onStartEdit itself — its own ripple makes it a real button; the group is the
+            //     enlarged hit-area that lets the name text trigger the same edit.
+            div {
+                asDynamic()["data-rename-button"] = ""
+
+                css {
+                    display = Display.inlineFlex
+                    alignItems = AlignItems.center
+                    marginLeft = 0.25.em
+                    opacity = number(0.0)
+                    transition = "opacity 120ms ease-out".unsafeCast<Transition>()
+                }
+
+                RenameButton::class.react {
+                    onAction = onStartEditCallback
+                }
             }
         }
     }
