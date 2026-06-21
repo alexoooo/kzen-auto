@@ -156,6 +156,10 @@ class HeaderController(
                 paddingBottom = 1.px
                 paddingLeft = 1.75.em
                 minHeight = 55.px
+                // Contain the floated logo / run controls: the run controls now stack onto two rows, so
+                // the right float is taller than the in-flow ribbon on documents with a short ribbon —
+                // a BFC here keeps that float from spilling below the header onto the content beneath.
+                display = Display.flowRoot
             }
 
             span {
@@ -171,6 +175,11 @@ class HeaderController(
             div {
                 css {
                     float = Float.right
+                    // Lay the project title next to the run controls, both aligned to the top of the
+                    // header (not vertically centred), with a little breathing room from the very top.
+                    display = Display.flex
+                    alignItems = AlignItems.flexStart
+                    marginTop = 0.5.em
                 }
                 renderRightFloat()
             }
@@ -220,7 +229,6 @@ class HeaderController(
 
         div {
             css {
-                marginTop = 0.5.em
                 marginRight = 0.5.em
                 fontSize = 1.5.em
                 color = NamedColor.gray

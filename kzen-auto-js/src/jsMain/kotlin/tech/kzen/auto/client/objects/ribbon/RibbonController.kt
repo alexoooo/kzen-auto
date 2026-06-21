@@ -270,6 +270,14 @@ class RibbonController(
             textColor = TabsTextColor.inherit
             indicatorColor = TabsIndicatorColor.primary
 
+            // The ribbon shares its row with the right-floated run controls, which shrink the tab area
+            // (MuiTabs-root is a BFC, so it can't overlap the float). With the default `standard` variant
+            // any overflow is silently clipped and unreachable; `scrollable` + scroll buttons keeps every
+            // ribbon section selectable no matter how narrow the remaining width gets.
+            variant = TabsVariant.scrollable
+            scrollButtons = TabsScrollButtons.auto
+            allowScrollButtonsMobile = true
+
             value = state.tabIndex
 
             asDynamic().onChange = { _: Any, index: Int ->

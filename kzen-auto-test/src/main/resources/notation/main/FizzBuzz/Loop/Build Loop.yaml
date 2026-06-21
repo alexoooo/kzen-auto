@@ -13,87 +13,10 @@ main.steps/Insert Loop:
   is: RunStep
   instructions: "main/FizzBuzz/Loop/Insert Loop.yaml#main"
 
-main.steps/Click:
-  is: BrowserClickStep
-  target:
-    type: Text
-    value: Logic / Control
-
-main.steps/Click 2:
-  is: BrowserClickStep
-  target:
-    type: Xpath
-    value: "//button[text()='Run']"
-
-main.steps/Click 6:
-  is: BrowserClickStep
-  target:
-    type: Xpath
-    value: "//div[text()='Add steps from the toolbar (above)']/..//button"
-
-main.steps/Click 3:
-  is: BrowserClickStep
-  target:
-    type: Xpath
-    value: "(//button[@title='Expand'])[last()]"
-
-main.steps/Click 4:
-  is: BrowserClickStep
-  target:
-    type: Visual
-    value: "main/Actions/Select placeholder/~main.yaml#main"
-
-main.steps/Write:
-  is: BrowserWriteStep
-  text: FizzBuzz Item
-
-main.steps/Enter:
-  is: BrowserEnterStep
-
-main.steps/Click 5:
-  is: BrowserClickStep
-  target:
-    type: Visual
-    value: "main/Actions/Select placeholder/~main.yaml#main"
-
-main.steps/Write 2:
-  is: BrowserWriteStep
-  text: Item
-
-main.steps/Enter 2:
-  is: BrowserEnterStep
-
-main.steps/Click 10:
-  is: BrowserClickStep
-  target:
-    type: Text
-    value: Input / Output
-
-main.steps/Click 7:
-  is: BrowserClickStep
-  target:
-    type: Text
-    value: Display
-
-main.steps/Run:
+main.steps/Insert Run:
   is: RunStep
-  instructions: "main/Actions/Insert Last.yaml#main"
+  instructions: "main/FizzBuzz/Loop/Insert Run.yaml#main"
 
-main.steps/Click 8:
-  is: BrowserClickStep
-  target:
-    type: Xpath
-    value: "(//button[@title='Expand'])[last()]"
-
-main.steps/Click 9:
-  is: BrowserClickStep
-  target:
-    type: Visual
-    value: "main/Actions/Select placeholder/~main.yaml#main"
-
-main.steps/Write 3:
-  is: BrowserWriteStep
-  text: Loop
-
-main.steps/Enter 3:
-  is: BrowserEnterStep
+main.steps/Insert Display:
+  is: RunStep
+  instructions: "main/FizzBuzz/Loop/Insert Display.yaml#main"

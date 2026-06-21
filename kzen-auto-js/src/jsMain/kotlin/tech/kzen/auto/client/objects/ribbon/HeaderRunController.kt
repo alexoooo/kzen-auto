@@ -310,44 +310,63 @@ class HeaderRunController (
         val executing = state.executing
         val runnable = state.runnable
 
-        // Transport: momentary actions (Step / Run-Pause / Stop) as an exclusive group.
-        ToggleButtonGroup {
+        // Two compact rows stacked at the top-right (right-aligned). This is a floated cluster, so the
+        // ribbon's tabs and sub-action buttons flow around it — filling the width beside it on the rows it
+        // covers, and reclaiming the full header width below it. The header is a BFC (flowRoot) so the
+        // taller-than-one-row cluster stays contained.
+        div {
+            css {
+                display = Display.flex
+                flexDirection = FlexDirection.column
+                alignItems = AlignItems.flexEnd
+            }
+
+            // Row 1 — transport: momentary actions (Step / Step Over / Step Out / Run-Pause / Stop) as an
+            // exclusive group.
+            ToggleButtonGroup {
 //                value = actionRun
-            exclusive = true
+                exclusive = true
+                size = Size.small
 
-            asDynamic()["onChange"] = { _, v ->
-                // An exclusive group emits null when the active button is re-clicked (deselect); ignore it.
-                val action = v as? String
-                if (action != null) {
-                    onAction(action, active, executing)
+                asDynamic()["onChange"] = { _, v ->
+                    // An exclusive group emits null when the active button is re-clicked (deselect); ignore it.
+                    val action = v as? String
+                    if (action != null) {
+                        onAction(action, active, executing)
+                    }
                 }
+
+                if (!active && !runnable) {
+                    title = "Current document is not runnable"
+                    disabled = true
+                }
+
+                renderStepButton(active, executing, runnable)
+                renderStepOverButton(active, executing)
+                renderStepOutButton(active, executing)
+                renderRunPauseButton(active, executing, runnable)
+                renderStopButton(active)
             }
 
-            if (!active && !runnable) {
-                title = "Current document is not runnable"
-                disabled = true
-            }
+            // Row 2 — run modes (persistent on/off toggles, kept OUT of the exclusive group so a deselect
+            // can't feed the `v as String` cast above) plus reset + inspect.
+            div {
+                css {
+                    display = Display.flex
+                    alignItems = AlignItems.center
+                    marginTop = 0.25.em
+                }
 
-            renderStepButton(active, executing, runnable)
-            renderStepOverButton(active, executing)
-            renderStepOutButton(active, executing)
-            renderRunPauseButton(active, executing, runnable)
-            renderStopButton(active)
+                renderSlowRunButton(active, executing, runnable)
+                renderSlowStepOverButton(active, executing, runnable)
+                renderPauseOnErrorToggle(active, runnable)
+
+                renderControlsDivider()
+
+                renderClearButton(active)
+                renderDetailsToggle(active)
+            }
         }
-
-        renderControlsDivider()
-
-        // Run modes: persistent on/off toggles. Kept OUT of the exclusive group so a deselect can't feed
-        // the `v as String` cast above, and so they read as a distinct "how to run" cluster.
-        renderSlowRunButton(active, executing, runnable)
-        renderSlowStepOverButton(active, executing, runnable)
-        renderPauseOnErrorToggle(active, runnable)
-
-        renderControlsDivider()
-
-        // Reset + inspect.
-        renderClearButton(active)
-        renderDetailsToggle(active)
     }
 
 
@@ -356,9 +375,22 @@ class HeaderRunController (
             orientation = Orientation.vertical
             flexItem = true
             sx {
-                marginLeft = 0.5.em
+                marginLeft = 0.25.em
                 marginRight = 0.25.em
             }
+        }
+    }
+
+
+    // Compact icon for a header run-control button: smaller than the former 1.5em and with no right
+    // margin (these buttons are icon-only), to keep the single-row control cluster narrow.
+    private fun ChildrenBuilder.controlIcon(name: String) {
+        span {
+            css {
+                fontSize = 1.2.em
+                marginBottom = (-0.2).em
+            }
+            icon(name) {}
         }
     }
 
@@ -370,11 +402,11 @@ class HeaderRunController (
             // Enabled whenever some trace is retained and nothing is running (Clear is global — see
             // onClear / hasTrace, which reflect ANY document's trace).
             disabled = active || !state.hasTrace
-            size = Size.medium
+            size = Size.small
 
             sx {
-                height = 34.px
-                marginLeft = 0.5.em
+                height = 30.px
+                marginLeft = 0.25.em
                 color = NamedColor.black
             }
 
@@ -383,14 +415,7 @@ class HeaderRunController (
             // ToggleButton's onClick is (event, value) -> Unit; ignore both and just clear.
             onClick = { _, _ -> onClear() }
 
-            span {
-                css {
-                    fontSize = 1.5.em
-                    marginRight = 0.25.em
-                    marginBottom = (-0.25).em
-                }
-                icon("material-symbols:replay") {}
-            }
+            controlIcon("material-symbols:replay")
         }
     }
 
@@ -409,11 +434,11 @@ class HeaderRunController (
             // Same availability as Step (start fresh, or continue from a pause); stays enabled while
             // looping so it can be toggled off.
             disabled = !(state.slowLooping || active && !executing || !active && runnable)
-            size = Size.medium
+            size = Size.small
 
             sx {
-                height = 34.px
-                marginLeft = 0.5.em
+                height = 30.px
+                marginLeft = 0.25.em
                 color = NamedColor.black
             }
 
@@ -428,14 +453,7 @@ class HeaderRunController (
             // ToggleButton's onClick is (event, value) -> Unit; ignore both and just toggle.
             onClick = { _, _ -> onSlowToggle(false) }
 
-            span {
-                css {
-                    fontSize = 1.5.em
-                    marginRight = 0.25.em
-                    marginBottom = (-0.25).em
-                }
-                icon("material-symbols:slow-motion-video") {}
-            }
+            controlIcon("material-symbols:slow-motion-video")
         }
     }
 
@@ -452,11 +470,11 @@ class HeaderRunController (
             selected = state.slowLooping && state.slowStepOver
 
             disabled = !(state.slowLooping || active && !executing || !active && runnable)
-            size = Size.medium
+            size = Size.small
 
             sx {
-                height = 34.px
-                marginLeft = 0.5.em
+                height = 30.px
+                marginLeft = 0.25.em
                 color = NamedColor.black
             }
 
@@ -470,14 +488,7 @@ class HeaderRunController (
 
             onClick = { _, _ -> onSlowToggle(true) }
 
-            span {
-                css {
-                    fontSize = 1.5.em
-                    marginRight = 0.25.em
-                    marginBottom = (-0.25).em
-                }
-                icon("material-symbols:autoplay") {}
-            }
+            controlIcon("material-symbols:autoplay")
         }
     }
 
@@ -489,11 +500,11 @@ class HeaderRunController (
 
             // Applies at run start only, so lock it once a run is active.
             disabled = active || !runnable
-            size = Size.medium
+            size = Size.small
 
             sx {
-                height = 34.px
-                marginLeft = 0.5.em
+                height = 30.px
+                marginLeft = 0.25.em
                 color = NamedColor.black
             }
 
@@ -502,14 +513,7 @@ class HeaderRunController (
             // ToggleButton's onClick is (event, value) -> Unit; we ignore both and just flip state.
             onClick = { _, _ -> onTogglePauseOnError() }
 
-            span {
-                css {
-                    fontSize = 1.5.em
-                    marginRight = 0.25.em
-                    marginBottom = (-0.25).em
-                }
-                icon("material-symbols:warning") {}
-            }
+            controlIcon("material-symbols:warning")
         }
     }
 
@@ -524,23 +528,16 @@ class HeaderRunController (
 
             disabled = !(active && !executing || !active && runnable)
 
-            size = Size.medium
+            size = Size.small
 
             sx {
-                height = 34.px
+                height = 30.px
                 color = NamedColor.black
             }
 
             title = "Step"
 
-            span {
-                css {
-                    fontSize = 1.5.em
-                    marginRight = 0.25.em
-                    marginBottom = (-0.25).em
-                }
-                icon("material-symbols:redo") {}
-            }
+            controlIcon("material-symbols:redo")
         }
     }
 
@@ -556,23 +553,16 @@ class HeaderRunController (
             // this step to completion instead of descending into it.
             disabled = !(active && !executing)
 
-            size = Size.medium
+            size = Size.small
 
             sx {
-                height = 34.px
+                height = 30.px
                 color = NamedColor.black
             }
 
             title = "Step over (run nested sub-documents to completion)"
 
-            span {
-                css {
-                    fontSize = 1.5.em
-                    marginRight = 0.25.em
-                    marginBottom = (-0.25).em
-                }
-                icon("material-symbols:step-over") {}
-            }
+            controlIcon("material-symbols:step-over")
         }
     }
 
@@ -588,23 +578,16 @@ class HeaderRunController (
             // next step (or finish, at the run root).
             disabled = !(active && !executing)
 
-            size = Size.medium
+            size = Size.small
 
             sx {
-                height = 34.px
+                height = 30.px
                 color = NamedColor.black
             }
 
             title = "Step out (run to end of current document)"
 
-            span {
-                css {
-                    fontSize = 1.5.em
-                    marginRight = 0.25.em
-                    marginBottom = (-0.25).em
-                }
-                icon("material-symbols:step-out") {}
-            }
+            controlIcon("material-symbols:step-out")
         }
     }
 
@@ -617,10 +600,10 @@ class HeaderRunController (
         ToggleButton {
             value = actionRunOrPause
             disabled = !active && !runnable
-            size = Size.medium
+            size = Size.small
 
             sx {
-                height = 34.px
+                height = 30.px
                 color = NamedColor.black
             }
 
@@ -642,18 +625,11 @@ class HeaderRunController (
                     }
             }
 
-            span {
-                css {
-                    fontSize = 1.5.em
-                    marginRight = 0.25.em
-                    marginBottom = (-0.25).em
-                }
-                if (executing) {
-                    icon("material-symbols:pause") {}
-                }
-                else {
-                    icon("material-symbols:play-arrow") {}
-                }
+            if (executing) {
+                controlIcon("material-symbols:pause")
+            }
+            else {
+                controlIcon("material-symbols:play-arrow")
             }
         }
     }
@@ -663,23 +639,16 @@ class HeaderRunController (
         ToggleButton {
             value = actionStop
             disabled = !active
-            size = Size.medium
+            size = Size.small
 
             sx {
-                height = 34.px
+                height = 30.px
                 color = NamedColor.black
             }
 
             title = "Stop"
 
-            span {
-                css {
-                    fontSize = 1.5.em
-                    marginRight = 0.25.em
-                    marginBottom = (-0.25).em
-                }
-                icon("material-symbols:stop") {}
-            }
+            controlIcon("material-symbols:stop")
         }
     }
 
@@ -698,6 +667,8 @@ class HeaderRunController (
                 }
 
             IconButton {
+                size = Size.small
+
                 sx {
                     if (active) {
                         color = NamedColor.black
