@@ -5,14 +5,7 @@ import react.ChildrenBuilder
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.common.objects.document.script.model.ScriptDependencyAnalysis
 import tech.kzen.lib.common.model.location.ObjectLocation
-import web.cssom.BoxSizing
-import web.cssom.Color
-import web.cssom.LineStyle
-import web.cssom.NamedColor
-import web.cssom.Position
-import web.cssom.number
-import web.cssom.pct
-import web.cssom.px
+import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------

@@ -3,10 +3,10 @@ package tech.kzen.auto.server.objects.script.model
 import tech.kzen.auto.common.objects.document.script.model.ScriptTree
 import tech.kzen.auto.common.objects.document.script.model.ScriptValidation
 import tech.kzen.auto.server.objects.script.api.ScriptValueBinding
-import tech.kzen.lib.common.exec.logic.trace.LogicTraceHandle
 import tech.kzen.lib.common.exec.logic.LogicControl
 import tech.kzen.lib.common.exec.logic.LogicHandleFacade
 import tech.kzen.lib.common.exec.logic.LogicResourceScope
+import tech.kzen.lib.common.exec.logic.trace.LogicTraceHandle
 import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.instance.GraphInstance

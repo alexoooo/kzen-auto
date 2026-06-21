@@ -1,6 +1,5 @@
 package tech.kzen.auto.common.objects.document.flow
 
-import tech.kzen.auto.common.objects.document.flow.FlowConventions
 import tech.kzen.auto.common.paradigm.flow.model.structure.cell.EdgeDescriptor
 import tech.kzen.lib.common.api.AttributeDefiner
 import tech.kzen.lib.common.model.attribute.AttributeName

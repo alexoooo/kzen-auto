@@ -28,11 +28,7 @@ import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
-import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
-import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
-import tech.kzen.lib.common.model.structure.notation.ObjectNotation
-import tech.kzen.lib.common.model.structure.notation.PositionRelation
-import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
+import tech.kzen.lib.common.model.structure.notation.*
 import tech.kzen.lib.common.model.structure.notation.cqrs.AddObjectCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.RemoveObjectCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.UpsertAttributeCommand

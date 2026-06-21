@@ -16,7 +16,7 @@ class FileIndexedSignatureStore(
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private fun signatureBytes(size: Int): Int {
-            return size * Long.SIZE_BYTES;
+            return size * Long.SIZE_BYTES
         }
     }
 

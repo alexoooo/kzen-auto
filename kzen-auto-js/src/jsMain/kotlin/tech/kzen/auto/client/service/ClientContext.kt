@@ -9,7 +9,10 @@ import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.global.ExecutionIntentGlobal
 import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.service.logic.ClientLogicGlobal
-import tech.kzen.auto.client.service.rest.*
+import tech.kzen.auto.client.service.rest.ClientRestApi
+import tech.kzen.auto.client.service.rest.ClientRestGraphStore
+import tech.kzen.auto.client.service.rest.ClientRestNotationMedia
+import tech.kzen.auto.client.service.rest.ClientRestTaskRepository
 import tech.kzen.auto.client.wrap.iconify.IconLoader
 import tech.kzen.auto.common.codegen.KzenAutoCommonModule
 import tech.kzen.lib.common.codegen.KzenLibCommonModule

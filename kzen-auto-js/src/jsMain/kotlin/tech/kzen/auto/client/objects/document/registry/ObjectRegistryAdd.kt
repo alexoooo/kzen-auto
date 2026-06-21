@@ -8,7 +8,6 @@ import react.ChildrenBuilder
 import react.Props
 import react.ReactNode
 import react.State
-import react.dom.html.ReactHTML
 import react.dom.html.ReactHTML.div
 import react.dom.onChange
 import tech.kzen.auto.client.objects.ProjectController
@@ -124,7 +123,7 @@ class ObjectRegistryAdd(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
-        ReactHTML.div {
+        div {
             css {
                 display = Display.tableRow
             }

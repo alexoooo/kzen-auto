@@ -1,5 +1,7 @@
 package tech.kzen.auto.client.wrap.iconify
 
+import tech.kzen.auto.client.wrap.iconify.IconNames.legacyMaterialAlias
+
 
 /**
  * Resolves an icon name to a fully-qualified Iconify name for `<Icon icon="...">`.

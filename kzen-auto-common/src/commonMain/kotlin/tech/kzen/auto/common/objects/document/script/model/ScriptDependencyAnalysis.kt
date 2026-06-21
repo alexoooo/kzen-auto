@@ -3,23 +3,12 @@ package tech.kzen.auto.common.objects.document.script.model
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
-import tech.kzen.lib.common.model.definition.AttributeDefinition
-import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
-import tech.kzen.lib.common.model.definition.ListAttributeDefinition
-import tech.kzen.lib.common.model.definition.MapAttributeDefinition
-import tech.kzen.lib.common.model.definition.ObjectDefinition
-import tech.kzen.lib.common.model.definition.ReferenceAttributeDefinition
-import tech.kzen.lib.common.model.definition.ServiceAttributeDefinition
-import tech.kzen.lib.common.model.definition.ValueAttributeDefinition
+import tech.kzen.lib.common.model.definition.*
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.location.ObjectReferenceHost
-import tech.kzen.lib.common.model.structure.notation.AttributeNotation
-import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
-import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
-import tech.kzen.lib.common.model.structure.notation.ObjectNotation
-import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
+import tech.kzen.lib.common.model.structure.notation.*
 
 
 data class ScriptStepDependency(

@@ -66,9 +66,7 @@ actual class Url(
 
         other as Url
 
-        if (uri != other.uri) return false
-
-        return true
+        return uri == other.uri
     }
 
 

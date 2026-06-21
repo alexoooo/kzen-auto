@@ -190,9 +190,7 @@ class FilePath private constructor(
 
         other as FilePath
 
-        if (location != other.location) return false
-
-        return true
+        return location == other.location
     }
 
 

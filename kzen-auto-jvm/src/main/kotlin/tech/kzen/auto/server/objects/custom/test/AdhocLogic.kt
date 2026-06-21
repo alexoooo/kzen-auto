@@ -1,16 +1,12 @@
 package tech.kzen.auto.server.objects.custom.test
 
-import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
-import tech.kzen.lib.common.exec.logic.trace.LogicTraceHandle
-import tech.kzen.lib.common.exec.logic.Logic
-import tech.kzen.lib.common.exec.logic.LogicControl
-import tech.kzen.lib.common.exec.logic.LogicExecution
-import tech.kzen.lib.common.exec.logic.LogicHandle
-import tech.kzen.lib.common.exec.logic.LogicResourceScope
+import tech.kzen.lib.common.exec.logic.*
 import tech.kzen.lib.common.exec.logic.model.LogicDefinition
 import tech.kzen.lib.common.exec.logic.model.LogicResult
 import tech.kzen.lib.common.exec.logic.model.LogicResultSuccess
 import tech.kzen.lib.common.exec.logic.model.LogicType
+import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
+import tech.kzen.lib.common.exec.logic.trace.LogicTraceHandle
 import tech.kzen.lib.common.exec.tuple.TupleComponentDefinition
 import tech.kzen.lib.common.exec.tuple.TupleComponentName
 import tech.kzen.lib.common.exec.tuple.TupleDefinition

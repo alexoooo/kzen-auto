@@ -11,15 +11,12 @@ import tech.kzen.auto.common.objects.document.report.output.OutputStatus
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotValueTableSpec
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputExploreSpec
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputType
-import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
 import tech.kzen.auto.plugin.api.managed.PipelineOutput
 import tech.kzen.auto.plugin.definition.ReportDefinition
 import tech.kzen.auto.plugin.model.PluginCoordinate
-import tech.kzen.auto.server.objects.report.exec.calc.CalculatedColumnEval
-import tech.kzen.auto.server.service.plugin.ReportDefinitionRepository
-import tech.kzen.lib.common.exec.logic.trace.LogicTraceHandle
 import tech.kzen.auto.server.objects.plugin.model.ClassLoaderHandle
 import tech.kzen.auto.server.objects.report.exec.ReportInputPipeline
+import tech.kzen.auto.server.objects.report.exec.calc.CalculatedColumnEval
 import tech.kzen.auto.server.objects.report.exec.event.ReportOutputEvent
 import tech.kzen.auto.server.objects.report.exec.event.output.DisruptorPipelineOutput
 import tech.kzen.auto.server.objects.report.exec.input.connect.file.FileFlatDataSource
@@ -40,16 +37,19 @@ import tech.kzen.auto.server.objects.report.exec.trace.ReportInputTrace
 import tech.kzen.auto.server.objects.report.exec.trace.ReportOutputTrace
 import tech.kzen.auto.server.objects.report.model.ReportRunContext
 import tech.kzen.auto.server.objects.report.service.ReportWorkPool
-import tech.kzen.lib.common.exec.logic.LogicControl
-import tech.kzen.lib.common.exec.logic.LogicExecution
-import tech.kzen.lib.common.exec.logic.LogicResourceScope
-import tech.kzen.lib.common.exec.logic.model.*
-import tech.kzen.lib.common.exec.tuple.TupleValue
+import tech.kzen.auto.server.service.plugin.ReportDefinitionRepository
 import tech.kzen.auto.server.util.ClassLoaderUtils
 import tech.kzen.auto.server.util.DisruptorUtils
 import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionResult
 import tech.kzen.lib.common.exec.ExecutionValue
+import tech.kzen.lib.common.exec.logic.LogicControl
+import tech.kzen.lib.common.exec.logic.LogicExecution
+import tech.kzen.lib.common.exec.logic.LogicResourceScope
+import tech.kzen.lib.common.exec.logic.model.*
+import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
+import tech.kzen.lib.common.exec.logic.trace.LogicTraceHandle
+import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import java.nio.file.Files
 import java.util.concurrent.atomic.AtomicBoolean
@@ -472,7 +472,7 @@ class ReportExecution(
         val recordExceptionHandler = recordExceptionHandler(/*control*/)
         recordDisruptor.setDefaultExceptionHandler(recordExceptionHandler)
 
-        return RecordDisruptor(recordDisruptor, /*executor*/)
+        return RecordDisruptor(recordDisruptor /*executor*/)
     }
 
 

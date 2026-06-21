@@ -2,7 +2,6 @@ package tech.kzen.auto.server.objects.script.step.control.foreach
 
 import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
-import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
 import tech.kzen.auto.server.objects.script.api.ScriptStepDefinition
 import tech.kzen.auto.server.objects.script.api.TracingScriptStep
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
@@ -10,6 +9,7 @@ import tech.kzen.auto.server.objects.script.model.ScriptExecutionContext
 import tech.kzen.auto.server.objects.script.step.control.MultiStep
 import tech.kzen.lib.common.exec.logic.StatefulLogicElement
 import tech.kzen.lib.common.exec.logic.model.*
+import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
 import tech.kzen.lib.common.exec.tuple.TupleDefinition
 import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.model.location.ObjectLocation

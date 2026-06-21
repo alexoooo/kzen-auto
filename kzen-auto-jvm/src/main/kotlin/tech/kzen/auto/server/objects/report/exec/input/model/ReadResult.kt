@@ -4,7 +4,7 @@ package tech.kzen.auto.server.objects.report.exec.input.model
 //@Suppress("EXPERIMENTAL_FEATURE_WARNING")
 //@OptIn(ExperimentalUnsignedTypes::class)
 @JvmInline
-value class ReadResult constructor(
+value class ReadResult(
     private val value: ULong
 ) {
     //-----------------------------------------------------------------------------------------------------------------

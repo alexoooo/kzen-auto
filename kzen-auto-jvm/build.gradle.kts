@@ -134,7 +134,7 @@ tasks.getByName<Jar>("jar") {
 }
 
 
-val sourcesJar by tasks.registering(Jar::class) {
+val sourcesJar = tasks.register<Jar>("sourcesJar") {
     archiveClassifier.set("sources")
     from(sourceSets.main.get().allSource)
 }

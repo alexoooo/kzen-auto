@@ -10,27 +10,22 @@ import react.Props
 import react.State
 import react.dom.events.DragEvent
 import react.dom.html.ReactHTML.div
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
+import tech.kzen.auto.client.objects.document.bridge.InsertionKey
 import tech.kzen.auto.client.objects.document.common.dragdrop.dropZoneRegion
 import tech.kzen.auto.client.objects.document.script.ScriptController
 import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
 import tech.kzen.auto.client.objects.document.script.display.ScriptStepSlot
 import tech.kzen.auto.client.objects.document.script.display.StepDisplayManager
 import tech.kzen.auto.client.objects.document.script.display.image.StepImageThumbnail
-import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
-import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
-import tech.kzen.auto.client.objects.document.bridge.InsertionKey
 import tech.kzen.auto.client.objects.document.script.model.ScriptDragStoreKey
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.contextValue
+import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.client.wrap.iconify.icon
-import tech.kzen.auto.client.wrap.installContextType
-import tech.kzen.auto.client.wrap.react
-import tech.kzen.auto.client.wrap.refCallback
-import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.objects.document.script.model.ScriptDependencyAnalysis
 import tech.kzen.lib.common.model.location.AttributeLocation
@@ -45,15 +40,7 @@ import tech.kzen.lib.common.model.structure.notation.cqrs.ShiftObjectTreeCommand
 import tech.kzen.lib.common.service.store.MirroredGraphStore
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import web.animations.requestAnimationFrame
-import web.cssom.AlignItems
-import web.cssom.Color
-import web.cssom.Display
-import web.cssom.NamedColor
-import web.cssom.Position
-import web.cssom.em
-import web.cssom.number
-import web.cssom.pct
-import web.cssom.px
+import web.cssom.*
 import web.html.HTMLDivElement
 
 
@@ -579,7 +566,7 @@ class ScriptBranchDisplay(
                 // NB: ref attaches to the OUTER row (gutter + body) so the overlay can compute the
                 //     polyline endpoint at row.left + laneWidth/2 — the phantom column's x.
                 //     React 19 invokes the returned Cleanup on unmount/ref-detach.
-                ref = refCallback<HTMLDivElement> { element ->
+                ref = refCallback { element ->
                     StepRowRefRegistry.register(stepLocation, element)
                     val cleanup: () -> Unit = { StepRowRefRegistry.unregister(stepLocation, element) }
                     cleanup
@@ -687,10 +674,7 @@ class ScriptBranchDisplay(
         val source = state.dragSource
             ?.takeIf { it.branchLocation == props.attributeLocation }
             ?.indexInBranch
-        if (source != null && (insertionIndex == source || insertionIndex == source + 1)) {
-            return false
-        }
-        return true
+        return !(source != null && (insertionIndex == source || insertionIndex == source + 1))
     }
 
 

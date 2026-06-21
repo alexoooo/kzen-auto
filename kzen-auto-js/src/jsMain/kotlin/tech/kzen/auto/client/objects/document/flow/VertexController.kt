@@ -8,9 +8,9 @@ import mui.material.MenuItem
 import react.*
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
+import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
 import tech.kzen.auto.client.objects.document.flow.edge.BottomEgress
 import tech.kzen.auto.client.objects.document.flow.edge.TopIngress
-import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ExecutionIntentGlobal
 import tech.kzen.auto.client.util.async

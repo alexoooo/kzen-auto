@@ -8,7 +8,10 @@ import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.common.dragdrop.dragHandle
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.lib.common.model.location.ObjectLocation
-import web.cssom.*
+import web.cssom.Color
+import web.cssom.Position
+import web.cssom.number
+import web.cssom.pct
 
 
 //---------------------------------------------------------------------------------------------------------------------

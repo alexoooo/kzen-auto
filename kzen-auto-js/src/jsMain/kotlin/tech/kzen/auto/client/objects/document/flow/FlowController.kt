@@ -18,20 +18,15 @@ import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
 import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.objects.document.bridge.InsertionKey
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
-import tech.kzen.auto.client.objects.document.flow.CellController
 import tech.kzen.auto.client.objects.ribbon.RibbonController
-import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.global.ExecutionIntentGlobal
 import tech.kzen.auto.client.service.global.InsertionGlobal
+import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.contextValue
+import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.client.wrap.iconify.icon
-import tech.kzen.auto.client.wrap.installContextType
-import tech.kzen.auto.client.wrap.react
-import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.flow.FlowConventions
 import tech.kzen.auto.common.objects.document.flow.FlowWiring
 import tech.kzen.auto.common.paradigm.flow.model.exec.VisualFlowModel
@@ -41,15 +36,12 @@ import tech.kzen.auto.common.paradigm.flow.model.structure.cell.CellCoordinate
 import tech.kzen.auto.common.paradigm.flow.model.structure.cell.CellDescriptor
 import tech.kzen.auto.common.paradigm.flow.model.structure.cell.EdgeDescriptor
 import tech.kzen.auto.common.paradigm.flow.model.structure.cell.VertexDescriptor
+import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.lib.common.model.structure.notation.DocumentNotation
-import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
-import tech.kzen.lib.common.model.structure.notation.ObjectNotation
-import tech.kzen.lib.common.model.structure.notation.PositionRelation
-import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
+import tech.kzen.lib.common.model.structure.notation.*
 import tech.kzen.lib.common.model.structure.notation.cqrs.InsertListItemInAttributeCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.InsertObjectInListAttributeCommand
 import tech.kzen.lib.common.reflect.Reflect
@@ -59,7 +51,6 @@ import tech.kzen.lib.common.service.store.MirroredGraphStore
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import tech.kzen.lib.platform.collect.persistentListOf
 import tech.kzen.lib.platform.collect.persistentMapOf
-import tech.kzen.auto.common.util.AutoConventions
 import web.cssom.*
 
 

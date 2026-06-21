@@ -10,5 +10,3 @@ class DataFormatDocument(
     val fields: FieldFormatListSpec
 ):
     DocumentArchetype()
-{
-}

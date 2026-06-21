@@ -1,8 +1,6 @@
 package tech.kzen.auto.server.objects.script
 
 import tech.kzen.auto.common.objects.document.DocumentArchetype
-import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
-import tech.kzen.lib.common.exec.logic.trace.LogicTraceHandle
 import tech.kzen.auto.server.objects.script.api.ScriptStep
 import tech.kzen.auto.server.objects.script.api.ScriptStepDefinition
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
@@ -15,6 +13,8 @@ import tech.kzen.lib.common.exec.logic.LogicHandle
 import tech.kzen.lib.common.exec.logic.model.LogicDefinition
 import tech.kzen.lib.common.exec.logic.model.LogicResult
 import tech.kzen.lib.common.exec.logic.model.LogicType
+import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
+import tech.kzen.lib.common.exec.logic.trace.LogicTraceHandle
 import tech.kzen.lib.common.exec.tuple.TupleComponentDefinition
 import tech.kzen.lib.common.exec.tuple.TupleComponentName
 import tech.kzen.lib.common.exec.tuple.TupleDefinition

@@ -12,7 +12,7 @@ import kotlin.io.path.name
 
 
 @Suppress("UnstableApiUsage")
-class FileFlatDataStream constructor(
+class FileFlatDataStream(
     location: Path,
     gzip: Boolean = location.name.endsWith(".gz"),
     bomPrefix: Boolean = true

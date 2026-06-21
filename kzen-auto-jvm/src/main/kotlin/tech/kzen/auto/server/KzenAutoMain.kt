@@ -12,7 +12,6 @@ import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import kotlin.system.exitProcess
 import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.api.staticResourceDir
 import tech.kzen.auto.common.api.staticResourcePath
@@ -22,6 +21,7 @@ import tech.kzen.auto.server.backend.indexPage
 import tech.kzen.auto.server.context.KzenAutoConfig
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.lib.common.util.ImmutableByteArray
+import kotlin.system.exitProcess
 
 
 //---------------------------------------------------------------------------------------------------------------------

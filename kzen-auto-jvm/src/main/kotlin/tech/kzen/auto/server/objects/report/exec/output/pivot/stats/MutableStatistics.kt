@@ -16,7 +16,7 @@ data class MutableStatistics(
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        const val sizeInBytes = Long.SIZE_BYTES + Double.SIZE_BYTES * 4;
+        const val sizeInBytes = Long.SIZE_BYTES + Double.SIZE_BYTES * 4
     }
 
 

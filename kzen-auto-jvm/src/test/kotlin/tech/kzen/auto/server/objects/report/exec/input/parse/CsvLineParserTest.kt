@@ -455,10 +455,10 @@ class CsvLineParserTest {
                 "0001,1,0,923774,04.1,0000,0925A,,NY,O,2,SOUTH END AVE,,01/05/0001 12:00:00 PM,408,F6,,BBBBBBB,ALL," +
                 "ALL,WHT,0,2006,-,0,,,,,,,,,,,,,,2006.00000099,foo2,199,2106.0"
         val record = read(csv)[0]
-        flyweight.selectHost(record);
+        flyweight.selectHost(record)
 
         for (i in 0 until record.fieldCount()) {
-            flyweight.selectField(i);
+            flyweight.selectField(i)
 
             val value = record.getString(i)
             assertEquals(value.toDoubleOrNull() ?: Double.NaN, flyweight.toDoubleOrNan(), value)

@@ -1,7 +1,7 @@
 package tech.kzen.auto.common.objects.document.report
 
-import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
 import tech.kzen.auto.common.util.data.DataLocation
+import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.attribute.AttributeSegment

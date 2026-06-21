@@ -2,17 +2,12 @@ package tech.kzen.auto.client.objects.sidebar
 
 import emotion.react.css
 import js.objects.unsafeJso
-import js.reflect.unsafeCast
 import kotlinx.browser.window
 import mui.material.Divider
 import mui.material.IconButton
 import mui.material.MenuItem
 import mui.system.sx
-import react.CSSProperties
-import react.ChildrenBuilder
-import react.Key
-import react.RefObject
-import react.State
+import react.*
 import react.dom.html.HTMLAttributes
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
@@ -24,16 +19,8 @@ import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.DocumentCreator
-import tech.kzen.lib.common.model.document.DocumentForm
-import tech.kzen.lib.common.model.document.DocumentName
-import tech.kzen.lib.common.model.document.DocumentNesting
-import tech.kzen.lib.common.model.document.DocumentPath
-import tech.kzen.lib.common.model.document.DocumentSegment
-import tech.kzen.lib.common.model.structure.notation.cqrs.CreateDocumentCommand
-import tech.kzen.lib.common.model.structure.notation.cqrs.CreateFolderCommand
-import tech.kzen.lib.common.model.structure.notation.cqrs.DeleteFolderCommand
-import tech.kzen.lib.common.model.structure.notation.cqrs.MoveDocumentRefactorCommand
-import tech.kzen.lib.common.model.structure.notation.cqrs.MoveFolderRefactorCommand
+import tech.kzen.lib.common.model.document.*
+import tech.kzen.lib.common.model.structure.notation.cqrs.*
 import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.common.service.store.MirroredGraphStore
 import tech.kzen.lib.common.util.naming.NextAvailableName

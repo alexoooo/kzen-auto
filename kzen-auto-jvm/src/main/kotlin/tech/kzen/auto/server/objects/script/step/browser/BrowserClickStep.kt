@@ -6,13 +6,13 @@ import tech.kzen.auto.server.objects.script.api.ScriptStepDefinition
 import tech.kzen.auto.server.objects.script.api.TracingScriptStep
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
 import tech.kzen.auto.server.objects.script.model.ScriptExecutionContext
+import tech.kzen.auto.server.service.vision.VisionUtils
+import tech.kzen.auto.server.service.webdriver.WebDriverContext
+import tech.kzen.lib.common.exec.BinaryExecutionValue
 import tech.kzen.lib.common.exec.logic.model.LogicResult
 import tech.kzen.lib.common.exec.logic.model.LogicResultFailed
 import tech.kzen.lib.common.exec.logic.model.LogicResultSuccess
 import tech.kzen.lib.common.exec.tuple.TupleValue
-import tech.kzen.auto.server.service.vision.VisionUtils
-import tech.kzen.lib.common.exec.BinaryExecutionValue
-import tech.kzen.auto.server.service.webdriver.WebDriverContext
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service

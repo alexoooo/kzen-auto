@@ -306,7 +306,7 @@ class ReportSummary(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun add(recordRow: FlatFileRecord, header: HeaderListing) {
-        flyweight.selectHost(recordRow);
+        flyweight.selectHost(recordRow)
 
         val indices = headerIndex.indices(header)
         for (i in builders.indices) {

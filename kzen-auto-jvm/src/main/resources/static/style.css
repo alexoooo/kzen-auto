@@ -4,7 +4,7 @@ body {
     font-family: Roboto, Arial, Helvetica, sans-serif;
 }
 
-// NB: referenced in CssClasses.kt
+/* NB: referenced in CssClasses.kt */
 
 #root {
     position: absolute;
@@ -51,5 +51,4 @@ body {
 
 .glowingText {
     text-shadow: 1px 1px 3px rgba(255, 215, 0, 0.5);
-//    text-shadow: 1px 1px 3px rgba(255, 184, 45, 0.5);
 }

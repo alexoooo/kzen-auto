@@ -18,8 +18,8 @@ import tech.kzen.auto.client.objects.document.report.input.select.InputSelectedC
 import tech.kzen.auto.client.objects.document.report.run.model.ReportRunProgress
 import tech.kzen.auto.client.objects.document.report.widget.ReportBottomEgress
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.material.FadeTimeout
 import tech.kzen.auto.client.wrap.iconify.icon
+import tech.kzen.auto.client.wrap.material.FadeTimeout
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.report.listing.InputSelectedInfo

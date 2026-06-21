@@ -8,14 +8,14 @@ import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.objects.document.script.model.RunStepInstructions
 import tech.kzen.auto.common.paradigm.logic.LogicConventions
 import tech.kzen.lib.common.exec.BinaryExecutionValue
+import tech.kzen.lib.common.exec.ExecutionFailure
+import tech.kzen.lib.common.exec.ExecutionSuccess
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceEvent
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceQuery
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceSnapshot
-import tech.kzen.lib.common.exec.ExecutionFailure
-import tech.kzen.lib.common.exec.ExecutionSuccess
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.model.structure.notation.GraphNotation

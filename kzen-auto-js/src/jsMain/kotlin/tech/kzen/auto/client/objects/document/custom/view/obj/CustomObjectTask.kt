@@ -15,12 +15,12 @@ import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.setState
-import tech.kzen.lib.common.exec.task.model.TaskModel
-import tech.kzen.lib.common.exec.task.model.TaskState
 import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionSuccess
 import tech.kzen.lib.common.exec.RequestParams
+import tech.kzen.lib.common.exec.task.model.TaskModel
+import tech.kzen.lib.common.exec.task.model.TaskState
 import tech.kzen.lib.common.model.location.ObjectLocation
 import web.cssom.FontStyle
 import web.cssom.em

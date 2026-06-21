@@ -92,8 +92,8 @@ class FeatureController(
         }
 
 
-        override fun header(): ReactWrapper<react.Props> {
-            return object: ReactWrapper<react.Props> {
+        override fun header(): ReactWrapper<Props> {
+            return object: ReactWrapper<Props> {
 //                override fun child(builder: ChildrenBuilder, block: Props.() -> Unit) {}
                 override fun ChildrenBuilder.child(block: Props.() -> Unit) {}
             }

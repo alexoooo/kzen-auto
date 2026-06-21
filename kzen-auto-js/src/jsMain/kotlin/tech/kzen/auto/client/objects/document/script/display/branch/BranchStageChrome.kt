@@ -4,18 +4,7 @@ import emotion.react.css
 import react.ChildrenBuilder
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.script.display.ScriptStepDisplayDefault
-import web.cssom.Border
-import web.cssom.Color
-import web.cssom.LineStyle
-import web.cssom.MaskImage
-import web.cssom.NamedColor
-import web.cssom.None
-import web.cssom.Position
-import web.cssom.deg
-import web.cssom.em
-import web.cssom.linearGradient
-import web.cssom.px
-import web.cssom.stop
+import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------

@@ -6,6 +6,8 @@ import react.Key
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeViewManager
 import tech.kzen.auto.client.objects.document.script.display.ScriptStepDisplayDefault
@@ -14,15 +16,9 @@ import tech.kzen.auto.client.objects.document.script.display.ScriptStepDisplayWr
 import tech.kzen.auto.client.objects.document.script.display.image.ScreenshotThumbnail
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
 import tech.kzen.auto.client.objects.document.script.model.ScriptStore
-import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
-import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.objects.document.script.model.ScriptStoreKey
 import tech.kzen.auto.client.service.global.ClientStateGlobal
-import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.contextValue
-import tech.kzen.auto.client.wrap.installContextType
-import tech.kzen.auto.client.wrap.react
-import tech.kzen.auto.client.wrap.setState
+import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.script.model.RunStepInstructions
 import tech.kzen.lib.common.exec.BinaryExecutionValue
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceEvent
@@ -32,13 +28,7 @@ import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.service.store.MirroredGraphStore
 import tech.kzen.lib.common.service.store.normal.ObjectStableId
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
-import web.cssom.AlignItems
-import web.cssom.Color
-import web.cssom.Cursor
-import web.cssom.Display
-import web.cssom.FlexWrap
-import web.cssom.FontWeight
-import web.cssom.em
+import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------

@@ -1,11 +1,7 @@
 package tech.kzen.auto.client.objects.document.script.model
 
 import kotlinx.coroutines.delay
-import tech.kzen.auto.client.objects.document.common.raw.DocumentRawHost
-import tech.kzen.auto.client.objects.document.common.raw.DocumentRawSnapshot
-import tech.kzen.auto.client.objects.document.common.raw.DocumentRawState
-import tech.kzen.auto.client.objects.document.common.raw.DocumentRawStore
-import tech.kzen.auto.client.objects.document.common.raw.DocumentViewMode
+import tech.kzen.auto.client.objects.document.common.raw.*
 import tech.kzen.auto.client.objects.document.script.progress.ScriptProgressStore
 import tech.kzen.auto.client.objects.document.script.valid.ScriptValidationState
 import tech.kzen.auto.client.objects.document.script.valid.ScriptValidationStore

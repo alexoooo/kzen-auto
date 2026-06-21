@@ -9,13 +9,7 @@ import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.common.objects.document.script.model.StepTrace
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.service.store.MirroredGraphStore
-import web.cssom.LineStyle
-import web.cssom.NamedColor
-import web.cssom.Overflow
-import web.cssom.Padding
-import web.cssom.Transition
-import web.cssom.em
-import web.cssom.px
+import web.cssom.*
 
 
 // Shared white-card scaffold for branch-bearing steps (If, ForEach): a header row over an

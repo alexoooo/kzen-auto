@@ -15,13 +15,9 @@ import tech.kzen.auto.common.objects.document.report.spec.input.InputSpec
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputExploreSpec
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputSpec
 import tech.kzen.auto.common.paradigm.detached.DetachedAction
-import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
-import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
-import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
 import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.common.util.data.DataLocationJvm.normalize
-import tech.kzen.lib.common.exec.logic.trace.LogicTraceHandle
 import tech.kzen.auto.server.objects.plugin.PluginUtils.asCommon
 import tech.kzen.auto.server.objects.plugin.PluginUtils.asPluginCoordinate
 import tech.kzen.auto.server.objects.report.exec.calc.CalculatedColumnEval
@@ -42,16 +38,20 @@ import tech.kzen.auto.server.paradigm.detached.DetachedDownloadAction
 import tech.kzen.auto.server.paradigm.detached.ExecutionDownloadResult
 import tech.kzen.auto.server.service.impl.ServerLogicController
 import tech.kzen.auto.server.service.plugin.ReportDefinitionRepository
+import tech.kzen.auto.server.util.ClassLoaderUtils
+import tech.kzen.auto.server.util.WorkUtils
+import tech.kzen.lib.common.exec.*
 import tech.kzen.lib.common.exec.logic.Logic
 import tech.kzen.lib.common.exec.logic.LogicControl
 import tech.kzen.lib.common.exec.logic.LogicExecution
 import tech.kzen.lib.common.exec.logic.LogicHandle
 import tech.kzen.lib.common.exec.logic.model.LogicDefinition
 import tech.kzen.lib.common.exec.logic.model.LogicType
+import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
+import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
+import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
+import tech.kzen.lib.common.exec.logic.trace.LogicTraceHandle
 import tech.kzen.lib.common.exec.tuple.TupleDefinition
-import tech.kzen.auto.server.util.ClassLoaderUtils
-import tech.kzen.auto.server.util.WorkUtils
-import tech.kzen.lib.common.exec.*
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
@@ -145,7 +145,7 @@ class ReportDocument(
                 actionOutputReset()
 
             else ->
-                return ExecutionFailure("Unknown action: $action")
+                ExecutionFailure("Unknown action: $action")
         }
     }
 

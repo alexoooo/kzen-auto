@@ -7,29 +7,20 @@ import mui.material.IconButton
 import mui.material.Modal
 import org.w3c.dom.events.Event
 import org.w3c.dom.events.KeyboardEvent
-import react.ChildrenBuilder
-import react.Key
-import react.Props
-import react.RefObject
-import react.State
+import react.*
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.img
 import react.dom.html.ReactHTML.input
-import tech.kzen.auto.client.objects.document.script.model.ScriptState
 import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
 import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
+import tech.kzen.auto.client.objects.document.script.model.ScriptState
 import tech.kzen.auto.client.objects.document.script.model.ScriptStoreKey
 import tech.kzen.auto.client.service.global.ClientStateGlobal
-import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.contextValue
-import tech.kzen.auto.client.wrap.createRef
-import tech.kzen.auto.client.wrap.installContextType
+import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.client.wrap.iconify.icon
-import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import web.cssom.*
 import web.html.HTMLImageElement
-import web.html.HTMLInputElement
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -366,7 +357,7 @@ class StepImageFullscreen(
             }
 
             onChange = { event ->
-                val nextIndex = (event.target as HTMLInputElement).value.toIntOrNull()
+                val nextIndex = event.currentTarget.value.toIntOrNull()
                 if (nextIndex != null) {
                     entries.getOrNull(nextIndex)?.let { navigateTo(it.key) }
                 }

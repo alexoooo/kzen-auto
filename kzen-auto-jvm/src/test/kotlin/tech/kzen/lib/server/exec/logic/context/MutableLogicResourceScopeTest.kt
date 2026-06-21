@@ -53,7 +53,7 @@ class MutableLogicResourceScopeTest {
 
         scope.disposeAll(error = false)
 
-        assertEquals(emptyList<String>(), fired)
+        assertEquals(emptyList(), fired)
     }
 
 

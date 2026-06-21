@@ -29,7 +29,7 @@ import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------
-external interface ReportControllerProps: react.Props {
+external interface ReportControllerProps: Props {
     var clientStateGlobal: ClientStateGlobal
     var mirroredGraphStore: MirroredGraphStore
     var restClient: ClientRestApi

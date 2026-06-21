@@ -20,11 +20,7 @@ import tech.kzen.auto.client.objects.document.custom.view.CustomViewModel
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.service.rest.ClientRestTaskRepository
-import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.contextValue
-import tech.kzen.auto.client.wrap.installContextType
-import tech.kzen.auto.client.wrap.react
-import tech.kzen.auto.client.wrap.setState
+import tech.kzen.auto.client.wrap.*
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service

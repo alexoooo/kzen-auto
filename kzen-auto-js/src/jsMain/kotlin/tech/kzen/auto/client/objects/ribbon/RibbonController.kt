@@ -16,12 +16,8 @@ import tech.kzen.auto.client.objects.document.bridge.ViewModeKey
 import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.contextValue
-import tech.kzen.auto.client.wrap.installContextType
+import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.client.wrap.iconify.icon
-import tech.kzen.auto.client.wrap.react
-import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.exec.RequestParams

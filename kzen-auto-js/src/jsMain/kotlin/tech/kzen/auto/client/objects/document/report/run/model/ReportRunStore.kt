@@ -7,14 +7,14 @@ import tech.kzen.auto.client.util.ClientSuccess
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.paradigm.logic.LogicConventions
+import tech.kzen.lib.common.exec.ExecutionFailure
+import tech.kzen.lib.common.exec.ExecutionSuccess
 import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceQuery
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceSnapshot
-import tech.kzen.lib.common.exec.ExecutionFailure
-import tech.kzen.lib.common.exec.ExecutionSuccess
 
 
 class ReportRunStore(

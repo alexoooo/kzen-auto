@@ -19,10 +19,10 @@ import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.auto.server.service.compile.ScriptKotlinCompiler
 import tech.kzen.auto.server.service.exec.ModelDetachedExecutor
 import tech.kzen.auto.server.service.exec.ModelTaskRepository
+import tech.kzen.auto.server.service.impl.ServerLogicController
 import tech.kzen.auto.server.service.plugin.HostReportDefinitionRepository
 import tech.kzen.auto.server.service.plugin.MultiDefinitionRepository
 import tech.kzen.auto.server.service.plugin.ReportDefinitionRepository
-import tech.kzen.auto.server.service.impl.ServerLogicController
 import tech.kzen.auto.server.service.webdriver.WebDriverContext
 import tech.kzen.auto.server.util.WorkUtils
 import tech.kzen.lib.common.codegen.KzenLibCommonModule
@@ -39,8 +39,8 @@ import tech.kzen.lib.common.service.parse.YamlNotationParser
 import tech.kzen.lib.common.service.store.DirectGraphStore
 import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
-import tech.kzen.lib.server.exec.logic.trace.LogicTraceStore
 import tech.kzen.lib.platform.ClassName
+import tech.kzen.lib.server.exec.logic.trace.LogicTraceStore
 import tech.kzen.lib.server.notation.ClasspathNotationMedia
 import tech.kzen.lib.server.notation.FileNotationMedia
 import tech.kzen.lib.server.notation.locate.FileNotationLocator

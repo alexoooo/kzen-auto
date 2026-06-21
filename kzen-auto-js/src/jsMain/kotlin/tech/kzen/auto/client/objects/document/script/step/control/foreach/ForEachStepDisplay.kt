@@ -5,31 +5,18 @@ import react.ChildrenBuilder
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
-import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
-import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
-import tech.kzen.auto.client.objects.document.script.display.ScriptStepDisplayProps
-import tech.kzen.auto.client.objects.document.script.display.ScriptStepDisplayWrapper
-import tech.kzen.auto.client.objects.document.script.display.StepDisplayManager
-import tech.kzen.auto.client.objects.document.script.display.branch.branchHeaderSlab
-import tech.kzen.auto.client.objects.document.script.display.branch.branchStageBase
-import tech.kzen.auto.client.objects.document.script.display.branch.branchStageLedge
-import tech.kzen.auto.client.objects.document.script.display.branch.branchStageSeam
-import tech.kzen.auto.client.objects.document.script.display.branch.branchStageTopShadow
-import tech.kzen.auto.client.objects.document.script.display.branch.scriptBranchContainer
-import tech.kzen.auto.client.objects.document.script.display.computeStepHeaderInfo
-import tech.kzen.auto.client.objects.document.script.display.computeStepTraceInfo
-import tech.kzen.auto.client.objects.document.script.model.ScriptState
-import tech.kzen.auto.client.objects.document.script.model.ScriptStore
 import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
 import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
+import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
+import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
+import tech.kzen.auto.client.objects.document.script.display.*
+import tech.kzen.auto.client.objects.document.script.display.branch.*
+import tech.kzen.auto.client.objects.document.script.model.ScriptState
+import tech.kzen.auto.client.objects.document.script.model.ScriptStore
 import tech.kzen.auto.client.objects.document.script.model.ScriptStoreKey
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
-import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.contextValue
-import tech.kzen.auto.client.wrap.installContextType
-import tech.kzen.auto.client.wrap.react
-import tech.kzen.auto.client.wrap.setState
+import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.objects.document.script.model.StepTrace
 import tech.kzen.lib.common.exec.ExecutionValue
@@ -43,11 +30,7 @@ import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.service.store.MirroredGraphStore
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
-import web.cssom.Color
-import web.cssom.FontWeight
-import web.cssom.NamedColor
-import web.cssom.Position
-import web.cssom.em
+import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------

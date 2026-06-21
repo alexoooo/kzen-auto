@@ -32,11 +32,7 @@ data class RowSignature(
 
         other as RowSignature
 
-        if (!valueIndexes.contentEquals(other.valueIndexes)) {
-            return false
-        }
-
-        return true
+        return valueIndexes.contentEquals(other.valueIndexes)
     }
 
 

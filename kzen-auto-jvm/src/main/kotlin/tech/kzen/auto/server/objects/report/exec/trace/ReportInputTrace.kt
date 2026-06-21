@@ -6,8 +6,8 @@ import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.report.progress.ReportFileProgress
 import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.auto.common.util.data.DataLocation
-import tech.kzen.lib.common.exec.logic.trace.LogicTraceHandle
 import tech.kzen.lib.common.exec.ExecutionValue
+import tech.kzen.lib.common.exec.logic.trace.LogicTraceHandle
 import java.util.concurrent.TimeUnit
 import kotlin.time.Clock
 import kotlin.time.Instant

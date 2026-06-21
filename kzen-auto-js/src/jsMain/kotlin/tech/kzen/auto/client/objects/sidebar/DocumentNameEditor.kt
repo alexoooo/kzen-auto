@@ -2,11 +2,8 @@ package tech.kzen.auto.client.objects.sidebar
 
 import emotion.react.css
 import js.objects.unsafeJso
-import mui.material.IconButton
-import mui.material.Popover
-import mui.material.PopoverOrigin
+import mui.material.*
 import mui.material.Size
-import mui.material.TextField
 import react.ChildrenBuilder
 import react.PropsWithRef
 import react.RefObject
