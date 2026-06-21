@@ -1,6 +1,7 @@
 package tech.kzen.auto.client.objects.document.script.display.image
 
 import emotion.react.css
+import kotlinx.browser.document
 import kotlinx.browser.window
 import react.ChildrenBuilder
 import react.Props
@@ -250,11 +251,27 @@ class StepImageThumbnail(
 
         val vh = window.innerHeight.toDouble()
         val left = rect.right + GAP_PX
+
+        // The app header is a fixed band at the top of the viewport that body content scrolls under;
+        // clamp the preview below the header's live bottom edge (not the raw viewport top, which let the
+        // preview slide behind the header when the thumbnail scrolled up under it). coerceAtLeast last so
+        // a too-short viewport clips the bottom rather than hiding the preview behind the header.
+        val minTop = appHeaderBottomPx() + GAP_PX
         val top = rect.top
             .coerceAtMost(vh - PREVIEW_MAX_H_PX - GAP_PX)
-            .coerceAtLeast(GAP_PX)
+            .coerceAtLeast(minTop)
 
         return left to top
+    }
+
+
+    // Bottom edge (viewport px) of the fixed app header, measured live so a taller header (ribbon tab /
+    // raw-view changes its height) is respected; 0 if it isn't in the DOM. The header carries the
+    // data-app-header marker set in ProjectController.
+    private fun appHeaderBottomPx(): Double {
+        val header = document.querySelector("[data-app-header]")
+            ?: return 0.0
+        return header.getBoundingClientRect().bottom
     }
 
 

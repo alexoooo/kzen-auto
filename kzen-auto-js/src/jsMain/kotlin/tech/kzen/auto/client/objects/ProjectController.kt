@@ -501,6 +501,11 @@ class ProjectController(
 
                 div {
                     ref = headerElement
+
+                    // Marker so viewport-anchored overlays elsewhere in the body (e.g. the script step
+                    // screenshot preview) can measure this fixed header's live height and stay clear of it.
+                    asDynamic()["data-app-header"] = ""
+
                     props.headerController.child(this) {
                         headerModel = state.headerModel
                     }
