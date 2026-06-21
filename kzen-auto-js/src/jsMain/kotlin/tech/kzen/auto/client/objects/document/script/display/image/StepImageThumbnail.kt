@@ -40,10 +40,6 @@ external interface StepImageThumbnailProps: Props {
 external interface StepImageThumbnailState: State {
     var screenshot: BinaryExecutionValue?
 
-    // The location whose screenshot is shown — usually props.objectLocation, but for a RunStep it
-    // redirects to the last screenshot-bearing step of its sub-script. Drives the full-screen target.
-    var resolvedLocation: ObjectLocation?
-
     // For a RunStep only: the frame a hovered strip thumbnail is requesting (via ScriptState). When
     // non-null it overrides what the floating preview shows — the small thumbnail keeps showing
     // `screenshot` (the latest), only the large preview tracks the hover.
@@ -55,6 +51,10 @@ external interface StepImageThumbnailState: State {
     var floatingLeft: Double
 
     var fullscreenOpen: Boolean
+
+    // Page-sequence key the full-screen viewer opens on (see PageScreenshotEntry): a RunStep opens on
+    // its representative frame, which coincides with one of the strip frames; any other step on its own.
+    var openKey: String
 }
 
 
@@ -141,13 +141,13 @@ class StepImageThumbnail(
     //-----------------------------------------------------------------------------------------------------------------
     override fun StepImageThumbnailState.init(props: StepImageThumbnailProps) {
         screenshot = null
-        resolvedLocation = null
         previewScreenshot = null
         hovered = false
         expanded = false
         floatingTop = 0.0
         floatingLeft = 0.0
         fullscreenOpen = false
+        openKey = ""
     }
 
 
@@ -158,28 +158,21 @@ class StepImageThumbnail(
         // there's no entry, so fall back to the step's own latest frame from the trace snapshot.
         val runStepStableId = props.objectStableMapper.objectStableId(props.objectLocation)
         val representative = scriptState.progress.representativeFrame(runStepStableId)
+        val nextScreenshot: BinaryExecutionValue? =
+            (representative?.value as? BinaryExecutionValue)
+                ?: computeStepTraceInfo(scriptState, props.objectLocation, props.objectStableMapper)
+                    .trace?.detail as? BinaryExecutionValue
 
-        val nextScreenshot: BinaryExecutionValue?
-        val resolvedLocation: ObjectLocation
-        if (representative != null) {
-            nextScreenshot = representative.value as? BinaryExecutionValue
-            // Full-screen opens on the capturing step (the representative is its latest frame).
-            resolvedLocation =
-                try {
-                    props.objectStableMapper.objectLocation(representative.objectStableId)
-                }
-                catch (_: IllegalArgumentException) {
-                    props.objectLocation
-                }
-        }
-        else {
-            nextScreenshot = computeStepTraceInfo(scriptState, props.objectLocation, props.objectStableMapper)
-                .trace?.detail as? BinaryExecutionValue
-            resolvedLocation = props.objectLocation
-        }
+        // A RunStep opens full-screen on its representative frame (which is one of its strip frames when
+        // expanded); any other step on its own page entry.
+        val nextOpenKey =
+            if (representative != null) {
+                PageScreenshotEntry.frameKey(representative.sequence)
+            }
+            else {
+                PageScreenshotEntry.stepKey(props.objectLocation)
+            }
 
-        // Expansion follows the step the thumbnail is attached to (props.objectLocation), not the
-        // redirected screenshot location.
         val nextExpanded = scriptState.isStepExpanded(props.objectLocation)
 
         // A hovered detail-strip frame requests a specific frame via ScriptState; show it in the
@@ -189,9 +182,9 @@ class StepImageThumbnail(
 
         val screenshotChanged = state.screenshot !== nextScreenshot
         val expandedChanged = state.expanded != nextExpanded
-        val resolvedChanged = state.resolvedLocation != resolvedLocation
         val previewChanged = state.previewScreenshot !== nextPreviewScreenshot
-        if (!screenshotChanged && !expandedChanged && !resolvedChanged && !previewChanged) {
+        val openKeyChanged = state.openKey != nextOpenKey
+        if (!screenshotChanged && !expandedChanged && !previewChanged && !openKeyChanged) {
             return
         }
 
@@ -209,8 +202,8 @@ class StepImageThumbnail(
         setState {
             this.screenshot = nextScreenshot
             this.expanded = nextExpanded
-            this.resolvedLocation = resolvedLocation
             this.previewScreenshot = nextPreviewScreenshot
+            this.openKey = nextOpenKey
         }
     }
 
@@ -367,8 +360,8 @@ class StepImageThumbnail(
 
         if (state.fullscreenOpen) {
             StepImageFullscreen::class.react {
-                // For a RunStep, open on the resolved sub-script frame so navigation walks the sub-script.
-                initialLocation = state.resolvedLocation ?: props.objectLocation
+                // Open on this thumbnail's entry; left/right then walks the whole page in reading order.
+                initialKey = state.openKey
                 onClose = { onFullscreenClose() }
                 objectStableMapper = props.objectStableMapper
                 clientStateGlobal = props.clientStateGlobal

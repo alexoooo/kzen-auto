@@ -304,7 +304,9 @@ class RunStepDisplay(
                         ScreenshotThumbnail::class.react {
                             key = Key(frame.sequence.toString())
                             screenshot = frame.value as BinaryExecutionValue
-                            label = group.label
+                            sequence = frame.sequence
+                            objectStableMapper = props.objectStableMapper
+                            clientStateGlobal = props.clientStateGlobal
 
                             // Hovering a frame drives this RunStep's right-of-step big preview; null on
                             // leave reverts it to the latest representative frame.

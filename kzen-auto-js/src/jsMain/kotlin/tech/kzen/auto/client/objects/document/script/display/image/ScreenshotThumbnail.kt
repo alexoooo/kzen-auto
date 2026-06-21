@@ -6,17 +6,24 @@ import react.Props
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.img
+import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.exec.BinaryExecutionValue
+import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------
 external interface ScreenshotThumbnailProps: Props {
     var screenshot: BinaryExecutionValue
-    var label: String
+
+    // This frame's global trace sequence — its identity in the page screenshot sequence, so the
+    // full-screen viewer opens on this exact frame and left/right walks the page from here.
+    var sequence: Long
+    var objectStableMapper: ObjectStableMapper
+    var clientStateGlobal: ClientStateGlobal
 
     // Hover delegation: reports the hovered screenshot (null on leave) so the host — the RunStep's
     // right-of-step thumbnail — shows it in its big preview. NB: plain (non-receiver) function type;
@@ -124,10 +131,12 @@ class ScreenshotThumbnail(
         }
 
         if (state.fullscreenOpen) {
-            ScreenshotFullscreen::class.react {
-                screenshot = props.screenshot
-                label = props.label
+            StepImageFullscreen::class.react {
+                // Open on this strip frame; left/right then walks the whole page in reading order.
+                initialKey = PageScreenshotEntry.frameKey(props.sequence)
                 onClose = { onFullscreenClose() }
+                objectStableMapper = props.objectStableMapper
+                clientStateGlobal = props.clientStateGlobal
             }
         }
     }

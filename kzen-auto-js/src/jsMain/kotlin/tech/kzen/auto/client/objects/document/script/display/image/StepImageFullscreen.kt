@@ -12,12 +12,9 @@ import react.Props
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.img
-import tech.kzen.auto.client.objects.document.script.display.computeStepHeaderInfo
-import tech.kzen.auto.client.objects.document.script.display.computeStepTraceInfo
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
 import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
 import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
-import tech.kzen.auto.common.objects.document.script.model.ScriptTree
 import tech.kzen.auto.client.objects.document.script.model.ScriptStoreKey
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
@@ -25,15 +22,15 @@ import tech.kzen.auto.client.wrap.contextValue
 import tech.kzen.auto.client.wrap.installContextType
 import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.setState
-import tech.kzen.lib.common.exec.BinaryExecutionValue
-import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------
 external interface StepImageFullscreenProps: Props {
-    var initialLocation: ObjectLocation
+    // Key (see PageScreenshotEntry) of the thumbnail the viewer was opened from — the starting position
+    // in the page screenshot sequence.
+    var initialKey: String
     var onClose: () -> Unit
     var objectStableMapper: ObjectStableMapper
     var clientStateGlobal: ClientStateGlobal
@@ -41,21 +38,24 @@ external interface StepImageFullscreenProps: Props {
 
 
 external interface StepImageFullscreenState: State {
-    // Which step's screenshot the full-screen view currently shows; navigation moves it between
-    // steps while this component stays mounted.
-    var location: ObjectLocation
+    // Key of the screenshot currently shown; prev/next moves it along the page sequence while this
+    // component stays mounted.
+    var currentKey: String
 }
 
 
 //---------------------------------------------------------------------------------------------------------------------
-// Full-screen image viewer ("lightbox") for step screenshots: a dark-backdrop MUI Modal with
-// prev/next navigation across every screenshot-bearing step in the document, a header naming the
-// step, and Left/Right keyboard control. Mounted by StepImageThumbnail only while open.
+// Full-screen image viewer ("lightbox") for step screenshots: a dark-backdrop MUI Modal with prev/next
+// navigation across every screenshot the user sees on the current Script page — each step's right-of-step
+// thumbnail plus, for an expanded RunStep, its detail film strip (the sub-script screenshots) — in page
+// reading order. A header names the step and Left/Right keys navigate. Mounted (by StepImageThumbnail or
+// ScreenshotThumbnail) only while open.
 //
-// It reads the current trace snapshot synchronously from the ScriptStore (via context) and the
-// current client state from the global, so navigating to a neighbour resolves that step's
-// screenshot/title on demand — no per-step observation, no captured-state fields. Re-renders are
-// driven solely by `location` (navigation) and the originating thumbnail re-rendering.
+// It reads the current trace snapshot synchronously from the ScriptStore (via context) and the current
+// client state from the global, rebuilding the page sequence (pageScreenshots) on each render, so a
+// neighbour resolves on demand and a live run's new frames appear without captured-state fields. The
+// shown screenshot follows `currentKey` (changed by prev/next); re-renders are driven by navigation and
+// by the originating thumbnail re-rendering.
 class StepImageFullscreen(
     props: StepImageFullscreenProps
 ):
@@ -80,7 +80,7 @@ class StepImageFullscreen(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun StepImageFullscreenState.init(props: StepImageFullscreenProps) {
-        location = props.initialLocation
+        currentKey = props.initialKey
     }
 
 
@@ -100,25 +100,11 @@ class StepImageFullscreen(
         contextValue<DocumentBridge?>()?.lookup(ScriptStoreKey)?.stateOrNull()
 
 
-    // Step locations that currently have a screenshot, in document order — the navigation sequence.
-    // Navigation spans the initialLocation's OWN document (which may be a sub-script opened from a
-    // RunStep thumbnail), not the current ScriptStore document — so build that document's tree from
-    // the global graph rather than reading scriptState.scriptTree (the current document only).
-    private fun screenshotLocations(scriptState: ScriptState): List<ObjectLocation> {
-        val documentPath = props.initialLocation.documentPath
-        val graphDefinition = props.clientStateGlobal.current()?.graphDefinitionAttempt?.successful()
+    // The page's visible screenshots in reading order; empty until client state is available.
+    private fun pageEntries(scriptState: ScriptState): List<PageScreenshotEntry> {
+        val clientState = props.clientStateGlobal.current()
             ?: return listOf()
-        return ScriptTree
-            .read(documentPath, graphDefinition)
-            .orderedDescendantObjectPaths()
-            .map { documentPath.toObjectLocation(it) }
-            .filter { hasScreenshot(scriptState, it) }
-    }
-
-
-    private fun hasScreenshot(scriptState: ScriptState, location: ObjectLocation): Boolean {
-        val trace = computeStepTraceInfo(scriptState, location, props.objectStableMapper).trace
-        return trace?.detail is BinaryExecutionValue
+        return pageScreenshots(scriptState, clientState, props.objectStableMapper)
     }
 
 
@@ -126,40 +112,36 @@ class StepImageFullscreen(
         val scriptState = scriptState()
             ?: return
 
-        val locations = screenshotLocations(scriptState)
-        val index = locations.indexOf(state.location)
+        val entries = pageEntries(scriptState)
+        val index = entries.indexOfFirst { it.key == state.currentKey }
         if (index < 0) {
             return
         }
 
         val nextIndex = index + delta
-        if (nextIndex < 0 || nextIndex >= locations.size) {
+        if (nextIndex < 0 || nextIndex >= entries.size) {
             // Stop at the ends.
             return
         }
 
         setState {
-            location = locations[nextIndex]
+            currentKey = entries[nextIndex].key
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
-        // The shown screenshot follows `location` (changed by prev/next), resolved from the latest
-        // trace snapshot read synchronously from the store.
         val scriptState = scriptState()
             ?: return
 
-        val location = state.location
-        val screenshot = computeStepTraceInfo(scriptState, location, props.objectStableMapper)
-            .trace?.detail as? BinaryExecutionValue
+        val entries = pageEntries(scriptState)
+        val index = entries.indexOfFirst { it.key == state.currentKey }
+        val entry = entries.getOrNull(index)
             ?: return
 
-        val locations = screenshotLocations(scriptState)
-        val index = locations.indexOf(location)
         val hasPrev = index > 0
-        val hasNext = index in 0 until (locations.size - 1)
+        val hasNext = index < entries.size - 1
 
         Modal {
             open = true
@@ -183,14 +165,14 @@ class StepImageFullscreen(
                 }
                 onClick = { props.onClose() }
 
-                renderHeader(location, canNavigate = locations.size > 1)
+                renderHeader(entry.title, canNavigate = entries.size > 1)
 
                 renderNavButton(alignLeft = true, iconName = "NavigateBefore", enabled = hasPrev) {
                     navigate(-1)
                 }
 
                 img {
-                    src = pngUrl(screenshot)
+                    src = pngUrl(entry.image)
 
                     css {
                         display = Display.block
@@ -261,12 +243,7 @@ class StepImageFullscreen(
     // Indicator so the full-screen view is self-explanatory (e.g. if opened as a browser tab):
     // which Script / Step it belongs to, and how to dismiss. pointer-events none → clicking the
     // bar still falls through to the backdrop's close handler ("click anywhere closes").
-    private fun ChildrenBuilder.renderHeader(location: ObjectLocation, canNavigate: Boolean) {
-        // Title follows `location` (navigation moves between steps); resolved from the current
-        // client state.
-        val title = props.clientStateGlobal.current()
-            ?.let { computeStepHeaderInfo(it, location)?.title }
-
+    private fun ChildrenBuilder.renderHeader(title: String, canNavigate: Boolean) {
         div {
             css {
                 position = Position.fixed
@@ -290,7 +267,7 @@ class StepImageFullscreen(
                     fontSize = 1.1.em
                     fontWeight = FontWeight.bold
                 }
-                +"${location.documentPath.name.value} > ${title ?: ""}"
+                +title
             }
 
             div {
