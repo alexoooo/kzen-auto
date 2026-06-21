@@ -8,10 +8,13 @@ import mui.material.Modal
 import org.w3c.dom.events.Event
 import org.w3c.dom.events.KeyboardEvent
 import react.ChildrenBuilder
+import react.Key
 import react.Props
+import react.RefObject
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.img
+import react.dom.html.ReactHTML.input
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
 import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
 import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
@@ -19,11 +22,14 @@ import tech.kzen.auto.client.objects.document.script.model.ScriptStoreKey
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.contextValue
+import tech.kzen.auto.client.wrap.createRef
 import tech.kzen.auto.client.wrap.installContextType
 import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import web.cssom.*
+import web.html.HTMLImageElement
+import web.html.HTMLInputElement
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -48,20 +54,36 @@ external interface StepImageFullscreenState: State {
 // Full-screen image viewer ("lightbox") for step screenshots: a dark-backdrop MUI Modal with prev/next
 // navigation across every screenshot the user sees on the current Script page — each step's right-of-step
 // thumbnail plus, for an expanded RunStep, its detail film strip (the sub-script screenshots) — in page
-// reading order. A header names the step and Left/Right keys navigate. Mounted (by StepImageThumbnail or
-// ScreenshotThumbnail) only while open.
+// reading order. A header names the step, Left/Right keys (or the edge buttons) step through them, and a
+// thumbnail timeline along the bottom lets the user jump directly to any screenshot. Mounted (by
+// StepImageThumbnail or ScreenshotThumbnail) only while open.
 //
 // It reads the current trace snapshot synchronously from the ScriptStore (via context) and the current
 // client state from the global, rebuilding the page sequence (pageScreenshots) on each render, so a
 // neighbour resolves on demand and a live run's new frames appear without captured-state fields. The
-// shown screenshot follows `currentKey` (changed by prev/next); re-renders are driven by navigation and
-// by the originating thumbnail re-rendering.
+// shown screenshot follows `currentKey` (changed by prev/next or a timeline click); re-renders are
+// driven by navigation and by the originating thumbnail re-rendering.
 class StepImageFullscreen(
     props: StepImageFullscreenProps
 ):
     RPureComponent<StepImageFullscreenProps, StepImageFullscreenState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        // Active-thumbnail accent; matches the highlight used by the in-page thumbnails.
+        private val highlightColour = Color("#1565ff")
+        private val timelineThumbBorder = Color("rgba(255, 255, 255, 0.35)")
+        private val timelineBackground = Color("rgba(0, 0, 0, 0.55)")
+        private val timelineBorder = Color("rgba(255, 255, 255, 0.15)")
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    // The timeline thumbnail of the currently-shown image, so navigation keeps it scrolled into view in
+    // the horizontally-scrolling strip. Re-attached each render to whichever thumbnail is current.
+    private val currentTimelineThumb: RefObject<HTMLImageElement> = createRef()
+
+
     // Stable handler so add/removeEventListener pair up. Handles Left/Right only (MUI Modal already
     // dismisses on Escape via onClose).
     private val onKeyDown: (Event?) -> Unit = { event ->
@@ -87,11 +109,36 @@ class StepImageFullscreen(
     override fun componentDidMount() {
         // The viewer exists only while open, so the listener's lifetime is simply its mount lifetime.
         window.addEventListener("keydown", onKeyDown)
+        // Opened from a thumbnail deep in the strip → bring it into view immediately.
+        scrollCurrentThumbIntoView()
     }
 
 
     override fun componentWillUnmount() {
         window.removeEventListener("keydown", onKeyDown)
+    }
+
+
+    override fun componentDidUpdate(
+        prevProps: StepImageFullscreenProps,
+        prevState: StepImageFullscreenState,
+        snapshot: Any
+    ) {
+        // Follow the selection along the timeline after prev/next or a timeline click.
+        if (prevState.currentKey != state.currentKey) {
+            scrollCurrentThumbIntoView()
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun scrollCurrentThumbIntoView() {
+        val element = currentTimelineThumb.current
+            ?: return
+        // Keep the active thumbnail centred in the strip; block:nearest avoids nudging the page
+        // vertically. Built as a plain JS options object — the typed scrollIntoView overload isn't
+        // reliably exposed across wrapper versions.
+        element.asDynamic().scrollIntoView(js("({ block: 'nearest', inline: 'center' })"))
     }
 
 
@@ -130,6 +177,15 @@ class StepImageFullscreen(
     }
 
 
+    private fun navigateTo(key: String) {
+        if (key != state.currentKey) {
+            setState {
+                currentKey = key
+            }
+        }
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
         val scriptState = scriptState()
@@ -142,6 +198,7 @@ class StepImageFullscreen(
 
         val hasPrev = index > 0
         val hasNext = index < entries.size - 1
+        val showTimeline = entries.size > 1
 
         Modal {
             open = true
@@ -157,49 +214,68 @@ class StepImageFullscreen(
                     width = 100.vw
                     height = 100.vh
                     display = Display.flex
-                    alignItems = AlignItems.center
-                    justifyContent = JustifyContent.center
+                    // Column so the timeline takes the bottom and the image fills the rest — a tall
+                    // image is bounded above the strip instead of hiding behind it.
+                    flexDirection = FlexDirection.column
                     backgroundColor = Color("rgba(0, 0, 0, 0.92)")
                     // NB: cursor pointer signals the backdrop is clickable to close.
                     cursor = Cursor.pointer
                 }
                 onClick = { props.onClose() }
 
-                renderHeader(entry.title, canNavigate = entries.size > 1)
+                renderHeader(entry.title, canNavigate = showTimeline)
 
-                renderNavButton(alignLeft = true, iconName = "NavigateBefore", enabled = hasPrev) {
-                    navigate(-1)
-                }
-
-                img {
-                    src = pngUrl(entry.image)
-
+                // Image area: fills the space above the timeline; the edge nav buttons pin to it.
+                div {
                     css {
-                        display = Display.block
-                        // NB: fit-to-viewport — the largest size that fits while preserving
-                        //     aspect ratio. Avoids the "user sees a fragment of a large image
-                        //     pixel-for-pixel" effect of a no-constraint native-resolution
-                        //     rendering. The browser does high-quality downscaling here.
-                        maxWidth = 100.vw
-                        maxHeight = 100.vh
-                        // NB: clicking the image closes too ("click anywhere") — no onClick here, so
-                        //     the click bubbles to the backdrop div's close handler.
-                        cursor = Cursor.pointer
+                        position = Position.relative
+                        flexGrow = number(1.0)
+                        flexShrink = number(1.0)
+                        // NB: lets this flex child shrink below the image's intrinsic height so
+                        //     maxHeight = 100% bounds the image to the area above the timeline.
+                        minHeight = 0.px
+                        display = Display.flex
+                        alignItems = AlignItems.center
+                        justifyContent = JustifyContent.center
+                    }
+
+                    renderNavButton(alignLeft = true, iconName = "NavigateBefore", enabled = hasPrev) {
+                        navigate(-1)
+                    }
+
+                    img {
+                        src = pngUrl(entry.image)
+
+                        css {
+                            display = Display.block
+                            // NB: fit-to-area — the largest size that fits the image area while
+                            //     preserving aspect ratio. Avoids the "user sees a fragment of a
+                            //     large image pixel-for-pixel" effect of native-resolution rendering.
+                            //     The browser does high-quality downscaling here.
+                            maxWidth = 100.pct
+                            maxHeight = 100.pct
+                            // NB: clicking the image closes too ("click anywhere") — no onClick here, so
+                            //     the click bubbles to the backdrop div's close handler.
+                            cursor = Cursor.pointer
+                        }
+                    }
+
+                    renderNavButton(alignLeft = false, iconName = "NavigateNext", enabled = hasNext) {
+                        navigate(1)
                     }
                 }
 
-                renderNavButton(alignLeft = false, iconName = "NavigateNext", enabled = hasNext) {
-                    navigate(1)
+                if (showTimeline) {
+                    renderTimeline(entries, index)
                 }
             }
         }
     }
 
 
-    // Prev/next button pinned to a viewport-height column on one edge, vertically centred. The
-    // button stops click propagation so navigating doesn't also trigger the backdrop's close;
-    // clicking the empty column still falls through to close ("click anywhere closes"). Disabled
-    // (greyed) at the ends of the sequence.
+    // Prev/next button pinned to one edge of the image area, vertically centred. The button stops click
+    // propagation so navigating doesn't also trigger the backdrop's close; clicking the empty column
+    // still falls through to close ("click anywhere closes"). Disabled (greyed) at the ends.
     private fun ChildrenBuilder.renderNavButton(
         alignLeft: Boolean,
         iconName: String,
@@ -208,7 +284,7 @@ class StepImageFullscreen(
     ) {
         div {
             css {
-                position = Position.fixed
+                position = Position.absolute
                 top = 0.px
                 bottom = 0.px
                 if (alignLeft) {
@@ -233,6 +309,112 @@ class StepImageFullscreen(
                     style = unsafeJso {
                         color = if (enabled) NamedColor.white else Color("rgba(255, 255, 255, 0.3)")
                         fontSize = 2.5.em
+                    }
+                }
+            }
+        }
+    }
+
+
+    // The bottom timeline: a scrub slider over a horizontally-scrolling strip of every page screenshot
+    // in reading order, the current one highlighted, so the user can flip rapidly through them (drag the
+    // slider for a flipbook effect) or jump straight to any image (click a thumbnail). A control surface,
+    // not a dismiss target — clicks on it (gaps included) are swallowed so they don't close the viewer.
+    private fun ChildrenBuilder.renderTimeline(
+        entries: List<PageScreenshotEntry>,
+        currentIndex: Int
+    ) {
+        div {
+            css {
+                flexShrink = number(0.0)
+                display = Display.flex
+                flexDirection = FlexDirection.column
+                boxSizing = BoxSizing.borderBox
+                padding = Padding(0.5.em, 1.em, 0.5.em, 1.em)
+                backgroundColor = timelineBackground
+                borderTop = Border(1.px, LineStyle.solid, timelineBorder)
+                cursor = Cursor.default
+            }
+            onClick = { it.stopPropagation() }
+
+            renderScrubber(entries, currentIndex)
+            renderThumbnailStrip(entries, currentIndex)
+        }
+    }
+
+
+    // A range slider spanning the whole sequence: drag it to flip rapidly through the frames (flipbook).
+    // Controlled by the current index, so it tracks arrow-key and thumbnail navigation too.
+    private fun ChildrenBuilder.renderScrubber(
+        entries: List<PageScreenshotEntry>,
+        currentIndex: Int
+    ) {
+        input {
+            value = currentIndex.toString()
+            // NB: type/min/max/step set via asDynamic — the range InputType member and the numeric range
+            //     attributes aren't reliably typed on the native input across wrapper versions; the DOM
+            //     accepts these string values.
+            asDynamic().type = "range"
+            asDynamic().min = "0"
+            asDynamic().max = "${entries.size - 1}"
+            asDynamic().step = "1"
+
+            css {
+                width = 100.pct
+                marginBottom = 0.5.em
+                cursor = Cursor.pointer
+            }
+
+            onChange = { event ->
+                val nextIndex = (event.target as HTMLInputElement).value.toIntOrNull()
+                if (nextIndex != null) {
+                    entries.getOrNull(nextIndex)?.let { navigateTo(it.key) }
+                }
+            }
+        }
+    }
+
+
+    private fun ChildrenBuilder.renderThumbnailStrip(
+        entries: List<PageScreenshotEntry>,
+        currentIndex: Int
+    ) {
+        div {
+            css {
+                display = Display.flex
+                alignItems = AlignItems.center
+                overflowX = Auto.auto
+                overflowY = Overflow.hidden
+            }
+
+            entries.forEachIndexed { entryIndex, entry ->
+                val current = entryIndex == currentIndex
+
+                img {
+                    key = Key(entry.key)
+                    if (current) {
+                        ref = currentTimelineThumb
+                    }
+                    src = pngUrl(entry.image)
+
+                    css {
+                        flexShrink = number(0.0)
+                        height = 3.5.em
+                        display = Display.block
+                        marginRight = 0.5.em
+                        cursor = Cursor.pointer
+                        // NB: 2px border at both states — only the colour changes — so highlighting
+                        //     the current thumbnail doesn't shift the strip's layout.
+                        border = Border(
+                            2.px,
+                            LineStyle.solid,
+                            if (current) highlightColour else timelineThumbBorder)
+                        transition = "border-color 120ms ease-out".unsafeCast<Transition>()
+                    }
+
+                    onClick = { event ->
+                        event.stopPropagation()
+                        navigateTo(entry.key)
                     }
                 }
             }
