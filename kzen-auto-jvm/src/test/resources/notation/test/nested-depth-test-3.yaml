@@ -1,0 +1,5 @@
+main:
+  is: Script
+
+main.steps/Pause:
+  is: PauseStep

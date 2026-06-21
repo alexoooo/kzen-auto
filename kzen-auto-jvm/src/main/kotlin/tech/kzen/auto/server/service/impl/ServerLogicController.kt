@@ -165,8 +165,14 @@ class ServerLogicController(
                 val currentState = checkNotNull(stateOrNull)
                 check(currentState.runId == runId)
 
-                val hostFrame = currentState.frame.find(executionId)
-                checkNotNull(hostFrame)
+                // Attach the new guest frame under its actual caller, not the root. The same
+                // logicHandle closure is threaded down every nesting level (LogicExecutionFacadeImpl
+                // passes it on to each nested execution), so the host is identified by the caller's
+                // execution id carried in logicRunExecutionId — using the captured root executionId
+                // here flattened the frame tree, making every nested document report stack depth 1
+                // in the sidebar run indicator.
+                val hostFrame = currentState.frame.find(logicRunExecutionId.logicExecutionId)
+                checkNotNull(hostFrame) { "Host frame not found: $logicRunExecutionId" }
 
                 val guestExecutionId = LogicExecutionId.random()
 
