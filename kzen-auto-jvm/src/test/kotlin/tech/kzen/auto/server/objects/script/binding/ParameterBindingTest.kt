@@ -37,6 +37,9 @@ class ParameterBindingTest {
     private val documentPath = DocumentPath.parse("test/parameter-binding-test.yaml")
     private val mainLocation = ObjectLocation(documentPath, ObjectPath.parse("main"))
 
+    private val defaultDocumentPath = DocumentPath.parse("test/parameter-default-test.yaml")
+    private val defaultMainLocation = ObjectLocation(defaultDocumentPath, ObjectPath.parse("main"))
+
     private lateinit var context: KzenAutoContext
 
 
@@ -100,6 +103,35 @@ class ParameterBindingTest {
         // The script's last step is FirstTag (`tags.first()`); its value is the run result's main value.
         val success = assertIs<LogicResultSuccess>(result)
         assertEquals("alpha", success.value.mainComponentValue())
+    }
+
+
+    @Test
+    fun parameterUsesDefaultWhenArgumentOmitted() {
+        // `threshold` declares `default: 5` and the single step echoes it; with no argument supplied the
+        // resolved value falls back to the declared default.
+        val execution = AutoTestUtils.liveLogicExecution(context, defaultMainLocation, UnusedLogicHandle)
+        execution.beforeStart(TupleValue.empty)
+
+        val result = execution.continueOrStart(
+            MutableLogicControl(false), MutableLogicResourceScope(), graphDefinition())
+
+        val success = assertIs<LogicResultSuccess>(result)
+        assertEquals(5, success.value.mainComponentValue())
+    }
+
+
+    @Test
+    fun argumentOverridesDefault() {
+        val execution = AutoTestUtils.liveLogicExecution(context, defaultMainLocation, UnusedLogicHandle)
+        execution.beforeStart(TupleValue(listOf(
+            TupleComponentValue(TupleComponentName("threshold"), 9))))
+
+        val result = execution.continueOrStart(
+            MutableLogicControl(false), MutableLogicResourceScope(), graphDefinition())
+
+        val success = assertIs<LogicResultSuccess>(result)
+        assertEquals(9, success.value.mainComponentValue())
     }
 
 

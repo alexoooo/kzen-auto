@@ -602,41 +602,23 @@ class ScriptBranchDisplay(
         gutter: ChildrenBuilder.() -> Unit,
         body: ChildrenBuilder.() -> Unit
     ) {
-        div {
-            css {
-                display = Display.flex
-                alignItems = AlignItems.stretch
+        // NB: row layout + StepRowRefRegistry registration is shared with the parameter list (see
+        //     scriptGutterRow). A step row trails a thumbnail; spacer rows (stepLocation == null) don't register.
+        val trailing: (ChildrenBuilder.() -> Unit)? =
+            if (stepLocation == null) {
+                null
             }
-            if (stepLocation != null) {
-                // NB: ref attaches to the OUTER row (gutter + body) so the overlay can compute the
-                //     polyline endpoint at row.left + laneWidth/2 — the phantom column's x.
-                //     React 19 invokes the returned Cleanup on unmount/ref-detach.
-                ref = refCallback { element ->
-                    StepRowRefRegistry.register(stepLocation, element)
-                    val cleanup: () -> Unit = { StepRowRefRegistry.unregister(stepLocation, element) }
-                    cleanup
+            else {
+                {
+                    StepImageThumbnail::class.react {
+                        objectLocation = stepLocation
+                        objectStableMapper = props.objectStableMapper
+                        clientStateGlobal = props.clientStateGlobal
+                    }
                 }
             }
-            gutter()
-            div {
-                css {
-                    width = ScriptController.stepWidth
-                    flexShrink = number(0.0)
-                    // NB: dedicated strip for the absolute-positioned drag handle (left: -1.25em
-                    // off body's left edge). Without this margin, the handle overlaps the
-                    // rightmost dependency-gutter lane.
-                    marginLeft = 1.25.em
-                }
-                body()
-            }
-            if (stepLocation != null) {
-                StepImageThumbnail::class.react {
-                    objectLocation = stepLocation
-                    objectStableMapper = props.objectStableMapper
-                    clientStateGlobal = props.clientStateGlobal
-                }
-            }
-        }
+
+        scriptGutterRow(stepLocation, gutter, body, trailing)
     }
 
 

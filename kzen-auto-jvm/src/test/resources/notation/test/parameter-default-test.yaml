@@ -1,0 +1,17 @@
+# A parameter with a declared default value, echoed by a single step so the run's main result IS the
+# resolved parameter value: exercises ParameterBinding's default-when-no-argument fallback.
+
+main:
+  is: Script
+
+main.parameters/threshold:
+  is: ParameterBinding
+  type:
+    class: kotlin.Int
+    generics: []
+    nullable: false
+  default: 5
+
+main.steps/Echoed:
+  is: FormulaStep
+  code: threshold

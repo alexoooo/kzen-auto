@@ -326,28 +326,27 @@ class ScriptController:
 
         div {
             css {
-                paddingTop = 1.em
-            }
-            renderSignature(mainObjectLocation)
-        }
-
-        val globalError = state.globalError
-        if (globalError != null) {
-            div {
-                +"Error: $globalError"
-            }
-        }
-
-        div {
-            css {
                 marginLeft = 2.em
                 position = Position.relative
             }
 
-            // NB: overlay is rendered BEFORE MultiStepDisplay so default stacking puts it behind
-            //     step cards; the cross-branch polylines visually pass behind the IfStep card.
+            // NB: overlay is rendered BEFORE the signature + steps so default stacking puts it behind their
+            //     cards; the cross-branch polylines (including parameter -> step) visually pass behind them.
+            //     The signature shares this one relative container so a parameter row and the step that uses
+            //     it align in a single dependency column and the overlay can span both.
             ScriptDependencyOverlay::class.react {
                 clientStateGlobal = props.clientStateGlobal
+            }
+
+            // The signature owns its own top spacing — empty (no parameters) it adds no vertical flow, so the
+            // steps start at the top with only the floating add control on the right.
+            renderSignature(mainObjectLocation)
+
+            val globalError = state.globalError
+            if (globalError != null) {
+                div {
+                    +"Error: $globalError"
+                }
             }
 
             renderMain(mainObjectLocation)

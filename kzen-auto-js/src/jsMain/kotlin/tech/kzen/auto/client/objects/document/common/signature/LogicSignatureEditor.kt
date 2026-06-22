@@ -2,41 +2,53 @@ package tech.kzen.auto.client.objects.document.common.signature
 
 import emotion.react.css
 import js.objects.unsafeJso
+import mui.material.IconButton
 import mui.material.Size
 import mui.material.Switch
 import mui.material.TextField
 import react.ChildrenBuilder
 import react.Props
 import react.State
-import react.dom.html.ReactHTML.button
+import react.dom.events.DragEvent
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
 import react.dom.onChange
+import tech.kzen.auto.client.objects.document.common.dragdrop.dragHandle
+import tech.kzen.auto.client.objects.document.common.dragdrop.dropIndicator
+import tech.kzen.auto.client.objects.document.common.dragdrop.dropMarkerFor
+import tech.kzen.auto.client.objects.document.script.display.dependency.StepDependencyEdges
+import tech.kzen.auto.client.objects.document.script.display.dependency.scriptGutterRow
+import tech.kzen.auto.client.objects.document.script.display.dependency.stepDependencyGutterCellForStep
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.select.ReactSelectOption
 import tech.kzen.auto.client.wrap.select.reactSelectField
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
+import tech.kzen.auto.common.objects.document.script.model.ScriptDependencyAnalysis
 import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.ListExecutionValue
 import tech.kzen.lib.common.exec.NullExecutionValue
 import tech.kzen.lib.common.exec.ScalarExecutionValue
 import tech.kzen.lib.common.model.attribute.AttributeName
+import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.attribute.AttributeSegment
+import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.structure.notation.*
 import tech.kzen.lib.common.model.structure.notation.cqrs.AddObjectCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.RemoveObjectCommand
+import tech.kzen.lib.common.model.structure.notation.cqrs.RenameObjectRefactorCommand
+import tech.kzen.lib.common.model.structure.notation.cqrs.ShiftObjectTreeCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.UpsertAttributeCommand
 import tech.kzen.lib.common.service.store.MirroredGraphStore
 import tech.kzen.lib.platform.collect.persistentMapOf
-import web.cssom.em
-import web.cssom.minus
-import web.cssom.pct
+import web.cssom.*
+import web.html.HTMLDivElement
 import web.html.HTMLInputElement
 
 
@@ -55,16 +67,38 @@ external interface LogicSignatureEditorProps: Props {
 
 external interface LogicSignatureEditorState: State {
     var parameters: List<LogicSignatureEditor.ParameterRow>?
+
+    // Dependency lanes for the parameter list (parameters that are referenced by a step are cross-branch
+    // sources); rendered in the gutter with the same machinery as the step list.
+    var parameterEdges: StepDependencyEdges
+
+    // The parameter currently expanded into the full inline editor (null = all collapsed to readers).
+    var editingLocation: ObjectLocation?
+    // Local text of the edited parameter's name + default; committed on done so a rename (a refactor) does
+    // not fire per keystroke. Initialized when entering edit mode.
+    var editingName: String
+    var editingDefault: String
+
+    // The collapsed add control expands to an inline name form when true.
+    var adding: Boolean
     var newParameterName: String
+
+    // Drag-reorder state (within the parameter list only). dragIndex = the row being dragged; dropIndex +
+    // dropAfter = the hovered insertion point.
+    var dragIndex: Int?
+    var dropIndex: Int?
+    var dropAfter: Boolean
 }
 
 
 //---------------------------------------------------------------------------------------------------------------------
 /**
  * Edits a Script's typed parameters. Each parameter is a ParameterBinding object in the `parameters`
- * branch (rowless — it has no body step), named by its object name and carrying a `type` TypeMetadata.
- * Renders a row per parameter (name, a class-name picker, a nullable toggle, delete) plus an add control.
- * Generic type arguments are preserved across edits but are not yet editable here (use notation directly).
+ * branch (rowless — it has no body step), named by its object name and carrying a `type` TypeMetadata and
+ * an optional `default` value. Each parameter renders as a streamlined `name: Type = value` row in the
+ * script's dependency column (so a referenced parameter draws a tracing line down to the consuming step),
+ * with a pencil to expand the full editor (rename-as-refactor, type, nullable, default, delete) and a drag
+ * handle to reorder. Generic type arguments are preserved across edits but are not yet editable here.
  */
 class LogicSignatureEditor:
     RPureComponent<LogicSignatureEditorProps, LogicSignatureEditorState>(),
@@ -76,18 +110,23 @@ class LogicSignatureEditor:
         val name: String,
         val className: String,
         val nullable: Boolean,
-        val generics: ListAttributeNotation?
+        val generics: ListAttributeNotation?,
+        val defaultText: String?
     )
 
 
     companion object {
         private val typeAttributeName = AttributeName("type")
+        private val defaultAttributeName = AttributeName("default")
+        private val defaultAttributePath = AttributePath.ofName(defaultAttributeName)
         private const val classKey = "class"
         private const val genericsKey = "generics"
         private const val nullableKey = "nullable"
 
         private const val parameterBindingArchetype = "ParameterBinding"
         private const val defaultClassName = "kotlin.Any"
+
+        private val dragHandleColor = Color("rgba(0, 0, 0, 0.45)")
 
         // The selectable simple types (matches FormulaStep's inferrable class set). Generic element types
         // default to Any until a nested-type picker exists; registered object types are a follow-up.
@@ -100,13 +139,28 @@ class LogicSignatureEditor:
             "kotlin.Boolean" to "Boolean",
             "kotlin.collections.List" to "List",
             "kotlin.collections.Set" to "Set")
+
+        private val simpleLabelByClassName = classOptions.toMap()
+
+        // Default values are only editable for scalar types the definer can coerce (String/Int/Long/Double/
+        // Boolean). List/Set/Any have no default input — they resolve to null when no argument is supplied.
+        private val scalarDefaultClassNames = setOf(
+            "kotlin.String", "kotlin.Int", "kotlin.Long", "kotlin.Double", "kotlin.Boolean")
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun LogicSignatureEditorState.init(props: LogicSignatureEditorProps) {
         parameters = null
+        parameterEdges = StepDependencyEdges.EMPTY
+        editingLocation = null
+        editingName = ""
+        editingDefault = ""
+        adding = false
         newParameterName = ""
+        dragIndex = null
+        dropIndex = null
+        dropAfter = false
     }
 
 
@@ -122,7 +176,8 @@ class LogicSignatureEditor:
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun onClientState(clientState: ClientState) {
-        val graphNotation = clientState.graphStructure().graphNotation
+        val graphStructure = clientState.graphDefinitionAttempt.graphStructure
+        val graphNotation = graphStructure.graphNotation
         if (props.objectLocation !in graphNotation.coalesce) {
             // NB: deleted or renamed (this is a stale objectLocation)
             return
@@ -131,29 +186,47 @@ class LogicSignatureEditor:
         val documentNotation = graphNotation.documents[props.objectLocation.documentPath]
             ?: return
 
-        val parameterPaths = documentNotation.directNestedObjectPaths(
-            props.objectLocation.objectPath, ScriptConventions.parametersAttributeName)
+        val parameterLocations = ScriptConventions.orderedDirectChildLocations(
+            graphNotation,
+            AttributeLocation(props.objectLocation, ScriptConventions.parametersAttributePath))
 
-        val newParameters = parameterPaths.map { path ->
-            val location = ObjectLocation(props.objectLocation.documentPath, path)
+        val newParameters = parameterLocations.map { location ->
             val typeNotation = graphNotation.firstAttribute(location, typeAttributeName) as? MapAttributeNotation
+            val defaultText = (graphNotation.firstAttribute(location, defaultAttributePath)
+                    as? ScalarAttributeNotation)
+                ?.value
 
             ParameterRow(
                 location = location,
-                name = path.name.value,
+                name = location.objectPath.name.value,
                 className = typeNotation?.get(classKey)?.asString() ?: defaultClassName,
                 nullable = typeNotation?.get(nullableKey)?.asString()?.toBoolean() ?: false,
-                generics = typeNotation?.get(genericsKey) as? ListAttributeNotation)
+                generics = typeNotation?.get(genericsKey) as? ListAttributeNotation,
+                defaultText = defaultText)
         }
+
+        // A parameter referenced by a step's code is a cross-branch source; compute its gutter the same way
+        // a step branch does (parameter -> step edges come from ScriptDependencyAnalysis including the
+        // `parameters` branch).
+        val newParameterEdges =
+            if (parameterLocations.isEmpty() || !ScriptConventions.isScript(documentNotation)) {
+                StepDependencyEdges.EMPTY
+            }
+            else {
+                val analysis = ScriptDependencyAnalysis.analyze(
+                    clientState.graphDefinitionAttempt, props.objectLocation.documentPath)
+                StepDependencyEdges.compute(parameterLocations, analysis)
+            }
 
         // map produces a fresh List each fire — guard with structural equality so RPureComponent's
         // shallow state comparison doesn't re-render on unchanged content.
-        if (newParameters == state.parameters) {
+        if (newParameters == state.parameters && newParameterEdges == state.parameterEdges) {
             return
         }
 
         setState {
             parameters = newParameters
+            parameterEdges = newParameterEdges
         }
     }
 
@@ -209,6 +282,7 @@ class LogicSignatureEditor:
             ObjectNotation.ofParent(ObjectName(parameterBindingArchetype)))
 
         setState {
+            adding = false
             newParameterName = ""
         }
 
@@ -219,6 +293,11 @@ class LogicSignatureEditor:
 
 
     private fun onRemoveParameter(location: ObjectLocation) {
+        if (state.editingLocation == location) {
+            setState {
+                editingLocation = null
+            }
+        }
         async {
             props.mirroredGraphStore.apply(RemoveObjectCommand(location))
         }
@@ -239,52 +318,398 @@ class LogicSignatureEditor:
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private fun onStartEdit(row: ParameterRow) {
+        setState {
+            editingLocation = row.location
+            editingName = row.name
+            editingDefault = row.defaultText ?: ""
+        }
+    }
+
+
+    // Commit the text edits (name + default) and collapse. Default is upserted first (on the current
+    // location), then the rename refactor runs (it moves the object, so it must be last); both are
+    // applied sequentially so the default lands at the pre-rename location.
+    private fun onCommitEdit(row: ParameterRow) {
+        val newName = state.editingName.trim()
+        val newDefault = state.editingDefault.trim()
+
+        val defaultChanged = newDefault != (row.defaultText ?: "")
+        val nameChanged = newName.isNotEmpty() && newName != row.name
+
+        setState {
+            editingLocation = null
+        }
+
+        if (!defaultChanged && !nameChanged) {
+            return
+        }
+
+        async {
+            if (defaultChanged) {
+                props.mirroredGraphStore.apply(UpsertAttributeCommand(
+                    row.location, defaultAttributeName, ScalarAttributeNotation(newDefault)))
+            }
+            if (nameChanged) {
+                props.mirroredGraphStore.apply(RenameObjectRefactorCommand(
+                    row.location, ObjectName(newName)))
+            }
+        }
+    }
+
+
+    // Discards the deferred text edits (name + default) and collapses. Type/nullable apply live (like the
+    // original editor), so they are already committed and not reverted.
+    private fun onCancelEdit() {
+        setState {
+            editingLocation = null
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun onReorderDrop() {
+        val source = state.dragIndex
+        val target = state.dropIndex
+        val after = state.dropAfter
+        val parameters = state.parameters
+
+        setState {
+            dragIndex = null
+            dropIndex = null
+        }
+
+        if (source == null || target == null || parameters == null) {
+            return
+        }
+
+        // insertionIndex is the gap (0..size) the cursor points at; dropping at the dragged row's own two
+        // edges is a no-op. Otherwise account for the row leaving its slot when it sits above the target.
+        val insertionIndex = target + (if (after) 1 else 0)
+        if (insertionIndex == source || insertionIndex == source + 1) {
+            return
+        }
+        val newIndex = if (insertionIndex > source) insertionIndex - 1 else insertionIndex
+
+        val documentNotation = props.clientStateGlobal.current()
+            ?.graphStructure()
+            ?.graphNotation
+            ?.documents
+            ?.get(props.objectLocation.documentPath)
+            ?: return
+
+        val draggedLocation = parameters[source].location
+        val draggedRoot = draggedLocation.objectPath
+
+        // Document order with the dragged subtree removed — the frame the shift index resolves against.
+        val remainingPaths = documentNotation.objects.notations.map.keys.filter {
+            it != draggedRoot && !it.startsWith(draggedRoot)
+        }
+
+        val siblings = parameters
+            .filterIndexed { i, _ -> i != source }
+            .map { it.location }
+        if (siblings.isEmpty()) {
+            return
+        }
+
+        val anchor = siblings.getOrNull(newIndex)?.objectPath
+        val targetDocumentIndex =
+            if (anchor != null) {
+                remainingPaths.indexOf(anchor)
+            }
+            else {
+                val lastSibling = siblings.last().objectPath
+                remainingPaths.indexOfLast { it == lastSibling || it.startsWith(lastSibling) } + 1
+            }
+
+        async {
+            props.mirroredGraphStore.apply(ShiftObjectTreeCommand(
+                draggedLocation,
+                PositionRelation.at(targetDocumentIndex)))
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
         val parameters = state.parameters
             ?: return
 
         div {
             css {
-                width = 100.pct.minus(2.em)
-                paddingLeft = 1.em
-            }
-
-            div {
-                css {
-                    fontSize = 0.8.em
-                    marginBottom = 0.25.em
+                // Take vertical space only when there are parameters; an empty list must not disrupt the page
+                // flow — the steps start at the top, with just the floating add control on the right.
+                if (parameters.isNotEmpty()) {
+                    paddingTop = 1.em
+                    marginBottom = 0.5.em
                 }
-                +"Parameters"
             }
 
-            for (parameter in parameters) {
-                renderParameterRow(parameter)
-            }
+            renderControls()
 
-            renderAddParameter()
+            val edges = state.parameterEdges
+            for ((index, parameter) in parameters.withIndex()) {
+                scriptGutterRow(
+                    rowLocation = parameter.location,
+                    gutter = { stepDependencyGutterCellForStep(index, edges) },
+                    body = { renderParameterBody(parameter, index) })
+            }
         }
     }
 
 
-    private fun ChildrenBuilder.renderParameterRow(parameter: ParameterRow) {
+    // The "Parameters" label + add control, floated at the top-right of the script area (absolute, anchored
+    // to ScriptController's relative container) so it never adds a row of its own — the parameter list owns
+    // all vertical space. The label collapses into an inline name form while adding.
+    private fun ChildrenBuilder.renderControls() {
         div {
             css {
-                marginBottom = 0.25.em
+                position = Position.absolute
+                top = 0.px
+                right = 0.px
+                display = Display.flex
+                alignItems = AlignItems.center
+                // above the step cards (which are positioned but auto z-index) so it stays clickable.
+                zIndex = integer(2)
             }
+
+            if (state.adding) {
+                span {
+                    css {
+                        display = Display.inlineBlock
+                        width = 9.em
+                        marginRight = 0.25.em
+                    }
+
+                    TextField {
+                        size = Size.small
+                        autoFocus = true
+                        fullWidth = true
+                        placeholder = "parameter name"
+                        value = state.newParameterName
+                        onChange = {
+                            val text = (it.target as HTMLInputElement).value
+                            setState { newParameterName = text }
+                        }
+                    }
+                }
+
+                IconButton {
+                    title = "Add"
+                    size = Size.small
+                    onClick = { onAddParameter() }
+                    icon("material-symbols:check") {}
+                }
+
+                IconButton {
+                    title = "Cancel"
+                    size = Size.small
+                    onClick = { setState { adding = false; newParameterName = "" } }
+                    icon("material-symbols:cancel") {}
+                }
+            }
+            else {
+                span {
+                    css {
+                        fontSize = 0.8.em
+                        color = Color("gray")
+                        marginRight = 0.25.em
+                    }
+                    +"Parameters"
+                }
+
+                IconButton {
+                    title = "Add parameter"
+                    size = Size.small
+                    onClick = { setState { adding = true } }
+                    icon("material-symbols:add-circle-outline") {}
+                }
+            }
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun ChildrenBuilder.renderParameterBody(parameter: ParameterRow, index: Int) {
+        div {
+            css {
+                position = Position.relative
+                marginBottom = 0.25.em
+
+                // Reveal the drag handle on hover (pure CSS — a hover state field would re-render the whole
+                // list on every mouse move; see ScriptStepSlot).
+                "&:hover > [data-drag-handle]" {
+                    opacity = number(1.0)
+                }
+            }
+
+            // The row is the drop target; constrained to the parameter list (no handlers reach outside it).
+            onDragOver = { event -> onRowDragOver(index, event) }
+            onDrop = { event ->
+                event.preventDefault()
+                onReorderDrop()
+            }
+
+            dragHandle(
+                isVisible = state.dragIndex == index,
+                handleColor = dragHandleColor,
+                onStart = { setState { dragIndex = index } },
+                onEnd = { setState { dragIndex = null; dropIndex = null } })
+
+            dropIndicator(dropMarkerFor(state.dragIndex, state.dropIndex, state.dropAfter, index))
+
+            if (state.editingLocation == parameter.location) {
+                renderParameterEditor(parameter)
+            }
+            else {
+                renderParameterReader(parameter)
+            }
+        }
+    }
+
+
+    private fun onRowDragOver(index: Int, event: DragEvent<HTMLDivElement>) {
+        if (state.dragIndex == null) {
+            return
+        }
+        event.preventDefault()
+        val rect = event.currentTarget.getBoundingClientRect()
+        val after = event.clientY > rect.top + rect.height / 2
+        if (state.dropIndex != index || state.dropAfter != after) {
+            setState {
+                dropIndex = index
+                dropAfter = after
+            }
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun ChildrenBuilder.renderParameterReader(parameter: ParameterRow) {
+        // The whole `name: Type = value` reads as one clickable edit affordance: hovering tints it and fades
+        // in the pencil, clicking opens the inline editor.
+        div {
+            css {
+                display = Display.inlineFlex
+                alignItems = AlignItems.center
+                borderRadius = 4.px
+                paddingLeft = 0.25.em
+                paddingRight = 0.25.em
+                marginLeft = (-0.25).em
+                cursor = Cursor.pointer
+                transition = "background-color 120ms ease-out".unsafeCast<Transition>()
+
+                "&:hover" {
+                    backgroundColor = Color("rgba(0, 0, 0, 0.06)")
+                }
+                "&:hover [data-edit-button]" {
+                    opacity = number(1.0)
+                }
+            }
+
+            onClick = { onStartEdit(parameter) }
 
             span {
                 css {
-                    display = web.cssom.Display.inlineBlock
-                    width = 8.em
-                    marginRight = 0.5.em
+                    fontWeight = FontWeight.bold
                 }
                 +parameter.name
             }
 
             span {
                 css {
-                    display = web.cssom.Display.inlineBlock
-                    width = 10.em
+                    color = Color("gray")
+                }
+                +": ${typeLabel(parameter)}"
+            }
+
+            renderValue(parameter)
+
+            div {
+                asDynamic()["data-edit-button"] = ""
+                css {
+                    display = Display.inlineFlex
+                    alignItems = AlignItems.center
+                    marginLeft = 0.25.em
+                    opacity = number(0.0)
+                    transition = "opacity 120ms ease-out".unsafeCast<Transition>()
+                }
+
+                IconButton {
+                    title = "Edit parameter"
+                    size = Size.small
+                    icon("material-symbols:edit") {}
+                }
+            }
+        }
+    }
+
+
+    // `= value`: the live run-time value if running, else the declared default; nothing when neither exists.
+    private fun ChildrenBuilder.renderValue(parameter: ParameterRow) {
+        val runtimeValue = props.parameterValues?.get(parameter.name)
+        val runtimeText =
+            if (runtimeValue != null && runtimeValue !is NullExecutionValue) {
+                executionValueText(runtimeValue)
+            }
+            else {
+                null
+            }
+
+        val displayText = runtimeText ?: parameter.defaultText?.takeIf { it.isNotEmpty() }
+            ?: return
+
+        span {
+            css {
+                marginLeft = 0.4.em
+                color = Color("gray")
+            }
+            +"= "
+            span {
+                css {
+                    fontWeight = FontWeight.bold
+                    color = NamedColor.black
+                }
+                +displayText
+            }
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun ChildrenBuilder.renderParameterEditor(parameter: ParameterRow) {
+        div {
+            css {
+                display = Display.flex
+                alignItems = AlignItems.center
+                flexWrap = FlexWrap.wrap
+                rowGap = 0.25.em
+            }
+
+            span {
+                css {
+                    display = Display.inlineBlock
+                    width = 9.em
+                    marginRight = 0.5.em
+                }
+
+                TextField {
+                    size = Size.small
+                    autoFocus = true
+                    fullWidth = true
+                    value = state.editingName
+                    onChange = {
+                        val text = (it.target as HTMLInputElement).value
+                        setState { editingName = text }
+                    }
+                }
+            }
+
+            span {
+                css {
+                    display = Display.inlineBlock
+                    width = 9.em
                     marginRight = 0.5.em
                 }
 
@@ -317,31 +742,80 @@ class LogicSignatureEditor:
                 +"nullable"
             }
 
-            button {
+            renderDefaultInput(parameter)
+
+            IconButton {
+                title = "Delete parameter"
+                size = Size.small
                 onClick = { onRemoveParameter(parameter.location) }
-                +"×"
+                icon("material-symbols:delete") {}
             }
 
-            // Run-time value (when running as a sub-logic with arguments); blank otherwise.
-            val value = props.parameterValues?.get(parameter.name)
-            if (value != null && value !is NullExecutionValue) {
-                span {
-                    css {
-                        marginLeft = 0.75.em
-                        fontSize = 0.85.em
-                        color = web.cssom.Color("gray")
-                    }
-                    +"= "
-                    span {
-                        css {
-                            fontWeight = web.cssom.FontWeight.bold
-                            color = web.cssom.NamedColor.black
-                        }
-                        +executionValueText(value)
+            IconButton {
+                title = "Cancel edit"
+                size = Size.small
+                onClick = { onCancelEdit() }
+                icon("material-symbols:cancel") {}
+            }
+
+            IconButton {
+                title = "Done"
+                size = Size.small
+                onClick = { onCommitEdit(parameter) }
+                icon("material-symbols:check") {}
+            }
+        }
+    }
+
+
+    // Default value editor, shown only for scalar types (the definer coerces those). Boolean uses a Switch;
+    // the others a text field. The value is held locally and committed on done (see onCommitEdit).
+    private fun ChildrenBuilder.renderDefaultInput(parameter: ParameterRow) {
+        if (parameter.className !in scalarDefaultClassNames) {
+            return
+        }
+
+        span {
+            css {
+                marginRight = 0.5.em
+            }
+            +"="
+        }
+
+        if (parameter.className == "kotlin.Boolean") {
+            Switch {
+                checked = state.editingDefault == "true"
+                onChange = { e, _ -> setState { editingDefault = e.currentTarget.checked.toString() } }
+            }
+        }
+        else {
+            span {
+                css {
+                    display = Display.inlineBlock
+                    width = 7.em
+                    marginRight = 0.5.em
+                }
+
+                TextField {
+                    size = Size.small
+                    fullWidth = true
+                    placeholder = "default"
+                    value = state.editingDefault
+                    onChange = {
+                        val text = (it.target as HTMLInputElement).value
+                        setState { editingDefault = text }
                     }
                 }
             }
         }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun typeLabel(parameter: ParameterRow): String {
+        val simple = simpleLabelByClassName[parameter.className]
+            ?: parameter.className.substringAfterLast('.')
+        return if (parameter.nullable) "$simple?" else simple
     }
 
 
@@ -350,30 +824,6 @@ class LogicSignatureEditor:
             is ScalarExecutionValue -> value.get().toString()
             is ListExecutionValue -> value.values.map { it.get() }.toString()
             else -> value.toString()
-        }
-    }
-
-
-    private fun ChildrenBuilder.renderAddParameter() {
-        div {
-            css {
-                marginTop = 0.5.em
-            }
-
-            TextField {
-                size = Size.small
-                placeholder = "new parameter name"
-                value = state.newParameterName
-                onChange = {
-                    val text = (it.target as HTMLInputElement).value
-                    setState { newParameterName = text }
-                }
-            }
-
-            button {
-                onClick = { onAddParameter() }
-                +"Add parameter"
-            }
         }
     }
 }

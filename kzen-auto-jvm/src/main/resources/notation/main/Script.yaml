@@ -1,2 +1,22 @@
 main:
   is: Script
+
+main.parameters/test x:
+  is: ParameterBinding
+  type:
+    class: kotlin.String
+    generics: []
+    nullable: false
+  default: foo
+
+main.steps/Formula 2:
+  is: FormulaStep
+  code: "`test x`"
+
+main.steps/Name:
+  is: TextLiteralStep
+  value: Mable
+
+main.steps/Formula:
+  is: FormulaStep
+  code: '"Hello $Name"'

@@ -48,10 +48,17 @@ TypeMetadataDefiner:
   class: tech.kzen.auto.common.objects.document.script.TypeMetadataDefiner
 
 
+# Coerces a Script parameter's optional `default` notation scalar into a typed runtime value keyed on the
+# sibling `type`; absent/unparseable/unsupported-type defaults resolve to null (see the definer class).
+ParameterDefaultDefiner:
+  class: tech.kzen.auto.common.objects.document.script.ParameterDefaultDefiner
+
+
 # A Script parameter, exposed to steps by name and fully typed, without a body row (replaces the old
 # ArgumentStep). Lives in the Script's `parameters` branch; the parameter name is this object's own name,
-# and `type` declares its TypeMetadata (defaults to Any). Validated like a step so its type flows into
-# ScriptValidation, but never executed — its value is resolved from the run arguments on demand.
+# and `type` declares its TypeMetadata (defaults to Any). `default` is the value used at runtime when a run
+# supplies no argument for the parameter (omitted = no default). Validated like a step so its type flows
+# into ScriptValidation, but never executed — its value is resolved from the run arguments on demand.
 ParameterBinding:
   abstract: true
   is: ScriptStep
@@ -64,6 +71,9 @@ ParameterBinding:
     nullable: false
   meta:
     type: TypeMetadata
+    default:
+      is: Object
+      by: ParameterDefaultDefiner
     selfLocation: SelfLocation
 
 

@@ -22,11 +22,12 @@ import tech.kzen.lib.common.reflect.Reflect
  * is the parameter `threshold`); the declared [type] gives it a real TypeMetadata instead of Any. Lives
  * in the Script's `parameters` branch, so it is validated (contributing its type to ScriptValidation)
  * and referenceable like a step, but never executed — its value is resolved from the run arguments on
- * demand via [resolveValue].
+ * demand via [resolveValue], falling back to the declared [default] when the run supplied no argument.
  */
 @Reflect
 class ParameterBinding(
     private val type: TypeMetadata,
+    private val default: Any?,
     private val selfLocation: ObjectLocation
 ):
     ScriptStep,
@@ -42,7 +43,7 @@ class ParameterBinding(
 
 
     override fun resolveValue(scriptExecutionContext: ScriptExecutionContext): Any? {
-        return scriptExecutionContext.arguments.find(parameterName)
+        return scriptExecutionContext.arguments.find(parameterName) ?: default
     }
 
 

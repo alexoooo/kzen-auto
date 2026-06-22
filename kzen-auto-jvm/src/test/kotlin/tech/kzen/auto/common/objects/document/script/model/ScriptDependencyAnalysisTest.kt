@@ -34,6 +34,23 @@ class ScriptDependencyAnalysisTest {
     }
 
 
+    @Test
+    fun detectsParameterReferencedByStepAsCrossBranchEdge() {
+        val graphNotation = AutoTestUtils.readNotation()
+        val graphDefinitionAttempt = AutoTestUtils.graphDefinitionAttempt(graphNotation)
+
+        val analysis = ScriptDependencyAnalysis.analyze(graphDefinitionAttempt, documentPath)
+
+        // `threshold * 2` references the parameter by name: parameter is the source, the step is the target.
+        val parameterEdge = ScriptStepDependency(
+            location("main.parameters/threshold"), location("main.steps/Thresholded"))
+        assertTrue(parameterEdge in analysis.edges)
+
+        // the parameter lives in a different branch than the step, so it is drawn by the cross-branch overlay
+        assertTrue(parameterEdge in analysis.crossBranchEdges())
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private fun location(objectPath: String): ObjectLocation {
         return ObjectLocation(documentPath, ObjectPath.parse(objectPath))

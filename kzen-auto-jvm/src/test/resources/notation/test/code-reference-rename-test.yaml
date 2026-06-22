@@ -23,3 +23,16 @@ main.steps/Backtick User:
 main.steps/String Literal:
   is: FormulaStep
   code: '"Source stays in this string"'
+
+# A typed parameter (rowless binding in the `parameters` branch) referenced by name from a step's code:
+# exercises the cross-branch parameter -> step dependency edge.
+main.parameters/threshold:
+  is: ParameterBinding
+  type:
+    class: kotlin.Int
+    generics: []
+    nullable: false
+
+main.steps/Thresholded:
+  is: FormulaStep
+  code: threshold * 2

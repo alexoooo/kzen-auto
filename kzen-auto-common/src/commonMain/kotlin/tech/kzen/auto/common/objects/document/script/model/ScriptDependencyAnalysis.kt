@@ -56,6 +56,17 @@ data class ScriptDependencyAnalysis(
                 return EMPTY
             }
 
+            // Script parameters live in the `parameters` branch (rowless bindings), never executed but
+            // referenceable by name from a step's code. Walking them into branchOfStep makes a step that
+            // references a parameter produce a cross-branch edge (parameter source -> step target), so the
+            // dependency line is drawn just like a cross-branch step-to-step reference. Walked after the
+            // steps emptiness check so a parameter-only document (no steps to reference them) still short-
+            // circuits to EMPTY.
+            walkBranch(
+                AttributeLocation(mainObjectLocation, ScriptConventions.parametersAttributePath),
+                graphDefinitionAttempt,
+                branchOfStep)
+
             // Key every in-document object by the bare identifier content its name maps to, so a step named
             // "my step" (referenced as `` `my step` ``) is matched — the old plain-identifier regex missed it.
             // Collisions (two names escaping to the same identifier) keep the last, a documented limitation.
