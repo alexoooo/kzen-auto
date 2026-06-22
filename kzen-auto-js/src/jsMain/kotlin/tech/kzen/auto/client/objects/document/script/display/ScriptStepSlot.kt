@@ -154,6 +154,13 @@ class ScriptStepSlot(
 
             title = "Insert this step into the expression"
 
+            // Stop mousedown too (not just click): the active editor's popover closes on a document-level
+            // mousedown-away (StepReferenceController.renderPopover). Swallowing mousedown here keeps a card
+            // press from reaching that listener, so the press inserts (onClick below) instead of cancelling.
+            onMouseDown = { event ->
+                event.stopPropagation()
+            }
+
             onClick = { event ->
                 event.stopPropagation()
                 props.onPick(props.objectLocation)

@@ -37,10 +37,14 @@ main.steps/div 3.then/div 3 and 5:
   is: IfStep
   condition: main.steps/Divisible By 5
 
+main.steps/div 3.then/div 3 and 5.then/Formula:
+  is: FormulaStep
+  code: '"fizzbuzz"'
+
 main.steps/div 3.then/div 3 and 5.else/Text:
   is: TextLiteralStep
   value: fizz
 
-main.steps/div 3.then/div 3 and 5.then/Formula:
-  is: FormulaStep
-  code: '"fizzbuzz"'
+main.steps/Display:
+  is: DisplayValueStep
+  text: main.parameters/number

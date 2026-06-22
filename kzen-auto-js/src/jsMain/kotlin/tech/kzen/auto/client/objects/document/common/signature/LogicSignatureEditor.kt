@@ -6,8 +6,11 @@ import mui.material.IconButton
 import mui.material.Size
 import mui.material.Switch
 import mui.material.TextField
+import mui.material.ToggleButton
+import mui.system.sx
 import react.ChildrenBuilder
 import react.Props
+import react.ReactNode
 import react.State
 import react.dom.events.DragEvent
 import react.dom.html.ReactHTML.div
@@ -21,11 +24,12 @@ import tech.kzen.auto.client.objects.document.script.display.dependency.scriptGu
 import tech.kzen.auto.client.objects.document.script.display.dependency.stepDependencyGutterCellForStep
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
+import tech.kzen.auto.client.util.ClientInputUtils
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.select.ReactSelectOption
-import tech.kzen.auto.client.wrap.select.reactSelectField
+import tech.kzen.auto.client.wrap.select.muiAutocompleteField
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.objects.document.script.model.ScriptDependencyAnalysis
@@ -292,6 +296,14 @@ class LogicSignatureEditor:
     }
 
 
+    private fun onCancelAdd() {
+        setState {
+            adding = false
+            newParameterName = ""
+        }
+    }
+
+
     private fun onRemoveParameter(location: ObjectLocation) {
         if (state.editingLocation == location) {
             setState {
@@ -466,8 +478,8 @@ class LogicSignatureEditor:
         div {
             css {
                 position = Position.absolute
-                top = 0.px
-                right = 0.px
+                top = 0.5.em
+                right = 0.5.em
                 display = Display.flex
                 alignItems = AlignItems.center
                 // above the step cards (which are positioned but auto z-index) so it stays clickable.
@@ -492,20 +504,24 @@ class LogicSignatureEditor:
                             val text = (it.target as HTMLInputElement).value
                             setState { newParameterName = text }
                         }
+                        onKeyDown = { event ->
+                            ClientInputUtils.handleEnterAndEscape(
+                                event, { onAddParameter() }, ::onCancelAdd)
+                        }
                     }
                 }
 
                 IconButton {
-                    title = "Add"
+                    title = "Add (Enter)"
                     size = Size.small
                     onClick = { onAddParameter() }
                     icon("material-symbols:check") {}
                 }
 
                 IconButton {
-                    title = "Cancel"
+                    title = "Cancel (Escape)"
                     size = Size.small
-                    onClick = { setState { adding = false; newParameterName = "" } }
+                    onClick = { onCancelAdd() }
                     icon("material-symbols:cancel") {}
                 }
             }
@@ -683,14 +699,15 @@ class LogicSignatureEditor:
             css {
                 display = Display.flex
                 alignItems = AlignItems.center
-                flexWrap = FlexWrap.wrap
-                rowGap = 0.25.em
+                // Single row — never wrap the trailing done/cancel/delete buttons onto a second line. The
+                // field widths below are sized to fit within ScriptController.stepWidth.
+                flexWrap = FlexWrap.nowrap
             }
 
             span {
                 css {
                     display = Display.inlineBlock
-                    width = 9.em
+                    width = 7.5.em
                     marginRight = 0.5.em
                 }
 
@@ -698,10 +715,15 @@ class LogicSignatureEditor:
                     size = Size.small
                     autoFocus = true
                     fullWidth = true
+                    label = ReactNode("Parameter")
                     value = state.editingName
                     onChange = {
                         val text = (it.target as HTMLInputElement).value
                         setState { editingName = text }
+                    }
+                    onKeyDown = { event ->
+                        ClientInputUtils.handleEnterAndEscape(
+                            event, { onCommitEdit(parameter) }, ::onCancelEdit)
                     }
                 }
             }
@@ -709,11 +731,11 @@ class LogicSignatureEditor:
             span {
                 css {
                     display = Display.inlineBlock
-                    width = 9.em
+                    width = 8.em
                     marginRight = 0.5.em
                 }
 
-                val options = classOptions
+                val typeOptions = classOptions
                     .map { (value, simpleLabel) ->
                         val option: ReactSelectOption = unsafeJso {
                             this.value = value
@@ -723,23 +745,35 @@ class LogicSignatureEditor:
                     }
                     .toTypedArray()
 
-                reactSelectField(
-                    selectedOption = options.find { it.value == parameter.className },
-                    options = options,
-                    onSelect = { onTypeChange(parameter, it.value, parameter.nullable) })
+                muiAutocompleteField(
+                    label = "Type",
+                    options = typeOptions,
+                    selectedOption = typeOptions.find { it.value == parameter.className },
+                    optionLabel = { it.label },
+                    optionsEqual = { a, b -> a.value == b.value },
+                    onSelect = { onTypeChange(parameter, it.value, parameter.nullable) },
+                    disableClearable = true)
             }
 
-            Switch {
-                checked = parameter.nullable
-                onChange = { e, _ -> onTypeChange(parameter, parameter.className, e.currentTarget.checked) }
-            }
-
-            span {
-                css {
-                    fontSize = 0.7.em
+            // Nullable as a compact toggle (`?`) rather than a switch + text label — the pressed state IS
+            // the meaning, and it reclaims horizontal room on the single editor row.
+            ToggleButton {
+                value = "nullable"
+                selected = parameter.nullable
+                size = Size.small
+                sx {
+                    height = 28.px
                     marginRight = 0.5.em
                 }
-                +"nullable"
+                title =
+                    if (parameter.nullable) {
+                        "Nullable (click to require non-null)"
+                    }
+                    else {
+                        "Allow null"
+                    }
+                onChange = { _, _ -> onTypeChange(parameter, parameter.className, !parameter.nullable) }
+                icon("material-symbols:question-mark") {}
             }
 
             renderDefaultInput(parameter)
@@ -752,14 +786,14 @@ class LogicSignatureEditor:
             }
 
             IconButton {
-                title = "Cancel edit"
+                title = "Cancel edit (Escape)"
                 size = Size.small
                 onClick = { onCancelEdit() }
                 icon("material-symbols:cancel") {}
             }
 
             IconButton {
-                title = "Done"
+                title = "Done (Enter)"
                 size = Size.small
                 onClick = { onCommitEdit(parameter) }
                 icon("material-symbols:check") {}
@@ -792,18 +826,22 @@ class LogicSignatureEditor:
             span {
                 css {
                     display = Display.inlineBlock
-                    width = 7.em
+                    width = 5.5.em
                     marginRight = 0.5.em
                 }
 
                 TextField {
                     size = Size.small
                     fullWidth = true
-                    placeholder = "default"
+                    label = ReactNode("Default")
                     value = state.editingDefault
                     onChange = {
                         val text = (it.target as HTMLInputElement).value
                         setState { editingDefault = text }
+                    }
+                    onKeyDown = { event ->
+                        ClientInputUtils.handleEnterAndEscape(
+                            event, { onCommitEdit(parameter) }, ::onCancelEdit)
                     }
                 }
             }
