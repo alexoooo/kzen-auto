@@ -9,9 +9,13 @@ import tech.kzen.auto.client.objects.document.common.dragdrop.dragHandle
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.lib.common.model.location.ObjectLocation
 import web.cssom.Color
+import web.cssom.Cursor
+import web.cssom.LineStyle
 import web.cssom.Position
+import web.cssom.integer
 import web.cssom.number
 import web.cssom.pct
+import web.cssom.px
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -22,6 +26,12 @@ external interface ScriptStepSlotProps: Props {
     var last: Boolean
 
     var isDragSource: Boolean
+
+    // Step-reference pick session: when true this step is a highlighted, clickable insert target. onPick
+    // threads the slot's own objectLocation back so the parent can hold a single stable reference for all
+    // slots (mirrors onDragStart threading indexInParent).
+    var isPickTarget: Boolean
+    var onPick: (ObjectLocation) -> Unit
 
     var stepDisplayManager: StepDisplayManager.Wrapper
     var handleColor: Color
@@ -40,6 +50,14 @@ class ScriptStepSlot(
 ):
     RPureComponent<ScriptStepSlotProps, State>(props)
 {
+    //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        // Subtle blue insert-target highlight, matching the sidebar row highlight palette.
+        private val pickHighlightColor = Color("#649fff")
+        private val pickHighlightTint = Color("rgba(100, 159, 255, 0.12)")
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     // NB: kept stable across renders so StepDisplayManager (RPureComponent) can bail out
     private var cachedCommon: ScriptStepDisplayPropsCommon? = null
@@ -84,6 +102,16 @@ class ScriptStepSlot(
                 position = Position.relative
                 height = 100.pct
 
+                // Subtle outline framing this step as a click-to-insert target during a pick session. Outline
+                // (not border) and an inset offset so it doesn't shift the card's layout.
+                if (props.isPickTarget) {
+                    borderRadius = 3.px
+                    outlineWidth = 2.px
+                    outlineStyle = LineStyle.solid
+                    outlineColor = pickHighlightColor
+                    outlineOffset = (-2).px
+                }
+
                 "&:hover:not(:has([data-step-slot]:hover)):not(:has([data-step-branch]:hover)) > [data-drag-handle]" {
                     opacity = number(1.0)
                 }
@@ -98,6 +126,37 @@ class ScriptStepSlot(
 
             props.stepDisplayManager.child(this) {
                 common = commonForProps()
+            }
+
+            // Rendered last so it overlays the card: a transparent click target that inserts this step into
+            // the active expression editor (the whole card becomes clickable, taking precedence over the
+            // card's own expand-on-click). Present only while this step is a pick target.
+            if (props.isPickTarget) {
+                renderPickOverlay()
+            }
+        }
+    }
+
+
+    private fun ChildrenBuilder.renderPickOverlay() {
+        div {
+            css {
+                position = Position.absolute
+                top = 0.px
+                left = 0.px
+                right = 0.px
+                bottom = 0.px
+                backgroundColor = pickHighlightTint
+                borderRadius = 3.px
+                cursor = Cursor.pointer
+                zIndex = integer(1)
+            }
+
+            title = "Insert this step into the expression"
+
+            onClick = { event ->
+                event.stopPropagation()
+                props.onPick(props.objectLocation)
             }
         }
     }

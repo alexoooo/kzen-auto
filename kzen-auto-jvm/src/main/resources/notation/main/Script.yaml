@@ -1,10 +1,2 @@
 main:
   is: Script
-
-main.steps/Text:
-  is: TextLiteralStep
-  value: foo
-
-main.steps/Formula:
-  is: FormulaStep
-  code: Text

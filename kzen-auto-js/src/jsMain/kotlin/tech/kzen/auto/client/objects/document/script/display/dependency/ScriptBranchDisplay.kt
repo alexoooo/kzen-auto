@@ -18,8 +18,10 @@ import tech.kzen.auto.client.objects.document.script.ScriptController
 import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
 import tech.kzen.auto.client.objects.document.script.display.ScriptStepSlot
 import tech.kzen.auto.client.objects.document.script.display.StepDisplayManager
+import tech.kzen.auto.client.objects.document.script.display.edit.ScriptStepReferenceStore
 import tech.kzen.auto.client.objects.document.script.display.image.StepImageThumbnail
 import tech.kzen.auto.client.objects.document.script.model.ScriptDragStoreKey
+import tech.kzen.auto.client.objects.document.script.model.ScriptStepReferenceStoreKey
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.global.InsertionGlobal
@@ -70,6 +72,10 @@ external interface StepListDisplayState: State {
     // some other branch. The branch is one drop zone; the index is computed from cursor Y vs step midpoints,
     // so the whole vertical extent (cards, gaps, insertion strips, empty space) maps to a single line.
     var dropInsertionIndex: Int?
+
+    // Which of this branch's steps are highlighted insert targets during a step-reference pick session
+    // (derived from the shared ScriptStepReferenceStore); null when no session is active.
+    var pickTargets: Set<ObjectLocation>?
 }
 
 
@@ -80,7 +86,8 @@ class ScriptBranchDisplay(
     RPureComponent<StepListDisplayProps, StepListDisplayState>(props),
     ClientStateGlobal.Observer,
     InsertionGlobal.Subscriber,
-    ScriptStepDragStore.Observer
+    ScriptStepDragStore.Observer,
+    ScriptStepReferenceStore.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -95,6 +102,10 @@ class ScriptBranchDisplay(
     // Drag-over / drop are handled at the BRANCH level (one drop zone), not per slot — see onBranchDragOver.
     private val onSlotDragStart: (Int) -> Unit = { index -> onDragStart(index) }
     private val onSlotDragEnd: () -> Unit = { onDragEnd() }
+
+    // Stable so a highlighted slot (RPureComponent) keeps the same onPick reference across renders; the slot
+    // threads its own objectLocation back in (like onSlotDragStart threads its index).
+    private val onSlotPick: (ObjectLocation) -> Unit = { location -> referenceStore()?.selectStep(location) }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -114,10 +125,12 @@ class ScriptBranchDisplay(
         props.clientStateGlobal.observe(this)
         insertion()?.subscribe(this)
         dragStore()?.observe(this)
+        referenceStore()?.observe(this)
     }
 
 
     override fun componentWillUnmount() {
+        referenceStore()?.unobserve(this)
         dragStore()?.unobserve(this)
         insertion()?.unsubscribe(this)
         props.clientStateGlobal.unobserve(this)
@@ -126,6 +139,10 @@ class ScriptBranchDisplay(
 
     private fun dragStore(): ScriptStepDragStore? =
         contextValue<DocumentBridge?>()?.lookup(ScriptDragStoreKey)
+
+
+    private fun referenceStore(): ScriptStepReferenceStore? =
+        contextValue<DocumentBridge?>()?.lookup(ScriptStepReferenceStoreKey)
 
 
     private fun insertion(): InsertionGlobal? =
@@ -152,6 +169,34 @@ class ScriptBranchDisplay(
         setState {
             this.dragSource = dragSource
             this.dropInsertionIndex = dropInsertionIndex
+        }
+    }
+
+
+    // Derive only this branch's slice of the active pick session — which of its rendered steps are in scope
+    // for the expression being edited — and skip setState when unchanged, so beginning/ending a pick
+    // re-renders only the branches whose highlighted steps actually changed.
+    override fun onStepReferenceChanged() {
+        val session = referenceStore()?.session
+        val stepLocations = state.stepLocations
+
+        // Null (not an empty set) when this branch has no in-scope steps, so branches untouched by the
+        // session keep the same slice and bail — only branches that actually gain/lose a highlight re-render.
+        val pickTargets =
+            if (session == null || stepLocations == null) {
+                null
+            }
+            else {
+                val matches = stepLocations.filter { it in session.inScopeLocations }
+                if (matches.isEmpty()) null else matches.toSet()
+            }
+
+        if (state.pickTargets == pickTargets) {
+            return
+        }
+
+        setState {
+            this.pickTargets = pickTargets
         }
     }
 
@@ -732,6 +777,9 @@ class ScriptBranchDisplay(
             this.last = index == stepCount - 1
 
             this.isDragSource = sourceIndexInThisBranch == index
+
+            this.isPickTarget = state.pickTargets?.contains(objectLocation) ?: false
+            this.onPick = onSlotPick
 
             this.stepDisplayManager = props.stepDisplayManager
             this.handleColor = dragHandleColor

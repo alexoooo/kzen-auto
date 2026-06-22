@@ -20,8 +20,10 @@ import tech.kzen.auto.client.objects.document.script.display.StepDisplayManager
 import tech.kzen.auto.client.objects.document.script.display.computeStepTraceInfo
 import tech.kzen.auto.client.objects.document.script.display.dependency.ScriptDependencyOverlay
 import tech.kzen.auto.client.objects.document.script.display.dependency.ScriptStepDragStore
+import tech.kzen.auto.client.objects.document.script.display.edit.ScriptStepReferenceStore
 import tech.kzen.auto.client.objects.document.script.model.ScriptDragStoreKey
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
+import tech.kzen.auto.client.objects.document.script.model.ScriptStepReferenceStoreKey
 import tech.kzen.auto.client.objects.document.script.model.ScriptStore
 import tech.kzen.auto.client.objects.document.script.model.ScriptStoreKey
 import tech.kzen.auto.client.objects.document.script.step.control.MultiStepDisplay
@@ -172,6 +174,10 @@ class ScriptController:
     // ScriptBranchDisplay in this script's subtree reads the same instance. One per mounted controller.
     private val dragStore = ScriptStepDragStore()
 
+    // Shared "insert a prior Step as a value" pick session; provided into the per-document bridge so the
+    // active KotlinExpressionEditor and every ScriptBranchDisplay coordinate the popover + canvas highlight.
+    private val stepReferenceStore = ScriptStepReferenceStore()
+
 
     //-----------------------------------------------------------------------------------------------------------------
     init {
@@ -316,6 +322,7 @@ class ScriptController:
         val bridge = contextValue<DocumentBridge?>()
         bridge?.provide(ScriptStoreKey, store)
         bridge?.provide(ScriptDragStoreKey, dragStore)
+        bridge?.provide(ScriptStepReferenceStoreKey, stepReferenceStore)
 
         div {
             css {

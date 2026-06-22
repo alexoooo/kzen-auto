@@ -27,6 +27,11 @@ external interface ReactSelectProps: react.Props {
 
     var onMenuOpen: () -> Unit
 
+    // Focus the control on mount and start with the option list open — for a popover that should behave
+    // like a primitive autocomplete (type to filter, click to insert) the instant it appears.
+    var autoFocus: Boolean
+    var defaultMenuIsOpen: Boolean
+
     var isDisabled: Boolean
 
 //    var id: String

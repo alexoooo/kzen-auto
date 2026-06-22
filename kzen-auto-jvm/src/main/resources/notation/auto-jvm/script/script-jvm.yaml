@@ -122,6 +122,7 @@ FormulaStep:
     code:
       is: String
       multiline: true
+      editor: KotlinExpressionEditor
       summary: TextAttributeView
     selfLocation: SelfLocation
 
@@ -353,6 +354,7 @@ DoWhileStep:
     condition:
       is: String
       multiline: true
+      editor: KotlinExpressionEditor
       summary: TextAttributeView
     steps:
       is: List

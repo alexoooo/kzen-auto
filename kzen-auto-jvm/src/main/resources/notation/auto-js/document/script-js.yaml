@@ -125,6 +125,11 @@ SelectStepEditor:
   class: tech.kzen.auto.client.objects.document.script.display.edit.SelectStepEditor$Wrapper
 
 
+KotlinExpressionEditor:
+  is: AttributeEditor
+  class: tech.kzen.auto.client.objects.document.script.display.edit.KotlinExpressionEditor$Wrapper
+
+
 SelectLogicEditor:
   is: AttributeEditor
   class: tech.kzen.auto.client.objects.document.script.display.edit.SelectLogicEditor$Wrapper
