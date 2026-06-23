@@ -103,9 +103,12 @@ data class SidebarModel(
                     ?.asBoolean()
                     ?: false
 
+                // the base Document archetype defaults group to "" (a meta-declared scalar must have a value, or the
+                // object fails to define) — treat that empty default as "ungrouped" so untagged archetypes stay top-level
                 val group = coalesced
                     .get(AutoConventions.groupAttributePath)
                     ?.asString()
+                    ?.takeIf { it.isNotEmpty() }
 
                 ArchetypeInfo(location, icon, title, directory, group)
             }

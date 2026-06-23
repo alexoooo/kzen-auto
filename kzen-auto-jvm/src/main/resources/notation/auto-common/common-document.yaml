@@ -4,6 +4,7 @@ Document:
   class: tech.kzen.auto.common.objects.document.DocumentArchetype
   title: "Document"
   directory: false
+  group: ""
   meta:
     title: String
     icon: String

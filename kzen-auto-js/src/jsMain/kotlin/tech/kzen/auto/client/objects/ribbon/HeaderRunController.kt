@@ -13,6 +13,7 @@ import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.service.logic.ClientLogicGlobal
 import tech.kzen.auto.client.service.logic.ClientLogicState
 import tech.kzen.auto.client.service.logic.LogicRunFrames
+import tech.kzen.auto.client.util.DefinitionErrors
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.createRef
@@ -55,6 +56,11 @@ external interface HeaderRunControllerState: State {
     // While slowLooping, whether the loop is the Step-Over variant (stays within the current document)
     // rather than the Step variant (descends into nested logic).
     var slowStepOver: Boolean
+
+    // When the current (logic) document can't run because it — or a transitive dependency — failed to define,
+    // the reason, shown as the disabled run-controls tooltip. Null when the document is runnable (or isn't a
+    // logic document); folded into `runnable` so all the run controls disable without per-button changes.
+    var runBlockReason: String?
 }
 
 
@@ -100,6 +106,7 @@ class HeaderRunController (
         hasTrace = false
         slowLooping = false
         slowStepOver = false
+        runBlockReason = null
     }
 
 
@@ -144,9 +151,21 @@ class HeaderRunController (
         mainObjectLocation = mainLocation
         latestFrame = nextFrame
 
+        // A logic document whose root (or a transitive dependency) failed to define can't run — surface the
+        // reason and treat it as not-runnable so every run control disables, instead of letting the run fail
+        // opaquely on the server.
+        val runBlocker =
+            if (isLogic) {
+                DefinitionErrors.runBlocker(clientState.graphDefinitionAttempt, mainLocation)
+            }
+            else {
+                null
+            }
+
         val dropdownWasOpen = state.dropdownOpen
         setState {
-            runnable = isLogic
+            runnable = isLogic && runBlocker == null
+            runBlockReason = runBlocker
             active = clientLogicState.isActive()
             executing = clientLogicState.isExecuting()
             slowLooping = clientLogicState.slowLooping
@@ -338,7 +357,8 @@ class HeaderRunController (
                 }
 
                 if (!active && !runnable) {
-                    title = "Current document is not runnable"
+                    // A definition failure gives a specific reason; otherwise it's simply not a logic document.
+                    title = state.runBlockReason ?: "Current document is not runnable"
                     disabled = true
                 }
 

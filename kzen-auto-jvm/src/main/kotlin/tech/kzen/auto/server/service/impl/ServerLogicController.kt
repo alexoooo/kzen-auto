@@ -136,7 +136,19 @@ class ServerLogicController(
 
         val successfulGraphDefinition = graphDefinition.successful()
 
-        val transitiveDefinition = successfulGraphDefinition.filterTransitive(root)
+        val transitiveDefinition =
+            try {
+                successfulGraphDefinition.filterTransitive(root)
+            }
+            catch (e: IllegalArgumentException) {
+                // The root (or a transitive dependency) failed to define — e.g. a meta-declared attribute with
+                // no value silently dropped the object from the successful graph. Fail gracefully (return null →
+                // clean 400) instead of letting it escape as a 500; the client surfaces the specific detail.
+                logger.warn(
+                    "Unable to start run, definition incomplete: {} - {}",
+                    root, graphDefinition.failures[root], e)
+                return null
+            }
 
         val rootGraphInstance =
             try {

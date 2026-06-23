@@ -2,12 +2,14 @@ package tech.kzen.auto.client.objects.document
 
 import emotion.react.css
 import react.ChildrenBuilder
+import react.Key
 import react.Props
 import react.State
 import react.createContext
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.service.global.NavigationGlobal
+import tech.kzen.auto.client.util.DefinitionErrors
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.react
@@ -25,7 +27,10 @@ import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.common.service.store.MirroredGraphStore
+import web.cssom.FontWeight
 import web.cssom.Length
+import web.cssom.LineStyle
+import web.cssom.NamedColor
 import web.cssom.em
 import web.cssom.px
 
@@ -42,6 +47,10 @@ external interface StageControllerState: State {
     var structure: GraphStructure?
     var documentPath: DocumentPath?
     var transition: Boolean
+
+    // Definition failures grouped by the document they belong to; the open document's entry (if any) is shown
+    // as an in-context error panel above its body. Recomputed on every graph-store update.
+    var definitionErrorsByDocument: Map<DocumentPath, List<DefinitionErrors.Line>>
 }
 
 
@@ -92,6 +101,7 @@ class StageController(
         structure = null
         documentPath = null
         transition = false
+        definitionErrorsByDocument = emptyMap()
     }
 
 
@@ -135,8 +145,10 @@ class StageController(
     override suspend fun onCommandSuccess(
         event: NotationEvent, graphDefinition: GraphDefinitionAttempt, attachment: LocalGraphStore.Attachment
     ) {
+        val nextDefinitionErrors = DefinitionErrors.all(graphDefinition).groupBy { it.location.documentPath }
         setState {
             structure = graphDefinition.graphStructure
+            definitionErrorsByDocument = nextDefinitionErrors
         }
     }
 
@@ -147,8 +159,10 @@ class StageController(
 
 
     override suspend fun onStoreRefresh(graphDefinitionAttempt: GraphDefinitionAttempt) {
+        val nextDefinitionErrors = DefinitionErrors.all(graphDefinitionAttempt).groupBy { it.location.documentPath }
         setState {
             structure = graphDefinitionAttempt.graphStructure
+            definitionErrorsByDocument = nextDefinitionErrors
         }
     }
 
@@ -181,6 +195,8 @@ class StageController(
             return
         }
 
+        renderDefinitionErrors()
+
         val archetypeName = documentArchetypeName()
 
         if (archetypeName == null) {
@@ -188,6 +204,46 @@ class StageController(
         }
         else {
             renderDocumentController(archetypeName)
+        }
+    }
+
+
+    // In-context error when the open document's object failed to define. Rendered ABOVE the body (not instead of
+    // it) — the editor still loads from notation, so the user can fix the offending attribute in place.
+    private fun ChildrenBuilder.renderDefinitionErrors() {
+        val documentPath = state.documentPath
+            ?: return
+
+        val lines = state.definitionErrorsByDocument[documentPath]
+            ?: return
+
+        div {
+            css {
+                margin = 1.em
+                padding = 0.5.em
+                color = NamedColor.red
+                borderWidth = 1.px
+                borderStyle = LineStyle.solid
+                borderColor = NamedColor.red
+                borderRadius = 4.px
+            }
+
+            div {
+                css {
+                    fontWeight = FontWeight.bold
+                }
+                +"This document has a notation error and can't run until it's fixed"
+            }
+
+            for (line in lines) {
+                div {
+                    key = Key(line.location.asString())
+                    css {
+                        marginTop = 0.25.em
+                    }
+                    +"${line.location.asString()} — ${line.detail}"
+                }
+            }
         }
     }
 

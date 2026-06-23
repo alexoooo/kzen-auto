@@ -6,6 +6,7 @@ import kotlinx.coroutines.delay
 import org.w3c.dom.events.Event
 import org.w3c.dom.events.MouseEvent
 import react.ChildrenBuilder
+import react.Key
 import react.Props
 import react.RefObject
 import react.State
@@ -24,6 +25,7 @@ import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.service.logic.ClientLogicGlobal
 import tech.kzen.auto.client.service.logic.LogicRunFrames
 import tech.kzen.auto.client.service.storage.SidebarPreferences
+import tech.kzen.auto.client.util.DefinitionErrors
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.createRef
@@ -68,6 +70,12 @@ external interface ProjectControllerState: State {
     var documentPath: DocumentPath?
     var commandErrorMessage: String?
     var commandErrorRequest: NotationCommand?
+
+    // Objects that failed to define in the current notation (e.g. a meta-declared attribute with no value).
+    // Shown as a persistent banner so a corrupted notation is visible up front, not only as an opaque run-time
+    // "Missing: <doc>#main". Recomputed on every graph-store update; empty when the notation is clean.
+    var definitionErrors: List<DefinitionErrors.Line>
+
     var headerHeight: Int?
     var sidebarWidthPx: Double
     var sidebarCollapsed: Boolean
@@ -227,6 +235,7 @@ class ProjectController(
         sidebarCollapsed = SidebarPreferences.loadCollapsed(false)
         executingDepths = emptyMap()
         tracedDocuments = emptySet()
+        definitionErrors = emptyList()
     }
 
 
@@ -306,12 +315,14 @@ class ProjectController(
 //        console.log("^^^ onCommandSuccess", event)
         val nextHeaderModel = headerModelBuilder.update(graphDefinition.graphStructure)
         val nextSidebarModel = sidebarModelBuilder.update(graphDefinition.graphStructure)
+        val nextDefinitionErrors = DefinitionErrors.all(graphDefinition)
         setState {
             structure = graphDefinition.graphStructure
             headerModel = nextHeaderModel
             sidebarModel = nextSidebarModel
             commandErrorRequest = null
             commandErrorMessage = null
+            definitionErrors = nextDefinitionErrors
         }
     }
 
@@ -339,10 +350,12 @@ class ProjectController(
 //        console.log("^^^ onStoreRefresh: " + graphDefinition.graphStructure)
         val nextSidebarModel = sidebarModelBuilder.update(graphDefinitionAttempt.graphStructure)
         val nextHeaderModel = headerModelBuilder.update(graphDefinitionAttempt.graphStructure)
+        val nextDefinitionErrors = DefinitionErrors.all(graphDefinitionAttempt)
         setState {
             structure = graphDefinitionAttempt.graphStructure
             headerModel = nextHeaderModel
             sidebarModel = nextSidebarModel
+            definitionErrors = nextDefinitionErrors
         }
     }
 
@@ -574,6 +587,10 @@ class ProjectController(
             css {
                 marginTop = headerHeight
                 marginLeft = effectiveWidth
+
+                // BFC so the error banner's top margin creates a gap below the header instead of collapsing
+                // into this container's own marginTop.
+                display = Display.flowRoot
             }
 
             div {
@@ -586,6 +603,44 @@ class ProjectController(
                     color = NamedColor.red
                 }
                 +"Command error: ${state.commandErrorMessage} - ${state.commandErrorRequest}"
+            }
+
+            // Persistent banner for objects that failed to define in the current notation. Clears itself once the
+            // notation is fixed (the next store update recomputes an empty list).
+            val definitionErrors = state.definitionErrors
+            if (definitionErrors.isNotEmpty()) {
+                div {
+                    css {
+                        // extra top margin so the banner clears the fixed header (and its drop shadow)
+                        marginTop = 1.em
+                        marginRight = 0.5.em
+                        marginBottom = 0.5.em
+                        marginLeft = 0.5.em
+                        padding = 0.5.em
+                        color = NamedColor.red
+                        borderWidth = 1.px
+                        borderStyle = LineStyle.solid
+                        borderColor = NamedColor.red
+                        borderRadius = 4.px
+                    }
+
+                    div {
+                        css {
+                            fontWeight = FontWeight.bold
+                        }
+                        +"Notation error — ${definitionErrors.size} object(s) failed to define"
+                    }
+
+                    for (line in definitionErrors) {
+                        div {
+                            key = Key(line.location.asString())
+                            css {
+                                marginTop = 0.25.em
+                            }
+                            +"${line.location.asString()} — ${line.detail}"
+                        }
+                    }
+                }
             }
 
             val context = StageController.CoordinateContext(
