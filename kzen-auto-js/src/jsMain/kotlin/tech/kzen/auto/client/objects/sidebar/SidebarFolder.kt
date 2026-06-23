@@ -75,6 +75,14 @@ class SidebarFolder(
     RComponent<SidebarFolderProps, SidebarFolderState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        // presentation-only icon for a create-group flyout trigger; groups are label-only in the notation (no per-group
+        // icon), so a single neutral icon stands in for every group
+        private const val createGroupIcon = "material-symbols:tune"
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     private var nameEditorRef: RefObject<DocumentNameEditor> = createRef()
 
 
@@ -523,32 +531,67 @@ class SidebarFolder(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun ChildrenBuilder.renderCreateItems(close: () -> Unit) {
-        val iconStyle: CSSProperties = unsafeJso {
-            marginRight = 1.em
-        }
-
         MenuItem {
             onClick = { onAddFolder(close) }
             icon("material-symbols:create-new-folder") {
-                style = iconStyle
+                style = createItemIconStyle()
             }
             +"New Folder..."
         }
 
-        for (archetype in props.sidebarModel.archetypes) {
-            MenuItem {
-                key = Key(archetype.location.objectPath.name.value)
-                onClick = {
-                    onAddDocument(archetype, close)
-                }
+        val archetypes = props.sidebarModel.archetypes
 
-                icon(archetype.icon) {
-                    style = iconStyle
-                }
-
-                +"New ${archetype.title}..."
+        // ungrouped archetypes stay as top-level items, in discovery order
+        for (archetype in archetypes) {
+            if (archetype.group == null) {
+                renderArchetypeItem(archetype, close)
             }
         }
+
+        // each declarative group (the `group` notation attribute) collapses into one hover flyout; groupBy preserves
+        // first-encounter order so the flyouts render in a stable order
+        val groups = archetypes
+            .filter { it.group != null }
+            .groupBy { it.group!! }
+
+        for ((groupName, groupArchetypes) in groups) {
+            SidebarCreateSubMenu::class.react {
+                key = Key(groupName)
+
+                title = groupName
+                groupIcon = createGroupIcon
+                parentClose = close
+                renderItems = { childrenBuilder, groupClose ->
+                    for (archetype in groupArchetypes) {
+                        childrenBuilder.renderArchetypeItem(archetype, groupClose)
+                    }
+                }
+            }
+        }
+    }
+
+
+    private fun ChildrenBuilder.renderArchetypeItem(
+        archetype: SidebarModel.ArchetypeInfo,
+        close: () -> Unit
+    ) {
+        MenuItem {
+            key = Key(archetype.location.objectPath.name.value)
+            onClick = {
+                onAddDocument(archetype, close)
+            }
+
+            icon(archetype.icon) {
+                style = createItemIconStyle()
+            }
+
+            +"New ${archetype.title}..."
+        }
+    }
+
+
+    private fun createItemIconStyle(): CSSProperties = unsafeJso {
+        marginRight = 1.em
     }
 
 

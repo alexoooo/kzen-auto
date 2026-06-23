@@ -8,17 +8,16 @@ import tech.kzen.lib.common.reflect.Reflect
 
 @Reflect
 class IntRangeSource(
-        private val output: StreamOutput<Int>,
+    private val output: StreamOutput<Int>,
 
-        private val from: Int,
-        private val to: Int
+    private val from: Int,
+    private val to: Int
 ):
-        StreamFlowVertex<IntRangeSource.State>/*,
-        ValidatedObject*/
+    StreamFlowVertex<IntRangeSource.State>
 {
     //-----------------------------------------------------------------------------------------------------------------
     class State(
-            var next: Int
+        var next: Int
     )
 
 
@@ -29,7 +28,7 @@ class IntRangeSource(
 
     override fun inspectState(state: State): ExecutionValue {
         return ExecutionValue.of(
-                mapOf("next" to state.next))
+            mapOf("next" to state.next))
     }
 
 

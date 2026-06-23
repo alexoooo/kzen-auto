@@ -26,7 +26,9 @@ data class SidebarModel(
         val location: ObjectLocation,
         val icon: String,
         val title: String,
-        val directory: Boolean
+        val directory: Boolean,
+        // optional declarative flyout group (the `group` notation attribute); null = top-level create item
+        val group: String?
     )
 
 
@@ -101,7 +103,11 @@ data class SidebarModel(
                     ?.asBoolean()
                     ?: false
 
-                ArchetypeInfo(location, icon, title, directory)
+                val group = coalesced
+                    .get(AutoConventions.groupAttributePath)
+                    ?.asString()
+
+                ArchetypeInfo(location, icon, title, directory, group)
             }
 
             val byLocation = archetypes.associateBy { it.location }

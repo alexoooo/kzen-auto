@@ -8,9 +8,9 @@ import tech.kzen.lib.common.reflect.Reflect
 
 @Reflect
 class SelectLast<T>(
-        private val first: OptionalInput<T>,
-        private val second: OptionalInput<T>,
-        private val output: RequiredOutput<T>
+    private val first: OptionalInput<T>,
+    private val second: OptionalInput<T>,
+    private val output: RequiredOutput<T>
 ): StatelessFlowVertex {
     override fun process() {
         val secondValue = second.get()

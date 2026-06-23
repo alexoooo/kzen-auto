@@ -38,6 +38,7 @@ object AutoConventions {
     val descriptionAttributePath = AttributePath.ofName(AttributeName("description"))
     val displayAttributePath = AttributePath.ofName(AttributeName("display"))
     val directoryAttributePath = AttributePath.ofName(AttributeName("directory"))
+    val groupAttributePath = AttributePath.ofName(AttributeName("group"))
 
 
     @Suppress("ConstPropertyName")

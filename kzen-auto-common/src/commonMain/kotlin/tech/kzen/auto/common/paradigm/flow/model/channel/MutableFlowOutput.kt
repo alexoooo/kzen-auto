@@ -8,10 +8,10 @@ import tech.kzen.auto.common.paradigm.flow.api.output.StreamOutput
 
 // TODO: enforce optional/required/stream/batch contracts
 class MutableFlowOutput<T>:
-        OptionalOutput<T>,
-        RequiredOutput<T>,
-        BatchOutput<T>,
-        StreamOutput<T>
+    OptionalOutput<T>,
+    RequiredOutput<T>,
+    BatchOutput<T>,
+    StreamOutput<T>
 {
     private val buffer = mutableListOf<T>()
     private var streamHasNext: Boolean = false

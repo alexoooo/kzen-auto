@@ -10,7 +10,7 @@ class MutableRequiredInput<out T>: RequiredInput<T>, MutableInput<T> {
 
     override fun get(): T {
         return value
-                ?: throw NoSuchElementException("required input missing")
+            ?: throw NoSuchElementException("required input missing")
     }
 
 
