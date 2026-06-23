@@ -37,7 +37,23 @@ fun ChildrenBuilder.scriptGutterRow(
             }
         }
 
-        gutter()
+        // Stable wrapper for the gutter so its variable lane count never shifts the body's sibling index.
+        // The gutter cell emits 0..N lane boxes depending on the branch's dependency edges (zero when there
+        // are none); emitting them directly into this flex row meant the body div — and the stateful step
+        // slot inside it — changed position the instant an edge appeared/disappeared (e.g. inserting a step
+        // reference creates the branch's first dependency), so React reconciled by index, remounted the step,
+        // and the step's unmount hook collapsed its expansion (and discarded any in-progress editor buffer).
+        // An always-present box keeps the body at a fixed index so React reconciles the step in place. Flex +
+        // stretch reproduces the prior layout exactly (lanes laid out horizontally, full row height); it
+        // collapses to zero width when empty, and the leftmost lane still sits at row.left for the overlay.
+        div {
+            css {
+                display = Display.flex
+                alignItems = AlignItems.stretch
+                flexShrink = number(0.0)
+            }
+            gutter()
+        }
 
         div {
             css {
