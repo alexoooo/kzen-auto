@@ -1,0 +1,23 @@
+main:
+  is: Job
+
+main.channels/raw:
+  is: Channel
+  buffer: 8
+
+# UI-facing duplex channel the Preview worker serves slice queries on (the bridge is its client).
+main.channels/queries:
+  is: DuplexChannel
+  external: true
+
+main.workers/reader:
+  is: CsvReaderWorker
+  output: main.channels/raw
+  path: build/job-preview/input.csv
+  batch: 4096
+
+main.workers/preview:
+  is: PreviewWorker
+  input: main.channels/raw
+  serve: main.channels/queries
+  sample: 1000

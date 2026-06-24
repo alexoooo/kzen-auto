@@ -1,0 +1,27 @@
+main:
+  is: Job
+
+main.channels/raw:
+  is: Channel
+  buffer: 8
+
+main.channels/filtered:
+  is: Channel
+  buffer: 8
+
+main.workers/reader:
+  is: CsvReaderWorker
+  output: main.channels/raw
+  path: build/job-slice-test/input.csv
+  batch: 4096
+
+main.workers/filter:
+  is: FilterWorker
+  input: main.channels/raw
+  output: main.channels/filtered
+  where: 'flag eq "yes"'
+
+main.workers/writer:
+  is: CsvWriterWorker
+  input: main.channels/filtered
+  path: build/job-slice-test/output.csv

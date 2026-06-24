@@ -1,0 +1,101 @@
+
+
+JobController:
+  is: DocumentController
+  class: tech.kzen.auto.client.objects.document.job.JobController$Wrapper
+  archetype: Job
+  ribbonController: RibbonController
+  attributeEditorManager: AttributeEditorManager
+
+
+# Channel-reference picker: lists the Job document's Channel objects in a dropdown and writes the chosen
+# reference into the Worker's ChannelInput / ChannelOutput / ChannelServer / ChannelClient attribute.
+# Selected per attribute via `editor: SelectChannelEditor` in the Worker archetype metadata.
+SelectChannelEditor:
+  is: AttributeEditor
+  class: tech.kzen.auto.client.objects.document.job.edit.SelectChannelEditor$Wrapper
+
+
+# Calculated-column map editor: edits a FormulaWorker's `formula` attribute (a FormulaSpec — column-name ->
+# Kotlin-expression map), since the generic value editor can't edit a structured map attribute. Selected via
+# `editor: FormulaMapEditor` on the FormulaWorker's `formula` metadata.
+FormulaMapEditor:
+  is: AttributeEditor
+  class: tech.kzen.auto.client.objects.document.job.edit.FormulaMapEditor$Wrapper
+
+
+#######################################################################################################################
+# Job insert ribbon: each RibbonTool delegates to a Worker / Channel archetype; clicking it inserts that
+# archetype into the active Job document (Workers nest under `workers`, Channels under `channels`).
+
+
+JobGroup_Sources:
+  is: RibbonGroup
+  title: "Sources"
+  archetype: Job
+
+
+CsvReaderTool:
+  is: RibbonTool
+  parent: JobGroup_Sources
+  delegate: CsvReaderWorker
+
+
+################################################################
+
+JobGroup_Transforms:
+  is: RibbonGroup
+  title: "Transforms"
+  archetype: Job
+
+
+FilterTool:
+  is: RibbonTool
+  parent: JobGroup_Transforms
+  delegate: FilterWorker
+
+
+FormulaTool:
+  is: RibbonTool
+  parent: JobGroup_Transforms
+  delegate: FormulaWorker
+
+
+################################################################
+
+JobGroup_Sinks:
+  is: RibbonGroup
+  title: "Sinks"
+  archetype: Job
+
+
+CsvWriterTool:
+  is: RibbonTool
+  parent: JobGroup_Sinks
+  delegate: CsvWriterWorker
+
+
+PreviewTool:
+  is: RibbonTool
+  parent: JobGroup_Sinks
+  delegate: PreviewWorker
+
+
+################################################################
+
+JobGroup_Channels:
+  is: RibbonGroup
+  title: "Channels"
+  archetype: Job
+
+
+ChannelTool:
+  is: RibbonTool
+  parent: JobGroup_Channels
+  delegate: Channel
+
+
+DuplexChannelTool:
+  is: RibbonTool
+  parent: JobGroup_Channels
+  delegate: DuplexChannel

@@ -1,0 +1,14 @@
+main:
+  is: Job
+
+# No Worker produces to this channel, so the writer below blocks on it forever — a genuine deadlock the
+# quiescence barrier must report (settled with inFlight==0 while not terminated and no external channel open).
+main.channels/unfed:
+  is: Channel
+  buffer: 8
+
+main.workers/writer:
+  is: CsvWriterWorker
+  input: main.channels/unfed
+  path: build/job-deadlock-csv/output.csv
+  header: false

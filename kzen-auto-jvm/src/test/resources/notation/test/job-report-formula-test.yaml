@@ -1,0 +1,28 @@
+main:
+  is: Job
+
+main.channels/raw:
+  is: Channel
+  buffer: 8
+
+main.channels/computed:
+  is: Channel
+  buffer: 8
+
+main.workers/reader:
+  is: CsvReaderWorker
+  output: main.channels/raw
+  path: build/job-formula-test/input.csv
+  batch: 4096
+
+main.workers/formula:
+  is: FormulaWorker
+  input: main.channels/raw
+  output: main.channels/computed
+  formula:
+    total: "qty * price"
+
+main.workers/writer:
+  is: CsvWriterWorker
+  input: main.channels/computed
+  path: build/job-formula-test/output.csv

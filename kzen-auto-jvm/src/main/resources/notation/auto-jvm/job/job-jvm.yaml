@@ -1,0 +1,34 @@
+
+#######################################################################################################################
+# Job paradigm JVM-side notation: the Channel impl (JobChannel) and the channel-wiring AttributeCreator.
+# Concrete Workers (is: Worker) live alongside in this folder once they exist (M1 step 4 onward).
+
+
+# A first-class, named, buffered conduit shared by the Workers that reference it. `buffer` is the channel
+# capacity: 0 (the default) is a rendezvous handoff, > 0 is a backpressured buffer.
+Channel:
+  abstract: true
+  class: tech.kzen.auto.server.objects.job.channel.JobChannel
+  buffer: 0
+  meta:
+    buffer: Int
+
+
+# Duplex (request/reply) counterpart of Channel: client endpoints request a value and suspend until the
+# single serving endpoint replies. Same `buffer` semantics (request-stream capacity). When `external: true`,
+# the client side is not a Worker but the UI bridge: JobExecution opens a client at launch and routes inbound
+# ExecutionRequests addressed to this channel (by name) to the serving Worker (see JobExecution.route).
+DuplexChannel:
+  abstract: true
+  class: tech.kzen.auto.server.objects.job.channel.DuplexJobChannel
+  buffer: 0
+  external: false
+  meta:
+    buffer: Int
+    external: Boolean
+
+
+# Resolves a Worker's channel-typed attribute (ChannelInput / ChannelOutput) to a view over the single
+# shared JobChannel it references. Selected per attribute via `creator: JobChannelCreator`.
+JobChannelCreator:
+  class: tech.kzen.auto.server.objects.job.JobChannelCreator

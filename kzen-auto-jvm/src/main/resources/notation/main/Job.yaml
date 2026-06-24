@@ -1,0 +1,35 @@
+main:
+  is: Job
+
+main.workers/CSV Reader:
+  is: CsvReaderWorker
+  path: '"C:\\~\\data\\measurements-1000000000.txt"'
+  delimiter: ";"
+  batch: 4096
+  output: main.channels/raw
+  header: false
+
+main.channels/raw:
+  is: Channel
+  buffer: 4
+
+main.channels/kept:
+  is: Channel
+  buffer: 4
+
+main.channels/preview queries:
+  is: DuplexChannel
+  external: true
+
+main.workers/Formula:
+  is: FormulaWorker
+  input: main.channels/raw
+  output: main.channels/kept
+  formula:
+    test: 'c0 + "_foo"'
+
+main.workers/Preview:
+  is: PreviewWorker
+  input: main.channels/kept
+  serve: main.channels/preview queries
+  sample: 10

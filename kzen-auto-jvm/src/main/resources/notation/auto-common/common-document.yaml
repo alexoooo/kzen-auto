@@ -82,6 +82,29 @@ Flow:
 #################################################################
 
 
+Job:
+  abstract: true
+  is: Document
+  class: tech.kzen.auto.server.objects.job.JobDocument
+  title: "Job"
+  icon: "material-symbols:lan"
+  meta:
+    workers:
+      is: List
+      of: Worker
+      by: NestedList
+    channels:
+      is: List
+      of: Channel
+      by: NestedList
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
+#################################################################
+
+
 Feature:
   abstract: true
   is: Document

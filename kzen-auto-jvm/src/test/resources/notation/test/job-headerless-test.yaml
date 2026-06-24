@@ -1,0 +1,31 @@
+main:
+  is: Job
+
+main.channels/raw:
+  is: Channel
+  buffer: 8
+
+main.channels/kept:
+  is: Channel
+  buffer: 8
+
+main.workers/reader:
+  is: CsvReaderWorker
+  output: main.channels/raw
+  path: build/job-headerless/input.csv
+  delimiter: ";"
+  batch: 4096
+  header: false
+
+main.workers/filter:
+  is: FilterWorker
+  input: main.channels/raw
+  output: main.channels/kept
+  where: 'c0 eq "Lviv"'
+
+main.workers/writer:
+  is: CsvWriterWorker
+  input: main.channels/kept
+  path: build/job-headerless/output.csv
+  delimiter: ";"
+  header: false

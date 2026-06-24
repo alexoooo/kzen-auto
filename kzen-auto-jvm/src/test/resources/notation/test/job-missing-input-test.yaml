@@ -1,0 +1,17 @@
+main:
+  is: Job
+
+main.channels/data:
+  is: Channel
+  buffer: 8
+
+main.workers/reader:
+  is: CsvReaderWorker
+  output: main.channels/data
+  path: build/job-missing-input/does-not-exist.csv
+  batch: 4096
+
+main.workers/writer:
+  is: CsvWriterWorker
+  input: main.channels/data
+  path: build/job-missing-input/output.csv

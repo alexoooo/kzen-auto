@@ -1,0 +1,140 @@
+
+#######################################################################################################################
+# Job Workers — the user-composable parallel data-processing stages. Each is `is: Worker`; channel-endpoint
+# attributes are typed ChannelInput / ChannelOutput / ChannelServer and tagged `creator: JobChannelCreator`,
+# which resolves each to a view over the shared Channel the attribute references (a one-way Channel, or a
+# duplex DuplexChannel for request/reply). Value attributes carry defaults (the meta-scalar-needs-value
+# convention). `selfLocation` is the Worker's own ObjectLocation (by: Self), used to publish live progress
+# to its trace. Concrete Job documents wire these together — see notation/main/Job.yaml and the
+# job-*-test.yaml fixtures under src/test/resources/notation/test/.
+
+
+# Reads a delimited text file (full RFC-4180 parsing: quoted fields, embedded delimiters / newlines, doubled
+# quotes) and emits batched records. With header=false (a headerless file, e.g. the 1BRC measurement set)
+# the schema is synthesized as positional names c0, c1, … so the strictly-typed downstream stages can still
+# reference columns by name over headerless data.
+CsvReaderWorker:
+  abstract: true
+  is: Worker
+  title: "CSV Reader"
+  class: tech.kzen.auto.server.objects.job.worker.CsvReaderWorker
+  output: ""
+  path: ""
+  delimiter: ","
+  batch: 4096
+  header: true
+  meta:
+    output:
+      is: ChannelOutput
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    path: String
+    delimiter: String
+    batch: Int
+    header: Boolean
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
+# Keeps each record for which the Kotlin boolean expression `where` (columns referenced by name, e.g.
+# `City eq "Lviv"` or `temp.number > 30`) is truthy, compiled by the genuine CalculatedColumnEval engine.
+# An empty `where` keeps every record.
+FilterWorker:
+  abstract: true
+  is: Worker
+  title: "Filter"
+  class: tech.kzen.auto.server.objects.job.worker.FilterWorker
+  input: ""
+  output: ""
+  where: ""
+  meta:
+    input:
+      is: ChannelInput
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    output:
+      is: ChannelOutput
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    where: String
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
+# Appends one calculated column per `formula` entry (arbitrary Kotlin expression over the record's columns),
+# reusing the genuine CalculatedColumnEval engine. `formula` is a column-name -> Kotlin map (FormulaSpec).
+FormulaWorker:
+  abstract: true
+  is: Worker
+  title: "Formula"
+  class: tech.kzen.auto.server.objects.job.worker.FormulaWorker
+  input: ""
+  output: ""
+  formula: {}
+  meta:
+    input:
+      is: ChannelInput
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    output:
+      is: ChannelOutput
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    formula:
+      is: FormulaSpec
+      editor: FormulaMapEditor
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
+# Writes records to a delimited file with RFC-4180 quoting (delimiter-aware). With header=false (a headerless
+# round-trip) only the records are written.
+CsvWriterWorker:
+  abstract: true
+  is: Worker
+  title: "CSV Writer"
+  class: tech.kzen.auto.server.objects.job.worker.CsvWriterWorker
+  input: ""
+  path: ""
+  delimiter: ","
+  header: true
+  meta:
+    input:
+      is: ChannelInput
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    path: String
+    delimiter: String
+    header: Boolean
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
+# Sink that shows a LIVE sample of incoming data: pushes a teaser (first rows + running count) to its trace
+# for the always-on view, and serves on-demand slice queries (offset / limit) over an external duplex Channel
+# `serve` for the browser to read its larger buffered sample. `sample` bounds the buffered rows.
+PreviewWorker:
+  abstract: true
+  is: Worker
+  title: "Preview"
+  class: tech.kzen.auto.server.objects.job.worker.PreviewWorker
+  input: ""
+  serve: ""
+  sample: 1000
+  meta:
+    input:
+      is: ChannelInput
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    serve:
+      is: ChannelServer
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    sample: Int
+    selfLocation:
+      is: ObjectLocation
+      by: Self

@@ -105,6 +105,15 @@ tasks.compileJava {
 }
 
 
+// Forward the optional `-DjobSliceRows=<n>` to the forked test JVM, so JobExecutionTest's M3 throughput
+// benchmark can be scaled for a heavier manual run (it defaults to a modest CI-friendly N otherwise).
+tasks.test {
+    System.getProperty("jobSliceRows")?.let {
+        systemProperty("jobSliceRows", it)
+    }
+}
+
+
 ksp {
     arg("kzen.reflect.moduleClassName", "tech.kzen.auto.server.codegen.KzenAutoJvmModule")
 }

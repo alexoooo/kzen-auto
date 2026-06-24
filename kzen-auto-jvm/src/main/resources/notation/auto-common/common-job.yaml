@@ -1,0 +1,40 @@
+
+#######################################################################################################################
+# Job paradigm core types (common SPI). Mirrors common-flow.yaml: these are the abstract notation archetypes
+# pinned to the common api interfaces a Worker sees. Concrete Workers and the Channel impl live in
+# notation/auto-jvm/job/job-jvm.yaml; the Job document archetype itself is in common-document.yaml.
+
+
+Worker:
+  abstract: true
+  class: tech.kzen.auto.common.paradigm.job.api.Worker
+
+
+#######################################################################################################################
+# Channel endpoint views. A Worker declares zero or more arbitrarily-named attributes of these types, each
+# referencing a named Channel object; JobChannelCreator resolves the shared channel and injects the view.
+
+
+ChannelInput:
+  abstract: true
+  class: tech.kzen.auto.common.paradigm.job.api.ChannelInput
+
+
+ChannelOutput:
+  abstract: true
+  class: tech.kzen.auto.common.paradigm.job.api.ChannelOutput
+
+
+#######################################################################################################################
+# Duplex (request/reply) channel endpoint views. A client endpoint sends Req / receives Rsp; the single server
+# endpoint (the "actor" side) receives Req / sends Rsp. JobChannelCreator resolves the shared DuplexChannel.
+
+
+ChannelClient:
+  abstract: true
+  class: tech.kzen.auto.common.paradigm.job.api.ChannelClient
+
+
+ChannelServer:
+  abstract: true
+  class: tech.kzen.auto.common.paradigm.job.api.ChannelServer
