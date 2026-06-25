@@ -7,6 +7,7 @@ import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.auto.common.paradigm.job.api.ChannelClient
 import tech.kzen.auto.common.paradigm.job.api.Worker
 import tech.kzen.auto.server.objects.job.channel.DuplexJobChannel
+import tech.kzen.auto.server.objects.job.worker.WorkerBase
 import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionResult
 import tech.kzen.lib.common.exec.ExecutionValue
@@ -28,6 +29,7 @@ import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.service.context.GraphCreator
 import tech.kzen.lib.common.service.context.environment.GraphEnvironment
+import tech.kzen.lib.common.service.store.normal.ObjectStableId
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 
 
@@ -37,12 +39,23 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
  * full speed on a supervisor-owned [CountingDispatcher] while this `continueOrStart` drives them from the
  * controller-execution thread by polling commands and awaiting quiescence. The same execution instance is
  * reused across pause/step/resume (the live Worker coroutines survive a [LogicResultPaused] return), so
- * partial progress lives in instance fields rather than a StatefulLogicElement — like
- * [tech.kzen.auto.server.objects.flow.FlowExecution].
+ * partial progress lives in the running Worker instances rather than a StatefulLogicElement of this execution
+ * — like [tech.kzen.auto.server.objects.flow.FlowExecution].
  *
  * Best-effort pause/step is cooperative: pause takes effect when each Worker next suspends at a channel
  * boundary or `checkpoint` (a Worker in a tight compute loop with no checkpoint won't park — an M1
  * constraint, acceptable for cooperative Workers).
+ *
+ * STATE MIGRATION (pause / edit config / continue): the controller re-reads the live (possibly edited)
+ * notation each tick and passes it as `graphDefinition`. When that definition changes while paused, this
+ * rebuilds the Worker graph from the edit so the new config takes effect ([migrate]) — the live coroutines
+ * can't be re-pointed at new config in place. Before tearing the old run down, each Worker's run-scoped state
+ * is snapshotted ([WorkerBase.captureMigrationState], while still parked) and keyed by [ObjectStableId]; the
+ * matching rebuilt Worker adopts it ([WorkerBase.loadMigrationState]) — so an accumulating Worker keeps its
+ * progress and a [tech.kzen.auto.server.objects.job.worker.CsvReaderWorker] continues from its file position
+ * (mirrors [tech.kzen.auto.server.objects.script.ScriptExecution]'s identity-continuity). A Worker that doesn't
+ * opt in restarts from scratch with the new config; a captured handle whose Worker was REMOVED by the edit is
+ * closed (orphan sweep) so it can't leak.
  */
 class JobExecution(
     private val documentPath: DocumentPath,
@@ -82,6 +95,11 @@ class JobExecution(
     private var logicHost: JobLogicHostImpl? = null
     private var started = false
 
+    // The filtered definition the live Workers were (re)built from, and the live Worker instances keyed by
+    // stable id: the change-detection baseline and the loadState donors for the next [migrate].
+    private var launchDefinition: GraphDefinition? = null
+    private var workersByStableId: Map<ObjectStableId, Worker> = mapOf()
+
     // Client endpoints the bridge holds for each `external` duplex Channel, keyed by the Channel's leaf name;
     // `route` forwards inbound ExecutionRequests through these. Populated at launch, closed at teardown.
     private val externalClients = mutableMapOf<String, ChannelClient<Any?, Any?>>()
@@ -102,10 +120,20 @@ class JobExecution(
             return cancelRun()
         }
 
+        val filteredDefinition = graphDefinition.filterTransitive(documentPath)
+
         if (! started) {
-            launchWorkers(graphDefinition)
+            buildAndLaunch(graphDefinition, filteredDefinition, mapOf(), initiallyPaused = false)
             logicControl.subscribeRequest(::route)
             started = true
+        }
+        else if (filteredDefinition.objectDefinitions != launchDefinition!!.objectDefinitions) {
+            // Pause / edit config / continue: the notation changed while paused, so rebuild from the edit. A
+            // step / pause tick re-parks the fresh Workers at their first checkpoint (initiallyPaused) so the
+            // step stays bounded; a full resume lets them run.
+            migrate(
+                graphDefinition, filteredDefinition,
+                initiallyPaused = logicControl.pollCommand() == LogicCommand.Pause)
         }
 
         val supervisor = supervisor!!
@@ -208,14 +236,43 @@ class JobExecution(
     }
 
 
-    private fun launchWorkers(graphDefinition: GraphDefinition) {
+    // Tear the live run down and rebuild it from the edited definition, migrating each surviving Worker's
+    // run-scoped state by stable id. The old coroutines can't be re-pointed at new config in place, so this
+    // SNAPSHOTS each Worker's state while it is still parked (so a live handle — e.g. an open file — can be
+    // detached before teardown closes it), cancels + joins the old run, then relaunches against the new
+    // definition with the snapshots in hand. Reuses the same controller LogicControl / request subscriber.
+    private fun migrate(
+        fullDefinition: GraphDefinition,
+        filteredDefinition: GraphDefinition,
+        initiallyPaused: Boolean
+    ) {
+        logger.info("{} - rebuilding run from edited definition", documentPath)
+
+        val capturedStates = mutableMapOf<ObjectStableId, Any>()
+        for ((stableId, worker) in workersByStableId) {
+            (worker as? WorkerBase)?.captureMigrationState()?.let {
+                capturedStates[stableId] = it
+            }
+        }
+
+        tearDown()
+        buildAndLaunch(fullDefinition, filteredDefinition, capturedStates, initiallyPaused)
+    }
+
+
+    private fun buildAndLaunch(
+        fullDefinition: GraphDefinition,
+        filteredDefinition: GraphDefinition,
+        capturedStates: Map<ObjectStableId, Any>,
+        initiallyPaused: Boolean
+    ) {
         // One shared instance graph for the whole run: the Channel objects are single shared JobChannels,
         // and each Worker's injected endpoint views reference those same instances (via JobChannelCreator).
-        val graphInstance = graphCreator.createGraph(
-            graphDefinition.filterTransitive(documentPath), environment)
+        val graphInstance = graphCreator.createGraph(filteredDefinition, environment)
 
         // Open a bridge client for each `external` duplex Channel so the UI can address it via `route`; the
         // serving Worker then ends only when this client closes at teardown (close-on-last-client).
+        externalClients.clear()
         for (channelLocation in channelLocations) {
             val channel = graphInstance[channelLocation]?.reference
             if (channel is DuplexJobChannel && channel.external) {
@@ -227,22 +284,52 @@ class JobExecution(
         // The host keeps the live (full) graphDefinition so a Run Worker can resolve + run a child Logic from
         // any document; built here so it shares the exact definition the Workers were launched against.
         val logicHost = JobLogicHostImpl(
-            graphDefinition, logicRunExecutionId, graphCreator, environment)
+            fullDefinition, logicRunExecutionId, graphCreator, environment)
         val jobControl = JobControlImpl(logicTraceHandle, objectStableMapper, logicHost)
 
+        // A relaunch on a paused / step tick must park the fresh Workers at their first checkpoint before they
+        // run free, so a single step-after-edit advances one bounded wavefront (set the phase before launch).
+        if (initiallyPaused) {
+            jobControl.pause()
+        }
+
+        val adoptedStates = mutableSetOf<ObjectStableId>()
+        val nextWorkers = mutableMapOf<ObjectStableId, Worker>()
         for (workerLocation in workerLocations) {
             val worker = graphInstance[workerLocation]?.reference as? Worker
             if (worker == null) {
                 logger.warn("{} - not a Worker, skipping - {}", documentPath, workerLocation)
                 continue
             }
+
+            val stableId = objectStableMapper.objectStableId(workerLocation)
+            nextWorkers[stableId] = worker
+
+            // Identity-continuity: a same-stable-id Worker adopts the snapshot the previous instance captured
+            // (mirrors ScriptExecution). capturedStates is empty on first launch, so nothing migrates then.
+            val captured = capturedStates[stableId]
+            if (captured != null && worker is WorkerBase) {
+                worker.loadMigrationState(captured)
+                adoptedStates.add(stableId)
+            }
+
             supervisor.launch(worker, jobControl, workerLocation.objectPath.name.value)
             trace(workerLocation, "started")
+        }
+
+        // Orphan sweep: a captured state whose Worker was removed by the edit is never adopted, so release any
+        // detached live handle (e.g. an open file reader) it holds rather than leaking it.
+        for ((stableId, state) in capturedStates) {
+            if (stableId !in adoptedStates) {
+                (state as? AutoCloseable)?.close()
+            }
         }
 
         this.supervisor = supervisor
         this.jobControl = jobControl
         this.logicHost = logicHost
+        this.workersByStableId = nextWorkers
+        this.launchDefinition = filteredDefinition
     }
 
 

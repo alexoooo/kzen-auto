@@ -29,8 +29,8 @@ import tech.kzen.lib.common.model.location.ObjectLocation
  * crosses to the serve coroutine, so no Worker hand-rolls `@Volatile` sharing.
  *
  * Run-scoped state lives in subclass instance fields (the Worker instance is constructed once and its [run]
- * executes once per Job, parking at [JobControl.checkpoint] while paused) — which keeps the door open to a
- * future state-migration (pause / edit config / continue) handoff.
+ * executes once per Job, parking at [JobControl.checkpoint] while paused), which is what makes the
+ * state-migration (pause / edit config / continue) handoff possible — see [loadState].
  */
 abstract class WorkerBase(
     private val selfLocation: ObjectLocation,
@@ -80,6 +80,26 @@ abstract class WorkerBase(
 
     /** Deterministic cleanup after the run ends — completion, failure, or cancel alike. Default no-op. */
     protected open fun onClose() {}
+
+
+    /**
+     * Snapshot this Worker's run-scoped state for migration into a rebuilt instance, when a pause / edit-config
+     * / continue rebuilds the Job's graph (see [tech.kzen.auto.server.objects.job.JobExecution]). Called on the
+     * OUTGOING instance while it is parked at a checkpoint (quiescent) and BEFORE the run is torn down — so the
+     * snapshot may include a LIVE resource (e.g. an open file reader) that the teardown's [onClose] would
+     * otherwise close: such a capture should DETACH the resource so [onClose] skips it, transferring ownership
+     * to the returned state. Default: null (nothing migrates → the worker restarts from scratch with the edited
+     * config — the safe default, and the only coherent one for a sink that re-truncates).
+     *
+     * If the returned state holds a detached resource it should be [AutoCloseable]: [JobExecution] closes any
+     * captured state whose Worker was REMOVED by the edit (so a detached handle can't leak), and a Worker whose
+     * config changed incompatibly should likewise close it in [loadMigrationState] instead of adopting it.
+     */
+    internal open fun captureMigrationState(): Any? = null
+
+
+    /** Adopt state captured by the previous (same stable id) instance's [captureMigrationState]. Default no-op. */
+    internal open fun loadMigrationState(captured: Any?) {}
 
 
     /**

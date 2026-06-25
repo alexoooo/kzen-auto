@@ -23,6 +23,15 @@ import java.nio.file.Files
  * row-count progress; this Worker only reads, emits, and closes its own file. File IO runs through
  * [JobControl.runBlockingIo] so the read stays visible to quiescence detection, with a [JobControl.checkpoint]
  * per batch so the read is cooperatively pausable / cancellable.
+ *
+ * STATE MIGRATION: the open reader IS run-scoped state. The [checkpoint] sits at the TOP of the batch loop, so a
+ * paused reader holds no built-but-unsent batch — only [pendingBatch] (a batch read but whose `send` had not
+ * yet completed, the one in-flight item the reader itself owns). [captureMigrationState] detaches the open
+ * reader at its current file position and [loadMigrationState] re-adopts it — but ONLY if `path` / `delimiter` /
+ * `header` are unchanged — so a pause / edit-config / continue continues reading from where it left off instead
+ * of reopening and re-reading the file from the top. If those change, the carried reader is closed and this one
+ * opens the new file fresh. (Batches already buffered in the channel at the cut are still lost — that needs
+ * consumer-side coordination — so this is best-effort, exact only for a rendezvous channel.)
  */
 @Reflect
 class CsvReaderWorker(
@@ -37,69 +46,174 @@ class CsvReaderWorker(
 ):
     SourceWorker<RecordBatch>(output, selfLocation)
 {
+    // Run-scoped reader state (null until opened; carried across a migration by capture/loadMigrationState).
+    private var csvReader: CsvRecordReader? = null
+    private var headerListing: HeaderListing? = null
+    private var pendingFirstRecord: FlatFileRecord? = null  // header=false: first record is also first data row
+    private var pendingBatch: ArrayList<FlatFileRecord>? = null  // built + handed to send, not yet confirmed sent
     private var count = 0L
+    private var finished = false   // reached EOF: a resume emits nothing rather than reopening + re-reading
+    private var detached = false   // reader handed to a migration snapshot: onClose must NOT close it
 
 
     override suspend fun produce(emit: Emitter<RecordBatch>, control: JobControl) {
-        val csvReader = control.runBlockingIo {
-            CsvRecordReader(Files.newBufferedReader(toFilePath(path)), delimiter)
+        if (finished) {
+            // Resumed after already reaching EOF on unchanged config — nothing left to emit.
+            return
         }
-        try {
-            // Read the first record up front: it names the columns when header=true, otherwise it determines
-            // the synthesized positional schema AND is itself the first data record.
-            var firstRecord = control.runBlockingIo { csvReader.readRecord() }
 
-            val headerListing =
-                if (header) {
-                    val first = firstRecord ?: return  // empty file: nothing to emit
-                    firstRecord = null
-                    HeaderListing.of(first.toList())
-                }
-                else if (firstRecord == null) {
-                    HeaderListing.empty
-                }
-                else {
-                    HeaderListing.of((0 until firstRecord.fieldCount()).map { "c$it" })
-                }
+        ensureOpen(control)
+        val reader = csvReader!!
+        val headers = headerListing!!
 
-            var records = ArrayList<FlatFileRecord>(batch)
-            if (firstRecord != null) {
-                records.add(firstRecord)
+        // Resume: re-send the batch a previous instance had built and handed to `send` but not finished sending
+        // before the migration (its `send` was parked on a full channel). Re-emit it once, then carry on.
+        pendingBatch?.let {
+            emit.send(RecordBatch(headers, it))
+            publish(control)
+            pendingBatch = null
+        }
+
+        while (true) {
+            // Checkpoint at the batch boundary BEFORE reading, so a paused reader holds no built-but-unsent
+            // batch — its only resumable position is the open reader (and an in-flight `pendingBatch`). One
+            // step still surfaces exactly one batch (read + emit) downstream.
+            control.checkpoint()
+
+            val records = ArrayList<FlatFileRecord>(batch)
+            pendingFirstRecord?.let {
+                records.add(it)
                 count += 1
+                pendingFirstRecord = null
             }
-
-            while (true) {
-                val record = control.runBlockingIo { csvReader.readRecord() }
+            while (records.size < batch) {
+                val record = control.runBlockingIo { reader.readRecord() }
                     ?: break
-
                 records.add(record)
                 count += 1
-                if (records.size >= batch) {
-                    // Checkpoint once per emitted batch, NOT per record: the batch is the pipeline's unit of
-                    // work, so a pause/cancel lands per batch and a single STEP advances exactly one batch.
-                    // (A record-granular checkpoint made stepping/slow-motion advance one invisible record at
-                    // a time — thousands of record-steps before any batch surfaced downstream, so stepping
-                    // looked "stuck".)
-                    control.checkpoint()
-                    emit.send(RecordBatch(headerListing, records))
-                    publish(control)
-                    records = ArrayList(batch)
-                }
             }
 
-            if (records.isNotEmpty()) {
-                // The trailing partial batch is also a step boundary, so an undersized input (fewer rows than
-                // one batch) is still pausable / steppable rather than running straight through.
-                control.checkpoint()
-                emit.send(RecordBatch(headerListing, records))
+            if (records.isEmpty()) {
+                break
+            }
+
+            // Mark the batch in-flight across the (possibly parking) send, then clear once send returns, so a
+            // migration that catches the reader parked in `send` carries exactly this batch (see pendingBatch).
+            pendingBatch = records
+            emit.send(RecordBatch(headers, records))
+            pendingBatch = null
+            publish(control)
+
+            if (records.size < batch) {
+                break  // a partial batch means EOF was reached
             }
         }
-        finally {
-            csvReader.close()
+
+        finished = true
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    // Opens the file and resolves the header schema once; a no-op when resuming with a carried reader.
+    private suspend fun ensureOpen(control: JobControl) {
+        if (csvReader != null) {
+            return
+        }
+
+        val reader = control.runBlockingIo {
+            CsvRecordReader(Files.newBufferedReader(toFilePath(path)), delimiter)
+        }
+        csvReader = reader
+
+        // The first record names the columns when header=true, otherwise it determines the synthesized
+        // positional schema AND is itself the first data record (kept in pendingFirstRecord).
+        val first = control.runBlockingIo { reader.readRecord() }
+        headerListing = when {
+            header ->
+                if (first == null) HeaderListing.empty else HeaderListing.of(first.toList())
+
+            first == null ->
+                HeaderListing.empty
+
+            else -> {
+                pendingFirstRecord = first
+                HeaderListing.of((0 until first.fieldCount()).map { "c$it" })
+            }
+        }
+    }
+
+
+    override fun onClose() {
+        // Skip closing a reader that was handed to a migration snapshot (it lives on in the rebuilt instance).
+        if (! detached) {
+            csvReader?.close()
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun captureMigrationState(): Any {
+        if (finished || csvReader == null) {
+            // EOF already reached (file closed) or never opened: carry only the logical markers, no live handle.
+            return ReaderState(
+                null, headerListing, null, null, count, path, delimiter, header, finished)
+        }
+
+        // Detach the open reader so onClose (during teardown) skips closing it — ownership transfers to the
+        // returned state, which JobExecution hands to the rebuilt instance (or closes if the Worker was removed).
+        detached = true
+        return ReaderState(
+            csvReader, headerListing, pendingFirstRecord, pendingBatch, count, path, delimiter, header, finished)
+    }
+
+
+    override fun loadMigrationState(captured: Any?) {
+        val state = captured as? ReaderState
+            ?: return
+
+        if (state.path == path && state.delimiter == delimiter && state.header == header) {
+            // Config unchanged: adopt the previous reader at its position (or its EOF marker), so reading
+            // continues from where it left off instead of reopening + re-reading the file from the top.
+            csvReader = state.reader
+            headerListing = state.headerListing
+            pendingFirstRecord = state.pendingFirstRecord
+            pendingBatch = state.pendingBatch
+            count = state.count
+            finished = state.finished
+            // TODO: communicate resumption status to the UI — surface (e.g. on this worker's progress trace)
+            //  that a migration occurred AND that the reader RESUMED from row `count` (rather than restarting),
+            //  so the user can see that their edit preserved progress. Pair with the restart branch below.
+        }
+        else {
+            // path / delimiter / header changed: the carried reader points at the wrong file / parse, so close
+            // it (teardown skipped closing because it was detached) and start fresh from the edited config.
+            // TODO: communicate to the UI that the reader RESTARTED from the top because path/delimiter/header
+            //  changed (resumption did NOT happen), so the user understands why progress was not preserved.
+            state.close()
         }
     }
 
 
     override fun progress(snapshot: Any?): Map<String, Any?> =
         mapOf("read" to count)
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    // Immutable migration snapshot of the reader's run-scoped state. AutoCloseable so JobExecution can release
+    // the detached reader if this Worker was removed by the edit (no rebuilt instance adopts it).
+    private class ReaderState(
+        val reader: CsvRecordReader?,
+        val headerListing: HeaderListing?,
+        val pendingFirstRecord: FlatFileRecord?,
+        val pendingBatch: ArrayList<FlatFileRecord>?,
+        val count: Long,
+        val path: String,
+        val delimiter: String,
+        val header: Boolean,
+        val finished: Boolean
+    ): AutoCloseable {
+        override fun close() {
+            reader?.close()
+        }
+    }
 }

@@ -71,6 +71,25 @@ class PreviewWorker(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    // Opt into state migration: when a pause / edit-config / continue rebuilds the Job graph, carry the live
+    // sample (header + rolling window + running count) forward into the rebuilt Preview so the view doesn't
+    // reset to empty across the edit. The snapshot is an immutable copy (no live handle) — coherent because the
+    // Preview accumulates and never re-truncates; over-counts only if the upstream source RESTARTS rather than
+    // resumes (with CsvReaderWorker resuming from position on unchanged config, reader -> preview stays exact).
+    override fun captureMigrationState(): Any =
+        snapshot()
+
+
+    override fun loadMigrationState(captured: Any?) {
+        val snap = captured as Snapshot
+        header = snap.header
+        count = snap.count
+        window.clear()
+        window.addAll(snap.rows)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     override fun snapshot(): Snapshot =
         Snapshot(header, ArrayList(window), count)
 
