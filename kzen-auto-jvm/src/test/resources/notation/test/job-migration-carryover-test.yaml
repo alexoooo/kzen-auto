@@ -1,0 +1,23 @@
+main:
+  is: Job
+
+# A roomy buffer so a free-running (fast) reader gets several batches ahead of the Preview before a mid-stream
+# pause — populating the channel with the buffered + parked-mid-send batches a lossless migration must carry.
+main.channels/raw:
+  is: Channel
+  buffer: 8
+
+main.channels/queries:
+  is: DuplexChannel
+
+main.workers/reader:
+  is: CsvReaderWorker
+  output: main.channels/raw
+  path: build/job-migration/carryover.csv
+  batch: 64
+
+main.workers/preview:
+  is: PreviewWorker
+  input: main.channels/raw
+  serve: main.channels/queries
+  sample: 1000

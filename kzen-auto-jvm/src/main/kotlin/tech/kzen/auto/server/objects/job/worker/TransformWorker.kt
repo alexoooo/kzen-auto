@@ -30,8 +30,18 @@ abstract class TransformWorker<In, Out>(
 
     final override suspend fun drive(control: JobControl) {
         try {
-            for (item in input) {
+            val iterator = input.iterator()
+            while (true) {
+                // Checkpoint BEFORE receiving, so a parked Worker never holds a received-but-unforwarded
+                // payload: at a pause wavefront every not-yet-consumed input is still in the channel (so a
+                // migration's JobChannel.drainBuffered carries it forward) rather than stranded on this
+                // Worker's stack, where teardown would silently drop it. A payload already transformed and
+                // parked mid-send rides the OUTPUT channel's in-flight capture instead.
                 control.checkpoint()
+                if (! iterator.hasNext()) {
+                    break
+                }
+                val item = iterator.next()
 
                 // Safe by construction: ChannelTypeDefiner checks this port's element type against the
                 // channel's at definition time (see the class doc).

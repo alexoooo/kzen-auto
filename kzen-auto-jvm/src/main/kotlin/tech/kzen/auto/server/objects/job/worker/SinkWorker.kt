@@ -25,8 +25,17 @@ abstract class SinkWorker<In>(
     WorkerBase(selfLocation, serve)
 {
     final override suspend fun drive(control: JobControl) {
-        for (item in input) {
+        val iterator = input.iterator()
+        while (true) {
+            // Checkpoint BEFORE receiving, so a parked Worker never holds a received-but-unprocessed payload:
+            // at a pause wavefront every not-yet-consumed payload is still in the channel (so a migration's
+            // JobChannel.drainBuffered carries it forward) rather than stranded on this Worker's stack, where
+            // teardown would silently drop it.
             control.checkpoint()
+            if (! iterator.hasNext()) {
+                break
+            }
+            val item = iterator.next()
 
             // Safe by construction: ChannelTypeDefiner checks this port's element type at definition time.
             @Suppress("UNCHECKED_CAST")

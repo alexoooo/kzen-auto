@@ -25,13 +25,12 @@ import java.nio.file.Files
  * per batch so the read is cooperatively pausable / cancellable.
  *
  * STATE MIGRATION: the open reader IS run-scoped state. The [checkpoint] sits at the TOP of the batch loop, so a
- * paused reader holds no built-but-unsent batch — only [pendingBatch] (a batch read but whose `send` had not
- * yet completed, the one in-flight item the reader itself owns). [captureMigrationState] detaches the open
- * reader at its current file position and [loadMigrationState] re-adopts it — but ONLY if `path` / `delimiter` /
- * `header` are unchanged — so a pause / edit-config / continue continues reading from where it left off instead
- * of reopening and re-reading the file from the top. If those change, the carried reader is closed and this one
- * opens the new file fresh. (Batches already buffered in the channel at the cut are still lost — that needs
- * consumer-side coordination — so this is best-effort, exact only for a rendezvous channel.)
+ * paused reader holds no built-but-unsent batch; a batch it has built and is parked mid-`send` on rides the
+ * OUTPUT channel's own in-flight capture ([tech.kzen.auto.server.objects.job.channel.JobChannel.drainBuffered]),
+ * not this Worker. [captureMigrationState] detaches the open reader at its current file position and
+ * [loadMigrationState] re-adopts it — but ONLY if `path` / `delimiter` / `header` are unchanged — so a pause /
+ * edit-config / continue continues reading from where it left off instead of reopening and re-reading the file
+ * from the top. If those change, the carried reader is closed and this one opens the new file fresh.
  */
 @Reflect
 class CsvReaderWorker(
@@ -50,7 +49,6 @@ class CsvReaderWorker(
     private var csvReader: CsvRecordReader? = null
     private var headerListing: HeaderListing? = null
     private var pendingFirstRecord: FlatFileRecord? = null  // header=false: first record is also first data row
-    private var pendingBatch: ArrayList<FlatFileRecord>? = null  // built + handed to send, not yet confirmed sent
     private var count = 0L
     private var finished = false   // reached EOF: a resume emits nothing rather than reopening + re-reading
     private var detached = false   // reader handed to a migration snapshot: onClose must NOT close it
@@ -66,18 +64,10 @@ class CsvReaderWorker(
         val reader = csvReader!!
         val headers = headerListing!!
 
-        // Resume: re-send the batch a previous instance had built and handed to `send` but not finished sending
-        // before the migration (its `send` was parked on a full channel). Re-emit it once, then carry on.
-        pendingBatch?.let {
-            emit.send(RecordBatch(headers, it))
-            publish(control)
-            pendingBatch = null
-        }
-
         while (true) {
             // Checkpoint at the batch boundary BEFORE reading, so a paused reader holds no built-but-unsent
-            // batch — its only resumable position is the open reader (and an in-flight `pendingBatch`). One
-            // step still surfaces exactly one batch (read + emit) downstream.
+            // batch — its only resumable position is the open reader. A batch already built and parked mid-send
+            // is captured by the output channel, not here. One step still surfaces exactly one batch downstream.
             control.checkpoint()
 
             val records = ArrayList<FlatFileRecord>(batch)
@@ -97,11 +87,7 @@ class CsvReaderWorker(
                 break
             }
 
-            // Mark the batch in-flight across the (possibly parking) send, then clear once send returns, so a
-            // migration that catches the reader parked in `send` carries exactly this batch (see pendingBatch).
-            pendingBatch = records
             emit.send(RecordBatch(headers, records))
-            pendingBatch = null
             publish(control)
 
             if (records.size < batch) {
@@ -156,14 +142,14 @@ class CsvReaderWorker(
         if (finished || csvReader == null) {
             // EOF already reached (file closed) or never opened: carry only the logical markers, no live handle.
             return ReaderState(
-                null, headerListing, null, null, count, path, delimiter, header, finished)
+                null, headerListing, null, count, path, delimiter, header, finished)
         }
 
         // Detach the open reader so onClose (during teardown) skips closing it — ownership transfers to the
         // returned state, which JobExecution hands to the rebuilt instance (or closes if the Worker was removed).
         detached = true
         return ReaderState(
-            csvReader, headerListing, pendingFirstRecord, pendingBatch, count, path, delimiter, header, finished)
+            csvReader, headerListing, pendingFirstRecord, count, path, delimiter, header, finished)
     }
 
 
@@ -177,7 +163,6 @@ class CsvReaderWorker(
             csvReader = state.reader
             headerListing = state.headerListing
             pendingFirstRecord = state.pendingFirstRecord
-            pendingBatch = state.pendingBatch
             count = state.count
             finished = state.finished
             // TODO: communicate resumption status to the UI — surface (e.g. on this worker's progress trace)
@@ -205,7 +190,6 @@ class CsvReaderWorker(
         val reader: CsvRecordReader?,
         val headerListing: HeaderListing?,
         val pendingFirstRecord: FlatFileRecord?,
-        val pendingBatch: ArrayList<FlatFileRecord>?,
         val count: Long,
         val path: String,
         val delimiter: String,

@@ -34,4 +34,4 @@ main.workers/Preview:
   is: PreviewWorker
   input: main.channels/kept
   serve: main.channels/preview queries
-  sample: 20
+  sample: 10

@@ -7,6 +7,7 @@ import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.auto.common.paradigm.job.api.ChannelClient
 import tech.kzen.auto.common.paradigm.job.api.Worker
 import tech.kzen.auto.server.objects.job.channel.DuplexJobChannel
+import tech.kzen.auto.server.objects.job.channel.JobChannel
 import tech.kzen.auto.server.objects.job.worker.WorkerBase
 import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionResult
@@ -55,7 +56,9 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
  * progress and a [tech.kzen.auto.server.objects.job.worker.CsvReaderWorker] continues from its file position
  * (mirrors [tech.kzen.auto.server.objects.script.ScriptExecution]'s identity-continuity). A Worker that doesn't
  * opt in restarts from scratch with the new config; a captured handle whose Worker was REMOVED by the edit is
- * closed (orphan sweep) so it can't leak.
+ * closed (orphan sweep) so it can't leak. In-flight Channel payloads (buffered, or parked mid-send) are likewise
+ * carried across the rebuild ([JobChannel.drainBuffered] / [JobChannel.preload]) so the migration neither drops
+ * nor double-delivers messages that were between Workers at the cut.
  */
 class JobExecution(
     private val documentPath: DocumentPath,
@@ -100,6 +103,11 @@ class JobExecution(
     private var launchDefinition: GraphDefinition? = null
     private var workersByStableId: Map<ObjectStableId, Worker> = mapOf()
 
+    // The live one-way Channel instances keyed by stable id: a [migrate] drains each one's in-flight payloads
+    // before teardown and restores them into the rebuilt channel, so the rebuild doesn't drop messages that
+    // were buffered in (or parked mid-send on) a channel at the cut.
+    private var streamChannelsByStableId: Map<ObjectStableId, JobChannel> = mapOf()
+
     // Client endpoints the bridge holds for each `external` duplex Channel, keyed by the Channel's leaf name;
     // `route` forwards inbound ExecutionRequests through these. Populated at launch, closed at teardown.
     private val externalClients = mutableMapOf<String, ChannelClient<Any?, Any?>>()
@@ -123,7 +131,13 @@ class JobExecution(
         val filteredDefinition = graphDefinition.filterTransitive(documentPath)
 
         if (! started) {
-            buildAndLaunch(graphDefinition, filteredDefinition, mapOf(), initiallyPaused = false)
+            // Park the fresh Workers at their first checkpoint when the run starts already paused / stepping
+            // (a debugger-style start-at-entry), rather than letting them run a brief, nondeterministic free
+            // window before the command loop below parks them — that window would leave stray in-flight batches
+            // and make a first-tick pause/step state irreproducible.
+            buildAndLaunch(
+                graphDefinition, filteredDefinition, mapOf(), mapOf(),
+                initiallyPaused = logicControl.pollCommand() == LogicCommand.Pause)
             logicControl.subscribeRequest(::route)
             started = true
         }
@@ -255,8 +269,16 @@ class JobExecution(
             }
         }
 
+        // Snapshot each one-way Channel's in-flight payloads (buffered + parked mid-send) while the Workers are
+        // still parked and BEFORE teardown cancels the producers (which would drop a parked sender's payload).
+        // Captured AFTER the Worker states above so a reader resumed by the drain re-parks at its checkpoint
+        // without reading past the position its (already snapshotted) state recorded.
+        val carriedChannels = streamChannelsByStableId.mapValues { (_, channel) ->
+            channel.drainBuffered()
+        }
+
         tearDown()
-        buildAndLaunch(fullDefinition, filteredDefinition, capturedStates, initiallyPaused)
+        buildAndLaunch(fullDefinition, filteredDefinition, capturedStates, carriedChannels, initiallyPaused)
     }
 
 
@@ -264,19 +286,31 @@ class JobExecution(
         fullDefinition: GraphDefinition,
         filteredDefinition: GraphDefinition,
         capturedStates: Map<ObjectStableId, Any>,
+        carriedChannels: Map<ObjectStableId, List<Any?>>,
         initiallyPaused: Boolean
     ) {
         // One shared instance graph for the whole run: the Channel objects are single shared JobChannels,
         // and each Worker's injected endpoint views reference those same instances (via JobChannelCreator).
         val graphInstance = graphCreator.createGraph(filteredDefinition, environment)
 
-        // Open a bridge client for each `external` duplex Channel so the UI can address it via `route`; the
-        // serving Worker then ends only when this client closes at teardown (close-on-last-client).
+        // Resolve the Channel instances: open a bridge client for each `external` duplex Channel so the UI can
+        // address it via `route` (the serving Worker then ends only when this client closes at teardown), and
+        // index each one-way Channel by stable id — seeding any payloads carried over from the torn-down channel
+        // of a [migrate] BEFORE the Workers launch, so the consumer sees that carryover ahead of the live stream.
         externalClients.clear()
+        val streamChannels = mutableMapOf<ObjectStableId, JobChannel>()
         for (channelLocation in channelLocations) {
-            val channel = graphInstance[channelLocation]?.reference
-            if (channel is DuplexJobChannel && channel.external) {
-                externalClients[channelLocation.objectPath.name.value] = channel.newClient()
+            when (val channel = graphInstance[channelLocation]?.reference) {
+                is DuplexJobChannel ->
+                    if (channel.external) {
+                        externalClients[channelLocation.objectPath.name.value] = channel.newClient()
+                    }
+
+                is JobChannel -> {
+                    val stableId = objectStableMapper.objectStableId(channelLocation)
+                    streamChannels[stableId] = channel
+                    carriedChannels[stableId]?.let { channel.preload(it) }
+                }
             }
         }
 
@@ -329,6 +363,7 @@ class JobExecution(
         this.jobControl = jobControl
         this.logicHost = logicHost
         this.workersByStableId = nextWorkers
+        this.streamChannelsByStableId = streamChannels
         this.launchDefinition = filteredDefinition
     }
 

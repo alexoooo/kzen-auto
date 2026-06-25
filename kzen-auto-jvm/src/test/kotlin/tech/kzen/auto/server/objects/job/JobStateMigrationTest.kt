@@ -35,16 +35,20 @@ import kotlin.test.assertTrue
 
 
 /**
- * Drives the P3 state-migration path of [JobExecution]: pause -> edit config -> continue. The controller
- * re-reads the (possibly edited) notation each tick and passes it as the run's `graphDefinition`; when it
- * changes while paused, [JobExecution] rebuilds the Worker graph from the edit so the new config takes effect,
- * migrating each surviving Worker's run-scoped state by stable id via
- * [tech.kzen.lib.common.exec.logic.StatefulLogicElement.loadState] (mirroring `ScriptExecution`).
+ * Drives the state-migration path of [JobExecution]: pause -> edit config -> continue. The controller re-reads
+ * the (possibly edited) notation each tick and passes it as the run's `graphDefinition`; when it changes while
+ * paused, [JobExecution] rebuilds the Worker graph from the edit so the new config takes effect, migrating each
+ * surviving Worker's run-scoped state by stable id via
+ * [tech.kzen.auto.server.objects.job.worker.WorkerBase.captureMigrationState] /
+ * [tech.kzen.auto.server.objects.job.worker.WorkerBase.loadMigrationState] (mirroring `ScriptExecution`'s
+ * identity-continuity).
  *
  * [tech.kzen.auto.server.objects.job.worker.PreviewWorker] is the carry-forward testbed (it already keeps
- * header / rolling window / running count as run-scoped state). The edit re-points the reader at an empty file
- * so the rebuilt source contributes nothing — isolating the carried state: with `loadState` the migrated
- * Preview keeps its accumulated count + header, without it the rebuilt Preview would publish 0 / no header.
+ * header / rolling window / running count as run-scoped state). These tests STEP to a clean, in-flight-free
+ * wavefront before migrating, so the carried Worker state is isolated from channel carryover (covered separately
+ * by [JobMigrationCarryoverTest]): the first edit re-points the reader at an empty file so the rebuilt source
+ * contributes nothing — with the migration the Preview keeps its accumulated count + header, without it the
+ * rebuilt Preview would publish 0 / no header.
  */
 class JobStateMigrationTest {
     //-----------------------------------------------------------------------------------------------------------------
@@ -205,10 +209,11 @@ class JobStateMigrationTest {
         assertIs<LogicResultSuccess>(finalResult)
 
         val finalCount = previewCount()
-        assertTrue(
-            finalCount <= rows.toLong(),
-            "reader should resume from position so each row counts once (<= $rows), but counted $finalCount " +
-                "(a restart would re-read the file and exceed $rows)")
+        assertEquals(
+            rows.toLong(), finalCount,
+            "reader resumes from position and the migration carries any in-flight batch, so every row is " +
+                "counted exactly once (a restart would re-read the file and exceed $rows; a dropped in-flight " +
+                "batch would fall short)")
         assertTrue(finalCount > pausedCount, "the run should make progress past the pause point")
     }
 

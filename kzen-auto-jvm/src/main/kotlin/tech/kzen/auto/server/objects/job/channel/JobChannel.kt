@@ -5,6 +5,9 @@ import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.api.ChannelInputIterator
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.lib.common.reflect.Reflect
+import java.util.Collections
+import java.util.IdentityHashMap
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicInteger
 
 
@@ -20,6 +23,14 @@ import java.util.concurrent.atomic.AtomicInteger
  * **Close-on-last-producer:** a fan-in channel may have several producer endpoints; consumers see
  * end-of-stream only once *all* of them have [ChannelOutput.close]d, so one producer finishing is not a
  * premature EOF. The live producer count is tracked across worker threads via an [AtomicInteger].
+ *
+ * **Migration carryover:** a state migration (pause / edit config / continue) tears the running graph down and
+ * rebuilds it, so the in-flight payloads a live channel holds would otherwise be lost — and because a
+ * [tech.kzen.auto.server.objects.job.worker.CsvReaderWorker] resumes from its file position rather than
+ * re-reading, that loss is permanent. To keep migration lossless, [drainBuffered] snapshots everything a
+ * channel still holds (buffered payloads plus any a producer is parked mid-[send] on) before teardown, and the
+ * rebuilt channel is seeded via [preload]; [input] then delivers that carryover BEFORE the live channel, so the
+ * consumer sees the exact same stream it would have without the migration.
  */
 @Reflect
 class JobChannel(
@@ -35,6 +46,12 @@ class JobChannel(
         }
 
     private val openProducers = AtomicInteger(0)
+    private val producers = CopyOnWriteArrayList<Producer>()
+
+    // Payloads carried over from a previous instance of this channel across a migration: delivered to the
+    // consumer (via input) BEFORE the live channel, so the rebuilt graph resumes the stream without a gap.
+    // Seeded by preload before any worker launches; thereafter read only by the single consumer coroutine.
+    private val carryover = ArrayDeque<Any?>()
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -43,7 +60,9 @@ class JobChannel(
 
     fun newProducer(): ChannelOutput<Any?> {
         openProducers.incrementAndGet()
-        return Producer()
+        val producer = Producer()
+        producers.add(producer)
+        return producer
     }
 
 
@@ -55,11 +74,76 @@ class JobChannel(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    // Seed the carryover drained from a previous instance of this channel (by stable id) during a migration.
+    // Called from the run driver before any worker launches, so no consumer is reading yet.
+    fun preload(items: List<Any?>) {
+        carryover.addAll(items)
+    }
+
+
+    /**
+     * Snapshot everything this channel still holds, in delivery order, so a migration can carry it into the
+     * rebuilt channel rather than dropping it. Called from the run driver while the Workers are parked (paused
+     * and quiescent) and BEFORE teardown — the only safe point, since teardown cancels the producers (losing
+     * any payload one is parked mid-[send] on).
+     *
+     * Order is: not-yet-delivered carryover, then buffered payloads (FIFO), then payloads a producer is parked
+     * mid-send on (those enter the channel last). A producer's parked payload is captured explicitly because a
+     * suspended sender's element is NOT in the buffer; [Producer.inFlight] is snapshotted up front (before the
+     * drain below resumes any sender) and deduplicated by identity against the drained buffer, so a sender that
+     * happens to resume mid-drain — moving its element into the buffer — is still counted exactly once.
+     */
+    fun drainBuffered(): List<Any?> {
+        val parkedSends = producers.mapNotNull { it.inFlight }
+
+        val buffered = ArrayList<Any?>(carryover)
+        carryover.clear()
+
+        while (true) {
+            val received = channel.tryReceive()
+            if (received.isSuccess) {
+                buffered.add(received.getOrThrow())
+            }
+            else {
+                break
+            }
+        }
+
+        if (parkedSends.isEmpty()) {
+            return buffered
+        }
+
+        val drainedByIdentity = Collections.newSetFromMap(IdentityHashMap<Any?, Boolean>())
+        drainedByIdentity.addAll(buffered)
+
+        val result = ArrayList<Any?>(buffered.size + parkedSends.size)
+        result.addAll(buffered)
+        for (payload in parkedSends) {
+            if (payload !in drainedByIdentity) {
+                result.add(payload)
+            }
+        }
+        return result
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     private inner class Producer: ChannelOutput<Any?> {
         private var closed = false
 
+        // The payload currently being sent, while a full-channel send is parked (null otherwise). Read by
+        // drainBuffered from the run-driver thread to capture a suspended sender's element (not in the buffer).
+        @Volatile
+        var inFlight: Any? = null
+
         override suspend fun send(payload: Any?) {
-            channel.send(payload)
+            inFlight = payload
+            try {
+                channel.send(payload)
+            }
+            finally {
+                inFlight = null
+            }
         }
 
         override fun close() {
@@ -73,6 +157,9 @@ class JobChannel(
 
     private inner class Input: ChannelInput<Any?> {
         override suspend fun receive(): Any? {
+            if (carryover.isNotEmpty()) {
+                return carryover.removeFirst()
+            }
             return channel.receiveCatching().getOrNull()
         }
 
@@ -80,10 +167,16 @@ class JobChannel(
             val delegate = channel.iterator()
             return object: ChannelInputIterator<Any?> {
                 override suspend fun hasNext(): Boolean {
+                    if (carryover.isNotEmpty()) {
+                        return true
+                    }
                     return delegate.hasNext()
                 }
 
                 override fun next(): Any? {
+                    if (carryover.isNotEmpty()) {
+                        return carryover.removeFirst()
+                    }
                     return delegate.next()
                 }
             }
