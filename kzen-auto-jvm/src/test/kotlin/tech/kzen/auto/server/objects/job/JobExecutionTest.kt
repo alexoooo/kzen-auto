@@ -378,6 +378,80 @@ class JobExecutionTest {
 
 
     @Test
+    fun singleStepDoesBoundedWorkThenStaysPaused() {
+        // A step must advance only a small, bounded amount of work and then re-pause on its own — NOT run to
+        // completion. Regression for the bug where stepping released the Workers with a full resume and waited
+        // for natural quiescence, which a steady pipeline only reaches at completion: a single step ran the
+        // whole Job and left the controller wedged (still reporting "paused" while the run kept going).
+        val expectedKept = writeSliceInput(2_000)
+
+        val execution = newExecution(sliceDocumentPath)
+        execution.beforeStart(TupleValue.empty)
+
+        val control = MutableLogicControl(false)
+        val resourceScope = MutableLogicResourceScope()
+        val graphDefinition = graphDefinition(sliceDocumentPath)
+
+        // Settle to a parked wavefront.
+        control.commandPause()
+        assertEquals(LogicResultPaused,
+            execution.continueOrStart(control, resourceScope, graphDefinition))
+
+        // Exactly one step: still paused and nowhere near done (the bug would return Success here).
+        control.grantStepBudget(1)
+        assertIs<LogicResultPaused>(
+            execution.continueOrStart(control, resourceScope, graphDefinition))
+        val writtenAfterOneStep =
+            if (Files.exists(sliceOutput)) Files.readAllLines(sliceOutput).drop(1).size else 0
+        assertTrue(
+            writtenAfterOneStep < expectedKept,
+            "one step should not finish the Job, but wrote $writtenAfterOneStep of $expectedKept rows")
+
+        // Resuming from the stepped-and-paused state still completes with the full, correct output.
+        control.commandUnpause()
+        val result = execution.continueOrStart(control, resourceScope, graphDefinition)
+        assertIs<LogicResultSuccess>(result)
+        assertEquals(expectedKept, Files.readAllLines(sliceOutput).drop(1).size)
+    }
+
+
+    @Test
+    fun steppingAdvancesByBatchNotByRecord() {
+        // Each step advances the pipeline by one BATCH (the reader's configured batch size), not one record,
+        // so a multi-batch run drains in a handful of steps — and each step makes visible progress. Regression
+        // for the reader checkpointing per-record: with batch=4096 that was 4096 invisible record-steps per
+        // batch, so manual stepping looked "stuck" and slow-motion never visibly advanced. 8192 rows = 2
+        // reader batches, so completion is a few batch-steps, NOT thousands of record-steps.
+        val expectedKept = writeSliceInput(8_192)
+
+        val execution = newExecution(sliceDocumentPath)
+        execution.beforeStart(TupleValue.empty)
+
+        val control = MutableLogicControl(false)
+        val resourceScope = MutableLogicResourceScope()
+        val graphDefinition = graphDefinition(sliceDocumentPath)
+
+        control.commandPause()
+        assertEquals(LogicResultPaused,
+            execution.continueOrStart(control, resourceScope, graphDefinition))
+
+        var result: LogicResult
+        var steps = 0
+        do {
+            control.grantStepBudget(1)
+            result = execution.continueOrStart(control, resourceScope, graphDefinition)
+            steps += 1
+        } while (result is LogicResultPaused && steps < 200)
+
+        assertIs<LogicResultSuccess>(result)
+        // ~one step per batch plus a little pipeline fill — per-record stepping would need ~8192 steps and
+        // never reach Success within the guard.
+        assertTrue(steps < 50, "expected a handful of batch-steps, took $steps")
+        assertEquals(expectedKept, Files.readAllLines(sliceOutput).drop(1).size)
+    }
+
+
+    @Test
     fun cancelTerminatesRunningSlice() {
         // Pause to a known mid-run parked state (deterministic with the large source), then cancel: the parked
         // Worker coroutines must unwind and the run report Cancelled.

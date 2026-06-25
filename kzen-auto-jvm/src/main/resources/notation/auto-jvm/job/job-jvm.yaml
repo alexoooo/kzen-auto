@@ -5,13 +5,21 @@
 
 
 # A first-class, named, buffered conduit shared by the Workers that reference it. `buffer` is the channel
-# capacity: 0 (the default) is a rendezvous handoff, > 0 is a backpressured buffer.
+# capacity: 0 (the default) is a rendezvous handoff, > 0 is a backpressured buffer. `elementType` declares
+# the type carried by the channel (a TypeMetadata; empty = untyped / Any): ChannelTypeDefiner validates at
+# definition time that every referencing Worker port's `of:` element type matches, and that at most one
+# Worker drains it (single-reader). The type is erased at run time (JobChannel takes only `buffer`); it is
+# authoring/wiring metadata, so the run-time `item as In` cast in TransformWorker / SinkWorker is safe.
 Channel:
   abstract: true
   class: tech.kzen.auto.server.objects.job.channel.JobChannel
   buffer: 0
+  elementType: ""
   meta:
     buffer: Int
+    elementType:
+      is: TypeMetadata
+      by: ChannelTypeDefiner
 
 
 # Duplex (request/reply) counterpart of Channel: client endpoints request a value and suspend until the
@@ -32,3 +40,17 @@ DuplexChannel:
 # shared JobChannel it references. Selected per attribute via `creator: JobChannelCreator`.
 JobChannelCreator:
   class: tech.kzen.auto.server.objects.job.JobChannelCreator
+
+
+# Parses a Channel's `elementType` and validates channel wiring (port type compatibility + single-reader) at
+# definition time. Bound via the Channel's `elementType` meta (mirrors how TypeMetadataDefiner is bound).
+ChannelTypeDefiner:
+  class: tech.kzen.auto.common.objects.document.job.ChannelTypeDefiner
+
+
+# Type-only archetype (never instantiated) naming the element a data-pipeline Channel carries: a batch of
+# FlatFileRecords with their shared header — the channel transfer unit (see the RecordBatch class). A
+# Channel's `elementType` and a Worker port's `of:` both reference it by name so the two are checked equal.
+RecordBatch:
+  abstract: true
+  class: tech.kzen.auto.server.objects.job.worker.RecordBatch

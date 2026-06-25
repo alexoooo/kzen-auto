@@ -2,7 +2,6 @@ package tech.kzen.auto.server.objects.job.worker
 
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
-import tech.kzen.auto.common.paradigm.job.api.Worker
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -18,28 +17,30 @@ import java.nio.file.Files
  * When [header] is true the first record names the columns. When false (a headerless file, e.g. the 1BRC
  * measurement set) every record is data; the schema is then SYNTHESIZED as positional names `c0, c1, …`
  * (field-count taken from the first record), so the strictly-typed downstream stages (the expression
- * [FilterWorker], [FormulaWorker]) can still reference columns by name — `c0`, `c1`, … — over headerless
- * data.
+ * [FilterWorker], [FormulaWorker]) can still reference columns by name — `c0`, `c1`, … — over headerless data.
  *
- * File IO runs through `control.runBlockingIo` so the read stays visible to quiescence detection; a
- * `checkpoint()` per batch makes it cooperatively pausable / cancellable; the `try/finally` closes the file
- * (and propagates EOF by closing the output) on completion, failure, and cancel alike. Live row-count
- * progress is published to the Worker's trace for the interactive UI.
+ * A [SourceWorker]: the framework owns end-of-stream (closing the output once [produce] returns) and the live
+ * row-count progress; this Worker only reads, emits, and closes its own file. File IO runs through
+ * [JobControl.runBlockingIo] so the read stays visible to quiescence detection, with a [JobControl.checkpoint]
+ * per batch so the read is cooperatively pausable / cancellable.
  */
 @Reflect
 class CsvReaderWorker(
-    private val output: ChannelOutput<Any?>,
+    output: ChannelOutput<Any?>,
 
     private val path: String,
     private val delimiter: String,
     private val batch: Int,
     private val header: Boolean,
 
-    private val selfLocation: ObjectLocation
+    selfLocation: ObjectLocation
 ):
-    Worker
+    SourceWorker<RecordBatch>(output, selfLocation)
 {
-    override suspend fun run(control: JobControl) {
+    private var count = 0L
+
+
+    override suspend fun produce(emit: Emitter<RecordBatch>, control: JobControl) {
         val csvReader = control.runBlockingIo {
             CsvRecordReader(Files.newBufferedReader(toFilePath(path)), delimiter)
         }
@@ -61,7 +62,6 @@ class CsvReaderWorker(
                     HeaderListing.of((0 until firstRecord.fieldCount()).map { "c$it" })
                 }
 
-            var count = 0L
             var records = ArrayList<FlatFileRecord>(batch)
             if (firstRecord != null) {
                 records.add(firstRecord)
@@ -69,27 +69,37 @@ class CsvReaderWorker(
             }
 
             while (true) {
-                control.checkpoint()
                 val record = control.runBlockingIo { csvReader.readRecord() }
                     ?: break
 
                 records.add(record)
                 count += 1
                 if (records.size >= batch) {
-                    output.send(RecordBatch(headerListing, records))
-                    control.publishProgress(selfLocation, mapOf("read" to count))
+                    // Checkpoint once per emitted batch, NOT per record: the batch is the pipeline's unit of
+                    // work, so a pause/cancel lands per batch and a single STEP advances exactly one batch.
+                    // (A record-granular checkpoint made stepping/slow-motion advance one invisible record at
+                    // a time — thousands of record-steps before any batch surfaced downstream, so stepping
+                    // looked "stuck".)
+                    control.checkpoint()
+                    emit.send(RecordBatch(headerListing, records))
+                    publish(control)
                     records = ArrayList(batch)
                 }
             }
 
             if (records.isNotEmpty()) {
-                output.send(RecordBatch(headerListing, records))
+                // The trailing partial batch is also a step boundary, so an undersized input (fewer rows than
+                // one batch) is still pausable / steppable rather than running straight through.
+                control.checkpoint()
+                emit.send(RecordBatch(headerListing, records))
             }
-            control.publishProgress(selfLocation, mapOf("read" to count), force = true)
         }
         finally {
             csvReader.close()
-            output.close()
         }
     }
+
+
+    override fun progress(snapshot: Any?): Map<String, Any?> =
+        mapOf("read" to count)
 }

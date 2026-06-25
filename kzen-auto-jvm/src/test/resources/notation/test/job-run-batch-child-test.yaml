@@ -1,0 +1,17 @@
+# The child Logic the end-to-end RunWorker Job test invokes once per batch: a single RecordBatch parameter
+# `batch` and a FormulaStep that returns it unchanged (identity). A Script's main result is its last step's
+# value, so RunWorker emits the same RecordBatch downstream — proving the Job hosts a child Logic per element
+# and threads the value through, without the child needing to be a no-op. See JobNestedLogicTest.
+main:
+  is: Script
+
+main.parameters/batch:
+  is: ParameterBinding
+  type:
+    class: tech.kzen.auto.server.objects.job.worker.RecordBatch
+    generics: []
+    nullable: false
+
+main.steps/Identity:
+  is: FormulaStep
+  code: batch

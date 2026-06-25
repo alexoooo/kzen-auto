@@ -19,6 +19,7 @@ import tech.kzen.lib.common.exec.logic.model.LogicResultCancelled
 import tech.kzen.lib.common.exec.logic.model.LogicResultFailed
 import tech.kzen.lib.common.exec.logic.model.LogicResultPaused
 import tech.kzen.lib.common.exec.logic.model.LogicResultSuccess
+import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
 import tech.kzen.lib.common.exec.logic.trace.LogicTraceHandle
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
 import tech.kzen.lib.common.exec.tuple.TupleValue
@@ -48,6 +49,7 @@ class JobExecution(
     private val workerLocations: List<ObjectLocation>,
     private val channelLocations: List<ObjectLocation>,
     private val logicTraceHandle: LogicTraceHandle,
+    private val logicRunExecutionId: LogicRunExecutionId,
     private val objectStableMapper: ObjectStableMapper,
     private val graphCreator: GraphCreator,
     private val environment: GraphEnvironment
@@ -77,6 +79,7 @@ class JobExecution(
     //-----------------------------------------------------------------------------------------------------------------
     private var supervisor: WorkerSupervisor? = null
     private var jobControl: JobControlImpl? = null
+    private var logicHost: JobLogicHostImpl? = null
     private var started = false
 
     // Client endpoints the bridge holds for each `external` duplex Channel, keyed by the Channel's leaf name;
@@ -115,10 +118,12 @@ class JobExecution(
 
                 LogicCommand.Pause -> {
                     if (logicControl.consumeStepBudget()) {
-                        // Step = one global tick: release, run to the next quiescent wavefront, re-arm pause.
-                        jobControl.resume()
+                        // Step = one global tick: release each parked Worker past exactly one checkpoint (one
+                        // wavefront) while staying paused, then await the re-park. Unlike a full resume, the
+                        // Workers re-park on their own at their next checkpoint, so this settles after a small,
+                        // bounded amount of work — a best-effort step rather than running to completion.
+                        jobControl.step()
                         supervisor.awaitQuiescent()
-                        jobControl.pause()
                     }
                     else {
                         // Plain pause: park Workers at their next checkpoint, await the quiescent wavefront.
@@ -219,7 +224,11 @@ class JobExecution(
         }
 
         val supervisor = WorkerSupervisor(parallelism)
-        val jobControl = JobControlImpl(logicTraceHandle, objectStableMapper)
+        // The host keeps the live (full) graphDefinition so a Run Worker can resolve + run a child Logic from
+        // any document; built here so it shares the exact definition the Workers were launched against.
+        val logicHost = JobLogicHostImpl(
+            graphDefinition, logicRunExecutionId, graphCreator, environment)
+        val jobControl = JobControlImpl(logicTraceHandle, objectStableMapper, logicHost)
 
         for (workerLocation in workerLocations) {
             val worker = graphInstance[workerLocation]?.reference as? Worker
@@ -233,6 +242,7 @@ class JobExecution(
 
         this.supervisor = supervisor
         this.jobControl = jobControl
+        this.logicHost = logicHost
     }
 
 
@@ -245,6 +255,9 @@ class JobExecution(
     private fun tearDown() {
         externalClients.values.forEach { it.close() }
         jobControl?.cancel()
+        // Abort in-flight child Logics before joining: a Worker blocked in a synchronous host.run won't see
+        // the coroutine cancel until the child returns, so flip the children to Cancel to unwind them first.
+        logicHost?.cancelAll()
         supervisor?.cancelAndJoin()
     }
 

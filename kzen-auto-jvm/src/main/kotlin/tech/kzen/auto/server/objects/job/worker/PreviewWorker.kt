@@ -1,11 +1,8 @@
 package tech.kzen.auto.server.objects.job.worker
 
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
 import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.api.ChannelServer
-import tech.kzen.auto.common.paradigm.job.api.Worker
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionResult
@@ -16,32 +13,32 @@ import tech.kzen.lib.common.reflect.Reflect
 
 
 /**
- * A SINK Worker that shows a LIVE sample of the data flowing into it — the interactive replacement for
- * writing to a file. It exercises BOTH UI communication paths a Worker can use:
+ * A SINK Worker that shows a LIVE sample of the data flowing into it — the interactive replacement for writing
+ * to a file. It exercises BOTH UI communication paths, now unified on the framework-owned [snapshot]:
  *
- * - **Trace (push):** a small teaser (the most recent [teaserRows] rows + the running total count) is
- *   published to the Worker's trace as data streams in, for the always-on live view the UI polls.
- * - **Duplex query (pull):** the Worker SERVES an (external, UI-facing) duplex Channel ([serve]), answering
- *   on-demand slice requests (`offset` / `limit`) over its larger buffered sample — the browser→worker
- *   request/reply path for reading richer internal state than the teaser carries.
+ * - **Trace (push):** a small teaser (the most recent [teaserRows] rows + the running total count) is derived
+ *   from the snapshot and published to the Worker's trace as data streams in, for the always-on live view.
+ * - **Duplex query (pull):** the Worker answers on-demand slice requests (`offset` / `limit`) from the SAME
+ *   snapshot over an (external, UI-facing) duplex Channel ([onQuery]) — the browser→worker request/reply path
+ *   for reading a richer sample than the teaser carries.
  *
- * It keeps a ROLLING window of the most recent [sample] records (a live tail — so the sample keeps changing
- * as data flows rather than freezing on the first [sample] records seen), copied off the hot-path
- * [tech.kzen.auto.plugin.model.record.FlatFileRecord] to `List<String>` (bounded by [sample]) plus the
- * running count, published as `@Volatile` immutable snapshots (single writer — the input loop — so a volatile
- * publish suffices, no lock). The input drain and the serve loop run as two child coroutines under one
- * `coroutineScope`; when the input ends the serve loop is cancelled so the run reaches a terminal (done)
- * state, and the UI falls back to the final teaser persisted on the trace (Report's online/offline pattern).
+ * It keeps a ROLLING window of the most recent [sample] records (a live tail — so the sample keeps changing as
+ * data flows rather than freezing on the first [sample] records), copied off the hot-path [FlatFileRecord] to
+ * `List<String>` (bounded by [sample]). The window is confined to the work coroutine ([onBatch]); after each
+ * batch the framework captures an immutable [Snapshot] of it — only that snapshot crosses to the serve
+ * coroutine, so no lock / `@Volatile` field is needed here. When the input ends the framework cancels the
+ * serve loop so the run reaches a terminal (done) state, and the UI falls back to the final teaser persisted
+ * on the trace.
  */
 @Reflect
 class PreviewWorker(
-    private val input: ChannelInput<Any?>,
-    private val serve: ChannelServer<Any?, Any?>,
+    input: ChannelInput<Any?>,
+    serve: ChannelServer<Any?, Any?>,
 
     private val sample: Int,
-    private val selfLocation: ObjectLocation
+    selfLocation: ObjectLocation
 ):
-    Worker
+    SinkWorker<RecordBatch>(input, selfLocation, serve)
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -50,74 +47,52 @@ class PreviewWorker(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    @Volatile private var previewHeader: List<String> = listOf()
-    @Volatile private var previewRows: List<List<String>> = listOf()
-    @Volatile private var previewCount: Long = 0L
+    // Rolling window of the most recent `sample` records (oldest -> newest); the oldest is evicted once full, so
+    // the live view keeps sampling fresh data instead of freezing on the first batch. Confined to onBatch.
+    private val window = ArrayDeque<List<String>>()
+    private var header: List<String> = listOf()
+    private var count = 0L
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun run(control: JobControl): Unit = coroutineScope {
-        val serveJob = launch {
-            for (served in serve) {
-                served.reply(handleQuery(served.request))
-            }
+    override suspend fun onBatch(batch: RecordBatch, control: JobControl) {
+        if (header.isEmpty() && batch.header.values.isNotEmpty()) {
+            header = batch.header.values.map { it.text }
         }
 
-        try {
-            // Rolling window of the most recent `sample` records (oldest -> newest); the oldest is evicted
-            // once full, so the live view keeps sampling fresh data instead of freezing on the first batch.
-            val window = ArrayDeque<List<String>>()
-            var count = 0L
-
-            for (item in input) {
-                control.checkpoint()
-                val batch = item as RecordBatch
-
-                if (previewHeader.isEmpty() && batch.header.values.isNotEmpty()) {
-                    previewHeader = batch.header.values.map { it.text }
-                }
-
-                for (record in batch.records) {
-                    count += 1
-                    window.addLast(record.toList())
-                    if (window.size > sample) {
-                        window.removeFirst()
-                    }
-                }
-                previewRows = ArrayList(window)
-                previewCount = count
-
-                publishTeaser(control, force = false)
+        for (record in batch.records) {
+            count += 1
+            window.addLast(record.toList())
+            if (window.size > sample) {
+                window.removeFirst()
             }
-
-            publishTeaser(control, force = true)
-        }
-        finally {
-            serveJob.cancel()
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun publishTeaser(control: JobControl, force: Boolean) {
-        control.publishProgress(
-            selfLocation,
-            mapOf(
-                "header" to previewHeader,
-                "rows" to previewRows.takeLast(teaserRows),
-                "count" to previewCount),
-            force)
+    override fun snapshot(): Snapshot =
+        Snapshot(header, ArrayList(window), count)
+
+
+    override fun progress(snapshot: Any?): Map<String, Any?> {
+        val snap = snapshot as Snapshot
+        return mapOf(
+            "header" to snap.header,
+            "rows" to snap.rows.takeLast(teaserRows),
+            "count" to snap.count)
     }
 
 
-    private fun handleQuery(request: Any?): ExecutionResult {
+    override fun onQuery(request: Any?, snapshot: Any?): ExecutionResult {
+        val snap = snapshot as? Snapshot
         val executionRequest = request as? ExecutionRequest
         val offset = executionRequest?.getSingle(JobConventions.previewOffsetParameter)
             ?.toIntOrNull()?.coerceAtLeast(0) ?: 0
         val limit = executionRequest?.getSingle(JobConventions.previewLimitParameter)
             ?.toIntOrNull()?.coerceAtLeast(0) ?: sample
 
-        val rows = previewRows
+        val rows = snap?.rows ?: listOf()
         val slice =
             if (offset >= rows.size) {
                 listOf()
@@ -127,9 +102,18 @@ class PreviewWorker(
             }
 
         return ExecutionSuccess.ofValue(ExecutionValue.of(mapOf(
-            "header" to previewHeader,
+            "header" to (snap?.header ?: listOf<String>()),
             "rows" to slice,
-            "count" to previewCount,
+            "count" to (snap?.count ?: 0L),
             "offset" to offset.toLong())))
     }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    // Immutable point-in-time view of the rolling window, shared with the serve coroutine via WorkerBase.
+    class Snapshot(
+        val header: List<String>,
+        val rows: List<List<String>>,
+        val count: Long
+    )
 }

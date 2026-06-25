@@ -1,5 +1,6 @@
 package tech.kzen.auto.common.paradigm.job.control
 
+import tech.kzen.auto.common.paradigm.job.api.JobLogicHost
 import tech.kzen.lib.common.model.location.ObjectLocation
 
 
@@ -37,4 +38,11 @@ interface JobControl {
      * pass [force] = true for the final value at end-of-stream so it is never dropped by the throttle.
      */
     fun publishProgress(location: ObjectLocation, value: Map<String, Any?>, force: Boolean = false)
+
+
+    /**
+     * The run-scoped [JobLogicHost] for invoking another Logic as a child (a Run Worker running a Script per
+     * event). Most Workers never call this — it is the seam for nested-Logic Workers.
+     */
+    fun logicHost(): JobLogicHost
 }

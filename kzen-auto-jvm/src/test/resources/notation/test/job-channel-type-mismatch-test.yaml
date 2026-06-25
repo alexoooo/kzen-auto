@@ -1,0 +1,15 @@
+# A deliberately miswired Job: the channel declares it carries kotlin.String, but the CSV reader's `output`
+# port is typed RecordBatch. ChannelTypeDefiner must fail the channel's `elementType` at definition time
+# (rather than letting it crash at run time on the `item as In` cast). See JobChannelTypingTest.
+main:
+  is: Job
+
+main.channels/raw:
+  is: Channel
+  elementType:
+    class: kotlin.String
+
+main.workers/reader:
+  is: CsvReaderWorker
+  output: main.channels/raw
+  path: build/job-channel-type-mismatch/input.csv

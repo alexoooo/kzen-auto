@@ -58,6 +58,7 @@ class JobDocument(
             workers,
             channels,
             logicTraceHandle,
+            logicRunExecutionId,
             objectStableMapper,
             graphCreator,
             environment)

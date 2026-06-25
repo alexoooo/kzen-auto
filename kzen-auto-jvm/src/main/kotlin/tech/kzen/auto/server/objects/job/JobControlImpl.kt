@@ -3,6 +3,7 @@ package tech.kzen.auto.server.objects.job
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import tech.kzen.auto.common.objects.document.job.JobConventions
+import tech.kzen.auto.common.paradigm.job.api.JobLogicHost
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.logic.trace.LogicTraceHandle
@@ -14,12 +15,14 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  * The shared [JobControl] handed to every Worker in a run. The worker-facing surface is
  * [checkpoint] / [runBlockingIo] / [publishProgress]; the run driver ([JobExecution]) flips the phase via
- * [pause] / [resume] / [cancel].
+ * [pause] / [resume] / [step] / [cancel].
  *
  * A parked worker suspends on a [CompletableDeferred] captured under the monitor (so a concurrent
- * [resume] / [cancel] can't be lost between the phase check and the await), then re-checks the phase on
- * wake-up. [cancel] surfaces as a [CancellationException] thrown from [checkpoint], unwinding the worker
- * for resource cleanup.
+ * [resume] / [step] / [cancel] can't be lost between the phase check and the await). Being woken means
+ * "proceed past this checkpoint": [resume] then runs free (phase is Running), while [step] keeps the Job
+ * paused but completes the captured signal once and leaves a FRESH (uncompleted) one for the next checkpoint,
+ * so each parked worker advances exactly one checkpoint (one wavefront) and re-parks on its own. [cancel]
+ * surfaces as a [CancellationException] thrown from [checkpoint], unwinding the worker for resource cleanup.
  *
  * [publishProgress] writes each Worker's live progress to the shared (thread-safe) [logicTraceHandle] under
  * a CHILD of the Worker's stable-id trace path ([progressSegment]), so it never collides with the terminal
@@ -28,7 +31,8 @@ import java.util.concurrent.ConcurrentHashMap
  */
 class JobControlImpl(
     private val logicTraceHandle: LogicTraceHandle,
-    private val objectStableMapper: ObjectStableMapper
+    private val objectStableMapper: ObjectStableMapper,
+    private val logicHost: JobLogicHost
 ): JobControl {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -77,6 +81,22 @@ class JobControlImpl(
     }
 
 
+    // Release each currently-parked Worker past exactly one checkpoint, but STAY paused: completing the
+    // captured signal wakes the parked Workers, and nulling it (without leaving Running) means each re-parks
+    // at its NEXT checkpoint on a fresh signal. So one step advances one quiescent wavefront rather than
+    // resuming the run — the run driver awaits quiescence after this to let the wavefront settle.
+    fun step() {
+        synchronized(monitor) {
+            if (phase == Phase.Cancelling) {
+                return
+            }
+            phase = Phase.Pausing
+            releaseSignal?.complete(Unit)
+            releaseSignal = null
+        }
+    }
+
+
     fun cancel() {
         synchronized(monitor) {
             phase = Phase.Cancelling
@@ -88,20 +108,27 @@ class JobControlImpl(
 
     //-----------------------------------------------------------------------------------------------------------------
     override suspend fun checkpoint() {
-        while (true) {
-            val signal = synchronized(monitor) {
-                when (phase) {
-                    Phase.Running ->
-                        return
+        val signal = synchronized(monitor) {
+            when (phase) {
+                Phase.Running ->
+                    return
 
-                    Phase.Cancelling ->
-                        throw CancellationException("Job cancelled")
+                Phase.Cancelling ->
+                    throw CancellationException("Job cancelled")
 
-                    Phase.Pausing ->
-                        releaseSignal ?: CompletableDeferred<Unit>().also { releaseSignal = it }
-                }
+                Phase.Pausing ->
+                    releaseSignal ?: CompletableDeferred<Unit>().also { releaseSignal = it }
             }
-            signal.await()
+        }
+
+        // Park until released. Only [resume] / [step] / [cancel] complete the captured signal, so being woken
+        // authorizes proceeding past THIS checkpoint (a [pause] never completes a signal — it only arms one).
+        // A [step] keeps the phase Pausing and nulls the signal, so the NEXT checkpoint re-parks on a fresh
+        // one: exactly one wavefront per step. Re-check for cancel on wake so a cancel still unwinds the Worker.
+        signal.await()
+
+        if (synchronized(monitor) { phase == Phase.Cancelling }) {
+            throw CancellationException("Job cancelled")
         }
     }
 
@@ -126,5 +153,10 @@ class JobControlImpl(
 
         val tracePath = JobConventions.workerProgressPath(objectStableMapper.objectStableId(location))
         logicTraceHandle.set(tracePath, ExecutionValue.of(value))
+    }
+
+
+    override fun logicHost(): JobLogicHost {
+        return logicHost
     }
 }

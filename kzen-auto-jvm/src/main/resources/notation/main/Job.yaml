@@ -12,10 +12,12 @@ main.workers/CSV Reader:
 main.channels/raw:
   is: Channel
   buffer: 4
+  elementType: RecordBatch
 
 main.channels/kept:
   is: Channel
   buffer: 4
+  elementType: RecordBatch
 
 main.channels/preview queries:
   is: DuplexChannel

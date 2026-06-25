@@ -1,0 +1,29 @@
+main:
+  is: Job
+
+main.channels/raw:
+  is: Channel
+  buffer: 8
+  elementType: RecordBatch
+
+main.channels/kept:
+  is: Channel
+  buffer: 8
+  elementType: RecordBatch
+
+main.workers/reader:
+  is: CsvReaderWorker
+  output: main.channels/raw
+  path: build/job-typed-channel/input.csv
+  batch: 4096
+
+main.workers/filter:
+  is: FilterWorker
+  input: main.channels/raw
+  output: main.channels/kept
+  where: 'amount.number > 2'
+
+main.workers/writer:
+  is: CsvWriterWorker
+  input: main.channels/kept
+  path: build/job-typed-channel/output.csv

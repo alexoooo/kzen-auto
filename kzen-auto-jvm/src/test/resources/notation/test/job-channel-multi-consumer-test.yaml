@@ -1,0 +1,32 @@
+# Two Workers drain the same channel — a fan-OUT that must be modelled explicitly, not by sharing a channel.
+# Both `input` ports are type-compatible (RecordBatch), so the type check passes and ChannelTypeDefiner must
+# fail the channel's `elementType` on the single-reader (single-consumer) rule. See JobChannelTypingTest.
+main:
+  is: Job
+
+main.channels/raw:
+  is: Channel
+  elementType: RecordBatch
+
+main.channels/keptA:
+  is: Channel
+
+main.channels/keptB:
+  is: Channel
+
+main.workers/reader:
+  is: CsvReaderWorker
+  output: main.channels/raw
+  path: build/job-channel-multi-consumer/input.csv
+
+main.workers/filterA:
+  is: FilterWorker
+  input: main.channels/raw
+  output: main.channels/keptA
+  where: ''
+
+main.workers/filterB:
+  is: FilterWorker
+  input: main.channels/raw
+  output: main.channels/keptB
+  where: ''

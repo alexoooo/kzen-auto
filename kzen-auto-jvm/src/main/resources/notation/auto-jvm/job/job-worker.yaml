@@ -26,6 +26,7 @@ CsvReaderWorker:
   meta:
     output:
       is: ChannelOutput
+      of: RecordBatch
       creator: JobChannelCreator
       editor: SelectChannelEditor
     path: String
@@ -51,10 +52,12 @@ FilterWorker:
   meta:
     input:
       is: ChannelInput
+      of: RecordBatch
       creator: JobChannelCreator
       editor: SelectChannelEditor
     output:
       is: ChannelOutput
+      of: RecordBatch
       creator: JobChannelCreator
       editor: SelectChannelEditor
     where: String
@@ -76,10 +79,12 @@ FormulaWorker:
   meta:
     input:
       is: ChannelInput
+      of: RecordBatch
       creator: JobChannelCreator
       editor: SelectChannelEditor
     output:
       is: ChannelOutput
+      of: RecordBatch
       creator: JobChannelCreator
       editor: SelectChannelEditor
     formula:
@@ -104,11 +109,44 @@ CsvWriterWorker:
   meta:
     input:
       is: ChannelInput
+      of: RecordBatch
       creator: JobChannelCreator
       editor: SelectChannelEditor
     path: String
     delimiter: String
     header: Boolean
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
+# Invokes another Logic (a Script / Flow / Job) as a child once per incoming element, passing the element as
+# the child's first parameter and emitting the child's main result downstream — the Job analogue of a Script's
+# Run step. The child runs to completion on a private control (see JobLogicHostImpl), so concurrently-running
+# Run Workers host their children in parallel. `instructions` references the child Logic; the input / output
+# channels are untyped (the element is whatever the child consumes / produces), so they carry no `of:` type.
+RunWorker:
+  abstract: true
+  is: Worker
+  title: "Run"
+  class: tech.kzen.auto.server.objects.job.worker.RunWorker
+  input: ""
+  output: ""
+  instructions: ""
+  meta:
+    input:
+      is: ChannelInput
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    output:
+      is: ChannelOutput
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    instructions:
+      is: ObjectLocation
+      by: Nominal
+      editor: SelectLogicEditor
+      summary: ReferenceLinkAttributeView
     selfLocation:
       is: ObjectLocation
       by: Self
@@ -128,6 +166,7 @@ PreviewWorker:
   meta:
     input:
       is: ChannelInput
+      of: RecordBatch
       creator: JobChannelCreator
       editor: SelectChannelEditor
     serve:
