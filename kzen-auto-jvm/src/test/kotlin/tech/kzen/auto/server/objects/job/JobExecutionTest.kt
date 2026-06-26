@@ -452,6 +452,34 @@ class JobExecutionTest {
 
 
     @Test
+    fun stepOutAtRootRunsWholeJobToCompletion() {
+        // Step Out AT the run root — the Job's own frame runs free by depth (budget 0, a depth limit below the
+        // root frame at depth 0) — has no caller to return to, so it runs the whole Job to completion like a
+        // full resume, NOT a single wavefront. (Script parity: Step Out at a Script's root runs it to the end.)
+        val expectedKept = writeSliceInput(500)
+
+        val execution = newExecution(sliceDocumentPath)
+        execution.beforeStart(TupleValue.empty)
+
+        val control = MutableLogicControl(false)
+        val resourceScope = MutableLogicResourceScope()
+        val graphDefinition = graphDefinition(sliceDocumentPath)
+
+        // Settle to a parked wavefront.
+        control.commandPause()
+        assertEquals(LogicResultPaused,
+            execution.continueOrStart(control, resourceScope, graphDefinition))
+
+        // Step Out at the root: budget 0, depth limit below the root frame (depth 0), still command Pause.
+        control.arm(0, -1)
+        val result = execution.continueOrStart(control, resourceScope, graphDefinition)
+
+        assertIs<LogicResultSuccess>(result)
+        assertEquals(expectedKept, Files.readAllLines(sliceOutput).drop(1).size)
+    }
+
+
+    @Test
     fun cancelTerminatesRunningSlice() {
         // Pause to a known mid-run parked state (deterministic with the large source), then cancel: the parked
         // Worker coroutines must unwind and the run report Cancelled.

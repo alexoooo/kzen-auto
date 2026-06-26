@@ -436,6 +436,13 @@ class ClientLogicGlobal(
 
     // Poll status until the in-flight step has settled back to Paused (no longer Stepping) or the run
     // finished (active == null), bounded by a defensive cap.
+    //
+    // Publish each poll so observers (the sidebar run-highlight + depth badge, the frame tree) see the
+    // intermediate frames a single step traverses while it's mid-flight — e.g. a stepped-over RunStep
+    // child lit up in the sidebar while it runs (its Wait). Without this the loop only published at
+    // settle points (back on the current frame), so slow-motion looked frozen even though each step
+    // transiently descended; manual Step Over surfaces those same frames via the background
+    // scheduleRefresh poll, which lookupStatus()+publish()es while the run is active.
     private suspend fun awaitStepSettled() {
         var waited = 0
         while (waited < slowSettleMaxMillis) {
@@ -443,6 +450,7 @@ class ClientLogicGlobal(
             waited += slowSettlePollMillis
 
             lookupStatus()
+            publish()
 
             val active = clientLogicState.logicStatus?.active
             if (active == null || active.state != LogicRunState.Stepping) {

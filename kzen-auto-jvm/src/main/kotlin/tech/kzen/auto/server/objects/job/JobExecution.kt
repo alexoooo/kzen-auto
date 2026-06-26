@@ -159,67 +159,84 @@ class JobExecution(
         val logicHost = logicHost!!
 
         while (true) {
-            when (logicControl.pollCommand()) {
-                LogicCommand.Cancel ->
-                    return cancelRun()
+            val command = logicControl.pollCommand()
+            if (command == LogicCommand.Cancel) {
+                return cancelRun()
+            }
 
-                LogicCommand.Pause -> {
-                    if (logicControl.consumeStepBudget()) {
-                        // Step = one global tick: release each parked Worker past exactly one checkpoint (one
-                        // wavefront) while staying paused, then await the re-park. Unlike a full resume, the
-                        // Workers re-park on their own at their next checkpoint, so this settles after a small,
-                        // bounded amount of work — a best-effort step rather than running to completion.
-                        // The Job's own budget and each child's budget are now SEPARATE (each child runs on its
-                        // own control), so we CONSUME the Job's budget to recognize the step tick, then grant a
-                        // fresh boundary to every hosted child so a Step descends one boundary INTO each.
-                        logicHost.grantStepToChildren()
-                        jobControl.step()
-                        supervisor.awaitQuiescent()
-                    }
-                    else {
-                        // Plain pause: park Workers at their next checkpoint, await the quiescent wavefront.
-                        jobControl.pause()
-                        supervisor.awaitQuiescent()
-                    }
+            // The controller communicates the step plan by arming the run's control: budget>0 is a Step Into /
+            // Over, a finite depth limit a Step Over / Out (Step Out carries budget 0); a plain pause is budget
+            // 0 with an unbounded limit. The Job runs as the run's ROOT frame (frame depth 0), so a Step Out
+            // whose limit drops below that root (runningFreeByDepth) is a Step Out AT the root — there is no
+            // caller to return to, so it runs the whole Job to completion exactly like a full resume (mirroring
+            // a Script's Step Out at its root). Every OTHER Pause is bounded: one wavefront, then report Paused.
+            val bounded = command == LogicCommand.Pause && ! logicControl.runningFreeByDepth()
 
-                    return terminalResult(supervisor) ?: LogicResultPaused
+            if (bounded) {
+                val stepBudget = logicControl.armedStepBudget()
+                val stepDepthLimit = logicControl.armedDepthLimit()
+                if (stepBudget > 0 || stepDepthLimit != Int.MAX_VALUE) {
+                    // Step = one global tick: release each parked Worker past exactly one checkpoint (one
+                    // wavefront) while staying paused, then await the re-park. Unlike a full resume, the Workers
+                    // re-park on their own at their next checkpoint, so this settles after a small, bounded
+                    // amount of work — a best-effort step rather than running to completion. The Job's own
+                    // budget and each child's budget are SEPARATE (each child runs on its own control), so we
+                    // CONSUME the Job's budget to recognize the step tick, then mirror the step plan onto every
+                    // hosted child (translated into the child's own frame coordinates) so Step Into / Over / Out
+                    // all descend/run/return correctly ACROSS the Job boundary, not just Step Into.
+                    logicControl.consumeStepBudget()
+                    logicHost.grantStepToChildren(stepBudget, stepDepthLimit)
+                    jobControl.step()
+                    supervisor.awaitQuiescent()
+                }
+                else {
+                    // Plain pause: park Workers at their next checkpoint, await the quiescent wavefront.
+                    jobControl.pause()
+                    supervisor.awaitQuiescent()
                 }
 
-                LogicCommand.None -> {
-                    jobControl.resume()
-                    val quiescent = supervisor.awaitQuiescenceOrProgress(pollIntervalMillis)
+                return terminalResult(supervisor) ?: LogicResultPaused
+            }
 
+            // Run free to quiescence / completion: a full resume (command None) or a Step Out AT the run root.
+            // The latter still carries the Pause command, so first mirror its run-free plan onto the children
+            // (and onto children born during the run, via grantStepToChildren's recorded plan) — otherwise they
+            // would pause at their own boundaries instead of running through.
+            if (command == LogicCommand.Pause) {
+                logicHost.grantStepToChildren(logicControl.armedStepBudget(), logicControl.armedDepthLimit())
+            }
+            jobControl.resume()
+            val quiescent = supervisor.awaitQuiescenceOrProgress(pollIntervalMillis)
+
+            terminalResult(supervisor)?.let {
+                return it
+            }
+
+            if (quiescent) {
+                if (externalClients.isEmpty()) {
+                    // Settled with Workers still live and no external input expected: a Worker is
+                    // mid-completion, or a genuine deadlock.
+                    Thread.sleep(deadlockGraceMillis)
                     terminalResult(supervisor)?.let {
                         return it
                     }
-
-                    if (quiescent) {
-                        if (externalClients.isEmpty()) {
-                            // Settled with Workers still live and no external input expected: a Worker is
-                            // mid-completion, or a genuine deadlock.
-                            Thread.sleep(deadlockGraceMillis)
-                            terminalResult(supervisor)?.let {
-                                return it
-                            }
-                            if (supervisor.isQuiescent()) {
-                                val failure = supervisor.firstFailure()
-                                logger.warn("{} - settled with no progress - {}", documentPath, failure)
-                                tearDown()
-                                return LogicResultFailed(
-                                    failure ?: "Job deadlock: all workers blocked with no progress")
-                            }
-                        }
-                        else {
-                            // Externally-driven (service) Job: a Worker idle on an open external channel is
-                            // awaiting a UI request, which is indistinguishable from deadlock under the
-                            // inFlight==0 heuristic — so deadlock detection is suspended while any external
-                            // channel is open. Idle-poll (re-checking Cancel) rather than busy-spin.
-                            // (M2 limitation: this also masks a genuine deadlock in a Job that happens to
-                            // have an external channel; a precise fix needs per-Worker blocked-on-which-
-                            // channel introspection — deferred.)
-                            Thread.sleep(pollIntervalMillis)
-                        }
+                    if (supervisor.isQuiescent()) {
+                        val failure = supervisor.firstFailure()
+                        logger.warn("{} - settled with no progress - {}", documentPath, failure)
+                        tearDown()
+                        return LogicResultFailed(
+                            failure ?: "Job deadlock: all workers blocked with no progress")
                     }
+                }
+                else {
+                    // Externally-driven (service) Job: a Worker idle on an open external channel is
+                    // awaiting a UI request, which is indistinguishable from deadlock under the
+                    // inFlight==0 heuristic — so deadlock detection is suspended while any external
+                    // channel is open. Idle-poll (re-checking Cancel) rather than busy-spin.
+                    // (M2 limitation: this also masks a genuine deadlock in a Job that happens to
+                    // have an external channel; a precise fix needs per-Worker blocked-on-which-
+                    // channel introspection — deferred.)
+                    Thread.sleep(pollIntervalMillis)
                 }
             }
         }

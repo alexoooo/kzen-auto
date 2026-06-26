@@ -5,6 +5,7 @@ import tech.kzen.auto.client.util.ClientError
 import tech.kzen.auto.client.util.ClientResult
 import tech.kzen.auto.client.util.ClientSuccess
 import tech.kzen.auto.common.api.CommonRestApi
+import tech.kzen.auto.client.service.logic.LogicRunFrames
 import tech.kzen.auto.common.objects.document.script.model.RunStepInstructions
 import tech.kzen.auto.common.paradigm.logic.LogicConventions
 import tech.kzen.lib.common.exec.BinaryExecutionValue
@@ -42,12 +43,28 @@ class ScriptProgressStore(
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun refresh() {
-        val logicRunExecutionId = mostRecent()
+        // A document LIVE in the run is shown by its OWN frame's execution id (frame-keyed), so sequential
+        // re-entries and parallel invocations of the same document don't bleed together through the run-merge;
+        // otherwise the most-recent invocation merged across the run (post-run inspection of the last one).
+        val activeRun = scriptStore.clientStateGlobal.current()
+            ?.clientLogicState?.logicStatus?.active
+        val activeFrame = LogicRunFrames.frameForDocument(
+            activeRun?.frame, scriptStore.mainLocation().documentPath)
+
+        val logicRunExecutionId =
+            if (activeRun != null && activeFrame != null) {
+                LogicRunExecutionId(activeRun.id, activeFrame.executionId)
+            }
+            else {
+                mostRecent()
+            }
+
         if (logicRunExecutionId == null) {
             resetHistory()
             scriptStore.update { state -> state
                 .withProgressSuccess {
                     it.copy(
+                        logicRunExecutionId = null,
                         logicTraceSnapshot = null,
                         traceEvents = listOf(),
                         runStepRepresentative = mapOf(),
@@ -60,9 +77,26 @@ class ScriptProgressStore(
 
         val logicRunId = logicRunExecutionId.logicRunId
 
-        // The per-path merged snapshot drives live step state / next-step and non-RunStep thumbnails.
+        // The per-path snapshot drives live step state / next-step and non-RunStep thumbnails: the live frame's
+        // own buffer (single execution) when this document is executing, else merged across the run. If the
+        // single-execution lookup misses (a just-evicted / racing frame), fall back to the merged run so the
+        // view still renders.
         @Suppress("MoveVariableDeclarationIntoWhen", "RedundantSuppression")
-        val progressResult = lookupRunQuery(logicRunId, LogicTraceQuery(LogicTracePath.root))
+        val progressResult =
+            if (activeFrame != null) {
+                lookupQuery(logicRunExecutionId, LogicTraceQuery(LogicTracePath.root))
+                    .let { frameResult ->
+                        if (frameResult is ClientError) {
+                            lookupRunQuery(logicRunId, LogicTraceQuery(LogicTracePath.root))
+                        }
+                        else {
+                            frameResult
+                        }
+                    }
+            }
+            else {
+                lookupRunQuery(logicRunId, LogicTraceQuery(LogicTracePath.root))
+            }
 
         when (progressResult) {
             is ClientError -> {
@@ -70,6 +104,7 @@ class ScriptProgressStore(
                     .withGlobalError(progressResult.message)
                     .withProgressSuccess {
                         it.copy(
+                            logicRunExecutionId = logicRunExecutionId,
                             logicTraceSnapshot = null,
                             traceEvents = listOf(),
                             runStepRepresentative = mapOf(),
@@ -100,6 +135,7 @@ class ScriptProgressStore(
                 scriptStore.update { state -> state
                     .withProgressSuccess {
                         it.copy(
+                            logicRunExecutionId = logicRunExecutionId,
                             logicTraceSnapshot = snapshot,
                             traceEvents = events,
                             runStepRepresentative = runStepRepresentative,
@@ -179,6 +215,33 @@ class ScriptProgressStore(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    // Single-execution snapshot for one frame's invocation (frame-keyed view), keyed by run + execution id —
+    // does NOT merge sibling invocations the way lookupRun does.
+    private suspend fun lookupQuery(
+        logicRunExecutionId: LogicRunExecutionId,
+        logicTraceQuery: LogicTraceQuery
+    ): ClientResult<LogicTraceSnapshot> {
+        val result = scriptStore.restClient.performDetached(
+            LogicConventions.logicTraceEndpointLocation,
+            CommonRestApi.paramAction to LogicConventions.actionLookup,
+            CommonRestApi.paramRunId to logicRunExecutionId.logicRunId.value,
+            CommonRestApi.paramExecutionId to logicRunExecutionId.logicExecutionId.value,
+            LogicConventions.paramQuery to logicTraceQuery.asString()
+        )
+
+        return when (result) {
+            is ExecutionSuccess -> {
+                @Suppress("UNCHECKED_CAST")
+                val resultValue = result.value.get() as Map<String, Map<String, Any>>
+                ClientResult.ofSuccess(LogicTraceSnapshot.ofCollection(resultValue))
+            }
+
+            is ExecutionFailure ->
+                ClientResult.ofError(result.errorMessage)
+        }
+    }
+
+
     private suspend fun lookupRunQuery(
         logicRunId: LogicRunId,
         logicTraceQuery: LogicTraceQuery
@@ -232,6 +295,8 @@ class ScriptProgressStore(
         @Suppress("MoveVariableDeclarationIntoWhen", "RedundantSuppression")
         val mostRecentResult = mostRecentQuery()
 
+        // The resolved id is persisted by refresh() (uniformly for both the frame-keyed and this fallback
+        // path), so this only reports a query failure.
         return when (mostRecentResult) {
             is ClientError -> {
                 scriptStore.update { state -> state
@@ -240,17 +305,8 @@ class ScriptProgressStore(
                 null
             }
 
-            is ClientSuccess -> {
-                scriptStore.update { state -> state
-                    .withProgressSuccess {
-                        it.copy(
-                            logicRunExecutionId = mostRecentResult.value.logicRunExecutionId
-                        )
-                    }
-                }
-
+            is ClientSuccess ->
                 mostRecentResult.value.logicRunExecutionId
-            }
         }
     }
 

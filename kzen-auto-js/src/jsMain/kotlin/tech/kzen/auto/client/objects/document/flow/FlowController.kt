@@ -205,8 +205,10 @@ class FlowController(
         val mainLocation = ObjectLocation(documentPath, NotationConventions.mainObjectPath)
         val vertexLocations = matrix.verticesByLocation.keys.toList()
 
+        val activeRun = clientState.clientLogicState.logicStatus?.active
+
         async {
-            val visualFlowModel = flowProgressStore.fetchVisualModel(mainLocation, vertexLocations)
+            val visualFlowModel = flowProgressStore.fetchVisualModel(mainLocation, vertexLocations, activeRun)
             setState {
                 this.visualFlowModel = visualFlowModel
             }

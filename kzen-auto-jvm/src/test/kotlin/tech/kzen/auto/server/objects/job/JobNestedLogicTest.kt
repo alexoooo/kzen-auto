@@ -29,7 +29,9 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 
@@ -116,29 +118,108 @@ class JobNestedLogicTest {
         // The reported regression: a Job Worker's child that ITSELF starts a further nested Logic. The chain is
         // host -> wrapper Script -> RunStep -> grandchild Script (number -> number*10); the inner RunStep is
         // exactly where the former NestedLogicUnsupported stub threw. Reaching Success with number*10 proves the
-        // recursion runs and threads the result back through both levels.
+        // recursion runs and threads the result back through both levels. Both nested documents are independently
+        // trace-recorded under the Job's run id (recursive visibility) rather than running "dark" under the former
+        // NoOpLogicTraceHandle — asserted while the frames are LIVE, since each child's buffer is evicted when its
+        // frame closes (so a completed child is not retained).
         val runExecutionId = LogicRunExecutionId.random()
-        val host = newHost(runExecutionId)
+        val shared = MutableLogicControl(false)
+        shared.commandPause()
+        val host = newHost(runExecutionId, shared)
 
         val wrapperLocation = ObjectLocation(
             DocumentPath.parse("test/job-nested-wrapper-test.yaml"), ObjectPath.parse("main"))
         val grandchildLocation = ObjectLocation(intChildDocumentPath, ObjectPath.parse("main"))
 
-        val result = runToCompletion(host, wrapperLocation, 5)
+        // Warm the FormulaStep compiler cache via a full-speed run so the stepping below isn't first-compile timed.
+        assertIs<LogicResultSuccess>(runToCompletion(newHost(), grandchildLocation, 5))
 
-        val success = result as? LogicResultSuccess
-            ?: error("expected success, was $result")
-        assertEquals(50, success.value.mainComponentValue())
+        val facade = host.logicHandleFacade().start(wrapperLocation)
+        try {
+            assertTrue(facade.beforeStart(host.argumentTuple(wrapperLocation, 5)))
 
-        // Both nested documents are now independently trace-recorded under the Job's run id (recursive
-        // visibility), instead of running "dark" under the former NoOpLogicTraceHandle.
-        assertNotNull(context.logicTraceStore.mostRecent(wrapperLocation), "wrapper trace")
-        assertNotNull(context.logicTraceStore.mostRecent(grandchildLocation), "grandchild trace")
+            // Descend into the grandchild (it pauses before its own first step): both frames are now live, so
+            // both nested documents are addressable in the trace store under the Job's run id.
+            host.grantStepToChildren()
+            assertIs<LogicResultPaused>(facade.continueOrStart(host.graphDefinition()))
 
-        val snapshot = context.logicTraceStore.lookupRun(
-            runExecutionId.logicRunId, LogicTraceQuery(LogicTracePath.root))
-        assertNotNull(snapshot, "run snapshot")
-        assertTrue(snapshot.values.isNotEmpty(), "nested step values recorded in the run snapshot")
+            assertNotNull(context.logicTraceStore.mostRecent(wrapperLocation), "wrapper trace")
+            assertNotNull(context.logicTraceStore.mostRecent(grandchildLocation), "grandchild trace")
+            assertNotNull(
+                context.logicTraceStore.lookupRun(
+                    runExecutionId.logicRunId, LogicTraceQuery(LogicTracePath.root)),
+                "run snapshot")
+
+            // Complete: 5 -> 50 threaded back through both levels.
+            host.grantStepToChildren()
+            val result = facade.continueOrStart(host.graphDefinition())
+            val success = result as? LogicResultSuccess
+                ?: error("expected success, was $result")
+            assertEquals(50, success.value.mainComponentValue())
+        }
+        finally {
+            facade.close()
+        }
+    }
+
+
+    @Test
+    fun reEnteringAChildStartsFromAClearedTrace() {
+        // The reported UI bug: a RunWorker invokes the SAME child once per element; on the 2nd entry the child
+        // showed the 1st invocation's finished trace ("already executed"). Each invocation now gets its OWN
+        // execution id and its buffer is evicted when the frame closes, so the next invocation reads a fresh,
+        // empty buffer — never the prior one's state. This is the unit-level proof, driving the host directly
+        // (two sequential start -> run -> close cycles for the same child, as a stepped RunWorker would).
+        val host = newHost()
+        val childLocation = ObjectLocation(intChildDocumentPath, ObjectPath.parse("main"))
+        val rootQuery = LogicTraceQuery(LogicTracePath.root)
+
+        assertIs<LogicResultSuccess>(runToCompletion(newHost(), childLocation, 0))  // warm the compiler cache
+
+        // First invocation, driven manually so we can observe its live buffer + id before it closes.
+        val facadeA = host.logicHandleFacade().start(childLocation)
+        val idA: LogicRunExecutionId
+        try {
+            assertTrue(facadeA.beforeStart(host.argumentTuple(childLocation, 3)))
+            idA = assertNotNull(
+                context.logicTraceStore.mostRecent(childLocation), "A is traced while its frame is open")
+            var resultA: LogicResult = facadeA.continueOrStart(host.graphDefinition())
+            while (resultA is LogicResultPaused) {
+                resultA = facadeA.continueOrStart(host.graphDefinition())
+            }
+            assertIs<LogicResultSuccess>(resultA)
+            assertTrue(
+                context.logicTraceStore.lookup(idA, rootQuery)?.values?.isNotEmpty() == true,
+                "A recorded step trace while its frame is open")
+        }
+        finally {
+            facadeA.close()
+        }
+
+        // Evict-on-close: A's buffer is reclaimed, so nothing of A's lingers to bleed into the re-entry.
+        assertNull(context.logicTraceStore.lookup(idA, rootQuery), "A's buffer is evicted on close")
+        assertNull(context.logicTraceStore.mostRecent(childLocation), "A is no longer most-recent after close")
+
+        // Second invocation (the re-entry): a DISTINCT execution id and a fresh buffer — A's evicted buffer can
+        // no longer surface, so the merged-run view the client reads shows this invocation starting clean.
+        val facadeB = host.logicHandleFacade().start(childLocation)
+        try {
+            assertTrue(facadeB.beforeStart(host.argumentTuple(childLocation, 7)))
+            val idB = assertNotNull(
+                context.logicTraceStore.mostRecent(childLocation), "B is traced while its frame is open")
+            assertNotEquals(idA, idB, "each invocation gets its own execution id (no per-document reuse)")
+
+            var resultB: LogicResult = facadeB.continueOrStart(host.graphDefinition())
+            while (resultB is LogicResultPaused) {
+                resultB = facadeB.continueOrStart(host.graphDefinition())
+            }
+            val successB = resultB as? LogicResultSuccess
+                ?: error("expected success, was $resultB")
+            assertEquals(70, successB.value.mainComponentValue())
+        }
+        finally {
+            facadeB.close()
+        }
     }
 
 
@@ -175,6 +256,148 @@ class JobNestedLogicTest {
             val second = facade.continueOrStart(host.graphDefinition())
             assertIs<LogicResultSuccess>(second)
             assertEquals(50, second.value.mainComponentValue())
+        }
+        finally {
+            facade.close()
+        }
+    }
+
+
+    @Test
+    fun stepOverRunsNestedChildToCompletionWithoutDescending() {
+        // Step Over ACROSS the Job boundary: paused at the wrapper's first (Run) boundary, a Step Over runs the
+        // Run step's whole nested grandchild to completion and returns — reaching the wrapper's end (Success)
+        // in ONE grant — rather than descending into the grandchild and pausing (Step Into's two-grant path in
+        // steppingDescendsIntoNestedChildOneFreshStepAtATime). The depth limit is the wrapper-frame depth: in
+        // the controller's global coordinates that is 1 (the child's top frame sits one level below the Job
+        // root), which grantStepToChildren translates to the child-local limit 0. This is the regression for
+        // Step Over collapsing to Step Into for a Job.
+        val shared = MutableLogicControl(false)
+        shared.commandPause()
+        val host = newHost(sharedControl = shared)
+        val wrapperLocation = ObjectLocation(
+            DocumentPath.parse("test/job-nested-wrapper-test.yaml"), ObjectPath.parse("main"))
+
+        // Warm the FormulaStep compiler cache via a separate full-speed run.
+        assertIs<LogicResultSuccess>(
+            runToCompletion(newHost(), ObjectLocation(intChildDocumentPath, ObjectPath.parse("main")), 5))
+
+        val facade = host.logicHandleFacade().start(wrapperLocation)
+        try {
+            assertTrue(facade.beforeStart(host.argumentTuple(wrapperLocation, 5)))
+
+            // Step Over the wrapper's Run boundary (budget 1, global depth limit 1 -> child-local 0): the
+            // grandchild runs free to completion and the wrapper finishes in this single grant.
+            host.grantStepToChildren(1, 1)
+            val result = facade.continueOrStart(host.graphDefinition())
+            val success = result as? LogicResultSuccess
+                ?: error("expected success (stepped over the nested child), was $result")
+            assertEquals(50, success.value.mainComponentValue())
+        }
+        finally {
+            facade.close()
+        }
+    }
+
+
+    @Test
+    fun stepOutOfNestedChildRunsItToCompletionAndReturns() {
+        // Step Out ACROSS the Job boundary: after descending INTO the grandchild (Step Into), a Step Out runs
+        // the grandchild to completion and returns to the caller — reaching the wrapper's end (Success) in ONE
+        // grant — rather than re-parking as a no-op. This is the regression for Step Out's budget 0 falling
+        // through to a plain pause for a Job (the reported "step-out doesn't work").
+        val shared = MutableLogicControl(false)
+        shared.commandPause()
+        val host = newHost(sharedControl = shared)
+        val wrapperLocation = ObjectLocation(
+            DocumentPath.parse("test/job-nested-wrapper-test.yaml"), ObjectPath.parse("main"))
+
+        // Warm the FormulaStep compiler cache via a separate full-speed run.
+        assertIs<LogicResultSuccess>(
+            runToCompletion(newHost(), ObjectLocation(intChildDocumentPath, ObjectPath.parse("main")), 5))
+
+        val facade = host.logicHandleFacade().start(wrapperLocation)
+        try {
+            assertTrue(facade.beforeStart(host.argumentTuple(wrapperLocation, 5)))
+
+            // Step Into: descend into the grandchild, which pauses before its first step.
+            host.grantStepToChildren()
+            assertIs<LogicResultPaused>(facade.continueOrStart(host.graphDefinition()))
+
+            // Step Out (budget 0, global depth limit 1 -> child-local 0): the grandchild runs free to
+            // completion and control returns to the wrapper, which finishes — all in this single grant.
+            host.grantStepToChildren(0, 1)
+            val result = facade.continueOrStart(host.graphDefinition())
+            val success = result as? LogicResultSuccess
+                ?: error("expected success (stepped out of the nested child), was $result")
+            assertEquals(50, success.value.mainComponentValue())
+        }
+        finally {
+            facade.close()
+        }
+    }
+
+
+    @Test
+    fun stepOverAtJobLevelRunsFreshChildWithoutDescending() {
+        // The reported follow-up: paused at the Job level (no child yet), Step Over must run the RunWorker's
+        // whole child to completion WITHOUT the run descending into it. A fresh child is created AFTER the
+        // wavefront's grant (as the RunWorker does mid-wavefront), so it must inherit the step plan at birth:
+        // under Step Over its entry boundary is below the depth limit, so it runs free instead of pausing at its
+        // entry (which is a descent — the bug). Mirrors JobExecution's grant-BEFORE-the-child-exists order.
+        val shared = MutableLogicControl(false)
+        shared.commandPause()
+        val host = newHost(sharedControl = shared)
+        val wrapperLocation = ObjectLocation(
+            DocumentPath.parse("test/job-nested-wrapper-test.yaml"), ObjectPath.parse("main"))
+
+        // Warm the FormulaStep compiler cache via a separate full-speed run.
+        assertIs<LogicResultSuccess>(
+            runToCompletion(newHost(), ObjectLocation(intChildDocumentPath, ObjectPath.parse("main")), 5))
+
+        // Step Over at the Job level: global depth limit 0 (the Job root). Granted before the child is created.
+        host.grantStepToChildren(1, 0)
+
+        val facade = host.logicHandleFacade().start(wrapperLocation)
+        try {
+            assertTrue(facade.beforeStart(host.argumentTuple(wrapperLocation, 5)))
+
+            // The fresh child runs free to completion in this single grant — it does NOT pause at its entry.
+            val result = facade.continueOrStart(host.graphDefinition())
+            val success = result as? LogicResultSuccess
+                ?: error("expected the stepped-over fresh child to complete, was $result")
+            assertEquals(50, success.value.mainComponentValue())
+        }
+        finally {
+            facade.close()
+        }
+    }
+
+
+    @Test
+    fun stepIntoAtJobLevelPausesFreshChildAtEntry() {
+        // Contrast to Step Over (same grant-before-create order): under Step Into a fresh child must pause at its
+        // ENTRY — so the run descends into it, showing it about to start — rather than running free. The Into
+        // plan carries an unbounded depth limit, so the child's entry boundary pauses.
+        val shared = MutableLogicControl(false)
+        shared.commandPause()
+        val host = newHost(sharedControl = shared)
+        val wrapperLocation = ObjectLocation(
+            DocumentPath.parse("test/job-nested-wrapper-test.yaml"), ObjectPath.parse("main"))
+
+        // Warm the FormulaStep compiler cache via a separate full-speed run.
+        assertIs<LogicResultSuccess>(
+            runToCompletion(newHost(), ObjectLocation(intChildDocumentPath, ObjectPath.parse("main")), 5))
+
+        // Step Into (budget 1, unbounded limit), granted before the child is created.
+        host.grantStepToChildren()
+
+        val facade = host.logicHandleFacade().start(wrapperLocation)
+        try {
+            assertTrue(facade.beforeStart(host.argumentTuple(wrapperLocation, 5)))
+
+            // The fresh child descends and pauses at its entry — not run to completion.
+            assertIs<LogicResultPaused>(facade.continueOrStart(host.graphDefinition()))
         }
         finally {
             facade.close()

@@ -35,6 +35,35 @@ object LogicRunFrames {
     }
 
 
+    // The active frame currently displaying a given document: the DEEPEST frame whose document matches.
+    // Each frame is one live invocation with its own executionId; a re-entrant document appears more than
+    // once (a RunStep loop, a Job re-running the same child), and the deepest match is the innermost
+    // currently-executing one — the invocation the user is stepping into. null when the document isn't live
+    // in the run, so the caller falls back to the most-recent (post-run) invocation. Used to fetch a
+    // document's trace by THAT invocation's execution id, so sibling / sequential invocations don't merge.
+    fun frameForDocument(frame: LogicRunFrameInfo?, documentPath: DocumentPath): LogicRunFrameInfo? {
+        if (frame == null) {
+            return null
+        }
+
+        var best: LogicRunFrameInfo? = null
+        var bestDepth = -1
+
+        fun visit(node: LogicRunFrameInfo, depth: Int) {
+            if (node.objectLocation.documentPath == documentPath && depth > bestDepth) {
+                bestDepth = depth
+                best = node
+            }
+            for (dependency in node.dependencies) {
+                visit(dependency, depth + 1)
+            }
+        }
+
+        visit(frame, 0)
+        return best
+    }
+
+
     // Flattens the tree to documentPath → stack depth (root = 0). If a document re-enters at multiple
     // depths the shallowest is kept, so the sidebar indicator is stable. Empty when no run is active.
     fun depthByDocument(frame: LogicRunFrameInfo?): Map<DocumentPath, Int> {

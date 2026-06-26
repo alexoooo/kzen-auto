@@ -51,11 +51,13 @@ import java.util.concurrent.ConcurrentHashMap
  * shows it executing at the right depth; the facade's close listener detaches the frame, disposes the child's
  * scope, and untracks its control when it finishes.
  *
- * The trace / argument resolution reuses one execution id and one parameter-name lookup per nested DOCUMENT for
- * the whole run ([nestedExecutionId] / [firstParameterNames]), not per element: a Job streams arbitrarily many
- * elements through one run, so a fresh id / rebuild per element would leak a buffer (and re-resolve a constant)
- * per element. Two distinct Run Workers pointing at the SAME child document share one trace buffer (keyed by
- * document, not caller), so their concurrent writes interleave (cosmetic, last-write-wins) — deferred.
+ * Each child INVOCATION gets its OWN execution id (minted per [LogicHandle.start]); its trace buffer is
+ * reclaimed when the frame closes ([logicTraceStore]`.evict`). So a re-entry — the next element through the same
+ * Run Worker — starts from an EMPTY buffer instead of the prior invocation's finished state (the reported
+ * "already executed" bug), a streaming Job is bounded to its LIVE frames (no per-element buffer leak), and two
+ * Run Workers driving the SAME child document get DISTINCT buffers (no last-write-wins interleave). Only the
+ * positional first-parameter-name lookup is memoized per nested DOCUMENT ([firstParameterNames]) — a run
+ * constant, so [argumentTuple] needn't rebuild the child graph per element just to name the input.
  */
 class JobLogicHostImpl(
     private val fullDefinition: GraphDefinition,
@@ -69,13 +71,19 @@ class JobLogicHostImpl(
     JobLogicHost
 {
     //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        // A Job's RunWorkers sit at the run-root level, so each hosted child's top frame attaches one level
+        // below the Job (frame depth 1). grantStepToChildren subtracts this to translate the controller's
+        // global step depth limit into the child's own frame coordinates.
+        private const val childAttachDepth = 1
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     // Every live child's control: the driver arms them on a Step (grantStepToChildren) and cancelAll aborts
     // them; a child registers on start, deregisters when its facade closes. Thread-safe: children run on the
     // concurrent supervisor pool.
     private val childControls = ConcurrentHashMap.newKeySet<MutableLogicControl>()
-
-    // One trace execution id per nested document, reused for the whole Job run (see KDoc).
-    private val nestedExecutionIds = ConcurrentHashMap<ObjectLocation, LogicRunExecutionId>()
 
     // Memoized first-declared-input name per child document (constant for the run), so argumentTuple needn't
     // rebuild the child graph per element just to name the positional input.
@@ -83,6 +91,14 @@ class JobLogicHostImpl(
 
     @Volatile
     private var cancelled = false
+
+    // The depth limit (in the run's GLOBAL frame coordinates) of the step currently in flight, set by
+    // grantStepToChildren before each step wavefront and read when a NEW child is born mid-wavefront
+    // (TopLevelHandle.start). A child created during a Step Over / Step Out must inherit the plan so it runs
+    // free instead of pausing at its entry (which would descend INTO it — the bug where stepping over the
+    // RunWorker's child still entered it). MAX = Step Into / plain pause (a fresh child pauses at its entry).
+    @Volatile
+    private var childStepDepthLimit: Int = Int.MAX_VALUE
 
     private val handleFacade = LogicHandleFacade(runExecutionId, TopLevelHandle())
 
@@ -108,11 +124,42 @@ class JobLogicHostImpl(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    // Arm every live child with one fresh-step budget: called by JobExecution on a Step tick (before releasing
-    // the wavefront), so each Worker's child advances exactly one boundary (descending into it).
-    fun grantStepToChildren() {
+    // Arm every live child with the controller's step plan for this wavefront, translated into the child's OWN
+    // frame coordinates: a Job's children run on their own controls rooted one frame-level below the Job (the
+    // RunWorker -> child boundary is at depth 1 of the run's frame tree), so a global depth limit D maps to
+    // D - childAttachDepth in the child. This is what makes Step Over (budget 1, finite limit) and Step Out
+    // (budget 0, finite limit) cross the Job boundary instead of collapsing to Step Into / a no-op: below the
+    // limit the child runs free, at it the child pauses (see LogicControl.runningFreeByDepth /
+    // consumeStepBudget). An unbounded limit (Step Into / plain step) stays unbounded.
+    //
+    // Assumes a top-level Job, whose children attach at frame depth 1; a Job nested within another Logic would
+    // need its own frame depth folded into the offset — deferred (such a Job's children degrade to Step-Into
+    // descent, never worse than before). Records the plan (childStepDepthLimit) so a child BORN later in this
+    // same wavefront inherits it too (TopLevelHandle.start), not only the children live at grant time.
+    fun grantStepToChildren(budget: Int, depthLimit: Int) {
+        childStepDepthLimit = depthLimit
+        val childLimit = childDepthLimit(depthLimit)
         for (control in childControls) {
-            control.arm(1)
+            control.arm(budget, childLimit)
+        }
+    }
+
+
+    // Step Into: descend exactly one boundary into each child (budget 1, unbounded). The default grant on a
+    // Job Step; the parameterless form keeps the common case (and the nested-logic tests) readable.
+    fun grantStepToChildren() {
+        grantStepToChildren(1, Int.MAX_VALUE)
+    }
+
+
+    // Translate a global frame depth limit into a hosted child's OWN frame coordinates (its top frame attaches
+    // childAttachDepth levels below the Job root). An unbounded limit stays unbounded.
+    private fun childDepthLimit(globalDepthLimit: Int): Int {
+        return if (globalDepthLimit == Int.MAX_VALUE) {
+            Int.MAX_VALUE
+        }
+        else {
+            globalDepthLimit - childAttachDepth
         }
     }
 
@@ -130,12 +177,6 @@ class JobLogicHostImpl(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun nestedExecutionId(location: ObjectLocation): LogicRunExecutionId =
-        nestedExecutionIds.computeIfAbsent(location) {
-            LogicRunExecutionId(runExecutionId.logicRunId, LogicExecutionId.random())
-        }
-
-
     private fun resolveFirstParameterName(child: ObjectLocation): TupleComponentName? {
         val childGraph = graphCreator.createGraph(
             fullDefinition.filterTransitive(child.documentPath), environment)
@@ -160,15 +201,22 @@ class JobLogicHostImpl(
             if (cancelled) {
                 control.commandCancel()
             }
+            // Inherit the in-flight step plan: under Step Into a fresh child pauses at its entry (so the run
+            // descends into it); under Step Over / Step Out its entry boundary is below the depth limit, so it
+            // runs free — the RunWorker's child is stepped over without the run descending into it. Budget 0:
+            // a fresh child never spends a step to run its first boundary, it either pauses at entry (limit
+            // covers depth 0) or runs free by depth (limit below it).
+            control.arm(0, childDepthLimit(childStepDepthLimit))
             val resourceScope = MutableLogicResourceScope()
             childControls.add(control)
 
-            val childExecutionId = nestedExecutionId(originalObjectLocation)
+            val childExecutionId = LogicRunExecutionId(runExecutionId.logicRunId, LogicExecutionId.random())
 
             var frameHandle: AutoCloseable? = null
             val listener = object: LogicExecutionListener {
                 override fun closed() {
                     frameHandle?.close()
+                    logicTraceStore.evict(childExecutionId)
                     childControls.remove(control)
                     resourceScope.disposeAll(false)
                 }
@@ -202,12 +250,13 @@ class JobLogicHostImpl(
             logicRunExecutionId: LogicRunExecutionId,
             originalObjectLocation: ObjectLocation
         ): LogicExecutionFacade {
-            val childExecutionId = nestedExecutionId(originalObjectLocation)
+            val childExecutionId = LogicRunExecutionId(runExecutionId.logicRunId, LogicExecutionId.random())
 
             var frameHandle: AutoCloseable? = null
             val listener = object: LogicExecutionListener {
                 override fun closed() {
                     frameHandle?.close()
+                    logicTraceStore.evict(childExecutionId)
                 }
             }
 
