@@ -89,5 +89,6 @@ class PreviewWorkerTest {
         override suspend fun <R> runBlockingIo(block: () -> R): R = block()
         override fun publishProgress(location: ObjectLocation, value: Map<String, Any?>, force: Boolean) {}
         override fun logicHost(): JobLogicHost = error("nested logic not used by PreviewWorker")
+        override fun requestErrorPause() {}
     }
 }

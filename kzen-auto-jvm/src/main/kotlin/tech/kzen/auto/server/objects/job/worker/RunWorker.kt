@@ -69,11 +69,17 @@ class RunWorker(
                         return
                     }
 
-                    // Stepping: the child advanced one fresh boundary and parked at its next. Park this
-                    // Worker too (staying quiescence-visible) until the next wavefront / resume, then drive the
-                    // SAME child onward (the driver re-grants its budget per wavefront).
-                    LogicResultPaused ->
+                    // The child parked rather than finishing. Two causes converge here: a normal step wavefront
+                    // (the child advanced one fresh boundary), or pause-on-error (the child hit a recoverable
+                    // failure while running free). requestErrorPause() distinguishes them — it pauses the whole
+                    // Job only in the free-running case (no-op during a step), so an error pauses the run for
+                    // fix + resume instead of busy-looping the failing boundary. Either way this Worker then
+                    // parks (staying quiescence-visible) until the next wavefront / resume, then drives the SAME
+                    // child onward (its facade stays open across the park; the driver re-grants its budget).
+                    LogicResultPaused -> {
+                        control.requestErrorPause()
                         control.checkpoint()
+                    }
 
                     // The Job is cancelling and the child observed it: unwind the Worker.
                     LogicResultCancelled ->

@@ -13,6 +13,7 @@ import tech.kzen.lib.common.exec.logic.run.model.LogicRunResponse
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunState
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
+import kotlin.time.Duration.Companion.milliseconds
 
 
 class ClientLogicGlobal(
@@ -230,6 +231,20 @@ class ClientLogicGlobal(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    // Live-toggle pause-on-error on the active run (the header toggle is now clickable while paused). Fire and
+    // forget: the toggle's display state lives in HeaderRunController, and the value isn't surfaced back through
+    // LogicStatus — this only pushes it onto the running control so the next continue/step honours it.
+    fun setPauseOnErrorAsync(pauseOnError: Boolean) {
+        val logicRunId = clientLogicState.logicStatus?.active?.id
+            ?: return
+
+        async {
+            restClient.logicSetPauseOnError(logicRunId, pauseOnError)
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     fun stepAsync() {
         cancelSlowLoop()
         val logicRunId = clientLogicState.logicStatus?.active?.id
@@ -373,7 +388,7 @@ class ClientLogicGlobal(
                     publish()
                     return@async
                 }
-                delay(10)
+                delay(10.milliseconds)
                 lookupStatus()
                 awaitStepSettled()
                 publish()

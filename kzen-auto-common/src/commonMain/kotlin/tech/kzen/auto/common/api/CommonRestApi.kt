@@ -106,6 +106,7 @@ object CommonRestApi {
     const val logicStepOver = "${logicPrefix}stepOver"
     const val logicStepOut = "${logicPrefix}stepOut"
     const val logicStartAndStep = "${logicPrefix}startStep"
+    const val logicSetPauseOnError = "${logicPrefix}setPauseOnError"
 
     // stable object id mapping
     const val objectStableMapperSnapshot = "/object-stable/snapshot"

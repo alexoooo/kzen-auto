@@ -715,6 +715,19 @@ class ClientRestApi(
     }
 
 
+    suspend fun logicSetPauseOnError(
+        runId: LogicRunId,
+        pauseOnError: Boolean
+    ): LogicRunResponse {
+        val response = getOrPut(
+            CommonRestApi.logicSetPauseOnError,
+            CommonRestApi.paramRunId to runId.value,
+            CommonRestApi.paramPauseOnError to pauseOnError.toString())
+
+        return LogicRunResponse.valueOf(response)
+    }
+
+
     suspend fun logicStep(
         runId: LogicRunId
     ): LogicRunResponse {

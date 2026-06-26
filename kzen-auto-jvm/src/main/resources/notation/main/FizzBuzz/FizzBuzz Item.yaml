@@ -47,4 +47,4 @@ main.steps/div 3.then/div 3 and 5.else/Text:
 
 main.steps/Display:
   is: DisplayValueStep
-  text: main.parameters/number
+  text: main.steps/div 3

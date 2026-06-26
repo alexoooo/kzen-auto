@@ -45,4 +45,14 @@ interface JobControl {
      * event). Most Workers never call this — it is the seam for nested-Logic Workers.
      */
     fun logicHost(): JobLogicHost
+
+
+    /**
+     * Request a Job-wide pause because a nested child Logic hit a recoverable failure under pause-on-error
+     * (it returned a paused result rather than failing). Flips a free-running Job to pausing so every Worker
+     * parks at its next [checkpoint] and the run driver reports the Job paused (to be fixed + resumed) instead
+     * of failing / deadlocking. A no-op while the Job is already pausing / stepping (so a normal step wavefront
+     * that descends into a child is not mistaken for an error pause). Called by nested-Logic Workers only.
+     */
+    fun requestErrorPause()
 }

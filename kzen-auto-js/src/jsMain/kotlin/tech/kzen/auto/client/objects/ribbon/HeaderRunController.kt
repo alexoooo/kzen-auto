@@ -46,8 +46,9 @@ external interface HeaderRunControllerState: State {
     // do). Detected per document via ClientLogicGlobal.traceMostRecentPresent.
     var hasTrace: Boolean
 
-    // Run-start mode: when set, a failed step pauses the run (to fix + continue) instead of ending
-    // it. Read at start only; locked while a run is active.
+    // When set, a failed step pauses the run (to fix + continue) instead of ending it. A live toggle: it
+    // seeds the value at run start AND can be flipped while the run is paused, pushing the new value onto the
+    // active run (onTogglePauseOnError -> setPauseOnErrorAsync). Disabled only while actively executing.
     var pauseOnError: Boolean
 
     // Whether the client-paced "slow motion" auto-step loop is currently driving the run.
@@ -223,6 +224,12 @@ class HeaderRunController (
         setState {
             pauseOnError = next
         }
+
+        // While a run is active (paused), push the new value onto the running control so the next continue /
+        // step honours it; while idle the toggle just seeds the next start (startAndRunAsync passes it).
+        if (state.active) {
+            props.clientLogicGlobal.setPauseOnErrorAsync(next)
+        }
     }
 
 
@@ -380,7 +387,7 @@ class HeaderRunController (
 
                 renderSlowRunButton(active, executing, runnable)
                 renderSlowStepOverButton(active, executing, runnable)
-                renderPauseOnErrorToggle(active, runnable)
+                renderPauseOnErrorToggle(active, executing, runnable)
 
                 renderControlsDivider()
 
@@ -514,13 +521,15 @@ class HeaderRunController (
     }
 
 
-    private fun ChildrenBuilder.renderPauseOnErrorToggle(active: Boolean, runnable: Boolean) {
+    private fun ChildrenBuilder.renderPauseOnErrorToggle(active: Boolean, executing: Boolean, runnable: Boolean) {
         ToggleButton {
             value = "pauseOnError"
             selected = state.pauseOnError
 
-            // Applies at run start only, so lock it once a run is active.
-            disabled = active || !runnable
+            // A live toggle: clickable while paused (so it can be turned on/off mid-run and pushed to the
+            // active run) and while idle on a runnable document (to seed the next start); locked only while
+            // actively executing or on a non-runnable idle document.
+            disabled = executing || (!active && !runnable)
             size = Size.small
 
             sx {

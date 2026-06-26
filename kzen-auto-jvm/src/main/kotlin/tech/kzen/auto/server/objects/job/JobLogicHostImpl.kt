@@ -60,7 +60,8 @@ import java.util.concurrent.ConcurrentHashMap
  * constant, so [argumentTuple] needn't rebuild the child graph per element just to name the input.
  */
 class JobLogicHostImpl(
-    private val fullDefinition: GraphDefinition,
+    @Volatile
+    private var fullDefinition: GraphDefinition,
     private val runExecutionId: LogicRunExecutionId,
     private val graphCreator: GraphCreator,
     private val environment: GraphEnvironment,
@@ -111,6 +112,19 @@ class JobLogicHostImpl(
 
     override fun graphDefinition(): GraphDefinition {
         return fullDefinition
+    }
+
+
+    // Re-point the definition that children are built from at the latest (re-read) notation. A child Logic a
+    // Run Worker runs is a Nominal reference, so it sits OUTSIDE the Job's own filterTransitive subset and an
+    // edit to it never trips JobExecution's migrate check — without this refresh the host would keep handing
+    // out the launch-time notation, so a sub-script edited while paused would not take effect on resume. A
+    // child (re)built after this sees the edit (the Job's own workers / channels are still handled by migrate).
+    // Safe to swap while the run is paused (workers parked, no concurrent child build); firstParameterNames is
+    // cleared since an edited child's first-input name may have changed.
+    fun updateDefinition(definition: GraphDefinition) {
+        fullDefinition = definition
+        firstParameterNames.clear()
     }
 
 
@@ -197,7 +211,10 @@ class JobLogicHostImpl(
             logicRunExecutionId: LogicRunExecutionId,
             originalObjectLocation: ObjectLocation
         ): LogicExecutionFacade {
-            val control = MutableLogicControl(false, sharedControl::pollCommand)
+            // Delegate both the run command AND pause-on-error to the shared host control: a live mid-run
+            // pause-on-error toggle (set on the shared control) then reaches every concurrent child without
+            // copying the flag, and a child that fails under it returns a paused result (see RunWorker).
+            val control = MutableLogicControl(false, sharedControl::pollCommand, sharedControl::pauseOnError)
             if (cancelled) {
                 control.commandCancel()
             }

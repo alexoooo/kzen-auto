@@ -311,6 +311,24 @@ class ServerLogicController(
     }
 
 
+    // Live-toggle pause-on-error on the active run (the header toggle, now clickable while paused). The run's
+    // common control is shared across every Script/Flow frame and delegated to by each Job child control, so a
+    // single set reaches the whole run; it takes effect at the next boundary the execution checks (i.e. on the
+    // next continue/step).
+    @Synchronized
+    fun setPauseOnError(runId: LogicRunId, value: Boolean): LogicRunResponse {
+        val state = stateOrNull
+            ?: return LogicRunResponse.NotFound
+
+        if (state.runId != runId) {
+            return LogicRunResponse.RunIdMismatch
+        }
+
+        state.frame.control.setPauseOnError(value)
+        return LogicRunResponse.Submitted
+    }
+
+
     @Synchronized
     override fun continueOrStart(
         runId: LogicRunId,

@@ -1,23 +1,68 @@
+# Deterministic end-to-end channel-carryover migration fixture (JobMigrationCarryoverTest). A gated source
+# streams into a small buffered channel drained by a sink whose first instance never consumes — so the source
+# fills the buffer and parks mid-send, the exact "buffered + parked-mid-send" state JobExecution.migrate must
+# carry across a pause / edit / continue without dropping or replaying a row. The external duplex `signal`
+# channel (unserved) is present only to suspend deadlock detection while the gated state is quiescent, so the
+# test can pause precisely at it. The worker archetypes are test-only (registered via GatedWorkerTestModule).
+
+
+#######################################################################################################################
+# Test-only Worker archetypes (the production analogues live in notation/auto-jvm/job/job-worker.yaml).
+
+GatedSourceWorker:
+  abstract: true
+  is: Worker
+  title: "Gated Source (test)"
+  class: tech.kzen.auto.server.objects.job.worker.test.GatedSourceWorker
+  output: ""
+  total: 0
+  meta:
+    output:
+      is: ChannelOutput
+      creator: JobChannelCreator
+    total: Int
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
+GatedCountingSinkWorker:
+  abstract: true
+  is: Worker
+  title: "Gated Counting Sink (test)"
+  class: tech.kzen.auto.server.objects.job.worker.test.GatedCountingSinkWorker
+  input: ""
+  note: ""
+  meta:
+    input:
+      is: ChannelInput
+      creator: JobChannelCreator
+    note: String
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
+#######################################################################################################################
+# The concrete Job: source -> buffered channel -> gated sink, plus the deadlock-suppressing external channel.
+
 main:
   is: Job
 
-# A roomy buffer so a free-running (fast) reader gets several batches ahead of the Preview before a mid-stream
-# pause — populating the channel with the buffered + parked-mid-send batches a lossless migration must carry.
 main.channels/raw:
   is: Channel
-  buffer: 8
+  buffer: 4
 
-main.channels/queries:
+main.channels/signal:
   is: DuplexChannel
+  external: true
 
-main.workers/reader:
-  is: CsvReaderWorker
+main.workers/source:
+  is: GatedSourceWorker
   output: main.channels/raw
-  path: build/job-migration/carryover.csv
-  batch: 64
+  total: 50
 
-main.workers/preview:
-  is: PreviewWorker
+main.workers/sink:
+  is: GatedCountingSinkWorker
   input: main.channels/raw
-  serve: main.channels/queries
-  sample: 1000
+  note: ""

@@ -1138,6 +1138,25 @@ class RestHandler(
     }
 
 
+    fun logicSetPauseOnError(parameters: Parameters): String {
+        val runId: LogicRunId = parameters.getParam(CommonRestApi.paramRunId) {
+            value -> LogicRunId(value)
+        }
+
+        val pauseOnError: Boolean = parameters
+            .getAll(CommonRestApi.paramPauseOnError)
+            ?.singleOrNull()
+            ?.toBoolean()
+            ?: false
+
+        val response = runBlocking {
+            serverLogicController.setPauseOnError(runId, pauseOnError)
+        }
+
+        return response.name
+    }
+
+
     fun logicContinueStep(parameters: Parameters): String {
         val runId: LogicRunId = parameters.getParam(CommonRestApi.paramRunId) {
             value -> LogicRunId(value)

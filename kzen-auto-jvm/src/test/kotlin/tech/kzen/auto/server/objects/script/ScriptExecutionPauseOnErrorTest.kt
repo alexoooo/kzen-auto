@@ -28,7 +28,9 @@ import kotlin.test.assertIs
  * runnable on resume.
  *
  * A failing step run with pauseOnError=true returns [LogicResultPaused] instead of ending the run;
- * the same step run without the flag returns [LogicResultFailed]. This drives the real
+ * the same step run without the flag returns [LogicResultFailed]. The flag is also a LIVE toggle
+ * ([MutableLogicControl.setPauseOnError]): flipping it on/off mid-control switches the failing step
+ * between pausing and ending, since [MultiStep] reads it at the boundary. This drives the real
  * notation -> graph -> ScriptExecution path in-process, so it needs no server and no SUT subprocess.
  */
 class ScriptExecutionPauseOnErrorTest {
@@ -67,6 +69,30 @@ class ScriptExecutionPauseOnErrorTest {
         val execution = newExecution()
         val result = execution.continueOrStart(
             MutableLogicControl(pauseOnError = false), MutableLogicResourceScope(), graphDefinition())
+        assertIs<LogicResultFailed>(result)
+    }
+
+
+    @Test
+    fun failingStepPausesAfterLiveEnable() {
+        // The live toggle: a control created WITHOUT pause-on-error pauses the failing step once the flag is
+        // flipped on (setPauseOnError) — the mid-run "enable while paused, then continue" path, since MultiStep
+        // reads pauseOnError() at the boundary rather than at start.
+        val execution = newExecution()
+        val control = MutableLogicControl(pauseOnError = false)
+        control.setPauseOnError(true)
+        val result = execution.continueOrStart(control, MutableLogicResourceScope(), graphDefinition())
+        assertEquals(LogicResultPaused, result)
+    }
+
+
+    @Test
+    fun failingStepEndsRunAfterLiveDisable() {
+        // The inverse: flipping pause-on-error off mid-control lets the same failing step end the run.
+        val execution = newExecution()
+        val control = MutableLogicControl(pauseOnError = true)
+        control.setPauseOnError(false)
+        val result = execution.continueOrStart(control, MutableLogicResourceScope(), graphDefinition())
         assertIs<LogicResultFailed>(result)
     }
 

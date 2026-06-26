@@ -158,6 +158,12 @@ class JobExecution(
         val jobControl = jobControl!!
         val logicHost = logicHost!!
 
+        // Adopt the latest notation for children a Run Worker spawns: a sub-script (a Nominal-referenced child
+        // Logic) is outside the Job's filterTransitive subset, so editing it while paused doesn't trip the
+        // migrate check above. Refresh the host so a child (re)built after this resume runs the edit — no worker
+        // teardown (and so no in-flight element loss); only the Job's own structure requires a migrate.
+        logicHost.updateDefinition(graphDefinition)
+
         while (true) {
             val command = logicControl.pollCommand()
             if (command == LogicCommand.Cancel) {
@@ -210,6 +216,16 @@ class JobExecution(
 
             terminalResult(supervisor)?.let {
                 return it
+            }
+
+            // A nested child failed under pause-on-error and parked the run (requestErrorPause): report the
+            // Job paused (to be fixed + resumed) instead of letting it fall through to deadlock detection.
+            // Await full quiescence first so every sibling has parked at its checkpoint, then clear the flag so
+            // the next resume starts clean.
+            if (jobControl.isErrorPausePending()) {
+                supervisor.awaitQuiescent()
+                jobControl.consumeErrorPause()
+                return terminalResult(supervisor) ?: LogicResultPaused
             }
 
             if (quiescent) {
