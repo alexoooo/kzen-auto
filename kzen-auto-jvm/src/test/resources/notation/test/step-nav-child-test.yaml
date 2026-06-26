@@ -1,0 +1,10 @@
+main:
+  is: Script
+
+main.steps/ChildA:
+  is: NumberLiteralStep
+  value: 10
+
+main.steps/ChildB:
+  is: NumberLiteralStep
+  value: 20

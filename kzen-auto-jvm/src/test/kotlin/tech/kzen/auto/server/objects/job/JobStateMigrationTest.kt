@@ -131,7 +131,7 @@ class JobStateMigrationTest {
         var guard = 0
         while (previewCount() == 0L && guard < 100) {
             assertIs<LogicResultPaused>(result)
-            control.grantStepBudget(1)
+            control.arm(1)
             result = execution.continueOrStart(control, resourceScope, baseDefinition)
             guard += 1
         }
@@ -196,7 +196,7 @@ class JobStateMigrationTest {
         var guard = 0
         while (previewCount() == 0L && guard < 100) {
             assertIs<LogicResultPaused>(result)
-            control.grantStepBudget(1)
+            control.arm(1)
             result = execution.continueOrStart(control, resourceScope, baseDefinition)
             guard += 1
         }

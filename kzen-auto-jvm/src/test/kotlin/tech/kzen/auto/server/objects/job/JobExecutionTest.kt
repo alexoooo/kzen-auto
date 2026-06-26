@@ -367,7 +367,7 @@ class JobExecutionTest {
         var result: LogicResult
         var guard = 0
         do {
-            control.grantStepBudget(1)
+            control.arm(1)
             result = execution.continueOrStart(control, resourceScope, graphDefinition)
             guard += 1
         } while (result is LogicResultPaused && guard < 10_000)
@@ -398,7 +398,7 @@ class JobExecutionTest {
             execution.continueOrStart(control, resourceScope, graphDefinition))
 
         // Exactly one step: still paused and nowhere near done (the bug would return Success here).
-        control.grantStepBudget(1)
+        control.arm(1)
         assertIs<LogicResultPaused>(
             execution.continueOrStart(control, resourceScope, graphDefinition))
         val writtenAfterOneStep =
@@ -438,7 +438,7 @@ class JobExecutionTest {
         var result: LogicResult
         var steps = 0
         do {
-            control.grantStepBudget(1)
+            control.arm(1)
             result = execution.continueOrStart(control, resourceScope, graphDefinition)
             steps += 1
         } while (result is LogicResultPaused && steps < 200)

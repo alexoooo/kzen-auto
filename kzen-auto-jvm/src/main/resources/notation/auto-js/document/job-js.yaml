@@ -41,6 +41,12 @@ CsvReaderTool:
   delegate: CsvReaderWorker
 
 
+FormulaSourceTool:
+  is: RibbonTool
+  parent: JobGroup_Sources
+  delegate: FormulaSourceWorker
+
+
 ################################################################
 
 JobGroup_Transforms:
@@ -59,6 +65,12 @@ FormulaTool:
   is: RibbonTool
   parent: JobGroup_Transforms
   delegate: FormulaWorker
+
+
+RunTool:
+  is: RibbonTool
+  parent: JobGroup_Transforms
+  delegate: RunWorker
 
 
 ################################################################

@@ -1,0 +1,20 @@
+# A two-level nested-Logic fixture for JobNestedLogicTest.recursivelyNestedChildRunsAndIsTraced: a Script with
+# one Int parameter `number` whose single Run step invokes test/job-run-child-test.yaml#main (number -> number*10),
+# passing `number` through. Run as a JobLogicHost child this exercises host -> wrapper Script -> RunStep ->
+# grandchild Script — the recursion the former NestedLogicUnsupported stub rejected — so running with number=N
+# yields N*10 (a Script's main result is its last step's value). See JobNestedLogicTest.
+main:
+  is: Script
+
+main.parameters/number:
+  is: ParameterBinding
+  type:
+    class: kotlin.Int
+    generics: []
+    nullable: false
+
+main.steps/Run:
+  is: RunStep
+  instructions: "test/job-run-child-test.yaml#main"
+  arguments:
+    number: main.parameters/number

@@ -7,9 +7,14 @@ import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.lib.common.exec.logic.LogicExecutionFacade
 import tech.kzen.lib.common.exec.logic.LogicHandle
+import tech.kzen.lib.common.exec.logic.model.LogicResult
 import tech.kzen.lib.common.exec.logic.model.LogicResultCancelled
+import tech.kzen.lib.common.exec.logic.model.LogicResultFailed
+import tech.kzen.lib.common.exec.logic.model.LogicResultPaused
 import tech.kzen.lib.common.exec.logic.model.LogicResultSuccess
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
+import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
+import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceQuery
 import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -24,6 +29,8 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 
 /**
@@ -34,9 +41,11 @@ import kotlin.test.assertIs
  *
  * The flagged risk was concurrency: a top-level Script / Flow drives its child frames on the single controller
  * thread sharing one steppable [MutableLogicControl], but a Job runs its Workers concurrently. [JobLogicHostImpl]
- * resolves it by CONFINEMENT — each child runs full-speed on a private control + scope, sharing only the
- * stateless GraphCreator + immutable definition. [concurrentChildrenRunIsolated] is the proof: many threads run
- * the same child with distinct inputs at once and every result is correct and isolated.
+ * resolves it by CONFINEMENT — each child runs on its OWN control + scope (its step state per-spine), sharing
+ * only the run COMMAND (delegated to the shared control) plus the stateless GraphCreator + immutable definition.
+ * [concurrentChildrenRunIsolated] is the proof for full speed; [steppingDescendsIntoNestedChildOneFreshStepAtATime]
+ * proves a Step descends into a child via that child's own control (the per-spine budget granted by
+ * [JobLogicHostImpl.grantStepToChildren]), with no shared stepping state.
  */
 class JobNestedLogicTest {
     //-----------------------------------------------------------------------------------------------------------------
@@ -70,7 +79,7 @@ class JobNestedLogicTest {
         val host = newHost()
         val childLocation = ObjectLocation(intChildDocumentPath, ObjectPath.parse("main"))
 
-        assertIs<LogicResultSuccess>(host.run(childLocation, 0))  // warm the compiler cache
+        assertIs<LogicResultSuccess>(runToCompletion(host, childLocation, 0))  // warm the compiler cache
 
         val threadCount = 8
         val perThread = 8
@@ -81,7 +90,7 @@ class JobNestedLogicTest {
                     val observed = mutableListOf<Pair<Int, Any?>>()
                     for (i in 0 until perThread) {
                         val input = thread * 1_000 + i
-                        val result = host.run(childLocation, input)
+                        val result = runToCompletion(host, childLocation, input)
                         val success = result as? LogicResultSuccess
                             ?: error("expected success for $input, was $result")
                         observed.add(input to success.value.mainComponentValue())
@@ -103,17 +112,88 @@ class JobNestedLogicTest {
 
 
     @Test
+    fun recursivelyNestedChildRunsAndIsTraced() {
+        // The reported regression: a Job Worker's child that ITSELF starts a further nested Logic. The chain is
+        // host -> wrapper Script -> RunStep -> grandchild Script (number -> number*10); the inner RunStep is
+        // exactly where the former NestedLogicUnsupported stub threw. Reaching Success with number*10 proves the
+        // recursion runs and threads the result back through both levels.
+        val runExecutionId = LogicRunExecutionId.random()
+        val host = newHost(runExecutionId)
+
+        val wrapperLocation = ObjectLocation(
+            DocumentPath.parse("test/job-nested-wrapper-test.yaml"), ObjectPath.parse("main"))
+        val grandchildLocation = ObjectLocation(intChildDocumentPath, ObjectPath.parse("main"))
+
+        val result = runToCompletion(host, wrapperLocation, 5)
+
+        val success = result as? LogicResultSuccess
+            ?: error("expected success, was $result")
+        assertEquals(50, success.value.mainComponentValue())
+
+        // Both nested documents are now independently trace-recorded under the Job's run id (recursive
+        // visibility), instead of running "dark" under the former NoOpLogicTraceHandle.
+        assertNotNull(context.logicTraceStore.mostRecent(wrapperLocation), "wrapper trace")
+        assertNotNull(context.logicTraceStore.mostRecent(grandchildLocation), "grandchild trace")
+
+        val snapshot = context.logicTraceStore.lookupRun(
+            runExecutionId.logicRunId, LogicTraceQuery(LogicTracePath.root))
+        assertNotNull(snapshot, "run snapshot")
+        assertTrue(snapshot.values.isNotEmpty(), "nested step values recorded in the run snapshot")
+    }
+
+
+    @Test
+    fun steppingDescendsIntoNestedChildOneFreshStepAtATime() {
+        // The step-into contract: with the run paused (command Pause, delegated to the child's own control),
+        // each per-wavefront budget grant (grantStepToChildren) advances the child by exactly ONE fresh step —
+        // descending through the wrapper's Run step into the grandchild before the chain completes — rather than
+        // running the child straight through. This is the unit-level proof of what a Run Worker does when the
+        // Job is stepped.
+        val shared = MutableLogicControl(false)
+        shared.commandPause()
+        val host = newHost(sharedControl = shared)
+
+        val wrapperLocation = ObjectLocation(
+            DocumentPath.parse("test/job-nested-wrapper-test.yaml"), ObjectPath.parse("main"))
+
+        // Warm the FormulaStep compiler cache via a separate full-speed run so the stepping assertions below
+        // aren't timing-sensitive to first-compile.
+        assertIs<LogicResultSuccess>(
+            runToCompletion(newHost(), ObjectLocation(intChildDocumentPath, ObjectPath.parse("main")), 5))
+
+        val facade = host.logicHandleFacade().start(wrapperLocation)
+        try {
+            assertTrue(facade.beforeStart(host.argumentTuple(wrapperLocation, 5)))
+
+            // First fresh step: the wrapper's Run step descends into the grandchild, which then pauses before
+            // its own first step (the tick's budget is already spent) — still paused, not yet complete.
+            host.grantStepToChildren()
+            assertIs<LogicResultPaused>(facade.continueOrStart(host.graphDefinition()))
+
+            // Second fresh step: the grandchild's step runs, threading 5 -> 50 back up through both levels.
+            host.grantStepToChildren()
+            val second = facade.continueOrStart(host.graphDefinition())
+            assertIs<LogicResultSuccess>(second)
+            assertEquals(50, second.value.mainComponentValue())
+        }
+        finally {
+            facade.close()
+        }
+    }
+
+
+    @Test
     fun cancelAllShortCircuitsSubsequentChildren() {
         // Teardown / cancel of a Job aborts its hosted children: after cancelAll a new run short-circuits to
         // Cancelled rather than building + running a child.
         val host = newHost()
         val childLocation = ObjectLocation(intChildDocumentPath, ObjectPath.parse("main"))
 
-        assertIs<LogicResultSuccess>(host.run(childLocation, 1))
+        assertIs<LogicResultSuccess>(runToCompletion(host, childLocation, 1))
 
         host.cancelAll()
 
-        assertEquals(LogicResultCancelled, host.run(childLocation, 2))
+        assertEquals(LogicResultCancelled, runToCompletion(host, childLocation, 2))
     }
 
 
@@ -149,13 +229,100 @@ class JobNestedLogicTest {
     }
 
 
+    @Test
+    fun steppingRunWorkerDescendsIntoChildWithinJob() {
+        // Integration through the real JobExecution -> JobControlImpl.logicHost() -> RunWorker path, STEPPED.
+        // The child is two-step, so a single step leaves the first child mid-execution and emits nothing — the
+        // tell that a Step descends INTO the RunWorker's child rather than running the whole child per step (the
+        // old behaviour would have completed the first child and written a row after one step). Stepping on to
+        // completion still yields identity output, so correctness holds across the stepped run.
+        val dir = Path.of("build/job-run-worker-stepping")
+        Files.createDirectories(dir)
+        Files.newBufferedWriter(dir.resolve("input.csv")).use {
+            it.write("id,name"); it.newLine()
+            it.write("0,a"); it.newLine()
+            it.write("1,b"); it.newLine()
+            it.write("2,c"); it.newLine()
+        }
+        Files.deleteIfExists(dir.resolve("output.csv"))
+
+        val mainLocation = ObjectLocation(
+            DocumentPath.parse("test/job-run-worker-stepping-test.yaml"), ObjectPath.parse("main"))
+        val execution = AutoTestUtils.liveLogicExecution(context, mainLocation, UnusedLogicHandle)
+        execution.beforeStart(TupleValue.empty)
+
+        val control = MutableLogicControl(false)
+        val resourceScope = MutableLogicResourceScope()
+        val graphDefinition = fullGraphDefinition()
+
+        // Park the fresh workers at their first checkpoint.
+        control.commandPause()
+        assertIs<LogicResultPaused>(
+            execution.continueOrStart(control, resourceScope, graphDefinition))
+
+        // One step: the reader emits a batch and the RunWorker descends one step into the two-step child, now
+        // mid-execution — so nothing has reached the writer yet.
+        control.arm(1)
+        assertIs<LogicResultPaused>(
+            execution.continueOrStart(control, resourceScope, graphDefinition))
+        val outputFile = dir.resolve("output.csv")
+        val rowsAfterOneStep =
+            if (Files.exists(outputFile)) Files.readAllLines(outputFile).drop(1).size else 0
+        assertEquals(0, rowsAfterOneStep, "one step must not run the whole child to completion")
+
+        // Step on to completion: identity output (same rows as input) confirms correctness across stepping.
+        var result: LogicResult
+        var guard = 0
+        do {
+            control.arm(1)
+            result = execution.continueOrStart(control, resourceScope, graphDefinition)
+            guard += 1
+        } while (result is LogicResultPaused && guard < 1_000)
+
+        assertIs<LogicResultSuccess>(result)
+        assertEquals(
+            listOf("id,name", "0,a", "1,b", "2,c"),
+            Files.readAllLines(outputFile))
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
-    private fun newHost(): JobLogicHostImpl {
+    private fun newHost(
+        runExecutionId: LogicRunExecutionId = LogicRunExecutionId.random(),
+        sharedControl: MutableLogicControl = MutableLogicControl(false)
+    ): JobLogicHostImpl {
         return JobLogicHostImpl(
             fullGraphDefinition(),
-            LogicRunExecutionId.random(),
+            runExecutionId,
             context.graphCreator,
-            context.graphEnvironment)
+            context.graphEnvironment,
+            context.logicTraceStore,
+            // No controller run is active in this direct-drive test, so the registry no-ops (frames need a
+            // live run); the assertions here are on traces / step results, recorded regardless.
+            context.serverLogicController,
+            sharedControl)
+    }
+
+
+    // Drive a child to completion on a full-speed shared control (command None): one continueOrStart runs it
+    // through. Mirrors how RunWorker drives a child, minus the per-wavefront checkpoint. The standalone
+    // step-into behaviour is covered by [steppingDescendsIntoNestedChildOneFreshStepAtATime].
+    private fun runToCompletion(host: JobLogicHostImpl, child: ObjectLocation, input: Any?): LogicResult {
+        val facade = host.logicHandleFacade().start(child)
+        try {
+            if (! facade.beforeStart(host.argumentTuple(child, input))) {
+                return LogicResultFailed("Unable to initialize $child")
+            }
+            var result: LogicResult
+            do {
+                result = facade.continueOrStart(host.graphDefinition())
+            }
+            while (result is LogicResultPaused)
+            return result
+        }
+        finally {
+            facade.close()
+        }
     }
 
 

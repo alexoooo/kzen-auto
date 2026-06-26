@@ -56,12 +56,6 @@ class RunStep(
 
         val existing = pausedExecution
 
-        // Step Over: on a fresh descent (no paused child to resume) during a step-over tick, run the
-        // child sub-document to completion instead of descending into it — the parent then pauses at its
-        // next step. A non-null pausedExecution means we're on the resume spine (a normal step-into that
-        // paused deeper), so resume it normally.
-        val stepOverChild = logicControl.stepOverActive() && existing == null
-
         val execution =
             if (existing != null) {
                 existing
@@ -87,24 +81,14 @@ class RunStep(
             }
 
         try {
-            // Track the frame boundary so Step Out can run a frame (and its descendants) to completion
-            // by depth (see LogicControl.inStepOutRegion); depth reflects "inside the child" only while
-            // the child runs, so the parent's post-return work happens back at the parent's depth.
+            // Track the frame boundary so Step Over / Step Out can run a frame (and its descendants) to
+            // completion by depth (see LogicControl.runningFreeByDepth): while the child runs, depth is one
+            // deeper, so a Step Over (limit = this step's depth) or Step Out (limit = caller depth) lets the
+            // child's fresh boundaries run free; the parent's post-return work happens back at its own depth.
             val runResult = run {
                 logicControl.enterFrame()
                 try {
-                    if (stepOverChild) {
-                        logicControl.pushSuppressPause()
-                        try {
-                            execution.continueOrStart(scriptExecutionContext.graphDefinition)
-                        }
-                        finally {
-                            logicControl.popSuppressPause()
-                        }
-                    }
-                    else {
-                        execution.continueOrStart(scriptExecutionContext.graphDefinition)
-                    }
+                    execution.continueOrStart(scriptExecutionContext.graphDefinition)
                 }
                 finally {
                     logicControl.exitFrame()

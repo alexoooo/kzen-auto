@@ -1,0 +1,14 @@
+main:
+  is: Script
+
+main.steps/First:
+  is: NumberLiteralStep
+  value: 1
+
+main.steps/Run:
+  is: RunStep
+  instructions: "test/step-nav-child-test.yaml#main"
+
+main.steps/Last:
+  is: NumberLiteralStep
+  value: 3

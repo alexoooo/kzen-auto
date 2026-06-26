@@ -1,0 +1,23 @@
+# A deliberately TWO-step RecordBatch identity child for the RunWorker step-into integration test
+# (JobNestedLogicTest.steppingRunWorkerDescendsIntoChildWithinJob): one RecordBatch parameter `batch` and two
+# FormulaSteps that each return it unchanged. A Script's main result is its last step's value, so RunWorker
+# still emits the input batch (identity) — but being observably multi-step means stepping the Job must descend
+# INTO the child (more than one step per batch) rather than run the whole child per step, which is what the
+# test asserts (a single step leaves the first child mid-flight, so nothing is emitted yet).
+main:
+  is: Script
+
+main.parameters/batch:
+  is: ParameterBinding
+  type:
+    class: tech.kzen.auto.server.objects.job.worker.RecordBatch
+    generics: []
+    nullable: false
+
+main.steps/First:
+  is: FormulaStep
+  code: batch
+
+main.steps/Identity:
+  is: FormulaStep
+  code: batch

@@ -146,10 +146,11 @@ class FlowExecution(
             if (command == LogicCommand.Cancel) {
                 return LogicResultCancelled
             }
-            // suppressPause / inStepOutRegion: a Flow that is itself a child being Stepped Over or
-            // Stepped Out of runs every vertex to completion instead of pausing per-vertex.
+            // runningFreeByDepth: a Flow that is itself a child being Stepped Over / Stepped Out of (its
+            // frames are deeper than the step's depth limit) runs every vertex to completion rather than
+            // pausing per-vertex.
             else if (!executeNextIfPaused && command == LogicCommand.Pause &&
-                    ! logicControl.suppressPause() && ! logicControl.inStepOutRegion()) {
+                    ! logicControl.runningFreeByDepth()) {
                 return LogicResultPaused
             }
             executeNextIfPaused = false
@@ -236,10 +237,10 @@ class FlowExecution(
     /**
      * Invoke a [RunLogicVertex]'s target Logic as a child frame — the Flow analogue of [RunStep]
      * [tech.kzen.auto.server.objects.script.step.control.RunStep]. On a fresh descent the single upstream
-     * input is passed as the callee's first declared parameter; the call is bracketed by enter/exitFrame
-     * (so Step Out can run a frame by depth) and, under Step Over, wrapped in suppressPause so the child
-     * runs to completion. A paused child is cached in [pausedChildren] and resumed on the next pass; on
-     * success the callee's main result becomes the vertex message.
+     * input is passed as the callee's first declared parameter; the call is bracketed by enter/exitFrame so
+     * Step Over / Step Out run the child to completion by depth (runningFreeByDepth). A paused child is cached
+     * in [pausedChildren] and resumed on the next pass; on success the callee's main result becomes the vertex
+     * message.
      */
     private fun runChildLogic(
         vertexLocation: ObjectLocation,
@@ -253,7 +254,6 @@ class FlowExecution(
         val activeVertexModel = activeVertices[stableId]!!
 
         val existing = pausedChildren[stableId]
-        val stepOverChild = logicControl.stepOverActive() && existing == null
 
         val child =
             if (existing != null) {
@@ -279,8 +279,8 @@ class FlowExecution(
                 }
 
                 // Mirror RunStep: consume the per-tick budget on a fresh descent so a Step Into pauses
-                // *before* the callee's first step. No-op during a full run / Step Over (the child runs
-                // free below regardless).
+                // *before* the callee's first step. Under Step Over / Step Out the child runs free by depth
+                // (runningFreeByDepth) regardless, so consuming here is a harmless no-op then.
                 logicControl.consumeStepBudget()
 
                 created
@@ -290,18 +290,7 @@ class FlowExecution(
             try {
                 logicControl.enterFrame()
                 try {
-                    if (stepOverChild) {
-                        logicControl.pushSuppressPause()
-                        try {
-                            child.continueOrStart(graphDefinition)
-                        }
-                        finally {
-                            logicControl.popSuppressPause()
-                        }
-                    }
-                    else {
-                        child.continueOrStart(graphDefinition)
-                    }
+                    child.continueOrStart(graphDefinition)
                 }
                 finally {
                     logicControl.exitFrame()

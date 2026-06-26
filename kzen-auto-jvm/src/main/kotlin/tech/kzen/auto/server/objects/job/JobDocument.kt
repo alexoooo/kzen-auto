@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.objects.job
 
 import tech.kzen.auto.common.objects.document.DocumentArchetype
+import tech.kzen.auto.server.service.impl.NestedFrameRegistry
 import tech.kzen.lib.common.exec.logic.Logic
 import tech.kzen.lib.common.exec.logic.LogicControl
 import tech.kzen.lib.common.exec.logic.LogicExecution
@@ -15,6 +16,7 @@ import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.service.context.GraphCreator
 import tech.kzen.lib.common.service.context.environment.GraphEnvironment
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
+import tech.kzen.lib.server.exec.logic.trace.LogicTraceStore
 
 
 /**
@@ -32,7 +34,9 @@ class JobDocument(
 
     @Service private val objectStableMapper: ObjectStableMapper,
     @Service private val graphCreator: GraphCreator,
-    @Service private val environment: GraphEnvironment
+    @Service private val environment: GraphEnvironment,
+    @Service private val logicTraceStore: LogicTraceStore,
+    @Service private val nestedFrameRegistry: NestedFrameRegistry
 ):
     DocumentArchetype(),
     Logic
@@ -61,6 +65,8 @@ class JobDocument(
             logicRunExecutionId,
             objectStableMapper,
             graphCreator,
-            environment)
+            environment,
+            logicTraceStore,
+            nestedFrameRegistry)
     }
 }

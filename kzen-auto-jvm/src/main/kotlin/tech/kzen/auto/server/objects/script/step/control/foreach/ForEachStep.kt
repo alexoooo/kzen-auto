@@ -140,16 +140,16 @@ class ForEachStep(
             // Interruptibility between iterations. Cancel always wins. A Pause is honoured here only for
             // a degenerate empty body (no body step to stop at); for a normal body the body MultiStep's
             // step-budget gate already pauses at the next iteration's first step — so stepping advances
-            // one fresh boundary without an extra "iteration complete" tick. Respect suppressPause so
-            // Step Over runs the whole loop to completion.
+            // one fresh boundary without an extra "iteration complete" tick. Respect runningFreeByDepth so
+            // a Step Over / Step Out of the loop runs it to completion. No budget consult here (the body
+            // MultiStep owns that) — an empty body otherwise double-steps.
             val logicCommand = scriptExecutionContext.logicControl.pollCommand()
             if (logicCommand == LogicCommand.Cancel) {
                 return LogicResultCancelled
             }
             else if (bodySteps.isEmpty() &&
                     logicCommand == LogicCommand.Pause &&
-                    ! scriptExecutionContext.logicControl.suppressPause() &&
-                    ! scriptExecutionContext.logicControl.inStepOutRegion()
+                    ! scriptExecutionContext.logicControl.runningFreeByDepth()
             ) {
                 return LogicResultPaused
             }

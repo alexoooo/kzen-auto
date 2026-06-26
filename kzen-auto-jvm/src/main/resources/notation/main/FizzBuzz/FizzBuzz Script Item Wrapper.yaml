@@ -1,0 +1,14 @@
+main:
+  is: Script
+
+main.steps/Wait:
+  is: WaitStep
+
+main.steps/Run:
+  is: RunStep
+  instructions: "main/FizzBuzz/FizzBuzz Flow Item.yaml#main"
+  arguments:
+    number: main.parameters/number
+
+main.parameters/number:
+  is: ParameterBinding

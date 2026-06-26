@@ -22,6 +22,10 @@ import tech.kzen.lib.common.reflect.Reflect
  *   snapshot over an (external, UI-facing) duplex Channel ([onQuery]) — the browser→worker request/reply path
  *   for reading a richer sample than the teaser carries.
  *
+ * It consumes the untyped `Any?` input lane so one live view serves every stream: a [RecordBatch] (the CSV
+ * lane) renders column-for-column, while any other element (a scalar from a FormulaSource / Run lane — e.g. a
+ * FizzBuzz `String`) renders as a single `value` column.
+ *
  * It keeps a ROLLING window of the most recent [sample] records (a live tail — so the sample keeps changing as
  * data flows rather than freezing on the first [sample] records), copied off the hot-path [FlatFileRecord] to
  * `List<String>` (bounded by [sample]). The window is confined to the work coroutine ([onBatch]); after each
@@ -38,11 +42,12 @@ class PreviewWorker(
     private val sample: Int,
     selfLocation: ObjectLocation
 ):
-    SinkWorker<RecordBatch>(input, selfLocation, serve)
+    SinkWorker<Any?>(input, selfLocation, serve)
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        private const val teaserRows = 50
+        // Synthetic column name for the scalar lane (a non-RecordBatch element rendered as a one-column row).
+        private const val scalarColumn = "value"
     }
 
 
@@ -55,17 +60,35 @@ class PreviewWorker(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun onBatch(batch: RecordBatch, control: JobControl) {
-        if (header.isEmpty() && batch.header.values.isNotEmpty()) {
-            header = batch.header.values.map { it.text }
-        }
-
-        for (record in batch.records) {
-            count += 1
-            window.addLast(record.toList())
-            if (window.size > sample) {
-                window.removeFirst()
+    override suspend fun onBatch(batch: Any?, control: JobControl) {
+        when (batch) {
+            // CSV lane: a batch of typed records, rendered column-for-column under the batch's header.
+            is RecordBatch -> {
+                if (header.isEmpty() && batch.header.values.isNotEmpty()) {
+                    header = batch.header.values.map { it.text }
+                }
+                for (record in batch.records) {
+                    addRow(record.toList())
+                }
             }
+
+            // Scalar lane: a single arbitrary element (e.g. a FizzBuzz String from a Run Worker), rendered as
+            // one `value` column so the same live view works for non-RecordBatch streams.
+            else -> {
+                if (header.isEmpty()) {
+                    header = listOf(scalarColumn)
+                }
+                addRow(listOf(batch?.toString() ?: ""))
+            }
+        }
+    }
+
+
+    private fun addRow(row: List<String>) {
+        count += 1
+        window.addLast(row)
+        if (window.size > sample) {
+            window.removeFirst()
         }
     }
 
@@ -98,7 +121,7 @@ class PreviewWorker(
         val snap = snapshot as Snapshot
         return mapOf(
             "header" to snap.header,
-            "rows" to snap.rows.takeLast(teaserRows),
+            "rows" to snap.rows,
             "count" to snap.count)
     }
 
@@ -121,7 +144,7 @@ class PreviewWorker(
             }
 
         return ExecutionSuccess.ofValue(ExecutionValue.of(mapOf(
-            "header" to (snap?.header ?: listOf<String>()),
+            "header" to (snap?.header ?: listOf()),
             "rows" to slice,
             "count" to (snap?.count ?: 0L),
             "offset" to offset.toLong())))

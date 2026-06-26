@@ -51,10 +51,10 @@ class MultiStep(
             // Cancel always wins. Otherwise: a step already Running paused mid-execution (its nested
             // child paused) — it's on the resume spine, so re-enter it to resume regardless of any
             // pause/budget. A fresh step (Idle, or Error under pause-on-error) is a pausable boundary:
-            // while a Pause command is in effect it runs only if the shared per-tick step budget allows
-            // it (so a single Step / slow-motion tick advances exactly one fresh boundary across the
-            // whole frame tree), unless pause is suppressed (Step Over running a sub-tree to completion).
-            // nextStepTracePath was just published, so a fresh step that pauses shows as "next to run".
+            // while a Pause command is in effect it pauses unless it is running free by depth (Step Over /
+            // Step Out running a deeper sub-tree to completion) or the per-tick step budget lets it run one
+            // fresh boundary. nextStepTracePath was just published, so a fresh step that pauses shows as
+            // "next to run".
             val logicCommand = logicControl.pollCommand()
             if (logicCommand == LogicCommand.Cancel) {
                 return LogicResultCancelled
@@ -63,8 +63,7 @@ class MultiStep(
             val onResumeSpine = stepModel.traceState == StepTrace.State.Running
             if (! onResumeSpine &&
                     logicCommand == LogicCommand.Pause &&
-                    ! logicControl.suppressPause() &&
-                    ! logicControl.inStepOutRegion() &&
+                    ! logicControl.runningFreeByDepth() &&
                     ! logicControl.consumeStepBudget()
             ) {
                 return LogicResultPaused

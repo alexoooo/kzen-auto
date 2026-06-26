@@ -9,6 +9,7 @@ import tech.kzen.auto.common.paradigm.job.api.Worker
 import tech.kzen.auto.server.objects.job.channel.DuplexJobChannel
 import tech.kzen.auto.server.objects.job.channel.JobChannel
 import tech.kzen.auto.server.objects.job.worker.WorkerBase
+import tech.kzen.auto.server.service.impl.NestedFrameRegistry
 import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionResult
 import tech.kzen.lib.common.exec.ExecutionValue
@@ -32,6 +33,7 @@ import tech.kzen.lib.common.service.context.GraphCreator
 import tech.kzen.lib.common.service.context.environment.GraphEnvironment
 import tech.kzen.lib.common.service.store.normal.ObjectStableId
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
+import tech.kzen.lib.server.exec.logic.trace.LogicTraceStore
 
 
 /**
@@ -68,7 +70,9 @@ class JobExecution(
     private val logicRunExecutionId: LogicRunExecutionId,
     private val objectStableMapper: ObjectStableMapper,
     private val graphCreator: GraphCreator,
-    private val environment: GraphEnvironment
+    private val environment: GraphEnvironment,
+    private val logicTraceStore: LogicTraceStore,
+    private val nestedFrameRegistry: NestedFrameRegistry
 ):
     LogicExecution
 {
@@ -136,7 +140,7 @@ class JobExecution(
             // window before the command loop below parks them — that window would leave stray in-flight batches
             // and make a first-tick pause/step state irreproducible.
             buildAndLaunch(
-                graphDefinition, filteredDefinition, mapOf(), mapOf(),
+                logicControl, graphDefinition, filteredDefinition, mapOf(), mapOf(),
                 initiallyPaused = logicControl.pollCommand() == LogicCommand.Pause)
             logicControl.subscribeRequest(::route)
             started = true
@@ -146,12 +150,13 @@ class JobExecution(
             // step / pause tick re-parks the fresh Workers at their first checkpoint (initiallyPaused) so the
             // step stays bounded; a full resume lets them run.
             migrate(
-                graphDefinition, filteredDefinition,
+                logicControl, graphDefinition, filteredDefinition,
                 initiallyPaused = logicControl.pollCommand() == LogicCommand.Pause)
         }
 
         val supervisor = supervisor!!
         val jobControl = jobControl!!
+        val logicHost = logicHost!!
 
         while (true) {
             when (logicControl.pollCommand()) {
@@ -164,6 +169,10 @@ class JobExecution(
                         // wavefront) while staying paused, then await the re-park. Unlike a full resume, the
                         // Workers re-park on their own at their next checkpoint, so this settles after a small,
                         // bounded amount of work — a best-effort step rather than running to completion.
+                        // The Job's own budget and each child's budget are now SEPARATE (each child runs on its
+                        // own control), so we CONSUME the Job's budget to recognize the step tick, then grant a
+                        // fresh boundary to every hosted child so a Step descends one boundary INTO each.
+                        logicHost.grantStepToChildren()
                         jobControl.step()
                         supervisor.awaitQuiescent()
                     }
@@ -256,6 +265,7 @@ class JobExecution(
     // detached before teardown closes it), cancels + joins the old run, then relaunches against the new
     // definition with the snapshots in hand. Reuses the same controller LogicControl / request subscriber.
     private fun migrate(
+        logicControl: LogicControl,
         fullDefinition: GraphDefinition,
         filteredDefinition: GraphDefinition,
         initiallyPaused: Boolean
@@ -278,11 +288,13 @@ class JobExecution(
         }
 
         tearDown()
-        buildAndLaunch(fullDefinition, filteredDefinition, capturedStates, carriedChannels, initiallyPaused)
+        buildAndLaunch(
+            logicControl, fullDefinition, filteredDefinition, capturedStates, carriedChannels, initiallyPaused)
     }
 
 
     private fun buildAndLaunch(
+        logicControl: LogicControl,
         fullDefinition: GraphDefinition,
         filteredDefinition: GraphDefinition,
         capturedStates: Map<ObjectStableId, Any>,
@@ -318,7 +330,8 @@ class JobExecution(
         // The host keeps the live (full) graphDefinition so a Run Worker can resolve + run a child Logic from
         // any document; built here so it shares the exact definition the Workers were launched against.
         val logicHost = JobLogicHostImpl(
-            fullDefinition, logicRunExecutionId, graphCreator, environment)
+            fullDefinition, logicRunExecutionId, graphCreator, environment, logicTraceStore,
+            nestedFrameRegistry, logicControl)
         val jobControl = JobControlImpl(logicTraceHandle, objectStableMapper, logicHost)
 
         // A relaunch on a paused / step tick must park the fresh Workers at their first checkpoint before they

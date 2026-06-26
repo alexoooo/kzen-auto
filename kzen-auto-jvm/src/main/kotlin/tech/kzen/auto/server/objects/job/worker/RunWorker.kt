@@ -21,11 +21,14 @@ import tech.kzen.lib.common.reflect.Reflect
  *
  * Element-agnostic (the channel carries `Any?`): unlike the typed RecordBatch stages, what flows is whatever
  * the child consumes / produces. The child is driven through the run-scoped
- * [tech.kzen.auto.common.paradigm.job.api.JobLogicHost] obtained from [JobControl.logicHost], which runs each
- * child to completion on a PRIVATE control — so the concurrently-running Workers of a Job host their children
- * in parallel without interfering (see [tech.kzen.auto.server.objects.job.JobLogicHostImpl]). The blocking
- * host call is wrapped in [JobControl.runBlockingIo] so the Worker stays visible to quiescence while a child
- * runs; a cancelling Job aborts the in-flight child (surfaced here as [LogicResultCancelled]).
+ * [tech.kzen.auto.common.paradigm.job.api.JobLogicHost] (from [JobControl.logicHost]) exactly like RunStep
+ * drives its callee: `logicHandleFacade().start(instructions)` confines the child to its OWN control, then
+ * `beforeStart` → `continueOrStart`* → `close`. At full speed one `continueOrStart` runs the child to
+ * completion; while the Job is stepping/paused the child's command (delegated from the run's shared control)
+ * is Pause and the driver grants its control one fresh-step budget per wavefront, so each `continueOrStart`
+ * advances one boundary (descending INTO the child) and returns Paused — this Worker then parks at a
+ * [JobControl.checkpoint] until the next wavefront, staying quiescence-visible. Each call is wrapped in
+ * [JobControl.runBlockingIo] so it is counted; a cancelling Job surfaces as [LogicResultCancelled].
  *
  * A [TransformWorker]: the framework owns the drain loop, per-element checkpoint, throttled progress, and
  * end-of-stream close propagation; this Worker only maps each element through its child Logic.
@@ -44,25 +47,45 @@ class RunWorker(
 
 
     override suspend fun onBatch(batch: Any?, emit: Emitter<Any?>, control: JobControl) {
-        val result = control.runBlockingIo {
-            control.logicHost().run(instructions, batch)
-        }
-
-        when (result) {
-            is LogicResultSuccess -> {
-                ran += 1
-                emit.send(result.value.mainComponentValue())
+        val host = control.logicHost()
+        val facade = host.logicHandleFacade().start(instructions)
+        try {
+            val initialized = control.runBlockingIo {
+                facade.beforeStart(host.argumentTuple(instructions, batch))
+            }
+            if (! initialized) {
+                throw IllegalStateException("Unable to initialize $instructions")
             }
 
-            // The Job is cancelling and the host aborted this in-flight child: unwind the Worker.
-            LogicResultCancelled ->
-                throw CancellationException("Job cancelled")
+            while (true) {
+                val result = control.runBlockingIo {
+                    facade.continueOrStart(host.graphDefinition())
+                }
 
-            is LogicResultFailed ->
-                throw IllegalStateException("Run failed ($instructions): ${result.message}")
+                when (result) {
+                    is LogicResultSuccess -> {
+                        ran += 1
+                        emit.send(result.value.mainComponentValue())
+                        return
+                    }
 
-            LogicResultPaused ->
-                throw IllegalStateException("Child logic paused unexpectedly: $instructions")
+                    // Stepping: the child advanced one fresh boundary and parked at its next. Park this
+                    // Worker too (staying quiescence-visible) until the next wavefront / resume, then drive the
+                    // SAME child onward (the driver re-grants its budget per wavefront).
+                    LogicResultPaused ->
+                        control.checkpoint()
+
+                    // The Job is cancelling and the child observed it: unwind the Worker.
+                    LogicResultCancelled ->
+                        throw CancellationException("Job cancelled")
+
+                    is LogicResultFailed ->
+                        throw IllegalStateException("Run failed ($instructions): ${result.message}")
+                }
+            }
+        }
+        finally {
+            facade.close()
         }
     }
 

@@ -1,6 +1,7 @@
 package tech.kzen.auto.client.objects.document.job
 
 import emotion.react.css
+import js.objects.unsafeJso
 import mui.material.Button
 import mui.material.ButtonVariant
 import mui.material.IconButton
@@ -9,6 +10,7 @@ import react.ChildrenBuilder
 import react.Key
 import react.Props
 import react.State
+import react.dom.html.ReactHTML.a
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.h2
 import react.dom.html.ReactHTML.span
@@ -29,6 +31,7 @@ import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.service.rest.ClientRestApi
+import tech.kzen.auto.client.util.NavigationRoute
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.contextValue
@@ -40,10 +43,13 @@ import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.exec.ExecutionSuccess
+import tech.kzen.lib.common.exec.RequestParams
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.model.location.ObjectReference
+import tech.kzen.lib.common.model.location.ObjectReferenceHost
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.model.structure.metadata.ObjectMetadata
@@ -346,6 +352,14 @@ class JobController(
     }
 
 
+    private fun isRunWorker(documentNotation: DocumentNotation, workerPath: ObjectPath): Boolean {
+        val workerIs = documentNotation.objects.notations[workerPath]
+            ?.get(NotationConventions.isAttributeName)
+            ?.asString()
+        return workerIs == "RunWorker"
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
         val clientState = state.clientState
@@ -412,6 +426,10 @@ class JobController(
                         }
                         +statusText(progress)
                     }
+
+                    if (isRunWorker(documentNotation, workerPath)) {
+                        renderRunWorkerLink(workerLocation)
+                    }
                 }
 
                 renderAttributeEditors(workerLocation)
@@ -435,6 +453,58 @@ class JobController(
             parts.add(progress.counts.entries.joinToString(" ") { "${it.key}=${it.value}" })
         }
         return if (parts.isEmpty()) "—" else parts.joinToString(" · ")
+    }
+
+
+    // A Run Worker hosts another Logic (its `instructions`) once per element; surface a drill-in link to that
+    // child document so its — now independently trace-recorded — live execution can be opened, and from there
+    // its own nested children, recursively. Reuses the reference resolution + hash navigation of
+    // ReferenceLinkAttributeView (the same `summary` view declared on RunWorker.instructions).
+    private fun ChildrenBuilder.renderRunWorkerLink(workerLocation: ObjectLocation) {
+        val graphNotation = state.clientState?.graphStructure()?.graphNotation
+            ?: return
+
+        val reference = graphNotation
+            .firstAttribute(workerLocation, AttributePath.ofName(AttributeName("instructions")))
+            ?.asString()
+            ?.takeIf { it.isNotEmpty() }
+            ?.let { ObjectReference.parse(it) }
+            ?: return
+
+        val documentPath = graphNotation.coalesce
+            .locateOptional(reference, ObjectReferenceHost.ofLocation(workerLocation))
+            ?.documentPath
+            ?: return
+
+        a {
+            css {
+                display = Display.inlineFlex
+                alignItems = AlignItems.center
+                marginLeft = 0.75.em
+                fontSize = 0.85.em
+                color = Color("rgba(0, 0, 0, 0.55)")
+                textDecoration = Globals.initial
+                cursor = Cursor.pointer
+                "&:hover" {
+                    color = Color("#1565ff")
+                }
+            }
+
+            href = NavigationRoute(documentPath, RequestParams.empty).toFragment()
+            title = "Open the document this Run Worker executes"
+
+            // No competing parent click handler in this header, but keep navigation from bubbling defensively.
+            onClick = { it.stopPropagation() }
+
+            span { +documentPath.name.value }
+
+            icon("material-symbols:open-in-new") {
+                style = unsafeJso {
+                    fontSize = 1.em
+                    marginLeft = 0.25.em
+                }
+            }
+        }
     }
 
 

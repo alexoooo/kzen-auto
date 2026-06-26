@@ -35,7 +35,8 @@ class ServerLogicController(
     private val logicTraceStore: LogicTraceStore,
     private val environment: () -> GraphEnvironment
 ):
-    LogicController
+    LogicController,
+    NestedFrameRegistry
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -328,9 +329,10 @@ class ServerLogicController(
         check(!state.cancelRequested) { "Can't run, stop already requested" }
         state.pauseRequested = false
         state.paused = false
-        // Full-speed run: clear any leftover step budget / step-over mode (the command is None below,
-        // so the budget path isn't consulted anyway — this just keeps the control state tidy).
-        state.frame.control.grantStepBudget(0)
+        // Full-speed run: clear any leftover step budget and reset the depth limit to unbounded (a stale
+        // Step-Out limit would otherwise make a later deep pause run free). The command is None below, so
+        // the budget/depth path isn't consulted anyway — this just keeps the control state tidy.
+        state.frame.control.arm(0, Int.MAX_VALUE)
         state.frame.control.commandUnpause()
 
 //        val topLevel = state.frame.dependencies.isEmpty()
@@ -427,16 +429,21 @@ class ServerLogicController(
         val command = state.frame.control.pollCommand()
         check(command == LogicCommand.Pause) { "Must be paused in order to step" }
 
-        // Step Out: run the deepest currently-paused frame (and its descendants) to completion, pausing
-        // back at the caller's next step — no fresh-step budget, but frames at depth >= the deepest run
-        // free (see LogicControl.inStepOutRegion). Otherwise grant a single fresh-step budget for this
-        // tick; for Step Over also flag the mode so a fresh RunStep descent runs its sub-document to
-        // completion. One tick = exactly one fresh boundary advanced.
+        // Arm the spine for one tick (depth comparisons are against the live frameDepth during the tick;
+        // steppedDepth is the depth of the frame the user is paused in). Step Into: one fresh boundary, no
+        // depth limit (pause at the very next boundary, descending into a child). Step Over: one fresh
+        // boundary, but frames deeper than steppedDepth run free, so a RunStep's child runs to completion.
+        // Step Out: no fresh boundary, and frames at/below steppedDepth run free, so the current frame
+        // finishes and the run pauses back at the caller's next boundary.
+        val steppedDepth = deepestFrameDepth(state.frame)
         if (stepOut) {
-            state.frame.control.grantStepOut(deepestFrameDepth(state.frame))
+            state.frame.control.arm(0, steppedDepth - 1)
+        }
+        else if (stepOver) {
+            state.frame.control.arm(1, steppedDepth)
         }
         else {
-            state.frame.control.grantStepBudget(1, stepOver)
+            state.frame.control.arm(1)
         }
 
 //        val topLevel = state.frame.dependencies.isEmpty()
@@ -489,6 +496,40 @@ class ServerLogicController(
             return 0
         }
         return 1 + dependencies.maxOf { deepestFrameDepth(it) }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    @Synchronized
+    override fun attach(
+        hostExecutionId: LogicExecutionId,
+        location: ObjectLocation,
+        executionId: LogicExecutionId,
+        execution: LogicExecution
+    ): AutoCloseable {
+        // Visibility-only frame for a detached nested Logic (a Job's Run Worker child): mirror it into the
+        // tree under its caller so the sidebar highlights it at the right depth, without it joining the step
+        // spine. The host drives the child on its own control, so this frame is never driven from here and
+        // reuses the host frame's control purely to satisfy the field (only request() routing reads it, which
+        // a detached child never serves). No active run / no matching host frame -> no-op handle.
+        val state = stateOrNull
+            ?: return AutoCloseable {}
+        val hostFrame = state.frame.find(hostExecutionId)
+            ?: return AutoCloseable {}
+
+        val childFrame = LogicFrame(
+            objectStableMapper.objectStableId(location),
+            executionId,
+            execution,
+            CopyOnWriteArrayList(),
+            hostFrame.control)
+        hostFrame.dependencies.add(childFrame)
+
+        // Detach by identity (not by executionId): two concurrent Run Workers hosting the same child document
+        // share its reused executionId, so removing by id could drop a still-running sibling frame.
+        return AutoCloseable {
+            hostFrame.dependencies.remove(childFrame)
+        }
     }
 
 

@@ -38,6 +38,30 @@ CsvReaderWorker:
       by: Self
 
 
+# Generates a stream from a single Kotlin expression: `code` evaluates to an Iterable (e.g. `(1..100)`,
+# `listOf("a", "b")`, a generated sequence), compiled by the genuine StepExpressionCompiler / Kotlin compiler
+# (same engine as FormulaStep), and each element is iterated into the output channel. The output is untyped
+# (the iterable's element type is arbitrary), so the port carries no `of:` and any consumer is compatible.
+FormulaSourceWorker:
+  abstract: true
+  is: Worker
+  title: "Formula Source"
+  class: tech.kzen.auto.server.objects.job.worker.FormulaSourceWorker
+  output: ""
+  code: ""
+  meta:
+    output:
+      is: ChannelOutput
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    code:
+      is: String
+      multiline: true
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
 # Keeps each record for which the Kotlin boolean expression `where` (columns referenced by name, e.g.
 # `City eq "Lviv"` or `temp.number > 30`) is truthy, compiled by the genuine CalculatedColumnEval engine.
 # An empty `where` keeps every record.
@@ -154,7 +178,9 @@ RunWorker:
 
 # Sink that shows a LIVE sample of incoming data: pushes a teaser (first rows + running count) to its trace
 # for the always-on view, and serves on-demand slice queries (offset / limit) over an external duplex Channel
-# `serve` for the browser to read its larger buffered sample. `sample` bounds the buffered rows.
+# `serve` for the browser to read its larger buffered sample. `sample` bounds the buffered rows. The input is
+# untyped (no `of:`): a RecordBatch renders column-for-column, any other element as a single `value` column —
+# so the same view serves both the CSV lane and a scalar (FormulaSource / Run) lane.
 PreviewWorker:
   abstract: true
   is: Worker
@@ -166,7 +192,6 @@ PreviewWorker:
   meta:
     input:
       is: ChannelInput
-      of: RecordBatch
       creator: JobChannelCreator
       editor: SelectChannelEditor
     serve:
