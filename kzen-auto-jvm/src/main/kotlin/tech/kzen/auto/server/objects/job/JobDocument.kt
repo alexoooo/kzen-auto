@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.objects.job
 
 import tech.kzen.auto.common.objects.document.DocumentArchetype
+import tech.kzen.auto.common.objects.document.job.JobChannelSynthesis
 import tech.kzen.auto.server.service.impl.NestedFrameRegistry
 import tech.kzen.lib.common.exec.logic.Logic
 import tech.kzen.lib.common.exec.logic.LogicControl
@@ -15,28 +16,30 @@ import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.service.context.GraphCreator
 import tech.kzen.lib.common.service.context.environment.GraphEnvironment
+import tech.kzen.lib.common.service.metadata.NotationMetadataReader
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import tech.kzen.lib.server.exec.logic.trace.LogicTraceStore
 
 
 /**
- * A graph of concurrently-running Workers connected by named Channels, run on the kzen-lib Logic/Execution
- * model so it Runs / Steps / Pauses / Resumes through the shared
- * [tech.kzen.auto.server.service.impl.ServerLogicController] like a Script or Flow. `workers` / `channels`
- * autowire from nested document structure (NestedList, like Script's `steps`); the run itself is a
- * [JobExecution].
+ * A graph of concurrently-running Workers connected by Channels, run on the kzen-lib Logic/Execution model so
+ * it Runs / Steps / Pauses / Resumes through the shared
+ * [tech.kzen.auto.server.service.impl.ServerLogicController] like a Script or Flow. `workers` autowire from
+ * nested document structure (NestedList, like Script's `steps`); the Channels connecting them are derived from
+ * Worker order + typed ports by [JobChannelSynthesis] at run time (the saved notation can keep ports blank and
+ * omit Channel objects). The run itself is a [JobExecution].
  */
 @Reflect
 class JobDocument(
     private val workers: List<ObjectLocation>,
-    private val channels: List<ObjectLocation>,
     private val selfLocation: ObjectLocation,
 
     @Service private val objectStableMapper: ObjectStableMapper,
     @Service private val graphCreator: GraphCreator,
     @Service private val environment: GraphEnvironment,
     @Service private val logicTraceStore: LogicTraceStore,
-    @Service private val nestedFrameRegistry: NestedFrameRegistry
+    @Service private val nestedFrameRegistry: NestedFrameRegistry,
+    @Service private val notationMetadataReader: NotationMetadataReader
 ):
     DocumentArchetype(),
     Logic
@@ -60,7 +63,7 @@ class JobDocument(
         return JobExecution(
             selfLocation.documentPath,
             workers,
-            channels,
+            JobChannelSynthesis(notationMetadataReader),
             logicTraceHandle,
             logicRunExecutionId,
             objectStableMapper,

@@ -181,6 +181,7 @@ class KzenAutoContext(
             .put(ClassName(CachedKotlinCompiler::class.qualifiedName!!), cachedKotlinCompiler)
             .put(ClassName(WebDriverContext::class.qualifiedName!!), webDriverContext)
             .put(ClassName(NotationMedia::class.qualifiedName!!), notationMedia)
+            .put(ClassName(NotationMetadataReader::class.qualifiedName!!), notationMetadataReader)
             .put(ClassName(LocalGraphStore::class.qualifiedName!!), graphStore)
             .put(ClassName(LogicTraceStore::class.qualifiedName!!), logicTraceStore)
             .put(ClassName(ReportWorkPool::class.qualifiedName!!), reportWorkPool)

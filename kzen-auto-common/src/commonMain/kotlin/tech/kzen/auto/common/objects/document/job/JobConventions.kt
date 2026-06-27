@@ -64,6 +64,26 @@ object JobConventions {
     const val previewLimitParameter = "limit"
 
 
+    // Deterministic name for the one-way channel auto-synthesized to carry one adjacent-Worker connection
+    // (order-driven wiring — see [JobChannelSynthesis]): `ch__<upstreamWorkerLeaf>__<outputPort>`. A pure
+    // function of the upstream Worker's leaf name and its output port, so the synthesized channel's
+    // ObjectLocation — and thus its migration stable id (ObjectStableMapper keys on the location string) — is
+    // stable across edits that don't rename the upstream Worker, preserving in-flight carryover across a
+    // pause / edit / resume. Mirrored by the JS editor when it renders a synthesized pipe.
+    fun autoSynthChannelName(upstreamWorker: ObjectPath, outputPort: AttributeName): String {
+        return "ch__${upstreamWorker.name.value}__${outputPort.value}"
+    }
+
+
+    // Deterministic name for the external duplex channel auto-synthesized for a Worker's UI `serve` port:
+    // `ch__<workerLeaf>__serve`. JobExecution keys its external client by this leaf name (route by
+    // [channelParameter]); the JS client addresses the same name when it pulls a larger preview slice (see
+    // JobController.queryPreviewSlice). One serve channel per Worker, so the fixed `serve` suffix is unique.
+    fun autoServeChannelName(worker: ObjectPath): String {
+        return "ch__${worker.name.value}__serve"
+    }
+
+
     fun isJob(documentNotation: DocumentNotation): Boolean {
         val mainObjectNotation =
             documentNotation.objects.notations[NotationConventions.mainObjectPath]

@@ -5,7 +5,7 @@
 # which resolves each to a view over the shared Channel the attribute references (a one-way Channel, or a
 # duplex DuplexChannel for request/reply). Value attributes carry defaults (the meta-scalar-needs-value
 # convention). `selfLocation` is the Worker's own ObjectLocation (by: Self), used to publish live progress
-# to its trace. Concrete Job documents wire these together — see notation/main/Job.yaml and the
+# to its trace. Concrete Job documents wire these together — see the
 # job-*-test.yaml fixtures under src/test/resources/notation/test/.
 
 

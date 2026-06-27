@@ -3,6 +3,7 @@ package tech.kzen.auto.server.objects.job
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import org.slf4j.LoggerFactory
+import tech.kzen.auto.common.objects.document.job.JobChannelSynthesis
 import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.auto.common.paradigm.job.api.ChannelClient
 import tech.kzen.auto.common.paradigm.job.api.Worker
@@ -65,7 +66,7 @@ import tech.kzen.lib.server.exec.logic.trace.LogicTraceStore
 class JobExecution(
     private val documentPath: DocumentPath,
     private val workerLocations: List<ObjectLocation>,
-    private val channelLocations: List<ObjectLocation>,
+    private val jobChannelSynthesis: JobChannelSynthesis,
     private val logicTraceHandle: LogicTraceHandle,
     private val logicRunExecutionId: LogicRunExecutionId,
     private val objectStableMapper: ObjectStableMapper,
@@ -132,7 +133,15 @@ class JobExecution(
             return cancelRun()
         }
 
-        val filteredDefinition = graphDefinition.filterTransitive(documentPath)
+        // Order-driven channels: synthesize the auto-managed Channels (and fill the Worker port references) in
+        // an in-memory copy of the notation BEFORE defining the run graph, so the saved notation can keep its
+        // Worker ports blank and omit Channel objects for the common path. Re-run every tick so the migrate
+        // change-check below compares augmented-vs-augmented, and so a pause / edit / resume re-derives the
+        // same deterministic Channels (preserving in-flight carryover by stable id).
+        val synthesis = jobChannelSynthesis.synthesize(graphDefinition, documentPath)
+        val fullDefinition = synthesis.graphDefinition
+        val filteredDefinition = fullDefinition.filterTransitive(documentPath)
+        val channelLocations = synthesis.channelLocations
 
         if (! started) {
             // Park the fresh Workers at their first checkpoint when the run starts already paused / stepping
@@ -140,7 +149,7 @@ class JobExecution(
             // window before the command loop below parks them — that window would leave stray in-flight batches
             // and make a first-tick pause/step state irreproducible.
             buildAndLaunch(
-                logicControl, graphDefinition, filteredDefinition, mapOf(), mapOf(),
+                logicControl, fullDefinition, filteredDefinition, channelLocations, mapOf(), mapOf(),
                 initiallyPaused = logicControl.pollCommand() == LogicCommand.Pause)
             logicControl.subscribeRequest(::route)
             started = true
@@ -150,7 +159,7 @@ class JobExecution(
             // step / pause tick re-parks the fresh Workers at their first checkpoint (initiallyPaused) so the
             // step stays bounded; a full resume lets them run.
             migrate(
-                logicControl, graphDefinition, filteredDefinition,
+                logicControl, fullDefinition, filteredDefinition, channelLocations,
                 initiallyPaused = logicControl.pollCommand() == LogicCommand.Pause)
         }
 
@@ -162,7 +171,7 @@ class JobExecution(
         // Logic) is outside the Job's filterTransitive subset, so editing it while paused doesn't trip the
         // migrate check above. Refresh the host so a child (re)built after this resume runs the edit — no worker
         // teardown (and so no in-flight element loss); only the Job's own structure requires a migrate.
-        logicHost.updateDefinition(graphDefinition)
+        logicHost.updateDefinition(fullDefinition)
 
         while (true) {
             val command = logicControl.pollCommand()
@@ -301,6 +310,7 @@ class JobExecution(
         logicControl: LogicControl,
         fullDefinition: GraphDefinition,
         filteredDefinition: GraphDefinition,
+        channelLocations: List<ObjectLocation>,
         initiallyPaused: Boolean
     ) {
         logger.info("{} - rebuilding run from edited definition", documentPath)
@@ -322,7 +332,8 @@ class JobExecution(
 
         tearDown()
         buildAndLaunch(
-            logicControl, fullDefinition, filteredDefinition, capturedStates, carriedChannels, initiallyPaused)
+            logicControl, fullDefinition, filteredDefinition, channelLocations,
+            capturedStates, carriedChannels, initiallyPaused)
     }
 
 
@@ -330,6 +341,7 @@ class JobExecution(
         logicControl: LogicControl,
         fullDefinition: GraphDefinition,
         filteredDefinition: GraphDefinition,
+        channelLocations: List<ObjectLocation>,
         capturedStates: Map<ObjectStableId, Any>,
         carriedChannels: Map<ObjectStableId, List<Any?>>,
         initiallyPaused: Boolean

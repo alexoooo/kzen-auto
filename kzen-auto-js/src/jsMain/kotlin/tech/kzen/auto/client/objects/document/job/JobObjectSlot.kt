@@ -25,6 +25,7 @@ import tech.kzen.auto.client.util.NavigationRoute
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.refCallback
+import tech.kzen.auto.common.objects.document.job.JobChannelPorts
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.exec.RequestParams
 import tech.kzen.lib.common.model.attribute.AttributeName
@@ -43,9 +44,6 @@ external interface JobObjectSlotProps: Props {
     var objectLocation: ObjectLocation
     var indexInParent: Int
 
-    // True for a Channel (rendered as a gold pipe-styled bar), false for a Worker (white node card).
-    var isChannel: Boolean
-    var external: Boolean
     var isPreviewWorker: Boolean
     var isRunWorker: Boolean
 
@@ -72,12 +70,12 @@ external interface JobObjectSlotProps: Props {
 
 
 //---------------------------------------------------------------------------------------------------------------------
-// One card in the Job stage: a Worker (white node card with status / Run drill-in link / Preview sample) or a
-// Channel (a gold pipe-styled bar, echoing the Flow Pipe so a connector reads distinctly from a node). A
-// memoized RPureComponent so the frequent drag-hover re-renders of JobController — which only change the drop
-// indicator, not any slot's props — bail out here instead of rebuilding every attribute editor and Preview
-// table. Registers its root element with JobCardRowRegistry so the stage can map a drag cursor onto an
-// insertion index by card midpoints.
+// One Worker card in the Job stage: a white node card with live status, a Run drill-in link, attribute editors,
+// and (for a Preview worker) a live sample table. The Channels connecting Workers are NOT cards — they render
+// as gold pipes in the gaps between cards (JobChannelPipe), derived from Worker order. A memoized RPureComponent
+// so the frequent drag-hover re-renders of JobController — which only change the drop indicator, not any card's
+// props — bail out here instead of rebuilding every attribute editor and Preview table. Registers its root
+// element with JobCardRowRegistry so the stage can map a drag cursor onto an insertion index by card midpoints.
 class JobObjectSlot(
     props: JobObjectSlotProps
 ):
@@ -85,12 +83,6 @@ class JobObjectSlot(
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        // Pipe palette, echoing Flow's gold edge colours (EdgeController) so a Channel reads as a connector
-        // rather than a node — a light gold fill, a gold border, and a darker gold for the icon / accents.
-        private val channelFill = Color("#fff7d6")
-        private val channelBorder = Color("#e8c200")
-        private val channelAccent = Color("#9a7b00")
-
         private val workerBorder = Color("#c4c4c4")
     }
 
@@ -105,7 +97,7 @@ class JobObjectSlot(
 
             css {
                 position = Position.relative
-                maxWidth = if (props.isChannel) 32.em else 40.em
+                maxWidth = 40.em
 
                 "&:hover > [data-drag-handle]" {
                     opacity = number(1.0)
@@ -127,12 +119,7 @@ class JobObjectSlot(
                 onEnd = props.onDragEnd,
                 frosted = true)
 
-            if (props.isChannel) {
-                renderChannelCard()
-            }
-            else {
-                renderWorkerCard()
-            }
+            renderWorkerCard()
         }
     }
 
@@ -171,50 +158,8 @@ class JobObjectSlot(
     }
 
 
-    private fun ChildrenBuilder.renderChannelCard() {
-        div {
-            css {
-                padding = Padding(0.35.em, 0.85.em, 0.5.em, 0.85.em)
-                border = Border(1.px, LineStyle.solid, channelBorder)
-                // Rounded "pipe" ends; gold fill so a connector reads distinctly from the white node cards.
-                borderRadius = 1.25.em
-                backgroundColor = channelFill
-            }
-
-            cardHeader(
-                leading = {
-                    // Icon inherits the span's font-size (sizing) and currentColor (gold accent).
-                    span {
-                        css {
-                            display = Display.inlineFlex
-                            alignItems = AlignItems.center
-                            marginRight = 0.4.em
-                            fontSize = 1.25.em
-                            color = channelAccent
-                        }
-                        icon("material-symbols:swap-horiz") {}
-                    }
-                }
-            ) {
-                if (props.external) {
-                    span {
-                        css {
-                            marginLeft = 0.5.em
-                            color = channelAccent
-                        }
-                        +"(external)"
-                    }
-                }
-            }
-
-            renderAttributeEditors()
-        }
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     private fun ChildrenBuilder.cardHeader(
-        leading: (ChildrenBuilder.() -> Unit)? = null,
         trailing: ChildrenBuilder.() -> Unit
     ) {
         div {
@@ -223,8 +168,6 @@ class JobObjectSlot(
                 alignItems = AlignItems.center
                 marginBottom = 0.25.em
             }
-
-            leading?.invoke(this)
 
             span {
                 css {
@@ -437,8 +380,11 @@ class JobObjectSlot(
             .get(props.objectLocation)
             ?: return
 
-        for ((attributeName, _) in objectMetadata.attributes.map) {
-            if (AutoConventions.isManaged(attributeName)) {
+        for ((attributeName, attributeMetadata) in objectMetadata.attributes.map) {
+            // Skip managed metadata attributes (icon / title / ...) and channel-endpoint ports: a port is now
+            // order-managed (the gold pipes between Worker cards), not wired per-Worker via a dropdown.
+            if (AutoConventions.isManaged(attributeName) ||
+                    JobChannelPorts.isChannelPort(attributeMetadata.type)) {
                 continue
             }
 

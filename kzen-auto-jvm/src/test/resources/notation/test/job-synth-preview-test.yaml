@@ -1,0 +1,17 @@
+# Order-driven serve synthesis (JobExecutionTest.synthesizedPreviewServesDuplexSliceQuery): a blank-port
+# reader -> PreviewWorker with NO Channel objects. Synthesis must derive the one-way input channel AND
+# auto-manage the PreviewWorker's external `serve` duplex channel (named JobConventions.autoServeChannelName),
+# which the UI bridge then addresses by that deterministic name to pull a slice.
+
+
+main:
+  is: Job
+
+main.workers/reader:
+  is: CsvReaderWorker
+  path: build/job-synth-preview/input.csv
+  batch: 4096
+
+main.workers/preview:
+  is: PreviewWorker
+  sample: 1000

@@ -3,30 +3,11 @@ main:
 
 main.workers/Formula Source:
   is: FormulaSourceWorker
-  output: main.channels/Channel
   code: 1..100
-
-main.channels/Channel:
-  is: Channel
-  buffer: 1
 
 main.workers/Run:
   is: RunWorker
-  input: main.channels/Channel
-  output: main.channels/Channel 2
   instructions: "main/FizzBuzz/FizzBuzz Script Item Wrapper.yaml#main"
-
-main.channels/Channel 2:
-  is: Channel
-  buffer: 1
 
 main.workers/Preview:
   is: PreviewWorker
-  serve: main.channels/DuplexChannel
-  input: main.channels/Channel 2
-  sample: 10000
-
-main.channels/DuplexChannel:
-  is: DuplexChannel
-  buffer: 1
-  external: true

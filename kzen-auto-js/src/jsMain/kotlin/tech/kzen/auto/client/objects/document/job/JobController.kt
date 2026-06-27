@@ -28,13 +28,13 @@ import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.installContextType
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
+import tech.kzen.auto.common.objects.document.job.JobChannelDerivation
 import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.exec.ExecutionSuccess
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
-import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.obj.ObjectPath
@@ -75,16 +75,19 @@ external interface JobControllerState: State {
     // queried slice). Distinct from the always-on pushed teaser in [workerProgress]. Null until first query.
     var previewDetail: Map<ObjectLocation, JobWorkerProgress>?
 
-    // All Worker + Channel locations in document order — the single unified stage list. Value-gated in
-    // onClientState so the instances stay ===-stable across drag/progress re-renders, letting each
-    // JobObjectSlot bail out (see updateUnifiedLocations).
-    var unifiedLocations: List<ObjectLocation>?
+    // Workers in document order — the stage list. Value-gated in onClientState so the instances stay
+    // ===-stable across drag / progress re-renders, letting each JobObjectSlot bail out.
+    var workerLocations: List<ObjectLocation>?
+
+    // The order-driven channels, keyed by UPSTREAM Worker location: a gold pipe renders in the gap below that
+    // Worker. Derived (purely) from Worker order + typed ports — the same rule the server's synthesis uses.
+    var connectionsByUpstream: Map<ObjectLocation, JobChannelDerivation.Connection>?
 
     // Ribbon insert-mode: while true, a "+" insertion point shows in every gap so the user picks where the
     // selected archetype lands (mirrors ScriptBranchDisplay's `creating`).
     var creating: Boolean
 
-    // Active drag: the index in [unifiedLocations] being dragged, and the cursor's insertion index (0..size)
+    // Active drag: the index in [workerLocations] being dragged, and the cursor's insertion index (0..size)
     // computed from card midpoints. Both null when no drag is in progress.
     var dragSourceIndex: Int?
     var dropInsertionIndex: Int?
@@ -92,14 +95,14 @@ external interface JobControllerState: State {
 
 
 //---------------------------------------------------------------------------------------------------------------------
-// The Job editor: the Worker / Channel graph the user assembles from the ribbon palette (header), rendered as a
-// single document-order stage of cards (body). Workers are white node cards (attribute editors, live status /
-// counts, and — for a Preview worker — a live sample table); Channels are gold pipe-styled bars echoing the
-// Flow Pipe so connectors read distinctly from nodes. Cards can be reordered by drag/drop and the ribbon insert
-// drops at a chosen position. Run / Step / Pause come from the shared logic ribbon, exactly like Script / Flow.
-// Reordering / interleaving is purely cosmetic — Workers run concurrently and wire to Channels by typed
-// reference, not position (see JobExecution). A graphical node-and-edge canvas is deferred (see
-// kzen/plans/2026-06-23_job-paradigm.md, M4).
+// The Job editor: a single document-order stage of Worker cards (white node cards with attribute editors, live
+// status / counts, and — for a Preview worker — a live sample table), with the Channels connecting them drawn
+// as gold pipes in the gaps between cards (JobChannelPipe). Channels are auto-managed: the pipeline is derived
+// from Worker order + typed ports (JobChannelDerivation) and synthesized at run time, so the saved notation
+// keeps Worker ports blank and carries no Channel objects on the common path. Worker cards can be reordered by
+// drag/drop and the ribbon insert drops at a chosen position; reordering re-forms the pipes. Run / Step / Pause
+// come from the shared logic ribbon, exactly like Script / Flow. A graphical node-and-edge canvas is deferred
+// (see kzen/plans/2026-06-23_job-paradigm.md, M4).
 @Suppress("unused")
 class JobController(
     props: JobControllerProps
@@ -194,7 +197,8 @@ class JobController(
         clientState = null
         workerProgress = null
         previewDetail = null
-        unifiedLocations = null
+        workerLocations = null
+        connectionsByUpstream = null
         creating = false
         dragSourceIndex = null
         dropInsertionIndex = null
@@ -220,43 +224,39 @@ class JobController(
             this.clientState = clientState
         }
 
-        updateUnifiedLocations(clientState)
+        updateStageModel(clientState)
         refreshProgressIfNeeded(clientState)
     }
 
 
-    // Recompute the unified document-order list and store it ONLY when it changed structurally, so the held
-    // List / ObjectLocation instances stay ===-stable across drag-hover and progress-poll re-renders — that
-    // stability is what lets each JobObjectSlot bail.
-    private fun updateUnifiedLocations(clientState: ClientState) {
+    // Recompute the Worker list + derived pipes and store them ONLY when changed, so the held List /
+    // ObjectLocation / Connection instances stay ===-stable across drag-hover and progress-poll re-renders —
+    // that stability is what lets each JobObjectSlot and JobChannelPipe bail.
+    private fun updateStageModel(clientState: ClientState) {
         val documentPath = clientState.navigationRoute.documentPath
             ?: return
-        val documentNotation = clientState.graphStructure().graphNotation.documents[documentPath]
+        val graphStructure = clientState.graphStructure()
+        val documentNotation = graphStructure.graphNotation.documents[documentPath]
             ?: return
         if (! JobConventions.isJob(documentNotation)) {
             return
         }
 
-        val unified = computeUnifiedLocations(documentPath, documentNotation)
-        if (unified != state.unifiedLocations) {
+        val workers = workerPaths(documentNotation).map { ObjectLocation(documentPath, it) }
+        if (workers != state.workerLocations) {
             setState {
-                unifiedLocations = unified
+                workerLocations = workers
             }
         }
-    }
 
-
-    // All objects nested under main via either `workers` or `channels`, in document order (the ordered
-    // objects-notations map already is document order; we filter it by membership in the two attribute lists).
-    private fun computeUnifiedLocations(
-        documentPath: DocumentPath,
-        documentNotation: DocumentNotation
-    ): List<ObjectLocation> {
-        val workers = workerPaths(documentNotation).toHashSet()
-        val channels = channelPaths(documentNotation).toHashSet()
-        return documentNotation.objects.notations.map.keys
-            .filter { it in workers || it in channels }
-            .map { ObjectLocation(documentPath, it) }
+        val connections = JobChannelDerivation.derive(graphStructure, documentPath)
+            .connections
+            .associateBy { it.upstreamWorker }
+        if (connections != state.connectionsByUpstream) {
+            setState {
+                connectionsByUpstream = connections
+            }
+        }
     }
 
 
@@ -335,8 +335,8 @@ class JobController(
     }
 
 
-    // Insert the ribbon-selected archetype at the clicked gap: a Channel nests under `channels`, a Worker under
-    // `workers` (membership by archetype type), at the chosen document position. getAndClearSelection also fires
+    // Insert the ribbon-selected archetype at the clicked gap: a Worker nests under `workers`, a (manually
+    // created) Channel under `channels` — both at the chosen document position. getAndClearSelection also fires
     // onInsertionUnselected, ending insert-mode.
     private fun onCreate(gapIndex: Int) {
         val archetype = insertion()?.getAndClearSelection()
@@ -396,20 +396,19 @@ class JobController(
     }
 
 
-    // The document index at which to insert so the new object lands at the requested unified gap: before the
-    // card currently occupying that slot, after the last card, or right after main when the stage is empty.
-    // Workers / Channels are flat (no nested subtree), so this is a plain index lookup.
+    // The document index at which to insert so the new object lands at the requested Worker gap: before the
+    // Worker currently occupying that slot, after the last Worker, or right after main when the stage is empty.
     private fun insertionDocumentIndex(documentNotation: DocumentNotation, gapIndex: Int): Int {
-        val unified = state.unifiedLocations ?: listOf()
+        val workers = state.workerLocations ?: listOf()
         return when {
-            unified.isEmpty() ->
+            workers.isEmpty() ->
                 documentNotation.indexOf(NotationConventions.mainObjectPath).value + 1
 
-            gapIndex < unified.size ->
-                documentNotation.indexOf(unified[gapIndex].objectPath).value
+            gapIndex < workers.size ->
+                documentNotation.indexOf(workers[gapIndex].objectPath).value
 
             else ->
-                documentNotation.indexOf(unified.last().objectPath).value + 1
+                documentNotation.indexOf(workers.last().objectPath).value + 1
         }
     }
 
@@ -438,9 +437,9 @@ class JobController(
         }
         event.preventDefault()
 
-        val unified = state.unifiedLocations
+        val workers = state.workerLocations
             ?: return
-        val insertionIndex = computeInsertionFromCursor(event.clientY, unified)
+        val insertionIndex = computeInsertionFromCursor(event.clientY, workers)
         if (state.dropInsertionIndex != insertionIndex) {
             setState {
                 dropInsertionIndex = insertionIndex
@@ -480,10 +479,10 @@ class JobController(
     // Insertion index (0..size) = the number of card midpoints above the cursor; cards come from
     // JobCardRowRegistry, in document order. An unregistered card is skipped (shouldn't happen for a visible
     // one); an empty stage yields 0.
-    private fun computeInsertionFromCursor(clientY: Double, unified: List<ObjectLocation>): Int {
+    private fun computeInsertionFromCursor(clientY: Double, workers: List<ObjectLocation>): Int {
         var index = 0
-        for (objectLocation in unified) {
-            val element = JobCardRowRegistry.get(objectLocation)
+        for (workerLocation in workers) {
+            val element = JobCardRowRegistry.get(workerLocation)
                 ?: continue
             val rect = element.getBoundingClientRect()
             if (clientY < rect.top + rect.height / 2) {
@@ -495,9 +494,9 @@ class JobController(
     }
 
 
-    // Move the dragged card to the chosen position. insertionIndex is in the pre-removal list, so dropping at
-    // the dragged card's own two edges is a no-op; otherwise account for the card leaving its slot when it sits
-    // above the target. The target document index is resolved against the document with the dragged object
+    // Move the dragged Worker to the chosen position. insertionIndex is in the pre-removal list, so dropping at
+    // the dragged Worker's own two edges is a no-op; otherwise account for the card leaving its slot when it
+    // sits above the target. The target document index is resolved against the document with the dragged object
     // removed (mirrors ScriptBranchDisplay, simplified for flat single objects).
     private fun performShift(source: Int, insertionIndex: Int) {
         if (insertionIndex == source || insertionIndex == source + 1) {
@@ -510,23 +509,23 @@ class JobController(
             ?: return
         val documentNotation = clientState.graphStructure().graphNotation.documents[documentPath]
             ?: return
-        val unified = state.unifiedLocations
+        val workers = state.workerLocations
             ?: return
-        val draggedLocation = unified.getOrNull(source)
+        val draggedLocation = workers.getOrNull(source)
             ?: return
         val draggedPath = draggedLocation.objectPath
 
         val newIndex = if (insertionIndex > source) insertionIndex - 1 else insertionIndex
         val remainingPaths = documentNotation.objects.notations.map.keys.filter { it != draggedPath }
-        val remainingUnified = unified.filterIndexed { i, _ -> i != source }
+        val remainingWorkers = workers.filterIndexed { i, _ -> i != source }
 
-        val anchor = remainingUnified.getOrNull(newIndex)?.objectPath
+        val anchor = remainingWorkers.getOrNull(newIndex)?.objectPath
         val targetDocumentIndex =
             if (anchor != null) {
                 remainingPaths.indexOf(anchor)
             }
             else {
-                val last = remainingUnified.lastOrNull()?.objectPath
+                val last = remainingWorkers.lastOrNull()?.objectPath
                 if (last != null) remainingPaths.indexOf(last) + 1 else remainingPaths.size
             }
 
@@ -542,12 +541,6 @@ class JobController(
     private fun workerPaths(documentNotation: DocumentNotation): List<ObjectPath> {
         return documentNotation.directNestedObjectPaths(
             NotationConventions.mainObjectPath, JobConventions.workersAttributeName)
-    }
-
-
-    private fun channelPaths(documentNotation: DocumentNotation): List<ObjectPath> {
-        return documentNotation.directNestedObjectPaths(
-            NotationConventions.mainObjectPath, JobConventions.channelsAttributeName)
     }
 
 
@@ -597,8 +590,9 @@ class JobController(
 
 
     // Issue an `offset` / `limit` slice query to a Preview worker over its (external) duplex `serve` channel,
-    // via the running logic's request subscriber — the browser -> Worker request/reply path. The reply has the
-    // same shape as the pushed teaser.
+    // via the running logic's request subscriber — the browser -> Worker request/reply path. When the serve
+    // port is blank (the auto-managed common path), the channel is the deterministic auto-synthesized name;
+    // otherwise the worker's manual `serve` reference names it. The reply has the same shape as the teaser.
     private suspend fun queryPreviewSlice(
         clientState: ClientState,
         workerLocation: ObjectLocation
@@ -609,8 +603,13 @@ class JobController(
         val serveReference = clientState.graphStructure().graphNotation
             .firstAttribute(workerLocation, AttributePath.ofName(AttributeName("serve")))
             ?.asString()
-            ?: return null
-        val channelName = serveReference.substringAfterLast("/")
+        val channelName =
+            if (serveReference.isNullOrBlank()) {
+                JobConventions.autoServeChannelName(workerLocation.objectPath)
+            }
+            else {
+                serveReference.substringAfterLast("/")
+            }
 
         val result = props.restClient.logicRequest(
             logicRunInfo.id,
@@ -644,64 +643,65 @@ class JobController(
             return
         }
 
-        val unifiedLocations = state.unifiedLocations ?: listOf()
+        val workers = state.workerLocations ?: listOf()
+        val connections = state.connectionsByUpstream ?: mapOf()
         val graphStructure = clientState.graphStructure()
         val active = clientState.clientLogicState.isActive()
-        val channelPathSet = channelPaths(documentNotation).toHashSet()
 
         div {
             css {
                 margin = Margin(5.em, 2.em, 2.em, 2.em)
             }
 
-            // The whole stage is one drop zone; the drop index is computed from the cursor Y (claimDropHover).
+            // The whole stage is one drop zone; the drop index is computed from the cursor Y (onStageDragOver).
             onDragEnter = { event -> onStageDragOver(event) }
             onDragOver = { event -> onStageDragOver(event) }
             onDrop = { event -> onStageDrop(event) }
 
-            if (unifiedLocations.isEmpty()) {
+            if (workers.isEmpty()) {
                 div {
                     css {
                         fontSize = 1.25.em
                         marginBottom = 1.em
                     }
-                    +"Empty Job — add Workers and Channels from the ribbon above."
+                    +"Empty Job — add Workers from the ribbon above."
                 }
-                insertionGap(0)
+                insertionGap(0, null)
                 return@div
             }
 
-            insertionGap(0)
-            for ((index, objectLocation) in unifiedLocations.withIndex()) {
-                renderSlot(index, objectLocation, documentNotation, graphStructure, active, channelPathSet)
-                insertionGap(index + 1)
+            insertionGap(0, null)
+            for ((index, workerLocation) in workers.withIndex()) {
+                renderWorkerSlot(index, workerLocation, documentNotation, graphStructure, active)
+
+                // The pipe (if any) for this Worker lives in the gap directly below it (upstream = this Worker).
+                // The last Worker's gap is a plain trailing insert / drop gap.
+                val connection =
+                    if (index < workers.size - 1) connections[workerLocation]
+                    else null
+                insertionGap(index + 1, connection)
             }
         }
     }
 
 
-    private fun ChildrenBuilder.renderSlot(
+    private fun ChildrenBuilder.renderWorkerSlot(
         index: Int,
-        objectLocation: ObjectLocation,
+        workerLocation: ObjectLocation,
         documentNotation: DocumentNotation,
         graphStructure: GraphStructure,
-        active: Boolean,
-        channelPathSet: Set<ObjectPath>
+        active: Boolean
     ) {
-        val isChannel = objectLocation.objectPath in channelPathSet
-
         JobObjectSlot::class.react {
-            key = Key(objectLocation.toReference().asString())
+            key = Key(workerLocation.toReference().asString())
 
-            this.objectLocation = objectLocation
+            this.objectLocation = workerLocation
             this.indexInParent = index
-            this.isChannel = isChannel
-            this.external = isChannel && JobConventions.isExternalChannel(documentNotation, objectLocation.objectPath)
-            this.isPreviewWorker = ! isChannel && isPreviewWorker(documentNotation, objectLocation.objectPath)
-            this.isRunWorker = ! isChannel && isRunWorker(documentNotation, objectLocation.objectPath)
+            this.isPreviewWorker = isPreviewWorker(documentNotation, workerLocation.objectPath)
+            this.isRunWorker = isRunWorker(documentNotation, workerLocation.objectPath)
 
-            this.progress = state.workerProgress?.get(objectLocation)
-            this.previewDetail = state.previewDetail?.get(objectLocation)
+            this.progress = state.workerProgress?.get(workerLocation)
+            this.previewDetail = state.previewDetail?.get(workerLocation)
             this.active = active
 
             this.graphStructure = graphStructure
@@ -718,17 +718,23 @@ class JobController(
     }
 
 
-    // A gap between cards (index 0 above the first, index size after the last): shows the drop indicator when
-    // it's the active drop target, and a "+" insert button while in ribbon insert-mode. Height is reserved in
-    // both modes so toggling never shifts the card layout.
-    private fun ChildrenBuilder.insertionGap(gapIndex: Int) {
+    // A gap between cards (index 0 above the first, index size after the last): renders the gold pipe for the
+    // order-driven channel when there is one and the stage is idle; the drop indicator when it's the active
+    // drop target; and a "+" insert button while in ribbon insert-mode. Height is reserved so toggling modes
+    // never shifts the card layout.
+    private fun ChildrenBuilder.insertionGap(gapIndex: Int, connection: JobChannelDerivation.Connection?) {
         div {
             css {
                 position = Position.relative
                 display = Display.flex
                 alignItems = AlignItems.center
+                justifyContent = JustifyContent.center
                 maxWidth = 40.em
-                height = if (state.creating) 2.em else 0.75.em
+                height = when {
+                    state.creating -> 2.em
+                    connection != null -> 1.5.em
+                    else -> 0.75.em
+                }
             }
 
             if (isActiveDropGap(gapIndex)) {
@@ -737,6 +743,13 @@ class JobController(
 
             if (state.creating) {
                 insertionButton(gapIndex)
+            }
+            else if (connection != null) {
+                JobChannelPipe::class.react {
+                    key = Key("pipe:" + connection.upstreamWorker.toReference().asString())
+                    upstreamName = connection.upstreamWorker.objectPath.name.value
+                    downstreamName = connection.downstreamWorker.objectPath.name.value
+                }
             }
         }
     }

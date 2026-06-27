@@ -73,6 +73,13 @@ class JobExecutionTest {
     private val formulaInput = formulaDir.resolve("input.csv")
     private val formulaOutput = formulaDir.resolve("output.csv")
 
+    private val synthLinearDocumentPath = DocumentPath.parse("test/job-synth-linear-test.yaml")
+    private val synthDir = Path.of("build/job-synth-linear")
+    private val synthInput = synthDir.resolve("input.csv")
+    private val synthOutput = synthDir.resolve("output.csv")
+
+    private val synthPreviewDocumentPath = DocumentPath.parse("test/job-synth-preview-test.yaml")
+
     private lateinit var context: KzenAutoContext
 
 
@@ -223,6 +230,101 @@ class JobExecutionTest {
             val qty = fields[1].toInt()
             val price = fields[2].toInt()
             assertEquals((qty * price).toDouble(), fields[3].toDouble())
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    @Test
+    fun synthesizedLinearPipelineRunsWithBlankPortsAndNoChannels() {
+        // The fixture has blank Worker channel ports and NO Channel objects: reaching Success proves
+        // JobChannelSynthesis derived reader.output -> filter.input and filter.output -> writer.input from
+        // document order and wired them in the in-memory run copy, with the saved notation carrying no channels.
+        val expectedKept = writeFlaggedInput(synthInput, 1_000)
+        Files.deleteIfExists(synthOutput)
+
+        val execution = newExecution(synthLinearDocumentPath)
+        execution.beforeStart(TupleValue.empty)
+
+        val result = execution.continueOrStart(
+            MutableLogicControl(false), MutableLogicResourceScope(), graphDefinition(synthLinearDocumentPath))
+
+        assertIs<LogicResultSuccess>(result)
+        val lines = Files.readAllLines(synthOutput)
+        assertEquals("id,flag,value", lines.first())
+        val dataLines = lines.drop(1)
+        assertEquals(expectedKept, dataLines.size)
+        assertTrue(dataLines.all { it.split(",")[1] == "yes" })
+    }
+
+
+    @Test
+    fun synthesizedPipelineSurvivesPauseAndResume() {
+        // Pausing then resuming a synthesized (blank-port) pipeline must complete with the full, correct output:
+        // proves synthesis runs each tick AND the migrate change-detector compares augmented-vs-augmented (a
+        // spurious migrate would tear down + rebuild the run mid-flight and drop in-flight batches).
+        val expectedKept = writeFlaggedInput(synthInput, 2_000)
+        Files.deleteIfExists(synthOutput)
+
+        val execution = newExecution(synthLinearDocumentPath)
+        execution.beforeStart(TupleValue.empty)
+
+        val control = MutableLogicControl(false)
+        val resourceScope = MutableLogicResourceScope()
+        val graphDefinition = graphDefinition(synthLinearDocumentPath)
+
+        control.commandPause()
+        assertEquals(LogicResultPaused,
+            execution.continueOrStart(control, resourceScope, graphDefinition))
+
+        control.commandUnpause()
+        val result = execution.continueOrStart(control, resourceScope, graphDefinition)
+
+        assertIs<LogicResultSuccess>(result)
+        assertEquals(expectedKept, Files.readAllLines(synthOutput).drop(1).size)
+    }
+
+
+    @Test
+    fun synthesizedPreviewServesDuplexSliceQuery() {
+        // A blank-port reader -> PreviewWorker with NO Channel objects: synthesis must derive the one-way input
+        // channel AND auto-manage the PreviewWorker's external `serve` duplex channel (named
+        // autoServeChannelName). The UI bridge addresses that synthesized channel by its deterministic name to
+        // pull a slice — proving the serve-port synthesis + external-client routing end to end.
+        val dir = Path.of("build/job-synth-preview")
+        Files.createDirectories(dir)
+        Files.newBufferedWriter(dir.resolve("input.csv")).use {
+            it.write("id,name"); it.newLine()
+            for (i in 0 until 1_000) {
+                it.write("$i,n$i"); it.newLine()
+            }
+        }
+
+        val execution = newExecution(synthPreviewDocumentPath)
+        execution.beforeStart(TupleValue.empty)
+
+        val control = MutableLogicControl(false)
+        val resourceScope = MutableLogicResourceScope()
+        val graphDefinition = graphDefinition(synthPreviewDocumentPath)
+
+        control.commandPause()
+        assertEquals(LogicResultPaused,
+            execution.continueOrStart(control, resourceScope, graphDefinition))
+
+        try {
+            val previewLocation = ObjectLocation(
+                synthPreviewDocumentPath, ObjectPath.parse("main.workers/preview"))
+            val channelName = JobConventions.autoServeChannelName(previewLocation.objectPath)
+
+            val reply = queryPreviewSlice(control, channelName)
+            assertNotNull(reply, "slice query over the synthesized serve channel should reply")
+            assertTrue(reply.containsKey("rows"), "reply should carry a rows slice")
+            assertTrue(reply.containsKey("count"), "reply should carry the total count")
+        }
+        finally {
+            control.commandCancel()
+            assertEquals(LogicResultCancelled,
+                execution.continueOrStart(control, resourceScope, graphDefinition))
         }
     }
 
@@ -650,9 +752,15 @@ class JobExecutionTest {
     // Writes a generated CSV (header `id,flag,value`, then `dataRows` rows with `flag` alternating yes/no) to
     // the slice fixture's input path, returning the number of flag=="yes" rows the filter should keep.
     private fun writeSliceInput(dataRows: Int): Int {
-        Files.createDirectories(sliceDir)
+        return writeFlaggedInput(sliceInput, dataRows)
+    }
+
+
+    // Same generated CSV as writeSliceInput, to an arbitrary target (the synth fixture reuses it).
+    private fun writeFlaggedInput(target: Path, dataRows: Int): Int {
+        Files.createDirectories(target.parent)
         var kept = 0
-        Files.newBufferedWriter(sliceInput).use { writer ->
+        Files.newBufferedWriter(target).use { writer ->
             writer.write("id,flag,value")
             writer.newLine()
             for (i in 0 until dataRows) {
