@@ -6,15 +6,15 @@ main.workers/Formula Source:
   output: main.channels/Channel
   code: 1..100
 
+main.channels/Channel:
+  is: Channel
+  buffer: 1
+
 main.workers/Run:
   is: RunWorker
   input: main.channels/Channel
   output: main.channels/Channel 2
   instructions: "main/FizzBuzz/FizzBuzz Script Item Wrapper.yaml#main"
-
-main.channels/Channel:
-  is: Channel
-  buffer: 1
 
 main.channels/Channel 2:
   is: Channel

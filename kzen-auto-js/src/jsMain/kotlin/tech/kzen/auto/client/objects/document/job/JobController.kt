@@ -2,36 +2,25 @@ package tech.kzen.auto.client.objects.document.job
 
 import emotion.react.css
 import js.objects.unsafeJso
-import mui.material.Button
-import mui.material.ButtonVariant
 import mui.material.IconButton
-import mui.material.Size
 import react.ChildrenBuilder
 import react.Key
 import react.Props
 import react.State
-import react.dom.html.ReactHTML.a
+import react.dom.events.DragEvent
 import react.dom.html.ReactHTML.div
-import react.dom.html.ReactHTML.h2
-import react.dom.html.ReactHTML.span
-import react.dom.html.ReactHTML.table
-import react.dom.html.ReactHTML.tbody
-import react.dom.html.ReactHTML.td
-import react.dom.html.ReactHTML.th
-import react.dom.html.ReactHTML.thead
-import react.dom.html.ReactHTML.tr
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
 import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.objects.document.bridge.InsertionKey
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
+import tech.kzen.auto.client.objects.document.common.dragdrop.dropZoneRegion
 import tech.kzen.auto.client.objects.ribbon.RibbonController
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.service.rest.ClientRestApi
-import tech.kzen.auto.client.util.NavigationRoute
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.contextValue
@@ -43,20 +32,18 @@ import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.exec.ExecutionSuccess
-import tech.kzen.lib.common.exec.RequestParams
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.lib.common.model.location.ObjectReference
-import tech.kzen.lib.common.model.location.ObjectReferenceHost
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.obj.ObjectPath
-import tech.kzen.lib.common.model.structure.metadata.ObjectMetadata
+import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.DocumentNotation
 import tech.kzen.lib.common.model.structure.notation.PositionRelation
 import tech.kzen.lib.common.model.structure.notation.cqrs.AddObjectCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.RemoveObjectCommand
+import tech.kzen.lib.common.model.structure.notation.cqrs.ShiftObjectTreeCommand
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.service.notation.NotationConventions
@@ -64,6 +51,7 @@ import tech.kzen.lib.common.service.store.MirroredGraphStore
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import tech.kzen.lib.common.util.naming.NextAvailableName
 import web.cssom.*
+import web.html.HTMLDivElement
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -86,14 +74,31 @@ external interface JobControllerState: State {
     // On-demand larger sample pulled from a PreviewWorker over its duplex `serve` channel (Worker location ->
     // queried slice). Distinct from the always-on pushed teaser in [workerProgress]. Null until first query.
     var previewDetail: Map<ObjectLocation, JobWorkerProgress>?
+
+    // All Worker + Channel locations in document order — the single unified stage list. Value-gated in
+    // onClientState so the instances stay ===-stable across drag/progress re-renders, letting each
+    // JobObjectSlot bail out (see updateUnifiedLocations).
+    var unifiedLocations: List<ObjectLocation>?
+
+    // Ribbon insert-mode: while true, a "+" insertion point shows in every gap so the user picks where the
+    // selected archetype lands (mirrors ScriptBranchDisplay's `creating`).
+    var creating: Boolean
+
+    // Active drag: the index in [unifiedLocations] being dragged, and the cursor's insertion index (0..size)
+    // computed from card midpoints. Both null when no drag is in progress.
+    var dragSourceIndex: Int?
+    var dropInsertionIndex: Int?
 }
 
 
 //---------------------------------------------------------------------------------------------------------------------
-// The Job editor: the Worker / Channel graph the user assembles from the ribbon palette (header), each rendered
-// as a card with its attribute editors (path, delimiter, channel-reference dropdowns, ...), live status / counts,
-// and — for a Preview worker — a live sample table plus an on-demand duplex slice query. Run / Step / Pause come
-// from the shared logic ribbon, exactly like Script / Flow. A graphical node-and-edge canvas is deferred (see
+// The Job editor: the Worker / Channel graph the user assembles from the ribbon palette (header), rendered as a
+// single document-order stage of cards (body). Workers are white node cards (attribute editors, live status /
+// counts, and — for a Preview worker — a live sample table); Channels are gold pipe-styled bars echoing the
+// Flow Pipe so connectors read distinctly from nodes. Cards can be reordered by drag/drop and the ribbon insert
+// drops at a chosen position. Run / Step / Pause come from the shared logic ribbon, exactly like Script / Flow.
+// Reordering / interleaving is purely cosmetic — Workers run concurrently and wire to Channels by typed
+// reference, not position (see JobExecution). A graphical node-and-edge canvas is deferred (see
 // kzen/plans/2026-06-23_job-paradigm.md, M4).
 @Suppress("unused")
 class JobController(
@@ -103,6 +108,12 @@ class JobController(
     ClientStateGlobal.Observer,
     InsertionGlobal.Subscriber
 {
+    //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        private val dragHandleColor = Color("rgba(0, 0, 0, 0.45)")
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
@@ -159,6 +170,16 @@ class JobController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    // Built once per instance, so they are ===-stable across renders and let each JobObjectSlot (RPureComponent)
+    // bail when only the drag indicator changed. The slot threads its own index / location back in, so a single
+    // shared reference serves every slot rather than a fresh closure per slot per render.
+    private val onSlotDragStart: (Int) -> Unit = { index -> onDragStart(index) }
+    private val onSlotDragEnd: () -> Unit = { onDragEnd() }
+    private val onSlotDelete: (ObjectLocation) -> Unit = { location -> onDelete(location) }
+    private val onSlotQueryPreview: (ObjectLocation) -> Unit = { location -> queryPreview(location) }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     private val jobProgressStore by lazy {
         JobProgressStore(props.restClient, props.objectStableMapper)
     }
@@ -173,6 +194,10 @@ class JobController(
         clientState = null
         workerProgress = null
         previewDetail = null
+        unifiedLocations = null
+        creating = false
+        dragSourceIndex = null
+        dropInsertionIndex = null
     }
 
 
@@ -195,7 +220,43 @@ class JobController(
             this.clientState = clientState
         }
 
+        updateUnifiedLocations(clientState)
         refreshProgressIfNeeded(clientState)
+    }
+
+
+    // Recompute the unified document-order list and store it ONLY when it changed structurally, so the held
+    // List / ObjectLocation instances stay ===-stable across drag-hover and progress-poll re-renders — that
+    // stability is what lets each JobObjectSlot bail.
+    private fun updateUnifiedLocations(clientState: ClientState) {
+        val documentPath = clientState.navigationRoute.documentPath
+            ?: return
+        val documentNotation = clientState.graphStructure().graphNotation.documents[documentPath]
+            ?: return
+        if (! JobConventions.isJob(documentNotation)) {
+            return
+        }
+
+        val unified = computeUnifiedLocations(documentPath, documentNotation)
+        if (unified != state.unifiedLocations) {
+            setState {
+                unifiedLocations = unified
+            }
+        }
+    }
+
+
+    // All objects nested under main via either `workers` or `channels`, in document order (the ordered
+    // objects-notations map already is document order; we filter it by membership in the two attribute lists).
+    private fun computeUnifiedLocations(
+        documentPath: DocumentPath,
+        documentNotation: DocumentNotation
+    ): List<ObjectLocation> {
+        val workers = workerPaths(documentNotation).toHashSet()
+        val channels = channelPaths(documentNotation).toHashSet()
+        return documentNotation.objects.notations.map.keys
+            .filter { it in workers || it in channels }
+            .map { ObjectLocation(documentPath, it) }
     }
 
 
@@ -258,25 +319,36 @@ class JobController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    // Insert the ribbon-selected archetype into the active Job: a Channel nests under `channels`, anything else
-    // (a Worker) under `workers`, appended at the end of the document. Deferred to a coroutine so it runs after
-    // the synchronous subscriber-notification loop in InsertionGlobal.setSelected completes, then the selection
-    // is cleared so the ribbon button un-highlights.
+    // Ribbon archetype selected: enter insert-mode so the user picks a position (the "+" gaps), rather than
+    // inserting immediately. The selection stays in InsertionGlobal until a gap is clicked (onCreate).
     override fun onInsertionSelected(action: ObjectLocation) {
-        val insertion = insertion()
-            ?: return
-
-        async {
-            insertArchetype(action)
-            insertion.clearSelection()
+        setState {
+            creating = true
         }
     }
 
 
-    override fun onInsertionUnselected() {}
+    override fun onInsertionUnselected() {
+        setState {
+            creating = false
+        }
+    }
 
 
-    private suspend fun insertArchetype(archetype: ObjectLocation) {
+    // Insert the ribbon-selected archetype at the clicked gap: a Channel nests under `channels`, a Worker under
+    // `workers` (membership by archetype type), at the chosen document position. getAndClearSelection also fires
+    // onInsertionUnselected, ending insert-mode.
+    private fun onCreate(gapIndex: Int) {
+        val archetype = insertion()?.getAndClearSelection()
+            ?: return
+
+        async {
+            insertArchetypeAt(archetype, gapIndex)
+        }
+    }
+
+
+    private suspend fun insertArchetypeAt(archetype: ObjectLocation, gapIndex: Int) {
         val clientState = props.clientStateGlobal.current()
             ?: return
         val graphNotation = clientState.graphStructure().graphNotation
@@ -315,7 +387,7 @@ class JobController(
             documentPath,
             NotationConventions.mainObjectPath.nest(attributePath, newName))
 
-        val insertIndex = documentNotation.objects.notations.map.size
+        val insertIndex = insertionDocumentIndex(documentNotation, gapIndex)
 
         props.mirroredGraphStore.apply(AddObjectCommand.ofParent(
             newObjectLocation,
@@ -324,9 +396,144 @@ class JobController(
     }
 
 
+    // The document index at which to insert so the new object lands at the requested unified gap: before the
+    // card currently occupying that slot, after the last card, or right after main when the stage is empty.
+    // Workers / Channels are flat (no nested subtree), so this is a plain index lookup.
+    private fun insertionDocumentIndex(documentNotation: DocumentNotation, gapIndex: Int): Int {
+        val unified = state.unifiedLocations ?: listOf()
+        return when {
+            unified.isEmpty() ->
+                documentNotation.indexOf(NotationConventions.mainObjectPath).value + 1
+
+            gapIndex < unified.size ->
+                documentNotation.indexOf(unified[gapIndex].objectPath).value
+
+            else ->
+                documentNotation.indexOf(unified.last().objectPath).value + 1
+        }
+    }
+
+
     private fun onDelete(objectLocation: ObjectLocation) {
         async {
             props.mirroredGraphStore.apply(RemoveObjectCommand(objectLocation))
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun onDragStart(sourceIndex: Int) {
+        setState {
+            dragSourceIndex = sourceIndex
+        }
+    }
+
+
+    // The whole stage is one drop zone: claim a single insertion index from the cursor's Y against the card
+    // midpoints, and re-render only when it changed (throttles the hover re-renders). Bound to both dragenter
+    // and dragover so the index is claimed even if dragover is slow to re-fire.
+    private fun onStageDragOver(event: DragEvent<HTMLDivElement>) {
+        if (state.dragSourceIndex == null) {
+            return
+        }
+        event.preventDefault()
+
+        val unified = state.unifiedLocations
+            ?: return
+        val insertionIndex = computeInsertionFromCursor(event.clientY, unified)
+        if (state.dropInsertionIndex != insertionIndex) {
+            setState {
+                dropInsertionIndex = insertionIndex
+            }
+        }
+    }
+
+
+    private fun onStageDrop(event: DragEvent<HTMLDivElement>) {
+        event.preventDefault()
+
+        val source = state.dragSourceIndex
+        val insertionIndex = state.dropInsertionIndex
+        setState {
+            dragSourceIndex = null
+            dropInsertionIndex = null
+        }
+
+        if (source == null || insertionIndex == null) {
+            return
+        }
+        performShift(source, insertionIndex)
+    }
+
+
+    private fun onDragEnd() {
+        if (state.dragSourceIndex == null && state.dropInsertionIndex == null) {
+            return
+        }
+        setState {
+            dragSourceIndex = null
+            dropInsertionIndex = null
+        }
+    }
+
+
+    // Insertion index (0..size) = the number of card midpoints above the cursor; cards come from
+    // JobCardRowRegistry, in document order. An unregistered card is skipped (shouldn't happen for a visible
+    // one); an empty stage yields 0.
+    private fun computeInsertionFromCursor(clientY: Double, unified: List<ObjectLocation>): Int {
+        var index = 0
+        for (objectLocation in unified) {
+            val element = JobCardRowRegistry.get(objectLocation)
+                ?: continue
+            val rect = element.getBoundingClientRect()
+            if (clientY < rect.top + rect.height / 2) {
+                break
+            }
+            index++
+        }
+        return index
+    }
+
+
+    // Move the dragged card to the chosen position. insertionIndex is in the pre-removal list, so dropping at
+    // the dragged card's own two edges is a no-op; otherwise account for the card leaving its slot when it sits
+    // above the target. The target document index is resolved against the document with the dragged object
+    // removed (mirrors ScriptBranchDisplay, simplified for flat single objects).
+    private fun performShift(source: Int, insertionIndex: Int) {
+        if (insertionIndex == source || insertionIndex == source + 1) {
+            return
+        }
+
+        val clientState = props.clientStateGlobal.current()
+            ?: return
+        val documentPath = clientState.navigationRoute.documentPath
+            ?: return
+        val documentNotation = clientState.graphStructure().graphNotation.documents[documentPath]
+            ?: return
+        val unified = state.unifiedLocations
+            ?: return
+        val draggedLocation = unified.getOrNull(source)
+            ?: return
+        val draggedPath = draggedLocation.objectPath
+
+        val newIndex = if (insertionIndex > source) insertionIndex - 1 else insertionIndex
+        val remainingPaths = documentNotation.objects.notations.map.keys.filter { it != draggedPath }
+        val remainingUnified = unified.filterIndexed { i, _ -> i != source }
+
+        val anchor = remainingUnified.getOrNull(newIndex)?.objectPath
+        val targetDocumentIndex =
+            if (anchor != null) {
+                remainingPaths.indexOf(anchor)
+            }
+            else {
+                val last = remainingUnified.lastOrNull()?.objectPath
+                if (last != null) remainingPaths.indexOf(last) + 1 else remainingPaths.size
+            }
+
+        async {
+            props.mirroredGraphStore.apply(ShiftObjectTreeCommand(
+                draggedLocation,
+                PositionRelation.at(targetDocumentIndex)))
         }
     }
 
@@ -361,303 +568,6 @@ class JobController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun ChildrenBuilder.render() {
-        val clientState = state.clientState
-            ?: return
-
-        val documentPath = clientState.navigationRoute.documentPath
-            ?: return
-
-        val documentNotation = clientState.graphStructure().graphNotation.documents[documentPath]
-            ?: return
-
-        if (! JobConventions.isJob(documentNotation)) {
-            return
-        }
-
-        val workerPaths = workerPaths(documentNotation)
-        val channelPaths = channelPaths(documentNotation)
-
-        div {
-            css {
-                margin = Margin(5.em, 2.em, 2.em, 2.em)
-            }
-
-            if (workerPaths.isEmpty() && channelPaths.isEmpty()) {
-                div {
-                    css {
-                        fontSize = 1.25.em
-                        marginBottom = 1.em
-                    }
-                    +"Empty Job — add Workers and Channels from the ribbon above."
-                }
-            }
-
-            renderChannels(documentPath, documentNotation, channelPaths)
-            renderWorkers(documentPath, documentNotation, workerPaths)
-        }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    private fun ChildrenBuilder.renderWorkers(
-        documentPath: DocumentPath,
-        documentNotation: DocumentNotation,
-        workerPaths: List<ObjectPath>
-    ) {
-        h2 { +"Workers" }
-
-        if (workerPaths.isEmpty()) {
-            div { +"(none)" }
-            return
-        }
-
-        for (workerPath in workerPaths) {
-            val workerLocation = ObjectLocation(documentPath, workerPath)
-            val progress = state.workerProgress?.get(workerLocation)
-
-            objectCard(workerPath) {
-                cardHeader(workerPath, workerLocation) {
-                    span {
-                        css {
-                            fontFamily = FontFamily.monospace
-                            marginLeft = 0.5.em
-                            color = NamedColor.gray
-                        }
-                        +statusText(progress)
-                    }
-
-                    if (isRunWorker(documentNotation, workerPath)) {
-                        renderRunWorkerLink(workerLocation)
-                    }
-                }
-
-                renderAttributeEditors(workerLocation)
-
-                if (isPreviewWorker(documentNotation, workerPath)) {
-                    renderPreview(workerLocation, progress)
-                }
-            }
-        }
-    }
-
-
-    private fun statusText(progress: JobWorkerProgress?): String {
-        if (progress == null) {
-            return "—"
-        }
-
-        val parts = mutableListOf<String>()
-        progress.status?.let { parts.add(it) }
-        if (progress.counts.isNotEmpty()) {
-            parts.add(progress.counts.entries.joinToString(" ") { "${it.key}=${it.value}" })
-        }
-        return if (parts.isEmpty()) "—" else parts.joinToString(" · ")
-    }
-
-
-    // A Run Worker hosts another Logic (its `instructions`) once per element; surface a drill-in link to that
-    // child document so its — now independently trace-recorded — live execution can be opened, and from there
-    // its own nested children, recursively. Reuses the reference resolution + hash navigation of
-    // ReferenceLinkAttributeView (the same `summary` view declared on RunWorker.instructions).
-    private fun ChildrenBuilder.renderRunWorkerLink(workerLocation: ObjectLocation) {
-        val graphNotation = state.clientState?.graphStructure()?.graphNotation
-            ?: return
-
-        val reference = graphNotation
-            .firstAttribute(workerLocation, AttributePath.ofName(AttributeName("instructions")))
-            ?.asString()
-            ?.takeIf { it.isNotEmpty() }
-            ?.let { ObjectReference.parse(it) }
-            ?: return
-
-        val documentPath = graphNotation.coalesce
-            .locateOptional(reference, ObjectReferenceHost.ofLocation(workerLocation))
-            ?.documentPath
-            ?: return
-
-        a {
-            css {
-                display = Display.inlineFlex
-                alignItems = AlignItems.center
-                marginLeft = 0.75.em
-                fontSize = 0.85.em
-                color = Color("rgba(0, 0, 0, 0.55)")
-                textDecoration = Globals.initial
-                cursor = Cursor.pointer
-                "&:hover" {
-                    color = Color("#1565ff")
-                }
-            }
-
-            href = NavigationRoute(documentPath, RequestParams.empty).toFragment()
-            title = "Open the document this Run Worker executes"
-
-            // No competing parent click handler in this header, but keep navigation from bubbling defensively.
-            onClick = { it.stopPropagation() }
-
-            span { +documentPath.name.value }
-
-            icon("material-symbols:open-in-new") {
-                style = unsafeJso {
-                    fontSize = 1.em
-                    marginLeft = 0.25.em
-                }
-            }
-        }
-    }
-
-
-    private fun ChildrenBuilder.renderChannels(
-        documentPath: DocumentPath,
-        documentNotation: DocumentNotation,
-        channelPaths: List<ObjectPath>
-    ) {
-        h2 { +"Channels" }
-
-        if (channelPaths.isEmpty()) {
-            div { +"(none)" }
-            return
-        }
-
-        for (channelPath in channelPaths) {
-            val channelLocation = ObjectLocation(documentPath, channelPath)
-            val external = JobConventions.isExternalChannel(documentNotation, channelPath)
-
-            objectCard(channelPath) {
-                cardHeader(channelPath, channelLocation) {
-                    if (external) {
-                        span {
-                            css {
-                                marginLeft = 0.5.em
-                                color = NamedColor.gray
-                            }
-                            +"(external)"
-                        }
-                    }
-                }
-
-                renderAttributeEditors(channelLocation)
-            }
-        }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    // The live sample for a Preview worker: the always-on pushed teaser ([workerProgress]), replaced by a larger
-    // on-demand slice once the user queries the Worker over its duplex `serve` channel ([previewDetail]).
-    private fun ChildrenBuilder.renderPreview(
-        workerLocation: ObjectLocation,
-        progress: JobWorkerProgress?
-    ) {
-        val detail = state.previewDetail?.get(workerLocation)
-        val shown = detail ?: progress
-        val active = state.clientState?.clientLogicState?.isActive() ?: false
-
-        div {
-            css {
-                marginTop = 0.5.em
-            }
-
-            div {
-                css {
-                    fontSize = 0.8.em
-                    color = NamedColor.gray
-                }
-                val count = shown?.rowCount
-                val suffix = when {
-                    detail != null -> " (live — larger sample)"
-                    active -> " (live)"
-                    else -> " (final)"
-                }
-                +("Sample" + (count?.let { " — $it row(s) total" } ?: "") + suffix)
-            }
-
-            if (shown != null && (shown.header.isNotEmpty() || shown.rows.isNotEmpty())) {
-                renderPreviewTable(shown.header, shown.rows)
-            }
-
-            Button {
-                variant = ButtonVariant.outlined
-                size = Size.small
-                disabled = ! active
-                onClick = { queryPreview(workerLocation) }
-                +"Larger sample"
-            }
-        }
-    }
-
-
-    private fun ChildrenBuilder.renderPreviewTable(header: List<String>, rows: List<List<String>>) {
-        div {
-            css {
-                maxHeight = 20.em
-                overflowY = Auto.auto
-                marginTop = 0.25.em
-                marginBottom = 0.25.em
-                border = Border(1.px, LineStyle.solid, NamedColor.lightgray)
-            }
-
-            table {
-                css {
-                    borderCollapse = BorderCollapse.collapse
-                    fontSize = 0.75.em
-                    fontFamily = FontFamily.monospace
-                }
-
-                if (header.isNotEmpty()) {
-                    thead {
-                        tr {
-                            for (headerCell in header.withIndex()) {
-                                th {
-                                    key = Key(headerCell.index.toString())
-                                    css {
-                                        padding = Padding(0.1.em, 0.4.em, 0.1.em, 0.4.em)
-                                        border = Border(1.px, LineStyle.solid, NamedColor.gainsboro)
-                                        textAlign = TextAlign.left
-                                        position = Position.sticky
-                                        top = 0.px
-                                        backgroundColor = NamedColor.whitesmoke
-                                    }
-                                    +headerCell.value
-                                }
-                            }
-                        }
-                    }
-                }
-
-                tbody {
-                    for (row in rows.withIndex()) {
-                        tr {
-                            key = Key(row.index.toString())
-                            for (cell in row.value.withIndex()) {
-                                td {
-                                    key = Key(cell.index.toString())
-                                    css {
-                                        padding = Padding(0.1.em, 0.4.em, 0.1.em, 0.4.em)
-                                        border = Border(1.px, LineStyle.solid, NamedColor.gainsboro)
-                                    }
-                                    +abbreviate(cell.value)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-
-    private fun abbreviate(value: String): String {
-        return if (value.length > 50) {
-            value.substring(0, 50) + "…"
-        }
-        else {
-            value
-        }
-    }
-
-
     // Show / start the larger live preview slice for a Preview worker: pulls it once now; while the run stays
     // active, refreshProgressIfNeeded keeps re-pulling it each poll (and clears it once the run ends).
     private fun queryPreview(workerLocation: ObjectLocation) {
@@ -720,98 +630,156 @@ class JobController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    // A bordered card per Worker / Channel, keyed by its object path so its attribute-editor subtree reconciles
-    // independently of its siblings.
-    private fun ChildrenBuilder.objectCard(
-        objectPath: ObjectPath,
-        content: ChildrenBuilder.() -> Unit
-    ) {
-        div {
-            key = Key(objectPath.asString())
-            css {
-                marginBottom = 0.75.em
-                padding = Padding(0.5.em, 0.75.em, 0.5.em, 0.75.em)
-                border = Border(1.px, LineStyle.solid, Color("#c4c4c4"))
-                borderRadius = 3.px
-                backgroundColor = NamedColor.white
-                maxWidth = 40.em
-            }
-            content()
-        }
-    }
-
-
-    private fun ChildrenBuilder.cardHeader(
-        objectPath: ObjectPath,
-        objectLocation: ObjectLocation,
-        trailing: ChildrenBuilder.() -> Unit
-    ) {
-        div {
-            css {
-                display = Display.flex
-                alignItems = AlignItems.center
-                marginBottom = 0.25.em
-            }
-
-            span {
-                css {
-                    fontWeight = FontWeight.bold
-                }
-                +objectPath.name.value
-            }
-
-            trailing()
-
-            div {
-                css {
-                    flexGrow = number(1.0)
-                }
-            }
-
-            IconButton {
-                title = "Delete"
-                size = Size.small
-                onClick = { onDelete(objectLocation) }
-                icon("material-symbols:delete-outline") {}
-            }
-        }
-    }
-
-
-    // Render an editor for each non-managed attribute via the shared AttributeEditorManager — scalars (path,
-    // delimiter, buffer, ...) fall to the default value editor; channel-reference attributes dispatch to
-    // SelectChannelEditor via their `editor:` metadata. Attributes are in fixed metadata order, so they reconcile
-    // by position within this (path-keyed) card.
-    private fun ChildrenBuilder.renderAttributeEditors(objectLocation: ObjectLocation) {
-        val objectMetadata: ObjectMetadata = state.clientState
-            ?.graphStructure()
-            ?.graphMetadata
-            ?.objectMetadata
-            ?.get(objectLocation)
+    override fun ChildrenBuilder.render() {
+        val clientState = state.clientState
             ?: return
 
-        for ((attributeName, _) in objectMetadata.attributes.map) {
-            if (AutoConventions.isManaged(attributeName)) {
-                continue
+        val documentPath = clientState.navigationRoute.documentPath
+            ?: return
+
+        val documentNotation = clientState.graphStructure().graphNotation.documents[documentPath]
+            ?: return
+
+        if (! JobConventions.isJob(documentNotation)) {
+            return
+        }
+
+        val unifiedLocations = state.unifiedLocations ?: listOf()
+        val graphStructure = clientState.graphStructure()
+        val active = clientState.clientLogicState.isActive()
+        val channelPathSet = channelPaths(documentNotation).toHashSet()
+
+        div {
+            css {
+                margin = Margin(5.em, 2.em, 2.em, 2.em)
             }
 
-            div {
-                css {
-                    marginBottom = 0.25.em
+            // The whole stage is one drop zone; the drop index is computed from the cursor Y (claimDropHover).
+            onDragEnter = { event -> onStageDragOver(event) }
+            onDragOver = { event -> onStageDragOver(event) }
+            onDrop = { event -> onStageDrop(event) }
+
+            if (unifiedLocations.isEmpty()) {
+                div {
+                    css {
+                        fontSize = 1.25.em
+                        marginBottom = 1.em
+                    }
+                    +"Empty Job — add Workers and Channels from the ribbon above."
                 }
-                renderAttributeEditor(objectLocation, attributeName)
+                insertionGap(0)
+                return@div
+            }
+
+            insertionGap(0)
+            for ((index, objectLocation) in unifiedLocations.withIndex()) {
+                renderSlot(index, objectLocation, documentNotation, graphStructure, active, channelPathSet)
+                insertionGap(index + 1)
             }
         }
     }
 
 
-    private fun ChildrenBuilder.renderAttributeEditor(
+    private fun ChildrenBuilder.renderSlot(
+        index: Int,
         objectLocation: ObjectLocation,
-        attributeName: AttributeName
+        documentNotation: DocumentNotation,
+        graphStructure: GraphStructure,
+        active: Boolean,
+        channelPathSet: Set<ObjectPath>
     ) {
-        props.attributeEditorManager.child(this) {
+        val isChannel = objectLocation.objectPath in channelPathSet
+
+        JobObjectSlot::class.react {
+            key = Key(objectLocation.toReference().asString())
+
             this.objectLocation = objectLocation
-            this.attributeName = attributeName
+            this.indexInParent = index
+            this.isChannel = isChannel
+            this.external = isChannel && JobConventions.isExternalChannel(documentNotation, objectLocation.objectPath)
+            this.isPreviewWorker = ! isChannel && isPreviewWorker(documentNotation, objectLocation.objectPath)
+            this.isRunWorker = ! isChannel && isRunWorker(documentNotation, objectLocation.objectPath)
+
+            this.progress = state.workerProgress?.get(objectLocation)
+            this.previewDetail = state.previewDetail?.get(objectLocation)
+            this.active = active
+
+            this.graphStructure = graphStructure
+            this.attributeEditorManager = props.attributeEditorManager
+
+            this.isDragSource = state.dragSourceIndex == index
+            this.handleColor = dragHandleColor
+
+            this.onDragStart = onSlotDragStart
+            this.onDragEnd = onSlotDragEnd
+            this.onDelete = onSlotDelete
+            this.onQueryPreview = onSlotQueryPreview
+        }
+    }
+
+
+    // A gap between cards (index 0 above the first, index size after the last): shows the drop indicator when
+    // it's the active drop target, and a "+" insert button while in ribbon insert-mode. Height is reserved in
+    // both modes so toggling never shifts the card layout.
+    private fun ChildrenBuilder.insertionGap(gapIndex: Int) {
+        div {
+            css {
+                position = Position.relative
+                display = Display.flex
+                alignItems = AlignItems.center
+                maxWidth = 40.em
+                height = if (state.creating) 2.em else 0.75.em
+            }
+
+            if (isActiveDropGap(gapIndex)) {
+                dropZoneRegion()
+            }
+
+            if (state.creating) {
+                insertionButton(gapIndex)
+            }
+        }
+    }
+
+
+    // The gap at this index is the active drop target. Source no-op suppression: the dragged card's own two
+    // edges (source / source+1) are no-ops, so don't highlight them (mirrors performShift's guard).
+    private fun isActiveDropGap(gapIndex: Int): Boolean {
+        val insertionIndex = state.dropInsertionIndex
+            ?: return false
+        if (insertionIndex != gapIndex) {
+            return false
+        }
+        val source = state.dragSourceIndex
+            ?: return true
+        return !(gapIndex == source || gapIndex == source + 1)
+    }
+
+
+    private fun ChildrenBuilder.insertionButton(gapIndex: Int) {
+        IconButton {
+            title = "Insert here"
+
+            css {
+                width = 32.px
+                height = 32.px
+                padding = 0.px
+                backgroundColor = NamedColor.white
+
+                hover {
+                    backgroundColor = NamedColor.white
+                }
+            }
+
+            onClick = {
+                onCreate(gapIndex)
+            }
+
+            icon("material-symbols:add-circle-outline") {
+                style = unsafeJso {
+                    fontSize = 1.5.em
+                }
+            }
         }
     }
 }
