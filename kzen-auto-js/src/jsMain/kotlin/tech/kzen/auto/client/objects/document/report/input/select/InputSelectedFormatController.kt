@@ -1,24 +1,20 @@
 package tech.kzen.auto.client.objects.document.report.input.select
 
+import emotion.react.css
 import js.objects.unsafeJso
-import kotlinx.browser.document
-import mui.material.InputLabel
-import mui.system.sx
 import react.ChildrenBuilder
 import react.State
+import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.objects.document.report.input.model.ReportInputStore
 import tech.kzen.auto.client.objects.document.report.input.select.model.InputSelectedState
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.react
-import tech.kzen.auto.client.wrap.select.ReactSelect
-import tech.kzen.auto.client.wrap.select.ReactSelectOption
+import tech.kzen.auto.client.wrap.select.SelectOption
+import tech.kzen.auto.client.wrap.select.muiAutocompleteField
 import tech.kzen.auto.common.objects.document.plugin.model.CommonPluginCoordinate
 import tech.kzen.auto.common.objects.document.plugin.model.ReportDefinerDetail
 import tech.kzen.auto.common.objects.document.report.spec.input.InputSelectionSpec
 import web.cssom.em
-import kotlin.js.Json
-import kotlin.js.json
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -99,7 +95,7 @@ class InputSelectedFormatController(
         val classNamesLabels = when {
             loadedFormats != null -> {
                 val loadedOptions = loadedFormats.map {
-                    val option: ReactSelectOption = unsafeJso {
+                    val option: SelectOption = unsafeJso {
                         value = it.coordinate.asString()
                         label = typeLabel(it)
                     }
@@ -112,7 +108,7 @@ class InputSelectedFormatController(
                 else {
                     listOf(
                         run {
-                            val option: ReactSelectOption = unsafeJso {
+                            val option: SelectOption = unsafeJso {
                                 value = CommonPluginCoordinate.defaultName
                                 label = "Default"
                             }
@@ -124,7 +120,7 @@ class InputSelectedFormatController(
 
             selectionProcessorDefinitionCoordinates != null ->
                 selectionProcessorDefinitionCoordinates.map {
-                    val option: ReactSelectOption = unsafeJso {
+                    val option: SelectOption = unsafeJso {
                         value = it.name
                         label = it.asString()
                     }
@@ -152,52 +148,25 @@ class InputSelectedFormatController(
                     "Specify format for selected files"
             }
 
-            InputLabel {
-                sx {
-                    fontSize = 0.8.em
+            div {
+                css {
                     width = 16.em
                 }
 
-                +"Format"
-
-                ReactSelect::class.react {
-                    value =
+                muiAutocompleteField(
+                    label = "Format",
+                    options = selectOptions,
+                    selectedOption =
                         if (classNamesLabels.size == 1) {
                             classNamesLabels.single()
                         }
                         else {
                             null
-                        }
-
-                    options = selectOptions
-
-                    onChange = {
-                        onValueChange(it.value)
-                    }
-
-                    onMenuOpen = {
-                        loadIfRequired()
-                    }
-
-                    isDisabled = props.editDisabled || (selectionEmpty && !singleOption)
-
-                    // https://stackoverflow.com/a/51844542/1941359
-                    val styleTransformer: (Json, Json) -> Json = { base, _ ->
-                        val transformed = json()
-                        transformed.add(base)
-                        transformed["background"] = "transparent"
-                        transformed["borderWidth"] = "2px"
-                        transformed
-                    }
-
-                    val reactStyles = json()
-                    reactStyles["control"] = styleTransformer
-                    styles = reactStyles
-
-                    // NB: this was causing clipping when used in ConditionalStepDisplay table,
-                    //   see: https://react-select.com/advanced#portaling
-                    menuPortalTarget = document.body!!
-                }
+                        },
+                    onSelect = { onValueChange(it.value) },
+                    onOpen = { loadIfRequired() },
+                    disabled = props.editDisabled || (selectionEmpty && !singleOption),
+                    disableClearable = true)
             }
         }
     }

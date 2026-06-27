@@ -3,12 +3,9 @@ package tech.kzen.auto.client.objects.document.script.display.edit
 
 import emotion.react.css
 import js.objects.unsafeJso
-import mui.material.MenuItem
-import mui.material.Select
 import mui.material.Size
 import mui.material.TextField
 import react.ChildrenBuilder
-import react.Key
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.onChange
@@ -18,8 +15,8 @@ import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
-import tech.kzen.auto.client.wrap.select.ReactSelectOption
-import tech.kzen.auto.client.wrap.select.reactSelectField
+import tech.kzen.auto.client.wrap.select.SelectOption
+import tech.kzen.auto.client.wrap.select.muiAutocompleteField
 import tech.kzen.auto.common.objects.document.feature.FeatureDocument
 import tech.kzen.auto.common.objects.document.feature.TargetSpecDefiner
 import tech.kzen.auto.common.objects.document.feature.TargetType
@@ -339,41 +336,29 @@ class TargetSpecEditor(
         val targetType = state.targetType
             ?: return
 
-        div {
-            Select {
-                css {
-                    fontSize = 0.8.em
-                }
-
-                value = targetType.name
-
-                onChange = { event, _ ->
-                    val target: dynamic = event.target
-                    val value = target.value as String
-                    onTypeChange(TargetType.valueOf(value))
-                }
-
-                for (type in TargetType.entries) {
-                    MenuItem {
-                        key = Key(type.name)
-                        value = type.name
-
-                        when (type) {
-                            TargetType.Focus ->
-                                +"Currently focused"
-
-                            TargetType.Text ->
-                                +"Containing text"
-
-                            TargetType.Xpath ->
-                                +"Matching XPath"
-
-                            TargetType.Visual ->
-                                +"Visual"
-                        }
+        val typeOptions = TargetType.entries
+            .map { type ->
+                val option: SelectOption = unsafeJso {
+                    value = type.name
+                    label = when (type) {
+                        TargetType.Focus -> "Currently focused"
+                        TargetType.Text -> "Containing text"
+                        TargetType.Xpath -> "Matching XPath"
+                        TargetType.Visual -> "Visual"
                     }
                 }
+                option
             }
+            .toTypedArray()
+
+        div {
+            muiAutocompleteField(
+                label = "Target",
+                options = typeOptions,
+                selectedOption = typeOptions.find { it.value == targetType.name },
+                onSelect = { onTypeChange(TargetType.valueOf(it.value)) },
+                disableClearable = true,
+                autoHighlight = true)
         }
     }
 
@@ -402,7 +387,7 @@ class TargetSpecEditor(
 
         val selectOptions = visualTargets
                 .map {
-                    val option: ReactSelectOption = unsafeJso {
+                    val option: SelectOption = unsafeJso {
                         value = it.asString()
                         label = it.documentPath.name.value
                     }
@@ -410,9 +395,11 @@ class TargetSpecEditor(
                 }
                 .toTypedArray()
 
-        reactSelectField(
-            selectedOption = selectOptions.find { it.value == state.targetLocation?.asString() },
+        muiAutocompleteField(
+            label = "Feature",
             options = selectOptions,
-            onSelect = { onVisualFeatureChange(ObjectLocation.parse(it.value)) })
+            selectedOption = selectOptions.find { it.value == state.targetLocation?.asString() },
+            onSelect = { onVisualFeatureChange(ObjectLocation.parse(it.value)) },
+            disableClearable = true)
     }
 }

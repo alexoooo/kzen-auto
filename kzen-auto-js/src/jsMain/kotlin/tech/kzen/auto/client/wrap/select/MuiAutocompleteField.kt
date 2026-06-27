@@ -23,13 +23,13 @@ private fun objectAssign(target: Any, source: Any) {
 }
 
 
-// A labelled MUI Autocomplete select/filter field — the ergonomic, consistently-labelled replacement for
-// a bare react-select. The floating material `label` matches the look of the project's TextField editors
-// (TextAttributeEditor etc.), and Autocomplete closes its listbox on click-away natively. Generic over the
-// option type T (carry value + display label in T and expose them via optionLabel / optionsEqual).
+// A labelled MUI Autocomplete select/filter field — the single, consistently-labelled select used across the
+// client (the ergonomic replacement for a bare react-select). Options carry their identity + display text as
+// a SelectOption (value/label); selection identity and equality are by `value`.
 //
 // `Autocomplete` ships as `FC<AutocompleteProps<*>>` (star-projected), so it is cast to the concrete
-// FC<AutocompleteProps<T>> before invocation — the standard kotlin-wrappers idiom for generic components.
+// FC<AutocompleteProps<SelectOption>> before invocation — the standard kotlin-wrappers idiom for generic
+// components.
 //
 // `disablePortal` keeps the listbox inside the field's own DOM subtree (default false portals it to the
 // body to avoid clipping); a caller that wraps the field in a ClickAwayListener sets it true so option /
@@ -39,14 +39,13 @@ private fun objectAssign(target: Any, source: Any) {
 // with white — for fields that float over arbitrary content (e.g. the script canvas) so nothing ghosts
 // through. `onEscape` (meaningful only with `forceOpen`) is invoked when the user presses Escape: MUI's
 // Autocomplete preventDefault+stopPropagation's the Escape keydown, so a window-level listener never sees
-// it, and this onClose(escape) is the only signal a forced-open popover gets to cancel.
-fun <T> ChildrenBuilder.muiAutocompleteField(
+// it, and this onClose(escape) is the only signal a forced-open popover gets to cancel. `onOpen` fires when
+// the listbox opens — for selects that lazily load their options on first open.
+fun ChildrenBuilder.muiAutocompleteField(
     label: String,
-    options: Array<T>,
-    selectedOption: T?,
-    optionLabel: (T) -> String,
-    optionsEqual: (T, T) -> Boolean,
-    onSelect: (T) -> Unit,
+    options: Array<SelectOption>,
+    selectedOption: SelectOption?,
+    onSelect: (SelectOption) -> Unit,
     disableClearable: Boolean = false,
     autoFocus: Boolean = false,
     autoHighlight: Boolean = false,
@@ -55,14 +54,15 @@ fun <T> ChildrenBuilder.muiAutocompleteField(
     disablePortal: Boolean = false,
     forceOpen: Boolean = false,
     opaqueBackground: Boolean = false,
+    onOpen: (() -> Unit)? = null,
     onEscape: (() -> Unit)? = null
 ) {
-    val component = Autocomplete.unsafeCast<FC<AutocompleteProps<T>>>()
+    val component = Autocomplete.unsafeCast<FC<AutocompleteProps<SelectOption>>>()
     component {
-        this.options = options.unsafeCast<ReadonlyArray<T>>()
+        this.options = options.unsafeCast<ReadonlyArray<SelectOption>>()
         this.value = selectedOption
-        this.getOptionLabel = optionLabel
-        this.isOptionEqualToValue = optionsEqual
+        this.getOptionLabel = { it.label }
+        this.isOptionEqualToValue = { a, b -> a.value == b.value }
         this.disableClearable = disableClearable
         // Auto-highlight the first (top) filtered option as the user types so Enter selects it without first
         // arrow-down'ing or hovering. MUI's default is false (Enter does nothing until something is
@@ -72,6 +72,10 @@ fun <T> ChildrenBuilder.muiAutocompleteField(
         this.disabled = disabled
         this.disablePortal = disablePortal
         this.fullWidth = true
+
+        if (onOpen != null) {
+            this.onOpen = { onOpen() }
+        }
 
         // Pin the listbox open for the lifetime of the field (used by transient popovers that ARE the
         // dropdown). This removes the input-click toggle: clicking the already-focused input can't collapse
@@ -88,9 +92,9 @@ fun <T> ChildrenBuilder.muiAutocompleteField(
         }
 
         // onChange is (event, value: Any, reason, details) — value is the picked option (non-null here
-        // since the field is never cleared while editing); narrow it back to T.
+        // since the field is never cleared while editing); narrow it back to SelectOption.
         this.onChange = { _, picked, _, _ ->
-            onSelect(picked.unsafeCast<T>())
+            onSelect(picked.unsafeCast<SelectOption>())
         }
 
         this.renderInput = { params ->
@@ -117,6 +121,42 @@ fun <T> ChildrenBuilder.muiAutocompleteField(
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+
+// Multi-select sibling of muiAutocompleteField: an inline-labelled MUI Autocomplete with `multiple = true`,
+// rendering the selection as removable chips. `onChange` receives the full new selection array (MUI delivers
+// the complete set on every add/remove), so callers diff against the prior set as needed.
+fun ChildrenBuilder.muiAutocompleteMultiField(
+    label: String,
+    options: Array<SelectOption>,
+    selectedOptions: Array<SelectOption>,
+    onChange: (Array<SelectOption>) -> Unit,
+    disabled: Boolean = false
+) {
+    val component = Autocomplete.unsafeCast<FC<AutocompleteProps<SelectOption>>>()
+    component {
+        this.multiple = true
+        this.options = options.unsafeCast<ReadonlyArray<SelectOption>>()
+        // `value` is typed for the single-select projection above; for multiple it is the selection array.
+        this.asDynamic().value = selectedOptions
+        this.getOptionLabel = { it.label }
+        this.isOptionEqualToValue = { a, b -> a.value == b.value }
+        this.disabled = disabled
+        this.fullWidth = true
+
+        this.onChange = { _, picked, _, _ ->
+            onChange(picked.unsafeCast<Array<SelectOption>>())
+        }
+
+        this.renderInput = { params ->
+            TextField.create {
+                objectAssign(this, params)
+                this.label = ReactNode(label)
+                this.size = Size.small
             }
         }
     }

@@ -3,7 +3,6 @@ package tech.kzen.auto.client.objects.document.script.step.control
 import emotion.react.css
 import js.objects.unsafeJso
 import mui.material.IconButton
-import mui.material.InputLabel
 import react.ChildrenBuilder
 import react.Key
 import react.State
@@ -20,8 +19,8 @@ import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.client.wrap.iconify.icon
-import tech.kzen.auto.client.wrap.select.ReactSelectOption
-import tech.kzen.auto.client.wrap.select.reactSelectField
+import tech.kzen.auto.client.wrap.select.SelectOption
+import tech.kzen.auto.client.wrap.select.muiAutocompleteField
 import tech.kzen.auto.common.objects.document.flow.FlowConventions
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.objects.document.script.model.RunStepInstructions
@@ -317,9 +316,9 @@ class RunStepArgumentsEditor(
         val predecessors = state.predecessors ?: return
         val parameterNames = state.parameterNames ?: return
 
-        val selectOptions: Array<ReactSelectOption> = predecessors
+        val selectOptions: Array<SelectOption> = predecessors
             .map { location ->
-                val option: ReactSelectOption = unsafeJso {
+                val option: SelectOption = unsafeJso {
                     this.value = location.asString()
                     this.label = location.objectPath.name.value
                 }
@@ -346,30 +345,24 @@ class RunStepArgumentsEditor(
 
     private fun ChildrenBuilder.renderParameter(
         parameterName: String,
-        selectOptions: Array<ReactSelectOption>,
+        selectOptions: Array<SelectOption>,
         values: PersistentMap<String, ObjectLocation>
     ) {
         val selectedValue = values[parameterName]
         val selectedOption = selectOptions.find { it.value == selectedValue?.asString() }
 
-        InputLabel {
-            css {
-                fontSize = 0.8.em
-            }
-
-            +parameterName
-
-            reactSelectField(
-                selectedOption = selectedOption,
-                options = selectOptions,
-                onSelect = { onValueChange(parameterName, ObjectLocation.parse(it.value)) })
-        }
+        muiAutocompleteField(
+            label = parameterName,
+            options = selectOptions,
+            selectedOption = selectedOption,
+            onSelect = { onValueChange(parameterName, ObjectLocation.parse(it.value)) },
+            disableClearable = true)
     }
 
 
     private fun ChildrenBuilder.renderUnusedParameter(
         parameterName: String,
-        selectOptions: Array<ReactSelectOption>,
+        selectOptions: Array<SelectOption>,
         values: PersistentMap<String, ObjectLocation>
     ) {
         val selectedValue = values[parameterName]

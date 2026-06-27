@@ -11,7 +11,7 @@ import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.material.ClickAwayListener
-import tech.kzen.auto.client.wrap.select.ReactSelectOption
+import tech.kzen.auto.client.wrap.select.SelectOption
 import tech.kzen.auto.client.wrap.select.muiAutocompleteField
 import tech.kzen.lib.common.model.location.ObjectLocation
 import web.cssom.Display
@@ -138,7 +138,7 @@ class StepReferenceController(
         val selectOptions = props
             .stepReferences
             .map {
-                val option: ReactSelectOption = unsafeJso {
+                val option: SelectOption = unsafeJso {
                     value = it.asString()
                     label = it.objectPath.name.value
                 }
@@ -156,8 +156,6 @@ class StepReferenceController(
             options = selectOptions,
             // Fresh each open — the popover inserts on pick rather than holding a selection.
             selectedOption = null,
-            optionLabel = { it.label },
-            optionsEqual = { a, b -> a.value == b.value },
             onSelect = { props.onAdded(ObjectLocation.parse(it.value)) },
             autoFocus = true,
             disabled = props.editDisabled,

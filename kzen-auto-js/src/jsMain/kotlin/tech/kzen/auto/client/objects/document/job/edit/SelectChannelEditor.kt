@@ -1,8 +1,6 @@
 package tech.kzen.auto.client.objects.document.job.edit
 
-import emotion.react.css
 import js.objects.unsafeJso
-import mui.material.InputLabel
 import react.ChildrenBuilder
 import react.State
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor
@@ -12,8 +10,8 @@ import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RComponent
 import tech.kzen.auto.client.wrap.react
-import tech.kzen.auto.client.wrap.select.ReactSelectOption
-import tech.kzen.auto.client.wrap.select.reactSelectField
+import tech.kzen.auto.client.wrap.select.SelectOption
+import tech.kzen.auto.client.wrap.select.muiAutocompleteField
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.lib.common.model.attribute.AttributePath
@@ -30,7 +28,6 @@ import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.common.service.store.MirroredGraphStore
-import web.cssom.em
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -186,7 +183,7 @@ class SelectChannelEditor(
 
         val selectOptions = options
             .map { channelPath ->
-                val option: ReactSelectOption = unsafeJso {
+                val option: SelectOption = unsafeJso {
                     value = channelPath.asString()
                     label = channelPath.name.value
                 }
@@ -194,18 +191,12 @@ class SelectChannelEditor(
             }
             .toTypedArray()
 
-        InputLabel {
-            css {
-                fontSize = 0.8.em
-            }
-
-            +formattedLabel()
-
-            reactSelectField(
-                selectedOption = selectOptions.find { it.value == state.value },
-                options = selectOptions,
-                onSelect = { onValueChange(it.value) })
-        }
+        muiAutocompleteField(
+            label = formattedLabel(),
+            options = selectOptions,
+            selectedOption = selectOptions.find { it.value == state.value },
+            onSelect = { onValueChange(it.value) },
+            disableClearable = true)
     }
 
 

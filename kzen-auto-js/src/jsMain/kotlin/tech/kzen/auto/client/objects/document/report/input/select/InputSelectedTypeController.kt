@@ -2,22 +2,18 @@ package tech.kzen.auto.client.objects.document.report.input.select
 
 import emotion.react.css
 import js.objects.unsafeJso
-import kotlinx.browser.document
-import mui.material.InputLabel
 import react.ChildrenBuilder
 import react.State
+import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.report.input.model.ReportInputStore
 import tech.kzen.auto.client.objects.document.report.input.select.model.InputSelectedState
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.react
-import tech.kzen.auto.client.wrap.select.ReactSelect
-import tech.kzen.auto.client.wrap.select.ReactSelectOption
+import tech.kzen.auto.client.wrap.select.SelectOption
+import tech.kzen.auto.client.wrap.select.muiAutocompleteField
 import tech.kzen.auto.common.objects.document.report.spec.input.InputSelectionSpec
 import tech.kzen.lib.platform.ClassName
 import tech.kzen.lib.platform.ClassNames.topLevelWords
 import web.cssom.em
-import kotlin.js.Json
-import kotlin.js.json
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -76,7 +72,7 @@ class InputSelectedTypeController(
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
         val dataType = props.spec.dataType
-        val selectedOption: ReactSelectOption = unsafeJso {
+        val selectedOption: SelectOption = unsafeJso {
             value = dataType.asString()
             label = typeLabel(dataType)
         }
@@ -85,7 +81,7 @@ class InputSelectedTypeController(
 
         val classNamesLabels =
             loadedDataTypes?.map {
-                val option: ReactSelectOption = unsafeJso {
+                val option: SelectOption = unsafeJso {
                     value = it.asString()
                     label = typeLabel(it)
                 }
@@ -96,45 +92,19 @@ class InputSelectedTypeController(
         val selectOptions = classNamesLabels
             .toTypedArray()
 
-        InputLabel {
+        div {
             css {
-                fontSize = 0.8.em
                 width = 16.em
             }
 
-            +"Data Type"
-
-            ReactSelect::class.react {
-                value = selectedOption
-                options = selectOptions
-
-                onChange = {
-                    onValueChange(it.value)
-                }
-
-                onMenuOpen = {
-                    loadIfRequired()
-                }
-
-                isDisabled = props.editDisabled
-
-                // https://stackoverflow.com/a/51844542/1941359
-                val styleTransformer: (Json, Json) -> Json = { base, _ ->
-                    val transformed = json()
-                    transformed.add(base)
-                    transformed["background"] = "transparent"
-                    transformed["borderWidth"] = "2px"
-                    transformed
-                }
-
-                val reactStyles = json()
-                reactStyles["control"] = styleTransformer
-                styles = reactStyles
-
-                // NB: this was causing clipping when used in ConditionalStepDisplay table,
-                //   see: https://react-select.com/advanced#portaling
-                menuPortalTarget = document.body!!
-            }
+            muiAutocompleteField(
+                label = "Data Type",
+                options = selectOptions,
+                selectedOption = selectedOption,
+                onSelect = { onValueChange(it.value) },
+                onOpen = { loadIfRequired() },
+                disabled = props.editDisabled,
+                disableClearable = true)
         }
     }
 }

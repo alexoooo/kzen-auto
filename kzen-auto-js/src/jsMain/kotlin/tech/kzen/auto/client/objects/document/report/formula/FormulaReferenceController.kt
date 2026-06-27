@@ -2,24 +2,19 @@ package tech.kzen.auto.client.objects.document.report.formula
 
 import emotion.react.css
 import js.objects.unsafeJso
-import kotlinx.browser.document
 import mui.material.IconButton
-import mui.material.InputLabel
 import react.ChildrenBuilder
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.iconify.icon
-import tech.kzen.auto.client.wrap.react
-import tech.kzen.auto.client.wrap.select.ReactSelect
-import tech.kzen.auto.client.wrap.select.ReactSelectOption
+import tech.kzen.auto.client.wrap.select.SelectOption
+import tech.kzen.auto.client.wrap.select.muiAutocompleteField
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import web.cssom.Display
 import web.cssom.WhiteSpace
 import web.cssom.em
-import kotlin.js.Json
-import kotlin.js.json
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -151,7 +146,7 @@ class FormulaReferenceController(
             .inputColumns
             .values
             .map {
-                val option: ReactSelectOption = unsafeJso {
+                val option: SelectOption = unsafeJso {
                     value = it.asString()
                     label = it.render()
                 }
@@ -159,39 +154,14 @@ class FormulaReferenceController(
             }
             .toTypedArray()
 
-        InputLabel {
-            css {
-                fontSize = 0.8.em
-            }
-
-            +"Column"
-
-            ReactSelect::class.react {
-                value = selectOptions.find { HeaderLabel.ofString(it.value) == state.selectedColumn }
-                options = selectOptions
-
-                onChange = {
-                    onValueChange(HeaderLabel.ofString(it.value))
-                }
-
-                isDisabled = props.editDisabled
-
-                // https://stackoverflow.com/a/51844542/1941359
-                val styleTransformer: (Json, Json) -> Json = { base, _ ->
-                    val transformed = json()
-                    transformed.add(base)
-                    transformed["background"] = "transparent"
-                    transformed
-                }
-
-                val reactStyles = json()
-                reactStyles["control"] = styleTransformer
-                styles = reactStyles
-
-                // NB: this was causing clipping when used in ConditionalStepDisplay table,
-                //   see: https://react-select.com/advanced#portaling
-                menuPortalTarget = document.body!!
-            }
-        }
+        muiAutocompleteField(
+            label = "Column",
+            options = selectOptions,
+            selectedOption = selectOptions.find { HeaderLabel.ofString(it.value) == state.selectedColumn },
+            onSelect = { onValueChange(HeaderLabel.ofString(it.value)) },
+            disabled = props.editDisabled,
+            disableClearable = true,
+            autoFocus = true,
+            openOnFocus = true)
     }
 }

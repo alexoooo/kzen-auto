@@ -2,9 +2,7 @@ package tech.kzen.auto.client.objects.document.report.analysis.pivot
 
 import emotion.react.css
 import js.objects.unsafeJso
-import kotlinx.browser.document
 import mui.material.IconButton
-import mui.material.InputLabel
 import react.ChildrenBuilder
 import react.Props
 import react.State
@@ -13,17 +11,14 @@ import tech.kzen.auto.client.objects.document.report.analysis.model.ReportAnalys
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.iconify.icon
-import tech.kzen.auto.client.wrap.react
-import tech.kzen.auto.client.wrap.select.ReactSelect
-import tech.kzen.auto.client.wrap.select.ReactSelectOption
+import tech.kzen.auto.client.wrap.select.SelectOption
+import tech.kzen.auto.client.wrap.select.muiAutocompleteField
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotSpec
 import web.cssom.Display
 import web.cssom.em
-import kotlin.js.Json
-import kotlin.js.json
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -130,7 +125,7 @@ class AnalysisPivotValueAddController(
     private fun ChildrenBuilder.renderSelect(unusedOptions: List<HeaderLabel>, editDisabled: Boolean) {
         val selectOptions = unusedOptions
             .map {
-                val option: ReactSelectOption = unsafeJso {
+                val option: SelectOption = unsafeJso {
                     value = it.asString()
                     label = it.render()
                 }
@@ -138,41 +133,15 @@ class AnalysisPivotValueAddController(
             }
             .toTypedArray()
 
-        InputLabel {
-            css {
-                fontSize = 0.8.em
-            }
-
-            +"Column name"
-
-            ReactSelect::class.react {
-                value = selectOptions.find { HeaderLabel.ofString(it.value) == state.selectedColumn }
-
-                options = selectOptions
-
-                onChange = {
-                    onColumnSelected(HeaderLabel.ofString(it.value))
-                }
-
-                isDisabled = editDisabled
-
-                // https://stackoverflow.com/a/51844542/1941359
-                val styleTransformer: (Json, Json) -> Json = { base, _ ->
-                    val transformed = json()
-                    transformed.add(base)
-                    transformed["background"] = "transparent"
-                    transformed
-                }
-
-                val reactStyles = json()
-                reactStyles["control"] = styleTransformer
-                styles = reactStyles
-
-                // NB: this was causing clipping when used in ConditionalStepDisplay table,
-                //   see: https://react-select.com/advanced#portaling
-                menuPortalTarget = document.body!!
-            }
-        }
+        muiAutocompleteField(
+            label = "Column name",
+            options = selectOptions,
+            selectedOption = selectOptions.find { HeaderLabel.ofString(it.value) == state.selectedColumn },
+            onSelect = { onColumnSelected(HeaderLabel.ofString(it.value)) },
+            disabled = editDisabled,
+            disableClearable = true,
+            autoFocus = true,
+            openOnFocus = true)
     }
 
 

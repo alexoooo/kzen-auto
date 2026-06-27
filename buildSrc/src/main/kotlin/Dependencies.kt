@@ -34,7 +34,6 @@ const val lodashVersion = "4.18.1"
 const val cropperJsVersion = "2.1.1"
 const val babelCoreVersion = "7.29.0"
 
-const val reactSelectVersion = "5.10.2"
 const val iconifyReactVersion = "6.0.2"
 const val iconifyJsonMaterialSymbolsVersion = "1.2.79"
 const val esbuildVersion = "0.28.1"

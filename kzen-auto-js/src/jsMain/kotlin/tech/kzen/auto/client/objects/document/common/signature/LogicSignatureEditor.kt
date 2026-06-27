@@ -28,7 +28,7 @@ import tech.kzen.auto.client.util.ClientInputUtils
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.iconify.icon
-import tech.kzen.auto.client.wrap.select.ReactSelectOption
+import tech.kzen.auto.client.wrap.select.SelectOption
 import tech.kzen.auto.client.wrap.select.muiAutocompleteField
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
@@ -725,7 +725,7 @@ class LogicSignatureEditor:
 
                 val typeOptions = LogicTypeOptions.classOptions
                     .map { (value, simpleLabel) ->
-                        val option: ReactSelectOption = unsafeJso {
+                        val option: SelectOption = unsafeJso {
                             this.value = value
                             this.label = simpleLabel
                         }
@@ -737,8 +737,6 @@ class LogicSignatureEditor:
                     label = "Type",
                     options = typeOptions,
                     selectedOption = typeOptions.find { it.value == parameter.className },
-                    optionLabel = { it.label },
-                    optionsEqual = { a, b -> a.value == b.value },
                     onSelect = { onTypeChange(parameter, it.value, parameter.nullable) },
                     disableClearable = true,
                     autoHighlight = true)

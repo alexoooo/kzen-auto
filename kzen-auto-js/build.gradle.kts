@@ -65,7 +65,6 @@ kotlin {
 
             implementation(npm("cropperjs", cropperJsVersion))
             implementation(npm("lodash", lodashVersion))
-            implementation(npm("react-select", reactSelectVersion))
             implementation(npm("@iconify/react", iconifyReactVersion))
             // Icon catalogue JSON served by the JVM backend (see kzen-auto-jvm copyIconCollection task).
             // Nothing in Kotlin imports this — it only lands icons.json on disk for the server to serve —

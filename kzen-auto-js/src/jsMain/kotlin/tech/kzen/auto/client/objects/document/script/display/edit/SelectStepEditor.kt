@@ -1,8 +1,6 @@
 package tech.kzen.auto.client.objects.document.script.display.edit
 
-import emotion.react.css
 import js.objects.unsafeJso
-import mui.material.InputLabel
 import react.ChildrenBuilder
 import react.State
 import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
@@ -17,8 +15,8 @@ import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
-import tech.kzen.auto.client.wrap.select.ReactSelectOption
-import tech.kzen.auto.client.wrap.select.reactSelectField
+import tech.kzen.auto.client.wrap.select.SelectOption
+import tech.kzen.auto.client.wrap.select.muiAutocompleteField
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -33,7 +31,6 @@ import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.common.service.store.MirroredGraphStore
-import web.cssom.em
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -230,9 +227,9 @@ class SelectStepEditor(
         val predecessors = state.predecessors
             ?: return
 
-        val selectOptions: Array<ReactSelectOption> = predecessors
+        val selectOptions: Array<SelectOption> = predecessors
             .map { location ->
-                val option: ReactSelectOption = unsafeJso {
+                val option: SelectOption = unsafeJso {
                     this.value = location.asString()
                     this.label = location.objectPath.name.value
                 }
@@ -242,18 +239,12 @@ class SelectStepEditor(
 
         val selectedValue = selectOptions.find { it.value == state.value?.asString() }
 
-        InputLabel {
-            css {
-                fontSize = 0.8.em
-            }
-
-            +formattedLabel()
-
-            reactSelectField(
-                selectedOption = selectedValue,
-                options = selectOptions,
-                onSelect = { onValueChange(ObjectLocation.parse(it.value)) })
-        }
+        muiAutocompleteField(
+            label = formattedLabel(),
+            options = selectOptions,
+            selectedOption = selectedValue,
+            onSelect = { onValueChange(ObjectLocation.parse(it.value)) },
+            disableClearable = true)
     }
 
 

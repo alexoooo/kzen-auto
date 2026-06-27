@@ -1,11 +1,11 @@
 package tech.kzen.auto.client.objects.document.custom.view
 
 import emotion.react.css
+import js.objects.unsafeJso
 import mui.material.*
 import mui.material.Size
 import mui.system.sx
 import react.ChildrenBuilder
-import react.Key
 import react.Props
 import react.State
 import react.dom.html.ReactHTML.div
@@ -14,6 +14,8 @@ import tech.kzen.auto.client.objects.document.custom.CustomTheme
 import tech.kzen.auto.client.objects.document.custom.model.CustomState
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.iconify.icon
+import tech.kzen.auto.client.wrap.select.SelectOption
+import tech.kzen.auto.client.wrap.select.muiAutocompleteField
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.model.location.ObjectLocation
 import web.cssom.*
@@ -189,40 +191,30 @@ class CustomCreate(
 
 
     private fun ChildrenBuilder.renderTypeSelect() {
+        val typeOptions = props.prototypes
+            .map { prototype ->
+                val option: SelectOption = unsafeJso {
+                    value = prototype.toReference().asString()
+                    label = prototype.objectPath.name.value
+                }
+                option
+            }
+            .toTypedArray()
+
+        val selectedReference = state.selectedPrototype?.toReference()?.asString()
+
         div {
             css {
                 marginBottom = 0.75.em
             }
 
-            div {
-                css {
-                    fontSize = 0.85.em
-                    marginBottom = 0.25.em
-                }
-                +"Type"
-            }
-
-            Select {
-                sx {
-                    minWidth = 200.px
-                }
-                size = Size.small
-                value = state.selectedPrototype?.toReference()?.asString() ?: ""
-
-                onChange = { event, _ ->
-                    onPrototypeChange(event.target.asDynamic().value as String)
-                }
-
-                for (prototype in props.prototypes) {
-                    val reference = prototype.toReference().asString()
-
-                    MenuItem {
-                        key = Key(reference)
-                        value = reference
-                        +prototype.objectPath.name.value
-                    }
-                }
-            }
+            muiAutocompleteField(
+                label = "Type",
+                options = typeOptions,
+                selectedOption = typeOptions.find { it.value == selectedReference },
+                onSelect = { onPrototypeChange(it.value) },
+                disableClearable = true,
+                autoHighlight = true)
         }
     }
 

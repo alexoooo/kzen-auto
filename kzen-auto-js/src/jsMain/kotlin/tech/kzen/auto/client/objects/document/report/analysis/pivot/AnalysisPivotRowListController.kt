@@ -2,7 +2,6 @@ package tech.kzen.auto.client.objects.document.report.analysis.pivot
 
 import emotion.react.css
 import js.objects.unsafeJso
-import kotlinx.browser.document
 import react.ChildrenBuilder
 import react.State
 import react.dom.html.ReactHTML.div
@@ -10,16 +9,13 @@ import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.objects.document.report.ReportController
 import tech.kzen.auto.client.objects.document.report.analysis.model.ReportAnalysisStore
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.react
-import tech.kzen.auto.client.wrap.select.ReactSelectMulti
-import tech.kzen.auto.client.wrap.select.ReactSelectOption
+import tech.kzen.auto.client.wrap.select.SelectOption
+import tech.kzen.auto.client.wrap.select.muiAutocompleteMultiField
 import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotSpec
 import web.cssom.LineStyle
 import web.cssom.em
-import kotlin.js.Json
-import kotlin.js.json
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -38,14 +34,14 @@ class AnalysisPivotRowListController(
     RPureComponent<AnalysisPivotRowListControllerProps, State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    private fun onOptionsChange(options: Array<ReactSelectOption>?) {
+    private fun onOptionsChange(options: Array<SelectOption>) {
         val oldRows = props.spec.rows
 
-        if (options.isNullOrEmpty() && oldRows.values.size > 1) {
+        if (options.isEmpty() && oldRows.values.size > 1) {
             props.analysisStore.clearPivotRowsAsync()
         }
         else {
-            val newRows = options?.map { HeaderLabel.ofString(it.value) } ?: listOf()
+            val newRows = options.map { HeaderLabel.ofString(it.value) }
 
             val added = newRows.filter { it !in oldRows.values }
             val removed = oldRows.values.filter { it !in newRows }
@@ -85,47 +81,28 @@ class AnalysisPivotRowListController(
                 +"Rows"
             }
 
-            ReactSelectMulti::class.react {
-                isMulti = true
-
-                value = props.spec.rows.values.map {
-                    val option: ReactSelectOption = unsafeJso {
-                        value = it.asString()
-                        label = it.render()
-                    }
-                    option
-                }.toTypedArray()
-
-                options = columnListing.values.map {
-                    val option: ReactSelectOption = unsafeJso {
-                        value = it.asString()
-                        label = it.render()
-                    }
-                    option
-                }.toTypedArray()
-
-                onChange = {
-                    onOptionsChange(it)
+            val selectedOptions = props.spec.rows.values.map {
+                val option: SelectOption = unsafeJso {
+                    value = it.asString()
+                    label = it.render()
                 }
+                option
+            }.toTypedArray()
 
-                // https://stackoverflow.com/a/51844542/1941359
-                val styleTransformer: (Json, Json) -> Json = { base, _ ->
-                    val transformed = json()
-                    transformed.add(base)
-                    transformed["background"] = "transparent"
-                    transformed
+            val columnOptions = columnListing.values.map {
+                val option: SelectOption = unsafeJso {
+                    value = it.asString()
+                    label = it.render()
                 }
+                option
+            }.toTypedArray()
 
-                val reactStyles = json()
-                reactStyles["control"] = styleTransformer
-                styles = reactStyles
-
-                // NB: this was causing clipping when used in ConditionalStepDisplay table,
-                //   see: https://react-select.com/advanced#portaling
-                menuPortalTarget = document.body!!
-
-                isDisabled = props.runningOrLoading
-            }
+            muiAutocompleteMultiField(
+                label = "Rows",
+                options = columnOptions,
+                selectedOptions = selectedOptions,
+                onChange = { onOptionsChange(it) },
+                disabled = props.runningOrLoading)
         }
     }
 }

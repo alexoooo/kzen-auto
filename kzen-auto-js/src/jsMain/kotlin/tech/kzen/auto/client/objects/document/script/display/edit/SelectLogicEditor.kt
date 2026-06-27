@@ -3,7 +3,6 @@ package tech.kzen.auto.client.objects.document.script.display.edit
 import emotion.react.css
 import js.objects.unsafeJso
 import mui.material.IconButton
-import mui.material.InputLabel
 import react.ChildrenBuilder
 import react.State
 import react.dom.html.ReactHTML.div
@@ -16,8 +15,8 @@ import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RComponent
 import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.react
-import tech.kzen.auto.client.wrap.select.ReactSelectOption
-import tech.kzen.auto.client.wrap.select.reactSelectField
+import tech.kzen.auto.client.wrap.select.SelectOption
+import tech.kzen.auto.client.wrap.select.muiAutocompleteField
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.custom.CustomConventions
 import tech.kzen.auto.common.util.AutoConventions
@@ -251,7 +250,7 @@ class SelectLogicEditor(
 
         val selectOptions = options
             .map {
-                val option: ReactSelectOption = unsafeJso {
+                val option: SelectOption = unsafeJso {
                     value = it.asString()
                     label = it.documentPath.name.value
                 }
@@ -259,47 +258,41 @@ class SelectLogicEditor(
             }
             .toTypedArray()
 
-        InputLabel {
+        div {
             css {
-                fontSize = 0.8.em
+                display = Display.flex
+                alignItems = AlignItems.center
             }
 
-            +formattedLabel()
-
+            // The select grows; minWidth 0 lets it shrink so the launch button never overflows.
             div {
                 css {
-                    display = Display.flex
-                    alignItems = AlignItems.center
+                    flexGrow = number(1.0)
+                    minWidth = 0.px
                 }
 
-                // The select grows; minWidth 0 lets it shrink so the launch button never overflows.
-                div {
-                    css {
-                        flexGrow = number(1.0)
-                        minWidth = 0.px
-                    }
+                muiAutocompleteField(
+                    label = formattedLabel(),
+                    options = selectOptions,
+                    selectedOption = selectOptions.find { it.value == state.value?.asString() },
+                    onSelect = { onValueChange(ObjectLocation.parse(it.value)) },
+                    disableClearable = true)
+            }
 
-                    reactSelectField(
-                        selectedOption = selectOptions.find { it.value == state.value?.asString() },
-                        options = selectOptions,
-                        onSelect = { onValueChange(ObjectLocation.parse(it.value)) })
+            IconButton {
+                css {
+                    marginLeft = 0.25.em
+                }
+                title = "Open the selected script"
+                disabled = state.value == null
+
+                onClick = {
+                    onNavigateToSelected()
                 }
 
-                IconButton {
-                    css {
-                        marginLeft = 0.25.em
-                    }
-                    title = "Open the selected script"
-                    disabled = state.value == null
-
-                    onClick = {
-                        onNavigateToSelected()
-                    }
-
-                    icon("material-symbols:open-in-new") {
-                        style = unsafeJso {
-                            fontSize = 1.25.em
-                        }
+                icon("material-symbols:open-in-new") {
+                    style = unsafeJso {
+                        fontSize = 1.25.em
                     }
                 }
             }
