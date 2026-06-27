@@ -1,0 +1,14 @@
+# Declared Int result but the Result expression evaluates to String: the type mismatch surfaces as the
+# Result step's validation error (the expression is compiled against the declared return type).
+
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.Int
+      generics: []
+      nullable: false
+
+main.steps/Result:
+  is: ResultStep
+  code: '"not an int"'

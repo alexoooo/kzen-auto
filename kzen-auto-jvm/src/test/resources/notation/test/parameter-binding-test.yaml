@@ -1,5 +1,10 @@
 main:
   is: Script
+  results:
+    main:
+      class: kotlin.String
+      generics: []
+      nullable: false
 
 main.parameters/threshold:
   is: ParameterBinding
@@ -25,3 +30,8 @@ main.steps/Doubled:
 main.steps/FirstTag:
   is: FormulaStep
   code: tags.first()
+
+# Surfaces the parameter-derived value as the Script result (the observation point for the run tests).
+main.steps/Result:
+  is: ResultStep
+  code: FirstTag

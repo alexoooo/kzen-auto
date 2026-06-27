@@ -7,6 +7,7 @@ import tech.kzen.lib.common.exec.logic.LogicControl
 import tech.kzen.lib.common.exec.logic.LogicHandleFacade
 import tech.kzen.lib.common.exec.logic.LogicResourceScope
 import tech.kzen.lib.common.exec.logic.trace.LogicTraceHandle
+import tech.kzen.lib.common.exec.tuple.TupleDefinition
 import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.instance.GraphInstance
@@ -27,10 +28,23 @@ data class ScriptExecutionContext(
     val arguments: TupleValue,
     val scriptTree: ScriptTree,
     val scriptValidation: ScriptValidation,
-    val objectStableMapper: ObjectStableMapper
+    val objectStableMapper: ObjectStableMapper,
+    // The Script's declared result signature (parsed once from the `results` notation). A ResultStep
+    // type-checks its expression against and writes into the `main` component of this signature.
+    val resultSignature: TupleDefinition
 ) {
     fun stepModel(objectLocation: ObjectLocation): ActiveStepModel? {
         return activeScriptModel.steps[objectStableMapper.objectStableId(objectLocation)]
+    }
+
+
+    // Capture a Result step's value as the Script's result (last invoked wins). Only `main` for now.
+    fun setMainResult(value: Any?) {
+        activeScriptModel.resultValue = TupleValue.ofMain(value)
+    }
+
+    fun resultTupleValue(): TupleValue? {
+        return activeScriptModel.resultValue
     }
 
 

@@ -1,0 +1,17 @@
+# Two Result steps run in document order; the Script returns the value of the LAST one invoked (VB-style).
+
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.Int
+      generics: []
+      nullable: false
+
+main.steps/First:
+  is: ResultStep
+  code: 1
+
+main.steps/Second:
+  is: ResultStep
+  code: 2

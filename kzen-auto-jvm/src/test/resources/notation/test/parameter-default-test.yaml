@@ -3,6 +3,11 @@
 
 main:
   is: Script
+  results:
+    main:
+      class: kotlin.Int
+      generics: []
+      nullable: false
 
 main.parameters/threshold:
   is: ParameterBinding
@@ -13,5 +18,5 @@ main.parameters/threshold:
   default: 5
 
 main.steps/Echoed:
-  is: FormulaStep
+  is: ResultStep
   code: threshold

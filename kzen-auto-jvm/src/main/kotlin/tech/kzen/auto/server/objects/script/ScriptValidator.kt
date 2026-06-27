@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.objects.script
 
 import tech.kzen.auto.common.api.CommonRestApi
+import tech.kzen.auto.common.objects.document.script.ResultSignatureDefiner
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.objects.document.script.model.ScriptTree
 import tech.kzen.auto.common.objects.document.script.model.ScriptValidation
@@ -23,6 +24,7 @@ import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.service.context.GraphCreator
 import tech.kzen.lib.common.service.context.environment.GraphEnvironment
+import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.common.service.store.LocalGraphStore
 
 
@@ -47,10 +49,15 @@ class ScriptValidator(
 
             val scriptTree = ScriptTree.read(documentPath, graphDefinition)
             val stepValidationBuffer = mutableMapOf<ObjectPath, StepValidation>()
+            val resultSignature = ResultSignatureDefiner.parse(
+                graphNotation.firstAttribute(
+                    documentPath.toObjectLocation(NotationConventions.mainObjectPath),
+                    ScriptConventions.resultsAttributePath))
             val scriptDefinitionContext = ScriptDefinitionContext(
                 scriptTree,
                 ScriptValidation(stepValidationBuffer),
-                objectRegistryScan)
+                objectRegistryScan,
+                resultSignature)
 
             val stepObjectLocations = documentNotation
                 .objects

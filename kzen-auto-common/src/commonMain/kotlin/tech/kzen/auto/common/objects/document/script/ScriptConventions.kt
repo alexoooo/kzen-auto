@@ -31,6 +31,12 @@ object ScriptConventions {
     val itemAttributeName = AttributeName("item")
     val itemAttributePath = AttributePath.ofName(itemAttributeName)
 
+    // The Script's result signature: a `results` map (component name -> TypeMetadata) parsed by
+    // ResultSignatureDefiner into the output TupleDefinition. Not a live step object (unlike parameters) —
+    // it is plain data on the main Script object declaring what the Script returns; empty/absent => void.
+    val resultsAttributeName = AttributeName("results")
+    val resultsAttributePath = AttributePath.ofName(resultsAttributeName)
+
     val instructionsAttributeName = AttributeName("instructions")
     val instructionsAttributePath = AttributePath.ofName(instructionsAttributeName)
 

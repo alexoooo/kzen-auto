@@ -1,0 +1,40 @@
+# The two branches yield different value types (String vs Int), so the If's joined `main` type widens to the
+# only guaranteed common supertype, Any. The If is still referenceable, but a Result step declared as String
+# referencing it (`Branch`) now fails with a meaningful type mismatch (Any !-> String) rather than an
+# "unresolved reference". Making the branches uniform would give a precise, assignable type.
+
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.String
+      generics: []
+      nullable: false
+
+main.parameters/n:
+  is: ParameterBinding
+  type:
+    class: kotlin.Int
+    generics: []
+    nullable: false
+  default: 1
+
+main.steps/Positive:
+  is: FormulaStep
+  code: "n > 0"
+
+main.steps/Branch:
+  is: IfStep
+  condition: main.steps/Positive
+
+main.steps/Branch.then/Text:
+  is: TextLiteralStep
+  value: "yes"
+
+main.steps/Branch.else/Number:
+  is: FormulaStep
+  code: "n"
+
+main.steps/Result:
+  is: ResultStep
+  code: "`Branch`"

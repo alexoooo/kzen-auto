@@ -187,6 +187,12 @@ FormulaStepTool:
   delegate: FormulaStep
 
 
+ResultStepTool:
+  is: RibbonTool
+  parent: ScriptGroup_InputOutput
+  delegate: ResultStep
+
+
 NumberLiteralStepTool:
   is: RibbonTool
   parent: ScriptGroup_InputOutput

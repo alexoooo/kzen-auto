@@ -1,9 +1,14 @@
 # A tiny child Logic for the Job nested-Logic (RunWorker / JobLogicHost) tests: one Int parameter `number`,
-# one FormulaStep computing `number * 10`. A Script's main result is its last step's value (see MultiStep), so
-# running this to completion with number=N yields N*10 — a deterministic transform the concurrency test asserts
-# per input. See JobNestedLogicTest.
+# one Result step returning `number * 10`. The Script's result is the Result step's value, so running this to
+# completion with number=N yields N*10 — a deterministic transform the concurrency test asserts per input.
+# See JobNestedLogicTest.
 main:
   is: Script
+  results:
+    main:
+      class: kotlin.Int
+      generics: []
+      nullable: false
 
 main.parameters/number:
   is: ParameterBinding
@@ -13,5 +18,5 @@ main.parameters/number:
     nullable: false
 
 main.steps/Result:
-  is: FormulaStep
+  is: ResultStep
   code: number * 10

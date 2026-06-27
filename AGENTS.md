@@ -45,6 +45,14 @@ Two-terminal pattern. **Open kzen-auto as its OWN IntelliJ project**, not via th
 ./gradlew -t :kzen-auto-js:build -x test -PjsWatch
 ```
 
+Single-command alternative (no IDE run config; rebuilds the JS bundle first, then runs the server):
+
+```powershell
+./gradlew :kzen-auto-jvm:frontendDevelopment -PjsWatch
+```
+
+`-PjsWatch` bundles the unminified dev executable (symbols preserved, faster); omit it for the minified production bundle. This is the deterministic "always get the latest UI" action — `classes` → `processResources` → `jsEsbuildBundle` rebuilds the bundle before binding, and FrontendDevelopment's JS route sends `Cache-Control: no-store` so a single browser refresh shows it. See `FrontendDevelopment.kt`.
+
 End-to-end self-test (opt-in, opens Chrome, spawns two kzen-auto JVMs):
 
 ```powershell

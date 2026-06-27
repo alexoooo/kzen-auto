@@ -132,19 +132,7 @@ class LogicSignatureEditor:
 
         private val dragHandleColor = Color("rgba(0, 0, 0, 0.45)")
 
-        // The selectable simple types (matches FormulaStep's inferrable class set). Generic element types
-        // default to Any until a nested-type picker exists; registered object types are a follow-up.
-        private val classOptions: List<Pair<String, String>> = listOf(
-            "kotlin.Any" to "Any",
-            "kotlin.String" to "String",
-            "kotlin.Int" to "Int",
-            "kotlin.Long" to "Long",
-            "kotlin.Double" to "Double",
-            "kotlin.Boolean" to "Boolean",
-            "kotlin.collections.List" to "List",
-            "kotlin.collections.Set" to "Set")
-
-        private val simpleLabelByClassName = classOptions.toMap()
+        // The selectable simple types + their labels are shared with ResultSignatureEditor (see LogicTypeOptions).
 
         // Default values are only editable for scalar types the definer can coerce (String/Int/Long/Double/
         // Boolean). List/Set/Any have no default input — they resolve to null when no argument is supplied.
@@ -735,7 +723,7 @@ class LogicSignatureEditor:
                     marginRight = 0.5.em
                 }
 
-                val typeOptions = classOptions
+                val typeOptions = LogicTypeOptions.classOptions
                     .map { (value, simpleLabel) ->
                         val option: ReactSelectOption = unsafeJso {
                             this.value = value
@@ -852,7 +840,7 @@ class LogicSignatureEditor:
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun typeLabel(parameter: ParameterRow): String {
-        val simple = simpleLabelByClassName[parameter.className]
+        val simple = LogicTypeOptions.simpleLabelByClassName[parameter.className]
             ?: parameter.className.substringAfterLast('.')
         return if (parameter.nullable) "$simple?" else simple
     }

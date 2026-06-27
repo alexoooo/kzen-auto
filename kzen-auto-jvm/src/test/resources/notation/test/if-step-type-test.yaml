@@ -1,0 +1,39 @@
+# Both branches of the If yield String, so the If's joined `main` type is String: a downstream Result step
+# can reference the If by name (`Branch`) and the declared String result type-checks. n=1 => then branch =>
+# the Script result is "yes" (the taken branch's terminal value, read through the If reference).
+
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.String
+      generics: []
+      nullable: false
+
+main.parameters/n:
+  is: ParameterBinding
+  type:
+    class: kotlin.Int
+    generics: []
+    nullable: false
+  default: 1
+
+main.steps/Positive:
+  is: FormulaStep
+  code: "n > 0"
+
+main.steps/Branch:
+  is: IfStep
+  condition: main.steps/Positive
+
+main.steps/Branch.then/Yes:
+  is: TextLiteralStep
+  value: "yes"
+
+main.steps/Branch.else/No:
+  is: TextLiteralStep
+  value: "no"
+
+main.steps/Result:
+  is: ResultStep
+  code: "`Branch`"

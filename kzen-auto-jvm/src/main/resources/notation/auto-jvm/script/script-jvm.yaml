@@ -137,6 +137,25 @@ FormulaStep:
     selfLocation: SelfLocation
 
 
+# Sets the Script's return value: the Kotlin `code` must evaluate to the Script's declared `main` result
+# type (the result signature). The last Result step executed wins (VB-style); no declared signature is a
+# validation error (the Script is void), and a type mismatch surfaces as the step's compile error.
+ResultStep:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.server.objects.script.step.eval.ResultStep
+  icon: "material-symbols:keyboard-return"
+  title: "Result"
+  code: ""
+  meta:
+    code:
+      is: String
+      multiline: true
+      editor: KotlinExpressionEditor
+      summary: TextAttributeView
+    selfLocation: SelfLocation
+
+
 NumberLiteralStep:
   abstract: true
   is: ScriptStep

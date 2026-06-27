@@ -1,5 +1,10 @@
 main:
   is: Script
+  results:
+    main:
+      class: kotlin.String
+      generics: []
+      nullable: false
 
 main.parameters/number:
   is: ParameterBinding
@@ -31,7 +36,7 @@ main.steps/div 3.else/div 5.then/Text 2:
 
 main.steps/div 3.else/div 5.else/Formula 2:
   is: FormulaStep
-  code: number
+  code: "number.toString()"
 
 main.steps/div 3.then/div 3 and 5:
   is: IfStep
@@ -48,3 +53,7 @@ main.steps/div 3.then/div 3 and 5.else/Text:
 main.steps/Display:
   is: DisplayValueStep
   text: main.steps/div 3
+
+main.steps/Result:
+  is: ResultStep
+  code: "`div 3`"

@@ -1,8 +1,11 @@
-# A two-level nested-Logic fixture for JobNestedLogicTest.recursivelyNestedChildRunsAndIsTraced: a Script with
-# one Int parameter `number` whose single Run step invokes test/job-run-child-test.yaml#main (number -> number*10),
-# passing `number` through. Run as a JobLogicHost child this exercises host -> wrapper Script -> RunStep ->
-# grandchild Script — the recursion the former NestedLogicUnsupported stub rejected — so running with number=N
-# yields N*10 (a Script's main result is its last step's value). See JobNestedLogicTest.
+# A two-level nested-Logic fixture for the JobNestedLogicTest stepping tests: a Script with one Int parameter
+# `number` whose single Run step invokes test/job-run-child-test.yaml#main (number -> number*10), passing
+# `number` through. Run as a JobLogicHost child this exercises host -> wrapper Script -> RunStep -> grandchild
+# Script — the recursion the former NestedLogicUnsupported stub rejected. The wrapper has no Result step, so its
+# OWN result is void; these tests assert the nested STEPPING (descend / step over / step out) and that the
+# recursion reaches Success — the grandchild's N*10 value is covered by the direct-child tests (e.g.
+# concurrentChildrenRunIsolated). Kept single-step deliberately, so the stepping boundary sequence is unchanged.
+# See JobNestedLogicTest.
 main:
   is: Script
 

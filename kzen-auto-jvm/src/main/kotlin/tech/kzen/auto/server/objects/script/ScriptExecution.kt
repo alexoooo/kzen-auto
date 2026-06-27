@@ -1,6 +1,8 @@
 package tech.kzen.auto.server.objects.script
 
 import org.slf4j.LoggerFactory
+import tech.kzen.auto.common.objects.document.script.ResultSignatureDefiner
+import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.objects.document.script.model.ScriptTree
 import tech.kzen.auto.common.objects.document.script.model.StepTrace
 import tech.kzen.auto.server.objects.script.api.ScriptStep
@@ -105,6 +107,10 @@ class ScriptExecution(
             documentPath, graphNotation, graphDefinition, graphInstance)
         val scriptTree = ScriptTree.read(documentPath, graphDefinition)
 
+        // objectLocation is the main Script object; its `results` notation is the declared result signature.
+        val resultSignature = ResultSignatureDefiner.parse(
+            graphNotation.firstAttribute(objectLocation, ScriptConventions.resultsAttributePath))
+
         val stepContext = ScriptExecutionContext(
             logicControl,
             resourceScope,
@@ -116,7 +122,8 @@ class ScriptExecution(
             arguments,
             scriptTree,
             validation,
-            objectStableMapper)
+            objectStableMapper,
+            resultSignature)
 
         traceParameterValues(stepContext)
 

@@ -4,14 +4,11 @@ package tech.kzen.auto.server.objects.script.step.eval
 
 import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.objects.document.registry.model.ObjectRegistryScan
-import tech.kzen.auto.common.objects.document.script.model.ScriptTree
-import tech.kzen.auto.common.objects.document.script.model.ScriptValidation
 import tech.kzen.auto.server.objects.script.api.ScriptStepDefinition
 import tech.kzen.auto.server.objects.script.api.TracingScriptStep
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
 import tech.kzen.auto.server.objects.script.model.ScriptExecutionContext
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
-import tech.kzen.auto.server.service.compile.KotlinCode
 import tech.kzen.auto.server.util.ClassLoaderUtils
 import tech.kzen.lib.common.exec.logic.model.LogicResult
 import tech.kzen.lib.common.exec.logic.model.LogicResultFailed
@@ -20,7 +17,6 @@ import tech.kzen.lib.common.exec.logic.model.LogicType
 import tech.kzen.lib.common.exec.tuple.TupleDefinition
 import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
@@ -180,22 +176,15 @@ class FormulaStep(
         val compiler = cachedKotlinCompiler
         val classLoader = ClassLoaderUtils.dynamicParentClassLoader()
 
-        val predecessorTypesNullable = processorTypes(
-            scriptDefinitionContext.scriptTree, scriptDefinitionContext.scriptValidation)
+        val nonUnitPredecessorTypes = StepExpressionSupport.resolveNonUnit(
+            StepExpressionSupport.inScopeTypes(
+                selfLocation,
+                scriptDefinitionContext.scriptTree,
+                scriptDefinitionContext.scriptValidation))
+            ?: return null
 
-        val predecessorTypes = predecessorTypesNullable
-            .filter { it.value != null }
-            .mapValues { it.value!! }
-
-        if (predecessorTypes.size != predecessorTypesNullable.size) {
-            return null
-        }
-
-        val nonUnitPredecessorTypes = predecessorTypes
-            .filter { it.value.className != ClassNames.kotlinUnit }
-
-        val anyNullableCode = generateCode(
-            "Any?", nonUnitPredecessorTypes)
+        val anyNullableCode = StepExpressionSupport.generateCode(
+            selfLocation, "Any?", code, nonUnitPredecessorTypes)
         val anyNullableError = compiler.tryCompile(anyNullableCode, classLoader)
         if (anyNullableError != null) {
             return ScriptStepDefinition(
@@ -204,15 +193,15 @@ class FormulaStep(
                 anyNullableError)
         }
 
-        val anyCode = generateCode(
-            "Any", nonUnitPredecessorTypes)
+        val anyCode = StepExpressionSupport.generateCode(
+            selfLocation, "Any", code, nonUnitPredecessorTypes)
         val anyError = compiler.tryCompile(anyCode, classLoader)
 
         val nullable = anyError != null
         val nullableSuffix = if (nullable) { "?" } else { "" }
 
-        val stringCode = generateCode(
-            "String$nullableSuffix", nonUnitPredecessorTypes)
+        val stringCode = StepExpressionSupport.generateCode(
+            selfLocation, "String$nullableSuffix", code, nonUnitPredecessorTypes)
         val stringError = compiler.tryCompile(stringCode, classLoader)
 
         if (stringError == null) {
@@ -255,84 +244,22 @@ class FormulaStep(
     ): LogicResult {
         logger.info("{} - value = {}", selfLocation, code)
 
-        val compiler = cachedKotlinCompiler
-        val classLoader = ClassLoaderUtils.dynamicParentClassLoader()
+        val inScopeTypes = StepExpressionSupport.inScopeTypes(
+            selfLocation,
+            scriptExecutionContext.scriptTree,
+            scriptExecutionContext.scriptValidation)
 
-        val predecessorTypesNullable = processorTypes(
-            scriptExecutionContext.scriptTree, scriptExecutionContext.scriptValidation)
+        val nonUnitPredecessorTypes = StepExpressionSupport.resolveNonUnit(inScopeTypes)
+            ?: return LogicResultFailed(
+                "Can't determine type: ${inScopeTypes.filter { it.value == null }.keys}")
 
-        val predecessorTypes = predecessorTypesNullable
-            .filter { it.value != null }
-            .mapValues { it.value!! }
-
-        if (predecessorTypes.size != predecessorTypesNullable.size) {
-            val missingPredecessor = predecessorTypesNullable.filter { it.value == null }.keys
-            return LogicResultFailed("Can't determine type: $missingPredecessor")
-        }
-
-        val nonUnitPredecessorTypes = predecessorTypes
-            .filter { it.value.className != ClassNames.kotlinUnit }
-
-        val generatedCode = generateCode(
-            "Any?", nonUnitPredecessorTypes)
-
-        val error = compiler.tryCompile(generatedCode, classLoader)
-        check(error == null) {
-            "Unable to compile: $error - $generatedCode"
-        }
-
-        val clazz = compiler.tryLoad(generatedCode, classLoader)
-        check(clazz != null) {
-            "Unable to load: $generatedCode"
-        }
-
-        @Suppress("UNCHECKED_CAST")
-        val classCast = clazz as Class<StepExpression>
-
-        val instance = classCast.getDeclaredConstructor().newInstance()
-
-        val predecessorValues = nonUnitPredecessorTypes.map {
-            val objectLocation = selfLocation.documentPath.toObjectLocation(it.key)
-            scriptExecutionContext.referencedValue(objectLocation)
-        }
-
-        val value = instance.evaluate(predecessorValues)
+        val value = StepExpressionSupport.evaluate(
+            selfLocation, "Any?", code, nonUnitPredecessorTypes,
+            scriptExecutionContext, cachedKotlinCompiler)
 
         traceValue(scriptExecutionContext, value.toString())
 
         return LogicResultSuccess(
             TupleValue.ofMain(value))
-    }
-
-
-    private fun processorTypes(
-        scriptTree: ScriptTree,
-        scriptValidation: ScriptValidation
-    ):
-        Map<ObjectPath, TypeMetadata?>
-    {
-        val builder = mutableMapOf<ObjectPath, TypeMetadata?>()
-
-        // Body predecessors plus the parameters / loop items in scope — both are addressable, typed
-        // values this formula can reference by name (the bindings without occupying a body row).
-        val predecessors = scriptTree.predecessors(selfLocation.objectPath)
-        val bindings = scriptTree.inScopeBindingPaths(selfLocation.objectPath)
-
-        for (predecessor in predecessors + bindings) {
-            val typeMetadata = scriptValidation.stepValidations[predecessor]?.typeMetadata
-            builder[predecessor] = typeMetadata
-        }
-
-        return builder
-    }
-
-
-    private fun generateCode(
-        returnType: String,
-        predecessorTypes: Map<ObjectPath, TypeMetadata>
-    ): KotlinCode {
-        val mainClassName = "Eval_" + StepExpressionCompiler.sanitizeName(selfLocation.objectPath.name.value)
-        return StepExpressionCompiler.generateCode(
-            mainClassName, returnType, code, predecessorTypes)
     }
 }

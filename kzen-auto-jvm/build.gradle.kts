@@ -92,6 +92,23 @@ tasks.withType<ProcessResources> {
 }
 
 
+// Single-command frontend dev launch (alternative to an IDE run config — see FrontendDevelopment.kt):
+//   ./gradlew :kzen-auto-jvm:frontendDevelopment -PjsWatch
+// `classes` pulls in processResources -> jsEsbuildBundle, so the served bundle is rebuilt from the latest
+// sources before the server binds. With -PjsWatch that's the unminified DEVELOPMENT executable (symbols
+// preserved, faster build); without it, the minified production bundle. workingDir is the kzen-auto root
+// because FrontendDevelopment resolves kzen-auto-js/build/dist/... relative to the process cwd (an IDE
+// launch runs with cwd = project root). Debuggable from IntelliJ's Gradle tool window (right-click → Debug).
+tasks.register<JavaExec>("frontendDevelopment") {
+    group = "application"
+    description = "Run FrontendDevelopment, rebuilding the JS bundle first (-PjsWatch for the dev/unminified bundle)"
+    dependsOn("classes")
+    mainClass.set("tech.kzen.auto.server.dev.FrontendDevelopmentKt")
+    classpath = sourceSets.main.get().runtimeClasspath
+    workingDir = rootProject.projectDir
+}
+
+
 //tasks.withType<KotlinCompile> {
 //    kotlinOptions {
 //        freeCompilerArgs += listOf("-Xjsr305=strict")

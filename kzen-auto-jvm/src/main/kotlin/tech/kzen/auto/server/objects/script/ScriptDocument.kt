@@ -12,12 +12,14 @@ import tech.kzen.lib.common.exec.logic.LogicExecution
 import tech.kzen.lib.common.exec.logic.LogicHandle
 import tech.kzen.lib.common.exec.logic.model.LogicDefinition
 import tech.kzen.lib.common.exec.logic.model.LogicResult
+import tech.kzen.lib.common.exec.logic.model.LogicResultSuccess
 import tech.kzen.lib.common.exec.logic.model.LogicType
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
 import tech.kzen.lib.common.exec.logic.trace.LogicTraceHandle
 import tech.kzen.lib.common.exec.tuple.TupleComponentDefinition
 import tech.kzen.lib.common.exec.tuple.TupleComponentName
 import tech.kzen.lib.common.exec.tuple.TupleDefinition
+import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
@@ -30,7 +32,7 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 class ScriptDocument(
     steps: List<ObjectLocation>,
     parameters: List<ObjectLocation>,
-    private val results: List<String>,
+    private val results: TupleDefinition,
     private val selfLocation: ObjectLocation,
 
     @Service private val objectStableMapper: ObjectStableMapper,
@@ -54,13 +56,11 @@ class ScriptDocument(
             TupleComponentDefinition(TupleComponentName(it), LogicType.any)
         }
 
-        val outputs = results.map {
-            TupleComponentDefinition(TupleComponentName(it), LogicType.any)
-        }
-
+        // The declared result signature (parsed by ResultSignatureDefiner) is the Script's output tuple
+        // directly; an empty signature means a void Script.
         return LogicDefinition(
             TupleDefinition(inputs),
-            TupleDefinition(outputs))
+            results)
     }
 
 
@@ -89,6 +89,14 @@ class ScriptDocument(
 
 
     override fun continueOrStart(scriptExecutionContext: ScriptExecutionContext): LogicResult {
-        return scriptStepDelegate.continueOrStart(scriptExecutionContext)
+        // The Script returns the last invoked Result step's value (captured in ActiveScriptModel, VB-style),
+        // or void when no Result step ran. Pass non-success (paused / failed / cancelled) through unchanged;
+        // the captured value is read only on the terminal success pass once every step is Done.
+        val result = scriptStepDelegate.continueOrStart(scriptExecutionContext)
+        if (result !is LogicResultSuccess) {
+            return result
+        }
+        return LogicResultSuccess(
+            scriptExecutionContext.resultTupleValue() ?: TupleValue.empty)
     }
 }

@@ -25,7 +25,7 @@ Script:
   class: tech.kzen.auto.server.objects.script.ScriptDocument
   title: "Script"
   icon: "material-symbols:playlist-play"
-  results: []
+  results: {}
   meta:
     steps:
       is: List
@@ -35,12 +35,19 @@ Script:
       is: List
       of: ParameterBinding
       by: NestedList
+    # The result signature: a map (component name -> TypeMetadata) parsed into the output TupleDefinition.
+    # Plain data (not a live step object); empty/absent => void. Only `main` is wired today, but the map
+    # shape leaves room for additional named results with no schema change.
     results:
-      is: List
-      of: String
+      is: Object
+      by: ResultSignatureDefiner
     selfLocation:
       is: ObjectLocation
       by: Self
+
+
+ResultSignatureDefiner:
+  class: tech.kzen.auto.common.objects.document.script.ResultSignatureDefiner
 
 
 ScriptStep:

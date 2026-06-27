@@ -14,6 +14,7 @@ import tech.kzen.auto.client.objects.document.common.raw.DocumentRaw
 import tech.kzen.auto.client.objects.document.common.raw.DocumentRawState
 import tech.kzen.auto.client.objects.document.common.raw.DocumentViewMode
 import tech.kzen.auto.client.objects.document.common.signature.LogicSignatureEditor
+import tech.kzen.auto.client.objects.document.common.signature.ResultSignatureEditor
 import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
 import tech.kzen.auto.client.objects.document.script.display.ScriptStepDisplayPropsCommon
 import tech.kzen.auto.client.objects.document.script.display.StepDisplayManager
@@ -388,6 +389,12 @@ class ScriptController:
             clientStateGlobal = props.clientStateGlobal
             mirroredGraphStore = props.mirroredGraphStore
             parameterValues = state.parameterValues
+        }
+
+        ResultSignatureEditor::class.react {
+            objectLocation = mainObjectLocation
+            clientStateGlobal = props.clientStateGlobal
+            mirroredGraphStore = props.mirroredGraphStore
         }
     }
 

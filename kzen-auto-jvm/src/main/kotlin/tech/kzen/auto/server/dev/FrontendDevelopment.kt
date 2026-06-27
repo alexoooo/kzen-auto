@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.dev
 
+import io.ktor.http.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.response.*
@@ -11,6 +12,17 @@ import tech.kzen.auto.server.kzenAutoJsModuleName
 import java.nio.file.Path
 
 
+/**
+ * Frontend dev server.
+ *
+ * Run it (rebuilds the JS bundle first, then serves the latest UI on refresh):
+ * ./gradlew :kzen-auto-jvm:frontendDevelopment -PjsWatch
+ *
+ * `-PjsWatch` gives the unminified dev bundle (symbols, faster); omit it for the minified prod bundle.
+ *
+ * Hot reload loop: leave the server running and pair it with a watch:
+ * ./gradlew -t :kzen-auto-js:jsEsbuildBundle -PjsWatch
+ */
 fun main(args: Array<String>) {
     val context = kzenAutoInit(args, kzenAutoJsModuleName)
     frontendDevelopmentMain(context)
@@ -35,6 +47,11 @@ fun frontendDevelopmentMain(
     ) {
         routing {
             get(context.config.jsResourcePath()) {
+                // Dev server: never let the browser cache the bundle. Without this, the JS route sends only
+                // Last-Modified, so browsers heuristically cache it and serve stale JS on a plain reload
+                // (the "needs a second reload to see my change" symptom). no-store forces a refetch every
+                // load, so a single reload always reflects the latest esbuild output. Dev-only by construction.
+                call.response.header(HttpHeaders.CacheControl, "no-store")
                 call.respondFile(jsFile)
             }
         }

@@ -1,0 +1,14 @@
+# A declared Int result but NO Result step runs (only a FormulaStep): the Script returns void. Previously a
+# Script returned its last step's value (99); now it returns void unless a Result step is invoked.
+
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.Int
+      generics: []
+      nullable: false
+
+main.steps/OnlyStep:
+  is: FormulaStep
+  code: 99

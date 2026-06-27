@@ -1,0 +1,9 @@
+# A Result step with no declared result signature: the Script is void, so the Result step is a validation
+# error (the result signature is the single source of truth; without it there is no type to evaluate to).
+
+main:
+  is: Script
+
+main.steps/Result:
+  is: ResultStep
+  code: 42

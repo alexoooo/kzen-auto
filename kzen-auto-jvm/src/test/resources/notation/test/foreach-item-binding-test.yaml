@@ -1,5 +1,13 @@
 main:
   is: Script
+  results:
+    main:
+      class: kotlin.collections.List
+      generics:
+        - class: kotlin.Int
+          generics: []
+          nullable: false
+      nullable: false
 
 main.steps/Range:
   is: NumberRangeStep
@@ -16,3 +24,8 @@ main.steps/Loop.item/Item:
 main.steps/Loop.steps/Doubled:
   is: FormulaStep
   code: Item * 2
+
+# Surfaces the loop's collected output (List<Int>) as the Script result (the run test's observation point).
+main.steps/Result:
+  is: ResultStep
+  code: Loop

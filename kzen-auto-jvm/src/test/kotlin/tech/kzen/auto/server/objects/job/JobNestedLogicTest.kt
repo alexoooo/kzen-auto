@@ -150,12 +150,14 @@ class JobNestedLogicTest {
                     runExecutionId.logicRunId, LogicTraceQuery(LogicTracePath.root)),
                 "run snapshot")
 
-            // Complete: 5 -> 50 threaded back through both levels.
+            // Complete: the recursion runs through both levels and the wrapper reaches Success — the proof the
+            // inner RunStep ran. The wrapper has no Result step, so its own result is void (the grandchild's
+            // 5 -> 50 is asserted by the direct-child tests, e.g. concurrentChildrenRunIsolated).
             host.grantStepToChildren()
             val result = facade.continueOrStart(host.graphDefinition())
             val success = result as? LogicResultSuccess
                 ?: error("expected success, was $result")
-            assertEquals(50, success.value.mainComponentValue())
+            assertNull(success.value.mainComponentValue(), "wrapper has no Result step -> void")
         }
         finally {
             facade.close()
@@ -251,11 +253,13 @@ class JobNestedLogicTest {
             host.grantStepToChildren()
             assertIs<LogicResultPaused>(facade.continueOrStart(host.graphDefinition()))
 
-            // Second fresh step: the grandchild's step runs, threading 5 -> 50 back up through both levels.
+            // Second fresh step: the grandchild's step runs to completion, threading back up through both levels;
+            // the wrapper finishes (Success). The second fresh step reaching Success is the contract — the
+            // wrapper's own result is void (no Result step); the grandchild's value is asserted elsewhere.
             host.grantStepToChildren()
             val second = facade.continueOrStart(host.graphDefinition())
             assertIs<LogicResultSuccess>(second)
-            assertEquals(50, second.value.mainComponentValue())
+            assertNull(second.value.mainComponentValue(), "wrapper has no Result step -> void")
         }
         finally {
             facade.close()
@@ -292,7 +296,7 @@ class JobNestedLogicTest {
             val result = facade.continueOrStart(host.graphDefinition())
             val success = result as? LogicResultSuccess
                 ?: error("expected success (stepped over the nested child), was $result")
-            assertEquals(50, success.value.mainComponentValue())
+            assertNull(success.value.mainComponentValue(), "wrapper has no Result step -> void")
         }
         finally {
             facade.close()
@@ -330,7 +334,7 @@ class JobNestedLogicTest {
             val result = facade.continueOrStart(host.graphDefinition())
             val success = result as? LogicResultSuccess
                 ?: error("expected success (stepped out of the nested child), was $result")
-            assertEquals(50, success.value.mainComponentValue())
+            assertNull(success.value.mainComponentValue(), "wrapper has no Result step -> void")
         }
         finally {
             facade.close()
@@ -366,7 +370,7 @@ class JobNestedLogicTest {
             val result = facade.continueOrStart(host.graphDefinition())
             val success = result as? LogicResultSuccess
                 ?: error("expected the stepped-over fresh child to complete, was $result")
-            assertEquals(50, success.value.mainComponentValue())
+            assertNull(success.value.mainComponentValue(), "wrapper has no Result step -> void")
         }
         finally {
             facade.close()
