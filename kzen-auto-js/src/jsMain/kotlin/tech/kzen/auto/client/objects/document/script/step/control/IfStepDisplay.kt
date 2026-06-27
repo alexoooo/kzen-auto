@@ -43,6 +43,8 @@ external interface IfStepDisplayProps: ScriptStepDisplayProps {
 external interface IfStepDisplayState: State {
     var stepTrace: StepTrace?
     var isNextToRun: Boolean?
+    var typeMetadata: String?
+    var validationError: String?
 
     var icon: String?
     var description: String?
@@ -143,11 +145,21 @@ class IfStepDisplay(
         val info = computeStepTraceInfo(
             scriptState, props.common.objectLocation, props.objectStableMapper)
 
+        val stepValidation = scriptState
+            .validationState
+            .scriptValidation
+            ?.stepValidations
+            ?.get(props.common.objectLocation.objectPath)
+        val typeMetadata = stepValidation?.typeMetadata?.toSimple()
+        val validationError = stepValidation?.errorMessage
+
         // NB: value compare (==) — computeStepTraceInfo rebuilds a fresh StepTrace each call (value-equal,
         //     not ===). Skip setState when THIS step is unchanged so a sibling's expand/collapse or trace
         //     update doesn't re-render every step body.
         if (state.stepTrace == info.trace &&
-            state.isNextToRun == info.isNextToRun
+            state.isNextToRun == info.isNextToRun &&
+            state.typeMetadata == typeMetadata &&
+            state.validationError == validationError
         ) {
             return
         }
@@ -155,6 +167,8 @@ class IfStepDisplay(
         setState {
             this.stepTrace = info.trace
             this.isNextToRun = info.isNextToRun
+            this.typeMetadata = typeMetadata
+            this.validationError = validationError
         }
     }
 
@@ -168,7 +182,9 @@ class IfStepDisplay(
             title = state.title ?: "",
             trace = state.stepTrace,
             isNextToRun = state.isNextToRun ?: false,
-            mirroredGraphStore = props.mirroredGraphStore
+            mirroredGraphStore = props.mirroredGraphStore,
+            typeMetadata = state.typeMetadata,
+            validationError = state.validationError
         ) {
             props.attributeEditorManager.child(this) {
                 this.objectLocation = props.common.objectLocation

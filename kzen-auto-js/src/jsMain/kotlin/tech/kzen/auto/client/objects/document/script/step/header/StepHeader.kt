@@ -6,11 +6,13 @@ import mui.material.Chip
 import mui.material.ChipVariant
 import mui.material.IconButton
 import mui.material.Size
+import mui.material.Tooltip
 import mui.system.sx
 import react.ChildrenBuilder
 import react.Props
 import react.ReactNode
 import react.dom.html.ReactHTML.div
+import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeViewManager
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
@@ -38,6 +40,7 @@ external interface StepHeaderProps: Props {
     var summaryAttributeNames: List<AttributeName>?
     var attributeViewManager: AttributeViewManager.Wrapper?
     var typeMetadata: String?
+    var validationError: String?
     var expanded: Boolean?
     var onToggleExpanded: (() -> Unit)?
 
@@ -234,8 +237,34 @@ class StepHeader(
                 marginLeft = 0.5.em
             }
 
+            // Validation error: a distinct red-orange icon (different from the darker run-failure red) with
+            // the message in a tooltip — surfaced on the collapsed card so a broken step is visible at a
+            // glance. No stopPropagation, so a click still bubbles to the card's expand-to-see-detail.
+            val validationError = props.validationError
+            if (validationError != null) {
+                Tooltip {
+                    title = ReactNode(validationError)
+
+                    span {
+                        css {
+                            display = Display.flex
+                            alignItems = AlignItems.center
+                            marginRight = 0.5.em
+                        }
+
+                        icon("material-symbols:error") {
+                            style = unsafeJso {
+                                color = Color("#d84315")
+                                fontSize = 1.25.em
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Type chip, but not for void (Unit) steps — a "[Unit]" badge conveys nothing.
             val typeMetadata = props.typeMetadata
-            if (!typeMetadata.isNullOrEmpty()) {
+            if (!typeMetadata.isNullOrEmpty() && typeMetadata != "Unit") {
                 Chip {
                     sx {
                         marginRight = 0.5.em

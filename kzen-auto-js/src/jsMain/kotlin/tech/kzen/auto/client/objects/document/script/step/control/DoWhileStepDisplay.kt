@@ -47,6 +47,8 @@ external interface DoWhileStepDisplayProps: ScriptStepDisplayProps {
 external interface DoWhileStepDisplayState: State {
     var stepTrace: StepTrace?
     var isNextToRun: Boolean?
+    var typeMetadata: String?
+    var validationError: String?
 
     var icon: String?
     var description: String?
@@ -149,11 +151,21 @@ class DoWhileStepDisplay(
         val info = computeStepTraceInfo(
             scriptState, props.common.objectLocation, props.objectStableMapper)
 
+        val stepValidation = scriptState
+            .validationState
+            .scriptValidation
+            ?.stepValidations
+            ?.get(props.common.objectLocation.objectPath)
+        val typeMetadata = stepValidation?.typeMetadata?.toSimple()
+        val validationError = stepValidation?.errorMessage
+
         // NB: value compare (==) — computeStepTraceInfo rebuilds a fresh StepTrace each call (value-equal,
         //     not ===). Skip setState when THIS step is unchanged so a sibling's expand/collapse or trace
         //     update doesn't re-render every step body.
         if (state.stepTrace == info.trace &&
-            state.isNextToRun == info.isNextToRun
+            state.isNextToRun == info.isNextToRun &&
+            state.typeMetadata == typeMetadata &&
+            state.validationError == validationError
         ) {
             return
         }
@@ -161,6 +173,8 @@ class DoWhileStepDisplay(
         setState {
             this.stepTrace = info.trace
             this.isNextToRun = info.isNextToRun
+            this.typeMetadata = typeMetadata
+            this.validationError = validationError
         }
     }
 
@@ -173,7 +187,7 @@ class DoWhileStepDisplay(
         val trace = state.stepTrace
         val traceState = trace?.state ?: StepTrace.State.Idle
         val accent = ScriptStepDisplayDefault.statusBorderColor(
-            traceState, trace?.error, state.isNextToRun ?: false)
+            traceState, trace?.error, state.isNextToRun ?: false, state.validationError)
 
         // Three flush sections, ordered to match the do-while (run the body, THEN test the condition):
         //   header (neutral white) → "Do" body steps (recessed gray stage) → full-width "While" footer.
@@ -208,6 +222,8 @@ class DoWhileStepDisplay(
                     this.icon = state.icon ?: ""
                     this.description = state.description ?: ""
                     this.title = state.title ?: ""
+                    this.typeMetadata = state.typeMetadata
+                    this.validationError = state.validationError
                     this.mirroredGraphStore = props.mirroredGraphStore
                 }
             }

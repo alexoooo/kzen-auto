@@ -76,6 +76,10 @@ class ScriptStepDisplayDefault(
         private val successColour = Color("#00b467")
         private val errorColour = Color("#b40000")
 
+        // Validation (can't-run) error accent — deliberately a red-orange, distinct from the darker
+        // run-failure red above, so a static "this step won't compile" reads differently from a runtime failure.
+        val validationErrorColour = Color("#d84315")
+
         // Soft-elevation card chrome — lifts a step card off the grey stage; matches the app-wide
         // 3px card radius (Report controllers, VertexController). Single-layer shadow per the
         // StepImageThumbnail idiom. Resting is subtle; hover deepens it as an interactivity cue.
@@ -88,12 +92,16 @@ class ScriptStepDisplayDefault(
         fun statusBorderColor(
             traceState: StepTrace.State,
             error: String?,
-            nextToRun: Boolean
+            nextToRun: Boolean,
+            validationError: String? = null
         ): Color {
-            // NB: idle falls back to white (not a gray line) — the gray accent blended into the
-            //     gray stage. The card's resting shadow now provides separation. 4px width is kept
-            //     (just white) so there's no layout shift when the step transitions to running/done.
-            return activeStatusColor(traceState, error, nextToRun) ?: NamedColor.white
+            // Precedence: an active run status wins (so a running/done/failed step shows its run colour);
+            // otherwise a validation error tints the bar red-orange (the step is idle and can't run);
+            // otherwise idle white — not a gray line (the gray accent blended into the gray stage; the
+            // card's resting shadow provides separation). 4px width is kept even when white, so there's
+            // no layout shift when the step transitions to running/done.
+            return activeStatusColor(traceState, error, nextToRun)
+                ?: if (validationError != null) validationErrorColour else NamedColor.white
         }
 
         fun backgroundColor(
@@ -314,7 +322,8 @@ class ScriptStepDisplayDefault(
                 boxSizing = BoxSizing.borderBox
                 borderLeftWidth = 4.px
                 borderLeftStyle = LineStyle.solid
-                borderLeftColor = statusBorderColor(traceState, trace?.error, isNextToRun)
+                borderLeftColor = statusBorderColor(
+                    traceState, trace?.error, isNextToRun, state.stepValidation?.errorMessage)
                 backgroundColor = NamedColor.white
                 paddingLeft = 1.em
                 paddingRight = 0.5.em
@@ -353,6 +362,7 @@ class ScriptStepDisplayDefault(
                 summaryAttributeNames = state.summaryAttributeNames
                 attributeViewManager = props.attributeViewManager
                 typeMetadata = state.stepValidation?.typeMetadata?.toSimple()
+                validationError = state.stepValidation?.errorMessage
                 expanded = state.expanded
                 onToggleExpanded = ::onToggleExpanded
 

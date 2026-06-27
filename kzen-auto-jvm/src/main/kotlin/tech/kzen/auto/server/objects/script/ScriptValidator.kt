@@ -57,7 +57,8 @@ class ScriptValidator(
                 scriptTree,
                 ScriptValidation(stepValidationBuffer),
                 objectRegistryScan,
-                resultSignature)
+                resultSignature,
+                graphNotation)
 
             val stepObjectLocations = documentNotation
                 .objects
