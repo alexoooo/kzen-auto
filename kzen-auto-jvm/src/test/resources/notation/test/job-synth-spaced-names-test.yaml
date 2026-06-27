@@ -1,0 +1,25 @@
+# Reproduces a user Job that wasn't flowing data: a 3-worker blank-port chain whose UPSTREAM worker name has a
+# SPACE ("CSV Reader"), so the synthesized one-way channel is named `ch__CSV Reader__output`. Guards that a
+# synthesized channel name containing a space round-trips through reference resolution (ObjectPath.asString <->
+# ObjectReference.parse), so data actually reaches the terminal PreviewWorker through the middle FormulaWorker.
+# header:false so the formula's `c0` column exists (auto-named columns).
+
+
+main:
+  is: Job
+
+main.workers/CSV Reader:
+  is: CsvReaderWorker
+  path: build/job-synth-spaced/input.csv
+  delimiter: ";"
+  header: false
+  batch: 4096
+
+main.workers/Formula:
+  is: FormulaWorker
+  formula:
+    test: 'c0 + "_foo"'
+
+main.workers/Preview:
+  is: PreviewWorker
+  sample: 10

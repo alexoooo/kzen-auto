@@ -1,11 +1,17 @@
 main:
   is: Script
 
+main.steps/Click 4:
+  is: BrowserClickStep
+  target:
+    type: Xpath
+    value: "//button[@title='Add parameter']"
+
 main.steps/Click:
   is: BrowserClickStep
   target:
     type: Xpath
-    value: "//input[@placeholder='new parameter name']"
+    value: "//input[@placeholder='parameter name']"
 
 main.steps/Write:
   is: BrowserWriteStep
@@ -14,14 +20,20 @@ main.steps/Write:
 main.steps/Click 2:
   is: BrowserClickStep
   target:
-    type: Text
-    value: Add parameter
+    type: Xpath
+    value: "//button[@title='Add (Enter)']"
 
 main.steps/Click 3:
   is: BrowserClickStep
   target:
-    type: Visual
-    value: "main/Actions/Any Selection/~main.yaml#main"
+    type: Text
+    value: number
+
+main.steps/Click 5:
+  is: BrowserClickStep
+  target:
+    type: Xpath
+    value: "//input[@value='Any']"
 
 main.steps/Write 2:
   is: BrowserWriteStep

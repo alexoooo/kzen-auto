@@ -752,7 +752,8 @@ class LogicSignatureEditor:
                     optionLabel = { it.label },
                     optionsEqual = { a, b -> a.value == b.value },
                     onSelect = { onTypeChange(parameter, it.value, parameter.nullable) },
-                    disableClearable = true)
+                    disableClearable = true,
+                    autoHighlight = true)
             }
 
             // Nullable as a compact toggle (`?`) rather than a switch + text label — the pressed state IS

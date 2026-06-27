@@ -590,9 +590,11 @@ class JobController(
 
 
     // Issue an `offset` / `limit` slice query to a Preview worker over its (external) duplex `serve` channel,
-    // via the running logic's request subscriber — the browser -> Worker request/reply path. When the serve
-    // port is blank (the auto-managed common path), the channel is the deterministic auto-synthesized name;
-    // otherwise the worker's manual `serve` reference names it. The reply has the same shape as the teaser.
+    // via the running logic's request subscriber — the browser -> Worker request/reply path. The serve channel
+    // name must match what the server's synthesis used: when the serve port is auto-managed (open — blank, or a
+    // dangling leftover the editor hides), it is the deterministic auto-synthesized name; only a real manual
+    // `serve` reference (one that resolves to an existing Channel) names the channel itself. Routing through the
+    // same JobChannelDerivation keeps the two sides from drifting. The reply has the same shape as the teaser.
     private suspend fun queryPreviewSlice(
         clientState: ClientState,
         workerLocation: ObjectLocation
@@ -600,15 +602,21 @@ class JobController(
         val logicRunInfo = clientState.clientLogicState.logicStatus?.active
             ?: return null
 
-        val serveReference = clientState.graphStructure().graphNotation
-            .firstAttribute(workerLocation, AttributePath.ofName(AttributeName("serve")))
-            ?.asString()
+        val graphStructure = clientState.graphStructure()
+        val autoManagedServe = JobChannelDerivation
+            .derive(graphStructure, workerLocation.documentPath)
+            .serves
+            .any { it.worker == workerLocation }
         val channelName =
-            if (serveReference.isNullOrBlank()) {
+            if (autoManagedServe) {
                 JobConventions.autoServeChannelName(workerLocation.objectPath)
             }
             else {
-                serveReference.substringAfterLast("/")
+                graphStructure.graphNotation
+                    .firstAttribute(workerLocation, AttributePath.ofName(AttributeName("serve")))
+                    ?.asString()
+                    ?.substringAfterLast("/")
+                    ?: JobConventions.autoServeChannelName(workerLocation.objectPath)
             }
 
         val result = props.restClient.logicRequest(

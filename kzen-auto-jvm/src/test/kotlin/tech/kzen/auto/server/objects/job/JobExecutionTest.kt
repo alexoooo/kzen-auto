@@ -80,6 +80,9 @@ class JobExecutionTest {
 
     private val synthPreviewDocumentPath = DocumentPath.parse("test/job-synth-preview-test.yaml")
 
+    private val synthDanglingServeDocumentPath =
+        DocumentPath.parse("test/job-synth-dangling-serve-test.yaml")
+
     private lateinit var context: KzenAutoContext
 
 
@@ -326,6 +329,98 @@ class JobExecutionTest {
             assertEquals(LogicResultCancelled,
                 execution.continueOrStart(control, resourceScope, graphDefinition))
         }
+    }
+
+
+    @Test
+    fun synthesizedJobReclaimsDanglingServeReference() {
+        // A half-migrated Job: blank stream ports (auto-wired) but a PreviewWorker `serve` still pointing at a
+        // Channel object that was removed. The order rule must treat the DANGLING reference as OPEN, reclaiming
+        // and auto-managing the serve — so the run starts instead of crashing GraphDefinition.filterTransitive
+        // on the missing `main.channels/preview queries`. The full (UNfiltered) definition is passed in, exactly
+        // as the server does: continueOrStart synthesizes, then filters, so the dangling ref never reaches the
+        // filter. The slice query over the auto-synthesized serve name proves the reclaimed port was re-pointed.
+        val dir = Path.of("build/job-synth-dangling-serve")
+        Files.createDirectories(dir)
+        Files.newBufferedWriter(dir.resolve("input.csv")).use {
+            it.write("id,name"); it.newLine()
+            for (i in 0 until 1_000) {
+                it.write("$i,n$i"); it.newLine()
+            }
+        }
+
+        val execution = newExecution(synthDanglingServeDocumentPath)
+        execution.beforeStart(TupleValue.empty)
+
+        val control = MutableLogicControl(false)
+        val resourceScope = MutableLogicResourceScope()
+        // UNfiltered, like the server: filterTransitive on the raw notation would itself throw on the dangling
+        // reference, so synthesis must run first (inside continueOrStart) to reclaim it.
+        val fullDefinition = AutoTestUtils
+            .graphDefinitionAttempt(AutoTestUtils.readNotation())
+            .transitiveSuccessful
+
+        control.commandPause()
+        assertEquals(LogicResultPaused,
+            execution.continueOrStart(control, resourceScope, fullDefinition))
+
+        try {
+            val previewLocation = ObjectLocation(
+                synthDanglingServeDocumentPath, ObjectPath.parse("main.workers/preview"))
+            val channelName = JobConventions.autoServeChannelName(previewLocation.objectPath)
+
+            val reply = queryPreviewSlice(control, channelName)
+            assertNotNull(reply, "slice query over the reclaimed serve channel should reply")
+            assertTrue(reply.containsKey("rows"), "reply should carry a rows slice")
+            assertTrue(reply.containsKey("count"), "reply should carry the total count")
+        }
+        finally {
+            control.commandCancel()
+            assertEquals(LogicResultCancelled,
+                execution.continueOrStart(control, resourceScope, fullDefinition))
+        }
+    }
+
+
+    @Test
+    fun synthesizedSpacedWorkerNamesFlowThroughToPreview() {
+        // Reproduces a user Job that wasn't flowing data to its Preview: a blank-port CSV Reader -> Formula ->
+        // Preview chain whose UPSTREAM worker name "CSV Reader" has a SPACE, so the synthesized one-way channel
+        // is `ch__CSV Reader__output`. Proves that name round-trips through reference resolution and data reaches
+        // the terminal Preview THROUGH the middle Formula (run to completion — the framework cancels Preview's
+        // serve loop on input-end — then read the teaser back from the trace).
+        val documentPath = DocumentPath.parse("test/job-synth-spaced-names-test.yaml")
+        val dir = Path.of("build/job-synth-spaced")
+        Files.createDirectories(dir)
+        Files.newBufferedWriter(dir.resolve("input.csv")).use {
+            for (i in 0 until 100) {
+                it.write("v$i;$i"); it.newLine()
+            }
+        }
+
+        val runExecutionId = LogicRunExecutionId.random()
+        val mainLocation = ObjectLocation(documentPath, ObjectPath.parse("main"))
+        val previewLocation = ObjectLocation(documentPath, ObjectPath.parse("main.workers/Preview"))
+
+        val execution = AutoTestUtils.liveLogicExecution(
+            context, mainLocation, UnusedLogicHandle, runExecutionId)
+        execution.beforeStart(TupleValue.empty)
+
+        val result = execution.continueOrStart(
+            MutableLogicControl(false), MutableLogicResourceScope(), graphDefinition(documentPath))
+
+        assertIs<LogicResultSuccess>(result)
+
+        val snapshot = context.logicTraceStore.lookup(runExecutionId, LogicTraceQuery(LogicTracePath.root))
+        checkNotNull(snapshot)
+        val progressPath = JobConventions.workerProgressPath(
+            context.objectStableMapper.objectStableId(previewLocation))
+
+        @Suppress("UNCHECKED_CAST")
+        val progress = snapshot.values[progressPath]?.value?.get() as? Map<String, Any?>
+        assertNotNull(progress, "preview should receive data and publish a teaser")
+        assertEquals(100L, progress["count"], "all 100 rows should reach the preview through the spaced channel")
+        assertTrue((progress["rows"] as List<*>).isNotEmpty(), "preview teaser should carry sample rows")
     }
 
 

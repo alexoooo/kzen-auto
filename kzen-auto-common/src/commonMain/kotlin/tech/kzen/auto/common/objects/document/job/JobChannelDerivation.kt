@@ -4,6 +4,8 @@ import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.model.location.ObjectReference
+import tech.kzen.lib.common.model.location.ObjectReferenceHost
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.service.notation.NotationConventions
@@ -126,8 +128,12 @@ object JobChannelDerivation {
     }
 
 
-    // A channel port is OPEN when its (inheritance-resolved) notation scalar is blank — i.e. the user has not
-    // manually wired it, so the order rule owns it. The port always resolves (the archetype defaults it to "").
+    // A channel port is OPEN when the order rule owns it: its (inheritance-resolved) notation scalar is blank
+    // (the archetype defaults it to ""), OR it is a DANGLING reference to a Channel that does not exist. A
+    // non-blank port is a MANUAL wire ONLY when it resolves to a real Channel object; a leftover reference whose
+    // Channel was removed (e.g. a `serve:`/`output:` orphaned by a hand-edit — and which the editor now hides,
+    // so the user cannot clear it) is not a valid manual wire. Reclaiming it lets the run-copy re-point the port
+    // to a synthesized Channel instead of crashing `GraphDefinition.filterTransitive` on the missing object.
     private fun isOpenPort(
         graphNotation: GraphNotation,
         workerLocation: ObjectLocation,
@@ -136,6 +142,12 @@ object JobChannelDerivation {
         val value = graphNotation
             .firstAttribute(workerLocation, AttributePath.ofName(portName))
             ?.asString()
-        return value.isNullOrBlank()
+        if (value.isNullOrBlank()) {
+            return true
+        }
+        val referenced = graphNotation.coalesce.locateOptional(
+            ObjectReference.parse(value),
+            ObjectReferenceHost.ofLocation(workerLocation))
+        return referenced == null
     }
 }

@@ -1,0 +1,20 @@
+# Regression (JobExecutionTest.synthesizedJobReclaimsDanglingServeReference): a half-migrated Job whose stream
+# ports are blank (auto-wired) but whose PreviewWorker `serve` still references a Channel object that no longer
+# exists (`main.channels/preview queries`) — the kind of leftover a hand-edit (or the editor, which now hides
+# channel ports so the user cannot clear it) can orphan. The order rule must treat that DANGLING reference as
+# OPEN: reclaim + auto-manage the serve, rather than leaving it to crash GraphDefinition.filterTransitive on the
+# missing object. Mirrors job-synth-preview-test.yaml, but with the dangling serve instead of a blank one.
+
+
+main:
+  is: Job
+
+main.workers/reader:
+  is: CsvReaderWorker
+  path: build/job-synth-dangling-serve/input.csv
+  batch: 4096
+
+main.workers/preview:
+  is: PreviewWorker
+  serve: main.channels/preview queries
+  sample: 1000

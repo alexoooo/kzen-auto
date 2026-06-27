@@ -180,10 +180,23 @@ class ScriptStepDisplayDefault(
         val scriptStore = contextValue<DocumentBridge?>()?.lookup(ScriptStoreKey)
         // Unobserve first so clearing expansion below doesn't publish onScriptState back into this
         // unmounting component; the still-mounted sibling preview collapses and the deleted step's
-        // map entry is pruned. Idempotent — no-ops when already collapsed.
+        // map entry is pruned.
         scriptStore?.unobserve(this)
         props.clientStateGlobal.unobserve(this)
-        scriptStore?.stepStore?.setExpanded(props.common.objectLocation, false)
+
+        // Only prune the expansion entry when this step was genuinely DELETED (no longer in the
+        // notation). A plain REMOUNT also unmounts us — e.g. selecting a RunStep's sub-script clears a
+        // definition error and rebuilds the branch subtree — but the step still exists, so clearing
+        // then would wrongly collapse it (editing a step's contents must not collapse it). On document
+        // teardown the step also still exists, but the whole ScriptStore (and its steps map) is then
+        // discarded, so skipping the clear is harmless. Idempotent — no-ops when already collapsed.
+        val stillExists = props.clientStateGlobal.current()
+            ?.graphStructure()?.graphNotation?.coalesce
+            ?.let { props.common.objectLocation in it }
+            ?: false
+        if (!stillExists) {
+            scriptStore?.stepStore?.setExpanded(props.common.objectLocation, false)
+        }
     }
 
 
