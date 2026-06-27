@@ -210,14 +210,24 @@ class StageController(
 
     // In-context error when the open document's object failed to define. Rendered ABOVE the body (not instead of
     // it) — the editor still loads from notation, so the user can fix the offending attribute in place.
+    //
+    // NB: this container `div` is ALWAYS emitted (left empty when there's no error) so the document body
+    //     rendered after it keeps a STABLE child index. As a *conditional* sibling it would index-shift the
+    //     body below it on every appearance/removal, and React — matching unkeyed siblings by position — would
+    //     type-mismatch the body into the panel's vacated slot and REMOUNT the entire document controller
+    //     (ScriptController / JobController / …). That tears down the controller's store and ALL per-document UI
+    //     state (step expansion, scroll position, in-progress editor buffers) every time the document's error
+    //     state toggles — e.g. the first time a RunStep's `instructions` is selected and its definition error
+    //     clears. Keeping the slot present (empty `div` ⇒ zero footprint) holds the body in place across toggles.
     private fun ChildrenBuilder.renderDefinitionErrors() {
         val documentPath = state.documentPath
-            ?: return
-
-        val lines = state.definitionErrorsByDocument[documentPath]
-            ?: return
+        val lines = documentPath?.let { state.definitionErrorsByDocument[it] }
 
         div {
+            if (lines.isNullOrEmpty()) {
+                return@div
+            }
+
             css {
                 margin = 1.em
                 padding = 0.5.em

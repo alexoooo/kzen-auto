@@ -342,9 +342,15 @@ class ScriptController:
             // steps start at the top with only the floating add control on the right.
             renderSignature(mainObjectLocation)
 
-            val globalError = state.globalError
-            if (globalError != null) {
-                div {
+            // NB: this error slot's `div` is ALWAYS emitted (empty when there's no error) so renderMain's
+            //     MultiStepDisplay below keeps a STABLE child index. As a *conditional* sibling it would
+            //     index-shift the steps on every appearance/removal, and React — matching unkeyed siblings by
+            //     position — would remount the whole step subtree, losing per-step expansion / scroll /
+            //     in-progress editor buffers whenever a document-level (validation or progress) error toggles.
+            //     Mirrors StageController.renderDefinitionErrors; empty `div` ⇒ zero footprint.
+            div {
+                val globalError = state.globalError
+                if (globalError != null) {
                     +"Error: $globalError"
                 }
             }

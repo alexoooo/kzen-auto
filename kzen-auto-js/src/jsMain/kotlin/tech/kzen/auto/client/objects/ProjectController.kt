@@ -608,10 +608,25 @@ class ProjectController(
 
             // Persistent banner for objects that failed to define in the current notation. Clears itself once the
             // notation is fixed (the next store update recomputes an empty list).
+            //
+            // NB: the outer `div` is ALWAYS emitted (empty + display:none when clean) so the StageController
+            //     Provider after it keeps a STABLE child index — mirroring the command-error div above. As a
+            //     *conditional* sibling it index-shifted the stage on every appearance/removal, and React —
+            //     matching unkeyed siblings by position — REMOUNTED the entire StageController subtree, and with
+            //     it the active document controller (ScriptController / JobController / …). That recreates the
+            //     controller's `by lazy` store from ScriptState.initial, discarding ALL per-document UI state
+            //     (step expansion, scroll, in-progress editor buffers) every time the notation's definition-error
+            //     state toggled — e.g. the first time a RunStep's blank `instructions` is selected and the error
+            //     clears. Keeping the slot present (empty `div`, display:none ⇒ zero footprint) holds the stage
+            //     in place across toggles, exactly as the command-error div above intends ("avoid refreshing
+            //     StateController on error change").
             val definitionErrors = state.definitionErrors
-            if (definitionErrors.isNotEmpty()) {
-                div {
-                    css {
+            div {
+                css {
+                    if (definitionErrors.isEmpty()) {
+                        display = None.none
+                    }
+                    else {
                         // extra top margin so the banner clears the fixed header (and its drop shadow)
                         marginTop = 1.em
                         marginRight = 0.5.em
@@ -624,7 +639,9 @@ class ProjectController(
                         borderColor = NamedColor.red
                         borderRadius = 4.px
                     }
+                }
 
+                if (definitionErrors.isNotEmpty()) {
                     div {
                         css {
                             fontWeight = FontWeight.bold
