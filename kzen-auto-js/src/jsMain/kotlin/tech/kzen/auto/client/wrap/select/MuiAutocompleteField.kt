@@ -48,7 +48,7 @@ fun ChildrenBuilder.muiAutocompleteField(
     onSelect: (SelectOption) -> Unit,
     disableClearable: Boolean = false,
     autoFocus: Boolean = false,
-    autoHighlight: Boolean = false,
+    autoHighlight: Boolean = true,
     openOnFocus: Boolean = false,
     disabled: Boolean = false,
     disablePortal: Boolean = false,
@@ -65,8 +65,8 @@ fun ChildrenBuilder.muiAutocompleteField(
         this.isOptionEqualToValue = { a, b -> a.value == b.value }
         this.disableClearable = disableClearable
         // Auto-highlight the first (top) filtered option as the user types so Enter selects it without first
-        // arrow-down'ing or hovering. MUI's default is false (Enter does nothing until something is
-        // highlighted); opt-in per field.
+        // arrow-down'ing or hovering. Default true app-wide (MUI's own default is false — Enter does nothing
+        // until something is highlighted); pass autoHighlight = false to opt a field out.
         this.autoHighlight = autoHighlight
         this.openOnFocus = openOnFocus
         this.disabled = disabled

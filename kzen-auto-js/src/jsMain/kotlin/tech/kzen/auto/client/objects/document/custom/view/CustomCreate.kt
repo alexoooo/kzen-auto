@@ -213,8 +213,7 @@ class CustomCreate(
                 options = typeOptions,
                 selectedOption = typeOptions.find { it.value == selectedReference },
                 onSelect = { onPrototypeChange(it.value) },
-                disableClearable = true,
-                autoHighlight = true)
+                disableClearable = true)
         }
     }
 

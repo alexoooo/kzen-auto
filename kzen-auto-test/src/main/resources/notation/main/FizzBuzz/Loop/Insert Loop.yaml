@@ -17,11 +17,11 @@ main.steps/Run:
   is: RunStep
   instructions: "main/Actions/Insert Last.yaml#main"
 
-main.steps/Click 3:
+main.steps/Click 4:
   is: BrowserClickStep
   target:
-    type: Visual
-    value: "main/Actions/Select placeholder/~main.yaml#main"
+    type: Xpath
+    value: "//label[text()='Items']/..//input"
 
 main.steps/Write:
   is: BrowserWriteStep

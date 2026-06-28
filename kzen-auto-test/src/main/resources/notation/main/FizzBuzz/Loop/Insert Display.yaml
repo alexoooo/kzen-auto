@@ -26,8 +26,7 @@ main.steps/Click 8:
 main.steps/Click 9:
   is: BrowserClickStep
   target:
-    type: Visual
-    value: "main/Actions/Select placeholder/~main.yaml#main"
+    type: Xpath
 
 main.steps/Write 3:
   is: BrowserWriteStep

@@ -22,8 +22,8 @@ main:
 'main.steps/Append "0"':
   is: BrowserWriteStep
   target:
-    type: Xpath
-    value: "//label[text()='To']/..//input"
+    type: Text
+    value: 10
   text: 0
 
 "main.steps/Click [Rename]":

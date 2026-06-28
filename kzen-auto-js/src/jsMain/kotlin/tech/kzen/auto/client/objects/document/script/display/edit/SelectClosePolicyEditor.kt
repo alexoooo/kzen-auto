@@ -149,7 +149,6 @@ class SelectClosePolicyEditor(
             options = options,
             selectedOption = options.find { it.value == policy.key },
             onSelect = { onPolicyChange(ResourceClosePolicy.parse(it.value)) },
-            disableClearable = true,
-            autoHighlight = true)
+            disableClearable = true)
     }
 }

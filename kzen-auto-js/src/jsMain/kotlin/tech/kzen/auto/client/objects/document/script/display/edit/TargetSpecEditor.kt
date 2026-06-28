@@ -357,8 +357,7 @@ class TargetSpecEditor(
                 options = typeOptions,
                 selectedOption = typeOptions.find { it.value == targetType.name },
                 onSelect = { onTypeChange(TargetType.valueOf(it.value)) },
-                disableClearable = true,
-                autoHighlight = true)
+                disableClearable = true)
         }
     }
 

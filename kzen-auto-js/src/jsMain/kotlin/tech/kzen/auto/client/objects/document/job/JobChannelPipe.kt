@@ -71,7 +71,7 @@ class JobChannelPipe(
                 }
                 title = "${props.upstreamName} → ${props.downstreamName}"
 
-                icon("material-symbols:swap-horiz") {}
+                icon("material-symbols:arrow-downward") {}
             }
 
             connectorLine()

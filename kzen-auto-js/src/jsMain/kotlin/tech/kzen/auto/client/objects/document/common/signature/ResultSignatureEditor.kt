@@ -298,8 +298,7 @@ class ResultSignatureEditor:
                 options = typeOptions,
                 selectedOption = typeOptions.find { it.value == className },
                 onSelect = { onTypeChange(it.value, state.nullable) },
-                disableClearable = true,
-                autoHighlight = true)
+                disableClearable = true)
         }
 
         // Nullable as a compact toggle (`?`), matching the parameter editor.

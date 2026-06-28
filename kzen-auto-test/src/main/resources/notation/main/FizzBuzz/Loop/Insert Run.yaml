@@ -28,8 +28,8 @@ main.steps/Click 3:
 main.steps/Click 4:
   is: BrowserClickStep
   target:
-    type: Visual
-    value: "main/Actions/Select placeholder/~main.yaml#main"
+    type: Xpath
+    value: "//label[text()='Instructions']/..//input"
 
 main.steps/Write:
   is: BrowserWriteStep
@@ -41,8 +41,8 @@ main.steps/Enter:
 main.steps/Click 5:
   is: BrowserClickStep
   target:
-    type: Visual
-    value: "main/Actions/Select placeholder/~main.yaml#main"
+    type: Xpath
+    value: "//label[text()='number']/..//input"
 
 main.steps/Write 2:
   is: BrowserWriteStep

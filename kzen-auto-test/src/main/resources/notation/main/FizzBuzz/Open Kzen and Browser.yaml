@@ -7,6 +7,9 @@ main.steps/Start SUT:
   fixture: fixtures/empty-project
   port: 18082
 
+main.steps/Wait:
+  is: WaitStep
+
 main.steps/Open Browser:
   is: BrowserOpenStep
   closePolicy: manual
@@ -15,3 +18,6 @@ main.steps/Navigate:
   is: BrowserGetStep
   location: "http://127.0.0.1:18082/"
   screenshotDelayMilliseconds: 1000
+
+main.steps/Wait 2:
+  is: WaitStep
