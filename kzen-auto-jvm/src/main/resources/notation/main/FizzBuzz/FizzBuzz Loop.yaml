@@ -1,5 +1,6 @@
 main:
   is: Script
+  results: {}
 
 main.steps/Range:
   is: FormulaStep

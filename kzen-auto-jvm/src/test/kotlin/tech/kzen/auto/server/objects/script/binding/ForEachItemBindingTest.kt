@@ -33,6 +33,7 @@ import kotlin.test.assertIs
 class ForEachItemBindingTest {
     //-----------------------------------------------------------------------------------------------------------------
     private val documentPath = DocumentPath.parse("test/foreach-item-binding-test.yaml")
+    private val bodyTypeDocumentPath = DocumentPath.parse("test/foreach-body-type-test.yaml")
     private val mainLocation = ObjectLocation(documentPath, ObjectPath.parse("main"))
 
     private lateinit var context: KzenAutoContext
@@ -77,6 +78,34 @@ class ForEachItemBindingTest {
 
 
     @Test
+    fun forEachOutputTypeComesFromBodyTerminalNotItems() {
+        // Loop over Int with a body whose terminal step returns String => List<String> (what the loop
+        // collects), NOT List<Int> (the items element type).
+        assertEquals(
+            TypeMetadata(ClassNames.kotlinList, listOf(TypeMetadata.string), false),
+            typeMetadataFor(bodyTypeDocumentPath, "main.steps/Loop"))
+    }
+
+
+    @Test
+    fun itemBindingStaysItemsElementTypeWhenBodyDiffers() {
+        // The loop variable's type still tracks the items collection (Int), decoupled from the ForEach's
+        // own output type — so the body can reference Item without a circular type dependency.
+        assertEquals(
+            TypeMetadata(ClassNames.kotlinInt, listOf(), false),
+            typeMetadataFor(bodyTypeDocumentPath, "main.steps/Loop.item/Item"))
+    }
+
+
+    @Test
+    fun bodyTerminalInfersStringFromItemToString() {
+        assertEquals(
+            TypeMetadata(ClassNames.kotlinString, listOf(), false),
+            typeMetadataFor(bodyTypeDocumentPath, "main.steps/Loop.steps/Label"))
+    }
+
+
+    @Test
     fun bodyFormulaResolvesItemValueByName() {
         val execution = newExecution()
         execution.beforeStart(TupleValue.empty)
@@ -90,7 +119,11 @@ class ForEachItemBindingTest {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun typeMetadataFor(stepObjectPath: String): TypeMetadata? {
+    private fun typeMetadataFor(stepObjectPath: String): TypeMetadata? =
+        typeMetadataFor(documentPath, stepObjectPath)
+
+
+    private fun typeMetadataFor(documentPath: DocumentPath, stepObjectPath: String): TypeMetadata? {
         val graphNotation = AutoTestUtils.readNotation()
         val graphDefinitionAttempt = AutoTestUtils.graphDefinitionAttempt(graphNotation)
 

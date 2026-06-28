@@ -60,14 +60,14 @@ class ForEachStep(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun definition(scriptDefinitionContext: ScriptDefinitionContext): ScriptStepDefinition? {
-        // Output is a List whose element type matches the `items` collection's element type; defer (null)
-        // until items has been validated so the element type can refine past Any (the loop item binding
-        // reads this element type). ScriptValidator iterates to a fixpoint.
-        val itemsType = scriptDefinitionContext.scriptValidation
-            .stepValidations[items.objectPath]?.typeMetadata
+        // Output is a List of what the loop collects each iteration: the body's terminal step value (see
+        // continueOrStart, which adds the last body step's main value to `output`), mirroring IfStep whose
+        // type is its branches' terminal type. NOT the `items` element type — that's the loop variable's
+        // type (ForEachItemBinding), which it reads straight from `items`. An empty body has no value to
+        // collect, so its element type is unknown (Any). Defer (null) until the terminal step is validated;
+        // ScriptValidator iterates to a fixpoint.
+        val elementType = bodyTerminalType(scriptDefinitionContext)
             ?: return null
-
-        val elementType = itemsType.generics.firstOrNull() ?: TypeMetadata.any
 
         return ScriptStepDefinition.of(
             TupleDefinition.ofMain(LogicType(
@@ -75,6 +75,20 @@ class ForEachStep(
                     ClassNames.kotlinList,
                     listOf(elementType),
                     false))))
+    }
+
+
+    // The element type the loop collects: its last body step's resolved type, Unit when that terminal
+    // validated without a value, or Any for an empty body. Null means the terminal isn't validated yet —
+    // the caller should defer.
+    private fun bodyTerminalType(scriptDefinitionContext: ScriptDefinitionContext): TypeMetadata? {
+        val terminal = bodySteps.lastOrNull()
+            ?: return TypeMetadata.any
+
+        val validation = scriptDefinitionContext.scriptValidation.stepValidations[terminal.objectPath]
+            ?: return null
+
+        return validation.typeMetadata ?: TypeMetadata.unit
     }
 
 

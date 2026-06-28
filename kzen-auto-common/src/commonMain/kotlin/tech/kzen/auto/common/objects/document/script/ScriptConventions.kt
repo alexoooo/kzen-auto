@@ -31,6 +31,11 @@ object ScriptConventions {
     val itemAttributeName = AttributeName("item")
     val itemAttributePath = AttributePath.ofName(itemAttributeName)
 
+    // A ForEachStep's collection reference (the values it iterates over) — distinct from `item`, the
+    // branch that holds the per-iteration ForEachItemBinding.
+    val itemsAttributeName = AttributeName("items")
+    val itemsAttributePath = AttributePath.ofName(itemsAttributeName)
+
     // The Script's result signature: a `results` map (component name -> TypeMetadata) parsed by
     // ResultSignatureDefiner into the output TupleDefinition. Not a live step object (unlike parameters) —
     // it is plain data on the main Script object declaring what the Script returns; empty/absent => void.

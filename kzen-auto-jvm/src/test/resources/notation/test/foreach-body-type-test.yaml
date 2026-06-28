@@ -1,0 +1,20 @@
+main:
+  is: Script
+
+main.steps/Range:
+  is: NumberRangeStep
+  from: 1
+  to: 3
+
+main.steps/Loop:
+  is: ForEachStep
+  items: main.steps/Range
+
+main.steps/Loop.item/Item:
+  is: ForEachItemBinding
+
+# Body terminal returns String (references the Int loop item by name), so the loop collects Strings:
+# Loop's type must be List<String> (the body output), NOT List<Int> (the items element type).
+main.steps/Loop.steps/Label:
+  is: FormulaStep
+  code: "Item.toString()"
