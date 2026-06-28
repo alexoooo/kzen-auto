@@ -837,11 +837,8 @@ class LogicSignatureEditor:
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun typeLabel(parameter: ParameterRow): String {
-        val simple = LogicTypeOptions.simpleLabelByClassName[parameter.className]
-            ?: parameter.className.substringAfterLast('.')
-        return if (parameter.nullable) "$simple?" else simple
-    }
+    private fun typeLabel(parameter: ParameterRow): String =
+        LogicTypeOptions.simpleLabel(parameter.className, parameter.nullable)
 
 
     private fun executionValueText(value: ExecutionValue): String {

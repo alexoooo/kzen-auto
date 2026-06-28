@@ -2,15 +2,21 @@ package tech.kzen.auto.client.objects.document.script.step.control
 
 import emotion.react.css
 import js.objects.unsafeJso
+import mui.material.Chip
+import mui.material.ChipVariant
 import mui.material.IconButton
+import mui.material.Size
+import mui.system.sx
 import react.ChildrenBuilder
 import react.Key
+import react.ReactNode
 import react.State
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
 import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorProps
+import tech.kzen.auto.client.objects.document.common.signature.LogicTypeOptions
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
 import tech.kzen.auto.client.objects.document.script.model.ScriptStore
 import tech.kzen.auto.client.objects.document.script.model.ScriptStoreKey
@@ -24,6 +30,8 @@ import tech.kzen.auto.client.wrap.select.muiAutocompleteField
 import tech.kzen.auto.common.objects.document.flow.FlowConventions
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.objects.document.script.model.RunStepInstructions
+import tech.kzen.lib.common.model.attribute.AttributeName
+import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -44,7 +52,11 @@ import tech.kzen.lib.platform.collect.PersistentList
 import tech.kzen.lib.platform.collect.PersistentMap
 import tech.kzen.lib.platform.collect.toPersistentList
 import tech.kzen.lib.platform.collect.toPersistentMap
+import web.cssom.AlignItems
+import web.cssom.Display
 import web.cssom.em
+import web.cssom.number
+import web.cssom.px
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -55,6 +67,7 @@ external interface RunStepArgumentsEditorState: State {
     var values: PersistentMap<String, ObjectLocation>?
     var predecessors: PersistentList<ObjectLocation>?
     var parameterNames: PersistentList<String>?
+    var parameterTypes: PersistentMap<String, String>?
 }
 
 
@@ -88,6 +101,15 @@ class RunStepArgumentsEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        private val typeAttributePath = AttributePath.ofName(AttributeName("type"))
+        private const val classKey = "class"
+        private const val nullableKey = "nullable"
+        private const val defaultClassName = "kotlin.Any"
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     init {
         installContextType(DocumentBridgeContext)
     }
@@ -101,6 +123,7 @@ class RunStepArgumentsEditor(
         values = null
         predecessors = null
         parameterNames = null
+        parameterTypes = null
     }
 
 
@@ -157,23 +180,40 @@ class RunStepArgumentsEditor(
         // vertices in its `vertices` list (each carrying a `parameter` name) — so dispatch on the
         // callee's document type rather than assuming the Script shape (which found nothing for a Flow
         // and rendered no argument rows).
-        val instructionsParameters: List<String>? =
-            if (instructionsObjectLocation != null) {
-                val documentNotation = graphNotation.documents[instructionsObjectLocation.documentPath]
-                if (documentNotation != null && FlowConventions.isFlow(documentNotation)) {
-                    FlowConventions.inputParameterNames(graphNotation, instructionsObjectLocation)
-                }
-                else {
-                    documentNotation
-                        ?.directNestedObjectPaths(
-                            instructionsObjectLocation.objectPath,
-                            ScriptConventions.parametersAttributeName)
-                        ?.map { it.name.value }
-                }
+        //
+        // For a Script callee we also read each ParameterBinding's declared `type` (a MapAttributeNotation
+        // of {class, generics, nullable}, the same shape LogicSignatureEditor edits) and format it into a
+        // badge label. A Flow callee carries no typed signature in this shape, so its parameters get no badge.
+        val instructionsParameters: List<String>?
+        val newParameterTypes = mutableMapOf<String, String>()
+        if (instructionsObjectLocation != null) {
+            val documentNotation = graphNotation.documents[instructionsObjectLocation.documentPath]
+            if (documentNotation != null && FlowConventions.isFlow(documentNotation)) {
+                instructionsParameters = FlowConventions.inputParameterNames(
+                    graphNotation, instructionsObjectLocation)
             }
             else {
-                null
+                val parameterPaths = documentNotation
+                    ?.directNestedObjectPaths(
+                        instructionsObjectLocation.objectPath,
+                        ScriptConventions.parametersAttributeName)
+                instructionsParameters = parameterPaths?.map { it.name.value }
+
+                parameterPaths?.forEach { parameterPath ->
+                    val parameterLocation = instructionsObjectLocation
+                        .documentPath.toObjectLocation(parameterPath)
+                    val typeNotation = graphNotation
+                        .firstAttribute(parameterLocation, typeAttributePath) as? MapAttributeNotation
+                    val className = typeNotation?.get(classKey)?.asString() ?: defaultClassName
+                    val nullable = typeNotation?.get(nullableKey)?.asString()?.toBoolean() ?: false
+                    newParameterTypes[parameterPath.name.value] =
+                        LogicTypeOptions.simpleLabel(className, nullable)
+                }
             }
+        }
+        else {
+            instructionsParameters = null
+        }
 
         val attributeNotation = graphNotation
             .firstAttribute(props.objectLocation, props.attributeName)
@@ -202,6 +242,7 @@ class RunStepArgumentsEditor(
 
             this.values = values.toPersistentMap()
             parameterNames = instructionsParameters?.toPersistentList()
+            parameterTypes = newParameterTypes.toPersistentMap()
         }
     }
 
@@ -315,6 +356,7 @@ class RunStepArgumentsEditor(
         val values = state.values ?: return
         val predecessors = state.predecessors ?: return
         val parameterNames = state.parameterNames ?: return
+        val parameterTypes = state.parameterTypes
 
         val selectOptions: Array<SelectOption> = predecessors
             .map { location ->
@@ -329,7 +371,7 @@ class RunStepArgumentsEditor(
         for (parameterName in parameterNames) {
             div {
                 key = Key(parameterName)
-                renderParameter(parameterName, selectOptions, values)
+                renderParameter(parameterName, parameterTypes?.get(parameterName), selectOptions, values)
             }
         }
 
@@ -345,18 +387,46 @@ class RunStepArgumentsEditor(
 
     private fun ChildrenBuilder.renderParameter(
         parameterName: String,
+        typeLabel: String?,
         selectOptions: Array<SelectOption>,
         values: PersistentMap<String, ObjectLocation>
     ) {
         val selectedValue = values[parameterName]
         val selectedOption = selectOptions.find { it.value == selectedValue?.asString() }
 
-        muiAutocompleteField(
-            label = parameterName,
-            options = selectOptions,
-            selectedOption = selectedOption,
-            onSelect = { onValueChange(parameterName, ObjectLocation.parse(it.value)) },
-            disableClearable = true)
+        div {
+            css {
+                display = Display.flex
+                alignItems = AlignItems.center
+            }
+
+            // The select grows; minWidth 0 lets it shrink so the type badge never forces overflow.
+            div {
+                css {
+                    flexGrow = number(1.0)
+                    minWidth = 0.px
+                }
+
+                muiAutocompleteField(
+                    label = parameterName,
+                    options = selectOptions,
+                    selectedOption = selectedOption,
+                    onSelect = { onValueChange(parameterName, ObjectLocation.parse(it.value)) },
+                    disableClearable = true)
+            }
+
+            if (typeLabel != null) {
+                Chip {
+                    sx {
+                        marginLeft = 0.5.em
+                        flexShrink = number(0.0)
+                    }
+                    size = Size.small
+                    label = ReactNode(typeLabel)
+                    variant = ChipVariant.outlined
+                }
+            }
+        }
     }
 
 
