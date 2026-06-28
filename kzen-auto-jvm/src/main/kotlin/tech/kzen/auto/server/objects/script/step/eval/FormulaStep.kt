@@ -100,7 +100,9 @@ class FormulaStep(
             ClassNames.kotlinDouble,
             ClassNames.kotlinList,
             ClassNames.kotlinSet,
-//            ClassName("kotlin.ranges.IntRange")
+            // A FormulaStep like `1..100` infers to IntRange; recognize it so the step (and a ForEach
+            // iterating over it) is typed, rather than falling back to Any.
+            ClassName("kotlin.ranges.IntRange"),
         )
 
 

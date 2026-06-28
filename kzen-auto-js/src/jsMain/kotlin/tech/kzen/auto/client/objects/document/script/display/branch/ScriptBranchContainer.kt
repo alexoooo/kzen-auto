@@ -1,7 +1,12 @@
 package tech.kzen.auto.client.objects.document.script.display.branch
 
 import emotion.react.css
+import mui.material.Chip
+import mui.material.ChipVariant
+import mui.material.Size
+import mui.system.sx
 import react.ChildrenBuilder
+import react.ReactNode
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
 import tech.kzen.auto.client.objects.document.script.display.ScriptStepDisplayDefault
@@ -30,6 +35,10 @@ import web.cssom.*
 //     (IfStepDisplay / ForEachStepDisplay) via the shared branchStage* helpers in
 //     BranchStageChrome.kt — not by this helper, since branches differ in their top visuals
 //     (e.g. the If's Then branch adds a bottom fade-to-white lip the others don't).
+//
+//     `labelType` (optional): when a branch holds a typed value binding (ForEach's `item`), its type
+//     is shown as the standard outlined chip directly beneath the label. Null (the If/Do-While case)
+//     renders the label alone, unchanged.
 fun ChildrenBuilder.scriptBranchContainer(
     label: String,
     branchLocation: AttributeLocation,
@@ -38,7 +47,8 @@ fun ChildrenBuilder.scriptBranchContainer(
     roundedBottom: Boolean,
     clientStateGlobal: ClientStateGlobal,
     mirroredGraphStore: MirroredGraphStore,
-    objectStableMapper: ObjectStableMapper
+    objectStableMapper: ObjectStableMapper,
+    labelType: String? = null
 ) {
     div {
         css {
@@ -49,13 +59,20 @@ fun ChildrenBuilder.scriptBranchContainer(
         div {
             css {
                 backgroundColor = NamedColor.white
-                // Trunk content width — sized to the short branch labels ("Then"/"Else"/"Each") with
+                // Trunk content width — sized to the short branch labels ("Then"/"Else"/"Item") with
                 // minimal slack. Content-box, so the outer right edge is width + 2×0.75em padding;
                 // IfStepDisplay's vertical ledge line is positioned to that outer edge (keep in sync).
                 width = 3.em
                 flexShrink = number(0.0)
                 padding = Padding(32.px, 0.75.em)
                 color = Color("rgba(0, 0, 0, 0.7)")
+
+                // Stack the label over its optional type chip; flexStart keeps the chip hugging the
+                // left rather than stretching the trunk's full width. With no chip (If/Do-While) a lone
+                // text child renders top-left exactly as a plain block did.
+                display = Display.flex
+                flexDirection = FlexDirection.column
+                alignItems = AlignItems.flexStart
 
                 // Last branch of the construct: round the trunk's bottom corners so its white fill
                 // clips to the rounded shape (border-radius clips the background) — the white "⌐"
@@ -66,6 +83,20 @@ fun ChildrenBuilder.scriptBranchContainer(
                 }
             }
             +label
+
+            // Type chip for a typed branch binding (ForEach's loop item); skip void (Unit) — a "[Unit]"
+            // badge conveys nothing — mirroring StepHeader's own type-chip rule.
+            if (!labelType.isNullOrEmpty() && labelType != "Unit") {
+                Chip {
+                    sx {
+                        marginTop = 0.5.em
+                    }
+                    size = Size.small
+                    // this.label: the function's `label: String` param shadows ChipProps.label here.
+                    this.label = ReactNode(labelType)
+                    variant = ChipVariant.outlined
+                }
+            }
         }
 
         div {

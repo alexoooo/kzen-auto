@@ -31,6 +31,11 @@ dependencies {
 
     api("org.jetbrains.kotlinx:kotlinx-datetime:$kotlinxDatetimeVersion")
 
+    // kotlin.reflect.full.* (allSupertypes) — IterableElementTypeReflect recovers an Iterable's element
+    // type from the class hierarchy. Already on the classpath transitively via the scripting deps below;
+    // declared explicitly because it's used directly.
+    implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
+
     implementation("org.jetbrains.kotlin:kotlin-scripting-jvm:$kotlinVersion")
     implementation("org.jetbrains.kotlin:kotlin-scripting-jvm-host:$kotlinVersion")
     implementation("org.jetbrains.kotlin:kotlin-scripting-compiler-embeddable:$kotlinVersion")

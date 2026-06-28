@@ -34,6 +34,7 @@ class ForEachItemBindingTest {
     //-----------------------------------------------------------------------------------------------------------------
     private val documentPath = DocumentPath.parse("test/foreach-item-binding-test.yaml")
     private val bodyTypeDocumentPath = DocumentPath.parse("test/foreach-body-type-test.yaml")
+    private val rangeDocumentPath = DocumentPath.parse("test/foreach-item-range-test.yaml")
     private val mainLocation = ObjectLocation(documentPath, ObjectPath.parse("main"))
 
     private lateinit var context: KzenAutoContext
@@ -94,6 +95,16 @@ class ForEachItemBindingTest {
         assertEquals(
             TypeMetadata(ClassNames.kotlinInt, listOf(), false),
             typeMetadataFor(bodyTypeDocumentPath, "main.steps/Loop.item/Item"))
+    }
+
+
+    @Test
+    fun itemBindingInfersIntFromIntRangeItems() {
+        // items is a FormulaStep `1..3` (IntRange) — an Iterable<Int> with no generic parameter, so the
+        // loop item must still be Int (mapped from the range's element type), not Any.
+        assertEquals(
+            TypeMetadata(ClassNames.kotlinInt, listOf(), false),
+            typeMetadataFor(rangeDocumentPath, "main.steps/Loop.item/Item"))
     }
 
 

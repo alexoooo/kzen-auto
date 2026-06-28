@@ -10,6 +10,7 @@ import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.service.context.GraphCreator
+import tech.kzen.lib.platform.ClassName
 import tech.kzen.lib.platform.ClassNames
 import kotlin.test.assertEquals
 
@@ -45,6 +46,16 @@ class FormulaStepTest {
         assertEquals(
             TypeMetadata(ClassNames.kotlinInt, listOf(), false),
             typeMetadataFor("main.steps/IntFormula"))
+    }
+
+
+    @Test
+    fun infersIntRangeType() {
+        // `1..100` infers to IntRange — recognized rather than falling back to Any (drives a ForEach's
+        // loop-item element type; see ForEachItemBindingTest).
+        assertEquals(
+            TypeMetadata(ClassName("kotlin.ranges.IntRange"), listOf(), false),
+            typeMetadataFor("main.steps/RangeFormula"))
     }
 
 

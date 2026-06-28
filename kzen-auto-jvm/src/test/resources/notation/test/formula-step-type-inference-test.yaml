@@ -8,3 +8,7 @@ main.steps/StringFormula:
 main.steps/IntFormula:
   is: FormulaStep
   code: 42
+
+main.steps/RangeFormula:
+  is: FormulaStep
+  code: 1..100

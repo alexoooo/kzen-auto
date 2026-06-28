@@ -49,6 +49,7 @@ external interface ForEachStepDisplayState: State {
     var stepTrace: StepTrace?
     var isNextToRun: Boolean?
     var typeMetadata: String?
+    var itemTypeMetadata: String?
     var validationError: String?
 
     var icon: String?
@@ -152,12 +153,30 @@ class ForEachStepDisplay(
         val typeMetadata = stepValidation?.typeMetadata?.toSimple()
         val validationError = stepValidation?.errorMessage
 
+        // The loop item binding (ForEachItemBinding) lives in this ForEach's `item` branch; its type is
+        // the items-collection element type. Surfaced beside the "Item" branch label (see renderSteps).
+        val itemObjectPath = scriptState
+            .documentNotation
+            .directNestedObjectPaths(
+                props.common.objectLocation.objectPath, ScriptConventions.itemAttributeName)
+            .firstOrNull()
+        val itemTypeMetadata = itemObjectPath?.let {
+            scriptState
+                .validationState
+                .scriptValidation
+                ?.stepValidations
+                ?.get(it)
+                ?.typeMetadata
+                ?.toSimple()
+        }
+
         // NB: value compare (==) — computeStepTraceInfo rebuilds a fresh StepTrace each call (value-equal,
         //     not ===). Skip setState when THIS step is unchanged so a sibling's expand/collapse or trace
         //     update doesn't re-render every step body.
         if (state.stepTrace == info.trace &&
             state.isNextToRun == info.isNextToRun &&
             state.typeMetadata == typeMetadata &&
+            state.itemTypeMetadata == itemTypeMetadata &&
             state.validationError == validationError
         ) {
             return
@@ -167,6 +186,7 @@ class ForEachStepDisplay(
             this.stepTrace = info.trace
             this.isNextToRun = info.isNextToRun
             this.typeMetadata = typeMetadata
+            this.itemTypeMetadata = itemTypeMetadata
             this.validationError = validationError
         }
     }
@@ -255,13 +275,14 @@ class ForEachStepDisplay(
 
     private fun ChildrenBuilder.renderSteps() {
         scriptBranchContainer(
-            label = "Each",
+            label = "Item",
             branchLocation = AttributeLocation(props.common.objectLocation, ScriptConventions.stepsAttributePath),
             stepDisplayManager = props.stepDisplayManager,
             scriptCommander = props.scriptCommander,
             roundedBottom = true,
             clientStateGlobal = props.clientStateGlobal,
             mirroredGraphStore = props.mirroredGraphStore,
-            objectStableMapper = props.objectStableMapper)
+            objectStableMapper = props.objectStableMapper,
+            labelType = state.itemTypeMetadata)
     }
 }

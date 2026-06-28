@@ -7,6 +7,7 @@ import tech.kzen.auto.server.objects.script.api.ScriptValueBinding
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
 import tech.kzen.auto.server.objects.script.model.ScriptExecutionContext
 import tech.kzen.auto.server.objects.script.step.control.foreach.ForEachStep
+import tech.kzen.auto.server.util.IterableElementTypeReflect
 import tech.kzen.lib.common.exec.logic.model.LogicResult
 import tech.kzen.lib.common.exec.logic.model.LogicResultFailed
 import tech.kzen.lib.common.exec.logic.model.LogicResultSuccess
@@ -60,10 +61,21 @@ class ForEachItemBinding(
             .stepValidations[itemsLocation.objectPath]?.typeMetadata
             ?: return null
 
-        val elementType = itemsType.generics.firstOrNull() ?: TypeMetadata.any
-
+        val metadata = elementTypeOf(itemsType)
         return ScriptStepDefinition.of(
-            TupleDefinition.ofMain(LogicType(elementType)))
+            TupleDefinition.ofMain(LogicType(metadata)))
+    }
+
+
+    // The element type of the items collection: its first generic parameter when it has one
+    // (List<X>, Set<X>, …); otherwise — for an Iterable that fixes its element type and so exposes no
+    // generic parameter (IntRange : Iterable<Int>, a FormulaStep `1..100`) — recovered reflectively from
+    // the class's Iterable<E> supertype. Falls back to Any when neither applies.
+    private fun elementTypeOf(collectionType: TypeMetadata): TypeMetadata {
+        collectionType.generics.firstOrNull()?.let { return it }
+
+        return IterableElementTypeReflect.elementType(collectionType.className)
+            ?: TypeMetadata.any
     }
 
 

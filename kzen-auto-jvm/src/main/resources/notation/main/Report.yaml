@@ -10,3 +10,13 @@ main:
       locations:
         - location: "C:/Users/ostro/IdeaProjects/kzen-auto/build.gradle.kts"
           coordinate: Text
+  output:
+    type: Explore
+    explore:
+      start: 1
+      count: 50
+    export:
+      format: csv
+      compression: none
+      path: "../work/output/${report}_${group}_${time}.${extension}"
+    work: report
