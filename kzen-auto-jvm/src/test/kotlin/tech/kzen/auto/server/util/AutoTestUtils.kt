@@ -117,7 +117,7 @@ object AutoTestUtils {
         val logic = graphInstance.objectInstances[logicLocation]?.reference as? Logic
             ?: throw IllegalArgumentException("Logic not found: $logicLocation")
 
-        val logicTraceHandle = context.logicTraceStore.handle(runExecutionId, logicLocation)
+        val logicTraceHandle = context.logicTraceStore.handle(runExecutionId, logicLocation, null, null)
 
         return logic.execute(
             logicHandle,

@@ -209,7 +209,8 @@ class JobLogicHostImpl(
     private inner class TopLevelHandle: LogicHandle {
         override fun start(
             logicRunExecutionId: LogicRunExecutionId,
-            originalObjectLocation: ObjectLocation
+            originalObjectLocation: ObjectLocation,
+            callerLocation: ObjectLocation?
         ): LogicExecutionFacade {
             // Delegate both the run command AND pause-on-error to the shared host control: a live mid-run
             // pause-on-error toggle (set on the shared control) then reaches every concurrent child without
@@ -243,7 +244,9 @@ class JobLogicHostImpl(
                 fullDefinition, control, resourceScope, listener, logicTraceStore) { environment }
 
             val execution = facade.open(
-                childExecutionId, originalObjectLocation, NestedHandle(control, resourceScope), graphCreator)
+                childExecutionId, originalObjectLocation,
+                logicRunExecutionId.logicExecutionId, callerLocation,
+                NestedHandle(control, resourceScope), graphCreator)
 
             frameHandle = nestedFrameRegistry.attach(
                 logicRunExecutionId.logicExecutionId, originalObjectLocation,
@@ -265,7 +268,8 @@ class JobLogicHostImpl(
     {
         override fun start(
             logicRunExecutionId: LogicRunExecutionId,
-            originalObjectLocation: ObjectLocation
+            originalObjectLocation: ObjectLocation,
+            callerLocation: ObjectLocation?
         ): LogicExecutionFacade {
             val childExecutionId = LogicRunExecutionId(runExecutionId.logicRunId, LogicExecutionId.random())
 
@@ -281,7 +285,9 @@ class JobLogicHostImpl(
                 fullDefinition, control, resourceScope, listener, logicTraceStore) { environment }
 
             val execution = facade.open(
-                childExecutionId, originalObjectLocation, this, graphCreator)
+                childExecutionId, originalObjectLocation,
+                logicRunExecutionId.logicExecutionId, callerLocation,
+                this, graphCreator)
 
             frameHandle = nestedFrameRegistry.attach(
                 logicRunExecutionId.logicExecutionId, originalObjectLocation,

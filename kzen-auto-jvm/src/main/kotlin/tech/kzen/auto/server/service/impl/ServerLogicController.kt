@@ -182,7 +182,8 @@ class ServerLogicController(
         val logicHandle: LogicHandle = object: LogicHandle {
             override fun start(
                 logicRunExecutionId: LogicRunExecutionId,
-                originalObjectLocation: ObjectLocation
+                originalObjectLocation: ObjectLocation,
+                callerLocation: ObjectLocation?
             ): LogicExecutionFacade {
                 val currentState = checkNotNull(stateOrNull)
                 check(currentState.runId == runId)
@@ -210,7 +211,8 @@ class ServerLogicController(
                     listener, logicTraceStore, environment)
 
                 val logicExecution = logicExecutionFacadeImpl.open(
-                    LogicRunExecutionId(runId, guestExecutionId), originalObjectLocation, this, graphCreator)
+                    LogicRunExecutionId(runId, guestExecutionId), originalObjectLocation,
+                    logicRunExecutionId.logicExecutionId, callerLocation, this, graphCreator)
 
                 val stableObjectLocation = objectStableMapper.objectStableId(originalObjectLocation)
                 hostFrame.dependencies.add(LogicFrame(
@@ -230,7 +232,8 @@ class ServerLogicController(
         // Same global wipe as the manual "Clear all traces" control, made implicit at run start.
         logicTraceStore.clearAll()
 
-        val logicTraceHandle = logicTraceStore.handle(runExecutionId, root)
+        // The run's root execution has no caller / parent.
+        val logicTraceHandle = logicTraceStore.handle(runExecutionId, root, null, null)
 
         val logic = rootInstance as Logic
         val execution =

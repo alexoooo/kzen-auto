@@ -4,11 +4,9 @@ import tech.kzen.auto.client.objects.document.script.display.computeStepHeaderIn
 import tech.kzen.auto.client.objects.document.script.display.computeStepTraceInfo
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
 import tech.kzen.auto.client.service.global.ClientState
-import tech.kzen.auto.common.objects.document.script.model.RunStepInstructions
 import tech.kzen.lib.common.exec.BinaryExecutionValue
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceEvent
 import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 
 
@@ -52,7 +50,6 @@ fun pageScreenshots(
     objectStableMapper: ObjectStableMapper
 ): List<PageScreenshotEntry> {
     val documentPath = scriptState.mainLocation.documentPath
-    val graphNotation = clientState.graphStructure().graphNotation
     val entries = mutableListOf<PageScreenshotEntry>()
 
     for (objectPath in scriptState.scriptTree.orderedDescendantObjectPaths()) {
@@ -63,7 +60,7 @@ fun pageScreenshots(
         if (representative != null) {
             val frames =
                 if (scriptState.isStepExpanded(location)) {
-                    stripFrames(scriptState, graphNotation, objectStableMapper, location)
+                    stripFrames(scriptState, objectStableMapper, location)
                 }
                 else {
                     listOf(representative)
@@ -90,10 +87,9 @@ fun pageScreenshots(
         }
     }
 
-    // The detail strip filters subtree frames by execution root only, so two RunSteps that invoke the
-    // same sub-script surface the same frames; dedupe by key (keeping first / document order) so each
-    // screenshot is a single navigation stop and prev/next can't oscillate between duplicate keys.
-    return entries.distinctBy { it.key }
+    // Each execution belongs to exactly one RunStep's owned set (the execution tree is a tree), so a
+    // screenshot frame appears under a single step — no cross-step duplicate keys to dedupe.
+    return entries
 }
 
 
@@ -104,17 +100,15 @@ fun pageScreenshots(
 // executions interleave by sequence.
 private fun stripFrames(
     scriptState: ScriptState,
-    graphNotation: GraphNotation,
     objectStableMapper: ObjectStableMapper,
     runStepLocation: ObjectLocation
 ): List<LogicTraceEvent> {
-    val subtreeRoots = RunStepInstructions
-        .subtreeInstructionRoots(graphNotation, runStepLocation)
-        .mapTo(mutableSetOf()) { objectStableMapper.objectStableId(it) }
+    val ownedExecutions = scriptState.progress.ownedExecutions(
+        objectStableMapper.objectStableId(runStepLocation))
 
     val byExecution = LinkedHashMap<String, MutableList<LogicTraceEvent>>()
     for (frame in scriptState.progress.traceEvents) {
-        if (frame.value !is BinaryExecutionValue || frame.rootStableId !in subtreeRoots) {
+        if (frame.value !is BinaryExecutionValue || frame.executionId.value !in ownedExecutions) {
             continue
         }
         byExecution.getOrPut(frame.executionId.value) { mutableListOf() }.add(frame)

@@ -32,6 +32,7 @@ object LogicConventions {
     const val actionLookup = "lookup"
     const val actionLookupRun = "lookup-run"
     const val actionLookupRunHistory = "lookup-run-history"
+    const val actionLookupRunExecutions = "lookup-run-executions"
     const val actionMostRecent = "recent"
     const val actionTraced = "traced"
     const val actionReset = "reset"

@@ -171,7 +171,8 @@ class ParameterBindingTest {
     private object UnusedLogicHandle: LogicHandle {
         override fun start(
             logicRunExecutionId: LogicRunExecutionId,
-            originalObjectLocation: ObjectLocation
+            originalObjectLocation: ObjectLocation,
+            callerLocation: ObjectLocation?
         ): LogicExecutionFacade =
             error("nested logic should not start")
     }

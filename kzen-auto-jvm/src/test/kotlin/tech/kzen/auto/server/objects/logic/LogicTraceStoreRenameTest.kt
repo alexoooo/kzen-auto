@@ -49,7 +49,7 @@ class LogicTraceStoreRenameTest {
         val originalStableId = mapper.objectStableId(stepLocation)
 
         // Active run writes a trace entry under the step's stable id
-        val handle = store.handle(runExecutionId, rootLocation)
+        val handle = store.handle(runExecutionId, rootLocation, null, null)
         val stablePath = LogicTracePath.ofObjectStableId(originalStableId)
         handle.set(stablePath, ExecutionValue.of("done"))
 
@@ -78,7 +78,7 @@ class LogicTraceStoreRenameTest {
         mapper.objectStableId(rootLocation)
         val originalStableId = mapper.objectStableId(stepLocation)
 
-        val handle = store.handle(runExecutionId, rootLocation)
+        val handle = store.handle(runExecutionId, rootLocation, null, null)
         val stablePath = LogicTracePath.ofObjectStableId(originalStableId)
         handle.set(stablePath, ExecutionValue.of("done"))
 
@@ -100,7 +100,7 @@ class LogicTraceStoreRenameTest {
         mapper.objectStableId(rootLocation)
         val originalStableId = mapper.objectStableId(stepLocation)
 
-        val handle = store.handle(runExecutionId, rootLocation)
+        val handle = store.handle(runExecutionId, rootLocation, null, null)
         handle.set(
             LogicTracePath.ofObjectStableId(originalStableId),
             ExecutionValue.of("done"))
@@ -121,7 +121,7 @@ class LogicTraceStoreRenameTest {
         mapper.objectStableId(rootLocation)
 
         // Run scoped to the root document's main object
-        store.handle(runExecutionId, rootLocation)
+        store.handle(runExecutionId, rootLocation, null, null)
 
         // Root object renamed after the run ended
         mapper.apply(RenamedObjectEvent(rootLocation, ObjectName("MyScriptRenamed")))
@@ -148,7 +148,7 @@ class LogicTraceStoreRenameTest {
 
         // Iteration 1: the sub-logic runs under its own execution id and traces a step value + event.
         val iter1 = LogicRunExecutionId(runId, LogicExecutionId.random())
-        val handle1 = store.handle(iter1, itemRoot)
+        val handle1 = store.handle(iter1, itemRoot, null, null)
         handle1.set(stepPath, ExecutionValue.of("iter1"))
         handle1.append(stepStableId, ExecutionValue.of("iter1"))
 
@@ -159,7 +159,7 @@ class LogicTraceStoreRenameTest {
         // Iteration 2: the same sub-logic is re-invoked (fresh execution id, same run). Before it traces
         // anything, the whole-run merge must NOT still show iteration 1's finished value.
         val iter2 = LogicRunExecutionId(runId, LogicExecutionId.random())
-        val handle2 = store.handle(iter2, itemRoot)
+        val handle2 = store.handle(iter2, itemRoot, null, null)
 
         val betweenIterations = store.lookupRun(runId, LogicTraceQuery(LogicTracePath.root))
         checkNotNull(betweenIterations)

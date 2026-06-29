@@ -134,7 +134,7 @@ class JobNestedLogicTest {
         // Warm the FormulaStep compiler cache via a full-speed run so the stepping below isn't first-compile timed.
         assertIs<LogicResultSuccess>(runToCompletion(newHost(), grandchildLocation, 5))
 
-        val facade = host.logicHandleFacade().start(wrapperLocation)
+        val facade = host.logicHandleFacade().start(wrapperLocation, null)
         try {
             assertTrue(facade.beforeStart(host.argumentTuple(wrapperLocation, 5)))
 
@@ -179,7 +179,7 @@ class JobNestedLogicTest {
         assertIs<LogicResultSuccess>(runToCompletion(newHost(), childLocation, 0))  // warm the compiler cache
 
         // First invocation, driven manually so we can observe its live buffer + id before it closes.
-        val facadeA = host.logicHandleFacade().start(childLocation)
+        val facadeA = host.logicHandleFacade().start(childLocation, null)
         val idA: LogicRunExecutionId
         try {
             assertTrue(facadeA.beforeStart(host.argumentTuple(childLocation, 3)))
@@ -204,7 +204,7 @@ class JobNestedLogicTest {
 
         // Second invocation (the re-entry): a DISTINCT execution id and a fresh buffer — A's evicted buffer can
         // no longer surface, so the merged-run view the client reads shows this invocation starting clean.
-        val facadeB = host.logicHandleFacade().start(childLocation)
+        val facadeB = host.logicHandleFacade().start(childLocation, null)
         try {
             assertTrue(facadeB.beforeStart(host.argumentTuple(childLocation, 7)))
             val idB = assertNotNull(
@@ -244,7 +244,7 @@ class JobNestedLogicTest {
         assertIs<LogicResultSuccess>(
             runToCompletion(newHost(), ObjectLocation(intChildDocumentPath, ObjectPath.parse("main")), 5))
 
-        val facade = host.logicHandleFacade().start(wrapperLocation)
+        val facade = host.logicHandleFacade().start(wrapperLocation, null)
         try {
             assertTrue(facade.beforeStart(host.argumentTuple(wrapperLocation, 5)))
 
@@ -286,7 +286,7 @@ class JobNestedLogicTest {
         assertIs<LogicResultSuccess>(
             runToCompletion(newHost(), ObjectLocation(intChildDocumentPath, ObjectPath.parse("main")), 5))
 
-        val facade = host.logicHandleFacade().start(wrapperLocation)
+        val facade = host.logicHandleFacade().start(wrapperLocation, null)
         try {
             assertTrue(facade.beforeStart(host.argumentTuple(wrapperLocation, 5)))
 
@@ -320,7 +320,7 @@ class JobNestedLogicTest {
         assertIs<LogicResultSuccess>(
             runToCompletion(newHost(), ObjectLocation(intChildDocumentPath, ObjectPath.parse("main")), 5))
 
-        val facade = host.logicHandleFacade().start(wrapperLocation)
+        val facade = host.logicHandleFacade().start(wrapperLocation, null)
         try {
             assertTrue(facade.beforeStart(host.argumentTuple(wrapperLocation, 5)))
 
@@ -362,7 +362,7 @@ class JobNestedLogicTest {
         // Step Over at the Job level: global depth limit 0 (the Job root). Granted before the child is created.
         host.grantStepToChildren(1, 0)
 
-        val facade = host.logicHandleFacade().start(wrapperLocation)
+        val facade = host.logicHandleFacade().start(wrapperLocation, null)
         try {
             assertTrue(facade.beforeStart(host.argumentTuple(wrapperLocation, 5)))
 
@@ -396,7 +396,7 @@ class JobNestedLogicTest {
         // Step Into (budget 1, unbounded limit), granted before the child is created.
         host.grantStepToChildren()
 
-        val facade = host.logicHandleFacade().start(wrapperLocation)
+        val facade = host.logicHandleFacade().start(wrapperLocation, null)
         try {
             assertTrue(facade.beforeStart(host.argumentTuple(wrapperLocation, 5)))
 
@@ -535,7 +535,7 @@ class JobNestedLogicTest {
     // through. Mirrors how RunWorker drives a child, minus the per-wavefront checkpoint. The standalone
     // step-into behaviour is covered by [steppingDescendsIntoNestedChildOneFreshStepAtATime].
     private fun runToCompletion(host: JobLogicHostImpl, child: ObjectLocation, input: Any?): LogicResult {
-        val facade = host.logicHandleFacade().start(child)
+        val facade = host.logicHandleFacade().start(child, null)
         try {
             if (! facade.beforeStart(host.argumentTuple(child, input))) {
                 return LogicResultFailed("Unable to initialize $child")
@@ -565,7 +565,8 @@ class JobNestedLogicTest {
     private object UnusedLogicHandle: LogicHandle {
         override fun start(
             logicRunExecutionId: LogicRunExecutionId,
-            originalObjectLocation: ObjectLocation
+            originalObjectLocation: ObjectLocation,
+            callerLocation: ObjectLocation?
         ): LogicExecutionFacade =
             error("nested logic should be hosted via JobControl.logicHost() for a Job")
     }

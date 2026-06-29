@@ -2,6 +2,7 @@ package tech.kzen.auto.server.service.impl
 
 import tech.kzen.lib.common.exec.logic.*
 import tech.kzen.lib.common.exec.logic.model.LogicResult
+import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
 import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.model.definition.GraphDefinition
@@ -28,6 +29,8 @@ class LogicExecutionFacadeImpl(
     fun open(
         runExecutionId: LogicRunExecutionId,
         originalObjectLocation: ObjectLocation,
+        parentExecutionId: LogicExecutionId?,
+        callerLocation: ObjectLocation?,
         logicHandle: LogicHandle,
         graphCreator: GraphCreator
     ): LogicExecution {
@@ -39,7 +42,8 @@ class LogicExecutionFacadeImpl(
             ?.reference as? Logic
             ?: throw IllegalArgumentException("Dependency logic not found: $originalObjectLocation")
 
-        val logicTraceHandle = logicTraceStore.handle(runExecutionId, originalObjectLocation)
+        val logicTraceHandle = logicTraceStore.handle(
+            runExecutionId, originalObjectLocation, parentExecutionId, callerLocation)
 
         val execution = dependencyInstance.execute(
             logicHandle,

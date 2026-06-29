@@ -1,9 +1,6 @@
 main:
   is: Script
 
-main.steps/Pause:
-  is: PauseStep
-
 main.steps/Click:
   is: BrowserClickStep
   target:
@@ -24,7 +21,7 @@ main.steps/Click 3:
   is: BrowserClickStep
   target:
     type: Xpath
-    value: "//label[text()='Code']/..//textarea"
+    value: "(//label[text()='Code'])[last()]/..//textarea"
 
 main.steps/Write:
   is: BrowserWriteStep

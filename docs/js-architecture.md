@@ -138,9 +138,9 @@ deleted* (the parent hasn't yet handed it the new location). Two consequences:
   guard first — `if (objectLocation !in graphNotation.coalesce) return` (or fall back to the location
   unchanged). `RunStepArgumentsEditor` and `RunStepDisplay` both do this. Symptom when missed:
   `Observer error in ScriptStore: Missing: …` on rename/delete. This is also why per-RunStep
-  representative-screenshot resolution lives in `ScriptProgressStore` (which derives RunStep subtree
-  roots from the *current* notation each refresh and keys results by stable id), not in the
-  thumbnail's observer keyed off a possibly-stale `props.objectLocation`.
+  representative-screenshot resolution lives in `ScriptProgressStore` (which derives each RunStep's
+  owned executions from the run's execution tree each refresh and keys results by stable id), not in
+  the thumbnail's observer keyed off a possibly-stale `props.objectLocation`.
 
 ### RunStep screenshot detail = the trace timeline, not per-step latest
 
@@ -150,11 +150,16 @@ iterations), in execution order, grouped/labelled by sub-script execution. It is
 [kzen-lib trace](../../kzen-lib/docs/architecture.md)), not from per-step "latest frame" lookups: a
 loop's `clearAll` deletes per-path frames each iteration, so only the history retains them.
 `ScriptProgressStore` fetches the run's history incrementally (by a sequence watermark, resetting on a
-new run), publishes the accumulated `traceEvents`, and computes each RunStep's representative (latest
-binary-valued event in its `RunStepInstructions.subtreeInstructionRoots`). `RunStepDisplay` filters
-`traceEvents` to its subtree and groups them by `executionId`; each frame is a `ScreenshotThumbnail`
-(its own `ScreenshotFullscreen`), distinct from the location-keyed `StepImageThumbnail` /
-`StepImageFullscreen` used for a single step's current frame on the main canvas.
+new run) and publishes the accumulated `traceEvents`. Scoping a RunStep's strip to *only the
+executions that step launched* (not every execution of the same sub-script document — two RunSteps can
+invoke the same sub-script) uses the run's **execution tree** (`lookupRunExecutions`: per-execution
+parent + call-site): each refresh, the store seeds at the viewed document's resolved execution and
+assigns each direct child execution — and its transitive subtree — to the RunStep named by the child's
+call-site, publishing `runStepOwnedExecutions` (stable-id → owned `executionId`s) plus each step's
+representative (its latest owned binary event). `RunStepDisplay` filters `traceEvents` to its owned
+executions and groups them by `executionId`; each frame is a `ScreenshotThumbnail` (its own
+`ScreenshotFullscreen`), distinct from the location-keyed `StepImageThumbnail` / `StepImageFullscreen`
+used for a single step's current frame on the main canvas.
 
 ## 3. Document folder convention
 

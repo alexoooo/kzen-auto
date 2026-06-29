@@ -22,7 +22,7 @@ import tech.kzen.lib.common.util.ExceptionUtils
 class RunStep(
     private val instructions: ObjectLocation,
     private val arguments: Map<String, ObjectLocation>,
-    selfLocation: ObjectLocation
+    private val selfLocation: ObjectLocation
 ):
     TracingScriptStep(selfLocation),
     StatefulLogicElement<RunStep>
@@ -78,7 +78,7 @@ class RunStep(
                 existing
             }
             else {
-                val created = scriptExecutionContext.logicHandleFacade.start(instructions)
+                val created = scriptExecutionContext.logicHandleFacade.start(instructions, selfLocation)
 
                 val argumentTupleComponents = arguments.map {
                     TupleComponentValue(

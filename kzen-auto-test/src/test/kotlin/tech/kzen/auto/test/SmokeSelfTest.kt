@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test
 
 class SmokeSelfTest: SelfTestBase() {
     @Test
-    fun openWelcome() {
+    fun fizzBuzz() {
         val runId = testerClient.startRun(
             documentPath = "main/FizzBuzz/FizzBuzz.yaml",
             objectPath = "main")

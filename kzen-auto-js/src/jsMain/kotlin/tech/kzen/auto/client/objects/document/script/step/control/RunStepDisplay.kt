@@ -19,7 +19,6 @@ import tech.kzen.auto.client.objects.document.script.model.ScriptStore
 import tech.kzen.auto.client.objects.document.script.model.ScriptStoreKey
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.*
-import tech.kzen.auto.common.objects.document.script.model.RunStepInstructions
 import tech.kzen.lib.common.exec.BinaryExecutionValue
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceEvent
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -141,15 +140,18 @@ class RunStepDisplay(
             return
         }
 
-        val subtreeRoots = RunStepInstructions
-            .subtreeInstructionRoots(graphNotation, props.common.objectLocation)
-            .mapTo(mutableSetOf()) { props.objectStableMapper.objectStableId(it) }
+        // The executions this RunStep's invocation spawned (within the viewed run frame) — its own
+        // sub-script invocation plus everything nested under it — so a sibling RunStep that invokes the
+        // same sub-script document doesn't bleed its frames in. Derived from the run's execution tree
+        // (ScriptProgressStore), keyed by this step's stable id.
+        val selfStableId = props.objectStableMapper.objectStableId(props.common.objectLocation)
+        val ownedExecutions = scriptState.progress.ownedExecutions(selfStableId)
 
         // traceEvents is sorted by sequence; keep that order so groups read in execution order.
         val relevant = scriptState.progress.traceEvents
-            .filter { it.value is BinaryExecutionValue && it.rootStableId in subtreeRoots }
+            .filter { it.value is BinaryExecutionValue && it.executionId.value in ownedExecutions }
 
-        val signature = subtreeRoots.joinToString(",") { it.value } + "|" +
+        val signature = selfStableId.value + "|" + ownedExecutions.size + "|" +
                 relevant.size + "|" + (relevant.lastOrNull()?.sequence ?: -1L)
         if (signature == state.signature) {
             return

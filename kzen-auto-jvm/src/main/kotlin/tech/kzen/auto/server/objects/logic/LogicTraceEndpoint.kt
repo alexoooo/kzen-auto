@@ -91,6 +91,16 @@ class LogicTraceEndpoint(
                     events.map { it.toCollection() }))
             }
 
+            LogicConventions.actionLookupRunExecutions -> {
+                val logicRunId = request.getSingle(CommonRestApi.paramRunId)?.let { LogicRunId(it) }
+                    ?: return ExecutionResult.failure("Logic Run ID missing: '${CommonRestApi.paramRunId}'")
+
+                val executions = logicTraceStore.lookupRunExecutions(logicRunId)
+
+                ExecutionSuccess.ofValue(ExecutionValue.of(
+                    executions.map { it.toCollection() }))
+            }
+
             LogicConventions.actionTraced -> {
                 // Every document with a retained trace (run roots + sub-logic roots), as documentPath
                 // strings — the sidebar keys its "has trace" indicator by DocumentPath.

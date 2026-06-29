@@ -40,7 +40,7 @@ class RunWorker(
     output: ChannelOutput<Any?>,
 
     private val instructions: ObjectLocation,
-    selfLocation: ObjectLocation
+    private val selfLocation: ObjectLocation
 ):
     TransformWorker<Any?, Any?>(input, output, selfLocation)
 {
@@ -49,7 +49,7 @@ class RunWorker(
 
     override suspend fun onBatch(batch: Any?, emit: Emitter<Any?>, control: JobControl) {
         val host = control.logicHost()
-        val facade = host.logicHandleFacade().start(instructions)
+        val facade = host.logicHandleFacade().start(instructions, selfLocation)
         try {
             val initialized = control.runBlockingIo {
                 facade.beforeStart(host.argumentTuple(instructions, batch))

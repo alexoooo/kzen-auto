@@ -18,7 +18,15 @@ data class ScriptProgressState(
 
     // Per-RunStep representative: the latest screenshot-bearing event anywhere in the RunStep's subtree
     // (its instructions sub-script + nested RunSteps). Keyed by the RunStep's ObjectStableId (rename-safe).
-    val runStepRepresentative: Map<ObjectStableId, LogicTraceEvent> = mapOf()
+    val runStepRepresentative: Map<ObjectStableId, LogicTraceEvent> = mapOf(),
+
+    // Per-RunStep set of owned execution ids (executionId.value): the executions this RunStep's invocation
+    // spawned within the viewed run frame, plus their transitive descendants. Derived from the run's
+    // execution tree (LogicTrace.lookupRunExecutions) seeded at the viewed document's resolved execution.
+    // Keyed by the RunStep's ObjectStableId. This — not the sub-script document root — is how a RunStep's
+    // screenshot strip is scoped, so two RunSteps invoking the same sub-script don't share each other's
+    // frames.
+    val runStepOwnedExecutions: Map<ObjectStableId, Set<String>> = mapOf()
 ) {
     data class MostRecentResult(
         val logicRunExecutionId: LogicRunExecutionId?
@@ -32,5 +40,10 @@ data class ScriptProgressState(
 
     fun representativeFrame(runStepStableId: ObjectStableId): LogicTraceEvent? {
         return runStepRepresentative[runStepStableId]
+    }
+
+
+    fun ownedExecutions(runStepStableId: ObjectStableId): Set<String> {
+        return runStepOwnedExecutions[runStepStableId] ?: setOf()
     }
 }

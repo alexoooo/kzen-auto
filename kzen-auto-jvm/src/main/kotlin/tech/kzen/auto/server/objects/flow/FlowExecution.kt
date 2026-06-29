@@ -264,7 +264,7 @@ class FlowExecution(
                 val argumentMessage = singleInputMessage(vertexLocation, matrix)
                 val parameterName = calleeFirstParameterName(vertex.instructions, graphDefinition)
 
-                val created = logicHandleFacade.start(vertex.instructions)
+                val created = logicHandleFacade.start(vertex.instructions, vertexLocation)
                 val argumentValue =
                     if (parameterName != null) {
                         TupleValue(listOf(TupleComponentValue(parameterName, argumentMessage)))
