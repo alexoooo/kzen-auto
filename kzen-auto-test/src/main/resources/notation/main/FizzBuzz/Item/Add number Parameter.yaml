@@ -41,3 +41,6 @@ main.steps/Write 2:
 
 main.steps/Enter:
   is: BrowserEnterStep
+
+main.steps/Enter 2:
+  is: BrowserEnterStep

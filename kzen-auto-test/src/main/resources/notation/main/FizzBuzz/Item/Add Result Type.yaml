@@ -5,4 +5,20 @@ main.steps/Click:
   is: BrowserClickStep
   target:
     type: Xpath
-    value: "//button[@title='Add parameter']"
+    value: "//button[@title='Add result']"
+
+main.steps/Click 2:
+  is: BrowserClickStep
+  target:
+    type: Xpath
+    value: "//label[text()='Type']/..//input"
+
+main.steps/Write:
+  is: BrowserWriteStep
+  text: String
+
+main.steps/Enter:
+  is: BrowserEnterStep
+
+main.steps/Enter 2:
+  is: BrowserEnterStep

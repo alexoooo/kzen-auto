@@ -738,7 +738,13 @@ class LogicSignatureEditor:
                     options = typeOptions,
                     selectedOption = typeOptions.find { it.value == parameter.className },
                     onSelect = { onTypeChange(parameter, it.value, parameter.nullable) },
-                    disableClearable = true)
+                    disableClearable = true,
+                    // Once the dropdown is closed, Enter/Escape commit/cancel the edit like the sibling
+                    // Parameter and Default text fields (the first Enter/Escape still picks/closes the list).
+                    onClosedKeyDown = { event ->
+                        ClientInputUtils.handleEnterAndEscape(
+                            event, { onCommitEdit(parameter) }, ::onCancelEdit)
+                    })
             }
 
             // Nullable as a compact toggle (`?`) rather than a switch + text label — the pressed state IS

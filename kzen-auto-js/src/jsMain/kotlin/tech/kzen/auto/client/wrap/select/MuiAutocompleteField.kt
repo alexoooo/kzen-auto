@@ -41,6 +41,15 @@ private fun objectAssign(target: Any, source: Any) {
 // Autocomplete preventDefault+stopPropagation's the Escape keydown, so a window-level listener never sees
 // it, and this onClose(escape) is the only signal a forced-open popover gets to cancel. `onOpen` fires when
 // the listbox opens — for selects that lazily load their options on first open.
+//
+// `onClosedKeyDown` lets a caller treat the field like a plain text input for Enter/Escape WHEN THE DROPDOWN
+// IS CLOSED. MUI's Autocomplete consumes Enter/Escape only while its listbox is open (Enter selects the
+// highlighted option, Escape closes the listbox); once closed those keys are no-ops it never forwards. This
+// hook fires only in that closed state (read off the combobox input's `aria-expanded`), so the first
+// Enter/Escape still picks/closes as usual and a *subsequent* Enter/Escape can commit/cancel a surrounding
+// editor — matching plain TextField fields beside the select. MUI invokes our onKeyDown before its own switch
+// (see useAutocomplete handleKeyDown), so the open state read here is the one settled by the previous
+// keypress. With `forceOpen` the listbox is always open, so this never fires (use `onEscape` there instead).
 fun ChildrenBuilder.muiAutocompleteField(
     label: String,
     options: Array<SelectOption>,
@@ -55,7 +64,8 @@ fun ChildrenBuilder.muiAutocompleteField(
     forceOpen: Boolean = false,
     opaqueBackground: Boolean = false,
     onOpen: (() -> Unit)? = null,
-    onEscape: (() -> Unit)? = null
+    onEscape: (() -> Unit)? = null,
+    onClosedKeyDown: ((react.dom.events.KeyboardEvent<*>) -> Unit)? = null
 ) {
     val component = Autocomplete.unsafeCast<FC<AutocompleteProps<SelectOption>>>()
     component {
@@ -95,6 +105,22 @@ fun ChildrenBuilder.muiAutocompleteField(
         // since the field is never cleared while editing); narrow it back to SelectOption.
         this.onChange = { _, picked, _, _ ->
             onSelect(picked.unsafeCast<SelectOption>())
+        }
+
+        // MUI doesn't destructure onKeyDown, so a prop set here flows into getRootProps(other) and is invoked
+        // before MUI's own Enter/Escape handling (see the param doc above). Forward to the caller only when
+        // the dropdown is closed (aria-expanded on the combobox input), so we never hijack the keypress that
+        // selects an option or closes the listbox. Set via asDynamic() to avoid depending on the typed prop
+        // surface (same idiom as `value` in the multi-field below).
+        if (onClosedKeyDown != null) {
+            this.asDynamic().onKeyDown = { event: react.dom.events.KeyboardEvent<*> ->
+                // Read aria-expanded off the event's combobox input dynamically — robust to whichever DOM
+                // type the wrappers give `target`, and the same asDynamic idiom used for `value` below.
+                val expanded = event.target.asDynamic().getAttribute("aria-expanded") == "true"
+                if (!expanded) {
+                    onClosedKeyDown(event)
+                }
+            }
         }
 
         this.renderInput = { params ->

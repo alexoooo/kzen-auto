@@ -13,6 +13,7 @@ import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
+import tech.kzen.auto.client.util.ClientInputUtils
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.iconify.icon
@@ -298,7 +299,16 @@ class ResultSignatureEditor:
                 options = typeOptions,
                 selectedOption = typeOptions.find { it.value == className },
                 onSelect = { onTypeChange(it.value, state.nullable) },
-                disableClearable = true)
+                disableClearable = true,
+                // Once the dropdown is closed, Enter/Escape collapse the editor (the first Enter/Escape still
+                // picks/closes the list). Type/nullable apply live, so there is nothing to revert — both keys
+                // simply close, matching the "Done" button.
+                onClosedKeyDown = { event ->
+                    ClientInputUtils.handleEnterAndEscape(
+                        event,
+                        { setState { editing = false } },
+                        { setState { editing = false } })
+                })
         }
 
         // Nullable as a compact toggle (`?`), matching the parameter editor.
