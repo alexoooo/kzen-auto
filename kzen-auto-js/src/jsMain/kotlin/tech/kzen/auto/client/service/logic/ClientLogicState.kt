@@ -1,5 +1,6 @@
 package tech.kzen.auto.client.service.logic
 
+import tech.kzen.lib.common.exec.logic.run.model.LogicRunState
 import tech.kzen.lib.common.exec.logic.run.model.LogicStatus
 
 
@@ -33,5 +34,14 @@ data class ClientLogicState(
 
     fun isExecuting(): Boolean {
         return logicStatus?.active?.state?.isExecuting() ?: false
+    }
+
+
+    // True while the run is settled at a deliberate halt — a Pause step (ExplicitPaused) or pause-on-error
+    // (ErrorPaused). The slow-motion auto-step loop honours these by stopping, vs a plain Paused boundary
+    // settle (its own per-step pause) which it advances through.
+    fun isHaltPaused(): Boolean {
+        val state = logicStatus?.active?.state
+        return state == LogicRunState.ExplicitPaused || state == LogicRunState.ErrorPaused
     }
 }

@@ -277,7 +277,7 @@ class JobExecutionTest {
         val graphDefinition = graphDefinition(synthLinearDocumentPath)
 
         control.commandPause()
-        assertEquals(LogicResultPaused,
+        assertEquals(LogicResultPaused(),
             execution.continueOrStart(control, resourceScope, graphDefinition))
 
         control.commandUnpause()
@@ -311,7 +311,7 @@ class JobExecutionTest {
         val graphDefinition = graphDefinition(synthPreviewDocumentPath)
 
         control.commandPause()
-        assertEquals(LogicResultPaused,
+        assertEquals(LogicResultPaused(),
             execution.continueOrStart(control, resourceScope, graphDefinition))
 
         try {
@@ -361,7 +361,7 @@ class JobExecutionTest {
             .transitiveSuccessful
 
         control.commandPause()
-        assertEquals(LogicResultPaused,
+        assertEquals(LogicResultPaused(),
             execution.continueOrStart(control, resourceScope, fullDefinition))
 
         try {
@@ -534,7 +534,7 @@ class JobExecutionTest {
         val graphDefinition = graphDefinition(sliceDocumentPath)
 
         control.commandPause()
-        assertEquals(LogicResultPaused,
+        assertEquals(LogicResultPaused(),
             execution.continueOrStart(control, resourceScope, graphDefinition))
 
         control.commandUnpause()
@@ -591,7 +591,7 @@ class JobExecutionTest {
 
         // Settle to a parked wavefront.
         control.commandPause()
-        assertEquals(LogicResultPaused,
+        assertEquals(LogicResultPaused(),
             execution.continueOrStart(control, resourceScope, graphDefinition))
 
         // Exactly one step: still paused and nowhere near done (the bug would return Success here).
@@ -629,7 +629,7 @@ class JobExecutionTest {
         val graphDefinition = graphDefinition(sliceDocumentPath)
 
         control.commandPause()
-        assertEquals(LogicResultPaused,
+        assertEquals(LogicResultPaused(),
             execution.continueOrStart(control, resourceScope, graphDefinition))
 
         var result: LogicResult
@@ -664,7 +664,7 @@ class JobExecutionTest {
 
         // Settle to a parked wavefront.
         control.commandPause()
-        assertEquals(LogicResultPaused,
+        assertEquals(LogicResultPaused(),
             execution.continueOrStart(control, resourceScope, graphDefinition))
 
         // Step Out at the root: budget 0, depth limit below the root frame (depth 0), still command Pause.
@@ -690,7 +690,7 @@ class JobExecutionTest {
         val graphDefinition = graphDefinition(sliceDocumentPath)
 
         control.commandPause()
-        assertEquals(LogicResultPaused,
+        assertEquals(LogicResultPaused(),
             execution.continueOrStart(control, resourceScope, graphDefinition))
 
         control.commandCancel()
@@ -790,7 +790,7 @@ class JobExecutionTest {
         val graphDefinition = graphDefinition(previewDocumentPath)
 
         control.commandPause()
-        assertEquals(LogicResultPaused,
+        assertEquals(LogicResultPaused(),
             execution.continueOrStart(control, resourceScope, graphDefinition))
 
         try {

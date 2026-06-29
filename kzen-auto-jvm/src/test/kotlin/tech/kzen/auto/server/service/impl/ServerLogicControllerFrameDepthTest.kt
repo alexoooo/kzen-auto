@@ -6,7 +6,6 @@ import org.junit.Test
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunFrameInfo
-import tech.kzen.lib.common.exec.logic.run.model.LogicRunState
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -84,7 +83,9 @@ class ServerLogicControllerFrameDepthTest {
 
     private fun awaitPaused(controller: ServerLogicController) {
         for (attempt in 0 until 500) {
-            if (controller.status().active?.state == LogicRunState.Paused) {
+            // The leaf document halts at a Pause step (ExplicitPaused); accept any settled pause state.
+            val state = controller.status().active?.state
+            if (state != null && ! state.isExecuting()) {
                 return
             }
             Thread.sleep(10)

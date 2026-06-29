@@ -18,6 +18,7 @@ import tech.kzen.lib.common.exec.logic.LogicControl
 import tech.kzen.lib.common.exec.logic.LogicExecution
 import tech.kzen.lib.common.exec.logic.LogicResourceScope
 import tech.kzen.lib.common.exec.logic.model.LogicCommand
+import tech.kzen.lib.common.exec.logic.model.LogicPauseReason
 import tech.kzen.lib.common.exec.logic.model.LogicResult
 import tech.kzen.lib.common.exec.logic.model.LogicResultCancelled
 import tech.kzen.lib.common.exec.logic.model.LogicResultFailed
@@ -210,7 +211,10 @@ class JobExecution(
                     supervisor.awaitQuiescent()
                 }
 
-                return terminalResult(supervisor) ?: LogicResultPaused
+                // A child may have deliberately halted (Pause step / pause-on-error) during the wavefront;
+                // carry that reason up so the run reports Explicit / Error instead of a plain Boundary settle.
+                val haltReason = jobControl.consumeHalt()
+                return terminalResult(supervisor) ?: LogicResultPaused(haltReason ?: LogicPauseReason.Boundary)
             }
 
             // Run free to quiescence / completion: a full resume (command None) or a Step Out AT the run root.
@@ -227,14 +231,15 @@ class JobExecution(
                 return it
             }
 
-            // A nested child failed under pause-on-error and parked the run (requestErrorPause): report the
-            // Job paused (to be fixed + resumed) instead of letting it fall through to deadlock detection.
-            // Await full quiescence first so every sibling has parked at its checkpoint, then clear the flag so
-            // the next resume starts clean.
-            if (jobControl.isErrorPausePending()) {
+            // A nested child deliberately halted (a Pause step or pause-on-error) and parked the run
+            // (requestHalt): report the Job paused with that reason (to be inspected / fixed + resumed) instead
+            // of letting it fall through to deadlock detection. Await full quiescence first so every sibling has
+            // parked at its checkpoint, then clear the flag so the next resume starts clean.
+            val pendingHalt = jobControl.pendingHalt()
+            if (pendingHalt != null) {
                 supervisor.awaitQuiescent()
-                jobControl.consumeErrorPause()
-                return terminalResult(supervisor) ?: LogicResultPaused
+                jobControl.consumeHalt()
+                return terminalResult(supervisor) ?: LogicResultPaused(pendingHalt)
             }
 
             if (quiescent) {

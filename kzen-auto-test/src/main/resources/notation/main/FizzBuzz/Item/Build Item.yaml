@@ -9,6 +9,14 @@ main.steps/Create Item Script:
   is: RunStep
   instructions: "main/FizzBuzz/Item/Add number Parameter.yaml#main"
 
-main.steps/Run:
+main.steps/Add result type:
+  is: RunStep
+  instructions: "main/FizzBuzz/Item/Add Result Type.yaml#main"
+
+main.steps/Add Formula:
   is: RunStep
   instructions: "main/FizzBuzz/Item/FizzBuzz Formula.yaml#main"
+
+main.steps/Add Return:
+  is: RunStep
+  instructions: "main/FizzBuzz/Item/Add Result Step.yaml#main"

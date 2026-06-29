@@ -1,6 +1,7 @@
 package tech.kzen.auto.common.paradigm.job.control
 
 import tech.kzen.auto.common.paradigm.job.api.JobLogicHost
+import tech.kzen.lib.common.exec.logic.model.LogicPauseReason
 import tech.kzen.lib.common.model.location.ObjectLocation
 
 
@@ -48,11 +49,14 @@ interface JobControl {
 
 
     /**
-     * Request a Job-wide pause because a nested child Logic hit a recoverable failure under pause-on-error
-     * (it returned a paused result rather than failing). Flips a free-running Job to pausing so every Worker
-     * parks at its next [checkpoint] and the run driver reports the Job paused (to be fixed + resumed) instead
-     * of failing / deadlocking. A no-op while the Job is already pausing / stepping (so a normal step wavefront
-     * that descends into a child is not mistaken for an error pause). Called by nested-Logic Workers only.
+     * Request a Job-wide halt because a nested child Logic deliberately paused — a Pause step
+     * ([LogicPauseReason.Explicit]) or a recoverable failure under pause-on-error ([LogicPauseReason.Error]),
+     * i.e. it returned a paused result rather than finishing. Flips a free-running Job to pausing so every
+     * Worker parks at its next [checkpoint] and the run driver reports the Job paused (to be inspected / fixed +
+     * resumed) instead of running forward / deadlocking; while already pausing / stepping it just records the
+     * halt reason so the wavefront settles as a halt rather than the loop's own boundary. Called by
+     * nested-Logic Workers only, and ONLY for a deliberate halt — never for a plain [LogicPauseReason.Boundary]
+     * step settle (which is the normal stepping mechanism).
      */
-    fun requestErrorPause()
+    fun requestHalt(reason: LogicPauseReason)
 }

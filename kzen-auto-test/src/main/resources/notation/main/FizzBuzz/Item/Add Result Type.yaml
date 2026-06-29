@@ -1,0 +1,8 @@
+main:
+  is: Script
+
+main.steps/Click:
+  is: BrowserClickStep
+  target:
+    type: Xpath
+    value: "//button[@title='Add parameter']"

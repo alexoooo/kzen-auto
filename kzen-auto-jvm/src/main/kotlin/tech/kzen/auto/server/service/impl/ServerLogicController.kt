@@ -7,7 +7,9 @@ import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionResult
 import tech.kzen.lib.common.exec.logic.*
 import tech.kzen.lib.common.exec.logic.model.LogicCommand
+import tech.kzen.lib.common.exec.logic.model.LogicPauseReason
 import tech.kzen.lib.common.exec.logic.model.LogicResultFailed
+import tech.kzen.lib.common.exec.logic.model.LogicResultPaused
 import tech.kzen.lib.common.exec.logic.run.LogicController
 import tech.kzen.lib.common.exec.logic.run.model.*
 import tech.kzen.lib.common.exec.tuple.TupleValue
@@ -56,6 +58,13 @@ class ServerLogicController(
         @Volatile
         var paused: Boolean = false
 
+        // Why the run is currently paused (meaningful only while [paused]) — mapped to the settled LogicRunState
+        // in [status] so the client can tell a plain step-boundary settle from a deliberate halt. Set from the
+        // LogicResultPaused reason at each pause convergence; reset to Boundary when a fresh run / user-pause
+        // begins.
+        @Volatile
+        var pauseReason: LogicPauseReason = LogicPauseReason.Boundary
+
         @Volatile
         var stepping: Boolean = false
 
@@ -86,7 +95,11 @@ class ServerLogicController(
                     LogicRunState.Stepping
                 }
                 else if (it.paused) {
-                    LogicRunState.Paused
+                    when (it.pauseReason) {
+                        LogicPauseReason.Error -> LogicRunState.ErrorPaused
+                        LogicPauseReason.Explicit -> LogicRunState.ExplicitPaused
+                        LogicPauseReason.Boundary -> LogicRunState.Paused
+                    }
                 }
                 else if (it.pauseRequested) {
                     LogicRunState.Pausing
@@ -305,6 +318,8 @@ class ServerLogicController(
 
         if (!state.running) {
             state.paused = true
+            // A user pause is a plain settle, never a deliberate halt (Explicit / Error).
+            state.pauseReason = LogicPauseReason.Boundary
         }
 
         return LogicRunResponse.Submitted
@@ -347,6 +362,7 @@ class ServerLogicController(
         check(!state.cancelRequested) { "Can't run, stop already requested" }
         state.pauseRequested = false
         state.paused = false
+        state.pauseReason = LogicPauseReason.Boundary
         // Full-speed run: clear any leftover step budget and reset the depth limit to unbounded (a stale
         // Step-Out limit would otherwise make a later deep pause run free). The command is None below, so
         // the budget/depth path isn't consulted anyway — this just keeps the control state tidy.
@@ -383,6 +399,7 @@ class ServerLogicController(
                 }
                 else {
                     state.paused = true
+                    state.pauseReason = (result as LogicResultPaused).reason
                     // Converge on the same state as a user-initiated pause (e.g. after a
                     // pause-on-error) so a subsequent step() satisfies its pauseRequested /
                     // Pause-command preconditions. Idempotent for a real user pause: the flag is
@@ -494,6 +511,7 @@ class ServerLogicController(
                     // Re-affirm the paused-and-Pause-requested invariant (a step ending in a
                     // pause-on-error leaves the run paused and ready for another step/continue).
                     state.paused = true
+                    state.pauseReason = (result as LogicResultPaused).reason
                     state.pauseRequested = true
                     state.frame.control.commandPause()
                 }

@@ -8,6 +8,7 @@ import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.lib.common.exec.logic.LogicExecution
 import tech.kzen.lib.common.exec.logic.LogicExecutionFacade
 import tech.kzen.lib.common.exec.logic.LogicHandle
+import tech.kzen.lib.common.exec.logic.model.LogicPauseReason
 import tech.kzen.lib.common.exec.logic.model.LogicResultPaused
 import tech.kzen.lib.common.exec.logic.model.LogicResultSuccess
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
@@ -56,7 +57,7 @@ class ScriptExecutionPauseTest {
         val execution = newExecution()
         val result = execution.continueOrStart(
             MutableLogicControl(false), MutableLogicResourceScope(), graphDefinition())
-        assertEquals(LogicResultPaused, result)
+        assertEquals(LogicResultPaused(LogicPauseReason.Explicit), result)
     }
 
 
@@ -70,7 +71,7 @@ class ScriptExecutionPauseTest {
         val resourceScope = MutableLogicResourceScope()
         val graphDefinition = graphDefinition()
 
-        assertEquals(LogicResultPaused, execution.continueOrStart(control, resourceScope, graphDefinition))
+        assertEquals(LogicResultPaused(LogicPauseReason.Explicit), execution.continueOrStart(control, resourceScope, graphDefinition))
         assertIs<LogicResultSuccess>(execution.continueOrStart(control, resourceScope, graphDefinition))
     }
 

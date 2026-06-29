@@ -417,6 +417,13 @@ class ClientLogicGlobal(
                 break
             }
 
+            // Stop on a deliberate halt — a Pause step or pause-on-error — rather than auto-stepping past it.
+            // Covers a fresh start whose first step halts (slowRunAsync settles before calling here) and every
+            // subsequent step (awaitStepSettled refreshes status before the loop re-checks).
+            if (clientLogicState.isHaltPaused()) {
+                break
+            }
+
             // The visible dwell between steps.
             delay(slowPacingMillis.toLong())
 

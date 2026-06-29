@@ -5,6 +5,7 @@ import tech.kzen.auto.server.objects.script.api.ScriptStepDefinition
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
 import tech.kzen.auto.server.objects.script.model.ScriptExecutionContext
 import tech.kzen.lib.common.exec.logic.StatefulLogicElement
+import tech.kzen.lib.common.exec.logic.model.LogicPauseReason
 import tech.kzen.lib.common.exec.logic.model.LogicResult
 import tech.kzen.lib.common.exec.logic.model.LogicResultPaused
 import tech.kzen.lib.common.exec.logic.model.LogicResultSuccess
@@ -36,7 +37,7 @@ class PauseStep:
     override fun continueOrStart(scriptExecutionContext: ScriptExecutionContext): LogicResult {
         if (!resumed) {
             resumed = true
-            return LogicResultPaused
+            return LogicResultPaused(LogicPauseReason.Explicit)
         }
 
         // Reset so a re-run (e.g. inside a Loop body) pauses again on the next iteration.

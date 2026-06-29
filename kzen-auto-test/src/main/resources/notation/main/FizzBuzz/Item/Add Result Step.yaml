@@ -1,0 +1,31 @@
+main:
+  is: Script
+
+main.steps/Pause:
+  is: PauseStep
+
+main.steps/Click:
+  is: BrowserClickStep
+  target:
+    type: Text
+    value: Result
+
+main.steps/Run:
+  is: RunStep
+  instructions: "main/Actions/Insert Last.yaml#main"
+
+main.steps/Click 2:
+  is: BrowserClickStep
+  target:
+    type: Xpath
+    value: "//button[@title='Expand']"
+
+main.steps/Click 3:
+  is: BrowserClickStep
+  target:
+    type: Xpath
+    value: "//label[text()='Code']/..//textarea"
+
+main.steps/Write:
+  is: BrowserWriteStep
+  text: Formula

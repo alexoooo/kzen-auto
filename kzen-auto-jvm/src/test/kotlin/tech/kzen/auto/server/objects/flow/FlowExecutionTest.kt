@@ -9,6 +9,7 @@ import tech.kzen.lib.common.exec.logic.Logic
 import tech.kzen.lib.common.exec.logic.LogicExecution
 import tech.kzen.lib.common.exec.logic.LogicExecutionFacade
 import tech.kzen.lib.common.exec.logic.LogicHandle
+import tech.kzen.lib.common.exec.logic.model.LogicPauseReason
 import tech.kzen.lib.common.exec.logic.model.LogicResultFailed
 import tech.kzen.lib.common.exec.logic.model.LogicResultPaused
 import tech.kzen.lib.common.exec.logic.model.LogicResultSuccess
@@ -90,9 +91,9 @@ class FlowExecutionTest {
         val resourceScope = MutableLogicResourceScope()
         val graphDefinition = graphDefinition(stepDocumentPath)
 
-        assertEquals(LogicResultPaused,
+        assertEquals(LogicResultPaused(),
             execution.continueOrStart(control, resourceScope, graphDefinition))
-        assertEquals(LogicResultPaused,
+        assertEquals(LogicResultPaused(),
             execution.continueOrStart(control, resourceScope, graphDefinition))
 
         val result = execution.continueOrStart(control, resourceScope, graphDefinition)
@@ -152,9 +153,9 @@ class FlowExecutionTest {
         val resourceScope = MutableLogicResourceScope()
         val graphDefinition = graphDefinition(errorDocumentPath)
 
-        assertEquals(LogicResultPaused,
+        assertEquals(LogicResultPaused(LogicPauseReason.Error),
             execution.continueOrStart(control, resourceScope, graphDefinition))
-        assertEquals(LogicResultPaused,
+        assertEquals(LogicResultPaused(LogicPauseReason.Error),
             execution.continueOrStart(control, resourceScope, graphDefinition))
     }
 

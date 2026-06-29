@@ -117,7 +117,7 @@ class DoWhileStep(
                 LogicResultCancelled ->
                     return result
 
-                LogicResultPaused -> {
+                is LogicResultPaused -> {
                     delegatePaused = true
                     return result
                 }
@@ -157,7 +157,7 @@ class DoWhileStep(
                     logicCommand == LogicCommand.Pause &&
                     ! scriptExecutionContext.logicControl.runningFreeByDepth()
             ) {
-                return LogicResultPaused
+                return LogicResultPaused()
             }
         }
 

@@ -151,7 +151,7 @@ class FlowExecution(
             // pausing per-vertex.
             else if (!executeNextIfPaused && command == LogicCommand.Pause &&
                     ! logicControl.runningFreeByDepth()) {
-                return LogicResultPaused
+                return LogicResultPaused()
             }
             executeNextIfPaused = false
 
@@ -168,10 +168,11 @@ class FlowExecution(
                 when (val childResult =
                     runChildLogic(next, nextStableId, instance, runLogicVertex, matrix, graphDefinition, logicControl)
                 ) {
-                    LogicResultPaused -> {
+                    is LogicResultPaused -> {
                         // Keep the vertex "running"; its message is still unset, so FlowUtils.next
-                        // re-selects it next pass and runChildLogic resumes the cached child.
-                        return LogicResultPaused
+                        // re-selects it next pass and runChildLogic resumes the cached child. Propagate the
+                        // child's pause reason (a Pause step / error inside the child surfaces unchanged).
+                        return childResult
                     }
 
                     LogicResultCancelled ->
@@ -180,7 +181,7 @@ class FlowExecution(
                     is LogicResultFailed -> {
                         activeVertices[nextStableId]?.error = childResult.message
                         traceVertex(next, nextStableId, instance, running = false)
-                        return if (logicControl.pauseOnError()) LogicResultPaused else childResult
+                        return if (logicControl.pauseOnError()) LogicResultPaused(LogicPauseReason.Error) else childResult
                     }
 
                     is LogicResultSuccess -> {
@@ -202,7 +203,7 @@ class FlowExecution(
                 traceVertex(next, nextStableId, instance, running = false)
 
                 return if (logicControl.pauseOnError()) {
-                    LogicResultPaused
+                    LogicResultPaused(LogicPauseReason.Error)
                 }
                 else {
                     LogicResultFailed(message)
@@ -304,7 +305,7 @@ class FlowExecution(
             }
 
         when (result) {
-            LogicResultPaused ->
+            is LogicResultPaused ->
                 pausedChildren[stableId] = child
 
             is LogicResultSuccess -> {

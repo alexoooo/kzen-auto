@@ -4,6 +4,7 @@ import kotlinx.coroutines.CancellationException
 import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
+import tech.kzen.lib.common.exec.logic.model.LogicPauseReason
 import tech.kzen.lib.common.exec.logic.model.LogicResultCancelled
 import tech.kzen.lib.common.exec.logic.model.LogicResultFailed
 import tech.kzen.lib.common.exec.logic.model.LogicResultPaused
@@ -69,15 +70,18 @@ class RunWorker(
                         return
                     }
 
-                    // The child parked rather than finishing. Two causes converge here: a normal step wavefront
-                    // (the child advanced one fresh boundary), or pause-on-error (the child hit a recoverable
-                    // failure while running free). requestErrorPause() distinguishes them — it pauses the whole
-                    // Job only in the free-running case (no-op during a step), so an error pauses the run for
-                    // fix + resume instead of busy-looping the failing boundary. Either way this Worker then
-                    // parks (staying quiescence-visible) until the next wavefront / resume, then drives the SAME
-                    // child onward (its facade stays open across the park; the driver re-grants its budget).
-                    LogicResultPaused -> {
-                        control.requestErrorPause()
+                    // The child parked rather than finishing. The result's reason says why: a plain Boundary
+                    // settle is the normal step wavefront (the child advanced one fresh boundary), while a
+                    // deliberate halt — a Pause step (Explicit) or a recoverable failure under pause-on-error
+                    // (Error) — should halt the whole Job for inspect / fix + resume rather than busy-looping
+                    // the same boundary. requestHalt carries that reason up; a Boundary settle never halts.
+                    // Either way this Worker then parks (staying quiescence-visible) until the next wavefront /
+                    // resume, then drives the SAME child onward (its facade stays open; the driver re-grants
+                    // its budget).
+                    is LogicResultPaused -> {
+                        if (result.reason != LogicPauseReason.Boundary) {
+                            control.requestHalt(result.reason)
+                        }
                         control.checkpoint()
                     }
 

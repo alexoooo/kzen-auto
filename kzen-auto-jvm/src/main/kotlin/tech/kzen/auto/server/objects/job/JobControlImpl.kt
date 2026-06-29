@@ -6,6 +6,7 @@ import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.auto.common.paradigm.job.api.JobLogicHost
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.lib.common.exec.ExecutionValue
+import tech.kzen.lib.common.exec.logic.model.LogicPauseReason
 import tech.kzen.lib.common.exec.logic.trace.LogicTraceHandle
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
@@ -52,11 +53,12 @@ class JobControlImpl(
     private val monitor = Any()
     private var phase = Phase.Running
 
-    // Set when a nested-Logic Worker pauses the run via [requestErrorPause] (pause-on-error), so the driver
-    // ([JobExecution]) can distinguish an error pause from genuine deadlock when the run quiesces, and report
-    // it as paused rather than failed. Read + cleared by the driver ([consumeErrorPause]); also cleared on any
-    // controller-initiated phase change so a clean resume / step / cancel starts fresh. Guarded by [monitor].
-    private var errorPause = false
+    // Set when a nested-Logic Worker halts the run via [requestHalt] — a Pause step ([LogicPauseReason.Explicit])
+    // or pause-on-error ([LogicPauseReason.Error]) — so the driver ([JobExecution]) can distinguish a deliberate
+    // halt from genuine deadlock when the run quiesces, report it as paused (not failed), and carry WHICH halt up
+    // to the run status. Read + cleared by the driver ([consumeHalt]); also cleared on any controller-initiated
+    // phase change so a clean resume / step / pause / cancel starts fresh. null = no halt. Guarded by [monitor].
+    private var haltReason: LogicPauseReason? = null
 
     private var releaseSignal: CompletableDeferred<Unit>? = null
 
@@ -68,6 +70,7 @@ class JobControlImpl(
         synchronized(monitor) {
             if (phase == Phase.Running) {
                 phase = Phase.Pausing
+                haltReason = null
                 if (releaseSignal == null) {
                     releaseSignal = CompletableDeferred()
                 }
@@ -82,7 +85,7 @@ class JobControlImpl(
                 return
             }
             phase = Phase.Running
-            errorPause = false
+            haltReason = null
             releaseSignal?.complete(Unit)
             releaseSignal = null
         }
@@ -99,7 +102,7 @@ class JobControlImpl(
                 return
             }
             phase = Phase.Pausing
-            errorPause = false
+            haltReason = null
             releaseSignal?.complete(Unit)
             releaseSignal = null
         }
@@ -109,7 +112,7 @@ class JobControlImpl(
     fun cancel() {
         synchronized(monitor) {
             phase = Phase.Cancelling
-            errorPause = false
+            haltReason = null
             releaseSignal?.complete(Unit)
             releaseSignal = null
         }
@@ -117,14 +120,19 @@ class JobControlImpl(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun requestErrorPause() {
+    override fun requestHalt(reason: LogicPauseReason) {
         synchronized(monitor) {
-            // Only a free-running Job becomes an error pause: while already Pausing (a plain pause or a step
-            // wavefront descending into a child) a child's paused result is the normal stepping mechanism, not
-            // an error — leave the phase and flag untouched so it is driven onward, not reported as paused.
+            // A cancelling Job is tearing down — ignore. Otherwise record the halt reason so the driver reports
+            // the run paused with it. A free-running Job additionally flips to pausing and arms the release
+            // signal so every Worker parks at its next checkpoint; while already pausing / stepping the phase +
+            // signal are already set by the controller, so just record the reason (a child that halted mid
+            // step-wavefront). The caller only invokes this for a deliberate halt, never a Boundary settle.
+            if (phase == Phase.Cancelling) {
+                return
+            }
+            haltReason = reason
             if (phase == Phase.Running) {
                 phase = Phase.Pausing
-                errorPause = true
                 if (releaseSignal == null) {
                     releaseSignal = CompletableDeferred()
                 }
@@ -133,19 +141,19 @@ class JobControlImpl(
     }
 
 
-    // Whether a Worker has requested an error pause since the last resume / step (read by the driver to report
-    // the quiesced run as paused rather than deadlocked).
-    fun isErrorPausePending(): Boolean {
-        return synchronized(monitor) { errorPause }
+    // The halt reason a Worker has requested since the last resume / step, or null (read by the driver to report
+    // the quiesced run as paused — with this reason — rather than deadlocked).
+    fun pendingHalt(): LogicPauseReason? {
+        return synchronized(monitor) { haltReason }
     }
 
 
-    // Read + clear the error-pause flag (the driver clears it as it reports the pause, so the next resume
-    // starts clean even though resume() also clears it defensively).
-    fun consumeErrorPause(): Boolean {
+    // Read + clear the halt reason (the driver clears it as it reports the pause, so the next resume starts
+    // clean even though resume() also clears it defensively).
+    fun consumeHalt(): LogicPauseReason? {
         return synchronized(monitor) {
-            val pending = errorPause
-            errorPause = false
+            val pending = haltReason
+            haltReason = null
             pending
         }
     }

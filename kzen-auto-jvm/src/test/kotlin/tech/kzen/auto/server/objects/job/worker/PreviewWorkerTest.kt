@@ -9,6 +9,7 @@ import tech.kzen.auto.common.paradigm.job.api.ChannelServerIterator
 import tech.kzen.auto.common.paradigm.job.api.JobLogicHost
 import tech.kzen.auto.common.paradigm.job.api.ServedRequest
 import tech.kzen.auto.common.paradigm.job.control.JobControl
+import tech.kzen.lib.common.exec.logic.model.LogicPauseReason
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
@@ -89,6 +90,6 @@ class PreviewWorkerTest {
         override suspend fun <R> runBlockingIo(block: () -> R): R = block()
         override fun publishProgress(location: ObjectLocation, value: Map<String, Any?>, force: Boolean) {}
         override fun logicHost(): JobLogicHost = error("nested logic not used by PreviewWorker")
-        override fun requestErrorPause() {}
+        override fun requestHalt(reason: LogicPauseReason) {}
     }
 }

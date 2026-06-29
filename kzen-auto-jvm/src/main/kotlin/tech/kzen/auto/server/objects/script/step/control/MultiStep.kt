@@ -66,7 +66,7 @@ class MultiStep(
                     ! logicControl.runningFreeByDepth() &&
                     ! logicControl.consumeStepBudget()
             ) {
-                return LogicResultPaused
+                return LogicResultPaused()
             }
 
             val step = scriptExecutionContext.graphInstance[nextToRun]?.reference as? ScriptStep
@@ -113,7 +113,7 @@ class MultiStep(
                         scriptExecutionContext.logicTraceHandle.set(
                             logicTracePath,
                             stepModel.trace().asExecutionValue())
-                        return LogicResultPaused
+                        return LogicResultPaused(LogicPauseReason.Error)
                     }
 
                     stepModel.traceState = StepTrace.State.Done
@@ -137,7 +137,7 @@ class MultiStep(
                     return result
                 }
 
-                LogicResultPaused -> {
+                is LogicResultPaused -> {
                     stepModel.value = null
                     stepModel.error = null
                     stepModel.traceState = StepTrace.State.Running

@@ -27,6 +27,7 @@ main.steps/Click 9:
   is: BrowserClickStep
   target:
     type: Xpath
+    value: "//label[text()='Text']/..//input"
 
 main.steps/Write 3:
   is: BrowserWriteStep
