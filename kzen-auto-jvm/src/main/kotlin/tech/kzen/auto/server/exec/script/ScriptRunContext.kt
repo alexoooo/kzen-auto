@@ -86,6 +86,16 @@ class ScriptRunContext(
 
 
     /**
+     * Mark a step as failed (its error rendered for the client). Used by the pause-on-error path: whether the
+     * run then pauses the step (Suspended Error, for fix + resume) or fails terminally, the step shows its error.
+     * NOT recorded as a completed outcome, so on a resume / migrate the step re-runs rather than short-circuiting.
+     */
+    fun markError(stableId: ObjectStableId, message: String?) {
+        emitStepTrace(stableId, StepTrace.State.Error, NullExecutionValue, message)
+    }
+
+
+    /**
      * Record a step's produced value (for downstream reference and live-edit capture) and mark it Done,
      * publishing its display value to the live trace. The raw value is kept verbatim for [referencedValue]; the
      * display falls back to a text rendering (matching the former step tracing).
@@ -155,8 +165,13 @@ class ScriptRunContext(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun emitStepTrace(stableId: ObjectStableId, state: StepTrace.State, display: ExecutionValue) {
-        val trace = StepTrace(state, display, NullExecutionValue, null)
+    private fun emitStepTrace(
+        stableId: ObjectStableId,
+        state: StepTrace.State,
+        display: ExecutionValue,
+        error: String? = null
+    ) {
+        val trace = StepTrace(state, display, NullExecutionValue, error)
         execution.emit(Address.of(stableId.value), trace.asExecutionValue())
     }
 

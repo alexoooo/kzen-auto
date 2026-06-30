@@ -4,7 +4,9 @@ import kotlinx.coroutines.runBlocking
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.exec.LogicCompilerServices
 import tech.kzen.auto.server.util.AutoTestUtils
+import tech.kzen.lib.common.exec.engine.NodeStatus
 import tech.kzen.lib.common.exec.engine.Outcome
+import tech.kzen.lib.common.exec.engine.PauseReason
 import tech.kzen.lib.common.exec.tuple.TupleComponentName
 import tech.kzen.lib.common.exec.tuple.TupleComponentValue
 import tech.kzen.lib.common.exec.tuple.TupleValue
@@ -25,8 +27,9 @@ import kotlin.test.assertIs
  * re-entrant executor: an input argument flowing through to the harvested output, a stateless processor, a
  * stream source looping across iterations to its last value, and a vertex error settling the run failed.
  *
- * Pause-on-error is intentionally not covered — it is not yet wired into the engine (a tracked parity gap
- * shared with the Script port).
+ * Pause-on-error (logic-spec §4) is also covered: the same failing vertex parks the run Suspended(Error) when
+ * the toggle is on (via [tech.kzen.lib.common.exec.engine.Execution.recoverable] in [FlowRun]) rather than
+ * failing — the engine-level mechanics are proven in [tech.kzen.lib.server.exec.engine.RunEngineTest].
  */
 class FlowNotationTest {
     //-----------------------------------------------------------------------------------------------------------------
@@ -71,6 +74,26 @@ class FlowNotationTest {
 
 
     @Test
+    fun vertexErrorPausesWhenPauseOnError() {
+        // The same divide-by-zero vertex, but with pause-on-error on: instead of failing the run it parks the
+        // run Suspended(Error) at the failed vertex (a regular in-line vertex runs on the root node, so the root
+        // parks) for inspect / fix + resume.
+        val engine = engineFor("test/flow-error-test.yaml", argument("n", 6))
+        try {
+            engine.pauseOnError(true)
+            engine.resume()
+            engine.awaitQuiescent()
+
+            val status = engine.snapshot().root.status
+            assertEquals(PauseReason.Error, assertIs<NodeStatus.Suspended>(status).reason)
+        }
+        finally {
+            engine.close()
+        }
+    }
+
+
+    @Test
     fun runLogicVertexHostsChildScript() {
         // FlowInput(x) -> RunLogic(child Script `number + 1`) -> FlowOutput(out). The vertex's single upstream
         // message is bound to the callee's first parameter (`number`), and the callee's result becomes the
@@ -89,6 +112,20 @@ class FlowNotationTest {
 
 
     private fun runFlow(documentPathString: String, inputs: TupleValue = TupleValue.empty): Outcome {
+        val engine = engineFor(documentPathString, inputs)
+        return try {
+            runBlocking {
+                engine.resume()
+                engine.await()
+            }
+        }
+        finally {
+            engine.close()
+        }
+    }
+
+
+    private fun engineFor(documentPathString: String, inputs: TupleValue = TupleValue.empty): RunEngine {
         context = KzenAutoContext.forTest()
 
         val documentPath = DocumentPath.parse(documentPathString)
@@ -108,15 +145,6 @@ class FlowNotationTest {
                 context.flowMessageInspector,
                 context.notationMetadataReader))
 
-        val engine = RunEngine(flowLogic, context.objectStableMapper.objectStableId(flowLocation), inputs)
-        return try {
-            runBlocking {
-                engine.resume()
-                engine.await()
-            }
-        }
-        finally {
-            engine.close()
-        }
+        return RunEngine(flowLogic, context.objectStableMapper.objectStableId(flowLocation), inputs)
     }
 }

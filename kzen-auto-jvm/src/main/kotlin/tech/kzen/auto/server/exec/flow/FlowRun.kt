@@ -1,6 +1,5 @@
 package tech.kzen.auto.server.exec.flow
 
-import kotlinx.coroutines.CancellationException
 import tech.kzen.auto.common.paradigm.flow.api.FlowVertex
 import tech.kzen.auto.common.paradigm.flow.api.StreamFlowVertex
 import tech.kzen.auto.common.paradigm.flow.model.channel.MutableFlowOutput
@@ -48,8 +47,9 @@ import tech.kzen.lib.platform.collect.toPersistentMap
  * trace is emitted with [Execution.emit] at the vertex's stable-id address, which the controller's trace bridge
  * routes back to the same per-vertex trace path the old store used.
  *
- * Pause-on-error is not yet wired into the engine (a tracked parity gap shared with the Script port), so a
- * vertex failure is traced then surfaced as a [LogicFailure] (the run settles failed) rather than pausing.
+ * Pause-on-error (logic-spec §4) is wired via [Execution.recoverable] around each vertex: a vertex failure is
+ * rendered (error + trace) and, when pause-on-error is enabled, parks the vertex Suspended(Error) for fix +
+ * resume (re-running it on resume) rather than failing the run; with the toggle off the failure propagates.
  */
 class FlowRun(
     private val execution: Execution,
@@ -117,17 +117,14 @@ class FlowRun(
                 continue
             }
 
-            try {
-                runOneVertex(next, nextStableId, instance, matrix)
-            }
-            catch (e: CancellationException) {
-                throw e
-            }
-            catch (t: Throwable) {
-                val message = ExceptionUtils.message(t)
-                activeVertices[nextStableId]?.error = message
+            // Pause-on-error (logic-spec §4): the engine renders the vertex failure (error + trace) then, if
+            // pause-on-error is on, parks the vertex Suspended(Error) for fix + resume and re-runs it on resume;
+            // if off, the failure propagates and the run fails.
+            execution.recoverable({ t ->
+                activeVertices[nextStableId]?.error = ExceptionUtils.message(t)
                 traceVertex(nextStableId, instance, running = false)
-                throw LogicFailure(message)
+            }) {
+                runOneVertex(next, nextStableId, instance, matrix)
             }
 
             traceVertex(nextStableId, instance, running = false)
@@ -165,19 +162,14 @@ class FlowRun(
                 TupleValue.empty
             }
 
-        val result =
-            try {
-                execution.host(childLogic.childStableId, childLogic.logic, inputs)
-            }
-            catch (e: CancellationException) {
-                throw e
-            }
-            catch (t: Throwable) {
-                val message = ExceptionUtils.message(t)
-                activeVertexModel.error = message
-                traceVertex(stableId, instance, running = false)
-                throw LogicFailure(message)
-            }
+        // Pause-on-error for a hosted child vertex: same recoverable contract as a regular vertex — render the
+        // failure, then park Error (fix + resume re-hosts) or propagate. A child cancel always propagates.
+        val result = execution.recoverable({ t ->
+            activeVertexModel.error = ExceptionUtils.message(t)
+            traceVertex(stableId, instance, running = false)
+        }) {
+            execution.host(childLogic.childStableId, childLogic.logic, inputs)
+        }
 
         activeVertexModel.message = result.mainComponentValue()
         activeVertexModel.epoch++

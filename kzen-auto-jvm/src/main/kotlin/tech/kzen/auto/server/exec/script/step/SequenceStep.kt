@@ -4,6 +4,7 @@ import tech.kzen.auto.server.exec.script.ScriptRunContext
 import tech.kzen.auto.server.exec.script.ScriptStepLogic
 import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.service.store.normal.ObjectStableId
+import tech.kzen.lib.common.util.ExceptionUtils
 
 
 /**
@@ -31,8 +32,16 @@ class SequenceStep(
             }
             context.publishNextStep(step.stableId)
             context.execution.checkpoint()
-            context.markRunning(step.stableId)
-            last = step.run(context)
+            // Pause-on-error (logic-spec §4): the engine renders the failure (markError) then, if pause-on-error
+            // is on, parks the step Suspended(Error) for fix + resume and re-runs it on resume; if off, the
+            // failure propagates and the run fails. markRunning is inside the recoverable unit so each (re-)try
+            // repaints Running. The failed step is never markDone'd, so a resume / migrate re-runs it.
+            last = context.execution.recoverable({ error ->
+                context.markError(step.stableId, ExceptionUtils.message(error))
+            }) {
+                context.markRunning(step.stableId)
+                step.run(context)
+            }
             context.markDone(step.stableId, last.mainComponentValue())
         }
         context.publishNextStep(null)
