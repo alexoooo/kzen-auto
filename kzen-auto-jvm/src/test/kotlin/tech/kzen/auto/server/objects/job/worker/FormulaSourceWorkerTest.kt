@@ -5,9 +5,7 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
-import tech.kzen.auto.common.paradigm.job.api.JobLogicHost
 import tech.kzen.auto.common.paradigm.job.control.JobControl
-import tech.kzen.lib.common.exec.logic.model.LogicPauseReason
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -90,7 +88,5 @@ class FormulaSourceWorkerTest {
         override suspend fun checkpoint() {}
         override suspend fun <R> runBlockingIo(block: () -> R): R = block()
         override fun publishProgress(location: ObjectLocation, value: Map<String, Any?>, force: Boolean) {}
-        override fun logicHost(): JobLogicHost = error("nested logic not used by FormulaSourceWorker")
-        override fun requestHalt(reason: LogicPauseReason) {}
     }
 }

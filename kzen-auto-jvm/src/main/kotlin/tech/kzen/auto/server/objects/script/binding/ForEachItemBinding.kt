@@ -3,17 +3,10 @@ package tech.kzen.auto.server.objects.script.binding
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.server.objects.script.api.ScriptStep
 import tech.kzen.auto.server.objects.script.api.ScriptStepDefinition
-import tech.kzen.auto.server.objects.script.api.ScriptValueBinding
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
-import tech.kzen.auto.server.objects.script.model.ScriptExecutionContext
-import tech.kzen.auto.server.objects.script.step.control.foreach.ForEachStep
 import tech.kzen.auto.server.util.IterableElementTypeReflect
-import tech.kzen.lib.common.exec.logic.model.LogicResult
-import tech.kzen.lib.common.exec.logic.model.LogicResultFailed
-import tech.kzen.lib.common.exec.logic.model.LogicResultSuccess
 import tech.kzen.lib.common.exec.logic.model.LogicType
 import tech.kzen.lib.common.exec.tuple.TupleDefinition
-import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.location.ObjectReference
 import tech.kzen.lib.common.model.location.ObjectReferenceHost
@@ -28,14 +21,13 @@ import tech.kzen.lib.common.reflect.Reflect
  * and referenceable like a step but never executed. Its type is the element type of the ForEach's `items`
  * collection, resolved directly from that collection (NOT via the ForEach's own output type, which is the
  * List of the body's terminal type — reading it would be circular whenever the body references this item);
- * its value is the ForEach's current `next` item, resolved on demand.
+ * its value is supplied by the engine's loop at run time.
  */
 @Reflect
 class ForEachItemBinding(
     private val selfLocation: ObjectLocation
 ):
-    ScriptStep,
-    ScriptValueBinding
+    ScriptStep
 {
     override fun definition(scriptDefinitionContext: ScriptDefinitionContext): ScriptStepDefinition? {
         val forEachLocation = selfLocation.parent()
@@ -76,25 +68,5 @@ class ForEachItemBinding(
 
         return IterableElementTypeReflect.elementType(collectionType.className)
             ?: TypeMetadata.any
-    }
-
-
-    override fun resolveValue(scriptExecutionContext: ScriptExecutionContext): Any? {
-        return enclosingForEach(scriptExecutionContext)?.next
-    }
-
-
-    override fun continueOrStart(scriptExecutionContext: ScriptExecutionContext): LogicResult {
-        val forEach = enclosingForEach(scriptExecutionContext)
-            ?: return LogicResultFailed("Enclosing ForEach not found: $selfLocation")
-        return LogicResultSuccess(
-            TupleValue.ofMain(forEach.next))
-    }
-
-
-    private fun enclosingForEach(scriptExecutionContext: ScriptExecutionContext): ForEachStep? {
-        val forEachLocation = selfLocation.parent()
-            ?: return null
-        return scriptExecutionContext.graphInstance[forEachLocation]?.reference as? ForEachStep
     }
 }

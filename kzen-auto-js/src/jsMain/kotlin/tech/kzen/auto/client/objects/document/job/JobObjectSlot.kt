@@ -1,7 +1,6 @@
 package tech.kzen.auto.client.objects.document.job
 
 import emotion.react.css
-import js.objects.unsafeJso
 import mui.material.Button
 import mui.material.ButtonVariant
 import mui.material.IconButton
@@ -10,7 +9,6 @@ import react.ChildrenBuilder
 import react.Key
 import react.Props
 import react.State
-import react.dom.html.ReactHTML.a
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
 import react.dom.html.ReactHTML.table
@@ -21,18 +19,13 @@ import react.dom.html.ReactHTML.thead
 import react.dom.html.ReactHTML.tr
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
 import tech.kzen.auto.client.objects.document.common.dragdrop.dragHandle
-import tech.kzen.auto.client.util.NavigationRoute
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.refCallback
 import tech.kzen.auto.common.objects.document.job.JobChannelPorts
 import tech.kzen.auto.common.util.AutoConventions
-import tech.kzen.lib.common.exec.RequestParams
 import tech.kzen.lib.common.model.attribute.AttributeName
-import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.lib.common.model.location.ObjectReference
-import tech.kzen.lib.common.model.location.ObjectReferenceHost
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.metadata.ObjectMetadata
 import web.cssom.*
@@ -45,7 +38,6 @@ external interface JobObjectSlotProps: Props {
     var indexInParent: Int
 
     var isPreviewWorker: Boolean
-    var isRunWorker: Boolean
 
     // This object's live progress / on-demand preview slice (Workers only; null for a Channel). Kept
     // value-stable upstream so a non-dragged slot bails out during a drag (see JobController).
@@ -143,10 +135,6 @@ class JobObjectSlot(
                     }
                     +statusText(props.progress)
                 }
-
-                if (props.isRunWorker) {
-                    renderRunWorkerLink()
-                }
             }
 
             renderAttributeEditors()
@@ -205,55 +193,6 @@ class JobObjectSlot(
             parts.add(progress.counts.entries.joinToString(" ") { "${it.key}=${it.value}" })
         }
         return if (parts.isEmpty()) "—" else parts.joinToString(" · ")
-    }
-
-
-    // A Run Worker hosts another Logic (its `instructions`) once per element; surface a drill-in link to that
-    // child document so its independently trace-recorded live execution can be opened. Mirrors the reference
-    // resolution + hash navigation of ReferenceLinkAttributeView.
-    private fun ChildrenBuilder.renderRunWorkerLink() {
-        val graphNotation = props.graphStructure.graphNotation
-
-        val reference = graphNotation
-            .firstAttribute(props.objectLocation, AttributePath.ofName(AttributeName("instructions")))
-            ?.asString()
-            ?.takeIf { it.isNotEmpty() }
-            ?.let { ObjectReference.parse(it) }
-            ?: return
-
-        val documentPath = graphNotation.coalesce
-            .locateOptional(reference, ObjectReferenceHost.ofLocation(props.objectLocation))
-            ?.documentPath
-            ?: return
-
-        a {
-            css {
-                display = Display.inlineFlex
-                alignItems = AlignItems.center
-                marginLeft = 0.75.em
-                fontSize = 0.85.em
-                color = Color("rgba(0, 0, 0, 0.55)")
-                textDecoration = Globals.initial
-                cursor = Cursor.pointer
-                "&:hover" {
-                    color = Color("#1565ff")
-                }
-            }
-
-            href = NavigationRoute(documentPath, RequestParams.empty).toFragment()
-            title = "Open the document this Run Worker executes"
-
-            onClick = { it.stopPropagation() }
-
-            span { +documentPath.name.value }
-
-            icon("material-symbols:open-in-new") {
-                style = unsafeJso {
-                    fontSize = 1.em
-                    marginLeft = 0.25.em
-                }
-            }
-        }
     }
 
 

@@ -19,7 +19,6 @@ import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.auto.server.service.compile.ScriptKotlinCompiler
 import tech.kzen.auto.server.service.exec.ModelDetachedExecutor
 import tech.kzen.auto.server.service.exec.ModelTaskRepository
-import tech.kzen.auto.server.service.impl.NestedFrameRegistry
 import tech.kzen.auto.server.service.impl.ServerLogicController
 import tech.kzen.auto.server.service.plugin.HostReportDefinitionRepository
 import tech.kzen.auto.server.service.plugin.MultiDefinitionRepository
@@ -194,7 +193,6 @@ class KzenAutoContext(
             .put(ClassName(FileListingAction::class.qualifiedName!!), fileListingAction)
             .put(ClassName(ColumnListingAction::class.qualifiedName!!), columnListingAction)
             .put(ClassName(ServerLogicController::class.qualifiedName!!), serverLogicController)
-            .put(ClassName(NestedFrameRegistry::class.qualifiedName!!), serverLogicController)
             .build()
     }
 

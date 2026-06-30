@@ -21,7 +21,6 @@ import tech.kzen.lib.common.exec.engine.NodeStatus
 import tech.kzen.lib.common.exec.engine.Outcome
 import tech.kzen.lib.common.exec.engine.PauseReason
 import tech.kzen.lib.common.exec.engine.StepMode
-import tech.kzen.lib.common.exec.logic.LogicExecution
 import tech.kzen.lib.common.exec.logic.run.LogicController
 import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
@@ -83,8 +82,7 @@ class ServerLogicController(
     private val notationMetadataReader: NotationMetadataReader,
     private val environment: () -> GraphEnvironment
 ):
-    LogicController,
-    NestedFrameRegistry
+    LogicController
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -446,20 +444,6 @@ class ServerLogicController(
         }
 
         return LogicRunResponse.Submitted
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    // Visibility-only attach of a detached nested Logic (a Job's Run Worker child). Not yet ported to the engine
-    // (Job translation pending), so this is a no-op until then.
-    @Synchronized
-    override fun attach(
-        hostExecutionId: LogicExecutionId,
-        location: ObjectLocation,
-        executionId: LogicExecutionId,
-        execution: LogicExecution
-    ): AutoCloseable {
-        return AutoCloseable {}
     }
 
 

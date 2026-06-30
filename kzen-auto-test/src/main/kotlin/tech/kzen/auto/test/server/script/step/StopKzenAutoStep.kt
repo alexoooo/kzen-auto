@@ -1,44 +1,20 @@
 package tech.kzen.auto.test.server.script.step
 
+import tech.kzen.auto.server.objects.script.api.ScriptStep
 import tech.kzen.auto.server.objects.script.api.ScriptStepDefinition
-import tech.kzen.auto.server.objects.script.api.TracingScriptStep
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
-import tech.kzen.auto.server.objects.script.model.ScriptExecutionContext
-import tech.kzen.auto.test.server.process.KzenAutoSubprocessRegistry
-import tech.kzen.lib.common.exec.logic.model.LogicResult
-import tech.kzen.lib.common.exec.logic.model.LogicResultSuccess
-import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 
 
 @Reflect
 class StopKzenAutoStep(
-    private val name: String,
-    selfLocation: ObjectLocation
+    @Suppress("unused") private val name: String,
+    @Suppress("unused") selfLocation: ObjectLocation
 ):
-    TracingScriptStep(selfLocation)
+    ScriptStep
 {
     override fun definition(scriptDefinitionContext: ScriptDefinitionContext): ScriptStepDefinition {
         return ScriptStepDefinition.empty
-    }
-
-
-    override fun continueOrStart(
-        scriptExecutionContext: ScriptExecutionContext
-    ): LogicResult {
-        val stopped = KzenAutoSubprocessRegistry.removeAndClose(name)
-        scriptExecutionContext.resourceScope.deregister(
-            KzenAutoSubprocessRegistry.resourceKey(name))
-
-        if (!stopped) {
-            traceDetail(
-                scriptExecutionContext,
-                "no SUT registered as '$name', nothing to stop")
-            return LogicResultSuccess(TupleValue.empty)
-        }
-
-        traceDetail(scriptExecutionContext, "stopped '$name'")
-        return LogicResultSuccess(TupleValue.empty)
     }
 }

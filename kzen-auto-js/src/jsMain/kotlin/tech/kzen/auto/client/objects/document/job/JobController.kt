@@ -552,14 +552,6 @@ class JobController(
     }
 
 
-    private fun isRunWorker(documentNotation: DocumentNotation, workerPath: ObjectPath): Boolean {
-        val workerIs = documentNotation.objects.notations[workerPath]
-            ?.get(NotationConventions.isAttributeName)
-            ?.asString()
-        return workerIs == "RunWorker"
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     // Show / start the larger live preview slice for a Preview worker: pulls it once now; while the run stays
     // active, refreshProgressIfNeeded keeps re-pulling it each poll (and clears it once the run ends).
@@ -706,7 +698,6 @@ class JobController(
             this.objectLocation = workerLocation
             this.indexInParent = index
             this.isPreviewWorker = isPreviewWorker(documentNotation, workerLocation.objectPath)
-            this.isRunWorker = isRunWorker(documentNotation, workerLocation.objectPath)
 
             this.progress = state.workerProgress?.get(workerLocation)
             this.previewDetail = state.previewDetail?.get(workerLocation)

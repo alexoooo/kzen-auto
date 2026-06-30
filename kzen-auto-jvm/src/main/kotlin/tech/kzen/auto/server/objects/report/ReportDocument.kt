@@ -40,19 +40,9 @@ import tech.kzen.auto.server.paradigm.detached.ExecutionDownloadResult
 import tech.kzen.auto.server.service.impl.ServerLogicController
 import tech.kzen.auto.server.service.plugin.ReportDefinitionRepository
 import tech.kzen.auto.server.util.ClassLoaderUtils
-import tech.kzen.auto.server.util.WorkUtils
 import tech.kzen.lib.common.exec.*
-import tech.kzen.lib.common.exec.logic.Logic
-import tech.kzen.lib.common.exec.logic.LogicControl
-import tech.kzen.lib.common.exec.logic.LogicExecution
-import tech.kzen.lib.common.exec.logic.LogicHandle
-import tech.kzen.lib.common.exec.logic.model.LogicDefinition
-import tech.kzen.lib.common.exec.logic.model.LogicType
 import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
-import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
-import tech.kzen.lib.common.exec.logic.trace.LogicTraceHandle
-import tech.kzen.lib.common.exec.tuple.TupleDefinition
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
@@ -89,8 +79,7 @@ class ReportDocument(
 ):
     DocumentArchetype(),
     DetachedAction,
-    DetachedDownloadAction,
-    Logic
+    DetachedDownloadAction
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -380,50 +369,6 @@ class ReportDocument(
             runId,
             executionId,
             ExecutionRequest(runExecutionParams, null))
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun define(): LogicDefinition {
-        return LogicDefinition(
-            TupleDefinition.empty,
-            TupleDefinition.ofMain(LogicType.string))
-    }
-
-
-    override fun execute(
-        logicHandle: LogicHandle,
-        logicTraceHandle: LogicTraceHandle,
-        logicRunExecutionId: LogicRunExecutionId,
-        logicControl: LogicControl
-    ): LogicExecution {
-        val reportRunContext = reportRunContext()
-            ?: throw IllegalStateException("Unable to create context")
-
-        val created = reportWorkPool.prepareRunDir(reportRunContext.runDir, logicRunExecutionId)
-
-        if (!created) {
-            WorkUtils.recursivelyDeleteDir(reportRunContext.runDir)
-            val createdRetry = reportWorkPool.prepareRunDir(reportRunContext.runDir, logicRunExecutionId)
-            check(createdRetry) { "Unable to re-create: ${reportRunContext.runDir}" }
-        }
-
-        var success = false
-        try {
-            val reportExecution = ReportExecution(
-                reportRunContext, reportWorkPool, logicTraceHandle, logicRunExecutionId,
-                definitionRepository, calculatedColumnEval)
-
-            reportExecution.init(logicControl)
-
-            success = true
-            return reportExecution
-        }
-        finally {
-            if (!success) {
-                reportWorkPool.updateRunStatus(reportRunContext.runDir, OutputStatus.Failed)
-            }
-        }
     }
 
 

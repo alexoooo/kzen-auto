@@ -67,12 +67,6 @@ FormulaTool:
   delegate: FormulaWorker
 
 
-RunTool:
-  is: RibbonTool
-  parent: JobGroup_Transforms
-  delegate: RunWorker
-
-
 ################################################################
 
 JobGroup_Sinks:

@@ -1,54 +1,24 @@
 package tech.kzen.auto.server.objects.script.step.value
 
-import org.slf4j.LoggerFactory
+import tech.kzen.auto.server.objects.script.api.ScriptStep
 import tech.kzen.auto.server.objects.script.api.ScriptStepDefinition
-import tech.kzen.auto.server.objects.script.api.TracingScriptStep
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
-import tech.kzen.auto.server.objects.script.model.ScriptExecutionContext
-import tech.kzen.lib.common.exec.logic.model.LogicResult
-import tech.kzen.lib.common.exec.logic.model.LogicResultSuccess
 import tech.kzen.lib.common.exec.logic.model.LogicType
-import tech.kzen.lib.common.exec.tuple.TupleComponentName
 import tech.kzen.lib.common.exec.tuple.TupleDefinition
-import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 
 
 @Reflect
 class ArgumentStep(
-    parameter: String,
-    private val selfLocation: ObjectLocation
+    @Suppress("unused") parameter: String,
+    @Suppress("unused") private val selfLocation: ObjectLocation
 ):
-    TracingScriptStep(selfLocation)
+    ScriptStep
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    companion object {
-        private val logger = LoggerFactory.getLogger(BooleanLiteralStep::class.java)
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    private val tupleComponentName = TupleComponentName(parameter)
-
-
     //-----------------------------------------------------------------------------------------------------------------
     override fun definition(scriptDefinitionContext: ScriptDefinitionContext): ScriptStepDefinition {
         return ScriptStepDefinition.of(
             TupleDefinition.ofMain(LogicType.any))
-    }
-
-
-    override fun continueOrStart(
-        scriptExecutionContext: ScriptExecutionContext
-    ): LogicResult {
-        val value = scriptExecutionContext.arguments.find(tupleComponentName)
-
-        logger.info("{} - value = {}", selfLocation, value)
-
-        traceValue(scriptExecutionContext, value)
-
-        return LogicResultSuccess(
-            TupleValue.ofMain(value))
     }
 }

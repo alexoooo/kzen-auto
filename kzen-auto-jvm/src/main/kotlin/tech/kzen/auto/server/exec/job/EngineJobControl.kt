@@ -1,11 +1,9 @@
 package tech.kzen.auto.server.exec.job
 
-import tech.kzen.auto.common.paradigm.job.api.JobLogicHost
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.engine.Address
 import tech.kzen.lib.common.exec.engine.Execution
-import tech.kzen.lib.common.exec.logic.model.LogicPauseReason
 import tech.kzen.lib.common.model.location.ObjectLocation
 
 
@@ -69,16 +67,5 @@ class EngineJobControl(
         // The emit address is the Worker node's; the Worker's own stable id (the node's stableId) is what the
         // bridge keys the progress path on, so [location] (always this Worker's own location) is not needed here.
         execution.emit(progressAddress, ExecutionValue.of(value))
-    }
-
-
-    override fun logicHost(): JobLogicHost {
-        throw NotImplementedError("Nested-logic Workers (RunWorker) are not yet ported to the engine")
-    }
-
-
-    override fun requestHalt(reason: LogicPauseReason) {
-        // Only nested-logic Workers (reached via logicHost) call this, so it is unreachable until RunWorker is
-        // ported — pause-on-error / explicit-halt propagation from a hosted child is a tracked parity gap.
     }
 }

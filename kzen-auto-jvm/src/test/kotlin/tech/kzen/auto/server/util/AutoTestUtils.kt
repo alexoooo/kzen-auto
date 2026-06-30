@@ -4,16 +4,10 @@ import kotlinx.coroutines.runBlocking
 import tech.kzen.auto.common.codegen.KzenAutoCommonModule
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.auto.server.codegen.KzenAutoJvmModule
-import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.lib.common.codegen.KzenLibCommonModule
-import tech.kzen.lib.common.exec.logic.Logic
-import tech.kzen.lib.common.exec.logic.LogicExecution
-import tech.kzen.lib.common.exec.logic.LogicHandle
-import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.document.DocumentPathMap
-import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.metadata.GraphMetadata
 import tech.kzen.lib.common.model.structure.notation.DocumentNotation
@@ -26,7 +20,6 @@ import tech.kzen.lib.common.service.metadata.NotationMetadataReader
 import tech.kzen.lib.common.service.parse.NotationParser
 import tech.kzen.lib.common.service.parse.YamlNotationParser
 import tech.kzen.lib.platform.collect.toPersistentMap
-import tech.kzen.lib.server.exec.logic.context.MutableLogicControl
 import tech.kzen.lib.server.notation.ClasspathNotationMedia
 import tech.kzen.lib.server.notation.FileNotationMedia
 import tech.kzen.lib.server.notation.locate.GradleLocator
@@ -92,37 +85,5 @@ object AutoTestUtils {
     fun graphMetadata(graphNotation: GraphNotation): GraphMetadata {
         val notationMetadataReader = NotationMetadataReader()
         return notationMetadataReader.read(graphNotation)
-    }
-
-
-    /**
-     * Instantiate a logic document (e.g. a ScriptDocument) from notation through the real graph and
-     * open its live LogicExecution — exercising the production Logic.execute path with @Service
-     * dependencies resolved from the context's environment, rather than hand-constructing the
-     * execution. The returned execution is driven by the caller via continueOrStart(control, ...).
-     */
-    fun liveLogicExecution(
-        context: KzenAutoContext,
-        logicLocation: ObjectLocation,
-        logicHandle: LogicHandle,
-        runExecutionId: LogicRunExecutionId = LogicRunExecutionId.random()
-    ): LogicExecution {
-        val graphDefinition = graphDefinitionAttempt(readNotation())
-            .transitiveSuccessful
-            .filterTransitive(logicLocation.documentPath)
-
-        val graphInstance = context.graphCreator.createGraph(
-            graphDefinition, context.graphEnvironment)
-
-        val logic = graphInstance.objectInstances[logicLocation]?.reference as? Logic
-            ?: throw IllegalArgumentException("Logic not found: $logicLocation")
-
-        val logicTraceHandle = context.logicTraceStore.handle(runExecutionId, logicLocation, null, null)
-
-        return logic.execute(
-            logicHandle,
-            logicTraceHandle,
-            runExecutionId,
-            MutableLogicControl(false))
     }
 }

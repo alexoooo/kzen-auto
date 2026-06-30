@@ -240,23 +240,6 @@ DisplayValueStep:
     selfLocation: SelfLocation
 
 
-#######################################################################################################################
-
-
-MultiScriptStep:
-  abstract: true
-  is: ScriptStep
-  class: tech.kzen.auto.server.objects.script.step.control.MultiStep
-  display: MultiStepDisplay
-  icon: "material-symbols:toggle-on"
-  title: "Sub-script"
-  meta:
-    steps:
-      is: List
-      of: ScriptStep
-      by: NestedList
-
-
 RunStep:
   abstract: true
   is: ScriptStep
