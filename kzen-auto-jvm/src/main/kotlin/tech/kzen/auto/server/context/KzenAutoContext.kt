@@ -117,8 +117,9 @@ class KzenAutoContext(
 
     val logicTraceStore = LogicTraceStore(objectStableMapper)
 
-    // Injected (via graphEnvironment) into Flow dataflow vertices for message inspection / tracing.
-    private val flowMessageInspector = FlowMessageInspector()
+    // Injected (via graphEnvironment) into Flow dataflow vertices for message inspection / tracing, and used
+    // by the engine-side Flow flavour (FlowRun) to render each vertex's traced message.
+    val flowMessageInspector = FlowMessageInspector()
 
     val workUtils = WorkUtils.sibling
     val reportWorkPool = ReportWorkPool(workUtils)
@@ -150,7 +151,8 @@ class KzenAutoContext(
     // serverLogicController and definitionRepository themselves, so eager wiring would be cyclic.
     // The provider is only invoked at request/run time, long after construction completes.
     val serverLogicController = ServerLogicController(
-        graphStore, objectStableMapper, logicTraceStore, cachedKotlinCompiler) { graphEnvironment }
+        graphStore, objectStableMapper, logicTraceStore, cachedKotlinCompiler, flowMessageInspector
+    ) { graphEnvironment }
 
     val detachedExecutor = ModelDetachedExecutor(
         graphStore, graphCreator) { graphEnvironment }

@@ -3,8 +3,10 @@ package tech.kzen.auto.server.service.impl
 import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
+import tech.kzen.auto.common.paradigm.flow.service.format.FlowMessageInspector
 import tech.kzen.auto.common.paradigm.logic.LogicConventions
-import tech.kzen.auto.server.exec.script.ScriptLogicCompiler
+import tech.kzen.auto.server.exec.LogicCompiler
+import tech.kzen.auto.server.exec.LogicCompilerServices
 import tech.kzen.auto.server.exec.script.ScriptRunContext
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.lib.common.exec.ExecutionRequest
@@ -44,12 +46,12 @@ import kotlin.time.Clock
  * Drives a single run on the new single-writer [RunEngine] (logic-spec greenfield core), while keeping the
  * existing [LogicController] REST contract intact so the client (status / start / run / step / pause / cancel)
  * is unchanged. The root document is translated to an engine [tech.kzen.lib.common.exec.engine.Logic] by
- * [ScriptLogicCompiler]; the engine's emitted trace events are bridged back into the existing
- * [LogicTraceStore] so the per-step value display keeps working.
+ * [LogicCompiler]; the engine's emitted trace events are bridged back into the existing [LogicTraceStore] so
+ * the per-step value display keeps working.
  *
- * Only Script documents compile so far — Flow / Job translation is not yet ported, so starting one of those
- * fails to compile here (returns null → clean 400). This is the deliberate, temporary loss-of-parity step of
- * the Logic-framework migration; both come back once their flavours are ported onto the engine.
+ * Script and Flow documents compile so far — Job translation is not yet ported, so starting a Job fails to
+ * compile here (returns null → clean 400). This is the deliberate, temporary loss-of-parity step of the
+ * Logic-framework migration; Job comes back once its flavour is ported onto the engine.
  *
  * Run-lifecycle convergence: every control action that releases work (resume / step / cancel) is driven on a
  * single-thread executor that then blocks in [RunEngine.awaitQuiescent] until the run settles at its next
@@ -62,6 +64,7 @@ class ServerLogicController(
     private val objectStableMapper: ObjectStableMapper,
     private val logicTraceStore: LogicTraceStore,
     private val cachedKotlinCompiler: CachedKotlinCompiler,
+    private val flowMessageInspector: FlowMessageInspector,
     private val environment: () -> GraphEnvironment
 ):
     LogicController,
@@ -172,19 +175,19 @@ class ServerLogicController(
 
         val graphDefinitionAttempt = graphDefinitionAttempt(snapshotGraphDefinitionAttempt)
 
-        val scriptLogic =
+        val logic =
             try {
-                ScriptLogicCompiler.compile(
+                LogicCompiler.compile(
                     root,
                     graphDefinitionAttempt.graphStructure.graphNotation,
                     graphDefinitionAttempt.transitiveSuccessful,
-                    environment(),
-                    objectStableMapper,
-                    cachedKotlinCompiler)
+                    LogicCompilerServices(
+                        environment(), objectStableMapper, cachedKotlinCompiler, flowMessageInspector))
             }
-            catch (e: Exception) {
-                // Not a Script (Flow / Job not yet ported), or the definition is incomplete. Fail gracefully
-                // (null → clean 400) instead of letting it escape as a 500.
+            catch (e: Throwable) {
+                // Not a supported flavour (Job not yet ported), or the definition is incomplete. Fail
+                // gracefully (null → clean 400) instead of letting it escape as a 500. A NotImplementedError
+                // (Error, not Exception) is the unported-flavour signal, so catch Throwable.
                 logger.warn("Unable to compile logic: {}", root, e)
                 return null
             }
@@ -193,7 +196,7 @@ class ServerLogicController(
         val runId = runExecutionId.logicRunId
 
         val rootStableId = objectStableMapper.objectStableId(root)
-        val engine = RunEngine(scriptLogic, rootStableId)
+        val engine = RunEngine(logic, rootStableId)
         engine.pauseOnError(pauseOnError)
 
         // A new run starts from a clean slate: drop every prior run's retained trace (values + the append-only
@@ -445,11 +448,12 @@ class ServerLogicController(
     // display keeps working unchanged. Invoked from the engine's observer (off the engine lock); serialized per
     // run on [LogicState.bridgeLock] so each event is written exactly once in sequence order.
     //
-    // The engine attributes an emit to (node, address): the node carries the Script's stable id, while the
-    // per-step stable id is the address (the Script's ScriptRunContext emits `Address.of(stepStableId.value)`).
-    // The old trace store keys per step by stable id, so the step id is reconstructed from the address segment.
-    // The reserved [ScriptRunContext.nextStepAddressMarker] address is the "next to run" highlight, routed to
-    // the fixed next-step trace path. (Script-specific glue — Script is the only flavour on the engine for now.)
+    // The engine attributes an emit to (node, address): the node carries the flavour's root stable id, while
+    // the per-element stable id is the address — a Script emits `Address.of(stepStableId.value)` per step, a
+    // Flow `Address.of(vertexStableId.value)` per vertex. The old trace store keys per element by stable id,
+    // so the element id is reconstructed from the address segment (flavour-agnostic). The one Script-specific
+    // address is the reserved [ScriptRunContext.nextStepAddressMarker] "next to run" highlight, routed to the
+    // fixed next-step trace path; Flow never emits it (its client computes "next" itself from the vertices).
     private fun mirrorTrace(state: LogicState) {
         synchronized(state.bridgeLock) {
             val events = state.engine.history(state.bridgedSequence)

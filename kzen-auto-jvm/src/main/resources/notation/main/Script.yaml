@@ -1,6 +1,22 @@
 main:
   is: Script
 
-main.steps/Text:
-  is: TextLiteralStep
-  value: foo
+main.parameters/number:
+  is: ParameterBinding
+  type:
+    class: kotlin.Int
+    generics: []
+    nullable: false
+  default: 3
+
+main.steps/Formula 2:
+  is: FormulaStep
+  code: "number % 3"
+
+main.steps/div 3:
+  is: FormulaStep
+  code: "number % 3 == 0"
+
+main.steps/Formula:
+  is: FormulaStep
+  code: "number % 5 == 0"

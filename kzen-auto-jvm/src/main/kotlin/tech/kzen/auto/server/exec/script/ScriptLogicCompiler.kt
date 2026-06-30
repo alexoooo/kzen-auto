@@ -16,10 +16,13 @@ import tech.kzen.auto.server.exec.script.step.ResultStep
 import tech.kzen.auto.server.exec.script.step.RunStep
 import tech.kzen.auto.server.exec.script.step.SequenceStep
 import tech.kzen.auto.server.exec.script.step.WaitStep
+import tech.kzen.auto.server.exec.LogicCompiler
+import tech.kzen.auto.server.exec.LogicCompilerServices
 import tech.kzen.auto.server.objects.script.ScriptValidator
 import tech.kzen.auto.server.objects.script.step.eval.StepExpressionSupport
-import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.lib.common.exec.engine.LogicSignature
+import tech.kzen.lib.common.exec.logic.model.LogicType
+import tech.kzen.lib.common.exec.tuple.TupleComponentDefinition
 import tech.kzen.lib.common.exec.tuple.TupleComponentName
 import tech.kzen.lib.common.exec.tuple.TupleComponentValue
 import tech.kzen.lib.common.exec.tuple.TupleDefinition
@@ -38,8 +41,6 @@ import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.service.context.GraphCreator
-import tech.kzen.lib.common.service.context.environment.GraphEnvironment
-import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import tech.kzen.lib.platform.ClassNames
 
 // The notation-side (document) step implementations, referenced only for type dispatch — the new engine-side
@@ -88,14 +89,12 @@ object ScriptLogicCompiler {
         scriptLocation: ObjectLocation,
         graphNotation: GraphNotation,
         graphDefinition: GraphDefinition,
-        graphEnvironment: GraphEnvironment,
-        objectStableMapper: ObjectStableMapper,
-        cachedKotlinCompiler: CachedKotlinCompiler
+        services: LogicCompilerServices
     ): ScriptLogic {
         val documentPath = scriptLocation.documentPath
 
         val graphInstance = GraphCreator.createGraph(
-            graphDefinition.filterTransitive(documentPath), graphEnvironment)
+            graphDefinition.filterTransitive(documentPath), services.graphEnvironment)
         val scriptTree = ScriptTree.read(documentPath, graphDefinition)
         val scriptValidation = ScriptValidator.validate(
             documentPath, graphNotation, graphDefinition, graphInstance)
@@ -103,8 +102,8 @@ object ScriptLogicCompiler {
             graphNotation.firstAttribute(scriptLocation, ScriptConventions.resultsAttributePath))
 
         val translation = Translation(
-            graphNotation, graphDefinition, graphEnvironment, graphInstance, scriptTree,
-            scriptValidation, resultSignature, objectStableMapper, cachedKotlinCompiler)
+            graphNotation, graphDefinition, graphInstance, scriptTree,
+            scriptValidation, resultSignature, services)
 
         val parameters = ScriptConventions.orderedDirectChildLocations(
             graphNotation, AttributeLocation(scriptLocation, ScriptConventions.parametersAttributePath))
@@ -113,7 +112,14 @@ object ScriptLogicCompiler {
         val root = translation.translateSequence(
             AttributeLocation(scriptLocation, ScriptConventions.stepsAttributePath))
 
-        return ScriptLogic(root, parameters, LogicSignature(TupleDefinition.empty, resultSignature))
+        // The signature's inputs are the declared parameters (in order), so a caller binding by signature —
+        // e.g. a Flow RunLogicVertex passing its single upstream message to the callee's first parameter —
+        // resolves the right name. Types stay `any` for now (nothing consumes the declared input types yet,
+        // mirroring the result/Flow signatures); the binding is by name.
+        val inputSignature = TupleDefinition(
+            parameters.map { TupleComponentDefinition(it.name, LogicType.any) })
+
+        return ScriptLogic(root, parameters, LogicSignature(inputSignature, resultSignature))
     }
 
 
@@ -121,14 +127,19 @@ object ScriptLogicCompiler {
     private class Translation(
         private val graphNotation: GraphNotation,
         private val graphDefinition: GraphDefinition,
-        private val graphEnvironment: GraphEnvironment,
         private val graphInstance: GraphInstance,
         private val scriptTree: ScriptTree,
         private val scriptValidation: ScriptValidation,
         private val resultSignature: TupleDefinition,
-        private val objectStableMapper: ObjectStableMapper,
-        private val cachedKotlinCompiler: CachedKotlinCompiler
+        private val services: LogicCompilerServices
     ) {
+        // The three services the translation body resolves values / stable ids / nested children through —
+        // surfaced as the original names so the per-step translators below read unchanged.
+        private val graphEnvironment get() = services.graphEnvironment
+        private val objectStableMapper get() = services.objectStableMapper
+        private val cachedKotlinCompiler get() = services.cachedKotlinCompiler
+
+
         fun translateSequence(attributeLocation: AttributeLocation): SequenceStep {
             val childLocations = ScriptConventions.orderedDirectChildLocations(graphNotation, attributeLocation)
             return SequenceStep(childLocations.map { translateStep(it) })
@@ -231,23 +242,15 @@ object ScriptLogicCompiler {
         }
 
 
-        // A nested sub-Script invocation: compile the linked Script and host it as a confined child node,
-        // resolving each declared argument from this run's in-scope values at call time. Only Script targets
-        // are ported; a non-Script linked logic (e.g. a Flow) throws until those flavours are ported.
+        // A nested sub-Logic invocation: compile the linked Logic (Script or Flow — dispatched by
+        // LogicCompiler) and host it as a confined child node, resolving each declared argument from this
+        // run's in-scope values at call time.
         private fun runStep(location: ObjectLocation): RunStep {
             val instructionsLocation = RunStepInstructions.instructionsLocation(graphNotation, location)
                 ?: error("RunStep has no instructions reference: $location")
 
-            val instructionsDocument = graphNotation.documents[instructionsLocation.documentPath]
-                ?: error("RunStep instructions document not found: $instructionsLocation")
-            if (! ScriptConventions.isScript(instructionsDocument)) {
-                throw NotImplementedError(
-                    "RunStep target is not a Script (only Script children ported): $instructionsLocation")
-            }
-
-            val childLogic = compile(
-                instructionsLocation, graphNotation, graphDefinition,
-                graphEnvironment, objectStableMapper, cachedKotlinCompiler)
+            val childLogic = LogicCompiler.compile(
+                instructionsLocation, graphNotation, graphDefinition, services)
 
             val bindings = argumentBindings(location)
 

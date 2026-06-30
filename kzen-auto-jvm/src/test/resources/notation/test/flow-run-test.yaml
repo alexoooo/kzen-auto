@@ -1,0 +1,25 @@
+main:
+  is: Flow
+  vertices:
+  - FrunInput
+  - FrunCall
+  - FrunOutput
+  edges: []
+
+FrunInput:
+  is: FlowInput
+  parameter: "x"
+  row: 0
+  column: 0
+
+FrunCall:
+  is: RunLogic
+  instructions: "test/script-engine-child-test.yaml#main"
+  row: 1
+  column: 0
+
+FrunOutput:
+  is: FlowOutput
+  result: "out"
+  row: 2
+  column: 0

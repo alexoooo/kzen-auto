@@ -2,6 +2,7 @@ package tech.kzen.auto.server.exec.script
 
 import kotlinx.coroutines.runBlocking
 import tech.kzen.auto.server.context.KzenAutoContext
+import tech.kzen.auto.server.exec.LogicCompilerServices
 import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.lib.common.exec.engine.Outcome
 import tech.kzen.lib.common.exec.tuple.TupleComponentName
@@ -102,9 +103,11 @@ class ScriptNotationTest {
             scriptLocation,
             graphNotation,
             graphDefinition,
-            context.graphEnvironment,
-            context.objectStableMapper,
-            context.cachedKotlinCompiler)
+            LogicCompilerServices(
+                context.graphEnvironment,
+                context.objectStableMapper,
+                context.cachedKotlinCompiler,
+                context.flowMessageInspector))
 
         val engine = RunEngine(scriptLogic, context.objectStableMapper.objectStableId(scriptLocation), inputs)
         return try {
