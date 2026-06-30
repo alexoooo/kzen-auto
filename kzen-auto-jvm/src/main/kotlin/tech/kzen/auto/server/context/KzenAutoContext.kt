@@ -150,7 +150,7 @@ class KzenAutoContext(
     // serverLogicController and definitionRepository themselves, so eager wiring would be cyclic.
     // The provider is only invoked at request/run time, long after construction completes.
     val serverLogicController = ServerLogicController(
-        graphStore, graphCreator, objectStableMapper, logicTraceStore) { graphEnvironment }
+        graphStore, objectStableMapper, logicTraceStore, cachedKotlinCompiler) { graphEnvironment }
 
     val detachedExecutor = ModelDetachedExecutor(
         graphStore, graphCreator) { graphEnvironment }

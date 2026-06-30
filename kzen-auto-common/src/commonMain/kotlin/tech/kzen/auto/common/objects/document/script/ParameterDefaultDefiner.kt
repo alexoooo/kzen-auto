@@ -25,6 +25,20 @@ import tech.kzen.lib.platform.ClassNames
 class ParameterDefaultDefiner: AttributeDefiner {
     companion object {
         private val typeAttributePath = AttributePath.ofName(AttributeName("type"))
+
+
+        // Coerce a default's notation text into a typed value keyed on the parameter's declared type.
+        // Shared with the engine-side parameter translation so both resolve defaults identically.
+        fun coerce(text: String, type: TypeMetadata): Any? {
+            return when (type.className) {
+                ClassNames.kotlinString -> text
+                ClassNames.kotlinBoolean -> text.toBooleanStrictOrNull()
+                ClassNames.kotlinInt -> text.toIntOrNull()
+                ClassNames.kotlinLong -> text.toLongOrNull()
+                ClassNames.kotlinDouble -> text.toDoubleOrNull()
+                else -> null
+            }
+        }
     }
 
 
@@ -50,17 +64,5 @@ class ParameterDefaultDefiner: AttributeDefiner {
 
         return AttributeDefinitionAttempt.success(
             ValueAttributeDefinition(coerce(defaultNotation.value, typeMetadata)))
-    }
-
-
-    private fun coerce(text: String, type: TypeMetadata): Any? {
-        return when (type.className) {
-            ClassNames.kotlinString -> text
-            ClassNames.kotlinBoolean -> text.toBooleanStrictOrNull()
-            ClassNames.kotlinInt -> text.toIntOrNull()
-            ClassNames.kotlinLong -> text.toLongOrNull()
-            ClassNames.kotlinDouble -> text.toDoubleOrNull()
-            else -> null
-        }
     }
 }

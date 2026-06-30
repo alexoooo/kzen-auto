@@ -257,7 +257,7 @@ class FormulaStep(
 
         val value = StepExpressionSupport.evaluate(
             selfLocation, "Any?", code, nonUnitPredecessorTypes,
-            scriptExecutionContext, cachedKotlinCompiler)
+            scriptExecutionContext::referencedValue, cachedKotlinCompiler)
 
         traceValue(scriptExecutionContext, value.toString())
 

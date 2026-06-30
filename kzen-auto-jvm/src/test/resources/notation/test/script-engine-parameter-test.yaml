@@ -1,0 +1,23 @@
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.Int
+      generics: []
+      nullable: false
+
+main.parameters/Start:
+  is: ParameterBinding
+  type:
+    class: kotlin.Int
+    generics: []
+    nullable: false
+  default: 2
+
+main.steps/Doubled:
+  is: FormulaStep
+  code: "Start * 2"
+
+main.steps/Result:
+  is: ResultStep
+  code: Doubled

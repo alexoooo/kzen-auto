@@ -34,6 +34,11 @@ import kotlin.test.fail
  *
  * Root steps: First (NumberLiteral) -> Run (RunStep -> child) -> Last (NumberLiteral).
  * Child steps: ChildA (NumberLiteral) -> ChildB (NumberLiteral).
+ *
+ * Now runs against the [tech.kzen.lib.server.exec.engine.RunEngine] that backs [ServerLogicController]: the
+ * same Step Into / Over / Out behaviour is preserved, now driven by the engine's uniform checkpoint-before-step
+ * boundaries and the Script flavour's re-emitted `next-step` highlight (start+pause settles before the first
+ * step; each step then advances exactly one).
  */
 class StepNavigationTest {
     //-----------------------------------------------------------------------------------------------------------------

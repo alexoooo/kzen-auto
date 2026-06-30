@@ -1,0 +1,27 @@
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.Int
+      generics: []
+      nullable: false
+
+main.steps/Flag:
+  is: FormulaStep
+  code: "true"
+
+main.steps/Branch:
+  is: IfStep
+  condition: main.steps/Flag
+
+main.steps/Branch.then/Yes:
+  is: FormulaStep
+  code: "10"
+
+main.steps/Branch.else/No:
+  is: FormulaStep
+  code: "20"
+
+main.steps/Result:
+  is: ResultStep
+  code: Branch

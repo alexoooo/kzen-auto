@@ -2,7 +2,6 @@ package tech.kzen.auto.server.objects.script.step.eval
 
 import tech.kzen.auto.common.objects.document.script.model.ScriptTree
 import tech.kzen.auto.common.objects.document.script.model.ScriptValidation
-import tech.kzen.auto.server.objects.script.model.ScriptExecutionContext
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.auto.server.service.compile.KotlinCode
 import tech.kzen.auto.server.util.ClassLoaderUtils
@@ -70,13 +69,15 @@ object StepExpressionSupport {
 
 
     // Compile, load, instantiate and evaluate the expression against the current values of the in-scope
-    // predecessors / bindings (resolved on demand via referencedValue, in the same order as [nonUnitTypes]).
+    // predecessors / bindings (resolved on demand via [valueResolver], in the same order as [nonUnitTypes]).
+    // The only coupling to the runtime is this resolver — a function from an in-scope object's location to
+    // its current value — so the engine flavour can supply its own without the legacy ScriptExecutionContext.
     fun evaluate(
         selfLocation: ObjectLocation,
         returnType: String,
         code: String,
         nonUnitTypes: Map<ObjectPath, TypeMetadata>,
-        scriptExecutionContext: ScriptExecutionContext,
+        valueResolver: (ObjectLocation) -> Any?,
         compiler: CachedKotlinCompiler
     ): Any? {
         val classLoader = ClassLoaderUtils.dynamicParentClassLoader()
@@ -99,7 +100,7 @@ object StepExpressionSupport {
 
         val predecessorValues = nonUnitTypes.map {
             val objectLocation = selfLocation.documentPath.toObjectLocation(it.key)
-            scriptExecutionContext.referencedValue(objectLocation)
+            valueResolver(objectLocation)
         }
 
         return instance.evaluate(predecessorValues)

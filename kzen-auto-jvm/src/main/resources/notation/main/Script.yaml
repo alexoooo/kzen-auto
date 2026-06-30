@@ -1,0 +1,6 @@
+main:
+  is: Script
+
+main.steps/Text:
+  is: TextLiteralStep
+  value: foo

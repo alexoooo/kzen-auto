@@ -85,7 +85,7 @@ class ResultStep(
 
         val value = StepExpressionSupport.evaluate(
             selfLocation, declaredType.toSimple(), code, nonUnitPredecessorTypes,
-            scriptExecutionContext, cachedKotlinCompiler)
+            scriptExecutionContext::referencedValue, cachedKotlinCompiler)
 
         traceValue(scriptExecutionContext, value.toString())
 

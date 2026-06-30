@@ -2,39 +2,66 @@ package tech.kzen.auto.server.service.impl
 
 import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
+import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.paradigm.logic.LogicConventions
+import tech.kzen.auto.server.exec.script.ScriptLogicCompiler
+import tech.kzen.auto.server.exec.script.ScriptRunContext
+import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionResult
-import tech.kzen.lib.common.exec.logic.*
-import tech.kzen.lib.common.exec.logic.model.LogicCommand
-import tech.kzen.lib.common.exec.logic.model.LogicPauseReason
-import tech.kzen.lib.common.exec.logic.model.LogicResultFailed
-import tech.kzen.lib.common.exec.logic.model.LogicResultPaused
+import tech.kzen.lib.common.exec.engine.Node
+import tech.kzen.lib.common.exec.engine.NodeId
+import tech.kzen.lib.common.exec.engine.NodeStatus
+import tech.kzen.lib.common.exec.engine.Outcome
+import tech.kzen.lib.common.exec.engine.PauseReason
+import tech.kzen.lib.common.exec.engine.StepMode
+import tech.kzen.lib.common.exec.logic.LogicExecution
 import tech.kzen.lib.common.exec.logic.run.LogicController
-import tech.kzen.lib.common.exec.logic.run.model.*
-import tech.kzen.lib.common.exec.tuple.TupleValue
+import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
+import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
+import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
+import tech.kzen.lib.common.exec.logic.run.model.LogicRunInfo
+import tech.kzen.lib.common.exec.logic.run.model.LogicRunFrameInfo
+import tech.kzen.lib.common.exec.logic.run.model.LogicRunResponse
+import tech.kzen.lib.common.exec.logic.run.model.LogicRunState
+import tech.kzen.lib.common.exec.logic.run.model.LogicStatus
+import tech.kzen.lib.common.exec.logic.trace.LogicTraceHandle
+import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.lib.common.service.context.GraphCreator
 import tech.kzen.lib.common.service.context.environment.GraphEnvironment
 import tech.kzen.lib.common.service.store.LocalGraphStore
+import tech.kzen.lib.common.service.store.normal.ObjectStableId
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
-import tech.kzen.lib.common.util.ExceptionUtils
-import tech.kzen.lib.server.exec.logic.context.LogicFrame
-import tech.kzen.lib.server.exec.logic.context.MutableLogicControl
-import tech.kzen.lib.server.exec.logic.context.MutableLogicResourceScope
+import tech.kzen.lib.server.exec.engine.RunEngine
 import tech.kzen.lib.server.exec.logic.trace.LogicTraceStore
-import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.time.Clock
 
 
+/**
+ * Drives a single run on the new single-writer [RunEngine] (logic-spec greenfield core), while keeping the
+ * existing [LogicController] REST contract intact so the client (status / start / run / step / pause / cancel)
+ * is unchanged. The root document is translated to an engine [tech.kzen.lib.common.exec.engine.Logic] by
+ * [ScriptLogicCompiler]; the engine's emitted trace events are bridged back into the existing
+ * [LogicTraceStore] so the per-step value display keeps working.
+ *
+ * Only Script documents compile so far — Flow / Job translation is not yet ported, so starting one of those
+ * fails to compile here (returns null → clean 400). This is the deliberate, temporary loss-of-parity step of
+ * the Logic-framework migration; both come back once their flavours are ported onto the engine.
+ *
+ * Run-lifecycle convergence: every control action that releases work (resume / step / cancel) is driven on a
+ * single-thread executor that then blocks in [RunEngine.awaitQuiescent] until the run settles at its next
+ * wavefront (a pause boundary or a terminal outcome), at which point [settleAfterDrive] reflects the settled
+ * state back into the status flags. Signal-only actions (pause / cancel / setPauseOnError) call the engine
+ * directly so they reach an in-flight run without queueing behind the busy executor.
+ */
 class ServerLogicController(
     private val graphStore: LocalGraphStore,
-    private val graphCreator: GraphCreator,
     private val objectStableMapper: ObjectStableMapper,
     private val logicTraceStore: LogicTraceStore,
+    private val cachedKotlinCompiler: CachedKotlinCompiler,
     private val environment: () -> GraphEnvironment
 ):
     LogicController,
@@ -47,29 +74,38 @@ class ServerLogicController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private data class LogicState(
+    private class LogicState(
         val runId: LogicRunId,
-        val frame: LogicFrame,
-        val resourceScope: LogicResourceScope
+        val engine: RunEngine,
+        val traceHandle: LogicTraceHandle
     ) {
-        var cancelRequested: Boolean = false
-        var pauseRequested: Boolean = false
+        // Set once, immediately after construction (the observer references this state).
+        lateinit var traceBridge: AutoCloseable
 
+        // The engine has been launched (the root coroutine started). A fresh run is created but not launched;
+        // the first drive (resume / step) — or a pause-at-entry — launches it.
         @Volatile
-        var paused: Boolean = false
+        var launched: Boolean = false
 
-        // Why the run is currently paused (meaningful only while [paused]) — mapped to the settled LogicRunState
-        // in [status] so the client can tell a plain step-boundary settle from a deliberate halt. Set from the
-        // LogicResultPaused reason at each pause convergence; reset to Boundary when a fresh run / user-pause
-        // begins.
+        // A full-speed run / a step is in flight on the driving executor (the run is executing, not settled).
         @Volatile
-        var pauseReason: LogicPauseReason = LogicPauseReason.Boundary
+        var running: Boolean = false
 
         @Volatile
         var stepping: Boolean = false
 
+        // User asked to pause / cancel a still-running run (drives the Pausing / Cancelling display until the
+        // run settles).
         @Volatile
-        var running: Boolean = false
+        var pauseRequested: Boolean = false
+
+        @Volatile
+        var cancelRequested: Boolean = false
+
+        // Bridge cursor: the highest engine trace sequence already mirrored into the trace store. Guarded by
+        // [bridgeLock] so concurrent publishes (engine dispatcher threads) mirror each event exactly once.
+        val bridgeLock = Any()
+        var bridgedSequence: Long = 0
     }
 
 
@@ -86,39 +122,32 @@ class ServerLogicController(
     //-----------------------------------------------------------------------------------------------------------------
     @Synchronized
     override fun status(): LogicStatus {
-        val runInfo = stateOrNull?.let {
-            val runState =
-                if (it.cancelRequested) {
-                    LogicRunState.Cancelling
-                }
-                else if (it.stepping) {
-                    LogicRunState.Stepping
-                }
-                else if (it.paused) {
-                    when (it.pauseReason) {
-                        LogicPauseReason.Error -> LogicRunState.ErrorPaused
-                        LogicPauseReason.Explicit -> LogicRunState.ExplicitPaused
-                        LogicPauseReason.Boundary -> LogicRunState.Paused
-                    }
-                }
-                else if (it.pauseRequested) {
-                    LogicRunState.Pausing
-                }
-                else {
-                    LogicRunState.Running
-                }
-
-            val frame = it.frame.toInfo(objectStableMapper)
-
-            LogicRunInfo(
-                it.runId,
-                frame,
-                runState
-            )
-        }
-
         val time = Clock.System.now()
-        return LogicStatus(time, runInfo)
+
+        val state = stateOrNull
+            ?: return LogicStatus(time, null)
+
+        val snapshot = state.engine.snapshot()
+
+        val runState =
+            if (state.cancelRequested) {
+                LogicRunState.Cancelling
+            }
+            else if (state.stepping) {
+                LogicRunState.Stepping
+            }
+            else if (state.running) {
+                if (state.pauseRequested) LogicRunState.Pausing else LogicRunState.Running
+            }
+            else {
+                when (deepestPauseReason(snapshot.root)) {
+                    PauseReason.Error -> LogicRunState.ErrorPaused
+                    PauseReason.Explicit -> LogicRunState.ExplicitPaused
+                    else -> LogicRunState.Paused
+                }
+            }
+
+        return LogicStatus(time, LogicRunInfo(state.runId, nodeToFrame(snapshot.root), runState))
     }
 
 
@@ -137,125 +166,46 @@ class ServerLogicController(
         snapshotGraphDefinitionAttempt: GraphDefinitionAttempt?,
         pauseOnError: Boolean
     ): LogicRunId? {
-        val state = stateOrNull
-        if (state != null) {
+        if (stateOrNull != null) {
             return null
         }
 
+        val graphDefinitionAttempt = graphDefinitionAttempt(snapshotGraphDefinitionAttempt)
+
+        val scriptLogic =
+            try {
+                ScriptLogicCompiler.compile(
+                    root,
+                    graphDefinitionAttempt.graphStructure.graphNotation,
+                    graphDefinitionAttempt.transitiveSuccessful,
+                    environment(),
+                    objectStableMapper,
+                    cachedKotlinCompiler)
+            }
+            catch (e: Exception) {
+                // Not a Script (Flow / Job not yet ported), or the definition is incomplete. Fail gracefully
+                // (null → clean 400) instead of letting it escape as a 500.
+                logger.warn("Unable to compile logic: {}", root, e)
+                return null
+            }
+
         val runExecutionId = LogicRunExecutionId.random()
         val runId = runExecutionId.logicRunId
-        val executionId = runExecutionId.logicExecutionId
 
-        val graphDefinition = graphDefinitionAttempt(snapshotGraphDefinitionAttempt)
+        val rootStableId = objectStableMapper.objectStableId(root)
+        val engine = RunEngine(scriptLogic, rootStableId)
+        engine.pauseOnError(pauseOnError)
 
-        val successfulGraphDefinition = graphDefinition.successful()
-
-        val transitiveDefinition =
-            try {
-                successfulGraphDefinition.filterTransitive(root)
-            }
-            catch (e: IllegalArgumentException) {
-                // The root (or a transitive dependency) failed to define — e.g. a meta-declared attribute with
-                // no value silently dropped the object from the successful graph. Fail gracefully (return null →
-                // clean 400) instead of letting it escape as a 500; the client surfaces the specific detail.
-                logger.warn(
-                    "Unable to start run, definition incomplete: {} - {}",
-                    root, graphDefinition.failures[root], e)
-                return null
-            }
-
-        val rootGraphInstance =
-            try {
-                graphCreator.createGraph(transitiveDefinition, environment())
-            }
-            catch (e: Exception) {
-                logger.info("Unable to create: {}", root, e)
-                return null
-            }
-
-        val rootInstance = rootGraphInstance.objectInstances[root]?.reference
-            ?: return null
-
-        val commonMutableLogicControl = MutableLogicControl(pauseOnError)
-        val resourceScope = MutableLogicResourceScope()
-
-        val logicHandle: LogicHandle = object: LogicHandle {
-            override fun start(
-                logicRunExecutionId: LogicRunExecutionId,
-                originalObjectLocation: ObjectLocation,
-                callerLocation: ObjectLocation?
-            ): LogicExecutionFacade {
-                val currentState = checkNotNull(stateOrNull)
-                check(currentState.runId == runId)
-
-                // Attach the new guest frame under its actual caller, not the root. The same
-                // logicHandle closure is threaded down every nesting level (LogicExecutionFacadeImpl
-                // passes it on to each nested execution), so the host is identified by the caller's
-                // execution id carried in logicRunExecutionId — using the captured root executionId
-                // here flattened the frame tree, making every nested document report stack depth 1
-                // in the sidebar run indicator.
-                val hostFrame = currentState.frame.find(logicRunExecutionId.logicExecutionId)
-                checkNotNull(hostFrame) { "Host frame not found: $logicRunExecutionId" }
-
-                val guestExecutionId = LogicExecutionId.random()
-
-                val dependencies = CopyOnWriteArrayList<LogicFrame>()
-                val listener = object: LogicExecutionListener {
-                    override fun closed() {
-                        hostFrame.dependencies.removeIf { it.executionId == guestExecutionId }
-                    }
-                }
-
-                val logicExecutionFacadeImpl = LogicExecutionFacadeImpl(
-                    successfulGraphDefinition, commonMutableLogicControl, resourceScope,
-                    listener, logicTraceStore, environment)
-
-                val logicExecution = logicExecutionFacadeImpl.open(
-                    LogicRunExecutionId(runId, guestExecutionId), originalObjectLocation,
-                    logicRunExecutionId.logicExecutionId, callerLocation, this, graphCreator)
-
-                val stableObjectLocation = objectStableMapper.objectStableId(originalObjectLocation)
-                hostFrame.dependencies.add(LogicFrame(
-                    stableObjectLocation,
-                    guestExecutionId,
-                    logicExecution,
-                    dependencies,
-                    commonMutableLogicControl
-                ))
-
-                return logicExecutionFacadeImpl
-            }
-        }
-
-        // A new run starts from a clean slate: drop every prior run's retained trace (values + the
-        // append-only film-strip) so stale per-vertex/per-step displays don't bleed into this run.
-        // Same global wipe as the manual "Clear all traces" control, made implicit at run start.
+        // A new run starts from a clean slate: drop every prior run's retained trace (values + the append-only
+        // film-strip) so stale per-step displays don't bleed into this run. The run's root execution has no
+        // caller / parent.
         logicTraceStore.clearAll()
+        val traceHandle = logicTraceStore.handle(runExecutionId, root, null, null)
 
-        // The run's root execution has no caller / parent.
-        val logicTraceHandle = logicTraceStore.handle(runExecutionId, root, null, null)
+        val state = LogicState(runId, engine, traceHandle)
+        state.traceBridge = engine.observe { mirrorTrace(state) }
+        stateOrNull = state
 
-        val logic = rootInstance as Logic
-        val execution =
-            try {
-                logic.execute(logicHandle, logicTraceHandle, runExecutionId, commonMutableLogicControl)
-            }
-            catch (e: Exception) {
-                logger.warn("Execution error: {}", root, e)
-                return null
-            }
-
-        stateOrNull = LogicState(
-            runId,
-            LogicFrame(
-                objectStableMapper.objectStableId(root),
-                executionId,
-                execution,
-                CopyOnWriteArrayList(),
-                commonMutableLogicControl
-            ),
-            resourceScope
-        )
         return runId
     }
 
@@ -274,11 +224,7 @@ class ServerLogicController(
                 LogicConventions.wrongRunningError(runId, state.runId))
         }
 
-        val frame = state.frame.find(executionId)
-            ?: return ExecutionResult.failure(
-                LogicConventions.missingExecution(executionId, runId))
-
-        return frame.control.publishRequest(request)
+        return state.engine.request(NodeId(executionId.value), request)
     }
 
 
@@ -293,12 +239,19 @@ class ServerLogicController(
 
         state.cancelRequested = true
 
-        if (state.paused) {
-            state.frame.execution.close(false)
-            clearState(false)
-        }
-        else {
-            state.frame.control.commandCancel()
+        // Signal directly (non-blocking) so the cancel reaches an in-flight run instead of queueing behind the
+        // busy driving executor.
+        state.engine.cancel()
+
+        if (!state.running && !state.stepping) {
+            // No in-flight drive task is waiting to observe the settle (the run was paused), so finalize the
+            // now-cancelling run on the executor (which is free).
+            executor.execute {
+                state.engine.awaitQuiescent()
+                synchronized(this@ServerLogicController) {
+                    clearState(state)
+                }
+            }
         }
 
         return LogicRunResponse.Submitted
@@ -314,25 +267,38 @@ class ServerLogicController(
             return LogicRunResponse.RunIdMismatch
         }
 
-        check(!state.paused) { "Already paused" }
+        when {
+            !state.launched -> {
+                // Pause-at-entry: launch the run paused so it settles at the first step boundary (the first
+                // step highlighted as "next to run"), matching the debugger's start-paused behaviour. A
+                // subsequent step then runs that first step.
+                state.launched = true
+                state.running = true
+                state.pauseRequested = true
+                executor.execute {
+                    state.engine.step(StepMode.Into)
+                    state.engine.awaitQuiescent()
+                    synchronized(this@ServerLogicController) {
+                        settleAfterDrive(state)
+                    }
+                }
+            }
 
-        state.pauseRequested = true
-        state.frame.control.commandPause()
+            state.running -> {
+                state.pauseRequested = true
+                // Signal directly; the in-flight run settles at its next boundary and the driving task converges it.
+                state.engine.pause()
+            }
 
-        if (!state.running) {
-            state.paused = true
-            // A user pause is a plain settle, never a deliberate halt (Explicit / Error).
-            state.pauseReason = LogicPauseReason.Boundary
+            // else: already settled at a pause — nothing to do.
         }
 
         return LogicRunResponse.Submitted
     }
 
 
-    // Live-toggle pause-on-error on the active run (the header toggle, now clickable while paused). The run's
-    // common control is shared across every Script/Flow frame and delegated to by each Job child control, so a
-    // single set reaches the whole run; it takes effect at the next boundary the execution checks (i.e. on the
-    // next continue/step).
+    // Live-toggle pause-on-error on the active run (the header toggle, clickable while paused). Takes effect at
+    // the next boundary the execution checks.
     @Synchronized
     fun setPauseOnError(runId: LogicRunId, value: Boolean): LogicRunResponse {
         val state = stateOrNull
@@ -342,7 +308,7 @@ class ServerLogicController(
             return LogicRunResponse.RunIdMismatch
         }
 
-        state.frame.control.setPauseOnError(value)
+        state.engine.pauseOnError(value)
         return LogicRunResponse.Submitted
     }
 
@@ -351,9 +317,7 @@ class ServerLogicController(
     override fun continueOrStart(
         runId: LogicRunId,
         snapshotGraphDefinitionAttempt: GraphDefinitionAttempt?
-    ):
-        LogicRunResponse
-    {
+    ): LogicRunResponse {
         val state = stateOrNull
             ?: return LogicRunResponse.NotFound
 
@@ -361,55 +325,18 @@ class ServerLogicController(
             return LogicRunResponse.RunIdMismatch
         }
 
-        check(!state.running) { "Can't run, already running" }
-        check(!state.cancelRequested) { "Can't run, stop already requested" }
+        check(!state.running && !state.stepping) { "Can't run, already running" }
+        check(!state.cancelRequested) { "Can't run, cancel already requested" }
+
         state.pauseRequested = false
-        state.paused = false
-        state.pauseReason = LogicPauseReason.Boundary
-        // Full-speed run: clear any leftover step budget and reset the depth limit to unbounded (a stale
-        // Step-Out limit would otherwise make a later deep pause run free). The command is None below, so
-        // the budget/depth path isn't consulted anyway — this just keeps the control state tidy.
-        state.frame.control.arm(0, Int.MAX_VALUE)
-        state.frame.control.commandUnpause()
-
-//        val topLevel = state.frame.dependencies.isEmpty()
-        val ready = state.frame.execution.beforeStart(TupleValue.empty/*, topLevel*/)
-        if (!ready) {
-            return LogicRunResponse.UnableToStart
-        }
-
-        val graphDefinitionAttempt = graphDefinitionAttempt(snapshotGraphDefinitionAttempt)
-
+        state.launched = true
         state.running = true
 
         executor.execute {
-            val result =
-                try {
-                    state.frame.execution.continueOrStart(
-                        state.frame.control, state.resourceScope, graphDefinitionAttempt.successful())
-                }
-                catch (t: Throwable) {
-                    logger.warn("Execution failed", t)
-                    LogicResultFailed(ExceptionUtils.message(t))
-                }
-
+            state.engine.resume()
+            state.engine.awaitQuiescent()
             synchronized(this@ServerLogicController) {
-                state.running = false
-
-                if (result.isTerminal()) {
-                    state.frame.execution.close(result is LogicResultFailed)
-                    clearState(result is LogicResultFailed)
-                }
-                else {
-                    state.paused = true
-                    state.pauseReason = (result as LogicResultPaused).reason
-                    // Converge on the same state as a user-initiated pause (e.g. after a
-                    // pause-on-error) so a subsequent step() satisfies its pauseRequested /
-                    // Pause-command preconditions. Idempotent for a real user pause: the flag is
-                    // already set and commandPause() is then a no-op CAS.
-                    state.pauseRequested = true
-                    state.frame.control.commandPause()
-                }
+                settleAfterDrive(state)
             }
         }
 
@@ -422,7 +349,7 @@ class ServerLogicController(
         runId: LogicRunId,
         snapshotGraphDefinitionAttempt: GraphDefinitionAttempt?
     ): LogicRunResponse {
-        return stepInternal(runId, snapshotGraphDefinitionAttempt, stepOver = false)
+        return drive(runId, StepMode.Into)
     }
 
 
@@ -431,7 +358,7 @@ class ServerLogicController(
         runId: LogicRunId,
         snapshotGraphDefinitionAttempt: GraphDefinitionAttempt?
     ): LogicRunResponse {
-        return stepInternal(runId, snapshotGraphDefinitionAttempt, stepOver = true)
+        return drive(runId, StepMode.Over)
     }
 
 
@@ -440,16 +367,11 @@ class ServerLogicController(
         runId: LogicRunId,
         snapshotGraphDefinitionAttempt: GraphDefinitionAttempt?
     ): LogicRunResponse {
-        return stepInternal(runId, snapshotGraphDefinitionAttempt, stepOut = true)
+        return drive(runId, StepMode.Out)
     }
 
 
-    private fun stepInternal(
-        runId: LogicRunId,
-        snapshotGraphDefinitionAttempt: GraphDefinitionAttempt?,
-        stepOver: Boolean = false,
-        stepOut: Boolean = false
-    ): LogicRunResponse {
+    private fun drive(runId: LogicRunId, mode: StepMode): LogicRunResponse {
         val state = stateOrNull
             ?: return LogicRunResponse.NotFound
 
@@ -457,67 +379,18 @@ class ServerLogicController(
             return LogicRunResponse.RunIdMismatch
         }
 
-        // NB: "stepping" is just the same as running, but with the pause pre-selected
-        check(!state.stepping) { "Can't step, already stepping" }
-        check(!state.cancelRequested) { "Can't step, stop already requested" }
-        check(state.pauseRequested) { "Must be paused in order to step" }
-        check(state.paused) { "Must be paused in order to step" }
+        check(!state.running && !state.stepping) { "Can't step, already running" }
+        check(!state.cancelRequested) { "Can't step, cancel already requested" }
+
+        state.pauseRequested = false
+        state.launched = true
         state.stepping = true
 
-        val command = state.frame.control.pollCommand()
-        check(command == LogicCommand.Pause) { "Must be paused in order to step" }
-
-        // Arm the spine for one tick (depth comparisons are against the live frameDepth during the tick;
-        // steppedDepth is the depth of the frame the user is paused in). Step Into: one fresh boundary, no
-        // depth limit (pause at the very next boundary, descending into a child). Step Over: one fresh
-        // boundary, but frames deeper than steppedDepth run free, so a RunStep's child runs to completion.
-        // Step Out: no fresh boundary, and frames at/below steppedDepth run free, so the current frame
-        // finishes and the run pauses back at the caller's next boundary.
-        val steppedDepth = deepestFrameDepth(state.frame)
-        if (stepOut) {
-            state.frame.control.arm(0, steppedDepth - 1)
-        }
-        else if (stepOver) {
-            state.frame.control.arm(1, steppedDepth)
-        }
-        else {
-            state.frame.control.arm(1)
-        }
-
-//        val topLevel = state.frame.dependencies.isEmpty()
-        val ready = state.frame.execution.beforeStart(TupleValue.empty/*, topLevel*/)
-        if (!ready) {
-            return LogicRunResponse.UnableToStart
-        }
-
-        val graphDefinitionAttempt = graphDefinitionAttempt(snapshotGraphDefinitionAttempt)
-
         executor.execute {
-            val result =
-                try {
-                    state.frame.execution.continueOrStart(
-                        state.frame.control, state.resourceScope, graphDefinitionAttempt.successful())
-                }
-                catch (t: Throwable) {
-                    logger.warn("Execution failed", t)
-                    LogicResultFailed(ExceptionUtils.message(t))
-                }
-
+            state.engine.step(mode)
+            state.engine.awaitQuiescent()
             synchronized(this@ServerLogicController) {
-                state.stepping = false
-
-                if (result.isTerminal()) {
-                    state.frame.execution.close(result is LogicResultFailed)
-                    clearState(result is LogicResultFailed)
-                }
-                else {
-                    // Re-affirm the paused-and-Pause-requested invariant (a step ending in a
-                    // pause-on-error leaves the run paused and ready for another step/continue).
-                    state.paused = true
-                    state.pauseReason = (result as LogicResultPaused).reason
-                    state.pauseRequested = true
-                    state.frame.control.commandPause()
-                }
+                settleAfterDrive(state)
             }
         }
 
@@ -526,19 +399,8 @@ class ServerLogicController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    // Depth of the deepest frame on the (paused) spine: when paused the frame tree still holds the
-    // cached child frames (RunStep keeps its pausedExecution), so this is the depth of the frame the
-    // user is paused in — the one Step Out runs to completion.
-    private fun deepestFrameDepth(frame: LogicFrame): Int {
-        val dependencies = frame.dependencies
-        if (dependencies.isEmpty()) {
-            return 0
-        }
-        return 1 + dependencies.maxOf { deepestFrameDepth(it) }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
+    // Visibility-only attach of a detached nested Logic (a Job's Run Worker child). Not yet ported to the engine
+    // (Job translation pending), so this is a no-op until then.
     @Synchronized
     override fun attach(
         hostExecutionId: LogicExecutionId,
@@ -546,29 +408,94 @@ class ServerLogicController(
         executionId: LogicExecutionId,
         execution: LogicExecution
     ): AutoCloseable {
-        // Visibility-only frame for a detached nested Logic (a Job's Run Worker child): mirror it into the
-        // tree under its caller so the sidebar highlights it at the right depth, without it joining the step
-        // spine. The host drives the child on its own control, so this frame is never driven from here and
-        // reuses the host frame's control purely to satisfy the field (only request() routing reads it, which
-        // a detached child never serves). No active run / no matching host frame -> no-op handle.
-        val state = stateOrNull
-            ?: return AutoCloseable {}
-        val hostFrame = state.frame.find(hostExecutionId)
-            ?: return AutoCloseable {}
+        return AutoCloseable {}
+    }
 
-        val childFrame = LogicFrame(
-            objectStableMapper.objectStableId(location),
-            executionId,
-            execution,
-            CopyOnWriteArrayList(),
-            hostFrame.control)
-        hostFrame.dependencies.add(childFrame)
 
-        // Detach by identity (not by executionId): two concurrent Run Workers hosting the same child document
-        // share its reused executionId, so removing by id could drop a still-running sibling frame.
-        return AutoCloseable {
-            hostFrame.dependencies.remove(childFrame)
+    //-----------------------------------------------------------------------------------------------------------------
+    // Must be invoked while synchronized on this controller, from the driving executor task once the engine has
+    // quiesced. Either the run reached a terminal outcome (clear it) or it settled into a pause boundary.
+    private fun settleAfterDrive(state: LogicState) {
+        if (stateOrNull !== state) {
+            return
         }
+
+        state.running = false
+        state.stepping = false
+        state.pauseRequested = false
+
+        val rootStatus = state.engine.snapshot().root.status
+        if (rootStatus is NodeStatus.Terminal) {
+            clearState(state)
+        }
+    }
+
+
+    private fun clearState(state: LogicState) {
+        if (stateOrNull !== state) {
+            return
+        }
+        stateOrNull = null
+        state.traceBridge.close()
+        state.engine.close()
+    }
+
+
+    // Mirror the engine's newly-emitted trace events into the existing trace store so the client's per-step value
+    // display keeps working unchanged. Invoked from the engine's observer (off the engine lock); serialized per
+    // run on [LogicState.bridgeLock] so each event is written exactly once in sequence order.
+    //
+    // The engine attributes an emit to (node, address): the node carries the Script's stable id, while the
+    // per-step stable id is the address (the Script's ScriptRunContext emits `Address.of(stepStableId.value)`).
+    // The old trace store keys per step by stable id, so the step id is reconstructed from the address segment.
+    // The reserved [ScriptRunContext.nextStepAddressMarker] address is the "next to run" highlight, routed to
+    // the fixed next-step trace path. (Script-specific glue — Script is the only flavour on the engine for now.)
+    private fun mirrorTrace(state: LogicState) {
+        synchronized(state.bridgeLock) {
+            val events = state.engine.history(state.bridgedSequence)
+            for (event in events) {
+                val address = event.address
+                if (address != null && address.segments.isNotEmpty()) {
+                    val segment = address.segments.first()
+                    if (segment == ScriptRunContext.nextStepAddressMarker) {
+                        state.traceHandle.set(ScriptConventions.nextStepTracePath, event.value)
+                    }
+                    else {
+                        state.traceHandle.set(LogicTracePath.ofObjectStableId(ObjectStableId(segment)), event.value)
+                    }
+                }
+                else {
+                    state.traceHandle.append(event.stableId, event.value)
+                }
+                if (event.sequence > state.bridgedSequence) {
+                    state.bridgedSequence = event.sequence
+                }
+            }
+        }
+    }
+
+
+    private fun deepestPauseReason(node: Node): PauseReason? {
+        val childReason = node.children.asReversed().firstNotNullOfOrNull { deepestPauseReason(it) }
+        if (childReason != null) {
+            return childReason
+        }
+        val status = node.status
+        return if (status is NodeStatus.Suspended) status.reason else null
+    }
+
+
+    // The live frame tree (sidebar run indicator) shows only active frames: a completed child node lingers in
+    // the engine's tree (for trace/history), but is pruned here so a hosted child that ran to completion
+    // (step-over / step-out) no longer counts toward the paused stack depth — matching the old frame tree,
+    // which removed a guest frame on close.
+    private fun nodeToFrame(node: Node): LogicRunFrameInfo {
+        return LogicRunFrameInfo(
+            objectStableMapper.objectLocation(node.stableId),
+            LogicExecutionId(node.id.value),
+            node.children
+                .filter { it.status !is NodeStatus.Terminal }
+                .map { nodeToFrame(it) })
     }
 
 
@@ -585,31 +512,10 @@ class ServerLogicController(
     }
 
 
-    @Synchronized
-    private fun clearState(error: Boolean) {
-        val state = stateOrNull
-            ?: return
-
-        stateOrNull = null
-        state.resourceScope.disposeAll(error)
-        state.frame.control.close()
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     override fun close() {
-        // Best-effort cooperative cancel of any in-flight run so the executor task
-        // can run its own clearState() before we shut the executor down.
         synchronized(this) {
-            val state = stateOrNull
-            if (state != null && !state.running && !state.stepping) {
-                state.frame.execution.close(false)
-                clearState(false)
-            }
-            else {
-                state?.cancelRequested = true
-                state?.frame?.control?.commandCancel()
-            }
+            stateOrNull?.engine?.cancel()
         }
 
         executor.shutdown()
@@ -617,12 +523,12 @@ class ServerLogicController(
             executor.shutdownNow()
         }
 
-        // Safety net: if the executor task didn't get to clearState() (e.g.
-        // shutdownNow interrupted it mid-execution), force the frame control close
-        // so no LogicControl publisher hangs past controller shutdown.
         synchronized(this) {
-            if (stateOrNull != null) {
-                clearState(false)
+            val state = stateOrNull
+            if (state != null) {
+                stateOrNull = null
+                state.traceBridge.close()
+                state.engine.close()
             }
         }
     }

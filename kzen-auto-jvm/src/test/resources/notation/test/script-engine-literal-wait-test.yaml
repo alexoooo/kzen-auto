@@ -1,0 +1,19 @@
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.String
+      generics: []
+      nullable: false
+
+main.steps/Delay:
+  is: WaitStep
+  milliseconds: 1
+
+main.steps/Greeting:
+  is: TextLiteralStep
+  value: hello
+
+main.steps/Result:
+  is: ResultStep
+  code: Greeting

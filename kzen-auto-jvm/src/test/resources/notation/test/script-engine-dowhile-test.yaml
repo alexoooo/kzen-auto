@@ -1,0 +1,15 @@
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.Int
+      generics: []
+      nullable: false
+
+main.steps/Loop:
+  is: DoWhileStep
+  condition: "false"
+
+main.steps/Loop.steps/Inner:
+  is: ResultStep
+  code: "7"
