@@ -3,6 +3,7 @@ package tech.kzen.auto.server.exec.script.step
 import tech.kzen.auto.server.exec.script.ScriptRunContext
 import tech.kzen.auto.server.exec.script.ScriptStepLogic
 import tech.kzen.lib.common.exec.tuple.TupleValue
+import tech.kzen.lib.common.service.store.normal.ObjectStableId
 
 
 /**
@@ -21,6 +22,13 @@ class SequenceStep(
     suspend fun run(context: ScriptRunContext): TupleValue {
         var last = TupleValue.empty
         for (step in steps) {
+            // Live-edit replay (logic-spec §5): a step that completed in the pre-edit run re-adopts its outcome
+            // without re-executing — no "next to run" highlight, no checkpoint boundary, no work — so resume
+            // continues from the live frontier. Its Done trace is re-emitted so the client display matches.
+            if (context.isReplayCompleted(step.stableId)) {
+                last = TupleValue.ofMain(context.adoptCompleted(step.stableId))
+                continue
+            }
             context.publishNextStep(step.stableId)
             context.execution.checkpoint()
             context.markRunning(step.stableId)
@@ -29,5 +37,10 @@ class SequenceStep(
         }
         context.publishNextStep(null)
         return last
+    }
+
+
+    fun nestedStableIds(): List<ObjectStableId> {
+        return steps.flatMap { it.nestedStableIds() }
     }
 }

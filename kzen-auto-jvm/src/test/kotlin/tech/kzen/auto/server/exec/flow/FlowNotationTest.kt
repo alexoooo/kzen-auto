@@ -105,7 +105,8 @@ class FlowNotationTest {
                 context.graphEnvironment,
                 context.objectStableMapper,
                 context.cachedKotlinCompiler,
-                context.flowMessageInspector))
+                context.flowMessageInspector,
+                context.notationMetadataReader))
 
         val engine = RunEngine(flowLogic, context.objectStableMapper.objectStableId(flowLocation), inputs)
         return try {

@@ -18,11 +18,21 @@ class DoWhileStep(
     private val condition: (ScriptRunContext) -> Boolean
 ): ScriptStepLogic {
     override suspend fun run(context: ScriptRunContext): TupleValue {
+        // Reaching here means the loop did NOT complete pre-edit; a coroutine's do/while can't be re-pointed at
+        // the rebuilt body, so it restarts from the first iteration — drop the body's stale per-iteration
+        // outcomes from the replay set so each body step executes live (see ForEachStep for the full rationale).
+        context.dropReplay(body.nestedStableIds())
+
         do {
             body.run(context)
         }
         while (condition(context))
 
         return TupleValue.empty
+    }
+
+
+    override fun nestedStableIds(): List<ObjectStableId> {
+        return listOf(stableId) + body.nestedStableIds()
     }
 }

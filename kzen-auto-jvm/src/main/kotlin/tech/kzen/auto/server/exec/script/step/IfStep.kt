@@ -33,4 +33,13 @@ class IfStep(
 
         return branch.run(context)
     }
+
+
+    // A branch runs at most once, so a re-entered If (paused inside its chosen branch pre-edit) keeps replay on:
+    // the condition re-evaluates deterministically to the same branch and that branch's completed steps
+    // short-circuit. Hence no dropReplay here (unlike a loop) — these ids are exposed only so an ENCLOSING loop
+    // that re-runs drops this whole sub-tree.
+    override fun nestedStableIds(): List<ObjectStableId> {
+        return listOf(stableId) + thenBranch.nestedStableIds() + elseBranch.nestedStableIds()
+    }
 }

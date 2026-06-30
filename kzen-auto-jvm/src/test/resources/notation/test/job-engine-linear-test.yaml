@@ -1,0 +1,21 @@
+# Engine-side Job port (JobNotationTest): a linear reader -> filter -> writer pipeline with ALL Worker channel
+# ports BLANK and NO Channel objects, so the run only succeeds if JobChannelSynthesis derives the two channels
+# from Worker document order (reader.output -> filter.input, filter.output -> writer.input) and wires them.
+# Mirrors job-synth-linear-test.yaml but with its own build dir so it can't collide with JobExecutionTest.
+
+
+main:
+  is: Job
+
+main.workers/reader:
+  is: CsvReaderWorker
+  path: build/job-engine-linear/input.csv
+  batch: 4096
+
+main.workers/filter:
+  is: FilterWorker
+  where: 'flag eq "yes"'
+
+main.workers/writer:
+  is: CsvWriterWorker
+  path: build/job-engine-linear/output.csv

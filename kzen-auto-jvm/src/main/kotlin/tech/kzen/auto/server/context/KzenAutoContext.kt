@@ -79,7 +79,7 @@ class KzenAutoContext(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val notationMetadataReader = NotationMetadataReader()
+    val notationMetadataReader = NotationMetadataReader()
 
     private val fileLocator: FileNotationLocator = GradleLocator(
         moduleRootOverride = config.moduleRoot)
@@ -151,7 +151,8 @@ class KzenAutoContext(
     // serverLogicController and definitionRepository themselves, so eager wiring would be cyclic.
     // The provider is only invoked at request/run time, long after construction completes.
     val serverLogicController = ServerLogicController(
-        graphStore, objectStableMapper, logicTraceStore, cachedKotlinCompiler, flowMessageInspector
+        graphStore, objectStableMapper, logicTraceStore, cachedKotlinCompiler, flowMessageInspector,
+        notationMetadataReader
     ) { graphEnvironment }
 
     val detachedExecutor = ModelDetachedExecutor(

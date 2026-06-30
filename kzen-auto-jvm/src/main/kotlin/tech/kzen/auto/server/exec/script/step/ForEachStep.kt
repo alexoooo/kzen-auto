@@ -23,6 +23,12 @@ class ForEachStep(
         val items = context.referencedValue(itemsStableId) as? Iterable<*>
             ?: error("ForEach items are not iterable: $itemsStableId")
 
+        // Reaching here means the loop did NOT complete pre-edit (a completed loop carries its own outcome and is
+        // short-circuited wholesale by the enclosing sequence). A coroutine's `for` can't be re-pointed at the
+        // rebuilt body, so the loop restarts from its first iteration — drop the body's stale per-iteration
+        // outcomes from the replay set so each body step executes live instead of short-circuiting on them.
+        context.dropReplay(body.nestedStableIds())
+
         val output = ArrayList<Any?>()
         for (item in items) {
             context.record(itemBindingId, item)
@@ -31,5 +37,10 @@ class ForEachStep(
         }
 
         return TupleValue.ofMain(output)
+    }
+
+
+    override fun nestedStableIds(): List<ObjectStableId> {
+        return listOf(stableId) + body.nestedStableIds()
     }
 }

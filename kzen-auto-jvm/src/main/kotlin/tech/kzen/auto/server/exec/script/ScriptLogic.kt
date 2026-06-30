@@ -25,6 +25,12 @@ class ScriptLogic(
     override suspend fun run(execution: Execution): TupleValue {
         val context = ScriptRunContext(execution)
 
+        // Live-edit migration (logic-spec §5): adopt the predecessor run's completed work (read once at start) so
+        // the spine replays-short-circuits completed steps, and register the capture so a later edit carries this
+        // run's completed work forward. Null on a fresh run -> nothing to adopt, everything runs live.
+        (execution.restored as? ScriptMigrationState)?.let { context.restore(it) }
+        execution.onCapture { context.captureState() }
+
         for (parameter in parameters) {
             context.record(
                 parameter.stableId,

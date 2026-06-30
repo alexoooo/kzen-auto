@@ -107,7 +107,8 @@ class ScriptNotationTest {
                 context.graphEnvironment,
                 context.objectStableMapper,
                 context.cachedKotlinCompiler,
-                context.flowMessageInspector))
+                context.flowMessageInspector,
+                context.notationMetadataReader))
 
         val engine = RunEngine(scriptLogic, context.objectStableMapper.objectStableId(scriptLocation), inputs)
         return try {

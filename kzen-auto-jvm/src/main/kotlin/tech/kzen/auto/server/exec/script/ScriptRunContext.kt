@@ -19,6 +19,12 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableId
  * is a [StepTrace] (state + display) addressed by its stable id, and the "next step to run" highlight is a
  * reserved-address emit ([nextStepAddressMarker]) the controller's trace bridge routes to
  * [tech.kzen.auto.common.objects.document.script.ScriptConventions.nextStepTracePath].
+ *
+ * LIVE-EDIT MIGRATION (logic-spec §5): the context also carries the run's completed work across a live edit. As
+ * each step finishes its outcome is recorded in [completedOutcomes] (the capture source — see [captureState]); on
+ * the rebuilt run [restore] seeds [restoredOutcomes] from the predecessor's capture so the [SequenceStep] spine
+ * can replay-short-circuit completed steps (see [isReplayCompleted] / [adoptCompleted]) and a re-running loop can
+ * drop its body's stale outcomes ([dropReplay]). See [ScriptMigrationState] for the carried shape and its bounds.
  */
 class ScriptRunContext(
     val execution: Execution
@@ -33,7 +39,18 @@ class ScriptRunContext(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    // The live value graph downstream expressions reference (step outcomes + non-step bindings).
     private val stepValues = HashMap<ObjectStableId, Any?>()
+
+    // The outcome each step that COMPLETED produced, in completion order — the live-edit capture source. Distinct
+    // from stepValues: it excludes the non-step bindings (a parameter / loop item), which the rebuilt run
+    // re-derives rather than carries.
+    private val completedOutcomes = LinkedHashMap<ObjectStableId, Any?>()
+
+    // The predecessor run's completed outcomes, seeded by restore() across a live edit; consulted by the spine to
+    // replay-short-circuit and pruned by a re-running loop (dropReplay). Empty on a fresh (non-migration) run.
+    private val restoredOutcomes = HashMap<ObjectStableId, Any?>()
+
     private var resultValue: TupleValue? = null
 
 
@@ -47,7 +64,8 @@ class ScriptRunContext(
 
     /**
      * Record a value for downstream reference WITHOUT emitting a step-trace entry — for the non-step bindings
-     * (a parameter, a loop item) that are resolved by reference but never shown as steps in the spine.
+     * (a parameter, a loop item) that are resolved by reference but never shown as steps in the spine. Not part
+     * of [completedOutcomes]: bindings are re-derived on the rebuilt run, not carried across a live edit.
      */
     fun record(stableId: ObjectStableId, value: Any?) {
         stepValues[stableId] = value
@@ -68,13 +86,60 @@ class ScriptRunContext(
 
 
     /**
-     * Record a step's produced value (for downstream reference) and mark it Done, publishing its display value
-     * to the live trace. The raw value is kept verbatim for [referencedValue]; the display falls back to a text
-     * rendering (matching the former step tracing).
+     * Record a step's produced value (for downstream reference and live-edit capture) and mark it Done,
+     * publishing its display value to the live trace. The raw value is kept verbatim for [referencedValue]; the
+     * display falls back to a text rendering (matching the former step tracing).
      */
     fun markDone(stableId: ObjectStableId, value: Any?) {
         stepValues[stableId] = value
+        completedOutcomes[stableId] = value
         emitStepTrace(stableId, StepTrace.State.Done, displayOf(value))
+    }
+
+
+    //----------------------------------------------------------------------------------- live-edit migration (§5)
+    /** Seed the carried-over completed work from the predecessor run's capture (read once at run start). */
+    fun restore(state: ScriptMigrationState) {
+        restoredOutcomes.putAll(state.completedOutcomes)
+        resultValue = state.result
+    }
+
+
+    /** Snapshot the run's completed work for carry-over at the migration barrier (see [ScriptMigrationState]). */
+    fun captureState(): ScriptMigrationState {
+        return ScriptMigrationState(LinkedHashMap(completedOutcomes), resultValue)
+    }
+
+
+    /** Whether this step completed in the predecessor run, so the spine can re-adopt it instead of re-running. */
+    fun isReplayCompleted(stableId: ObjectStableId): Boolean {
+        return restoredOutcomes.containsKey(stableId)
+    }
+
+
+    /**
+     * Re-adopt a step's predecessor outcome on replay: record it for downstream reference + capture and re-emit
+     * its Done trace, WITHOUT re-executing it. Returns the value so the enclosing sequence can yield it (a branch
+     * / loop-body result).
+     */
+    fun adoptCompleted(stableId: ObjectStableId): Any? {
+        val value = restoredOutcomes[stableId]
+        stepValues[stableId] = value
+        completedOutcomes[stableId] = value
+        emitStepTrace(stableId, StepTrace.State.Done, displayOf(value))
+        return value
+    }
+
+
+    /**
+     * Drop the given ids from the replay set so they execute live — used by a loop that did NOT complete
+     * pre-edit, so its body re-runs from the first iteration rather than short-circuiting on a body step's stale
+     * last-iteration outcome.
+     */
+    fun dropReplay(stableIds: Iterable<ObjectStableId>) {
+        for (stableId in stableIds) {
+            restoredOutcomes.remove(stableId)
+        }
     }
 
 

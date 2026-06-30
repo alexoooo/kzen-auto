@@ -2,15 +2,18 @@ package tech.kzen.auto.server.service.impl
 
 import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
+import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.paradigm.flow.service.format.FlowMessageInspector
 import tech.kzen.auto.common.paradigm.logic.LogicConventions
 import tech.kzen.auto.server.exec.LogicCompiler
 import tech.kzen.auto.server.exec.LogicCompilerServices
+import tech.kzen.auto.server.exec.job.EngineJobControl
 import tech.kzen.auto.server.exec.script.ScriptRunContext
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionResult
+import tech.kzen.lib.common.exec.engine.Logic
 import tech.kzen.lib.common.exec.engine.Node
 import tech.kzen.lib.common.exec.engine.NodeId
 import tech.kzen.lib.common.exec.engine.NodeStatus
@@ -29,9 +32,11 @@ import tech.kzen.lib.common.exec.logic.run.model.LogicRunState
 import tech.kzen.lib.common.exec.logic.run.model.LogicStatus
 import tech.kzen.lib.common.exec.logic.trace.LogicTraceHandle
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
+import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.service.context.environment.GraphEnvironment
+import tech.kzen.lib.common.service.metadata.NotationMetadataReader
 import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.common.service.store.normal.ObjectStableId
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
@@ -49,15 +54,23 @@ import kotlin.time.Clock
  * [LogicCompiler]; the engine's emitted trace events are bridged back into the existing [LogicTraceStore] so
  * the per-step value display keeps working.
  *
- * Script and Flow documents compile so far — Job translation is not yet ported, so starting a Job fails to
- * compile here (returns null → clean 400). This is the deliberate, temporary loss-of-parity step of the
- * Logic-framework migration; Job comes back once its flavour is ported onto the engine.
+ * Script, Flow and Job documents all compile onto the engine now (a document of any other type fails to
+ * compile → clean 400). The Job port runs its Workers as concurrent confined child nodes; live worker progress
+ * is bridged back to the JS Job UI via [JobConventions.workerProgressPath] (see [mirrorTrace]).
  *
  * Run-lifecycle convergence: every control action that releases work (resume / step / cancel) is driven on a
  * single-thread executor that then blocks in [RunEngine.awaitQuiescent] until the run settles at its next
  * wavefront (a pause boundary or a terminal outcome), at which point [settleAfterDrive] reflects the settled
  * state back into the status flags. Signal-only actions (pause / cancel / setPauseOnError) call the engine
  * directly so they reach an in-flight run without queueing behind the busy executor.
+ *
+ * Live-edit migration (logic-spec §5): the client re-reads the (possibly edited) notation and passes it as the
+ * run's `snapshotGraphDefinitionAttempt` each time it releases work. When that definition differs from the one
+ * the live run was compiled against (a pause → edit → resume), [pendingMigration] recompiles the root [Logic]
+ * and the executor calls [RunEngine.migrate] at the quiescent barrier instead of plain resume / step — so the
+ * edit takes effect on the live run. This is flavour-agnostic: a Job carries its Worker state + channel
+ * carryover across the rebuild (see [tech.kzen.auto.server.exec.job.JobRun]); a Script / Flow registers no
+ * capture yet, so it cleanly restarts on the edited definition (the safe best-effort §5 default).
  */
 class ServerLogicController(
     private val graphStore: LocalGraphStore,
@@ -65,6 +78,7 @@ class ServerLogicController(
     private val logicTraceStore: LogicTraceStore,
     private val cachedKotlinCompiler: CachedKotlinCompiler,
     private val flowMessageInspector: FlowMessageInspector,
+    private val notationMetadataReader: NotationMetadataReader,
     private val environment: () -> GraphEnvironment
 ):
     LogicController,
@@ -80,7 +94,13 @@ class ServerLogicController(
     private class LogicState(
         val runId: LogicRunId,
         val engine: RunEngine,
-        val traceHandle: LogicTraceHandle
+        val traceHandle: LogicTraceHandle,
+        val rootLocation: ObjectLocation,
+
+        // The definition (filtered to the root document) the live engine tree was last compiled against — the
+        // change-detection baseline for a live edit. Updated on each migrate so the next compare is vs the
+        // currently-running definition.
+        var baselineDefinition: GraphDefinition
     ) {
         // Set once, immediately after construction (the observer references this state).
         lateinit var traceBridge: AutoCloseable
@@ -177,17 +197,12 @@ class ServerLogicController(
 
         val logic =
             try {
-                LogicCompiler.compile(
-                    root,
-                    graphDefinitionAttempt.graphStructure.graphNotation,
-                    graphDefinitionAttempt.transitiveSuccessful,
-                    LogicCompilerServices(
-                        environment(), objectStableMapper, cachedKotlinCompiler, flowMessageInspector))
+                compileLogic(root, graphDefinitionAttempt)
             }
             catch (e: Throwable) {
-                // Not a supported flavour (Job not yet ported), or the definition is incomplete. Fail
-                // gracefully (null → clean 400) instead of letting it escape as a 500. A NotImplementedError
-                // (Error, not Exception) is the unported-flavour signal, so catch Throwable.
+                // Not a supported flavour, or the definition is incomplete. Fail gracefully (null → clean 400)
+                // instead of letting it escape as a 500. A NotImplementedError (Error, not Exception) is the
+                // unported-flavour signal, so catch Throwable.
                 logger.warn("Unable to compile logic: {}", root, e)
                 return null
             }
@@ -205,7 +220,9 @@ class ServerLogicController(
         logicTraceStore.clearAll()
         val traceHandle = logicTraceStore.handle(runExecutionId, root, null, null)
 
-        val state = LogicState(runId, engine, traceHandle)
+        val state = LogicState(
+            runId, engine, traceHandle, root,
+            graphDefinitionAttempt.transitiveSuccessful.filterTransitive(root.documentPath))
         state.traceBridge = engine.observe { mirrorTrace(state) }
         stateOrNull = state
 
@@ -331,12 +348,22 @@ class ServerLogicController(
         check(!state.running && !state.stepping) { "Can't run, already running" }
         check(!state.cancelRequested) { "Can't run, cancel already requested" }
 
+        val migration = pendingMigration(state, snapshotGraphDefinitionAttempt)
+
         state.pauseRequested = false
         state.launched = true
         state.running = true
 
         executor.execute {
-            state.engine.resume()
+            state.engine.awaitQuiescent()
+            if (migration != null) {
+                // The notation changed under the paused run: rebuild from the edit and run free (the migrate
+                // carries each flavour's surviving state across by stable id).
+                state.engine.migrate(migration, paused = false)
+            }
+            else {
+                state.engine.resume()
+            }
             state.engine.awaitQuiescent()
             synchronized(this@ServerLogicController) {
                 settleAfterDrive(state)
@@ -352,7 +379,7 @@ class ServerLogicController(
         runId: LogicRunId,
         snapshotGraphDefinitionAttempt: GraphDefinitionAttempt?
     ): LogicRunResponse {
-        return drive(runId, StepMode.Into)
+        return drive(runId, StepMode.Into, snapshotGraphDefinitionAttempt)
     }
 
 
@@ -361,7 +388,7 @@ class ServerLogicController(
         runId: LogicRunId,
         snapshotGraphDefinitionAttempt: GraphDefinitionAttempt?
     ): LogicRunResponse {
-        return drive(runId, StepMode.Over)
+        return drive(runId, StepMode.Over, snapshotGraphDefinitionAttempt)
     }
 
 
@@ -370,11 +397,15 @@ class ServerLogicController(
         runId: LogicRunId,
         snapshotGraphDefinitionAttempt: GraphDefinitionAttempt?
     ): LogicRunResponse {
-        return drive(runId, StepMode.Out)
+        return drive(runId, StepMode.Out, snapshotGraphDefinitionAttempt)
     }
 
 
-    private fun drive(runId: LogicRunId, mode: StepMode): LogicRunResponse {
+    private fun drive(
+        runId: LogicRunId,
+        mode: StepMode,
+        snapshotGraphDefinitionAttempt: GraphDefinitionAttempt?
+    ): LogicRunResponse {
         val state = stateOrNull
             ?: return LogicRunResponse.NotFound
 
@@ -385,12 +416,22 @@ class ServerLogicController(
         check(!state.running && !state.stepping) { "Can't step, already running" }
         check(!state.cancelRequested) { "Can't step, cancel already requested" }
 
+        val migration = pendingMigration(state, snapshotGraphDefinitionAttempt)
+
         state.pauseRequested = false
         state.launched = true
         state.stepping = true
 
         executor.execute {
-            state.engine.step(mode)
+            state.engine.awaitQuiescent()
+            if (migration != null) {
+                // Step after an edit: rebuild from the edit and park at the new definition's first wavefront —
+                // a bounded step-after-edit (matching the old executor's re-park-fresh-then-report-paused).
+                state.engine.migrate(migration, paused = true)
+            }
+            else {
+                state.engine.step(mode)
+            }
             state.engine.awaitQuiescent()
             synchronized(this@ServerLogicController) {
                 settleAfterDrive(state)
@@ -451,21 +492,28 @@ class ServerLogicController(
     // The engine attributes an emit to (node, address): the node carries the flavour's root stable id, while
     // the per-element stable id is the address — a Script emits `Address.of(stepStableId.value)` per step, a
     // Flow `Address.of(vertexStableId.value)` per vertex. The old trace store keys per element by stable id,
-    // so the element id is reconstructed from the address segment (flavour-agnostic). The one Script-specific
-    // address is the reserved [ScriptRunContext.nextStepAddressMarker] "next to run" highlight, routed to the
-    // fixed next-step trace path; Flow never emits it (its client computes "next" itself from the vertices).
+    // so the element id is reconstructed from the address segment (flavour-agnostic). Two flavour-specific
+    // addresses are routed by reserved marker instead: the Script [ScriptRunContext.nextStepAddressMarker]
+    // "next to run" highlight → the fixed next-step trace path (Flow never emits it); and a Job Worker's
+    // [EngineJobControl.workerProgressAddressMarker] live progress → that Worker's progress path (keyed by the
+    // node's stable id, which IS the Worker's stable id) — the path the JS Job UI polls.
     private fun mirrorTrace(state: LogicState) {
         synchronized(state.bridgeLock) {
             val events = state.engine.history(state.bridgedSequence)
             for (event in events) {
                 val address = event.address
                 if (address != null && address.segments.isNotEmpty()) {
-                    val segment = address.segments.first()
-                    if (segment == ScriptRunContext.nextStepAddressMarker) {
-                        state.traceHandle.set(ScriptConventions.nextStepTracePath, event.value)
-                    }
-                    else {
-                        state.traceHandle.set(LogicTracePath.ofObjectStableId(ObjectStableId(segment)), event.value)
+                    when (val segment = address.segments.first()) {
+                        ScriptRunContext.nextStepAddressMarker ->
+                            state.traceHandle.set(ScriptConventions.nextStepTracePath, event.value)
+
+                        EngineJobControl.workerProgressAddressMarker ->
+                            state.traceHandle.set(
+                                JobConventions.workerProgressPath(event.stableId), event.value)
+
+                        else ->
+                            state.traceHandle.set(
+                                LogicTracePath.ofObjectStableId(ObjectStableId(segment)), event.value)
                     }
                 }
                 else {
@@ -512,6 +560,49 @@ class ServerLogicController(
 
         return runBlocking {
             graphStore.graphDefinition()
+        }
+    }
+
+
+    private fun compileLogic(root: ObjectLocation, attempt: GraphDefinitionAttempt): Logic {
+        return LogicCompiler.compile(
+            root,
+            attempt.graphStructure.graphNotation,
+            attempt.transitiveSuccessful,
+            LogicCompilerServices(
+                environment(), objectStableMapper, cachedKotlinCompiler, flowMessageInspector,
+                notationMetadataReader))
+    }
+
+
+    // The recompiled root [Logic] to migrate the live run onto when its definition changed under a live edit, or
+    // null to resume / step the existing tree. The change signal is the root document's filtered object
+    // definitions (a fresh build of the same notation is definition-equal, so a no-edit resume never migrates).
+    // Only a LAUNCHED run migrates — an unlaunched engine has no live state to re-point, so the first release
+    // just runs the start-time logic. A recompile failure (a mid-edit incomplete definition) falls back to null,
+    // keeping the prior definition running rather than killing the run.
+    private fun pendingMigration(
+        state: LogicState,
+        snapshotGraphDefinitionAttempt: GraphDefinitionAttempt?
+    ): Logic? {
+        if (!state.launched) {
+            return null
+        }
+
+        val attempt = graphDefinitionAttempt(snapshotGraphDefinitionAttempt)
+        val editedDefinition = attempt.transitiveSuccessful.filterTransitive(state.rootLocation.documentPath)
+        if (editedDefinition.objectDefinitions == state.baselineDefinition.objectDefinitions) {
+            return null
+        }
+
+        return try {
+            val logic = compileLogic(state.rootLocation, attempt)
+            state.baselineDefinition = editedDefinition
+            logic
+        }
+        catch (e: Throwable) {
+            logger.warn("Unable to recompile edited logic, keeping prior definition: {}", state.rootLocation, e)
+            null
         }
     }
 

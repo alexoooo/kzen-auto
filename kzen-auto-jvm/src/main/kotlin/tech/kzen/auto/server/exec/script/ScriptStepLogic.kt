@@ -18,4 +18,15 @@ interface ScriptStepLogic {
     val stableId: ObjectStableId
 
     suspend fun run(context: ScriptRunContext): TupleValue
+
+    /**
+     * This step's stable id plus those of every step nested within it (an If's branches, a loop's body). A
+     * re-running loop drops these from the replay set ([ScriptRunContext.dropReplay]) so its body re-executes
+     * live rather than short-circuiting on a stale per-iteration outcome. The default is the leaf case (just this
+     * step); container steps (If / ForEach / DoWhile) override to include their nested sequences. A [RunStep]'s
+     * child is a separate engine node with its own migration, so it is NOT included.
+     */
+    fun nestedStableIds(): List<ObjectStableId> {
+        return listOf(stableId)
+    }
 }
