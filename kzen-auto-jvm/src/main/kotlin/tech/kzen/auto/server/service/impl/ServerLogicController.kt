@@ -9,6 +9,7 @@ import tech.kzen.auto.common.paradigm.logic.LogicConventions
 import tech.kzen.auto.server.exec.LogicCompiler
 import tech.kzen.auto.server.exec.LogicCompilerServices
 import tech.kzen.auto.server.exec.job.EngineJobControl
+import tech.kzen.auto.server.exec.report.ExecutionLogicTraceHandle
 import tech.kzen.auto.server.exec.script.ScriptRunContext
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.lib.common.exec.ExecutionRequest
@@ -54,9 +55,10 @@ import kotlin.time.Clock
  * [LogicCompiler]; the engine's emitted trace events are bridged back into the existing [LogicTraceStore] so
  * the per-step value display keeps working.
  *
- * Script, Flow and Job documents all compile onto the engine now (a document of any other type fails to
+ * Script, Flow, Job and Report documents all compile onto the engine now (a document of any other type fails to
  * compile → clean 400). The Job port runs its Workers as concurrent confined child nodes; live worker progress
- * is bridged back to the JS Job UI via [JobConventions.workerProgressPath] (see [mirrorTrace]).
+ * is bridged back to the JS Job UI via [JobConventions.workerProgressPath] (see [mirrorTrace]). A Report runs its
+ * record pipeline on the run's root node, bridging input / output progress to its literal trace paths.
  *
  * Run-lifecycle convergence: every control action that releases work (resume / step / cancel) is driven on a
  * single-thread executor that then blocks in [RunEngine.awaitQuiescent] until the run settles at its next
@@ -93,6 +95,7 @@ class ServerLogicController(
     //-----------------------------------------------------------------------------------------------------------------
     private class LogicState(
         val runId: LogicRunId,
+        val runExecutionId: LogicRunExecutionId,
         val engine: RunEngine,
         val traceHandle: LogicTraceHandle,
         val rootLocation: ObjectLocation,
@@ -195,9 +198,14 @@ class ServerLogicController(
 
         val graphDefinitionAttempt = graphDefinitionAttempt(snapshotGraphDefinitionAttempt)
 
+        // The run identity is generated before compiling: a flavour that persists run artifacts keyed to the
+        // run (Report stamps its run dir) reads it off the compiler services. It stays fixed across a later
+        // migrate recompile (same run).
+        val runExecutionId = LogicRunExecutionId.random()
+
         val logic =
             try {
-                compileLogic(root, graphDefinitionAttempt)
+                compileLogic(root, graphDefinitionAttempt, runExecutionId)
             }
             catch (e: Throwable) {
                 // Not a supported flavour, or the definition is incomplete. Fail gracefully (null → clean 400)
@@ -207,7 +215,6 @@ class ServerLogicController(
                 return null
             }
 
-        val runExecutionId = LogicRunExecutionId.random()
         val runId = runExecutionId.logicRunId
 
         val rootStableId = objectStableMapper.objectStableId(root)
@@ -221,7 +228,7 @@ class ServerLogicController(
         val traceHandle = logicTraceStore.handle(runExecutionId, root, null, null)
 
         val state = LogicState(
-            runId, engine, traceHandle, root,
+            runId, runExecutionId, engine, traceHandle, root,
             graphDefinitionAttempt.transitiveSuccessful.filterTransitive(root.documentPath))
         state.traceBridge = engine.observe { mirrorTrace(state) }
         stateOrNull = state
@@ -492,11 +499,13 @@ class ServerLogicController(
     // The engine attributes an emit to (node, address): the node carries the flavour's root stable id, while
     // the per-element stable id is the address — a Script emits `Address.of(stepStableId.value)` per step, a
     // Flow `Address.of(vertexStableId.value)` per vertex. The old trace store keys per element by stable id,
-    // so the element id is reconstructed from the address segment (flavour-agnostic). Two flavour-specific
+    // so the element id is reconstructed from the address segment (flavour-agnostic). Three flavour-specific
     // addresses are routed by reserved marker instead: the Script [ScriptRunContext.nextStepAddressMarker]
-    // "next to run" highlight → the fixed next-step trace path (Flow never emits it); and a Job Worker's
+    // "next to run" highlight → the fixed next-step trace path (Flow never emits it); a Job Worker's
     // [EngineJobControl.workerProgressAddressMarker] live progress → that Worker's progress path (keyed by the
-    // node's stable id, which IS the Worker's stable id) — the path the JS Job UI polls.
+    // node's stable id, which IS the Worker's stable id) — the path the JS Job UI polls; and a Report's
+    // [ExecutionLogicTraceHandle.tracePathAddressMarker] input / output progress → the literal trace path
+    // carried in the remaining address segments (Report's trace paths are by-convention, not per-element).
     private fun mirrorTrace(state: LogicState) {
         synchronized(state.bridgeLock) {
             val events = state.engine.history(state.bridgedSequence)
@@ -510,6 +519,12 @@ class ServerLogicController(
                         EngineJobControl.workerProgressAddressMarker ->
                             state.traceHandle.set(
                                 JobConventions.workerProgressPath(event.stableId), event.value)
+
+                        ExecutionLogicTraceHandle.tracePathAddressMarker ->
+                            // A Report emits its input / output progress at a literal trace path: the remaining
+                            // address segments ARE the LogicTracePath to set (no stable-id translation).
+                            state.traceHandle.set(
+                                LogicTracePath(address.segments.drop(1)), event.value)
 
                         else ->
                             state.traceHandle.set(
@@ -564,14 +579,18 @@ class ServerLogicController(
     }
 
 
-    private fun compileLogic(root: ObjectLocation, attempt: GraphDefinitionAttempt): Logic {
+    private fun compileLogic(
+        root: ObjectLocation,
+        attempt: GraphDefinitionAttempt,
+        runExecutionId: LogicRunExecutionId
+    ): Logic {
         return LogicCompiler.compile(
             root,
             attempt.graphStructure.graphNotation,
             attempt.transitiveSuccessful,
             LogicCompilerServices(
                 environment(), objectStableMapper, cachedKotlinCompiler, flowMessageInspector,
-                notationMetadataReader))
+                notationMetadataReader, runExecutionId))
     }
 
 
@@ -596,7 +615,7 @@ class ServerLogicController(
         }
 
         return try {
-            val logic = compileLogic(state.rootLocation, attempt)
+            val logic = compileLogic(state.rootLocation, attempt, state.runExecutionId)
             state.baselineDefinition = editedDefinition
             logic
         }

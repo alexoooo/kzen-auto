@@ -1,0 +1,22 @@
+main:
+  is: Report
+  input:
+    browser:
+      directory: "."
+      filter: ""
+    selection:
+      dataType: tech.kzen.auto.plugin.model.record.FlatFileRecord
+      groupBy: ""
+      locations:
+        - location: "build/report-engine-test/input.csv"
+          coordinate: CSV
+  output:
+    type: Explore
+    explore:
+      start: 1
+      count: 50
+    export:
+      format: csv
+      compression: none
+      path: "build/report-engine-test/export/${report}_${group}_${time}.${extension}"
+    work: "build/report-engine-test/work"

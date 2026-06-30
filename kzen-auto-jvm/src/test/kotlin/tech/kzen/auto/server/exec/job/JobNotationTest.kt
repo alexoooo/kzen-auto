@@ -6,6 +6,7 @@ import tech.kzen.auto.server.exec.LogicCompilerServices
 import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.lib.common.exec.engine.NodeStatus
 import tech.kzen.lib.common.exec.engine.Outcome
+import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
@@ -133,7 +134,8 @@ class JobNotationTest {
                 context.objectStableMapper,
                 context.cachedKotlinCompiler,
                 context.flowMessageInspector,
-                context.notationMetadataReader))
+                context.notationMetadataReader,
+                LogicRunExecutionId.random()))
 
         return RunEngine(jobLogic, context.objectStableMapper.objectStableId(jobLocation))
     }

@@ -5,6 +5,7 @@ import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.exec.LogicCompilerServices
 import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.lib.common.exec.engine.Outcome
+import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
 import tech.kzen.lib.common.exec.tuple.TupleComponentName
 import tech.kzen.lib.common.exec.tuple.TupleComponentValue
 import tech.kzen.lib.common.exec.tuple.TupleValue
@@ -108,7 +109,8 @@ class ScriptNotationTest {
                 context.objectStableMapper,
                 context.cachedKotlinCompiler,
                 context.flowMessageInspector,
-                context.notationMetadataReader))
+                context.notationMetadataReader,
+                LogicRunExecutionId.random()))
 
         val engine = RunEngine(scriptLogic, context.objectStableMapper.objectStableId(scriptLocation), inputs)
         return try {

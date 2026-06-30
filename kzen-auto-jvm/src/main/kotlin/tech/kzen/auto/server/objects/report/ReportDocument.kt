@@ -18,6 +18,7 @@ import tech.kzen.auto.common.paradigm.detached.DetachedAction
 import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.common.util.data.DataLocationJvm.normalize
+import tech.kzen.auto.server.exec.report.ReportRun
 import tech.kzen.auto.server.objects.plugin.PluginUtils.asCommon
 import tech.kzen.auto.server.objects.plugin.PluginUtils.asPluginCoordinate
 import tech.kzen.auto.server.objects.report.exec.calc.CalculatedColumnEval
@@ -273,7 +274,7 @@ class ReportDocument(
         val reportRunContext = reportRunContext()
             ?: return ExecutionFailure("Missing run")
 
-        val outputInfo = ReportExecution.outputInfoOffline(
+        val outputInfo = ReportRun.outputInfoOffline(
             reportRunContext,
             reportWorkPool
         )
@@ -427,7 +428,9 @@ class ReportDocument(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun reportRunContext(): ReportRunContext? {
+    // Internal (not private): the engine-side ReportLogicCompiler reuses this spec -> run-context derivation
+    // when translating the Report document into a ReportLogic.
+    internal fun reportRunContext(): ReportRunContext? {
         val datasetInfo = datasetInfo()
             ?: return null
 

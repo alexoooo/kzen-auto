@@ -7,6 +7,7 @@ import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.lib.common.exec.engine.NodeStatus
 import tech.kzen.lib.common.exec.engine.Outcome
 import tech.kzen.lib.common.exec.engine.PauseReason
+import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
 import tech.kzen.lib.common.exec.tuple.TupleComponentName
 import tech.kzen.lib.common.exec.tuple.TupleComponentValue
 import tech.kzen.lib.common.exec.tuple.TupleValue
@@ -143,7 +144,8 @@ class FlowNotationTest {
                 context.objectStableMapper,
                 context.cachedKotlinCompiler,
                 context.flowMessageInspector,
-                context.notationMetadataReader))
+                context.notationMetadataReader,
+                LogicRunExecutionId.random()))
 
         return RunEngine(flowLogic, context.objectStableMapper.objectStableId(flowLocation), inputs)
     }

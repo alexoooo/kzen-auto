@@ -9,6 +9,7 @@ import tech.kzen.auto.server.objects.job.worker.test.GatedWorkerTestModule
 import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.lib.common.exec.engine.Address
 import tech.kzen.lib.common.exec.engine.Outcome
+import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -188,7 +189,8 @@ class JobMigrationTest {
                 context.objectStableMapper,
                 context.cachedKotlinCompiler,
                 context.flowMessageInspector,
-                context.notationMetadataReader))
+                context.notationMetadataReader,
+                LogicRunExecutionId.random()))
     }
 
 

@@ -9,7 +9,6 @@ import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.paradigm.logic.LogicConventions
 import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.exec.ExecutionSuccess
-import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
@@ -79,7 +78,7 @@ class ReportRunStore(
         val logicTraceQuery = LogicTraceQuery(LogicTracePath.root)
 
         @Suppress("MoveVariableDeclarationIntoWhen", "RedundantSuppression")
-        val result = progressQuery(runExecutionId.logicRunId, runExecutionId.logicExecutionId, logicTraceQuery)
+        val result = progressQuery(runExecutionId.logicRunId, logicTraceQuery)
 
         when (result) {
             is ClientError ->
@@ -99,16 +98,18 @@ class ReportRunStore(
     }
 
 
+    // Query the whole-run trace merge (by run id), not the exact (run, execution) buffer: the engine runs a
+    // Report on a single root node whose execution id is the engine's, not the controller's trace-buffer
+    // execution id, so an exact lookup misses — the run-merge is the right query for a single-node run (and is
+    // how ScriptProgressStore falls back).
     private suspend fun progressQuery(
         logicRunId: LogicRunId,
-        logicExecutionId: LogicExecutionId,
         logicTraceQuery: LogicTraceQuery
     ): ClientResult<LogicTraceSnapshot> {
         val result = store.restClient.performDetached(
             LogicConventions.logicTraceEndpointLocation,
-            CommonRestApi.paramAction to LogicConventions.actionLookup,
+            CommonRestApi.paramAction to LogicConventions.actionLookupRun,
             CommonRestApi.paramRunId to logicRunId.value,
-            CommonRestApi.paramExecutionId to logicExecutionId.value,
             LogicConventions.paramQuery to logicTraceQuery.asString()
         )
 
