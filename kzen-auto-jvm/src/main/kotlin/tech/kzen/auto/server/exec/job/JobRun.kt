@@ -3,8 +3,15 @@ package tech.kzen.auto.server.exec.job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
+import tech.kzen.auto.common.objects.document.job.JobConventions
+import tech.kzen.auto.common.paradigm.job.api.ChannelClient
 import tech.kzen.auto.common.paradigm.job.api.Worker
+import tech.kzen.auto.server.objects.job.channel.DuplexJobChannel
 import tech.kzen.auto.server.objects.job.channel.JobChannel
+import tech.kzen.lib.common.exec.ExecutionRequest
+import tech.kzen.lib.common.exec.ExecutionResult
 import tech.kzen.lib.common.exec.engine.Execution
 import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.model.definition.GraphDefinition
@@ -42,12 +49,18 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
  *   it would have without the edit, neither dropping nor replaying a row across the cut (mirrors the old
  *   [tech.kzen.auto.server.objects.job.JobExecution.migrate]).
  *
- * DEFERRED from this first port (tracked parity gaps, mirroring the Flow port): the external duplex request
- * bridge (UI ↔ Worker — and so duplex-channel carryover), nested-logic Workers (RunWorker →
- * [EngineJobControl.logicHost]), deadlock detection, and pause-on-error. A failing Worker fails the run
- * (structured concurrency cancels its siblings) rather than the old `SupervisorJob` fail-at-end with per-Worker
- * outcome reporting. The old `server.objects.job.{JobExecution,JobDocument}` stay in place (reference + still
- * driven by the old tests); removal is deferred to the post-all-flavours cleanup.
+ * EXTERNAL DUPLEX BRIDGE (logic-spec §4): each `external` duplex Channel (a Worker's UI-facing `serve` port,
+ * e.g. the Preview's slice query) gets a UI-bridge client opened here at launch; the Job's ROOT node registers an
+ * [Execution.onRequest] router that forwards an inbound request (addressed by `channel` name) to that client's
+ * serving Worker and returns its reply (see [route]). Re-opened on every (re)launch, so it survives a migrate;
+ * closed at teardown so the serving Worker's serve stream ends. Mirrors the old
+ * `JobExecution.route` / `externalClients`.
+ *
+ * DEFERRED (remaining tracked parity gaps): nested-logic Workers (RunWorker → [EngineJobControl.logicHost]) and
+ * the Job pause-on-error tied to them. Deadlock detection (a Job whose Workers all block on channels with no
+ * progress) is the engine's stall guard; the external bridge above is its suppression signal (an externally
+ * serviceable run is not a deadlock). A failing Worker currently fails the run (structured concurrency cancels
+ * its siblings) rather than the old `SupervisorJob` fail-at-end with per-Worker outcome reporting.
  */
 class JobRun(
     private val execution: Execution,
@@ -63,14 +76,22 @@ class JobRun(
         // buildAndLaunch built it.
         val graphInstance = GraphCreator.createGraph(filteredDefinition, graphEnvironment)
 
-        // Index the one-way stream Channels by stable id (duplex channels — the external bridge — are a deferred
-        // parity gap, so they carry nothing here). The deterministic synthesized identity means a rebuilt run
-        // resolves the SAME stable ids, so channel carryover lines up across a migrate.
+        // Resolve the Channel instances: index each one-way stream Channel by stable id (for migration carryover),
+        // and open a UI-bridge client for each `external` duplex Channel (a Worker's UI-facing `serve` port, e.g.
+        // the Preview's slice query) so [route] can address its serving Worker by name. The deterministic
+        // synthesized identity means a rebuilt run resolves the SAME stable ids / names, so a migrate lines up.
         val streamChannels = LinkedHashMap<ObjectStableId, JobChannel>()
+        val externalClients = LinkedHashMap<String, ChannelClient<Any?, Any?>>()
         for (channelLocation in channelLocations) {
-            val channel = graphInstance[channelLocation]?.reference as? JobChannel
-                ?: continue
-            streamChannels[objectStableMapper.objectStableId(channelLocation)] = channel
+            when (val channel = graphInstance[channelLocation]?.reference) {
+                is DuplexJobChannel ->
+                    if (channel.external) {
+                        externalClients[channelLocation.objectPath.name.value] = channel.newClient()
+                    }
+
+                is JobChannel ->
+                    streamChannels[objectStableMapper.objectStableId(channelLocation)] = channel
+            }
         }
 
         // Restore: seed each channel with the in-flight payloads its predecessor (same stable id) was carrying at
@@ -91,23 +112,72 @@ class JobRun(
             streamChannels.mapValues { (_, channel) -> channel.drainBuffered() }
         }
 
+        // External duplex bridge: route an inbound UI request (addressed by `channel` name, e.g. the JS pulling a
+        // larger Preview slice) to the serving Worker of that `external` duplex Channel. Registered on the Job's
+        // ROOT node, which is the frame the JS addresses (LogicRunInfo.frame = root). Also tells the engine the run
+        // is externally serviceable, so a Worker idle on an open serve port is not mistaken for a deadlock.
+        if (externalClients.isNotEmpty()) {
+            execution.onRequest { request -> route(request, externalClients) }
+        }
+
         val workers = workerLocations.mapNotNull { location ->
             val worker = graphInstance[location]?.reference as? Worker
                 ?: return@mapNotNull null
             location to worker
         }
 
-        // Launch every Worker concurrently as its own confined node; the run settles when all of them do.
-        coroutineScope {
-            workers
-                .map { (location, worker) ->
-                    async {
-                        execution.host(objectStableMapper.objectStableId(location), WorkerLogic(worker))
+        // Launch every Worker concurrently as its own confined node; the run settles when all of them do. The
+        // external bridge clients are closed at teardown (run end, cancel, or migrate) so the serving Workers'
+        // serve streams end and the rebuilt run re-opens fresh clients.
+        try {
+            coroutineScope {
+                workers
+                    .map { (location, worker) ->
+                        async {
+                            execution.host(objectStableMapper.objectStableId(location), WorkerLogic(worker))
+                        }
                     }
-                }
-                .awaitAll()
+                    .awaitAll()
+            }
+        }
+        finally {
+            externalClients.values.forEach { it.close() }
         }
 
         return TupleValue.empty
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    // Bridge an inbound UI [ExecutionRequest] to the serving Worker of the addressed `external` duplex Channel:
+    // forward it as-is over the channel's client and return the Worker's reply (the Worker owns the request/reply
+    // protocol via its serve loop). Runs on the controller thread while it holds its monitor, so the round-trip is
+    // bounded ([externalRequestTimeoutMillis]) — a paused / slow Worker yields a timeout rather than stalling.
+    private fun route(
+        request: ExecutionRequest,
+        externalClients: Map<String, ChannelClient<Any?, Any?>>
+    ): ExecutionResult {
+        val channelName = request.getSingle(JobConventions.channelParameter)
+            ?: return ExecutionResult.failure("Missing '${JobConventions.channelParameter}' parameter")
+
+        val client = externalClients[channelName]
+            ?: return ExecutionResult.failure("Not an open external channel: $channelName")
+
+        return runBlocking {
+            val reply = withTimeoutOrNull(externalRequestTimeoutMillis) {
+                client.request(request)
+            }
+            reply as? ExecutionResult
+                ?: ExecutionResult.failure("External channel request timed out: $channelName")
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        // Upper bound a UI -> Worker external round-trip blocks the controller monitor (request is @Synchronized);
+        // a well-behaved serving Worker replies well within this. A blocked / paused Worker makes the request time
+        // out rather than stalling status / pause / cancel.
+        private const val externalRequestTimeoutMillis = 1000L
     }
 }

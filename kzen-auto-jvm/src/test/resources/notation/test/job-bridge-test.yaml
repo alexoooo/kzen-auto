@@ -1,0 +1,29 @@
+# External duplex request bridge fixture (JobExternalBridgeTest): a CsvReader streams rows into a Preview sink
+# whose `serve` port is an EXTERNAL duplex Channel (the UI bridge). While the run is mid-stream, a UI request
+# addressed by the channel name ("queries") must reach the Preview's serve loop through JobRun's bridge and come
+# back with the live slice — the browser->worker pull path (logic-spec §4). The serve channel is marked external
+# so JobRun opens a UI-bridge client for it (a non-external serve channel would have no client).
+
+main:
+  is: Job
+
+# Small batch + buffer so a few step wavefronts leave the Preview partially filled (count > 0) yet far from done.
+main.channels/raw:
+  is: Channel
+  buffer: 1
+
+main.channels/queries:
+  is: DuplexChannel
+  external: true
+
+main.workers/reader:
+  is: CsvReaderWorker
+  output: main.channels/raw
+  path: build/job-bridge/input.csv
+  batch: 2
+
+main.workers/preview:
+  is: PreviewWorker
+  input: main.channels/raw
+  serve: main.channels/queries
+  sample: 1000
