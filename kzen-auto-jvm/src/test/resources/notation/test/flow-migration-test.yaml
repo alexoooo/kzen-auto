@@ -1,0 +1,47 @@
+# Deterministic Flow live-edit migration fixture (FlowMigrationTest): an IntRangeSource streams 1..5 into a
+# test-only CountingSinkVertex that tallies how many values it has processed in a static counter. Stepping the
+# DAG partway, editing the sink's (no-op) `note`, then resuming must CARRY the per-vertex progress (the source's
+# stream position and the sink's accumulator) so every value is processed exactly once across the cut — a clean
+# restart would re-emit and re-process the already-consumed prefix, overshooting the count. The sink archetype
+# is test-only (registered via FlowVertexTestModule); IntRangeSource is the production vertex.
+
+
+#######################################################################################################################
+# Test-only vertex archetype (the production analogues live in notation/auto-jvm/flow/flow-vertex.yaml).
+
+CountingSinkVertex:
+  abstract: true
+  is: FlowVertex
+  icon: "material-symbols:print"
+  title: "Counting Sink (test)"
+  class: tech.kzen.auto.server.exec.flow.test.CountingSinkVertex
+  note: ""
+  meta:
+    input:
+      is: RequiredInput
+      by: FlowWiring
+    note: String
+
+
+#######################################################################################################################
+# The concrete Flow: source streams 1..5 into the counting sink (vertical adjacency in column 0 is the edge).
+
+main:
+  is: Flow
+  vertices:
+  - FmSource
+  - FmSink
+  edges: []
+
+FmSource:
+  is: IntRangeSource
+  from: 1
+  to: 5
+  row: 0
+  column: 0
+
+FmSink:
+  is: CountingSinkVertex
+  note: ""
+  row: 1
+  column: 0

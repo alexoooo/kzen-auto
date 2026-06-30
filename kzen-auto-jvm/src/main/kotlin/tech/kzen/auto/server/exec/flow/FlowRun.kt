@@ -50,6 +50,13 @@ import tech.kzen.lib.platform.collect.toPersistentMap
  * Pause-on-error (logic-spec §4) is wired via [Execution.recoverable] around each vertex: a vertex failure is
  * rendered (error + trace) and, when pause-on-error is enabled, parks the vertex Suspended(Error) for fix +
  * resume (re-running it on resume) rather than failing the run; with the toggle off the failure propagates.
+ *
+ * Live-edit migration (logic-spec §5): the per-vertex progress ([activeVertices]) and harvested output
+ * ([outputAccumulator]) are carried across a pause -> edit -> resume by the Flow root node's
+ * [Execution.onCapture] / [Execution.restored] as a [FlowMigrationState] (keyed by stable id), so the rebuilt
+ * run continues from the live frontier instead of restarting — the clean-room successor to the way the retired
+ * [tech.kzen.auto.server.objects.flow.FlowExecution] kept these same stable-id-keyed fields alive across
+ * `continueOrStart` re-entries.
  */
 class FlowRun(
     private val execution: Execution,
@@ -68,6 +75,17 @@ class FlowRun(
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun run(): TupleValue {
+        // Live-edit migration (logic-spec §5): adopt the predecessor run's DAG progress (read once at start) so
+        // the walker continues from the carried frontier, and register the capture so a later edit carries this
+        // run's progress forward. Null on a fresh run -> nothing to adopt, the DAG runs from the start.
+        (execution.restored as? FlowMigrationState)?.let { carried ->
+            activeVertices.putAll(carried.activeVertices)
+            outputAccumulator.putAll(carried.outputAccumulator)
+        }
+        execution.onCapture {
+            FlowMigrationState(activeVertices.toMap(), outputAccumulator.toMap())
+        }
+
         val matrix = FlowMatrix.ofDocument(documentPath, graphDefinition.graphStructure)
         val dag =
             try {
