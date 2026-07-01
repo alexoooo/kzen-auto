@@ -118,6 +118,12 @@ class ServerLogicController(
         // which is serialized on [bridgeLock].
         val nodeHandles = HashMap<NodeId, LogicTraceHandle>()
 
+        // Nodes whose trace buffer has already been evicted on frame close (§7 streaming bounding): a node that
+        // hosted with retainTrace = false, evicted once it settled terminal (see [evictClosedFrames]). Tracked so
+        // the once-per-frame eviction is idempotent across the many publishes a run emits. Touched only from the
+        // trace bridge, serialized on [bridgeLock].
+        val evictedNodes = HashSet<NodeId>()
+
         // The engine has been launched (the root coroutine started). A fresh run is created but not launched;
         // the first drive (resume / step) — or a pause-at-entry — launches it.
         @Volatile
@@ -579,6 +585,37 @@ class ServerLogicController(
                     state.bridgedSequence = event.sequence
                 }
             }
+
+            // §7 retention-vs-bounding: after mirroring this wavefront's events (so a just-closed frame's final
+            // events are already recorded), reclaim the trace buffer of any frame that closed and opted OUT of
+            // retention — bounding a streaming host to its live frames instead of leaking one buffer per element.
+            evictClosedFrames(state)
+        }
+    }
+
+
+    // Evict the trace buffer of every frame that has settled terminal while hosting with retainTrace = false
+    // (see [tech.kzen.lib.common.exec.engine.Node.retainTrace] / [tech.kzen.lib.common.exec.engine.Execution.host]):
+    // a long STREAMING host (one child per element) opts its per-element frames out of retention so their finished
+    // buffers don't accumulate for the life of the run. A retained frame (the default — a Script RunStep's
+    // sub-script, whose per-iteration screenshot strip needs every finished invocation) is never touched, so
+    // post-run review is unaffected; the run root is retained by construction. Eviction is once-per-frame
+    // ([LogicState.evictedNodes]) and idempotent across the run's many publishes. Called under [bridgeLock].
+    private fun evictClosedFrames(state: LogicState) {
+        forEachNode(state.engine.snapshot().root) { node ->
+            if (node.status is NodeStatus.Terminal && !node.retainTrace && node.id !in state.evictedNodes) {
+                state.evictedNodes.add(node.id)
+                state.nodeHandles.remove(node.id)
+                logicTraceStore.evict(LogicRunExecutionId(state.runId, LogicExecutionId(node.id.value)))
+            }
+        }
+    }
+
+
+    private fun forEachNode(node: Node, action: (Node) -> Unit) {
+        action(node)
+        for (child in node.children) {
+            forEachNode(child, action)
         }
     }
 
