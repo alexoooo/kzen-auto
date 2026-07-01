@@ -1,0 +1,16 @@
+main:
+  is: Script
+
+main.steps/Formula:
+  is: FormulaStep
+  code: 1..100
+
+main.steps/ForEach:
+  is: ForEachStep
+  items: main.steps/Formula
+
+main.steps/ForEach.steps/Run:
+  is: RunStep
+
+main.steps/ForEach.item/Item:
+  is: ForEachItemBinding

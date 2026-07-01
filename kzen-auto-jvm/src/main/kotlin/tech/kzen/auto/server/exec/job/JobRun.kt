@@ -1,8 +1,10 @@
 package tech.kzen.auto.server.exec.job
 
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import tech.kzen.auto.common.objects.document.job.JobConventions
@@ -14,7 +16,9 @@ import tech.kzen.auto.server.objects.job.channel.JobChannel
 import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionResult
 import tech.kzen.lib.common.exec.engine.Execution
+import tech.kzen.lib.common.exec.engine.LogicFailure
 import tech.kzen.lib.common.exec.tuple.TupleValue
+import java.util.concurrent.atomic.AtomicInteger
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
@@ -56,11 +60,14 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableId
  * closed at teardown so the serving Worker's serve stream ends. Mirrors the old
  * `JobExecution.route` / `externalClients`.
  *
- * DEFERRED (remaining tracked parity gaps): nested-logic Workers (RunWorker → [EngineJobControl.logicHost]) and
- * the Job pause-on-error tied to them. Deadlock detection (a Job whose Workers all block on channels with no
- * progress) is the engine's stall guard; the external bridge above is its suppression signal (an externally
- * serviceable run is not a deadlock). A failing Worker currently fails the run (structured concurrency cancels
- * its siblings) rather than the old `SupervisorJob` fail-at-end with per-Worker outcome reporting.
+ * DEADLOCK DETECTION (the retired engine watchdog's replacement): a Job whose Workers all block on channels with
+ * no progress — a lone sink on an orphan channel, or a cycle of Workers each waiting on the other — is failed by
+ * [JobDeadlockMonitor], which polls this run's stream channels off the engine dispatcher. The external bridge
+ * above is its suppression signal (a run idling on an open serve port awaits a UI request, not a deadlock). On a
+ * verdict the monitor completes a deadlock signal exceptionally and a guard coroutine awaiting it throws, failing
+ * the whole run (structured concurrency then cancels the channel-blocked Workers). A failing Worker instead
+ * parks / fails the run through [WorkerLogic]'s per-Worker `recoverable` (pause-on-error); per-Worker terminal
+ * outcome chips remain a display gap.
  */
 class JobRun(
     private val execution: Execution,
@@ -136,23 +143,51 @@ class JobRun(
             location to worker
         }
 
+        // Channel-aware deadlock detection: fail the run if every non-terminal Worker becomes blocked on a channel
+        // with no way to progress. [activeWorkers] is the live non-terminal count (each Worker decrements it as it
+        // settles); the monitor polls the stream channels' blocked-endpoint counts against it and, on a sustained
+        // all-blocked verdict, completes the signal exceptionally. Suppressed while an external serve channel is
+        // open (see [JobDeadlockMonitor]).
+        val activeWorkers = AtomicInteger(workers.size)
+        val deadlockSignal = CompletableDeferred<Nothing>()
+        val deadlockMonitor = JobDeadlockMonitor(
+            streamChannels.values, activeWorkers, externalClients.isNotEmpty()
+        ) {
+            deadlockSignal.completeExceptionally(
+                LogicFailure("Job deadlock: all workers blocked on channels with no progress"))
+        }
+        deadlockMonitor.start()
+
         // Launch every Worker concurrently as its own confined node; the run settles when all of them do. The
         // external bridge clients are closed at teardown (run end, cancel, or migrate) so the serving Workers'
         // serve streams end and the rebuilt run re-opens fresh clients.
         try {
             coroutineScope {
+                // Fails the scope (and so the run) the instant the monitor declares a deadlock; cancelled once the
+                // Workers settle on their own. Awaiting a deferred suspends without occupying the dispatcher, so it
+                // never perturbs the engine's quiescence.
+                val deadlockGuard = launch { deadlockSignal.await() }
+
                 workers
                     .map { (location, worker) ->
                         async {
-                            execution.host(
-                                objectStableMapper.objectStableId(location),
-                                WorkerLogic(worker, childLogicHost, objectStableMapper))
+                            try {
+                                execution.host(
+                                    objectStableMapper.objectStableId(location),
+                                    WorkerLogic(worker, childLogicHost, objectStableMapper))
+                            }
+                            finally {
+                                activeWorkers.decrementAndGet()
+                            }
                         }
                     }
                     .awaitAll()
+
+                deadlockGuard.cancel()
             }
         }
         finally {
+            deadlockMonitor.close()
             externalClients.values.forEach { it.close() }
         }
 

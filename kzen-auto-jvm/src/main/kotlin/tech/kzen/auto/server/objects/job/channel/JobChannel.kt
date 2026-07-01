@@ -48,6 +48,14 @@ class JobChannel(
     private val openProducers = AtomicInteger(0)
     private val producers = CopyOnWriteArrayList<Producer>()
 
+    // Count of endpoints (consumers + producers) currently suspended on a channel op: a consumer awaiting the
+    // next payload, or a producer parked on a full buffer. The Job-level deadlock monitor
+    // ([tech.kzen.auto.server.exec.job.JobDeadlockMonitor]) sums this across a run's stream channels — when EVERY
+    // non-terminal Worker is blocked on a channel, the pipeline can make no progress (a lone sink on an orphan
+    // channel, or a set of Workers each waiting on the other), so the Job is deadlocked. Kept self-contained here
+    // rather than fed to an injected shared object, so a channel stays constructible by its `@Reflect` ctor.
+    private val blocked = AtomicInteger(0)
+
     // Payloads carried over from a previous instance of this channel across a migration: delivered to the
     // consumer (via input) BEFORE the live channel, so the rebuilt graph resumes the stream without a gap.
     // Seeded by preload before any worker launches; thereafter read only by the single consumer coroutine.
@@ -69,6 +77,25 @@ class JobChannel(
     private fun closeOneProducer() {
         if (openProducers.decrementAndGet() <= 0) {
             channel.close()
+        }
+    }
+
+
+    /** Endpoints currently suspended on a channel op (consumers awaiting input + producers on a full buffer). */
+    fun blockedCount(): Int {
+        return blocked.get()
+    }
+
+
+    // Bracket a suspending channel op so a Worker parked in it counts toward [blockedCount] for the run's
+    // deadlock monitor, and stops counting the instant it resumes (a delivered payload, EOF, or cancellation).
+    private suspend fun <R> tracked(await: suspend () -> R): R {
+        blocked.incrementAndGet()
+        try {
+            return await()
+        }
+        finally {
+            blocked.decrementAndGet()
         }
     }
 
@@ -139,7 +166,7 @@ class JobChannel(
         override suspend fun send(payload: Any?) {
             inFlight = payload
             try {
-                channel.send(payload)
+                tracked { channel.send(payload) }
             }
             finally {
                 inFlight = null
@@ -160,7 +187,7 @@ class JobChannel(
             if (carryover.isNotEmpty()) {
                 return carryover.removeFirst()
             }
-            return channel.receiveCatching().getOrNull()
+            return tracked { channel.receiveCatching().getOrNull() }
         }
 
         override operator fun iterator(): ChannelInputIterator<Any?> {
@@ -170,7 +197,7 @@ class JobChannel(
                     if (carryover.isNotEmpty()) {
                         return true
                     }
-                    return delegate.hasNext()
+                    return tracked { delegate.hasNext() }
                 }
 
                 override fun next(): Any? {
