@@ -96,7 +96,6 @@ class ServerLogicController(
         val runId: LogicRunId,
         val runExecutionId: LogicRunExecutionId,
         val engine: RunEngine,
-        val traceHandle: LogicTraceHandle,
         val rootLocation: ObjectLocation,
 
         // The transitive-closure object NOTATIONS (root document + everything it references) the live engine
@@ -111,6 +110,13 @@ class ServerLogicController(
     ) {
         // Set once, immediately after construction (the observer references this state).
         lateinit var traceBridge: AutoCloseable
+
+        // Per-engine-node trace buffer handles, created lazily on a node's first mirrored event (see
+        // [handleForNode]) and cached for the run. Keying each node's trace by its own node id — the same id
+        // the client addresses a live frame by — is what scopes a re-entered sub-logic to a fresh buffer
+        // instead of ghosting the prior invocation's per-step values. Touched only from the trace bridge,
+        // which is serialized on [bridgeLock].
+        val nodeHandles = HashMap<NodeId, LogicTraceHandle>()
 
         // The engine has been launched (the root coroutine started). A fresh run is created but not launched;
         // the first drive (resume / step) — or a pause-at-entry — launches it.
@@ -226,13 +232,12 @@ class ServerLogicController(
         engine.pauseOnError(pauseOnError)
 
         // A new run starts from a clean slate: drop every prior run's retained trace (values + the append-only
-        // film-strip) so stale per-step displays don't bleed into this run. The run's root execution has no
-        // caller / parent.
+        // film-strip) so stale per-step displays don't bleed into this run. Per-node trace buffers are then
+        // created lazily by the bridge as each node emits (see [handleForNode]); the root's has no parent.
         logicTraceStore.clearAll()
-        val traceHandle = logicTraceStore.handle(runExecutionId, root, null, null)
 
         val state = LogicState(
-            runId, runExecutionId, engine, traceHandle, root,
+            runId, runExecutionId, engine, root,
             closureNotations(graphDefinitionAttempt, root.documentPath))
         state.traceBridge = engine.observe { mirrorTrace(state) }
         stateOrNull = state
@@ -524,6 +529,13 @@ class ServerLogicController(
     // display keeps working unchanged. Invoked from the engine's observer (off the engine lock); serialized per
     // run on [LogicState.bridgeLock] so each event is written exactly once in sequence order.
     //
+    // Each event is routed to ITS EMITTING NODE's own trace buffer (keyed by the node id — see [handleForNode]),
+    // not one shared run buffer. Every hosted child (a RunStep's sub-Script, a Job worker, a Flow child) is a
+    // distinct node, so its trace is isolated per invocation: the client's frame-keyed lookup resolves exactly
+    // that invocation, and a re-entered sub-logic starts from a fresh buffer instead of ghosting the prior
+    // invocation's per-step displays (the trace store clears a prior same-stable-id buffer's live values when a
+    // new execution re-opens it — the anti-ghost on re-entry).
+    //
     // The engine attributes an emit to (node, address): the node carries the flavour's root stable id, while
     // the per-element stable id is the address — a Script emits `Address.of(stepStableId.value)` per step, a
     // Flow `Address.of(vertexStableId.value)` per vertex. The old trace store keys per element by stable id,
@@ -538,35 +550,88 @@ class ServerLogicController(
         synchronized(state.bridgeLock) {
             val events = state.engine.history(state.bridgedSequence)
             for (event in events) {
+                val handle = handleForNode(state, event.nodeId, event.stableId)
                 val address = event.address
                 if (address != null && address.segments.isNotEmpty()) {
                     when (val segment = address.segments.first()) {
                         ScriptRunContext.nextStepAddressMarker ->
-                            state.traceHandle.set(ScriptConventions.nextStepTracePath, event.value)
+                            handle.set(ScriptConventions.nextStepTracePath, event.value)
 
                         EngineJobControl.workerProgressAddressMarker ->
-                            state.traceHandle.set(
+                            handle.set(
                                 JobConventions.workerProgressPath(event.stableId), event.value)
 
                         ExecutionLogicTraceHandle.tracePathAddressMarker ->
                             // A Report emits its input / output progress at a literal trace path: the remaining
                             // address segments ARE the LogicTracePath to set (no stable-id translation).
-                            state.traceHandle.set(
+                            handle.set(
                                 LogicTracePath(address.segments.drop(1)), event.value)
 
                         else ->
-                            state.traceHandle.set(
+                            handle.set(
                                 LogicTracePath.ofObjectStableId(ObjectStableId(segment)), event.value)
                     }
                 }
                 else {
-                    state.traceHandle.append(event.stableId, event.value)
+                    handle.append(event.stableId, event.value)
                 }
                 if (event.sequence > state.bridgedSequence) {
                     state.bridgedSequence = event.sequence
                 }
             }
         }
+    }
+
+
+    // The trace buffer handle for the engine node [nodeId], created lazily on its first mirrored event and
+    // cached for the run. Every node — the root logic and each hosted child (a RunStep's sub-Script, a Job
+    // worker, a Flow child) — gets its OWN buffer, keyed by its node id: the exact id the client addresses a
+    // live frame by (run id + frame execution id). Frame-keyed lookups therefore resolve each invocation in
+    // isolation, and — because the trace store clears a prior same-stable-id buffer's live values when a new
+    // execution re-opens it — a re-entered sub-logic starts fresh instead of ghosting the prior invocation's
+    // per-step displays. The buffer's object location comes from the event's own stable id; its parent
+    // execution and hosting call-site — the execution-tree linkage [LogicTraceStore.lookupRunExecutions]
+    // exposes, so a merged view can be scoped per hosting element (the RunStep screenshot strip) — are read
+    // from the live snapshot tree.
+    private fun handleForNode(
+        state: LogicState,
+        nodeId: NodeId,
+        stableId: ObjectStableId
+    ): LogicTraceHandle {
+        return state.nodeHandles.getOrPut(nodeId) {
+            val traceExecutionId = LogicRunExecutionId(state.runId, LogicExecutionId(nodeId.value))
+            val located = locateNode(state.engine.snapshot().root, nodeId, null)
+            val callerLocation = located?.node?.callerStableId?.let { objectStableMapper.objectLocation(it) }
+            logicTraceStore.handle(
+                traceExecutionId,
+                objectStableMapper.objectLocation(stableId),
+                located?.parentId?.let { LogicExecutionId(it.value) },
+                callerLocation)
+        }
+    }
+
+
+    private class NodeLocation(
+        val node: Node,
+        val parentId: NodeId?
+    )
+
+
+    // [target] and its parent id in the live node tree ([parentId] null for the root), or null when the node
+    // is not currently in the tree — e.g. an event from a node the concurrent live-edit teardown already
+    // removed. The tree is tiny (one node per live frame) and this is walked once per node, when its handle
+    // is first created.
+    private fun locateNode(node: Node, target: NodeId, parentId: NodeId?): NodeLocation? {
+        if (node.id == target) {
+            return NodeLocation(node, parentId)
+        }
+        for (child in node.children) {
+            val nested = locateNode(child, target, node.id)
+            if (nested != null) {
+                return nested
+            }
+        }
+        return null
     }
 
 

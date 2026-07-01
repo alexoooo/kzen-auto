@@ -233,7 +233,12 @@ class ScriptRunContext(
             child.inheritResources(resources)
         }
 
-        return execution.host(objectStableMapper.objectStableId(instructions), child, arguments)
+        // The hosting RunStep ([currentStableId], set by the spine before it invoked this step) is the child's
+        // call-site: recording it on the child node lets the trace store attribute the child's execution to
+        // THIS RunStep, so its screenshot strip scopes to the invocations it spawned (distinguishing two
+        // RunSteps that host the same sub-Script document).
+        return execution.host(
+            objectStableMapper.objectStableId(instructions), child, arguments, currentStableId)
     }
 
 
