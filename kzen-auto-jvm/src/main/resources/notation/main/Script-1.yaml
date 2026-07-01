@@ -11,6 +11,13 @@ main.steps/ForEach:
 
 main.steps/ForEach.steps/Run:
   is: RunStep
+  instructions: "main/Script.yaml#main"
+  arguments:
+    number: main.steps/ForEach.item/Item
 
 main.steps/ForEach.item/Item:
   is: ForEachItemBinding
+
+main.steps/Display:
+  is: DisplayValueStep
+  text: main.steps/ForEach

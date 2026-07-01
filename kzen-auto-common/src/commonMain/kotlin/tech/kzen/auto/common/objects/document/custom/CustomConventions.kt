@@ -69,7 +69,12 @@ object CustomConventions {
         documentNotation: DocumentNotation
     ): List<ObjectLocation> {
         val mainNotation = documentNotation.objects.notations[NotationConventions.mainObjectPath]!!
-        val exportsAttribute = mainNotation.get(exportsListAttributeName) as ListAttributeNotation
+
+        // A custom document may declare no `exports` list (e.g. the bundled main/Custom.yaml) — it then
+        // exports nothing. Guard the cast: the raw notation carries no metadata default, so an absent
+        // attribute is null here, and `null as ListAttributeNotation` throws (a ClassCastException in JS).
+        val exportsAttribute = mainNotation.get(exportsListAttributeName) as? ListAttributeNotation
+            ?: return listOf()
         val host = ObjectReferenceHost.ofLocation(
             ObjectLocation(documentPath, NotationConventions.mainObjectPath))
         return exportsAttribute.values.map { entry ->
