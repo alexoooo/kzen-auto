@@ -8,10 +8,10 @@ import tech.kzen.lib.common.reflect.Reflect
 
 @Reflect
 class DivisibleFilter(
-        private val input: RequiredInput<Int>,
-        private val output: OptionalOutput<Int>,
+    private val input: RequiredInput<Int>,
+    private val output: OptionalOutput<Int>,
 
-        private val divisor: Int
+    private val divisor: Int
 ): StatelessFlowVertex {
     override fun process() {
         val value = input.get()

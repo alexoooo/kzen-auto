@@ -32,9 +32,10 @@ import tech.kzen.lib.common.exec.logic.run.model.LogicRunState
 import tech.kzen.lib.common.exec.logic.run.model.LogicStatus
 import tech.kzen.lib.common.exec.logic.trace.LogicTraceHandle
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
-import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
+import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.model.structure.notation.ObjectNotation
 import tech.kzen.lib.common.service.context.environment.GraphEnvironment
 import tech.kzen.lib.common.service.metadata.NotationMetadataReader
 import tech.kzen.lib.common.service.store.LocalGraphStore
@@ -98,10 +99,15 @@ class ServerLogicController(
         val traceHandle: LogicTraceHandle,
         val rootLocation: ObjectLocation,
 
-        // The definition (filtered to the root document) the live engine tree was last compiled against — the
-        // change-detection baseline for a live edit. Updated on each migrate so the next compare is vs the
-        // currently-running definition.
-        var baselineDefinition: GraphDefinition
+        // The transitive-closure object NOTATIONS (root document + everything it references) the live engine
+        // tree was last compiled against — the change-detection baseline for a live edit. Keyed off notation,
+        // NOT the compiled definition: a fresh definition build embeds freshly-constructed mutable runtime
+        // scaffolding (e.g. a Flow vertex's MutableFlowOutput / MutableRequiredInput channel instances) with
+        // identity equality, so two builds of the SAME notation are never definition-equal — which would make
+        // every no-edit step / resume spuriously migrate (a step then re-parks at the same wavefront and never
+        // advances). Notation is parsed-YAML data with structural equality, so it compares equal iff the user
+        // actually edited. Updated on each migrate so the next compare is vs the currently-running notation.
+        var baselineNotations: Map<ObjectLocation, ObjectNotation>
     ) {
         // Set once, immediately after construction (the observer references this state).
         lateinit var traceBridge: AutoCloseable
@@ -227,7 +233,7 @@ class ServerLogicController(
 
         val state = LogicState(
             runId, runExecutionId, engine, traceHandle, root,
-            graphDefinitionAttempt.transitiveSuccessful.filterTransitive(root.documentPath))
+            closureNotations(graphDefinitionAttempt, root.documentPath))
         state.traceBridge = engine.observe { mirrorTrace(state) }
         stateOrNull = state
 
@@ -316,6 +322,44 @@ class ServerLogicController(
             }
 
             // else: already settled at a pause — nothing to do.
+        }
+
+        return LogicRunResponse.Submitted
+    }
+
+
+    // Atomic "start stepping": launch a fresh (never-launched) run parked at entry, then run exactly its first
+    // step — settling before the second. This is the single operation behind the "Start Stepping" control
+    // (logicStartAndStep): "start a fresh run in stepping mode; this also executes the first step". It MUST be
+    // atomic: composing it from a separate pause() + step() races, because pause()'s pause-at-entry launches
+    // asynchronously on the executor (setting running) and the immediately-following step()'s guard (!running)
+    // then trips with "Can't step, already running".
+    @Synchronized
+    fun startStep(runId: LogicRunId): LogicRunResponse {
+        val state = stateOrNull
+            ?: return LogicRunResponse.NotFound
+
+        if (state.runId != runId) {
+            return LogicRunResponse.RunIdMismatch
+        }
+
+        check(!state.launched) { "Can't start stepping, already running" }
+        check(!state.cancelRequested) { "Can't start stepping, cancel already requested" }
+
+        state.launched = true
+        state.stepping = true
+
+        executor.execute {
+            // The first step launches the run parked at entry (before the first step); the intermediate
+            // quiesce lets it park so the second step has a parked node to drain — running that first step and
+            // parking before the next. Mirrors pause-at-entry followed by one Step Into.
+            state.engine.step(StepMode.Into)
+            state.engine.awaitQuiescent()
+            state.engine.step(StepMode.Into)
+            state.engine.awaitQuiescent()
+            synchronized(this@ServerLogicController) {
+                settleAfterDrive(state)
+            }
         }
 
         return LogicRunResponse.Submitted
@@ -578,12 +622,13 @@ class ServerLogicController(
     }
 
 
-    // The recompiled root [Logic] to migrate the live run onto when its definition changed under a live edit, or
-    // null to resume / step the existing tree. The change signal is the root document's filtered object
-    // definitions (a fresh build of the same notation is definition-equal, so a no-edit resume never migrates).
+    // The recompiled root [Logic] to migrate the live run onto when its notation changed under a live edit, or
+    // null to resume / step the existing tree. The change signal is the transitive-closure object NOTATIONS (see
+    // [closureNotations] / [LogicState.baselineNotations]) — deterministic, so a no-edit release never migrates.
     // Only a LAUNCHED run migrates — an unlaunched engine has no live state to re-point, so the first release
-    // just runs the start-time logic. A recompile failure (a mid-edit incomplete definition) falls back to null,
-    // keeping the prior definition running rather than killing the run.
+    // just runs the start-time logic. A recompile failure (a mid-edit incomplete definition), or any failure
+    // recomputing the closure, falls back to null — keeping the prior definition running rather than killing the
+    // run.
     private fun pendingMigration(
         state: LogicState,
         snapshotGraphDefinitionAttempt: GraphDefinitionAttempt?
@@ -592,21 +637,43 @@ class ServerLogicController(
             return null
         }
 
-        val attempt = graphDefinitionAttempt(snapshotGraphDefinitionAttempt)
-        val editedDefinition = attempt.transitiveSuccessful.filterTransitive(state.rootLocation.documentPath)
-        if (editedDefinition.objectDefinitions == state.baselineDefinition.objectDefinitions) {
-            return null
-        }
-
         return try {
+            val attempt = graphDefinitionAttempt(snapshotGraphDefinitionAttempt)
+            val editedNotations = closureNotations(attempt, state.rootLocation.documentPath)
+            if (editedNotations == state.baselineNotations) {
+                return null
+            }
+
             val logic = compileLogic(state.rootLocation, attempt, state.runExecutionId)
-            state.baselineDefinition = editedDefinition
+            state.baselineNotations = editedNotations
             logic
         }
         catch (e: Throwable) {
             logger.warn("Unable to recompile edited logic, keeping prior definition: {}", state.rootLocation, e)
             null
         }
+    }
+
+
+    // The coalesced object notations of the root document's transitive closure (root document + every object it
+    // references, across documents), keyed by location — the deterministic live-edit change signal. The closure
+    // membership is taken from the successful definition (so a reference added / removed shifts the key set); the
+    // per-object VALUE is the parsed-YAML notation, which — unlike the compiled definition — carries no
+    // freshly-constructed mutable runtime scaffolding, so it compares equal across builds iff the user edited.
+    // A closure member with no notation entry (a synthesized object, e.g. a Job's auto-wired channel, that is not
+    // in the notation) is skipped: it is deterministically derived from notation objects that ARE in the closure,
+    // so their comparison already carries any edit that would change it — skipping keeps the signal notation-only.
+    private fun closureNotations(
+        attempt: GraphDefinitionAttempt,
+        documentPath: DocumentPath
+    ): Map<ObjectLocation, ObjectNotation> {
+        val closure = attempt.transitiveSuccessful.filterTransitive(documentPath)
+        val graphNotation = attempt.graphStructure.graphNotation
+        return closure.objectDefinitions.map.keys
+            .mapNotNull { location ->
+                graphNotation.coalesce[location]?.let { location to it }
+            }
+            .toMap()
     }
 
 

@@ -121,6 +121,27 @@ class StepNavigationTest {
     }
 
 
+    @Test
+    fun startStepLaunchesAndRunsExactlyTheFirstStep() {
+        val controller = context.serverLogicController
+        val runId = controller.start(mainLocation, snapshot)
+            ?: fail("Unable to start run")
+
+        // "Start Stepping" (logicStartAndStep): launch the run AND run exactly its first step (First),
+        // pausing before the second (Run) at the root depth. Regression: this was composed in the REST
+        // handler as a racing pause() + step(), which tripped the controller guard with
+        // "Can't step, already running" (pause-at-entry sets running before the synchronous step()).
+        controller.startStep(runId)
+        awaitState(LogicRunState.Paused)
+
+        assertPausedAtDepth(0)
+        assertNextToRun(runId, runLocation)
+
+        resume(runId)
+        awaitDone()
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private val snapshot: GraphDefinitionAttempt
         get() = AutoTestUtils.graphDefinitionAttempt(AutoTestUtils.readNotation())

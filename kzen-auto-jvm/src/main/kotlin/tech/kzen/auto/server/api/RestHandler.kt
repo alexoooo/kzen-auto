@@ -1051,9 +1051,9 @@ class RestHandler(
 
         val response = runBlocking {
             if (paused) {
-                serverLogicController.pause(logicRunId)
-
-                serverLogicController.step(logicRunId, graphDefinitionAttempt)
+                // Atomic launch-park-then-first-step (see ServerLogicController.startStep) — NOT a separate
+                // pause() + step(), which races on the run flags ("Can't step, already running").
+                serverLogicController.startStep(logicRunId)
             }
             else {
                 serverLogicController.continueOrStart(logicRunId, graphDefinitionAttempt)
