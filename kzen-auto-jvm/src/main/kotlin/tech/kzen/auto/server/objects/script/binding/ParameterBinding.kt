@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.objects.script.binding
 
-import tech.kzen.auto.server.objects.script.api.ScriptStep
 import tech.kzen.auto.server.objects.script.api.ScriptStepDefinition
+import tech.kzen.auto.server.objects.script.api.ScriptValueBinding
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
 import tech.kzen.lib.common.exec.logic.model.LogicType
 import tech.kzen.lib.common.exec.tuple.TupleDefinition
@@ -24,7 +24,7 @@ class ParameterBinding(
     @Suppress("unused") private val default: Any?,
     @Suppress("unused") private val selfLocation: ObjectLocation
 ):
-    ScriptStep
+    ScriptValueBinding()
 {
     override fun definition(scriptDefinitionContext: ScriptDefinitionContext): ScriptStepDefinition {
         return ScriptStepDefinition.of(

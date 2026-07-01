@@ -157,7 +157,7 @@ class FlowRun(
     //-----------------------------------------------------------------------------------------------------------------
     /**
      * Run a [RunLogicVertex]'s pre-compiled callee as a confined child node ([Execution.host]) — the Flow
-     * analogue of [RunStep][tech.kzen.auto.server.exec.script.step.RunStep]. The single upstream input is
+     * analogue of [RunStep][tech.kzen.auto.server.objects.script.step.control.RunStep]. The single upstream input is
      * passed as the callee's first declared parameter; on success the callee's main result becomes the
      * vertex's message (which downstream vertices wire to).
      */

@@ -26,7 +26,7 @@ import kotlin.test.fail
  * driven through the PUBLIC [ServerLogicController] surface — the clean-room successor to the old
  * [tech.kzen.auto.server.objects.script.ScriptExecutionPauseOnErrorTest] (MultiStep's failed-step branch). The
  * engine mechanism is [tech.kzen.lib.common.exec.engine.Execution.recoverable], wired into the Script flavour's
- * [tech.kzen.auto.server.exec.script.step.SequenceStep]; the engine-level mechanics are proven in isolation by
+ * [tech.kzen.auto.server.exec.script.ScriptRunContext]; the engine-level mechanics are proven in isolation by
  * [tech.kzen.lib.server.exec.engine.RunEngineTest].
  *
  * Uses the single-failing-step fixture (`Boom` throws). With pause-on-error OFF the run ends; with it ON the run

@@ -2,12 +2,14 @@ package tech.kzen.auto.server.objects.script.step.eval
 
 import tech.kzen.auto.server.objects.script.api.ScriptStep
 import tech.kzen.auto.server.objects.script.api.ScriptStepDefinition
+import tech.kzen.auto.server.objects.script.api.StepExecution
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.auto.server.util.ClassLoaderUtils
 import tech.kzen.lib.common.exec.logic.model.LogicType
 import tech.kzen.lib.common.exec.tuple.TupleComponentName
 import tech.kzen.lib.common.exec.tuple.TupleDefinition
+import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.reflect.Reflect
@@ -32,6 +34,27 @@ class ResultStep(
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private const val noResultDeclared = "No result type declared in the Script signature"
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    // Evaluate the expression as the Script's declared `main` result type and capture it as the result (last
+    // Result step wins). Like [FormulaStep] the step compiles its own expression with its injected compiler.
+    override suspend fun run(execution: StepExecution): Any? {
+        val declaredType = declaredMainType(execution.resultSignature)
+            ?: error("Result step with no declared result type: $selfLocation")
+
+        val nonUnitPredecessorTypes = StepExpressionSupport.resolveNonUnit(
+            StepExpressionSupport.inScopeTypes(
+                selfLocation, execution.scriptTree, execution.scriptValidation))
+            ?: error("Unresolved in-scope types for: $selfLocation")
+
+        val value = StepExpressionSupport.evaluate(
+            selfLocation, declaredType.toSimple(), code, nonUnitPredecessorTypes,
+            { execution.referencedValue(it) }, cachedKotlinCompiler)
+
+        execution.setResult(TupleValue.ofMain(value))
+        return value
     }
 
 

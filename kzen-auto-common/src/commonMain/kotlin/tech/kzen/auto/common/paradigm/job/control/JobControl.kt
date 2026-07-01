@@ -1,5 +1,6 @@
 package tech.kzen.auto.common.paradigm.job.control
 
+import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.model.location.ObjectLocation
 
 
@@ -37,4 +38,20 @@ interface JobControl {
      * pass [force] = true for the final value at end-of-stream so it is never dropped by the throttle.
      */
     fun publishProgress(location: ObjectLocation, value: Map<String, Any?>, force: Boolean = false)
+
+
+    /**
+     * Invoke another Logic ([instructions] — a Script / Flow / Job) as a confined child, binding [input] as its
+     * first declared parameter (the single-positional convention shared with a Script Run step and a Flow
+     * Run-Logic vertex), and return its output tuple. The seam that lets a Worker compose reusable sub-Logics
+     * into a Job's dataflow — a Run Worker running a child per incoming element.
+     *
+     * The engine drives the child's stepping and coordinates pause / cancel centrally across the whole run, so
+     * a child that halts — a Pause step, or a recoverable failure parked under pause-on-error — leaves this call
+     * suspended and brings the whole Job to a quiescent paused wavefront for inspect / fix + resume; on resume
+     * the same child is driven onward. No explicit halt request is needed (unlike the old re-entrant executor):
+     * a child breakpoint IS a run-wide pause. Only nested-Logic Workers (e.g.
+     * [RunWorker][tech.kzen.auto.server.objects.job.worker.RunWorker]) call this.
+     */
+    suspend fun host(instructions: ObjectLocation, input: Any?): TupleValue
 }

@@ -1,0 +1,20 @@
+# RunWorker host fixture (JobRunWorkerTest): a FormulaSource emits 1..3 into a RunWorker that hosts the child
+# Script (test/script-engine-child-test.yaml#main, `number + 1`) once per element, emitting the child's result
+# downstream to a RecordingSinkWorker. All Worker channel ports are BLANK — JobChannelSynthesis derives the two
+# channels from Worker document order (source.output -> run.input, run.output -> sink.input). The recorded
+# output {2, 3, 4} proves the child Logic ran per element (RunWorker archetype in job-worker.yaml;
+# RecordingSinkWorker archetype in job-run-worker-archetypes.yaml).
+
+main:
+  is: Job
+
+main.workers/source:
+  is: FormulaSourceWorker
+  code: "(1..3)"
+
+main.workers/run:
+  is: RunWorker
+  instructions: "test/script-engine-child-test.yaml#main"
+
+main.workers/sink:
+  is: RecordingSinkWorker

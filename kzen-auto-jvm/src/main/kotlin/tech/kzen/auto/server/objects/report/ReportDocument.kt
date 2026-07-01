@@ -18,6 +18,9 @@ import tech.kzen.auto.common.paradigm.detached.DetachedAction
 import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.common.util.data.DataLocationJvm.normalize
+import tech.kzen.auto.server.exec.LogicCompilerServices
+import tech.kzen.auto.server.exec.LogicDocument
+import tech.kzen.auto.server.exec.report.ReportLogicCompiler
 import tech.kzen.auto.server.exec.report.ReportRun
 import tech.kzen.auto.server.objects.plugin.PluginUtils.asCommon
 import tech.kzen.auto.server.objects.plugin.PluginUtils.asPluginCoordinate
@@ -41,9 +44,12 @@ import tech.kzen.auto.server.service.impl.ServerLogicController
 import tech.kzen.auto.server.service.plugin.ReportDefinitionRepository
 import tech.kzen.auto.server.util.ClassLoaderUtils
 import tech.kzen.lib.common.exec.*
+import tech.kzen.lib.common.exec.engine.Logic
 import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
+import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.platform.DateTimeUtils
@@ -78,6 +84,7 @@ class ReportDocument(
     @Service private val serverLogicController: ServerLogicController
 ):
     DocumentArchetype(),
+    LogicDocument,
     DetachedAction,
     DetachedDownloadAction
 {
@@ -89,6 +96,17 @@ class ReportDocument(
         private fun patternErrorOrNull(errors: List<String>): String? {
             return errors.firstOrNull()
         }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun toLogic(
+        location: ObjectLocation,
+        graphNotation: GraphNotation,
+        graphDefinition: GraphDefinition,
+        services: LogicCompilerServices
+    ): Logic {
+        return ReportLogicCompiler.compile(location, graphNotation, graphDefinition, services)
     }
 
 

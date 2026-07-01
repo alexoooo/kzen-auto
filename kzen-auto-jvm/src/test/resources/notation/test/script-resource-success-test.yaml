@@ -1,0 +1,22 @@
+# Resource-disposal-on-success fixture (ScriptExtensibilityTest): three test-only OpenResourceTestStep steps
+# (archetype in script-step-test-archetypes.yaml) open run-scoped resources under distinct ClosePolicies, then
+# the Script completes normally. On the root settling Done the engine must dispose Auto and KeepOnFailure
+# (success is not a failure) but retain Manual (only an explicit close disposes it).
+
+main:
+  is: Script
+
+main.steps/OpenAuto:
+  is: OpenResourceTestStep
+  key: auto
+  closePolicy: auto
+
+main.steps/OpenManual:
+  is: OpenResourceTestStep
+  key: manual
+  closePolicy: manual
+
+main.steps/OpenKeep:
+  is: OpenResourceTestStep
+  key: keep
+  closePolicy: keepOnFailure

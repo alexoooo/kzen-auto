@@ -23,7 +23,6 @@ import tech.kzen.auto.server.service.impl.ServerLogicController
 import tech.kzen.auto.server.service.plugin.HostReportDefinitionRepository
 import tech.kzen.auto.server.service.plugin.MultiDefinitionRepository
 import tech.kzen.auto.server.service.plugin.ReportDefinitionRepository
-import tech.kzen.auto.server.service.webdriver.WebDriverContext
 import tech.kzen.auto.server.util.WorkUtils
 import tech.kzen.lib.common.codegen.KzenLibCommonModule
 import tech.kzen.lib.common.service.context.GraphCreator
@@ -168,10 +167,6 @@ class KzenAutoContext(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    val webDriverContext = WebDriverContext()
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     // Runtime services exposed to @Service constructor parameters of graph-instantiated objects,
     // keyed by the type each consumer declares. Lazy so the cyclic members (serverLogicController,
     // definitionRepository) are already built when it is first accessed at request/run time.
@@ -181,7 +176,6 @@ class KzenAutoContext(
             .put(ClassName(GraphCreator::class.qualifiedName!!), graphCreator)
             .put(ClassName(ObjectStableMapper::class.qualifiedName!!), objectStableMapper)
             .put(ClassName(CachedKotlinCompiler::class.qualifiedName!!), cachedKotlinCompiler)
-            .put(ClassName(WebDriverContext::class.qualifiedName!!), webDriverContext)
             .put(ClassName(NotationMedia::class.qualifiedName!!), notationMedia)
             .put(ClassName(NotationMetadataReader::class.qualifiedName!!), notationMetadataReader)
             .put(ClassName(LocalGraphStore::class.qualifiedName!!), graphStore)
@@ -214,7 +208,9 @@ class KzenAutoContext(
 
 
     override fun close() {
+        // Cancelling the active run settles its root node, which disposes the run-scoped resources (a browser
+        // opened with closePolicy Auto/KeepOnFailure) via the engine — replacing the former WebDriverContext
+        // process-singleton shutdown quit.
         serverLogicController.close()
-        webDriverContext.quit()
     }
 }

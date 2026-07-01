@@ -1,0 +1,76 @@
+# Shared test-only Script step archetypes for ScriptExtensibilityTest, declared ONCE here (the production
+# analogues live in notation/auto-jvm/script/script-jvm.yaml). Each is backed by a test-source class registered
+# by hand via ScriptStepTestModule — no @Reflect, no entry in any kzen dispatch. Declaring them in one archetype
+# document (separate from the scenario documents that instantiate them) keeps every `is:` reference to them
+# unambiguous — the AutowiredAttributeDefiner locates each object's archetype from a global host, so a duplicate
+# declaration across scenario files would resolve ambiguously and fail the whole-graph build.
+
+# Uppercases the referenced value and appends "!!!" — a step type kzen knows nothing about.
+ShoutStep:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.server.exec.script.test.ShoutStep
+  icon: "material-symbols:campaign"
+  title: "Shout (test)"
+  input: ""
+  meta:
+    input:
+      is: ObjectLocation
+      by: Nominal
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
+# Opens a run-scoped resource under `key` with the named `closePolicy` (a plain String parsed in the step),
+# recording its disposal into the ResourceDisposalLog sink.
+OpenResourceTestStep:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.server.exec.script.test.OpenResourceTestStep
+  icon: "material-symbols:lock-open"
+  title: "Open resource (test)"
+  key: ""
+  closePolicy: auto
+  meta:
+    key:
+      is: String
+    closePolicy:
+      is: String
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
+# Always throws — drives the run to a terminal Outcome.Failed to exercise failure-branch resource disposal.
+FailStep:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.server.exec.script.test.FailStep
+  icon: "material-symbols:error"
+  title: "Fail (test)"
+  message: "deliberate test failure"
+  meta:
+    message:
+      is: String
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
+# Fails its first invocation (globally) then succeeds, returning its referenced `input` — a transient failure
+# that clears on retry, for exercising pause-on-error park-then-resume of a nested-Logic Worker's child.
+FlakyStep:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.server.exec.script.test.FlakyStep
+  icon: "material-symbols:sync-problem"
+  title: "Flaky (test)"
+  input: ""
+  meta:
+    input:
+      is: ObjectLocation
+      by: Nominal
+    selfLocation:
+      is: ObjectLocation
+      by: Self

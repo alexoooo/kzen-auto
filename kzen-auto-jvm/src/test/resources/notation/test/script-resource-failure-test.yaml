@@ -1,0 +1,26 @@
+# Resource-disposal-on-failure fixture (ScriptExtensibilityTest): three test-only OpenResourceTestStep steps
+# (archetype in script-step-test-archetypes.yaml) open run-scoped resources under distinct ClosePolicies, then a
+# FailStep throws. With pause-on-error off the throw propagates to a terminal Outcome.Failed, and the engine must
+# dispose Auto but RETAIN KeepOnFailure (for inspection on a failed run) and Manual.
+
+main:
+  is: Script
+
+main.steps/OpenAuto:
+  is: OpenResourceTestStep
+  key: auto
+  closePolicy: auto
+
+main.steps/OpenManual:
+  is: OpenResourceTestStep
+  key: manual
+  closePolicy: manual
+
+main.steps/OpenKeep:
+  is: OpenResourceTestStep
+  key: keep
+  closePolicy: keepOnFailure
+
+main.steps/Boom:
+  is: FailStep
+  message: "deliberate test failure"

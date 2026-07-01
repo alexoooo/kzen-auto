@@ -5,6 +5,7 @@ package tech.kzen.auto.server.objects.script.step.eval
 import tech.kzen.auto.common.objects.document.registry.model.ObjectRegistryScan
 import tech.kzen.auto.server.objects.script.api.ScriptStep
 import tech.kzen.auto.server.objects.script.api.ScriptStepDefinition
+import tech.kzen.auto.server.objects.script.api.StepExecution
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.auto.server.util.ClassLoaderUtils
@@ -161,6 +162,22 @@ class FormulaStep(
             return TypeMetadata(
                 simpleMatch, generics.mapNotNull { it }, nullable)
         }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    // Compile (via the injected [cachedKotlinCompiler]) and evaluate the user expression over the in-scope step
+    // values, producing its value. The step owns its own compilation — there is no central compiler that pre-bakes
+    // it — which is exactly what makes Script steps third-party-extensible (cf. the Job FormulaSourceWorker).
+    override suspend fun run(execution: StepExecution): Any? {
+        val nonUnitPredecessorTypes = StepExpressionSupport.resolveNonUnit(
+            StepExpressionSupport.inScopeTypes(
+                selfLocation, execution.scriptTree, execution.scriptValidation))
+            ?: error("Unresolved in-scope types for: $selfLocation")
+
+        return StepExpressionSupport.evaluate(
+            selfLocation, "Any?", code, nonUnitPredecessorTypes,
+            { execution.referencedValue(it) }, cachedKotlinCompiler)
     }
 
 

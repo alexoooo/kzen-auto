@@ -170,3 +170,34 @@ PreviewWorker:
     selfLocation:
       is: ObjectLocation
       by: Self
+
+
+# Runs another Logic (a Script / Flow / Job, referenced by `instructions`) as a child once per incoming
+# element: the element is passed as the child's first parameter and the child's main result is emitted
+# downstream. The seam for composing reusable sub-Logics into a Job's dataflow — the Job analogue of a Script
+# Run step. Untyped ports (`Any?`): what flows is whatever the child consumes / produces.
+RunWorker:
+  abstract: true
+  is: Worker
+  title: "Run"
+  class: tech.kzen.auto.server.objects.job.worker.RunWorker
+  input: ""
+  output: ""
+  instructions: ""
+  meta:
+    input:
+      is: ChannelInput
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    output:
+      is: ChannelOutput
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    instructions:
+      is: ObjectLocation
+      by: Nominal
+      editor: SelectLogicEditor
+      summary: ReferenceLinkAttributeView
+    selfLocation:
+      is: ObjectLocation
+      by: Self

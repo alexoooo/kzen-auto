@@ -4,7 +4,10 @@ import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.engine.Address
 import tech.kzen.lib.common.exec.engine.Execution
+import tech.kzen.lib.common.exec.tuple.TupleComponentValue
+import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 
 
 /**
@@ -19,9 +22,16 @@ import tech.kzen.lib.common.model.location.ObjectLocation
  * marker address ([workerProgressAddressMarker]) so the controller's trace bridge routes it to
  * [tech.kzen.auto.common.objects.document.job.JobConventions.workerProgressPath] (the path the JS Job UI polls),
  * throttled per Worker so a per-(small-)batch publisher doesn't flood the trace history.
+ *
+ * [host] is the nested-Logic seam ([RunWorker][tech.kzen.auto.server.objects.job.worker.RunWorker]): it
+ * compiles the child once via the run-shared [JobChildLogicHost] and hosts it under THIS Worker's own
+ * [Execution] node, so the engine drives the child's stepping and pause / cancel uniformly with the rest of
+ * the tree.
  */
 class EngineJobControl(
-    private val execution: Execution
+    private val execution: Execution,
+    private val childLogicHost: JobChildLogicHost,
+    private val objectStableMapper: ObjectStableMapper
 ): JobControl {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -67,5 +77,25 @@ class EngineJobControl(
         // The emit address is the Worker node's; the Worker's own stable id (the node's stableId) is what the
         // bridge keys the progress path on, so [location] (always this Worker's own location) is not needed here.
         execution.emit(progressAddress, ExecutionValue.of(value))
+    }
+
+
+    override suspend fun host(instructions: ObjectLocation, input: Any?): TupleValue {
+        val child = childLogicHost.compile(instructions)
+
+        // Bind the single incoming element to the child's first declared parameter (empty when it declares
+        // none) — the same positional convention a Flow Run-Logic vertex uses to pass its upstream message.
+        val firstParameter = child.signature().inputs.components.firstOrNull()?.name
+        val arguments =
+            if (firstParameter != null) {
+                TupleValue(listOf(TupleComponentValue(firstParameter, input)))
+            }
+            else {
+                TupleValue.empty
+            }
+
+        // Host under the child document's stable id (matching a Script RunStep), so the engine's execution tree
+        // and its live-edit migration carry the child by the same identity across a rebuild.
+        return execution.host(objectStableMapper.objectStableId(instructions), child, arguments)
     }
 }

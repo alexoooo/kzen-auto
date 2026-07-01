@@ -11,7 +11,7 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableId
  * the Script's "completed work so far": the outcome each step that finished produced (keyed by the step's
  * rename-stable id, in completion order) plus the last Result value.
  *
- * On the rebuilt run the [tech.kzen.auto.server.exec.script.step.SequenceStep] spine replays against this state:
+ * On the rebuilt run the [ScriptRunContext.runSteps] spine replays against this state:
  * a step whose id is present re-adopts its outcome WITHOUT re-executing (no checkpoint, no work), so resume
  * continues from the live frontier instead of restarting; a step absent (the next-to-run, anything the edit
  * added, or a loop body the loop re-runs — see below) executes live against the new definition.

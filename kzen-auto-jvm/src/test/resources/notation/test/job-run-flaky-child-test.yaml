@@ -1,0 +1,20 @@
+# The child Script a RunWorker hosts in the pause-on-error test (JobRunWorkerTest): its single FlakyStep fails
+# its first invocation (globally) then succeeds. The Script takes the incoming element as `number` (bound by
+# RunWorker to the first parameter) and passes it through FlakyStep. There is no ResultStep — the test asserts
+# the run's outcome and the number of elements the sink received, not the child's returned value. FlakyStep
+# archetype lives in script-step-test-archetypes.yaml.
+
+main:
+  is: Script
+
+main.parameters/number:
+  is: ParameterBinding
+  type:
+    class: kotlin.Int
+    generics: []
+    nullable: false
+  default: 0
+
+main.steps/Flaky:
+  is: FlakyStep
+  input: main.parameters/number

@@ -11,7 +11,7 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 /**
  * The runtime services a [LogicCompiler] (and the per-flavour compilers it delegates to) needs to translate
  * a notation document into an engine [tech.kzen.lib.common.exec.engine.Logic]. Bundled because they travel
- * together through the Script / Flow / Job / Report compilers — and a [RunStep][tech.kzen.auto.server.exec.script.step.RunStep]
+ * together through the Script / Flow / Job / Report compilers — and a [RunStep][tech.kzen.auto.server.objects.script.step.control.RunStep]
  * or [RunLogicVertex][tech.kzen.auto.server.objects.flow.vertex.RunLogicVertex] can nest another flavour, so
  * each compiler must be able to compile an arbitrary child via [LogicCompiler] without re-threading args.
  *

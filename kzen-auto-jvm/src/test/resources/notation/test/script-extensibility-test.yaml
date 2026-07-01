@@ -1,0 +1,25 @@
+# Extensibility acceptance fixture (ScriptExtensibilityTest): a Script whose middle step is the third-party
+# ShoutStep — a step type defined entirely in the test source set (archetype in script-step-test-archetypes.yaml,
+# class registered via ScriptStepTestModule), unknown to any kzen dispatch. A TextLiteral "hello" feeds ShoutStep,
+# which uppercases + "!!!" to "HELLO!!!", captured by the Result step. That this runs end-to-end through
+# LogicCompiler with no edit to ScriptLogicCompiler is the defining proof the step set is genuinely extensible.
+
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.String
+      generics: []
+      nullable: false
+
+main.steps/Greeting:
+  is: TextLiteralStep
+  value: hello
+
+main.steps/Shouted:
+  is: ShoutStep
+  input: main.steps/Greeting
+
+main.steps/Result:
+  is: ResultStep
+  code: Shouted

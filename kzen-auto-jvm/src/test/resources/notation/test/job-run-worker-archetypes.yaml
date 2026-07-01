@@ -1,0 +1,23 @@
+# Shared test-only Job Worker archetype for the RunWorker tests (JobRunWorkerTest), declared ONCE here so both
+# scenario fixtures (job-run-host-test.yaml, job-run-flaky-test.yaml) can reference it unambiguously — the
+# AutowiredAttributeDefiner locates each object's archetype from a global host, so a duplicate declaration
+# across scenario files would resolve ambiguously and fail the whole-graph build. The production Worker
+# archetypes (FormulaSourceWorker, RunWorker) live in notation/auto-jvm/job/job-worker.yaml. Backed by a
+# test-source class registered by hand via RunWorkerTestModule (no @Reflect / KSP in the test source set).
+
+
+# Records every element it receives into a static list, so a test can assert what the RunWorker emitted
+# downstream (i.e. that the child Logic ran per element and produced the expected value).
+RecordingSinkWorker:
+  abstract: true
+  is: Worker
+  title: "Recording Sink (test)"
+  class: tech.kzen.auto.server.objects.job.worker.test.RecordingSinkWorker
+  input: ""
+  meta:
+    input:
+      is: ChannelInput
+      creator: JobChannelCreator
+    selfLocation:
+      is: ObjectLocation
+      by: Self

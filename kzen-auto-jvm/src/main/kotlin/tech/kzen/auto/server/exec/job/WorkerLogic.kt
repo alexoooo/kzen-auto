@@ -6,6 +6,7 @@ import tech.kzen.lib.common.exec.engine.Execution
 import tech.kzen.lib.common.exec.engine.Logic
 import tech.kzen.lib.common.exec.engine.LogicSignature
 import tech.kzen.lib.common.exec.tuple.TupleValue
+import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 
 
 /**
@@ -27,9 +28,18 @@ import tech.kzen.lib.common.exec.tuple.TupleValue
  *   torn-down instance's `onClose` skips it and the rebuilt instance adopts it.
  *
  * A raw (non-[WorkerBase]) [Worker] opts into neither, so it cleanly restarts on an edit — the safe §5 default.
+ *
+ * PAUSE-ON-ERROR (logic-spec §4): the Worker's whole run is wrapped in [Execution.recoverable], so a Worker
+ * throwing (an expression error, a nested child's terminal failure) parks Suspended(Error) for inspect / fix +
+ * resume when pause-on-error is on, and fails the run when it is off — uniform across ALL Workers, exactly as a
+ * Script step / Flow vertex. A nested-Logic [RunWorker]'s child that halts (a Pause step, or a step parked
+ * under pause-on-error) does NOT surface here: its host call stays suspended and the child's own recoverable
+ * boundary parks it, bringing the whole Job to a quiescent wavefront centrally.
  */
 class WorkerLogic(
-    private val worker: Worker
+    private val worker: Worker,
+    private val childLogicHost: JobChildLogicHost,
+    private val objectStableMapper: ObjectStableMapper
 ): Logic {
     override fun signature(): LogicSignature {
         return LogicSignature.empty
@@ -43,7 +53,13 @@ class WorkerLogic(
             execution.onCapture { workerBase.captureMigrationState() }
         }
 
-        worker.run(EngineJobControl(execution))
+        val control = EngineJobControl(execution, childLogicHost, objectStableMapper)
+
+        // The engine renders the failure (the run settles / parks per pause-on-error); the run-level ErrorPaused
+        // state already surfaces which Worker halted (per-Worker error chips are a separate display gap).
+        execution.recoverable({ }) {
+            worker.run(control)
+        }
         return TupleValue.empty
     }
 }

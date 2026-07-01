@@ -8,6 +8,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.auto.common.paradigm.job.api.ChannelClient
 import tech.kzen.auto.common.paradigm.job.api.Worker
+import tech.kzen.auto.server.exec.LogicCompilerServices
 import tech.kzen.auto.server.objects.job.channel.DuplexJobChannel
 import tech.kzen.auto.server.objects.job.channel.JobChannel
 import tech.kzen.lib.common.exec.ExecutionRequest
@@ -16,10 +17,9 @@ import tech.kzen.lib.common.exec.engine.Execution
 import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.service.context.GraphCreator
-import tech.kzen.lib.common.service.context.environment.GraphEnvironment
 import tech.kzen.lib.common.service.store.normal.ObjectStableId
-import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 
 
 /**
@@ -67,10 +67,20 @@ class JobRun(
     private val filteredDefinition: GraphDefinition,
     private val workerLocations: List<ObjectLocation>,
     private val channelLocations: List<ObjectLocation>,
-    private val objectStableMapper: ObjectStableMapper,
-    private val graphEnvironment: GraphEnvironment
+    private val graphNotation: GraphNotation,
+    private val graphDefinition: GraphDefinition,
+    private val services: LogicCompilerServices
 ) {
+    private val objectStableMapper get() = services.objectStableMapper
+    private val graphEnvironment get() = services.graphEnvironment
+
+
     suspend fun run(): TupleValue {
+        // Shared across every Worker of this run: compiles + caches the child Logics that nested-Logic Workers
+        // (RunWorker) host. Built from the FULL graph (not [filteredDefinition]), since a child is a different
+        // document. Each Worker still hosts under its own node — this holds only the reusable compiled Logics.
+        val childLogicHost = JobChildLogicHost(graphNotation, graphDefinition, services)
+
         // One shared instance graph for the whole run: the Channel objects are single shared instances and each
         // Worker's injected endpoint views reference them (via JobChannelCreator) — exactly as the old
         // buildAndLaunch built it.
@@ -134,7 +144,9 @@ class JobRun(
                 workers
                     .map { (location, worker) ->
                         async {
-                            execution.host(objectStableMapper.objectStableId(location), WorkerLogic(worker))
+                            execution.host(
+                                objectStableMapper.objectStableId(location),
+                                WorkerLogic(worker, childLogicHost, objectStableMapper))
                         }
                     }
                     .awaitAll()

@@ -4,8 +4,10 @@ import tech.kzen.auto.common.objects.document.script.model.ScriptTree
 import tech.kzen.auto.common.objects.document.script.model.ScriptValidation
 import tech.kzen.auto.server.objects.script.api.ScriptStep
 import tech.kzen.auto.server.objects.script.api.ScriptStepDefinition
+import tech.kzen.auto.server.objects.script.api.StepExecution
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
 import tech.kzen.auto.server.objects.script.step.eval.StepExpressionCompiler
+import tech.kzen.auto.server.objects.script.step.eval.StepExpressionSupport
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.auto.server.util.ClassLoaderUtils
 import tech.kzen.lib.common.exec.tuple.TupleDefinition
@@ -21,8 +23,7 @@ import tech.kzen.lib.platform.ClassNames
  * A do-while loop: runs its body branch, then evaluates a user-supplied Kotlin [condition] (compiled like
  * [tech.kzen.auto.server.objects.script.step.eval.FormulaStep]'s formula, but *required* to be Boolean — so
  * no type inference); while the condition is true the body repeats. The condition can reference the body
- * steps' just-produced values by name (plus any in-scope parameters / enclosing loop items). Execution is
- * driven by the engine-side step logic; this notation object only validates the condition compiles.
+ * steps' just-produced values by name (plus any in-scope parameters / enclosing loop items).
  */
 @Reflect
 class DoWhileStep(
@@ -35,6 +36,37 @@ class DoWhileStep(
 {
     //-----------------------------------------------------------------------------------------------------------------
     private val bodySteps = steps
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override suspend fun run(execution: StepExecution): Any? {
+        // Reaching here means the loop did NOT complete pre-edit; a coroutine's do/while can't be re-pointed at
+        // the rebuilt body, so it restarts from the first iteration — drop the body's stale per-iteration
+        // outcomes from the replay set so each body step executes live (see ForEachStep for the full rationale).
+        execution.dropReplay(bodySteps)
+
+        do {
+            execution.runSteps(bodySteps)
+        }
+        while (evaluateCondition(execution))
+
+        return null
+    }
+
+
+    override fun nestedStepLists(): List<List<ObjectLocation>> {
+        return listOf(bodySteps)
+    }
+
+
+    private fun evaluateCondition(execution: StepExecution): Boolean {
+        val scope = nonUnitScope(conditionScopeTypes(execution.scriptTree, execution.scriptValidation))
+        val value = StepExpressionSupport.evaluate(
+            selfLocation, "Boolean", condition, scope,
+            { execution.referencedValue(it) }, cachedKotlinCompiler)
+        return value as? Boolean
+            ?: error("Do-while condition is not a boolean: $selfLocation")
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------

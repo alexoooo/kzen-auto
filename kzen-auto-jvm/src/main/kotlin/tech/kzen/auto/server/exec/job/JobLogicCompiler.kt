@@ -52,7 +52,8 @@ object JobLogicCompiler {
             workerLocations,
             synthesis.channelLocations,
             LogicSignature.empty,
-            services.objectStableMapper,
-            services.graphEnvironment)
+            graphNotation,
+            graphDefinition,
+            services)
     }
 }

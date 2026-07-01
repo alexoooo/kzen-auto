@@ -116,9 +116,10 @@ The companion-object `init` block registers SPI metadata with kzen-lib's `Reflec
 | `restHandler` | `RestHandler` | Dispatch target for every route in `KzenAutoMain` |
 | `cachedKotlinCompiler`, `calculatedColumnEval` | scripting | Embedded Kotlin scripting for report formula columns |
 | `definitionRepository` | `MultiDefinitionRepository` | Report-definer pool: built-in (`CsvReportDefiner` / `TsvReportDefiner` / `TextReportDefiner`) plus `PluginReportDefinitionRepository` for JAR-loaded plugins |
-| `webDriverContext` | `WebDriverContext` | Selenium / WebDriver lifecycle for browser-automation script steps |
 
-Construction is self-initializing: the private `init()` (run by `create()`/`forTest()`) subscribes the task repository **and `objectStableMapper`** to the graph store via `graphStore.observe(...)` — the same observer mechanism described in § 2 — then pre-warms the mapper by iterating the boot notation. The shutdown hook calls `context.close()`, which currently only quits the WebDriver pool.
+The Selenium / WebDriver browser handle is **no longer a context service**: it is a per-run resource keyed `"browser"` in the Script run's resource registry (opened by `BrowserOpenStep`, read by the action steps via `StepExecution.resource(...)`, disposed per its `closePolicy` when the run settles). `WebDriverSupport` holds only the shared key + quiet-quit helper. This replaced the former `webDriverContext` process singleton (removes a global; allows concurrent runs).
+
+Construction is self-initializing: the private `init()` (run by `create()`/`forTest()`) subscribes the task repository **and `objectStableMapper`** to the graph store via `graphStore.observe(...)` — the same observer mechanism described in § 2 — then pre-warms the mapper by iterating the boot notation. The shutdown hook calls `context.close()`, which cancels the active run — settling its root node disposes any run-scoped resources (an open browser) through the engine.
 
 ## 5. Backend execution model
 

@@ -1,8 +1,8 @@
 package tech.kzen.auto.server.objects.script.binding
 
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
-import tech.kzen.auto.server.objects.script.api.ScriptStep
 import tech.kzen.auto.server.objects.script.api.ScriptStepDefinition
+import tech.kzen.auto.server.objects.script.api.ScriptValueBinding
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
 import tech.kzen.auto.server.util.IterableElementTypeReflect
 import tech.kzen.lib.common.exec.logic.model.LogicType
@@ -27,7 +27,7 @@ import tech.kzen.lib.common.reflect.Reflect
 class ForEachItemBinding(
     private val selfLocation: ObjectLocation
 ):
-    ScriptStep
+    ScriptValueBinding()
 {
     override fun definition(scriptDefinitionContext: ScriptDefinitionContext): ScriptStepDefinition? {
         val forEachLocation = selfLocation.parent()
