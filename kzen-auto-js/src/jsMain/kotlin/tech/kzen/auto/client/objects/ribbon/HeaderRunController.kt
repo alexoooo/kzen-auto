@@ -20,6 +20,7 @@ import tech.kzen.auto.client.wrap.createRef
 import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.util.AutoConventions
+import tech.kzen.lib.common.exec.engine.StepMode
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunFrameInfo
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -266,10 +267,15 @@ class HeaderRunController (
             }
 
             actionStepOver -> {
-                // Only meaningful while paused mid-run (run a nested sub-document to completion); no
-                // start-fresh path like Step.
                 if (active) {
                     props.clientLogicGlobal.stepOverAsync()
+                }
+                else {
+                    // Start-fresh path (like Step, but the first step is a Step Over): launch paused and run the
+                    // first step over any sub-document it enters, so a run whose first step enters a child (or a
+                    // Job Worker hosting one) does not descend into it.
+                    props.clientLogicGlobal.startAndRunAsync(
+                        mainObjectLocation, true, state.pauseOnError, StepMode.Over)
                 }
             }
 
@@ -370,7 +376,7 @@ class HeaderRunController (
                 }
 
                 renderStepButton(active, executing, runnable)
-                renderStepOverButton(active, executing)
+                renderStepOverButton(active, executing, runnable)
                 renderStepOutButton(active, executing)
                 renderRunPauseButton(active, executing, runnable)
                 renderStopButton(active)
@@ -574,14 +580,16 @@ class HeaderRunController (
 
     private fun ChildrenBuilder.renderStepOverButton(
         active: Boolean,
-        executing: Boolean
+        executing: Boolean,
+        runnable: Boolean
     ) {
         ToggleButton {
             value = actionStepOver
 
-            // Only while paused mid-run: steps the current frame but runs any sub-document entered on
-            // this step to completion instead of descending into it.
-            disabled = !(active && !executing)
+            // Enabled while paused mid-run (step the current frame, running any sub-document entered on this
+            // step to completion instead of descending) AND while idle on a runnable document (start fresh in
+            // stepping-over mode) — mirroring Step's start-fresh path.
+            disabled = !(active && !executing || !active && runnable)
 
             size = Size.small
 

@@ -9,6 +9,7 @@ import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.paradigm.logic.LogicConventions
 import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.exec.ExecutionSuccess
+import tech.kzen.lib.common.exec.engine.StepMode
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunResponse
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunState
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -125,7 +126,15 @@ class ClientLogicGlobal(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun startAndRunAsync(mainLocation: ObjectLocation, paused: Boolean, pauseOnError: Boolean) {
+    // [stepMode] applies only to a paused (stepping) start — it is the mode of the first step. Default
+    // [StepMode.Into] is "Start Stepping"; [StepMode.Over] is "Start Stepping Over" (the Step Over button's
+    // start-fresh path), which runs a sub-Logic entered on the first boundary to completion instead of descending.
+    fun startAndRunAsync(
+        mainLocation: ObjectLocation,
+        paused: Boolean,
+        pauseOnError: Boolean,
+        stepMode: StepMode = StepMode.Into
+    ) {
         require(!clientLogicState.isActive()) {
             "Already running"
         }
@@ -140,7 +149,7 @@ class ClientLogicGlobal(
             delay(1)
             val logicRunId =
                 if (paused) {
-                    restClient.logicStartAndStep(mainLocation, pauseOnError)
+                    restClient.logicStartAndStep(mainLocation, pauseOnError, stepMode)
                 }
                 else {
                     restClient.logicStartAndRun(mainLocation, pauseOnError)
@@ -379,8 +388,12 @@ class ClientLogicGlobal(
 
         async {
             if (! clientLogicState.isActive()) {
-                // Start a fresh run in stepping (paused) mode; this also executes the first step.
-                val logicRunId = restClient.logicStartAndStep(mainLocation, pauseOnError)
+                // Start a fresh run in stepping (paused) mode; this also executes the first step. In step-over
+                // mode the bootstrap step is itself a Step Over, so the run never descends into a sub-Logic on
+                // the first tick (without this it would descend on the bootstrap and only climb out on the first
+                // subsequent Step Over — see ServerLogicController.startStep).
+                val logicRunId = restClient.logicStartAndStep(
+                    mainLocation, pauseOnError, if (stepOver) StepMode.Over else StepMode.Into)
                 if (logicRunId == null) {
                     clientLogicState = clientLogicState.copy(
                         slowLooping = false,

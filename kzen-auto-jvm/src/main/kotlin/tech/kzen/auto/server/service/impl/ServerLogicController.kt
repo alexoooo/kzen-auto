@@ -238,8 +238,8 @@ class ServerLogicController(
         engine.pauseOnError(pauseOnError)
 
         // A new run starts from a clean slate: drop every prior run's retained trace (values + the append-only
-        // film-strip) so stale per-step displays don't bleed into this run. Per-node trace buffers are then
-        // created lazily by the bridge as each node emits (see [handleForNode]); the root's has no parent.
+        // film-strip) so stale per-step displays don't bleed into this run. Child trace buffers are then created
+        // lazily by the bridge as each node emits (see [handleForNode]); the ROOT's is created eagerly below.
         logicTraceStore.clearAll()
 
         val state = LogicState(
@@ -247,6 +247,15 @@ class ServerLogicController(
             closureNotations(graphDefinitionAttempt, root.documentPath))
         state.traceBridge = engine.observe { mirrorTrace(state) }
         stateOrNull = state
+
+        // Register the run's ROOT trace buffer up front, so the run is discoverable by its root location via
+        // [LogicTraceStore.mostRecent] (the "run-scope entry point") the moment it starts — before any event is
+        // emitted. A Script / Flow / Report root emits per-element trace events and so self-registers on its first
+        // emit; a Job's root only HOSTS its Workers, each of which is its own node registering its OWN stable id,
+        // so the Job root would otherwise NEVER enter the trace history — leaving the JS Job UI's
+        // `fetchWorkerProgress` (mostRecent(main) -> lookupRun) with no run to resolve, hiding all live Preview /
+        // worker progress. Idempotent with the later bridge emits (same node id -> same cached handle / buffer).
+        handleForNode(state, engine.snapshot().root.id, rootStableId)
 
         return runId
     }
@@ -340,13 +349,19 @@ class ServerLogicController(
 
 
     // Atomic "start stepping": launch a fresh (never-launched) run parked at entry, then run exactly its first
-    // step — settling before the second. This is the single operation behind the "Start Stepping" control
-    // (logicStartAndStep): "start a fresh run in stepping mode; this also executes the first step". It MUST be
-    // atomic: composing it from a separate pause() + step() races, because pause()'s pause-at-entry launches
-    // asynchronously on the executor (setting running) and the immediately-following step()'s guard (!running)
-    // then trips with "Can't step, already running".
+    // step in [mode] — settling before the second. This is the single operation behind the "Start Stepping"
+    // control (logicStartAndStep): "start a fresh run in stepping mode; this also executes the first step". It
+    // MUST be atomic: composing it from a separate pause() + step() races, because pause()'s pause-at-entry
+    // launches asynchronously on the executor (setting running) and the immediately-following step()'s guard
+    // (!running) then trips with "Can't step, already running".
+    //
+    // [mode] is the mode of that FIRST step. Default [StepMode.Into] is the plain "Start Stepping"; [StepMode.Over]
+    // is "Start Stepping Over" — it runs any sub-Logic the first boundary enters (e.g. a Job's RunWorker child, or
+    // a Script whose first step is a RunStep) to completion rather than descending into it. This is what powers
+    // slow-motion auto-step-over: without it the run would descend into the child on the bootstrap step and only
+    // climb back out on the first subsequent Step Over.
     @Synchronized
-    fun startStep(runId: LogicRunId): LogicRunResponse {
+    fun startStep(runId: LogicRunId, mode: StepMode = StepMode.Into): LogicRunResponse {
         val state = stateOrNull
             ?: return LogicRunResponse.NotFound
 
@@ -361,12 +376,13 @@ class ServerLogicController(
         state.stepping = true
 
         executor.execute {
-            // The first step launches the run parked at entry (before the first step); the intermediate
-            // quiesce lets it park so the second step has a parked node to drain — running that first step and
-            // parking before the next. Mirrors pause-at-entry followed by one Step Into.
+            // The first step launches the run parked at entry (before the first step; the launch is always
+            // mode-agnostic — the never-started engine simply parks at the entry wavefront); the intermediate
+            // quiesce lets it park so the second step has a parked node to drain — running that first step in
+            // [mode] and parking before the next. Mirrors pause-at-entry followed by one Step [mode].
             state.engine.step(StepMode.Into)
             state.engine.awaitQuiescent()
-            state.engine.step(StepMode.Into)
+            state.engine.step(mode)
             state.engine.awaitQuiescent()
             synchronized(this@ServerLogicController) {
                 settleAfterDrive(state)

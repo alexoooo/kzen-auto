@@ -1,0 +1,14 @@
+# Repro of the user's Job-1.yaml: a scalar FormulaSourceWorker (1..100) -> PreviewWorker with BLANK ports
+# (order-driven channel synthesis wires the one-way channel AND the Preview's external serve). Guards that the
+# scalar lane surfaces a live sample (header + rows + count) in the Preview's progress, the way the JS UI polls.
+
+
+main:
+  is: Job
+
+main.workers/Formula Source:
+  is: FormulaSourceWorker
+  code: 1..100
+
+main.workers/Preview:
+  is: PreviewWorker

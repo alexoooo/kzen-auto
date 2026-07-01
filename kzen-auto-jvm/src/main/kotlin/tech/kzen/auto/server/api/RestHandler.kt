@@ -10,6 +10,7 @@ import tech.kzen.auto.server.service.impl.ServerLogicController
 import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionResult
 import tech.kzen.lib.common.exec.RequestParams
+import tech.kzen.lib.common.exec.engine.StepMode
 import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunResponse
@@ -1040,6 +1041,14 @@ class RestHandler(
             ?.toBoolean()
             ?: false
 
+        // The mode of the first step of a paused (stepping) start — Into (plain "Start Stepping") unless the
+        // client asks to start stepping OVER (run a sub-Logic entered on the first boundary to completion).
+        val stepMode: StepMode = parameters
+            .getAll(CommonRestApi.paramStepMode)
+            ?.singleOrNull()
+            ?.let { StepMode.valueOf(it) }
+            ?: StepMode.Into
+
         val graphDefinitionAttempt = runBlocking {
             graphStore.graphDefinition()
         }
@@ -1053,7 +1062,7 @@ class RestHandler(
             if (paused) {
                 // Atomic launch-park-then-first-step (see ServerLogicController.startStep) — NOT a separate
                 // pause() + step(), which races on the run flags ("Can't step, already running").
-                serverLogicController.startStep(logicRunId)
+                serverLogicController.startStep(logicRunId, stepMode)
             }
             else {
                 serverLogicController.continueOrStart(logicRunId, graphDefinitionAttempt)

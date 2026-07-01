@@ -5,6 +5,7 @@ import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.platform.encodeURIComponent
 import tech.kzen.lib.client.ClientJsonUtils
 import tech.kzen.lib.common.exec.ExecutionResult
+import tech.kzen.lib.common.exec.engine.StepMode
 import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunResponse
@@ -650,13 +651,15 @@ class ClientRestApi(
 
     suspend fun logicStartAndStep(
         objectLocation: ObjectLocation,
-        pauseOnError: Boolean
+        pauseOnError: Boolean,
+        stepMode: StepMode = StepMode.Into
     ): LogicRunId? {
         val response = getOrPut(
             CommonRestApi.logicStartAndStep,
             CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
             CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
-            CommonRestApi.paramPauseOnError to pauseOnError.toString())
+            CommonRestApi.paramPauseOnError to pauseOnError.toString(),
+            CommonRestApi.paramStepMode to stepMode.name)
 
         return when {
             response.isEmpty() -> null

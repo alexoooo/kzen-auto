@@ -6,6 +6,7 @@ import org.junit.Test
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.util.AutoTestUtils
+import tech.kzen.lib.common.exec.engine.StepMode
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunFrameInfo
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunState
@@ -44,12 +45,15 @@ class StepNavigationTest {
     //-----------------------------------------------------------------------------------------------------------------
     private val rootPath = DocumentPath.parse("test/step-nav-test.yaml")
     private val childPath = DocumentPath.parse("test/step-nav-child-test.yaml")
+    private val runFirstPath = DocumentPath.parse("test/step-nav-runfirst-test.yaml")
 
     private val mainLocation = ObjectLocation(rootPath, ObjectPath.parse("main"))
     private val runLocation = ObjectLocation(rootPath, ObjectPath.parse("main.steps/Run"))
     private val lastLocation = ObjectLocation(rootPath, ObjectPath.parse("main.steps/Last"))
     private val childALocation = ObjectLocation(childPath, ObjectPath.parse("main.steps/ChildA"))
     private val childBLocation = ObjectLocation(childPath, ObjectPath.parse("main.steps/ChildB"))
+    private val runFirstMainLocation = ObjectLocation(runFirstPath, ObjectPath.parse("main"))
+    private val runFirstLastLocation = ObjectLocation(runFirstPath, ObjectPath.parse("main.steps/Last"))
 
     private lateinit var context: KzenAutoContext
 
@@ -115,6 +119,47 @@ class StepNavigationTest {
         stepOut(runId)                           // run ChildB (rest of child), return to caller before Last
         assertPausedAtDepth(0)
         assertNextToRun(runId, lastLocation)
+
+        resume(runId)
+        awaitDone()
+    }
+
+
+    @Test
+    fun startStepIntoDescendsIntoAFirstRunStep() {
+        // Baseline for the pair below: a plain stepping start (Into) whose FIRST step is a RunStep descends into
+        // the child on the bootstrap step — pausing at the child's first step, depth 1. (This is the residual
+        // "auto-step-over descends on the first tick" the Over start below fixes.)
+        val controller = context.serverLogicController
+        val runId = controller.start(runFirstMainLocation, snapshot)
+            ?: fail("Unable to start run")
+
+        controller.startStep(runId, StepMode.Into)
+        awaitState(LogicRunState.Paused)
+
+        assertPausedAtDepth(1)
+        assertNextToRun(runId, childALocation)
+
+        resume(runId)
+        awaitDone()
+    }
+
+
+    @Test
+    fun startStepOverRunsAFirstRunStepWithoutDescending() {
+        // "Start Stepping Over": the bootstrap step is itself a Step Over, so a run whose first step enters a
+        // child runs the whole child to completion and pauses before the next step (Last) at the root depth —
+        // it does NOT descend (contrast Into's depth 1 above). This is what makes slow-motion auto-step-over
+        // stay out of the sub-Script from the very first tick.
+        val controller = context.serverLogicController
+        val runId = controller.start(runFirstMainLocation, snapshot)
+            ?: fail("Unable to start run")
+
+        controller.startStep(runId, StepMode.Over)
+        awaitState(LogicRunState.Paused)
+
+        assertPausedAtDepth(0)
+        assertNextToRun(runId, runFirstLastLocation)
 
         resume(runId)
         awaitDone()
