@@ -157,6 +157,17 @@ private fun Routing.routeRequests(
     routeLogic(context.restHandler)
 
     routeObjectStable(context.restHandler)
+    routeFileListing(context.restHandler)
+}
+
+
+private fun Routing.routeFileListing(
+    restHandler: RestHandler
+) {
+    get(CommonRestApi.fileListing) {
+        val response = restHandler.fileListing(call.parameters)
+        call.respond(response)
+    }
 }
 
 

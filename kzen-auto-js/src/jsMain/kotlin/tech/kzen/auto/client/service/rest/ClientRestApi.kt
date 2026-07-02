@@ -2,6 +2,7 @@ package tech.kzen.auto.client.service.rest
 
 import tech.kzen.auto.client.util.*
 import tech.kzen.auto.common.api.CommonRestApi
+import tech.kzen.auto.common.util.data.DataLocationInfo
 import tech.kzen.auto.platform.encodeURIComponent
 import tech.kzen.lib.client.ClientJsonUtils
 import tech.kzen.lib.common.exec.ExecutionResult
@@ -761,6 +762,28 @@ class ClientRestApi(
             CommonRestApi.paramRunId to runId.value)
 
         return LogicRunResponse.valueOf(response)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    // Lists the immediate children (files + subdirectories) of `directory` matching `filter`, via the
+    // document-agnostic /file-listing route (reuses the server's FileListingAction). Used by the Job
+    // MultiFileInputEditor to browse for input files.
+    suspend fun listFiles(
+        directory: String,
+        filter: String
+    ): List<DataLocationInfo> {
+        val responseText = getOrPut(
+            CommonRestApi.fileListing,
+            CommonRestApi.paramDirectory to directory,
+            CommonRestApi.paramFilter to filter)
+
+        val responseList = ClientJsonUtils.toList(JSON.parse(responseText))
+
+        return responseList.map {
+            @Suppress("UNCHECKED_CAST")
+            DataLocationInfo.ofCollection(it as Map<String, String>)
+        }
     }
 
 

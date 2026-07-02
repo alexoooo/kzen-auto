@@ -42,6 +42,15 @@ ExportSpecEditor:
   class: tech.kzen.auto.client.objects.document.job.edit.ExportSpecEditor$Wrapper
 
 
+# Multi-file input editor: edits a MultiFileReaderWorker's `paths` attribute (an ordered List<String> of concrete
+# input file paths) — a reorderable selected-paths list plus a directory browser (directory + name filter, backed
+# by the document-agnostic /file-listing route reusing FileListingAction) to pick files. Selected via
+# `editor: MultiFileInputEditor` on the MultiFileReaderWorker's `paths` metadata.
+MultiFileInputEditor:
+  is: AttributeEditor
+  class: tech.kzen.auto.client.objects.document.job.edit.MultiFileInputEditor$Wrapper
+
+
 #######################################################################################################################
 # Job insert ribbon: each RibbonTool delegates to a Worker / Channel archetype; clicking it inserts that
 # archetype into the active Job document (Workers nest under `workers`, Channels under `channels`).
@@ -63,6 +72,12 @@ FormulaSourceTool:
   is: RibbonTool
   parent: JobGroup_Sources
   delegate: FormulaSourceWorker
+
+
+MultiFileReaderTool:
+  is: RibbonTool
+  parent: JobGroup_Sources
+  delegate: MultiFileReaderWorker
 
 
 ################################################################

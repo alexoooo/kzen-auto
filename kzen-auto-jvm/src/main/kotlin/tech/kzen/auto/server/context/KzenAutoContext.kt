@@ -165,7 +165,8 @@ class KzenAutoContext(
         detachedExecutor,
         modelTaskRepository,
         serverLogicController,
-        objectStableMapper)
+        objectStableMapper,
+        fileListingAction)
 
 
     //-----------------------------------------------------------------------------------------------------------------
