@@ -4,7 +4,6 @@ import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
-import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.auto.server.objects.report.exec.calc.CalculatedColumn
 import tech.kzen.auto.server.objects.report.exec.calc.CalculatedColumnEval
 import tech.kzen.auto.server.util.ClassLoaderUtils
@@ -21,7 +20,7 @@ import tech.kzen.lib.platform.ClassNames
  * the genuine [CalculatedColumnEval] engine — the SAME engine [FormulaWorker] uses, injected as a `@Service`
  * — so the expression is type-checked against the element's schema ([HeaderListing]). This is the
  * typed-element expression bridge: today the "type" is the in-band record schema; the engine generalizes to
- * a richer TypeMetadata / minted-class element type without changing this Worker (see [RecordBatch]).
+ * a richer TypeMetadata / minted-class element type without changing this Worker (see [DataRecord]).
  *
  * The predicate is compiled lazily and recompiled only when the incoming header changes; a record is kept
  * when the compiled expression's result is truthy ([tech.kzen.auto.server.objects.report.exec.calc.ColumnValue.truthy]
@@ -41,7 +40,7 @@ class FilterWorker(
 
     @Service private val calculatedColumnEval: CalculatedColumnEval
 ):
-    TransformWorker<RecordBatch, RecordBatch>(input, output, selfLocation)
+    TransformWorker<DataRecord, DataRecord>(input, output, selfLocation)
 {
     private val classLoader = ClassLoaderUtils.dynamicParentClassLoader()
     private val passThrough = where.isBlank()
@@ -54,33 +53,26 @@ class FilterWorker(
     private var kept = 0L
 
 
-    override suspend fun onBatch(batch: RecordBatch, emit: Emitter<RecordBatch>, control: JobControl) {
+    override suspend fun onElement(element: DataRecord, emit: Emitter<DataRecord>, control: JobControl) {
+        seen += 1
+
         if (passThrough) {
-            seen += batch.records.size
-            kept += batch.records.size
-            emit.send(batch)
+            kept += 1
+            emit.send(element)
             return
         }
 
-        if (batch.header != compiledForHeader) {
+        if (element.header != compiledForHeader) {
             compiled = control.runBlockingIo {
                 calculatedColumnEval.create(
-                    "filter", where, batch.header, ClassNames.kotlinAny, classLoader)
+                    "filter", where, element.header, ClassNames.kotlinAny, classLoader)
             }
-            compiledForHeader = batch.header
+            compiledForHeader = element.header
         }
-        val predicate = compiled!!
 
-        val keptRecords = ArrayList<FlatFileRecord>(batch.records.size)
-        for (record in batch.records) {
-            seen += 1
-            if (predicate.evaluate(Unit, record, batch.header).truthy) {
-                keptRecords.add(record)
-                kept += 1
-            }
-        }
-        if (keptRecords.isNotEmpty()) {
-            emit.send(RecordBatch(batch.header, keptRecords))
+        if (compiled!!.evaluate(Unit, element.record, element.header).truthy) {
+            kept += 1
+            emit.send(element)
         }
     }
 

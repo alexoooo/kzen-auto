@@ -10,7 +10,6 @@ main:
 main.workers/reader:
   is: CsvReaderWorker
   path: build/job-synth-linear/input.csv
-  batch: 4096
 
 main.workers/filter:
   is: FilterWorker

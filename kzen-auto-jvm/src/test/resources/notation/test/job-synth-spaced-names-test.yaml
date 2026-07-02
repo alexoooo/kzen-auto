@@ -13,7 +13,6 @@ main.workers/CSV Reader:
   path: build/job-synth-spaced/input.csv
   delimiter: ";"
   header: false
-  batch: 4096
 
 main.workers/Formula:
   is: FormulaWorker

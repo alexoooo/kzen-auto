@@ -5,7 +5,6 @@ main.workers/CSV Reader:
   is: CsvReaderWorker
   path: '"C:\\~\\data\\measurements-100000.txt"'
   delimiter: ";"
-  batch: 1
   header: false
 
 main.workers/Formula:

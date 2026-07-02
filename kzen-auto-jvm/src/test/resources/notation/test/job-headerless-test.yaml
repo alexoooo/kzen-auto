@@ -14,7 +14,6 @@ main.workers/reader:
   output: main.channels/raw
   path: build/job-headerless/input.csv
   delimiter: ";"
-  batch: 4096
   header: false
 
 main.workers/filter:

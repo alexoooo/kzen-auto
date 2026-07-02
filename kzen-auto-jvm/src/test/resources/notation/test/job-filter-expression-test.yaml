@@ -13,7 +13,6 @@ main.workers/reader:
   is: CsvReaderWorker
   output: main.channels/raw
   path: build/job-filter-expr/input.csv
-  batch: 4096
 
 main.workers/filter:
   is: FilterWorker

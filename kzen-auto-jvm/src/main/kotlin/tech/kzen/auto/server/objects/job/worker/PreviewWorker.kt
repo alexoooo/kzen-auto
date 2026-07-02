@@ -22,14 +22,14 @@ import tech.kzen.lib.common.reflect.Reflect
  *   snapshot over an (external, UI-facing) duplex Channel ([onQuery]) — the browser→worker request/reply path
  *   for reading a richer sample than the teaser carries.
  *
- * It consumes the untyped `Any?` input lane so one live view serves every stream: a [RecordBatch] (the CSV
+ * It consumes the untyped `Any?` input lane so one live view serves every stream: a [DataRecord] (the CSV
  * lane) renders column-for-column, while any other element (a scalar from a FormulaSource / Run lane — e.g. a
  * FizzBuzz `String`) renders as a single `value` column.
  *
  * It keeps a ROLLING window of the most recent [sample] records (a live tail — so the sample keeps changing as
  * data flows rather than freezing on the first [sample] records), copied off the hot-path [FlatFileRecord] to
- * `List<String>` (bounded by [sample]). The window is confined to the work coroutine ([onBatch]); after each
- * batch the framework captures an immutable [Snapshot] of it — only that snapshot crosses to the serve
+ * `List<String>` (bounded by [sample]). The window is confined to the work coroutine ([onElement]); after each
+ * element the framework captures an immutable [Snapshot] of it — only that snapshot crosses to the serve
  * coroutine, so no lock / `@Volatile` field is needed here. When the input ends the framework cancels the
  * serve loop so the run reaches a terminal (done) state, and the UI falls back to the final teaser persisted
  * on the trace.
@@ -60,25 +60,23 @@ class PreviewWorker(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun onBatch(batch: Any?, control: JobControl) {
-        when (batch) {
-            // CSV lane: a batch of typed records, rendered column-for-column under the batch's header.
-            is RecordBatch -> {
-                if (header.isEmpty() && batch.header.values.isNotEmpty()) {
-                    header = batch.header.values.map { it.text }
+    override suspend fun onElement(element: Any?, control: JobControl) {
+        when (element) {
+            // CSV lane: a typed record, rendered column-for-column under its header.
+            is DataRecord -> {
+                if (header.isEmpty() && element.header.values.isNotEmpty()) {
+                    header = element.header.values.map { it.text }
                 }
-                for (record in batch.records) {
-                    addRow(record.toList())
-                }
+                addRow(element.record.toList())
             }
 
             // Scalar lane: a single arbitrary element (e.g. a FizzBuzz String from a Run Worker), rendered as
-            // one `value` column so the same live view works for non-RecordBatch streams.
+            // one `value` column so the same live view works for non-record streams.
             else -> {
                 if (header.isEmpty()) {
                     header = listOf(scalarColumn)
                 }
-                addRow(listOf(batch?.toString() ?: ""))
+                addRow(listOf(element?.toString() ?: ""))
             }
         }
     }

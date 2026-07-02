@@ -4,19 +4,23 @@
 # Concrete Workers (is: Worker) live alongside in this folder once they exist (M1 step 4 onward).
 
 
-# A first-class, named, buffered conduit shared by the Workers that reference it. `buffer` is the channel
-# capacity: 0 (the default) is a rendezvous handoff, > 0 is a backpressured buffer. `elementType` declares
-# the type carried by the channel (a TypeMetadata; empty = untyped / Any): ChannelTypeDefiner validates at
-# definition time that every referencing Worker port's `of:` element type matches, and that at most one
-# Worker drains it (single-reader). The type is erased at run time (JobChannel takes only `buffer`); it is
+# A first-class, named, buffered conduit shared by the Workers that reference it. Workers emit / consume single
+# ELEMENTS; the channel transparently batches them into chunks of `chunk` elements for transfer (the batch
+# granularity — also the checkpoint / step unit: one step ≈ one chunk). `buffer` is the channel capacity in
+# CHUNKS: 0 (the default) is a rendezvous handoff, > 0 is a backpressured buffer. `elementType` declares the
+# element type carried by the channel (a TypeMetadata; empty = untyped / Any): ChannelTypeDefiner validates at
+# definition time that every referencing Worker port's `of:` element type matches, and that at most one Worker
+# drains it (single-reader). The type is erased at run time (JobChannel takes only `buffer` / `chunk`); it is
 # authoring/wiring metadata, so the run-time `item as In` cast in TransformWorker / SinkWorker is safe.
 Channel:
   abstract: true
   class: tech.kzen.auto.server.objects.job.channel.JobChannel
   buffer: 0
+  chunk: 1024
   elementType: ""
   meta:
     buffer: Int
+    chunk: Int
     elementType:
       is: TypeMetadata
       by: ChannelTypeDefiner
@@ -48,9 +52,9 @@ ChannelTypeDefiner:
   class: tech.kzen.auto.common.objects.document.job.ChannelTypeDefiner
 
 
-# Type-only archetype (never instantiated) naming the element a data-pipeline Channel carries: a batch of
-# FlatFileRecords with their shared header — the channel transfer unit (see the RecordBatch class). A
+# Type-only archetype (never instantiated) naming the element a data-pipeline Channel carries: one
+# FlatFileRecord with its shared header — the self-describing records-lane element (see the DataRecord class). A
 # Channel's `elementType` and a Worker port's `of:` both reference it by name so the two are checked equal.
-RecordBatch:
+DataRecord:
   abstract: true
-  class: tech.kzen.auto.server.objects.job.worker.RecordBatch
+  class: tech.kzen.auto.server.objects.job.worker.DataRecord

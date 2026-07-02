@@ -1,12 +1,12 @@
 # Two Workers drain the same channel — a fan-OUT that must be modelled explicitly, not by sharing a channel.
-# Both `input` ports are type-compatible (RecordBatch), so the type check passes and ChannelTypeDefiner must
+# Both `input` ports are type-compatible (DataRecord), so the type check passes and ChannelTypeDefiner must
 # fail the channel's `elementType` on the single-reader (single-consumer) rule. See JobChannelTypingTest.
 main:
   is: Job
 
 main.channels/raw:
   is: Channel
-  elementType: RecordBatch
+  elementType: DataRecord
 
 main.channels/keptA:
   is: Channel

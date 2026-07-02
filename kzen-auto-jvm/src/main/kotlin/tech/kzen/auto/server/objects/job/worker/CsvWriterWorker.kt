@@ -34,7 +34,7 @@ class CsvWriterWorker(
 
     selfLocation: ObjectLocation
 ):
-    SinkWorker<RecordBatch>(input, selfLocation)
+    SinkWorker<DataRecord>(input, selfLocation)
 {
     private val delimiterChar: Char =
         if (delimiter.isEmpty()) ',' else delimiter[0]
@@ -49,17 +49,15 @@ class CsvWriterWorker(
     }
 
 
-    override suspend fun onBatch(batch: RecordBatch, control: JobControl) {
+    override suspend fun onElement(element: DataRecord, control: JobControl) {
         val writer = writer!!
         control.runBlockingIo {
             if (header && !headerWritten) {
-                writeRecord(writer, FlatFileRecord.of(batch.header.values.map { it.text }))
+                writeRecord(writer, FlatFileRecord.of(element.header.values.map { it.text }))
                 headerWritten = true
             }
-            for (record in batch.records) {
-                writeRecord(writer, record)
-                written += 1
-            }
+            writeRecord(writer, element.record)
+            written += 1
         }
     }
 

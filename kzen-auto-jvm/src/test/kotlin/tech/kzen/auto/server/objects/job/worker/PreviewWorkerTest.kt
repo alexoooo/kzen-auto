@@ -16,8 +16,8 @@ import kotlin.test.assertEquals
 
 /**
  * Unit test for [PreviewWorker]'s SCALAR lane in isolation: drives the sink's full [PreviewWorker.run] lifecycle
- * over a fake [ChannelInput] of arbitrary (non-[RecordBatch]) elements — the shape a FormulaSource / Run
- * pipeline emits — and asserts each renders as a single `value` column. The RecordBatch lane and the duplex
+ * over a fake [ChannelInput] of arbitrary (non-[DataRecord]) elements — the shape a FormulaSource / Run
+ * pipeline emits — and asserts each renders as a single `value` column. The record lane and the duplex
  * serve path are already covered end-to-end by [tech.kzen.auto.server.objects.job.JobExecutionTest]; this
  * isolates the new branch added so one Preview view serves both lanes.
  */
@@ -58,14 +58,20 @@ class PreviewWorkerTest {
 
     private fun scalarInput(elements: List<Any?>): ChannelInput<Any?> =
         object: ChannelInput<Any?> {
+            // The framework SinkWorker drive loop drains whole chunks: hand it every element as one chunk, then EOF.
+            private var delivered = false
+
+            override suspend fun receiveChunk(): List<Any?>? {
+                if (delivered || elements.isEmpty()) {
+                    return null
+                }
+                delivered = true
+                return elements
+            }
+
             override suspend fun receive(): Any? = error("unused")
 
-            override fun iterator(): ChannelInputIterator<Any?> =
-                object: ChannelInputIterator<Any?> {
-                    private var index = 0
-                    override suspend fun hasNext(): Boolean = index < elements.size
-                    override fun next(): Any? = elements[index++]
-                }
+            override fun iterator(): ChannelInputIterator<Any?> = error("unused")
         }
 
 

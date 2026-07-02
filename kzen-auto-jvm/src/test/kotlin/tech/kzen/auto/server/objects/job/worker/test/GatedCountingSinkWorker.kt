@@ -69,7 +69,7 @@ class GatedCountingSinkWorker(
     }
 
 
-    override suspend fun onBatch(batch: Any?, control: JobControl) {
+    override suspend fun onElement(element: Any?, control: JobControl) {
         received.incrementAndGet()
     }
 }

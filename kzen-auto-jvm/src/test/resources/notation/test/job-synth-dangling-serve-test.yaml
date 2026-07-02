@@ -12,7 +12,6 @@ main:
 main.workers/reader:
   is: CsvReaderWorker
   path: build/job-synth-dangling-serve/input.csv
-  batch: 4096
 
 main.workers/preview:
   is: PreviewWorker

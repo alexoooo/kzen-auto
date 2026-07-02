@@ -37,7 +37,7 @@ class RecordingSinkWorker(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun onBatch(batch: Any?, control: JobControl) {
-        recordedInternal.add(batch)
+    override suspend fun onElement(element: Any?, control: JobControl) {
+        recordedInternal.add(element)
     }
 }

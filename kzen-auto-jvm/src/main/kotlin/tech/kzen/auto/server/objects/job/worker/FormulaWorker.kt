@@ -21,7 +21,7 @@ import tech.kzen.lib.platform.ClassNames
  * Kotlin expression over the record's columns (referenced by name), compiled via the genuine
  * [CalculatedColumnEval] engine — **reused as shared infra, not reimplemented** — injected as a `@Service`,
  * exactly as `ReportDocument` obtains it. This is why the pipe standardizes on [FlatFileRecord] rather than
- * `List<String>` (see [RecordBatch]).
+ * `List<String>` (see [DataRecord]).
  *
  * Formulas are compiled lazily and recompiled only when the incoming header changes. All formulas evaluate
  * against the ORIGINAL columns, then their values are appended together (matching Report — formulas cannot
@@ -42,7 +42,7 @@ class FormulaWorker(
 
     @Service private val calculatedColumnEval: CalculatedColumnEval
 ):
-    TransformWorker<RecordBatch, RecordBatch>(input, output, selfLocation)
+    TransformWorker<DataRecord, DataRecord>(input, output, selfLocation)
 {
     private val classLoader = ClassLoaderUtils.dynamicParentClassLoader()
     private val formulaEntries = formula.formulas.entries.toList()
@@ -57,28 +57,27 @@ class FormulaWorker(
     private var computed = 0L
 
 
-    override suspend fun onBatch(batch: RecordBatch, emit: Emitter<RecordBatch>, control: JobControl) {
-        if (batch.header != compiledForHeader) {
+    override suspend fun onElement(element: DataRecord, emit: Emitter<DataRecord>, control: JobControl) {
+        if (element.header != compiledForHeader) {
             compiledColumns = control.runBlockingIo {
                 formulaEntries.map { (name, expression) ->
                     calculatedColumnEval.create(
-                        name, expression, batch.header, ClassNames.kotlinAny, classLoader)
+                        name, expression, element.header, ClassNames.kotlinAny, classLoader)
                 }
             }
-            augmentedHeader = batch.header.append(formulaNames)
-            compiledForHeader = batch.header
+            augmentedHeader = element.header.append(formulaNames)
+            compiledForHeader = element.header
         }
 
-        for (record in batch.records) {
-            for (i in compiledColumns.indices) {
-                formulaValues[i] = ColumnValue.toText(
-                    compiledColumns[i].evaluate(Unit, record, batch.header))
-            }
-            record.addAll(formulaValues)
-            computed += 1
+        val record = element.record
+        for (i in compiledColumns.indices) {
+            formulaValues[i] = ColumnValue.toText(
+                compiledColumns[i].evaluate(Unit, record, element.header))
         }
+        record.addAll(formulaValues)
+        computed += 1
 
-        emit.send(RecordBatch(augmentedHeader, batch.records))
+        emit.send(DataRecord(augmentedHeader, record))
     }
 
 

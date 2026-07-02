@@ -8,14 +8,16 @@ import tech.kzen.lib.common.model.location.ObjectLocation
 
 /**
  * A SINK Worker — consumes an input stream with no output channel (e.g. a file writer, or the live
- * [PreviewWorker]). The framework owns the drain loop, a [JobControl.checkpoint] per batch, throttled
- * progress, and — when a [serve] port is supplied — the duplex serve loop answering
- * [WorkerBase.onQuery]. The subclass implements [onBatch] (and optionally [onComplete]); each element arrives
- * as [In].
+ * [PreviewWorker]). The framework owns the drain loop and the batching: it drains one physical input CHUNK at a
+ * time, a [JobControl.checkpoint] per chunk (before receiving, so a parked Worker holds no received-but-
+ * unprocessed element — at a pause wavefront every not-yet-consumed element is still in the channel, carried
+ * forward by [tech.kzen.auto.server.objects.job.channel.JobChannel.drainBuffered] on a migration), dispatches
+ * the chunk's elements to [onElement] one by one, throttled progress, and — when a [serve] port is supplied —
+ * the duplex serve loop answering [WorkerBase.onQuery].
  *
  * The framework performs the single `item as In` cast here, made safe by
- * [tech.kzen.auto.common.objects.document.job.ChannelTypeDefiner] checking this worker's `in` port type
- * against the channel's element type at definition time (see TransformWorker).
+ * [tech.kzen.auto.common.objects.document.job.ChannelTypeDefiner] checking this worker's `in` port type against
+ * the channel's element type at definition time (see [TransformWorker]).
  */
 abstract class SinkWorker<In>(
     private val input: ChannelInput<Any?>,
@@ -25,21 +27,17 @@ abstract class SinkWorker<In>(
     WorkerBase(selfLocation, serve)
 {
     final override suspend fun drive(control: JobControl) {
-        val iterator = input.iterator()
         while (true) {
-            // Checkpoint BEFORE receiving, so a parked Worker never holds a received-but-unprocessed payload:
-            // at a pause wavefront every not-yet-consumed payload is still in the channel (so a migration's
-            // JobChannel.drainBuffered carries it forward) rather than stranded on this Worker's stack, where
-            // teardown would silently drop it.
             control.checkpoint()
-            if (! iterator.hasNext()) {
-                break
-            }
-            val item = iterator.next()
 
-            // Safe by construction: ChannelTypeDefiner checks this port's element type at definition time.
-            @Suppress("UNCHECKED_CAST")
-            onBatch(item as In, control)
+            val chunk = input.receiveChunk()
+                ?: break
+
+            for (element in chunk) {
+                // Safe by construction: ChannelTypeDefiner checks this port's element type at definition time.
+                @Suppress("UNCHECKED_CAST")
+                onElement(element as In, control)
+            }
 
             publish(control)
         }
@@ -47,7 +45,7 @@ abstract class SinkWorker<In>(
     }
 
 
-    protected abstract suspend fun onBatch(batch: In, control: JobControl)
+    protected abstract suspend fun onElement(element: In, control: JobControl)
 
 
     protected open suspend fun onComplete(control: JobControl) {}

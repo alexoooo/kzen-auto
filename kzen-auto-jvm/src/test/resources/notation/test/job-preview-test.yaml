@@ -14,7 +14,6 @@ main.workers/reader:
   is: CsvReaderWorker
   output: main.channels/raw
   path: build/job-preview/input.csv
-  batch: 4096
 
 main.workers/preview:
   is: PreviewWorker

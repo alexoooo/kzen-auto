@@ -4,18 +4,17 @@ main:
 main.channels/raw:
   is: Channel
   buffer: 8
-  elementType: RecordBatch
+  elementType: DataRecord
 
 main.channels/kept:
   is: Channel
   buffer: 8
-  elementType: RecordBatch
+  elementType: DataRecord
 
 main.workers/reader:
   is: CsvReaderWorker
   output: main.channels/raw
   path: build/job-typed-channel/input.csv
-  batch: 4096
 
 main.workers/filter:
   is: FilterWorker

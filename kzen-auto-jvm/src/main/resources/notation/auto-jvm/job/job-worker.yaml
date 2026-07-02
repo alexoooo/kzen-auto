@@ -21,17 +21,15 @@ CsvReaderWorker:
   output: ""
   path: ""
   delimiter: ","
-  batch: 4096
   header: true
   meta:
     output:
       is: ChannelOutput
-      of: RecordBatch
+      of: DataRecord
       creator: JobChannelCreator
       editor: SelectChannelEditor
     path: String
     delimiter: String
-    batch: Int
     header: Boolean
     selfLocation:
       is: ObjectLocation
@@ -76,12 +74,12 @@ FilterWorker:
   meta:
     input:
       is: ChannelInput
-      of: RecordBatch
+      of: DataRecord
       creator: JobChannelCreator
       editor: SelectChannelEditor
     output:
       is: ChannelOutput
-      of: RecordBatch
+      of: DataRecord
       creator: JobChannelCreator
       editor: SelectChannelEditor
     where: String
@@ -103,12 +101,12 @@ FormulaWorker:
   meta:
     input:
       is: ChannelInput
-      of: RecordBatch
+      of: DataRecord
       creator: JobChannelCreator
       editor: SelectChannelEditor
     output:
       is: ChannelOutput
-      of: RecordBatch
+      of: DataRecord
       creator: JobChannelCreator
       editor: SelectChannelEditor
     formula:
@@ -133,7 +131,7 @@ CsvWriterWorker:
   meta:
     input:
       is: ChannelInput
-      of: RecordBatch
+      of: DataRecord
       creator: JobChannelCreator
       editor: SelectChannelEditor
     path: String
@@ -147,7 +145,7 @@ CsvWriterWorker:
 # Sink that shows a LIVE sample of incoming data: pushes a teaser (first rows + running count) to its trace
 # for the always-on view, and serves on-demand slice queries (offset / limit) over an external duplex Channel
 # `serve` for the browser to read its larger buffered sample. `sample` bounds the buffered rows. The input is
-# untyped (no `of:`): a RecordBatch renders column-for-column, any other element as a single `value` column —
+# untyped (no `of:`): a DataRecord renders column-for-column, any other element as a single `value` column —
 # so the same view serves both the CSV lane and a scalar (FormulaSource / Run) lane.
 PreviewWorker:
   abstract: true

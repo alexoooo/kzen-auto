@@ -64,9 +64,11 @@ class FormulaSourceWorkerTest {
     private suspend fun runSource(code: String): List<Any?> {
         val emitted = mutableListOf<Any?>()
         val output = object: ChannelOutput<Any?> {
-            override suspend fun send(payload: Any?) {
-                emitted.add(payload)
+            override suspend fun send(element: Any?) {
+                emitted.add(element)
             }
+            override suspend fun flush() {}
+            override fun chunkSize(): Int = 1024
             override fun close() {}
         }
 

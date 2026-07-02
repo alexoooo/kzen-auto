@@ -7,16 +7,22 @@ import tech.kzen.lib.common.model.location.ObjectLocation
 
 
 /**
- * A TRANSFORM Worker — maps an input stream to an output stream. The framework owns the drain loop, a
- * [JobControl.checkpoint] per batch, throttled progress, and end-of-stream (closing [output] when the input
- * ends, fails, or is cancelled). The subclass implements [onBatch] (and optionally [onComplete] to flush
- * trailing output), receiving each element as [In] and emitting via [Emitter.send].
+ * A TRANSFORM Worker — maps an input stream to an output stream. The framework owns the drain loop and the
+ * batching: it drains one physical input CHUNK at a time, dispatches its elements to [onElement] one by one
+ * (which emit via [Emitter.send], buffered), and [Emitter.flush]es the accumulated output once the whole input
+ * chunk is consumed. The subclass sees single elements and never hand-rolls batching.
  *
- * The framework performs the single `item as In` cast here. It is the ONE guaranteed-safe boundary: a
- * Channel declares its element type and
- * [tech.kzen.auto.common.objects.document.job.ChannelTypeDefiner] validates at definition time that this
- * worker's `in` port type matches it (and that the channel is single-reader), so a miswire is a pre-run
- * definition error rather than a ClassCastException here.
+ * The [JobControl.checkpoint] sits at the TOP of the loop (before receiving a chunk) with the output already
+ * flushed, so a parked Worker holds NEITHER a received-but-unforwarded input element (the previous chunk is
+ * fully consumed) NOR a buffered-but-unflushed output element — every not-yet-consumed input is still in the
+ * channel (carried forward by [tech.kzen.auto.server.objects.job.channel.JobChannel.drainBuffered] on a
+ * migration) and every produced element is in the output channel or its parked-mid-flush chunk. This is what
+ * keeps a mid-stream migration lossless at the chunk grain.
+ *
+ * The framework performs the single `item as In` cast here. It is the ONE guaranteed-safe boundary: a Channel
+ * declares its element type and [tech.kzen.auto.common.objects.document.job.ChannelTypeDefiner] validates at
+ * definition time that this worker's `in` port type matches it (and that the channel is single-reader), so a
+ * miswire is a pre-run definition error rather than a ClassCastException here.
  */
 abstract class TransformWorker<In, Out>(
     private val input: ChannelInput<Any?>,
@@ -30,27 +36,27 @@ abstract class TransformWorker<In, Out>(
 
     final override suspend fun drive(control: JobControl) {
         try {
-            val iterator = input.iterator()
             while (true) {
-                // Checkpoint BEFORE receiving, so a parked Worker never holds a received-but-unforwarded
-                // payload: at a pause wavefront every not-yet-consumed input is still in the channel (so a
-                // migration's JobChannel.drainBuffered carries it forward) rather than stranded on this
-                // Worker's stack, where teardown would silently drop it. A payload already transformed and
-                // parked mid-send rides the OUTPUT channel's in-flight capture instead.
+                // Checkpoint with the output flushed (bottom of the previous iteration) and the previous input
+                // chunk fully consumed, so a parked Worker strands nothing — see the class doc.
                 control.checkpoint()
-                if (! iterator.hasNext()) {
-                    break
+
+                val chunk = input.receiveChunk()
+                    ?: break
+
+                for (element in chunk) {
+                    // Safe by construction: ChannelTypeDefiner checks this port's element type at definition time.
+                    @Suppress("UNCHECKED_CAST")
+                    onElement(element as In, emitter, control)
                 }
-                val item = iterator.next()
 
-                // Safe by construction: ChannelTypeDefiner checks this port's element type against the
-                // channel's at definition time (see the class doc).
-                @Suppress("UNCHECKED_CAST")
-                onBatch(item as In, emitter, control)
-
+                // Send this input chunk's whole output as one chunk (park-on-backpressure is safe now: the input
+                // chunk is fully consumed, so nothing is stranded on the stack).
+                emitter.flush()
                 publish(control)
             }
             onComplete(emitter, control)
+            emitter.flush()
         }
         finally {
             output.close()
@@ -58,7 +64,7 @@ abstract class TransformWorker<In, Out>(
     }
 
 
-    protected abstract suspend fun onBatch(batch: In, emit: Emitter<Out>, control: JobControl)
+    protected abstract suspend fun onElement(element: In, emit: Emitter<Out>, control: JobControl)
 
 
     protected open suspend fun onComplete(emit: Emitter<Out>, control: JobControl) {}

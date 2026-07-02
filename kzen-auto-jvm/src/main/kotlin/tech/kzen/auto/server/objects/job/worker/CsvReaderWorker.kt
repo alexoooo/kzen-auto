@@ -12,25 +12,25 @@ import java.nio.file.Files
 /**
  * The CSV input stage as a Job Worker (analogue of `ReportInputReader`, reimplemented Job-native). Reads a
  * delimited text file with full RFC-4180 parsing (quoted fields, embedded delimiters / newlines, doubled
- * quotes) via [CsvRecordReader], emitting [FlatFileRecord]s in fixed-size [batch]es ([RecordBatch]).
+ * quotes) via [CsvRecordReader], emitting one [DataRecord] per row. Batching for transfer is the framework's
+ * job (the referenced Channel's chunk size), so this Worker no longer carries a `batch` attribute — it just
+ * emits records and the [SourceWorker] cadence chunks + checkpoints + publishes progress per chunk.
  *
  * When [header] is true the first record names the columns. When false (a headerless file, e.g. the 1BRC
  * measurement set) every record is data; the schema is then SYNTHESIZED as positional names `c0, c1, …`
  * (field-count taken from the first record), so the strictly-typed downstream stages (the expression
  * [FilterWorker], [FormulaWorker]) can still reference columns by name — `c0`, `c1`, … — over headerless data.
+ * The same immutable [HeaderListing] reference is shared by every emitted [DataRecord] (self-describing element).
  *
- * A [SourceWorker]: the framework owns end-of-stream (closing the output once [produce] returns) and the live
- * row-count progress; this Worker only reads, emits, and closes its own file. File IO runs through
- * [JobControl.runBlockingIo] so the read stays visible to quiescence detection, with a [JobControl.checkpoint]
- * per batch so the read is cooperatively pausable / cancellable.
+ * File IO runs through [JobControl.runBlockingIo] so the read stays visible to quiescence detection.
  *
- * STATE MIGRATION: the open reader IS run-scoped state. The [checkpoint] sits at the TOP of the batch loop, so a
- * paused reader holds no built-but-unsent batch; a batch it has built and is parked mid-`send` on rides the
- * OUTPUT channel's own in-flight capture ([tech.kzen.auto.server.objects.job.channel.JobChannel.drainBuffered]),
- * not this Worker. [captureMigrationState] detaches the open reader at its current file position and
- * [loadMigrationState] re-adopts it — but ONLY if `path` / `delimiter` / `header` are unchanged — so a pause /
- * edit-config / continue continues reading from where it left off instead of reopening and re-reading the file
- * from the top. If those change, the carried reader is closed and this one opens the new file fresh.
+ * STATE MIGRATION: the open reader IS run-scoped state. The framework's per-chunk checkpoint sits between
+ * chunks with the output flushed, so a paused reader holds no buffered-but-unsent record; records it read into
+ * the just-flushed chunk ride the OUTPUT channel's carryover ([JobChannel.drainBuffered]), not this Worker.
+ * [captureMigrationState] detaches the open reader at its current file position and [loadMigrationState]
+ * re-adopts it — but ONLY if `path` / `delimiter` / `header` are unchanged — so a pause / edit-config / continue
+ * continues reading from where it left off instead of reopening and re-reading the file from the top. If those
+ * change, the carried reader is closed and this one opens the new file fresh.
  */
 @Reflect
 class CsvReaderWorker(
@@ -38,12 +38,11 @@ class CsvReaderWorker(
 
     private val path: String,
     private val delimiter: String,
-    private val batch: Int,
     private val header: Boolean,
 
     selfLocation: ObjectLocation
 ):
-    SourceWorker<RecordBatch>(output, selfLocation)
+    SourceWorker<DataRecord>(output, selfLocation)
 {
     // Run-scoped reader state (null until opened; carried across a migration by capture/loadMigrationState).
     private var csvReader: CsvRecordReader? = null
@@ -54,7 +53,7 @@ class CsvReaderWorker(
     private var detached = false   // reader handed to a migration snapshot: onClose must NOT close it
 
 
-    override suspend fun produce(emit: Emitter<RecordBatch>, control: JobControl) {
+    override suspend fun produce(emit: Emitter<DataRecord>, control: JobControl) {
         if (finished) {
             // Resumed after already reaching EOF on unchanged config — nothing left to emit.
             return
@@ -64,35 +63,17 @@ class CsvReaderWorker(
         val reader = csvReader!!
         val headers = headerListing!!
 
+        pendingFirstRecord?.let {
+            emit.send(DataRecord(headers, it))
+            count += 1
+            pendingFirstRecord = null
+        }
+
         while (true) {
-            // Checkpoint at the batch boundary BEFORE reading, so a paused reader holds no built-but-unsent
-            // batch — its only resumable position is the open reader. A batch already built and parked mid-send
-            // is captured by the output channel, not here. One step still surfaces exactly one batch downstream.
-            control.checkpoint()
-
-            val records = ArrayList<FlatFileRecord>(batch)
-            pendingFirstRecord?.let {
-                records.add(it)
-                count += 1
-                pendingFirstRecord = null
-            }
-            while (records.size < batch) {
-                val record = control.runBlockingIo { reader.readRecord() }
-                    ?: break
-                records.add(record)
-                count += 1
-            }
-
-            if (records.isEmpty()) {
-                break
-            }
-
-            emit.send(RecordBatch(headers, records))
-            publish(control)
-
-            if (records.size < batch) {
-                break  // a partial batch means EOF was reached
-            }
+            val record = control.runBlockingIo { reader.readRecord() }
+                ?: break
+            emit.send(DataRecord(headers, record))
+            count += 1
         }
 
         finished = true
@@ -165,15 +146,10 @@ class CsvReaderWorker(
             pendingFirstRecord = state.pendingFirstRecord
             count = state.count
             finished = state.finished
-            // TODO: communicate resumption status to the UI — surface (e.g. on this worker's progress trace)
-            //  that a migration occurred AND that the reader RESUMED from row `count` (rather than restarting),
-            //  so the user can see that their edit preserved progress. Pair with the restart branch below.
         }
         else {
             // path / delimiter / header changed: the carried reader points at the wrong file / parse, so close
             // it (teardown skipped closing because it was detached) and start fresh from the edited config.
-            // TODO: communicate to the UI that the reader RESTARTED from the top because path/delimiter/header
-            //  changed (resumption did NOT happen), so the user understands why progress was not preserved.
             state.close()
         }
     }

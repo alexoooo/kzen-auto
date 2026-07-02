@@ -6,10 +6,17 @@ import tech.kzen.lib.common.model.location.ObjectLocation
 
 
 /**
- * A SOURCE Worker — produces an output stream with no input (e.g. a file reader). The framework owns
- * end-of-stream: [output] is closed when [produce] returns, fails, or is cancelled. The subclass implements
- * only [produce], emitting via [Emitter.send] and calling [publish] to surface live progress; it never closes
- * the output channel itself, so a source can never deadlock the pipeline by forgetting to.
+ * A SOURCE Worker — produces an output stream with no input (e.g. a file reader). The subclass implements only
+ * [produce], emitting single elements via [Emitter.send]; the framework owns everything else:
+ *
+ * - **Batching + cadence.** [produce]'s [Emitter] runs the SOURCE cadence (see [Emitter.sourceCadence]): it
+ *   auto-flushes a chunk, [JobControl.checkpoint]s, and publishes progress every `chunkSize` elements. So the
+ *   source needs no manual batch loop / checkpoint / publish — it just emits elements — yet it still batches for
+ *   throughput, is cooperatively pausable / cancellable, and advances exactly one chunk per step. (A source has
+ *   no input to strand, so flushing at these boundaries keeps migration lossless without further care.)
+ * - **End-of-stream.** [output] is closed when [produce] returns, fails, or is cancelled — after a final [flush]
+ *   of the trailing partial chunk on normal completion — so a source can never deadlock the pipeline by
+ *   forgetting to close, nor drop its last sub-chunk of rows.
  */
 abstract class SourceWorker<Out>(
     private val output: ChannelOutput<Any?>,
@@ -21,8 +28,14 @@ abstract class SourceWorker<Out>(
 
 
     final override suspend fun drive(control: JobControl) {
+        emitter.sourceCadence(control) { publish(control) }
         try {
+            // Leading checkpoint so a pre-armed step / pause lands the source at its first wavefront BEFORE it
+            // produces anything (symmetric with a Transform / Sink parking at its loop-top checkpoint before its
+            // first receive) — "nothing drained yet" at the first quiescent wavefront.
+            control.checkpoint()
             produce(emitter, control)
+            emitter.flush()
         }
         finally {
             output.close()

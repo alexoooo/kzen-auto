@@ -27,12 +27,12 @@ import tech.kzen.lib.platform.ClassNames
  *
  * A Channel carries one element type — a [TypeMetadata], `Any` when undeclared (an untyped channel). Every
  * Worker port referencing the channel declares its own element type via the `of:` generic, so the port's
- * metadata type is e.g. `ChannelOutput<RecordBatch>` ([elementTypeOf] reads it back). This definer
+ * metadata type is e.g. `ChannelOutput<DataRecord>` ([elementTypeOf] reads it back). This definer
  * cross-checks them:
  *
  * - **type compatibility** — each producer / consumer port's element type must match the channel's, with
  *   `Any` on either side acting as a wildcard (an undeclared channel or port is unconstrained). A
- *   concretely-typed mismatch (e.g. a `RecordBatch` producer feeding a `String` channel) fails here.
+ *   concretely-typed mismatch (e.g. a `DataRecord` producer feeding a `String` channel) fails here.
  * - **single-reader** — a channel may be drained by at most one consumer port (fan-OUT must be modelled
  *   explicitly, not by implicitly sharing a channel); fan-IN (many producers) is allowed, mirroring
  *   JobChannel's close-on-last-producer.
@@ -91,7 +91,7 @@ class ChannelTypeDefiner: AttributeDefiner {
                     TypeMetadata.any
                 }
                 else {
-                    // Resolve a type-object reference (e.g. `elementType: RecordBatch`) to its class; a
+                    // Resolve a type-object reference (e.g. `elementType: DataRecord`) to its class; a
                     // dangling ref degrades to Any so a mid-edit notation still starts (cf. readAttributeType).
                     val referenced = graphNotation.coalesce.locateOptional(
                         ObjectReference.parse(notation.value),

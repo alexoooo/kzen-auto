@@ -9,7 +9,6 @@ main.workers/reader:
   is: CsvReaderWorker
   output: main.channels/data
   path: '"build/job-quoted-path/input.csv"'
-  batch: 4096
 
 main.workers/writer:
   is: CsvWriterWorker

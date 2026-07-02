@@ -1,28 +1,39 @@
 package tech.kzen.auto.server.objects.job.channel
 
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.yield
 import org.junit.Test
+import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import kotlin.test.assertEquals
 
 
 /**
- * Direct unit test of [JobChannel]'s migration carryover — no graph, no notation. A state migration tears the
- * running graph down and rebuilds it, so a channel's in-flight payloads (buffered, or one a producer is parked
- * mid-send on) must be snapshotted ([JobChannel.drainBuffered]) before teardown and re-seeded into the rebuilt
- * channel ([JobChannel.preload]), which then delivers that carryover ahead of the live stream — so the consumer
- * sees the exact same sequence across the cut, none dropped or duplicated.
+ * Direct unit test of [JobChannel]'s migration carryover — no graph, no notation. Workers emit single ELEMENTS
+ * ([ChannelOutput.send] buffers them; [ChannelOutput.flush] sends the buffer as one chunk), and a state
+ * migration snapshots a channel's in-flight elements ([JobChannel.drainBuffered]) before teardown and re-seeds
+ * them into the rebuilt channel ([JobChannel.preload]), which then delivers that carryover ahead of the live
+ * stream — so the consumer sees the exact same element sequence across the cut, none dropped or duplicated.
+ *
+ * `chunk = 1` here so each [emit] (send + flush) is a one-element chunk, making the buffered / parked-mid-send
+ * states easy to reason about element-by-element; the buffer capacity is then counted in one-element chunks.
  */
 class JobChannelTest {
+    // Emit one element as its own chunk (send buffers; flush sends the chunk, suspending under backpressure).
+    private suspend fun ChannelOutput<Any?>.emit(element: Any?) {
+        send(element)
+        flush()
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     @Test
-    fun drainCapturesBufferedPayloadsInOrder() = runBlocking {
-        val channel = JobChannel(4)
+    fun drainCapturesBufferedElementsInOrder() = runBlocking {
+        val channel = JobChannel(buffer = 4, chunk = 1)
         val producer = channel.newProducer()
-        producer.send("a")
-        producer.send("b")
-        producer.send("c")
+        producer.emit("a")
+        producer.emit("b")
+        producer.emit("c")
 
         assertEquals(listOf("a", "b", "c"), channel.drainBuffered())
         // A drained channel holds nothing more.
@@ -32,18 +43,17 @@ class JobChannelTest {
 
     //-----------------------------------------------------------------------------------------------------------------
     @Test
-    fun drainCapturesAPayloadParkedMidSend() = runBlocking {
-        // Buffer 2 plus a third send that parks (channel full): the parked payload is NOT in the buffer, so it
-        // is captured from the producer's in-flight slot and appended after the buffered payloads — it is the
-        // last to enter the channel.
-        val channel = JobChannel(2)
+    fun drainCapturesAnElementParkedMidSend() = runBlocking {
+        // Buffer 2 chunks plus a third flush that parks (channel full): the parked chunk is NOT in the buffer, so
+        // it is captured from the producer's in-flight slot and appended after the buffered elements — it is the
+        // last to enter the channel. UNDISPATCHED runs the sender synchronously until it suspends on the full send.
+        val channel = JobChannel(buffer = 2, chunk = 1)
         val producer = channel.newProducer()
-        val sender = launch {
-            producer.send(1)
-            producer.send(2)
-            producer.send(3)  // parks here: the buffer already holds 1, 2
+        val sender = launch(start = CoroutineStart.UNDISPATCHED) {
+            producer.emit(1)
+            producer.emit(2)
+            producer.emit(3)  // parks here: the buffer already holds chunks [1], [2]
         }
-        yield()  // let the sender fill the buffer and park on send(3)
 
         assertEquals(listOf(1, 2, 3), channel.drainBuffered())
 
@@ -54,11 +64,11 @@ class JobChannelTest {
     //-----------------------------------------------------------------------------------------------------------------
     @Test
     fun preloadDeliversCarryoverBeforeLiveStreamViaReceive() = runBlocking {
-        val channel = JobChannel(4)
+        val channel = JobChannel(buffer = 4, chunk = 1)
         channel.preload(listOf("x", "y"))
         val producer = channel.newProducer()
-        producer.send("live1")
-        producer.send("live2")
+        producer.emit("live1")
+        producer.emit("live2")
         producer.close()
 
         val received = mutableListOf<Any?>()
@@ -72,12 +82,12 @@ class JobChannelTest {
     //-----------------------------------------------------------------------------------------------------------------
     @Test
     fun preloadDeliversCarryoverBeforeLiveStreamViaIterator() = runBlocking {
-        // The framework consumer loops (Transform / Sink workers) iterate, so the iterator path must also drain
-        // the carryover before the live channel.
-        val channel = JobChannel(4)
+        // The framework consumer loops (Transform / Sink workers) drain chunks, so the carryover must precede the
+        // live channel on that path too.
+        val channel = JobChannel(buffer = 4, chunk = 1)
         channel.preload(listOf("x", "y"))
         val producer = channel.newProducer()
-        producer.send("live1")
+        producer.emit("live1")
         producer.close()
 
         val received = mutableListOf<Any?>()
@@ -91,27 +101,26 @@ class JobChannelTest {
     //-----------------------------------------------------------------------------------------------------------------
     @Test
     fun migrationRoundTripPreservesTheInFlightStream() = runBlocking {
-        // The end-to-end migration shape: drain a channel holding buffered + parked-mid-send payloads, seed the
+        // The end-to-end migration shape: drain a channel holding buffered + parked-mid-send elements, seed the
         // rebuilt channel with that carryover, then keep producing — the consumer reads the original stream
-        // followed seamlessly by the new payloads, none dropped or duplicated.
-        val source = JobChannel(2)
+        // followed seamlessly by the new elements, none dropped or duplicated.
+        val source = JobChannel(buffer = 2, chunk = 1)
         val producer = source.newProducer()
-        val sender = launch {
-            producer.send(1)
-            producer.send(2)
-            producer.send(3)  // parks
+        val sender = launch(start = CoroutineStart.UNDISPATCHED) {
+            producer.emit(1)
+            producer.emit(2)
+            producer.emit(3)  // parks
         }
-        yield()
         val carried = source.drainBuffered()
         sender.cancel()
         assertEquals(listOf(1, 2, 3), carried)
 
-        val rebuilt = JobChannel(2)
+        val rebuilt = JobChannel(buffer = 2, chunk = 1)
         rebuilt.preload(carried)
         val rebuiltProducer = rebuilt.newProducer()
         val rebuiltSender = launch {
-            rebuiltProducer.send(4)
-            rebuiltProducer.send(5)
+            rebuiltProducer.emit(4)
+            rebuiltProducer.emit(5)
             rebuiltProducer.close()
         }
 
