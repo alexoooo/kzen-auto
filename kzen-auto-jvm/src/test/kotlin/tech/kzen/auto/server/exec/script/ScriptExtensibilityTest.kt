@@ -98,6 +98,7 @@ class ScriptExtensibilityTest {
                 context.cachedKotlinCompiler,
                 context.flowMessageInspector,
                 context.notationMetadataReader,
+                context.jobWorkPool,
                 LogicRunExecutionId.random()))
 
         val engine = RunEngine(logic, context.objectStableMapper.objectStableId(scriptLocation), inputs)

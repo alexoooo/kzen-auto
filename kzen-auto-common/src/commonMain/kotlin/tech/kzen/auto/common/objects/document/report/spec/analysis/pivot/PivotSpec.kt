@@ -3,14 +3,22 @@ package tech.kzen.auto.common.objects.document.report.spec.analysis.pivot
 import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
+import tech.kzen.lib.common.api.AttributeDefiner
+import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.attribute.AttributeSegment
+import tech.kzen.lib.common.model.definition.AttributeDefinitionAttempt
+import tech.kzen.lib.common.model.definition.GraphDefinition
+import tech.kzen.lib.common.model.definition.ValueAttributeDefinition
+import tech.kzen.lib.common.model.instance.GraphInstance
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.PositionRelation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.*
+import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.util.digest.Digest
 import tech.kzen.lib.common.util.digest.Digestible
 
@@ -25,6 +33,10 @@ data class PivotSpec(
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         val empty = PivotSpec(HeaderListing.empty, PivotValueTableSpec.empty)
+
+        // The Job PivotWorker carries its pivot config as a top-level `pivot` attribute (defined by [Definer]);
+        // the Report document instead nests it under `analysis.pivot` (defined by AnalysisSpec.Definer).
+        val pivotAttributeName = AttributeName("pivot")
 
         private val rowsKey = AttributeSegment.ofKey("rows")
         private val rowsAttributePath = ReportConventions.pivotAttributePath.nest(rowsKey)
@@ -125,6 +137,34 @@ data class PivotSpec(
         }
     }
 
+
+    //-----------------------------------------------------------------------------------------------------------------
+    // Defines a standalone `pivot` attribute (a map with `rows` + `values` sub-attributes) directly into a
+    // PivotSpec, so the Job PivotWorker can carry its pivot config without the surrounding AnalysisSpec (type /
+    // flat) the Report document uses. Mirrors FilterSpec.Definer; the actual parse is the shared [ofNotation].
+    @Reflect
+    object Definer: AttributeDefiner {
+        override fun define(
+            objectLocation: ObjectLocation,
+            attributeName: AttributeName,
+            graphStructure: GraphStructure,
+            partialGraphDefinition: GraphDefinition,
+            partialGraphInstance: GraphInstance
+        ): AttributeDefinitionAttempt {
+            check(attributeName == pivotAttributeName) {
+                "Unexpected attribute name: $attributeName"
+            }
+
+            val attributeNotation = graphStructure
+                .graphNotation
+                .mergeAttribute(objectLocation, pivotAttributeName) as? MapAttributeNotation
+                ?: return AttributeDefinitionAttempt.failure(
+                    "'$pivotAttributeName' attribute notation not found: $objectLocation - $attributeName")
+
+            return AttributeDefinitionAttempt.success(
+                ValueAttributeDefinition(ofNotation(attributeNotation)))
+        }
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------

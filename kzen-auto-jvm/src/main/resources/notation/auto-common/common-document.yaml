@@ -278,6 +278,19 @@ AnalysisSpecDefiner:
   class: tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisSpec$Definer
 
 
+# The pivot config as a standalone attribute type (a map with `rows` + `values`), for the Job PivotWorker to
+# carry it directly — the Report document instead nests it inside AnalysisSpec (analysis.pivot).
+PivotSpec:
+  abstract: true
+  class: tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotSpec
+  meta:
+    ref:
+      by: PivotSpecDefiner
+
+PivotSpecDefiner:
+  class: tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotSpec$Definer
+
+
 OutputSpec:
   abstract: true
   class: tech.kzen.auto.common.objects.document.report.spec.output.OutputSpec

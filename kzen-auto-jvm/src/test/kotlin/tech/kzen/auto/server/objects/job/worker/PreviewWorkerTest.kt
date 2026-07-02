@@ -92,6 +92,8 @@ class PreviewWorkerTest {
     private object NoOpJobControl: JobControl {
         override suspend fun checkpoint() {}
         override suspend fun <R> runBlockingIo(block: () -> R): R = block()
+        override fun scratchDir(): String =
+            throw UnsupportedOperationException("A PreviewWorker needs no scratch dir")
         override fun publishProgress(location: ObjectLocation, value: Map<String, Any?>, force: Boolean) {}
         override suspend fun host(instructions: ObjectLocation, input: Any?) =
             throw UnsupportedOperationException("A PreviewWorker hosts no child")

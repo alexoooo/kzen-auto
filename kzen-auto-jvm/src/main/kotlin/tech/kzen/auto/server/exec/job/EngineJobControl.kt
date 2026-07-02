@@ -8,6 +8,8 @@ import tech.kzen.lib.common.exec.tuple.TupleComponentValue
 import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
+import java.nio.file.Files
+import java.nio.file.Path
 
 
 /**
@@ -31,7 +33,8 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 class EngineJobControl(
     private val execution: Execution,
     private val childLogicHost: JobChildLogicHost,
-    private val objectStableMapper: ObjectStableMapper
+    private val objectStableMapper: ObjectStableMapper,
+    private val workerScratchDir: Path
 ): JobControl {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -53,6 +56,10 @@ class EngineJobControl(
     // publishProgress for one Worker).
     private var lastProgressNanos = 0L
 
+    // Created lazily on the first scratchDir() call (single-threaded per Worker, so no synchronization needed),
+    // so a Worker that never needs scratch space leaves no directory on disk.
+    private var scratchCreated = false
+
 
     //-----------------------------------------------------------------------------------------------------------------
     override suspend fun checkpoint() {
@@ -64,6 +71,15 @@ class EngineJobControl(
         // Run inline on the engine dispatcher thread so the work stays counted by the CountingDispatcher (the
         // thread is occupied → inFlight stays positive), matching the old JobControlImpl: visible to quiescence.
         return block()
+    }
+
+
+    override fun scratchDir(): String {
+        if (!scratchCreated) {
+            Files.createDirectories(workerScratchDir)
+            scratchCreated = true
+        }
+        return workerScratchDir.toString()
     }
 
 

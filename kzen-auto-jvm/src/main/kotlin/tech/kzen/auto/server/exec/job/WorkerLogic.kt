@@ -7,6 +7,7 @@ import tech.kzen.lib.common.exec.engine.Logic
 import tech.kzen.lib.common.exec.engine.LogicSignature
 import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
+import java.nio.file.Path
 
 
 /**
@@ -39,7 +40,8 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 class WorkerLogic(
     private val worker: Worker,
     private val childLogicHost: JobChildLogicHost,
-    private val objectStableMapper: ObjectStableMapper
+    private val objectStableMapper: ObjectStableMapper,
+    private val scratchDir: Path
 ): Logic {
     override fun signature(): LogicSignature {
         return LogicSignature.empty
@@ -53,7 +55,7 @@ class WorkerLogic(
             execution.onCapture { workerBase.captureMigrationState() }
         }
 
-        val control = EngineJobControl(execution, childLogicHost, objectStableMapper)
+        val control = EngineJobControl(execution, childLogicHost, objectStableMapper, scratchDir)
 
         // The engine renders the failure (the run settles / parks per pause-on-error); the run-level ErrorPaused
         // state already surfaces which Worker halted (per-Worker error chips are a separate display gap).

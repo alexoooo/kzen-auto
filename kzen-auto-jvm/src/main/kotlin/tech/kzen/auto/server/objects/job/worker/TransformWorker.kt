@@ -2,6 +2,7 @@ package tech.kzen.auto.server.objects.job.worker
 
 import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
+import tech.kzen.auto.common.paradigm.job.api.ChannelServer
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.lib.common.model.location.ObjectLocation
 
@@ -23,13 +24,20 @@ import tech.kzen.lib.common.model.location.ObjectLocation
  * declares its element type and [tech.kzen.auto.common.objects.document.job.ChannelTypeDefiner] validates at
  * definition time that this worker's `in` port type matches it (and that the channel is single-reader), so a
  * miswire is a pre-run definition error rather than a ClassCastException here.
+ *
+ * An optional [serve] duplex port makes a passthrough transform LIVE-QUERYABLE — a Worker that accumulates a
+ * side-summary as records flow through it (e.g. [SummaryWorker]) forwards each record downstream unchanged AND
+ * answers on-demand queries against its accumulated [snapshot], exactly as [SinkWorker] does. Behaviour-
+ * preserving for a plain transform: it defaults to null (no serve loop), so [FilterWorker] / [FormulaWorker] /
+ * [RunWorker] are unchanged.
  */
 abstract class TransformWorker<In, Out>(
     private val input: ChannelInput<Any?>,
     private val output: ChannelOutput<Any?>,
-    selfLocation: ObjectLocation
+    selfLocation: ObjectLocation,
+    serve: ChannelServer<Any?, Any?>? = null
 ):
-    WorkerBase(selfLocation)
+    WorkerBase(selfLocation, serve)
 {
     private val emitter = Emitter<Out>(output)
 

@@ -190,6 +190,7 @@ class JobMigrationTest {
                 context.cachedKotlinCompiler,
                 context.flowMessageInspector,
                 context.notationMetadataReader,
+                context.jobWorkPool,
                 LogicRunExecutionId.random()))
     }
 

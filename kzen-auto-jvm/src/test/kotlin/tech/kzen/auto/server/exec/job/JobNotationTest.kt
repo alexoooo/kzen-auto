@@ -135,6 +135,7 @@ class JobNotationTest {
                 context.cachedKotlinCompiler,
                 context.flowMessageInspector,
                 context.notationMetadataReader,
+                context.jobWorkPool,
                 LogicRunExecutionId.random()))
 
         return RunEngine(jobLogic, context.objectStableMapper.objectStableId(jobLocation))

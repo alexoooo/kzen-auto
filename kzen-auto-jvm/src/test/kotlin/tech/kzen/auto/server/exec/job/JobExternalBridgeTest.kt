@@ -122,6 +122,7 @@ class JobExternalBridgeTest {
                 context.cachedKotlinCompiler,
                 context.flowMessageInspector,
                 context.notationMetadataReader,
+                context.jobWorkPool,
                 LogicRunExecutionId.random()))
     }
 

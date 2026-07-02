@@ -15,6 +15,7 @@ import tech.kzen.auto.server.objects.job.channel.DuplexJobChannel
 import tech.kzen.auto.server.objects.job.channel.JobChannel
 import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionResult
+import tech.kzen.lib.common.exec.engine.ClosePolicy
 import tech.kzen.lib.common.exec.engine.Execution
 import tech.kzen.lib.common.exec.engine.LogicFailure
 import tech.kzen.lib.common.exec.tuple.TupleValue
@@ -80,6 +81,10 @@ class JobRun(
 ) {
     private val objectStableMapper get() = services.objectStableMapper
     private val graphEnvironment get() = services.graphEnvironment
+    private val jobWorkPool get() = services.jobWorkPool
+
+    // Migrate-stable: keys each Worker's scratch dir so a rebuilt run resolves the same paths across a live edit.
+    private val runId get() = services.runExecutionId.logicRunId
 
 
     suspend fun run(): TupleValue {
@@ -129,6 +134,13 @@ class JobRun(
             streamChannels.mapValues { (_, channel) -> channel.drainBuffered() }
         }
 
+        // Sweep this run's whole scratch tree (every file-backed Worker's on-disk store) when the run settles —
+        // a run-root belt-and-suspenders over each stateful Worker's own close-then-delete onClose, keyed on the
+        // migrate-stable run id (a boot sweep covers a hard kill). Auto = fires on success / failure / cancel.
+        execution.resource("job-scratch", ClosePolicy.Auto) {
+            jobWorkPool.deleteRun(runId)
+        }
+
         // External duplex bridge: route an inbound UI request (addressed by `channel` name, e.g. the JS pulling a
         // larger Preview slice) to the serving Worker of that `external` duplex Channel. Registered on the Job's
         // ROOT node, which is the frame the JS addresses (LogicRunInfo.frame = root). Also tells the engine the run
@@ -170,11 +182,15 @@ class JobRun(
 
                 workers
                     .map { (location, worker) ->
+                        val workerStableId = objectStableMapper.objectStableId(location)
+                        // Resolved (not yet created) here so the Worker's EngineJobControl.scratchDir() can
+                        // materialize it lazily on first use — a Worker that needs no scratch space leaves none.
+                        val workerScratchDir = jobWorkPool.workerScratchDir(runId, workerStableId)
                         async {
                             try {
                                 execution.host(
-                                    objectStableMapper.objectStableId(location),
-                                    WorkerLogic(worker, childLogicHost, objectStableMapper))
+                                    workerStableId,
+                                    WorkerLogic(worker, childLogicHost, objectStableMapper, workerScratchDir))
                             }
                             finally {
                                 activeWorkers.decrementAndGet()

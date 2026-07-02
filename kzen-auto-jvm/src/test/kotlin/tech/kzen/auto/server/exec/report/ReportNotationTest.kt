@@ -85,6 +85,7 @@ class ReportNotationTest {
                 context.cachedKotlinCompiler,
                 context.flowMessageInspector,
                 context.notationMetadataReader,
+                context.jobWorkPool,
                 LogicRunExecutionId.random()))
 
         val engine = RunEngine(reportLogic, context.objectStableMapper.objectStableId(reportLocation))

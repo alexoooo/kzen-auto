@@ -88,6 +88,38 @@ FilterWorker:
       by: Self
 
 
+# Keeps each record that passes a distinct-value WHITELIST (Report's value-set filter, NOT the Kotlin-expression
+# predicate above). `filter` is a column -> {type, values} map (FilterSpec): RequireAny keeps a record only when
+# the field is one of the whitelisted values, ExcludeAll drops it when it is; a record survives only if every
+# configured column passes. Reuses ReportFilterStage's exact predicate, so it is byte-identical to Report's
+# filter over the same data. The editor discovers a column's candidate values from an upstream SummaryWorker.
+ValueSetFilterWorker:
+  abstract: true
+  is: Worker
+  title: "Value Filter"
+  class: tech.kzen.auto.server.objects.job.worker.ValueSetFilterWorker
+  input: ""
+  output: ""
+  filter: {}
+  meta:
+    input:
+      is: ChannelInput
+      of: DataRecord
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    output:
+      is: ChannelOutput
+      of: DataRecord
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    filter:
+      is: FilterSpec
+      editor: ValueSetFilterEditor
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
 # Appends one calculated column per `formula` entry (arbitrary Kotlin expression over the record's columns),
 # reusing the genuine CalculatedColumnEval engine. `formula` is a column-name -> Kotlin map (FormulaSpec).
 FormulaWorker:
@@ -112,6 +144,80 @@ FormulaWorker:
     formula:
       is: FormulaSpec
       editor: FormulaMapEditor
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
+# Passthrough analytics Worker: summarizes every record flowing through it (per-column count / numeric stats /
+# value histogram / opaque sample, reusing the genuine ValueSummaryBuilder engine — bounded memory, no scratch
+# dir) while forwarding each record downstream UNCHANGED, so it composes into any pipeline. Serves the live
+# TableSummary on-demand over an external duplex Channel `serve` (the value-set-filter editor reads a column's
+# distinct values from it); pushes a running row count to its trace. Summary columns are discovered from the
+# stream's header.
+SummaryWorker:
+  abstract: true
+  is: Worker
+  title: "Summary"
+  class: tech.kzen.auto.server.objects.job.worker.SummaryWorker
+  input: ""
+  output: ""
+  serve: ""
+  meta:
+    input:
+      is: ChannelInput
+      of: DataRecord
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    output:
+      is: ChannelOutput
+      of: DataRecord
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    serve:
+      is: ChannelServer
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
+# Analytics Worker that accumulates every incoming record into a pivot table (reusing the genuine PivotBuilder
+# engine over an H2-backed scratch dir) and, at end-of-stream, emits the built pivot table downstream row-by-row
+# (row-key columns + one column per value/type), so it composes into any pipeline. `pivot` is a {rows, values}
+# map (PivotSpec): `rows` are the group-by columns, `values` maps a column to its aggregate types (Count / Sum /
+# Average / Min / Max). Serves live preview-slice queries over an external duplex Channel `serve`; the scratch
+# dir is closed-then-deleted when the run ends.
+PivotWorker:
+  abstract: true
+  is: Worker
+  title: "Pivot"
+  class: tech.kzen.auto.server.objects.job.worker.PivotWorker
+  input: ""
+  output: ""
+  serve: ""
+  pivot:
+    rows: []
+    values: {}
+  meta:
+    input:
+      is: ChannelInput
+      of: DataRecord
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    output:
+      is: ChannelOutput
+      of: DataRecord
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    serve:
+      is: ChannelServer
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    pivot:
+      is: PivotSpec
+      editor: PivotSpecEditor
     selfLocation:
       is: ObjectLocation
       by: Self

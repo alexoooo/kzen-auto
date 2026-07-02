@@ -28,6 +28,18 @@ interface JobControl {
 
 
     /**
+     * An absolute filesystem path (a String — [JobControl] stays platform-neutral, so no JVM `Path` in the SPI)
+     * to a private scratch directory this Worker may use for file-backed operator state (an on-disk pivot store,
+     * an indexed CSV table). The directory is created on first call. It is unique per (run, Worker) and
+     * deterministic across a live-edit migrate — the run id is migrate-stable, so a rebuilt Worker resolves the
+     * SAME path (the P4 baseline restarts a file-backed operator on an edit, coherent precisely because the path
+     * is stable). The whole run tree is swept when the run settles, and a stale tree is cleared on the next
+     * process's boot sweep after a hard kill.
+     */
+    fun scratchDir(): String
+
+
+    /**
      * Publishes a Worker's live progress (e.g. row counts, or a preview sample) to its own trace, keyed by
      * [location] (the Worker's own [ObjectLocation]), for the interactive UI to poll while the Job runs.
      * This is the always-on PUSH path — distinct from the on-demand request/reply a Worker may serve over a

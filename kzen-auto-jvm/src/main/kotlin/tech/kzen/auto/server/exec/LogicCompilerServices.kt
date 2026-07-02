@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.exec
 
 import tech.kzen.auto.common.paradigm.flow.service.format.FlowMessageInspector
+import tech.kzen.auto.server.objects.job.service.JobWorkPool
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
 import tech.kzen.lib.common.service.context.environment.GraphEnvironment
@@ -17,9 +18,11 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
  *
  * [flowMessageInspector] is Flow's per-vertex message renderer; [notationMetadataReader] backs Job's
  * [tech.kzen.auto.common.objects.document.job.JobChannelSynthesis] (order-driven channel augmentation).
+ * [jobWorkPool] owns the per-run scratch directories a Job's file-backed Workers (Pivot / Explore) resolve via
+ * [tech.kzen.auto.common.paradigm.job.control.JobControl.scratchDir].
  * [runExecutionId] is the identity of the run being compiled for, used by flavours that persist run artifacts
- * keyed to the run (Report stamps its run dir with it, for offline trace correlation); it stays the same across
- * a live-edit recompile / migrate of one run.
+ * keyed to the run (Report stamps its run dir with it, for offline trace correlation; Job keys each Worker's
+ * scratch dir on its migrate-stable run id); it stays the same across a live-edit recompile / migrate of one run.
  * [tech.kzen.lib.common.service.context.GraphCreator] is not here: it is a stateless object, used directly.
  */
 class LogicCompilerServices(
@@ -28,5 +31,6 @@ class LogicCompilerServices(
     val cachedKotlinCompiler: CachedKotlinCompiler,
     val flowMessageInspector: FlowMessageInspector,
     val notationMetadataReader: NotationMetadataReader,
+    val jobWorkPool: JobWorkPool,
     val runExecutionId: LogicRunExecutionId
 )

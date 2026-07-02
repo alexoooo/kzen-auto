@@ -145,6 +145,7 @@ class FlowNotationTest {
                 context.cachedKotlinCompiler,
                 context.flowMessageInspector,
                 context.notationMetadataReader,
+                context.jobWorkPool,
                 LogicRunExecutionId.random()))
 
         return RunEngine(flowLogic, context.objectStableMapper.objectStableId(flowLocation), inputs)

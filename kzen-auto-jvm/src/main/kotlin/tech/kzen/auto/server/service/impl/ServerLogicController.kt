@@ -8,6 +8,7 @@ import tech.kzen.auto.common.paradigm.flow.service.format.FlowMessageInspector
 import tech.kzen.auto.common.paradigm.logic.LogicConventions
 import tech.kzen.auto.server.exec.LogicCompiler
 import tech.kzen.auto.server.exec.LogicCompilerServices
+import tech.kzen.auto.server.objects.job.service.JobWorkPool
 import tech.kzen.auto.server.exec.job.EngineJobControl
 import tech.kzen.auto.server.exec.report.ExecutionLogicTraceHandle
 import tech.kzen.auto.server.exec.script.ScriptRunContext
@@ -81,6 +82,7 @@ class ServerLogicController(
     private val cachedKotlinCompiler: CachedKotlinCompiler,
     private val flowMessageInspector: FlowMessageInspector,
     private val notationMetadataReader: NotationMetadataReader,
+    private val jobWorkPool: JobWorkPool,
     private val environment: () -> GraphEnvironment
 ):
     LogicController
@@ -736,7 +738,7 @@ class ServerLogicController(
             attempt.transitiveSuccessful,
             LogicCompilerServices(
                 environment(), objectStableMapper, cachedKotlinCompiler, flowMessageInspector,
-                notationMetadataReader, runExecutionId))
+                notationMetadataReader, jobWorkPool, runExecutionId))
     }
 
 
