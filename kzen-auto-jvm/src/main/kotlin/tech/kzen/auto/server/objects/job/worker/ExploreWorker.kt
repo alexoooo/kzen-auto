@@ -1,0 +1,151 @@
+package tech.kzen.auto.server.objects.job.worker
+
+import tech.kzen.auto.common.objects.document.job.JobConventions
+import tech.kzen.auto.common.objects.document.report.output.OutputPreview
+import tech.kzen.auto.common.paradigm.job.api.ChannelInput
+import tech.kzen.auto.common.paradigm.job.api.ChannelServer
+import tech.kzen.auto.common.paradigm.job.control.JobControl
+import tech.kzen.auto.server.objects.report.exec.output.flat.IndexedCsvTable
+import tech.kzen.auto.server.util.WorkUtils
+import tech.kzen.lib.common.exec.ExecutionRequest
+import tech.kzen.lib.common.exec.ExecutionResult
+import tech.kzen.lib.common.exec.ExecutionSuccess
+import tech.kzen.lib.common.exec.ExecutionValue
+import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.reflect.Reflect
+import java.nio.file.Path
+
+
+/**
+ * The EXPLORE stage as a Job Worker — the disk-backed, random-access browse over the whole result stream, reusing
+ * Report's substrate-neutral [IndexedCsvTable] engine (a CSV file + a row-offset index; NOT Report's disruptor
+ * pipeline). A [SinkWorker] with no output: every incoming record is appended to the table in [onElement], and
+ * the browser reads ANY window of the accumulated result — no matter how large — via on-demand slice queries
+ * (`offset` / `limit`) answered from the LIVE table in [onQuery]. It is the Job analogue of Report's Explore
+ * output, and the heavy-duty counterpart to [PreviewWorker]: where Preview keeps a bounded in-memory live tail
+ * (any lane, scalar or record), Explore indexes the FULL tabular stream to disk so the user can page through all
+ * of it. Input is therefore typed [DataRecord] (the table indexes by header + fields; a schemaless scalar lane
+ * has no columns to browse).
+ *
+ * SCRATCH DIR: [IndexedCsvTable] is file-backed, so it opens under the per-Worker, run-scoped directory from
+ * [JobControl.scratchDir] (see [tech.kzen.auto.server.objects.job.service.JobWorkPool]) — like [PivotWorker].
+ * The header is only known once the first record arrives, so the table is created lazily on the first
+ * [onElement] (its constructor writes the header row); an empty stream leaves no table (and serves an empty
+ * preview). [onClose] does CLOSE-THEN-DELETE: the table holds an open file handle, so it MUST be closed before
+ * its dir can be removed; the engine's run-root sweep ([tech.kzen.auto.server.exec.job.JobRun]) is the
+ * belt-and-suspenders backstop for a hard kill.
+ *
+ * INTERACTIVITY (via [SinkWorker]'s optional `serve` port): answers on-demand preview-slice queries against the
+ * LIVE table ([onQuery]). Reading the disk-backed table from the serve coroutine is race-free because a Worker
+ * runs SINGLE-THREADED on its own node coroutine (see [tech.kzen.auto.server.exec.job.EngineJobControl]): the
+ * serve loop only runs while the work coroutine is parked at a checkpoint / awaiting input, never concurrently
+ * with an [onElement] append. [IndexedCsvTable] interleaves append and random-access read on the same handle by
+ * design (`preview` flushes pending writes, then seeks to read), so a query mid-stream sees every appended row.
+ * A running row count is pushed to the trace.
+ *
+ * LIVE-EDIT MIGRATION: P4 baseline is RESTART on a live edit (the [WorkerBase] default — no state carried), which
+ * is coherent because the scratch path is deterministic per `(runId, stableId)` and runId is migrate-stable: the
+ * OUTGOING instance's [onClose] deletes the dir, then the rebuilt instance re-indexes from a resuming upstream
+ * reader into a fresh table at the same path. Carrying the table forward (like
+ * [tech.kzen.auto.server.objects.job.worker.CsvReaderWorker] carries its reader) is a documented later extension.
+ */
+@Reflect
+class ExploreWorker(
+    input: ChannelInput<Any?>,
+    serve: ChannelServer<Any?, Any?>,
+    selfLocation: ObjectLocation
+):
+    SinkWorker<DataRecord>(input, selfLocation, serve)
+{
+    //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        // Default preview slice served when a pull query omits a limit (mirrors PivotWorker's default).
+        private const val defaultQueryLimit = 1000
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    // Created lazily on the first record (its constructor needs the stream's header) under the scratch dir; closed
+    // and deleted in onClose. Confined to the work coroutine except for the immutable [ExploreView] handle the
+    // serve coroutine reads (single-threaded — safe; see the class doc).
+    private var table: IndexedCsvTable? = null
+    private var scratchDir: Path? = null
+    private var count = 0L
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override suspend fun onStart(control: JobControl) {
+        // Resolve (and create) the scratch dir now; the table itself waits for the first record's header.
+        scratchDir = Path.of(control.scratchDir())
+    }
+
+
+    override suspend fun onElement(element: DataRecord, control: JobControl) {
+        val activeTable = table
+            ?: control
+                .runBlockingIo { IndexedCsvTable(element.header, scratchDir!!) }
+                .also { table = it }
+
+        activeTable.add(element.record, element.header)
+        count += 1
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun snapshot(): Any? {
+        val activeTable = table
+            ?: return null
+        return ExploreView(activeTable, count)
+    }
+
+
+    override fun progress(snapshot: Any?): Map<String, Any?> {
+        val view = snapshot as? ExploreView
+        return mapOf("rows" to (view?.rowCount ?: 0L))
+    }
+
+
+    override fun onQuery(request: Any?, snapshot: Any?): ExecutionResult {
+        val view = snapshot as? ExploreView
+            ?: return ExecutionSuccess.ofValue(ExecutionValue.of(emptyPreview().asCollection()))
+
+        val executionRequest = request as? ExecutionRequest
+        val offset = executionRequest?.getSingle(JobConventions.previewOffsetParameter)
+            ?.toLongOrNull()?.coerceAtLeast(0L) ?: 0L
+        val limit = executionRequest?.getSingle(JobConventions.previewLimitParameter)
+            ?.toIntOrNull()?.coerceAtLeast(0) ?: defaultQueryLimit
+
+        val preview = view.table.preview(offset, limit)
+        return ExecutionSuccess.ofValue(ExecutionValue.of(preview.asCollection()))
+    }
+
+
+    // Before the first record the header is unknown, so an empty stream serves a header-less empty preview.
+    private fun emptyPreview(): OutputPreview =
+        OutputPreview(listOf(), listOf(), 0L)
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun onClose() {
+        // Close-then-delete: the table holds an open file handle, so it MUST be closed before its scratch dir can
+        // be removed. `error = true` skips the flush-before-close — the dir is deleted next, so flushing is wasted
+        // IO (the run-scoped scratch is never read after the run settles).
+        try {
+            table?.close(error = true)
+        }
+        finally {
+            scratchDir?.let { WorkUtils.recursivelyDeleteDir(it) }
+        }
+        table = null
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    // Immutable handle crossing to the serve coroutine. It wraps the LIVE table rather than a materialized copy
+    // (the table is disk-backed and can be large) — safe because the Worker is single-threaded, so onQuery only
+    // reads the table while the work coroutine is parked (see the class doc).
+    class ExploreView(
+        val table: IndexedCsvTable,
+        val rowCount: Long
+    )
+}

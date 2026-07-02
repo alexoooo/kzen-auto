@@ -24,6 +24,24 @@ FormulaMapEditor:
   class: tech.kzen.auto.client.objects.document.job.edit.FormulaMapEditor$Wrapper
 
 
+# Sort-keys editor: edits a SortWorker's `sort` attribute (a SortSpec — an ordered column -> ascending map where
+# the map order IS the multi-key sort priority), as add / remove / direction-toggle rows, since the generic value
+# editor can't edit a structured map attribute. Selected via `editor: SortSpecEditor` on the SortWorker's `sort`
+# metadata.
+SortSpecEditor:
+  is: AttributeEditor
+  class: tech.kzen.auto.client.objects.document.job.edit.SortSpecEditor$Wrapper
+
+
+# Export-config editor: edits an ExportWriterWorker's `export` attribute (an OutputExportSpec — format /
+# compression / path-pattern), a thin composition of the same Select / Text field editors Report's export panel
+# uses, pointed at the Job-relative `export.*` paths. Selected via `editor: ExportSpecEditor` on the
+# ExportWriterWorker's `export` metadata.
+ExportSpecEditor:
+  is: AttributeEditor
+  class: tech.kzen.auto.client.objects.document.job.edit.ExportSpecEditor$Wrapper
+
+
 #######################################################################################################################
 # Job insert ribbon: each RibbonTool delegates to a Worker / Channel archetype; clicking it inserts that
 # archetype into the active Job document (Workers nest under `workers`, Channels under `channels`).
@@ -73,6 +91,12 @@ RunTool:
   delegate: RunWorker
 
 
+SortTool:
+  is: RibbonTool
+  parent: JobGroup_Transforms
+  delegate: SortWorker
+
+
 ################################################################
 
 JobGroup_Sinks:
@@ -91,6 +115,12 @@ PreviewTool:
   is: RibbonTool
   parent: JobGroup_Sinks
   delegate: PreviewWorker
+
+
+ExportTool:
+  is: RibbonTool
+  parent: JobGroup_Sinks
+  delegate: ExportWriterWorker
 
 
 ################################################################

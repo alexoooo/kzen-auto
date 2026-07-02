@@ -36,6 +36,41 @@ CsvReaderWorker:
       by: Self
 
 
+# Reads MULTIPLE delimited text files as one combined stream (same RFC-4180 parsing as CsvReaderWorker),
+# emitting their records concatenated in `paths` order — the multi-file generalization of CsvReaderWorker, the
+# Job analogue of Report's multi-location input. The column schema is taken from the FIRST file; with header=true
+# each subsequent file's header row is skipped and its data emitted under the shared schema, with header=false
+# the schema is synthesized positionally (c0, c1, …) from the first file's first record and every row is data.
+# State migration carries a `(fileIndex, open-reader-position)` cursor, so a pause / edit / resume continues from
+# the exact spot in the current file (when paths / delimiter / header are unchanged) rather than re-reading from
+# the top. `paths` is a resolved, ordered list of concrete file paths — directory browse / glob discovery is the
+# editor's job (P4i MultiFileInputEditor), keeping the resume cursor deterministic.
+MultiFileReaderWorker:
+  abstract: true
+  is: Worker
+  title: "Multi-File Reader"
+  class: tech.kzen.auto.server.objects.job.worker.MultiFileReaderWorker
+  output: ""
+  paths: []
+  delimiter: ","
+  header: true
+  meta:
+    output:
+      is: ChannelOutput
+      of: DataRecord
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    paths:
+      is: List
+      of: String
+      editor: MultiFileInputEditor
+    delimiter: String
+    header: Boolean
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
 # Generates a stream from a single Kotlin expression: `code` evaluates to an Iterable (e.g. `(1..100)`,
 # `listOf("a", "b")`, a generated sequence), compiled by the genuine StepExpressionCompiler / Kotlin compiler
 # (same engine as FormulaStep), and each element is iterated into the output channel. The output is untyped
@@ -223,6 +258,39 @@ PivotWorker:
       by: Self
 
 
+# Buffers every incoming record, then at end-of-stream emits them re-ordered by a multi-key sort (`sort`, a
+# SortSpec): an ORDERED map of column -> ascending, first key primary, ties broken by the next. Per key, values
+# that parse as numbers sort numerically and BEFORE non-numeric text (which sorts lexically) — a stable total
+# order. In-memory v1 (buffers the whole stream; disk-spill is a documented follow-up), no serve, no scratch
+# dir. The accumulated buffer is carried across a live edit, so a pause / edit / resume re-sorts the full input
+# rather than only the tail an unchanged, resuming upstream reader would deliver next.
+SortWorker:
+  abstract: true
+  is: Worker
+  title: "Sort"
+  class: tech.kzen.auto.server.objects.job.worker.SortWorker
+  input: ""
+  output: ""
+  sort: {}
+  meta:
+    input:
+      is: ChannelInput
+      of: DataRecord
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    output:
+      is: ChannelOutput
+      of: DataRecord
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    sort:
+      is: SortSpec
+      editor: SortSpecEditor
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
 # Writes records to a delimited file with RFC-4180 quoting (delimiter-aware). With header=false (a headerless
 # round-trip) only the records are written.
 CsvWriterWorker:
@@ -243,6 +311,37 @@ CsvWriterWorker:
     path: String
     delimiter: String
     header: Boolean
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
+# Writes records to a delimited file with Report's EXACT export encoding — RFC-4180 CSV / TSV formatting → UTF-8
+# → optional compression — so a Job export is byte-identical to Report's over the same data. `export` is an
+# OutputExportSpec: `format` (csv/tsv), `compression` (none/zip/gz, via the shared ExportCompression.wrap seam),
+# and `path` (a pattern; ${time}/${extension} resolved, ${report} = this Worker's own document name, ${group}
+# empty for the single stream). The column header is written once from the first record. A SinkWorker: opens the
+# file in onStart, closes (finalizes the compression container) in onClose; live edit RESTARTS (re-truncates),
+# the WorkerBase sink default.
+ExportWriterWorker:
+  abstract: true
+  is: Worker
+  title: "Export"
+  class: tech.kzen.auto.server.objects.job.worker.ExportWriterWorker
+  input: ""
+  export:
+    format: csv
+    compression: none
+    path: "../work/output/${report}_${time}.${extension}"
+  meta:
+    input:
+      is: ChannelInput
+      of: DataRecord
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    export:
+      is: OutputExportSpec
+      editor: ExportSpecEditor
     selfLocation:
       is: ObjectLocation
       by: Self
@@ -271,6 +370,35 @@ PreviewWorker:
       creator: JobChannelCreator
       editor: SelectChannelEditor
     sample: Int
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
+# Sink that indexes EVERY incoming record into a disk-backed random-access table (Report's reused IndexedCsvTable
+# over a run-scoped scratch dir) and serves on-demand random-access preview SLICES (offset / limit) over the
+# external duplex Channel `serve` — so the browser can page through ANY window of the full result without
+# buffering it all in memory. The Job analogue of Report's Explore output, and the heavy-duty counterpart to
+# PreviewWorker's bounded in-memory live tail. Input is typed DataRecord (the table indexes by header + fields).
+# The scratch dir is closed-then-deleted when the run ends; live edit RESTARTS (re-indexes from a resuming
+# upstream reader), the WorkerBase default (coherent since the scratch path is deterministic per run).
+ExploreWorker:
+  abstract: true
+  is: Worker
+  title: "Explore"
+  class: tech.kzen.auto.server.objects.job.worker.ExploreWorker
+  input: ""
+  serve: ""
+  meta:
+    input:
+      is: ChannelInput
+      of: DataRecord
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    serve:
+      is: ChannelServer
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
     selfLocation:
       is: ObjectLocation
       by: Self

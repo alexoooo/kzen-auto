@@ -291,6 +291,33 @@ PivotSpecDefiner:
   class: tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotSpec$Definer
 
 
+# The multi-key sort configuration as a standalone attribute type (an ordered column -> ascending map), for the
+# Job SortWorker to carry it directly. Report has no sort stage, so — unlike PivotSpec / FilterSpec — this spec
+# is Job-native (no Report-document nesting); the map's order is the sort priority.
+SortSpec:
+  abstract: true
+  class: tech.kzen.auto.common.objects.document.report.spec.sort.SortSpec
+  meta:
+    ref:
+      by: SortSpecDefiner
+
+SortSpecDefiner:
+  class: tech.kzen.auto.common.objects.document.report.spec.sort.SortSpec$Definer
+
+
+# The export config as a standalone attribute type (a map with format / compression / path), for the Job
+# ExportWriterWorker to carry it directly — the Report document instead nests it inside OutputSpec (output.export).
+OutputExportSpec:
+  abstract: true
+  class: tech.kzen.auto.common.objects.document.report.spec.output.OutputExportSpec
+  meta:
+    ref:
+      by: OutputExportSpecDefiner
+
+OutputExportSpecDefiner:
+  class: tech.kzen.auto.common.objects.document.report.spec.output.OutputExportSpec$Definer
+
+
 OutputSpec:
   abstract: true
   class: tech.kzen.auto.common.objects.document.report.spec.output.OutputSpec
