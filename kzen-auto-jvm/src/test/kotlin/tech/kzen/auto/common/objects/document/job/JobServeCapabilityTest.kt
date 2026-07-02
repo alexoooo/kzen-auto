@@ -11,10 +11,12 @@ import kotlin.test.assertNull
 
 
 /**
- * [JobServeCapability] classifies a Worker's interactive capability from the semantic type of its `serve` port,
- * replacing the removed concrete-Worker-name string gates (CC-17). Loads a real notation graph and asserts each
- * built-in serve-bearing Worker classifies correctly, a non-serving sink is null, and — the extensibility proof —
- * a Worker whose serve port is a user-defined `PreviewServer` subtype classifies `Preview` with no code change.
+ * [JobServeCapability] classifies whether a Worker serves a live summary from the semantic type of its `serve`
+ * port, so the summary-aware editors (value-set filter / pivot) can find their upstream distinct-value source
+ * without naming concrete Worker classes (CC-17). Loads a real notation graph and asserts the SummaryWorker
+ * classifies Summary, non-summary serve-bearing Workers and a non-serving sink are null, and — the extensibility
+ * proof — a Worker whose serve port is a user-defined SummaryServer subtype classifies Summary with no code change.
+ * Card rendering (preview sample / download) is chosen by each Worker's own `display:` marker, not classified here.
  */
 class JobServeCapabilityTest {
     companion object {
@@ -34,27 +36,27 @@ class JobServeCapabilityTest {
 
 
     @Test
-    fun previewWorkerServesPreview() {
-        assertEquals(JobServeCapability.Capability.Preview, capabilityOf("preview"))
-    }
-
-
-    @Test
     fun summaryWorkerServesSummary() {
         assertEquals(JobServeCapability.Capability.Summary, capabilityOf("summary"))
     }
 
 
     @Test
-    fun exploreWorkerServesTable() {
-        assertEquals(JobServeCapability.Capability.Table, capabilityOf("explore"))
+    fun previewWorkerIsNotASummarySource() {
+        // Serves a preview sample, but that is a card behaviour (its `display:` marker), not a summary source.
+        assertNull(capabilityOf("preview"))
     }
 
 
     @Test
-    fun pivotWorkerServesPreview() {
-        // Pivot serves preview slices — the name-based gate silently omitted it; capability classification includes it.
-        assertEquals(JobServeCapability.Capability.Preview, capabilityOf("pivot"))
+    fun exploreWorkerIsNotASummarySource() {
+        assertNull(capabilityOf("explore"))
+    }
+
+
+    @Test
+    fun pivotWorkerIsNotASummarySource() {
+        assertNull(capabilityOf("pivot"))
     }
 
 
@@ -65,9 +67,9 @@ class JobServeCapabilityTest {
 
 
     @Test
-    fun thirdPartyServeSubtypeIsRecognizedWithoutCodeChange() {
-        // The whole point of CC-17: a Worker declaring a user-defined PreviewServer subtype gets the Preview
-        // capability purely through the inheritance chain — no edit to JobServeCapability's enum or logic.
-        assertEquals(JobServeCapability.Capability.Preview, capabilityOf("customPreview"))
+    fun thirdPartySummarySubtypeIsRecognizedWithoutCodeChange() {
+        // The whole point of CC-17: a Worker declaring a user-defined SummaryServer subtype is recognized as a
+        // summary source purely through the inheritance chain — no edit to JobServeCapability's enum or logic.
+        assertEquals(JobServeCapability.Capability.Summary, capabilityOf("customSummary"))
     }
 }

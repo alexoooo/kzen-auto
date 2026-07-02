@@ -14,9 +14,9 @@ import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
 import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.objects.document.bridge.InsertionKey
-import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
-import tech.kzen.auto.client.objects.document.common.attribute.AttributeViewManager
 import tech.kzen.auto.client.objects.document.common.dragdrop.dropZoneRegion
+import tech.kzen.auto.client.objects.document.job.display.WorkerDisplayManager
+import tech.kzen.auto.client.objects.document.job.display.WorkerDisplayPropsCommon
 import tech.kzen.auto.client.objects.ribbon.RibbonController
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
@@ -31,21 +31,13 @@ import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.job.JobChannelDerivation
 import tech.kzen.auto.common.objects.document.job.JobConventions
-import tech.kzen.auto.common.objects.document.job.JobServeCapability
-import tech.kzen.auto.common.objects.document.report.summary.TableSummary
 import tech.kzen.auto.common.util.AutoConventions
-import tech.kzen.lib.common.exec.ExecutionFailure
-import tech.kzen.lib.common.exec.ExecutionSuccess
-import tech.kzen.lib.common.model.attribute.AttributeName
-import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.obj.ObjectPath
-import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.DocumentNotation
 import tech.kzen.lib.common.model.structure.notation.PositionRelation
 import tech.kzen.lib.common.model.structure.notation.cqrs.AddObjectCommand
-import tech.kzen.lib.common.model.structure.notation.cqrs.RemoveObjectCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.ShiftObjectTreeCommand
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
@@ -63,8 +55,7 @@ external interface JobControllerProps: Props {
     var restClient: ClientRestApi
     var objectStableMapper: ObjectStableMapper
     var mirroredGraphStore: MirroredGraphStore
-    var attributeEditorManager: AttributeEditorManager.Wrapper
-    var attributeViewManager: AttributeViewManager.Wrapper
+    var workerDisplayManager: WorkerDisplayManager.Wrapper
 }
 
 
@@ -72,12 +63,9 @@ external interface JobControllerState: State {
     var clientState: ClientState?
 
     // Per-Worker live progress (status + counts + preview teaser), polled from the logic trace store after
-    // each run-status change. Null until the first fetch.
+    // each run-status change. Null until the first fetch. Threaded to each card via WorkerDisplayPropsCommon; a
+    // preview card layers its own on-demand larger slice on top (see PreviewWorkerDisplay).
     var workerProgress: Map<ObjectLocation, JobWorkerProgress>?
-
-    // On-demand larger sample pulled from a PreviewWorker over its duplex `serve` channel (Worker location ->
-    // queried slice). Distinct from the always-on pushed teaser in [workerProgress]. Null until first query.
-    var previewDetail: Map<ObjectLocation, JobWorkerProgress>?
 
     // Workers in document order — the stage list. Value-gated in onClientState so the instances stay
     // ===-stable across drag / progress re-renders, letting each JobObjectSlot bail out.
@@ -126,8 +114,7 @@ class JobController(
     class Wrapper(
         private val archetype: ObjectLocation,
         private val ribbonController: RibbonController.Wrapper,
-        private val attributeEditorManager: AttributeEditorManager.Wrapper,
-        private val attributeViewManager: AttributeViewManager.Wrapper,
+        private val workerDisplayManager: WorkerDisplayManager.Wrapper,
         @Service private val clientStateGlobal: ClientStateGlobal,
         @Service private val restClient: ClientRestApi,
         @Service private val objectStableMapper: ObjectStableMapper,
@@ -157,8 +144,7 @@ class JobController(
                         this.restClient = this@Wrapper.restClient
                         this.objectStableMapper = this@Wrapper.objectStableMapper
                         this.mirroredGraphStore = this@Wrapper.mirroredGraphStore
-                        this.attributeEditorManager = this@Wrapper.attributeEditorManager
-                        this.attributeViewManager = this@Wrapper.attributeViewManager
+                        this.workerDisplayManager = this@Wrapper.workerDisplayManager
                         block()
                     }
                 }
@@ -184,19 +170,12 @@ class JobController(
     // shared reference serves every slot rather than a fresh closure per slot per render.
     private val onSlotDragStart: (Int) -> Unit = { index -> onDragStart(index) }
     private val onSlotDragEnd: () -> Unit = { onDragEnd() }
-    private val onSlotDelete: (ObjectLocation) -> Unit = { location -> onDelete(location) }
-    private val onSlotQueryPreview: (ObjectLocation) -> Unit = { location -> queryPreview(location) }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     private val jobProgressStore by lazy {
         JobProgressStore(props.restClient, props.objectStableMapper)
     }
-
-    // Live per-SummaryWorker TableSummary broadcast, provided into the per-document DocumentBridge (see render)
-    // so the value-set-filter / pivot editors — out of props reach under the generic AttributeEditorManager —
-    // can observe it. Owned here because this controller is the single owner of the run-scoped serve query.
-    private val jobSummaryStore = JobSummaryStore()
 
     // Refetch progress only when the document or the run status changes (mirrors FlowController); during a run
     // the status time advances on each logic-status poll, so this also drives the live progress refresh.
@@ -207,7 +186,6 @@ class JobController(
     override fun JobControllerState.init(props: JobControllerProps) {
         clientState = null
         workerProgress = null
-        previewDetail = null
         workerLocations = null
         connectionsByUpstream = null
         creating = false
@@ -306,41 +284,9 @@ class JobController(
             }
         }
 
-        // Keep any opened larger preview slice live: while the run is active, re-pull each over its duplex
-        // serve channel on every poll (the Worker's rolling window means each pull is a fresh sample). When
-        // the run ends, drop the live slices so the persisted final teaser shows instead.
-        val active = clientState.clientLogicState.logicStatus?.active != null
-        if (active) {
-            val openedPreviewLocations = (state.previewDetail ?: mapOf()).keys
-                .filter { it.documentPath == documentPath }
-            if (openedPreviewLocations.isNotEmpty()) {
-                async {
-                    for (workerLocation in openedPreviewLocations) {
-                        refreshPreviewSlice(clientState, workerLocation)
-                    }
-                }
-            }
-
-            // Keep the live TableSummary of every SummaryWorker fresh while the run is active, so the value-set
-            // filter (and pivot) editors can source a column's distinct values from the nearest upstream Summary.
-            // Pulled over each Summary's duplex serve channel — the same bridge queryPreviewSlice uses — and
-            // pushed to the shared JobSummaryStore the editors observe. Kept (not cleared) once the run ends, so
-            // the user can still configure a filter against the last run's values (no persisted teaser fallback).
-            val graphStructure = clientState.graphStructure()
-            val summaryWorkerLocations = workerPaths(documentNotation)
-                .map { ObjectLocation(documentPath, it) }
-                .filter { JobServeCapability.of(graphStructure, it) == JobServeCapability.Capability.Summary }
-            if (summaryWorkerLocations.isNotEmpty()) {
-                async {
-                    refreshSummaries(clientState, summaryWorkerLocations)
-                }
-            }
-        }
-        else if (state.previewDetail?.isNotEmpty() == true) {
-            setState {
-                previewDetail = mapOf()
-            }
-        }
+        // The per-Worker preview-slice and summary serve-channel pulls that used to live here are now owned by
+        // each Worker's own card (PreviewWorkerDisplay / SummaryWorkerDisplay), which observe the run status and
+        // pull their own serve channel — so this controller no longer knows about any Worker type (see CC-17).
     }
 
 
@@ -435,13 +381,6 @@ class JobController(
 
             else ->
                 documentNotation.indexOf(workers.last().objectPath).value + 1
-        }
-    }
-
-
-    private fun onDelete(objectLocation: ObjectLocation) {
-        async {
-            props.mirroredGraphStore.apply(RemoveObjectCommand(objectLocation))
         }
     }
 
@@ -570,161 +509,6 @@ class JobController(
     }
 
 
-    // The <a href> download URL for a Table-serving worker's (e.g. Explore) whole result set (streamed as
-    // table.csv from the notation-resolved /job/download endpoint), or null when unavailable: not a Table-serving
-    // worker, or no rows. The table is PERSISTED (last-run-wins), so the link stays valid AFTER the run ends — the
-    // whole point of a report. Gated on the last run's row count (from the persisted progress teaser, which
-    // survives the run settling) so the link never points at an empty / never-run Worker. Needs no live run — the
-    // URL is a pure function of the Worker's location.
-    private fun exploreDownloadLink(
-        graphStructure: GraphStructure,
-        workerLocation: ObjectLocation
-    ): String? {
-        if (JobServeCapability.of(graphStructure, workerLocation) != JobServeCapability.Capability.Table) {
-            return null
-        }
-
-        val rowCount = state.workerProgress?.get(workerLocation)?.rowCount ?: 0L
-        if (rowCount <= 0L) {
-            return null
-        }
-
-        return props.restClient.linkJobDownload(workerLocation)
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    // Show / start the larger live preview slice for a Preview worker: pulls it once now; while the run stays
-    // active, refreshProgressIfNeeded keeps re-pulling it each poll (and clears it once the run ends).
-    private fun queryPreview(workerLocation: ObjectLocation) {
-        val clientState = state.clientState
-            ?: return
-        async {
-            refreshPreviewSlice(clientState, workerLocation)
-        }
-    }
-
-
-    // Pull one Preview worker's current slice over its duplex `serve` channel and store it, value-equality
-    // gated so an unchanged slice doesn't re-render.
-    private suspend fun refreshPreviewSlice(clientState: ClientState, workerLocation: ObjectLocation) {
-        val parsed = queryPreviewSlice(clientState, workerLocation)
-            ?: return
-
-        if (parsed == state.previewDetail?.get(workerLocation)) {
-            return
-        }
-
-        val updated = (state.previewDetail ?: mapOf()).plus(workerLocation to parsed)
-        setState {
-            previewDetail = updated
-        }
-    }
-
-
-    // Issue an `offset` / `limit` slice query to a Preview worker over its (external) duplex `serve` channel,
-    // via the running logic's request subscriber — the browser -> Worker request/reply path. The serve channel
-    // name must match what the server's synthesis used: when the serve port is auto-managed (open — blank, or a
-    // dangling leftover the editor hides), it is the deterministic auto-synthesized name; only a real manual
-    // `serve` reference (one that resolves to an existing Channel) names the channel itself. Routing through the
-    // same JobChannelDerivation keeps the two sides from drifting. The reply has the same shape as the teaser.
-    private suspend fun queryPreviewSlice(
-        clientState: ClientState,
-        workerLocation: ObjectLocation
-    ): JobWorkerProgress? {
-        val logicRunInfo = clientState.clientLogicState.logicStatus?.active
-            ?: return null
-
-        val channelName = serveChannelName(clientState, workerLocation)
-
-        val result = props.restClient.logicRequest(
-            logicRunInfo.id,
-            logicRunInfo.frame.executionId,
-            JobConventions.channelParameter to channelName,
-            JobConventions.previewOffsetParameter to "0",
-            JobConventions.previewLimitParameter to "200")
-
-        return when (result) {
-            is ExecutionSuccess ->
-                JobWorkerProgress.ofProgressMap(null, result.value.get())
-
-            is ExecutionFailure ->
-                null
-        }
-    }
-
-
-    // The name of the (external duplex) `serve` channel to address for a Worker's pull query. When the serve
-    // port is auto-managed (open) it is the deterministic auto-synthesized name; only a real manual `serve`
-    // reference that resolves to an existing Channel names the channel itself. Routing every pull through the
-    // same JobChannelDerivation keeps this in step with the server's synthesis. Shared by the preview-slice and
-    // summary pulls so the two can't drift.
-    private fun serveChannelName(clientState: ClientState, workerLocation: ObjectLocation): String {
-        val graphStructure = clientState.graphStructure()
-        val autoManagedServe = JobChannelDerivation
-            .derive(graphStructure, workerLocation.documentPath)
-            .serves
-            .any { it.worker == workerLocation }
-        return if (autoManagedServe) {
-            JobConventions.autoServeChannelName(workerLocation.objectPath)
-        }
-        else {
-            graphStructure.graphNotation
-                .firstAttribute(workerLocation, AttributePath.ofName(AttributeName("serve")))
-                ?.asString()
-                ?.substringAfterLast("/")
-                ?: JobConventions.autoServeChannelName(workerLocation.objectPath)
-        }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    // Pull each SummaryWorker's live TableSummary over its duplex serve channel and push the map into the shared
-    // JobSummaryStore (which value-gates the update, so an unchanged poll re-renders nothing). Carries a prior
-    // value forward for a Worker whose query transiently fails, and drops entries for a Worker no longer present.
-    private suspend fun refreshSummaries(clientState: ClientState, summaryWorkers: List<ObjectLocation>) {
-        val previous = jobSummaryStore.current()
-        val next = LinkedHashMap<ObjectLocation, TableSummary>()
-        for (workerLocation in summaryWorkers) {
-            val summary = querySummary(clientState, workerLocation)
-                ?: previous[workerLocation]
-                ?: continue
-            next[workerLocation] = summary
-        }
-        jobSummaryStore.update(next)
-    }
-
-
-    // Issue a `channel`-only request to a SummaryWorker's serve channel; the reply is the serialized TableSummary
-    // (SummaryWorker.onQuery ignores the request payload — it always returns its latest snapshot).
-    private suspend fun querySummary(
-        clientState: ClientState,
-        workerLocation: ObjectLocation
-    ): TableSummary? {
-        val logicRunInfo = clientState.clientLogicState.logicStatus?.active
-            ?: return null
-
-        val channelName = serveChannelName(clientState, workerLocation)
-
-        val result = props.restClient.logicRequest(
-            logicRunInfo.id,
-            logicRunInfo.frame.executionId,
-            JobConventions.channelParameter to channelName)
-
-        return when (result) {
-            is ExecutionSuccess -> {
-                @Suppress("UNCHECKED_CAST")
-                val collection = result.value.get() as? Map<String, Map<String, Any>>
-                    ?: return null
-                TableSummary.fromCollection(collection)
-            }
-
-            is ExecutionFailure ->
-                null
-        }
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
         val clientState = state.clientState
@@ -740,15 +524,8 @@ class JobController(
             return
         }
 
-        // Provide the live-summary store into the per-document bridge so the value-set-filter / pivot editors
-        // (nested under AttributeEditorManager, out of props reach) can look it up + observe it. Idempotent map
-        // write — no re-render — that runs before any child's componentDidMount, and re-provides into a fresh
-        // bridge after a same-archetype document switch (mirrors ScriptController providing its stores).
-        contextValue<DocumentBridge?>()?.provide(JobSummaryStore.Key, jobSummaryStore)
-
         val workers = state.workerLocations ?: listOf()
         val connections = state.connectionsByUpstream ?: mapOf()
-        val graphStructure = clientState.graphStructure()
         val active = clientState.clientLogicState.isActive()
 
         div {
@@ -775,7 +552,7 @@ class JobController(
 
             insertionGap(0, null)
             for ((index, workerLocation) in workers.withIndex()) {
-                renderWorkerSlot(index, workerLocation, graphStructure, active)
+                renderWorkerSlot(index, workerLocation, active)
 
                 // The pipe (if any) for this Worker lives in the gap directly below it (upstream = this Worker).
                 // The last Worker's gap is a plain trailing insert / drop gap.
@@ -791,7 +568,6 @@ class JobController(
     private fun ChildrenBuilder.renderWorkerSlot(
         index: Int,
         workerLocation: ObjectLocation,
-        graphStructure: GraphStructure,
         active: Boolean
     ) {
         JobObjectSlot::class.react {
@@ -799,25 +575,17 @@ class JobController(
 
             this.objectLocation = workerLocation
             this.indexInParent = index
-            this.showPreview =
-                JobServeCapability.of(graphStructure, workerLocation) == JobServeCapability.Capability.Preview
-            this.exploreDownloadLink = exploreDownloadLink(graphStructure, workerLocation)
 
             this.progress = state.workerProgress?.get(workerLocation)
-            this.previewDetail = state.previewDetail?.get(workerLocation)
             this.active = active
 
-            this.graphStructure = graphStructure
-            this.attributeEditorManager = props.attributeEditorManager
-            this.attributeViewManager = props.attributeViewManager
+            this.workerDisplayManager = props.workerDisplayManager
 
             this.isDragSource = state.dragSourceIndex == index
             this.handleColor = dragHandleColor
 
             this.onDragStart = onSlotDragStart
             this.onDragEnd = onSlotDragEnd
-            this.onDelete = onSlotDelete
-            this.onQueryPreview = onSlotQueryPreview
         }
     }
 

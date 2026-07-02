@@ -7,21 +7,26 @@ import tech.kzen.lib.common.model.location.ObjectLocation
 
 /**
  * Per-document broadcast of the live [TableSummary] each SummaryWorker in the running Job serves, keyed by that
- * Worker's [ObjectLocation]. [JobController] — the single owner of the run-scoped duplex serve query — pulls
- * these each poll while the run is active and pushes them here (value-gated); the value-set-filter / pivot
- * attribute editors OBSERVE this to source a column's distinct values from the nearest upstream SummaryWorker.
+ * Worker's [ObjectLocation]. Each SummaryWorker's own card ([tech.kzen.auto.client.objects.document.job.display.SummaryWorkerDisplay])
+ * pulls its TableSummary over the Worker's duplex serve channel while the run is active and writes its own entry
+ * here (value-gated); the value-set-filter / pivot attribute editors OBSERVE this to source a column's distinct
+ * values from the nearest upstream SummaryWorker.
  *
  * Those editors render deep under the generic AttributeEditorManager, whose dispatch carries only objectLocation
- * + attributeName — so a live summary cannot reach them through props, and giving each editor its own restClient
- * would duplicate the controller's channel-name resolution (and let the two drift). Instead JobController
- * `provide`s this store into the per-document DocumentBridge (owner-constructed, so it is document-scoped, not a
- * process-global) and the editors look it up + observe it — the same bridge seam ScriptStore uses to reach the
- * step-display subtree.
+ * + attributeName — so a live summary cannot reach them through props. Instead this store is a self-constructing
+ * [DocumentBridge] channel (see [Key]): whichever card / editor touches the key first lazily creates the one
+ * document-scoped instance, and everyone else gets the same one. No component OWNS it — each SummaryWorker card
+ * writes only its own entry (removing it on unmount), and the editors only read — so the generic JobController
+ * carries no summary awareness (see CC-17). Document-scoping is preserved because the bridge itself is created
+ * once per mounted document by `ProjectController`.
  */
 class JobSummaryStore {
     //-----------------------------------------------------------------------------------------------------------------
-    // Owner-provided bridge key (no factory): JobController constructs the store and calls DocumentBridge.provide.
-    object Key: BridgeKey<JobSummaryStore>
+    // Self-constructing bridge key: dependency-free, so the bridge lazily builds one instance per document on first
+    // touch (see DocumentBridge.channel) — no owner needs to provide it.
+    object Key: BridgeKey<JobSummaryStore> {
+        override fun create(): JobSummaryStore = JobSummaryStore()
+    }
 
 
     interface Observer {
@@ -51,16 +56,34 @@ class JobSummaryStore {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    // Replace + notify only on an actual change, so an unchanged poll doesn't re-render observing editors
-    // (TableSummary / ColumnSummary / NominalValueSummary are data classes → structural compare). Notify over a
-    // copy of the observer list so an observer that unobserves in its callback doesn't mutate it mid-iteration.
-    fun update(next: Map<ObjectLocation, TableSummary>) {
-        if (next == summaries) {
+    // Set one Worker's summary + notify only on an actual change, so an unchanged poll doesn't re-render observing
+    // editors (TableSummary / ColumnSummary / NominalValueSummary are data classes → structural compare). One entry
+    // per SummaryWorker card, so N cards each own their own key without clobbering the others.
+    fun put(location: ObjectLocation, summary: TableSummary) {
+        if (summaries[location] == summary) {
             return
         }
-        summaries = next
+        summaries = summaries + (location to summary)
+        notifyObservers()
+    }
+
+
+    // Drop one Worker's summary (its card unmounted — the Worker was deleted / the document switched).
+    fun remove(location: ObjectLocation) {
+        if (location !in summaries) {
+            return
+        }
+        summaries = summaries - location
+        notifyObservers()
+    }
+
+
+    // Notify over a copy of the observer list so an observer that unobserves in its callback doesn't mutate it
+    // mid-iteration.
+    private fun notifyObservers() {
+        val snapshot = summaries
         for (observer in observers.toList()) {
-            observer.onJobSummaries(next)
+            observer.onJobSummaries(snapshot)
         }
     }
 }

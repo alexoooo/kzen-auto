@@ -120,8 +120,9 @@ class ValueSetFilterEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    // Looked up from the DocumentBridge in componentDidMount (owner-provided by JobController), so it may be null
-    // for the brief window before the controller's first render — recompute defensively treats null as "no data".
+    // The self-constructing JobSummaryStore channel on the DocumentBridge (see JobSummaryStore.Key): reached in
+    // componentDidMount, null only if there is no bridge. The SummaryWorker cards write into it; recompute
+    // defensively treats null as "no data".
     private var summaryStore: JobSummaryStore? = null
 
 
@@ -142,7 +143,7 @@ class ValueSetFilterEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
-        val store = contextValue<DocumentBridge?>()?.lookup(JobSummaryStore.Key)
+        val store = contextValue<DocumentBridge?>()?.channel(JobSummaryStore.Key)
         summaryStore = store
         store?.observe(this)
 

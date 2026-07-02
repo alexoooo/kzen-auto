@@ -8,6 +8,12 @@
 Worker:
   abstract: true
   class: tech.kzen.auto.common.paradigm.job.api.Worker
+  # The JS card component this Worker renders as — resolved by WorkerDisplayManager (see job-js.yaml). Every Worker
+  # inherits WorkerDisplayDefault; a Worker overrides it to add behaviour (see job-worker.yaml). Inert server-side
+  # (a plain String, in isManaged so it's never an editor), mirroring ScriptStep's `display:` marker (see CC-17).
+  display: WorkerDisplayDefault
+  meta:
+    display: String
 
 
 #######################################################################################################################
@@ -41,22 +47,15 @@ ChannelServer:
 
 
 #######################################################################################################################
-# Semantic refinements of ChannelServer: same class (inherited — no own `class:`), so JobChannelPorts.kindOf,
-# JobChannelCreator, ChannelTypeDefiner, and JobChannelSynthesis keep treating a port declared with one of these
-# as a plain serve port. Only the JS Job editor reads the declared subtype (via JobServeCapability's inheritance
-# chain walk) to choose the interactive card behaviour — replacing the removed Worker-name string gate (CC-17).
-
-
-PreviewServer:
-  abstract: true
-  is: ChannelServer
+# Semantic refinement of ChannelServer: same class (inherited — no own `class:`), so JobChannelPorts.kindOf,
+# JobChannelCreator, ChannelTypeDefiner, and JobChannelSynthesis keep treating a port declared with it as a plain
+# serve port. A Worker declares `serve: { is: SummaryServer }` to mark itself a summary source; the summary-aware
+# editors (value-set filter / pivot) find their nearest upstream one via JobServeCapability's inheritance-chain
+# walk (see JobUpstreamSchema). Card rendering is chosen by the Worker's own `display:` marker instead (CC-17), so
+# no PreviewServer / TableServer subtypes are needed — a plain ChannelServer serve port carries the preview /
+# download pulls.
 
 
 SummaryServer:
-  abstract: true
-  is: ChannelServer
-
-
-TableServer:
   abstract: true
   is: ChannelServer

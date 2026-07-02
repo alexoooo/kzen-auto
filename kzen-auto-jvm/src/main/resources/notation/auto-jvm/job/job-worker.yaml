@@ -195,6 +195,7 @@ SummaryWorker:
   is: Worker
   title: "Summary"
   class: tech.kzen.auto.server.objects.job.worker.SummaryWorker
+  display: SummaryWorkerDisplay
   input: ""
   output: ""
   serve: ""
@@ -229,6 +230,7 @@ PivotWorker:
   is: Worker
   title: "Pivot"
   class: tech.kzen.auto.server.objects.job.worker.PivotWorker
+  display: PreviewWorkerDisplay
   input: ""
   output: ""
   serve: ""
@@ -247,7 +249,7 @@ PivotWorker:
       creator: JobChannelCreator
       editor: SelectChannelEditor
     serve:
-      is: PreviewServer
+      is: ChannelServer
       creator: JobChannelCreator
       editor: SelectChannelEditor
     pivot:
@@ -357,6 +359,7 @@ PreviewWorker:
   is: Worker
   title: "Preview"
   class: tech.kzen.auto.server.objects.job.worker.PreviewWorker
+  display: PreviewWorkerDisplay
   input: ""
   serve: ""
   sample: 1000
@@ -366,7 +369,7 @@ PreviewWorker:
       creator: JobChannelCreator
       editor: SelectChannelEditor
     serve:
-      is: PreviewServer
+      is: ChannelServer
       creator: JobChannelCreator
       editor: SelectChannelEditor
     sample: Int
@@ -387,6 +390,7 @@ ExploreWorker:
   is: Worker
   title: "Explore"
   class: tech.kzen.auto.server.objects.job.worker.ExploreWorker
+  display: ExploreWorkerDisplay
   input: ""
   serve: ""
   meta:
@@ -396,7 +400,7 @@ ExploreWorker:
       creator: JobChannelCreator
       editor: SelectChannelEditor
     serve:
-      is: TableServer
+      is: ChannelServer
       creator: JobChannelCreator
       editor: SelectChannelEditor
     selfLocation:

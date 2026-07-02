@@ -5,6 +5,60 @@ JobController:
   class: tech.kzen.auto.client.objects.document.job.JobController$Wrapper
   archetype: Job
   ribbonController: RibbonController
+  workerDisplayManager: WorkerDisplayManager
+
+
+#######################################################################################################################
+# Worker card display family (mirrors StepDisplayManager in script-js.yaml). Each Worker archetype names its card
+# component via the `display:` marker (default WorkerDisplayDefault on the base Worker); WorkerDisplayManager reads
+# that marker and mounts the matching `is: WorkerDisplay` object from the autowired list — so JobController /
+# JobObjectSlot never switch on Worker type, and a 3rd-party Worker contributes its whole card with no edit here
+# (see CC-17). The @Service ctor params (clientStateGlobal / restClient / mirroredGraphStore) are injected by the
+# runtime and NOT listed here, matching ScriptStepDisplayDefault / RunStepDisplay.
+
+
+WorkerDisplayManager:
+  class: tech.kzen.auto.client.objects.document.job.display.WorkerDisplayManager$Wrapper
+  meta:
+    workerDisplays:
+      is: List
+      of: WorkerDisplay
+      by: Autowired
+
+
+WorkerDisplay:
+  abstract: true
+  class: tech.kzen.auto.client.objects.document.job.display.WorkerDisplayWrapper
+  meta:
+    objectLocation:
+      is: ObjectLocation
+      by: Self
+
+
+WorkerDisplayDefault:
+  is: WorkerDisplay
+  class: tech.kzen.auto.client.objects.document.job.display.WorkerDisplayDefault$Wrapper
+  attributeEditorManager: AttributeEditorManager
+  attributeViewManager: AttributeViewManager
+
+
+PreviewWorkerDisplay:
+  is: WorkerDisplay
+  class: tech.kzen.auto.client.objects.document.job.display.PreviewWorkerDisplay$Wrapper
+  attributeEditorManager: AttributeEditorManager
+  attributeViewManager: AttributeViewManager
+
+
+ExploreWorkerDisplay:
+  is: WorkerDisplay
+  class: tech.kzen.auto.client.objects.document.job.display.ExploreWorkerDisplay$Wrapper
+  attributeEditorManager: AttributeEditorManager
+  attributeViewManager: AttributeViewManager
+
+
+SummaryWorkerDisplay:
+  is: WorkerDisplay
+  class: tech.kzen.auto.client.objects.document.job.display.SummaryWorkerDisplay$Wrapper
   attributeEditorManager: AttributeEditorManager
   attributeViewManager: AttributeViewManager
 

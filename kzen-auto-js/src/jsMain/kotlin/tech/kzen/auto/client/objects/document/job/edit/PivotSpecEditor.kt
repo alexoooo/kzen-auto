@@ -134,7 +134,7 @@ class PivotSpecEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
-        val store = contextValue<DocumentBridge?>()?.lookup(JobSummaryStore.Key)
+        val store = contextValue<DocumentBridge?>()?.channel(JobSummaryStore.Key)
         summaryStore = store
         store?.observe(this)
 
