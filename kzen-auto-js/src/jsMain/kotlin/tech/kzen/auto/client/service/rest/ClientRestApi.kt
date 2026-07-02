@@ -563,6 +563,20 @@ class ClientRestApi(
     }
 
 
+    // Streaming download URL (a plain <a href>) for a Job Explore Worker's PERSISTED result, streamed as
+    // table.csv from GET /job/download. The Worker's on-disk table is keyed on its notation identity, so this URL
+    // is a pure function of the Worker's location and resolves with NO live run — the report downloads after the
+    // run settles.
+    fun linkJobDownload(
+        objectLocation: ObjectLocation
+    ): String {
+        return url(
+            CommonRestApi.jobDownload,
+            CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
+            CommonRestApi.paramObjectPath to objectLocation.objectPath.asString())
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun taskSubmit(
         objectLocation: ObjectLocation,

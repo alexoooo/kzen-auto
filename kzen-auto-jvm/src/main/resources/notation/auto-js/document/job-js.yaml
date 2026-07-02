@@ -51,6 +51,26 @@ MultiFileInputEditor:
   class: tech.kzen.auto.client.objects.document.job.edit.MultiFileInputEditor$Wrapper
 
 
+# Value-set filter editor: edits a ValueSetFilterWorker's `filter` attribute (a FilterSpec — a column ->
+# {type, values} distinct-value whitelist) as add/remove-column rows, each with a RequireAny / ExcludeAll toggle
+# and a value set editable via histogram checkboxes + free text. A column's candidate distinct values come from
+# the nearest upstream SummaryWorker's live TableSummary, threaded here through the JobSummaryStore that
+# JobController provides into the DocumentBridge. Selected via `editor: ValueSetFilterEditor` on the
+# ValueSetFilterWorker's `filter` metadata.
+ValueSetFilterEditor:
+  is: AttributeEditor
+  class: tech.kzen.auto.client.objects.document.job.edit.ValueSetFilterEditor$Wrapper
+
+
+# Pivot-config editor: edits a PivotWorker's `pivot` attribute (a PivotSpec — `rows` group-by columns + `values`,
+# a column -> set of aggregate types Count/Sum/Average/Min/Max). Both column pickers draw candidate columns from
+# the nearest upstream SummaryWorker's live TableSummary (threaded via the JobSummaryStore), degrading to free-text
+# entry with no Summary upstream. Selected via `editor: PivotSpecEditor` on the PivotWorker's `pivot` metadata.
+PivotSpecEditor:
+  is: AttributeEditor
+  class: tech.kzen.auto.client.objects.document.job.edit.PivotSpecEditor$Wrapper
+
+
 #######################################################################################################################
 # Job insert ribbon: each RibbonTool delegates to a Worker / Channel archetype; clicking it inserts that
 # archetype into the active Job document (Workers nest under `workers`, Channels under `channels`).
@@ -92,6 +112,24 @@ FilterTool:
   is: RibbonTool
   parent: JobGroup_Transforms
   delegate: FilterWorker
+
+
+ValueSetFilterTool:
+  is: RibbonTool
+  parent: JobGroup_Transforms
+  delegate: ValueSetFilterWorker
+
+
+SummaryTool:
+  is: RibbonTool
+  parent: JobGroup_Transforms
+  delegate: SummaryWorker
+
+
+PivotTool:
+  is: RibbonTool
+  parent: JobGroup_Transforms
+  delegate: PivotWorker
 
 
 FormulaTool:
@@ -136,6 +174,12 @@ ExportTool:
   is: RibbonTool
   parent: JobGroup_Sinks
   delegate: ExportWriterWorker
+
+
+ExploreTool:
+  is: RibbonTool
+  parent: JobGroup_Sinks
+  delegate: ExploreWorker
 
 
 ################################################################

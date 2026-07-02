@@ -34,7 +34,8 @@ class EngineJobControl(
     private val execution: Execution,
     private val childLogicHost: JobChildLogicHost,
     private val objectStableMapper: ObjectStableMapper,
-    private val workerScratchDir: Path
+    private val workerScratchDir: Path,
+    private val workerOutputDir: Path
 ): JobControl {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -80,6 +81,14 @@ class EngineJobControl(
             scratchCreated = true
         }
         return workerScratchDir.toString()
+    }
+
+
+    // Persistent, notation-keyed per-Worker output dir (JobWorkPool.workerOutputDir) — NOT created here: a
+    // persisting Worker (Explore) clears + recreates it itself at run start (last-run-wins), and it must survive
+    // the run so the result stays downloadable. See JobControl.outputDir.
+    override fun outputDir(): String {
+        return workerOutputDir.toString()
     }
 
 

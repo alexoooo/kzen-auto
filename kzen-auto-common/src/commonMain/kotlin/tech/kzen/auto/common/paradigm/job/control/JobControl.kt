@@ -40,6 +40,22 @@ interface JobControl {
 
 
     /**
+     * An absolute filesystem path (a String — see [scratchDir]) to this Worker's PERSISTENT, per-Worker output
+     * directory. Unlike [scratchDir] this is NOT transient run state: it is keyed on the Worker's NOTATION
+     * identity (its [ObjectLocation]) rather than the run, so it SURVIVES the run settling — the result a
+     * file-backed sink accumulates (an Explore [IndexedCsvTable]) can be browsed / downloaded AFTER the run
+     * ends, which is what makes a Job usable for reporting. Semantics are last-run-wins: a new run of the same
+     * Worker replaces it, and it is never swept by the run-settle / boot cleanup that clears [scratchDir] trees.
+     *
+     * Also unlike [scratchDir], the directory is NOT auto-created — a persisting Worker owns its lifecycle
+     * (typically clearing it at run start so the new run fully replaces the previous). Only a Worker that
+     * persists output ([tech.kzen.auto.server.objects.job.worker.ExploreWorker]) calls this; the default throws.
+     */
+    fun outputDir(): String =
+        throw UnsupportedOperationException("This Worker has no persistent output directory")
+
+
+    /**
      * Publishes a Worker's live progress (e.g. row counts, or a preview sample) to its own trace, keyed by
      * [location] (the Worker's own [ObjectLocation]), for the interactive UI to poll while the Job runs.
      * This is the always-on PUSH path — distinct from the on-demand request/reply a Worker may serve over a

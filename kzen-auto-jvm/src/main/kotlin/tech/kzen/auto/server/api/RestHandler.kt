@@ -3,7 +3,10 @@ package tech.kzen.auto.server.api
 import io.ktor.http.*
 import kotlinx.coroutines.runBlocking
 import tech.kzen.auto.common.api.CommonRestApi
+import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.auto.common.util.data.DataLocation
+import tech.kzen.auto.server.objects.job.service.JobWorkPool
+import tech.kzen.auto.server.objects.report.exec.output.flat.IndexedCsvTable
 import tech.kzen.auto.server.objects.report.service.FileListingAction
 import tech.kzen.auto.server.paradigm.detached.ExecutionDownloadResult
 import tech.kzen.auto.server.service.exec.ModelDetachedExecutor
@@ -41,7 +44,9 @@ import tech.kzen.lib.common.service.store.DirectGraphStore
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import tech.kzen.lib.common.util.ImmutableByteArray
 import tech.kzen.lib.common.util.digest.Digest
+import tech.kzen.lib.platform.DateTimeUtils
 import java.net.URI
+import java.nio.file.Files
 
 
 class RestHandler(
@@ -52,7 +57,8 @@ class RestHandler(
     private val modelTaskRepository: ModelTaskRepository,
     private val serverLogicController: ServerLogicController,
     private val objectStableMapper: ObjectStableMapper,
-    private val fileListingAction: FileListingAction
+    private val fileListingAction: FileListingAction,
+    private val jobWorkPool: JobWorkPool
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     fun scan(parameters: Parameters): Map<String, Any> {
@@ -1125,6 +1131,36 @@ class RestHandler(
         }
 
         return result.toJsonCollection()
+    }
+
+
+    // Streaming download of a Job Explore Worker's PERSISTED result as table.csv — the Job analogue of Report's
+    // detached download (RestHandler.actionDetachedDownload). The Worker's IndexedCsvTable lives in a per-Worker
+    // output dir keyed on its NOTATION identity (JobWorkPool.workerOutputDir), which SURVIVES the run settling
+    // (last-run-wins), so this resolves it straight from path + object with NO live run — letting the report be
+    // downloaded after the run ends. The object path both resolves the Worker's dir and names the file.
+    fun jobDownload(parameters: Parameters): ExecutionDownloadResult {
+        val documentPath: DocumentPath = parameters.getParam(
+            CommonRestApi.paramDocumentPath, DocumentPath::parse)
+
+        val objectPath: ObjectPath = parameters.getParam(
+            CommonRestApi.paramObjectPath, ObjectPath::parse)
+
+        val workerLocation = ObjectLocation(documentPath, objectPath)
+
+        val outputDir = jobWorkPool.workerOutputDir(workerLocation)
+        val tablePath = outputDir.resolve(IndexedCsvTable.tableFile)
+        if (! Files.exists(tablePath)) {
+            error("No downloadable result: $workerLocation")
+        }
+
+        val filenamePrefix = FormatUtils.sanitizeFilename(objectPath.name.value)
+        val filename = filenamePrefix + "_" + DateTimeUtils.filenameTimestamp() + ".csv"
+
+        return ExecutionDownloadResult(
+            IndexedCsvTable.downloadCsvOffline(outputDir),
+            filename,
+            "text/csv")
     }
 
 

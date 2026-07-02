@@ -166,7 +166,8 @@ class KzenAutoContext(
         modelTaskRepository,
         serverLogicController,
         objectStableMapper,
-        fileListingAction)
+        fileListingAction,
+        jobWorkPool)
 
 
     //-----------------------------------------------------------------------------------------------------------------

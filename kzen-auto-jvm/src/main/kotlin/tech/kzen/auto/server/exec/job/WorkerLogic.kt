@@ -41,7 +41,8 @@ class WorkerLogic(
     private val worker: Worker,
     private val childLogicHost: JobChildLogicHost,
     private val objectStableMapper: ObjectStableMapper,
-    private val scratchDir: Path
+    private val scratchDir: Path,
+    private val outputDir: Path
 ): Logic {
     override fun signature(): LogicSignature {
         return LogicSignature.empty
@@ -55,7 +56,7 @@ class WorkerLogic(
             execution.onCapture { workerBase.captureMigrationState() }
         }
 
-        val control = EngineJobControl(execution, childLogicHost, objectStableMapper, scratchDir)
+        val control = EngineJobControl(execution, childLogicHost, objectStableMapper, scratchDir, outputDir)
 
         // The engine renders the failure (the run settles / parks per pause-on-error); the run-level ErrorPaused
         // state already surfaces which Worker halted (per-Worker error chips are a separate display gap).

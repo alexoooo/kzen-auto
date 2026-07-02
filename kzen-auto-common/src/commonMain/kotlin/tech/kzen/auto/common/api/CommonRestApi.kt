@@ -109,6 +109,12 @@ object CommonRestApi {
     const val logicStartAndStep = "${logicPrefix}startStep"
     const val logicSetPauseOnError = "${logicPrefix}setPauseOnError"
 
+    // Streaming download of a Job Explore Worker's PERSISTED result as a table.csv attachment (raw file bytes,
+    // not a JSON ExecutionResult). The Worker's on-disk table is keyed on its notation identity, so this
+    // resolves it from path + object with NO live run — the report downloads after the run ends. See
+    // RestHandler.jobDownload; addressed by paramDocumentPath (the Job) + paramObjectPath (the Worker).
+    const val jobDownload = "/job/download"
+
     // stable object id mapping
     const val objectStableMapperSnapshot = "/object-stable/snapshot"
 

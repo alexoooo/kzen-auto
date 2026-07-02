@@ -27,6 +27,22 @@ data class FilterSpec(
 ): Digestible {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
+        // Parse a `filter` map notation (column-key -> {type, values}) into a FilterSpec. The map's insertion
+        // order is preserved. Shared by the server-side [Definer] and the JS ValueSetFilterEditor, which reads
+        // the committed spec straight from notation (the same role SortSpec.ofNotation plays for its editor).
+        fun ofNotation(attributeNotation: MapAttributeNotation): FilterSpec {
+            val definitionMap = mutableMapOf<HeaderLabel, ColumnFilterSpec>()
+
+            for ((columnName, columnNotation) in attributeNotation.map) {
+                val columnCriteriaNotation = columnNotation as MapAttributeNotation
+                val columnCriteria = ColumnFilterSpec.ofNotation(columnCriteriaNotation)
+                definitionMap[HeaderLabel.ofString(columnName.asKey())] = columnCriteria
+            }
+
+            return FilterSpec(definitionMap)
+        }
+
+
         fun addCommand(mainLocation: ObjectLocation, columnName: String): NotationCommand {
             val columnAttributeSegment = AttributeSegment.ofKey(columnName)
             return InsertMapEntryInAttributeCommand(
@@ -125,16 +141,8 @@ data class FilterSpec(
                     "'${ReportConventions.filterAttributeName}' attribute notation not found:" +
                             " $objectLocation - $attributeName")
 
-            val definitionMap = mutableMapOf<HeaderLabel, ColumnFilterSpec>()
-
-            for ((columnName, columnNotation) in attributeNotation.map) {
-                val columnCriteriaNotation = columnNotation as MapAttributeNotation
-                val columnCriteria = ColumnFilterSpec.ofNotation(columnCriteriaNotation)
-                definitionMap[HeaderLabel.ofString(columnName.asKey())] = columnCriteria
-            }
-
             return AttributeDefinitionAttempt.success(
-                    ValueAttributeDefinition(FilterSpec(definitionMap)))
+                    ValueAttributeDefinition(ofNotation(attributeNotation)))
         }
     }
 

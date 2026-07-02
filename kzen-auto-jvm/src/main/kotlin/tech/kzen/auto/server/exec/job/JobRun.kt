@@ -186,11 +186,16 @@ class JobRun(
                         // Resolved (not yet created) here so the Worker's EngineJobControl.scratchDir() can
                         // materialize it lazily on first use — a Worker that needs no scratch space leaves none.
                         val workerScratchDir = jobWorkPool.workerScratchDir(runId, workerStableId)
+                        // Persistent, notation-keyed output dir (survives run-settle): a persisting sink (Explore)
+                        // clears + rewrites it so its result stays browsable / downloadable after the run ends.
+                        val workerOutputDir = jobWorkPool.workerOutputDir(location)
                         async {
                             try {
                                 execution.host(
                                     workerStableId,
-                                    WorkerLogic(worker, childLogicHost, objectStableMapper, workerScratchDir))
+                                    WorkerLogic(
+                                        worker, childLogicHost, objectStableMapper,
+                                        workerScratchDir, workerOutputDir))
                             }
                             finally {
                                 activeWorkers.decrementAndGet()

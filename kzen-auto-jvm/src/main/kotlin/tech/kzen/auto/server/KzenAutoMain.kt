@@ -536,6 +536,20 @@ private fun Routing.routeDetached(
             ByteStreams.copy(response.data, this)
         }
     }
+    // Streams a Job Explore Worker's persisted table.csv (resolved from notation, no live run needed) — the
+    // same attachment plumbing as actionDetachedDownload above; see RestHandler.jobDownload.
+    get(CommonRestApi.jobDownload) {
+        val response = restHandler.jobDownload(call.parameters)
+
+        val attachmentFilename = "attachment; filename*=utf-8''" + response.fileName
+        call.response.header(HttpHeaders.ContentDisposition, attachmentFilename)
+
+        call.respondOutputStream(
+            ContentType.parse(response.mimeType)
+        ) {
+            ByteStreams.copy(response.data, this)
+        }
+    }
 }
 
 

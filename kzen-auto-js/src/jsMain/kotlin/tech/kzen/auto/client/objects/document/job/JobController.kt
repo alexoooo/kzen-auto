@@ -30,6 +30,7 @@ import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.job.JobChannelDerivation
 import tech.kzen.auto.common.objects.document.job.JobConventions
+import tech.kzen.auto.common.objects.document.report.summary.TableSummary
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.exec.ExecutionSuccess
@@ -187,6 +188,11 @@ class JobController(
         JobProgressStore(props.restClient, props.objectStableMapper)
     }
 
+    // Live per-SummaryWorker TableSummary broadcast, provided into the per-document DocumentBridge (see render)
+    // so the value-set-filter / pivot editors — out of props reach under the generic AttributeEditorManager —
+    // can observe it. Owned here because this controller is the single owner of the run-scoped serve query.
+    private val jobSummaryStore = JobSummaryStore()
+
     // Refetch progress only when the document or the run status changes (mirrors FlowController); during a run
     // the status time advances on each logic-status poll, so this also drives the live progress refresh.
     private var lastFetchKey: String? = null
@@ -307,6 +313,20 @@ class JobController(
                     for (workerLocation in openedPreviewLocations) {
                         refreshPreviewSlice(clientState, workerLocation)
                     }
+                }
+            }
+
+            // Keep the live TableSummary of every SummaryWorker fresh while the run is active, so the value-set
+            // filter (and pivot) editors can source a column's distinct values from the nearest upstream Summary.
+            // Pulled over each Summary's duplex serve channel — the same bridge queryPreviewSlice uses — and
+            // pushed to the shared JobSummaryStore the editors observe. Kept (not cleared) once the run ends, so
+            // the user can still configure a filter against the last run's values (no persisted teaser fallback).
+            val summaryWorkerLocations = workerPaths(documentNotation)
+                .filter { isSummaryWorker(documentNotation, it) }
+                .map { ObjectLocation(documentPath, it) }
+            if (summaryWorkerLocations.isNotEmpty()) {
+                async {
+                    refreshSummaries(clientState, summaryWorkerLocations)
                 }
             }
         }
@@ -560,6 +580,45 @@ class JobController(
     }
 
 
+    private fun isSummaryWorker(documentNotation: DocumentNotation, workerPath: ObjectPath): Boolean {
+        val workerIs = documentNotation.objects.notations[workerPath]
+            ?.get(NotationConventions.isAttributeName)
+            ?.asString()
+        return workerIs == "SummaryWorker"
+    }
+
+
+    private fun isExploreWorker(documentNotation: DocumentNotation, workerPath: ObjectPath): Boolean {
+        val workerIs = documentNotation.objects.notations[workerPath]
+            ?.get(NotationConventions.isAttributeName)
+            ?.asString()
+        return workerIs == "ExploreWorker"
+    }
+
+
+    // The <a href> download URL for an Explore worker's whole result set (streamed as table.csv from the
+    // notation-resolved /job/download endpoint), or null when unavailable: not an Explore worker, or no rows.
+    // The table is PERSISTED (last-run-wins), so the link stays valid AFTER the run ends — the whole point of a
+    // report. Gated on the last run's row count (from the persisted progress teaser, which survives the run
+    // settling) so the link never points at an empty / never-run Worker. Needs no live run — the URL is a pure
+    // function of the Worker's location.
+    private fun exploreDownloadLink(
+        documentNotation: DocumentNotation,
+        workerLocation: ObjectLocation
+    ): String? {
+        if (! isExploreWorker(documentNotation, workerLocation.objectPath)) {
+            return null
+        }
+
+        val rowCount = state.workerProgress?.get(workerLocation)?.rowCount ?: 0L
+        if (rowCount <= 0L) {
+            return null
+        }
+
+        return props.restClient.linkJobDownload(workerLocation)
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     // Show / start the larger live preview slice for a Preview worker: pulls it once now; while the run stays
     // active, refreshProgressIfNeeded keeps re-pulling it each poll (and clears it once the run ends).
@@ -602,22 +661,7 @@ class JobController(
         val logicRunInfo = clientState.clientLogicState.logicStatus?.active
             ?: return null
 
-        val graphStructure = clientState.graphStructure()
-        val autoManagedServe = JobChannelDerivation
-            .derive(graphStructure, workerLocation.documentPath)
-            .serves
-            .any { it.worker == workerLocation }
-        val channelName =
-            if (autoManagedServe) {
-                JobConventions.autoServeChannelName(workerLocation.objectPath)
-            }
-            else {
-                graphStructure.graphNotation
-                    .firstAttribute(workerLocation, AttributePath.ofName(AttributeName("serve")))
-                    ?.asString()
-                    ?.substringAfterLast("/")
-                    ?: JobConventions.autoServeChannelName(workerLocation.objectPath)
-            }
+        val channelName = serveChannelName(clientState, workerLocation)
 
         val result = props.restClient.logicRequest(
             logicRunInfo.id,
@@ -629,6 +673,77 @@ class JobController(
         return when (result) {
             is ExecutionSuccess ->
                 JobWorkerProgress.ofProgressMap(null, result.value.get())
+
+            is ExecutionFailure ->
+                null
+        }
+    }
+
+
+    // The name of the (external duplex) `serve` channel to address for a Worker's pull query. When the serve
+    // port is auto-managed (open) it is the deterministic auto-synthesized name; only a real manual `serve`
+    // reference that resolves to an existing Channel names the channel itself. Routing every pull through the
+    // same JobChannelDerivation keeps this in step with the server's synthesis. Shared by the preview-slice and
+    // summary pulls so the two can't drift.
+    private fun serveChannelName(clientState: ClientState, workerLocation: ObjectLocation): String {
+        val graphStructure = clientState.graphStructure()
+        val autoManagedServe = JobChannelDerivation
+            .derive(graphStructure, workerLocation.documentPath)
+            .serves
+            .any { it.worker == workerLocation }
+        return if (autoManagedServe) {
+            JobConventions.autoServeChannelName(workerLocation.objectPath)
+        }
+        else {
+            graphStructure.graphNotation
+                .firstAttribute(workerLocation, AttributePath.ofName(AttributeName("serve")))
+                ?.asString()
+                ?.substringAfterLast("/")
+                ?: JobConventions.autoServeChannelName(workerLocation.objectPath)
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    // Pull each SummaryWorker's live TableSummary over its duplex serve channel and push the map into the shared
+    // JobSummaryStore (which value-gates the update, so an unchanged poll re-renders nothing). Carries a prior
+    // value forward for a Worker whose query transiently fails, and drops entries for a Worker no longer present.
+    private suspend fun refreshSummaries(clientState: ClientState, summaryWorkers: List<ObjectLocation>) {
+        val previous = jobSummaryStore.current()
+        val next = LinkedHashMap<ObjectLocation, TableSummary>()
+        for (workerLocation in summaryWorkers) {
+            val summary = querySummary(clientState, workerLocation)
+                ?: previous[workerLocation]
+                ?: continue
+            next[workerLocation] = summary
+        }
+        jobSummaryStore.update(next)
+    }
+
+
+    // Issue a `channel`-only request to a SummaryWorker's serve channel; the reply is the serialized TableSummary
+    // (SummaryWorker.onQuery ignores the request payload — it always returns its latest snapshot).
+    private suspend fun querySummary(
+        clientState: ClientState,
+        workerLocation: ObjectLocation
+    ): TableSummary? {
+        val logicRunInfo = clientState.clientLogicState.logicStatus?.active
+            ?: return null
+
+        val channelName = serveChannelName(clientState, workerLocation)
+
+        val result = props.restClient.logicRequest(
+            logicRunInfo.id,
+            logicRunInfo.frame.executionId,
+            JobConventions.channelParameter to channelName)
+
+        return when (result) {
+            is ExecutionSuccess -> {
+                @Suppress("UNCHECKED_CAST")
+                val collection = result.value.get() as? Map<String, Map<String, Any>>
+                    ?: return null
+                TableSummary.fromCollection(collection)
+            }
 
             is ExecutionFailure ->
                 null
@@ -650,6 +765,12 @@ class JobController(
         if (! JobConventions.isJob(documentNotation)) {
             return
         }
+
+        // Provide the live-summary store into the per-document bridge so the value-set-filter / pivot editors
+        // (nested under AttributeEditorManager, out of props reach) can look it up + observe it. Idempotent map
+        // write — no re-render — that runs before any child's componentDidMount, and re-provides into a fresh
+        // bridge after a same-archetype document switch (mirrors ScriptController providing its stores).
+        contextValue<DocumentBridge?>()?.provide(JobSummaryStore.Key, jobSummaryStore)
 
         val workers = state.workerLocations ?: listOf()
         val connections = state.connectionsByUpstream ?: mapOf()
@@ -707,6 +828,7 @@ class JobController(
             this.indexInParent = index
             this.isPreviewWorker = isPreviewWorker(documentNotation, workerLocation.objectPath)
             this.isRunWorker = isRunWorker(documentNotation, workerLocation.objectPath)
+            this.exploreDownloadLink = exploreDownloadLink(documentNotation, workerLocation)
 
             this.progress = state.workerProgress?.get(workerLocation)
             this.previewDetail = state.previewDetail?.get(workerLocation)

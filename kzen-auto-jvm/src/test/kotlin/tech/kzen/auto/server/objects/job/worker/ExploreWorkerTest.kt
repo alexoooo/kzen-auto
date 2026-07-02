@@ -25,12 +25,12 @@ import tech.kzen.lib.common.model.obj.ObjectPath
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 
 /**
  * Unit test for [ExploreWorker]: driven through its real [ExploreWorker.run] lifecycle over a fake input of
- * [DataRecord]s, it asserts the two things that make it a faithful, self-cleaning browse operator —
+ * [DataRecord]s, it asserts the two things that make it a faithful, PERSISTENT browse operator —
  *
  * 1. **Serve A/B parity** — a random-access slice query (`offset` / `limit`) answered by the Worker's serve path
  *    is byte-identical to what a direct [IndexedCsvTable] produces over the same records and slice (the P4g
@@ -40,8 +40,10 @@ import kotlin.test.assertFalse
  *    table is fully populated. The two coroutines are coordinated by a pair of [CompletableDeferred]s so the
  *    query lands deterministically after every record is indexed and before the run settles (a single-threaded
  *    `runBlocking` event loop, so the handoff is race-free).
- * 2. **Scratch sweep** — the file-backed scratch dir the Worker opens is closed-then-deleted once the run settles
- *    ([ExploreWorker.onClose]).
+ * 2. **Output persistence** — the file-backed output dir the Worker opens is flushed-and-closed but KEPT once the
+ *    run settles ([ExploreWorker.onClose]), so the result (`table.csv`) stays on disk to be browsed / downloaded
+ *    after the run ends. This is the core of making a Job usable for reporting — the data must NOT vanish on
+ *    settle.
  *
  * The accumulated row count pushed to the trace is checked as a bonus (the final forced progress publish).
  */
@@ -65,7 +67,7 @@ class ExploreWorkerTest {
 
     //-----------------------------------------------------------------------------------------------------------------
     @Test
-    fun servesRandomAccessSliceMatchingDirectIndexedCsvTableAndSweepsScratchDir() = runBlocking {
+    fun servesRandomAccessSliceMatchingDirectIndexedCsvTableAndPersistsResult() = runBlocking {
         // A middle slice (skip the first row, take the next two) — a non-trivial random-access window.
         val offset = 1L
         val limit = 2
@@ -97,16 +99,27 @@ class ExploreWorkerTest {
 
         val control = ScratchJobControl(workerScratch)
         val worker = ExploreWorker(input, server, selfLocation)
-        worker.run(control)
+        try {
+            worker.run(control)
 
-        // A/B: the served slice matches the direct IndexedCsvTable's preview exactly.
-        assertEquals(expected, served)
+            // A/B: the served slice matches the direct IndexedCsvTable's preview exactly.
+            assertEquals(expected, served)
 
-        // The running row count reached the trace.
-        assertEquals(records.size.toLong(), control.progressValues.last()["rows"])
+            // The running row count reached the trace (under "count", matching PreviewWorker — so the client
+            // parses it as JobWorkerProgress.rowCount and can gate the download link on there being data).
+            assertEquals(records.size.toLong(), control.progressValues.last()["count"])
 
-        // The scratch dir is closed-then-deleted once the run settles.
-        assertFalse(Files.exists(workerScratch))
+            // The output dir and its table.csv PERSIST once the run settles (NOT swept) — so the result stays
+            // browsable / downloadable after the run ends.
+            assertTrue(Files.exists(workerScratch))
+            assertTrue(Files.exists(workerScratch.resolve(IndexedCsvTable.tableFile)))
+        }
+        finally {
+            // The output is persistent now, so the Worker no longer deletes it — the test cleans up its own dir.
+            if (Files.exists(workerScratch)) {
+                WorkUtils.recursivelyDeleteDir(workerScratch)
+            }
+        }
     }
 
 
@@ -193,18 +206,21 @@ class ExploreWorkerTest {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    // Returns a real, created scratch dir; an ExploreWorker opens its IndexedCsvTable under it and deletes it in
-    // onClose. Captures published progress so the row count can be asserted.
-    private class ScratchJobControl(private val scratchDir: Path): JobControl {
+    // Hands the ExploreWorker its persistent output dir; the Worker opens its IndexedCsvTable under it, clears it
+    // at onStart, and KEEPS it at onClose (the test cleans it up). Captures published progress for the row count.
+    private class ScratchJobControl(private val outputDir: Path): JobControl {
         val progressValues = mutableListOf<Map<String, Any?>>()
 
         override suspend fun checkpoint() {}
         override suspend fun <R> runBlockingIo(block: () -> R): R = block()
 
-        override fun scratchDir(): String {
-            Files.createDirectories(scratchDir)
-            return scratchDir.toString()
+        // Persistent, per-Worker output dir — NOT auto-created (the Worker manages it), mirroring EngineJobControl.
+        override fun outputDir(): String {
+            return outputDir.toString()
         }
+
+        override fun scratchDir(): String =
+            throw UnsupportedOperationException("An ExploreWorker uses outputDir, not scratchDir")
 
         override fun publishProgress(location: ObjectLocation, value: Map<String, Any?>, force: Boolean) {
             progressValues.add(value)

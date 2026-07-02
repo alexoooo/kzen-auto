@@ -47,6 +47,12 @@ external interface JobObjectSlotProps: Props {
     var isPreviewWorker: Boolean
     var isRunWorker: Boolean
 
+    // For an Explore worker with a non-empty PERSISTED table: a ready-to-use <a href> URL that streams the whole
+    // result set as table.csv (JobController builds it from the Worker's notation location). Null otherwise (not
+    // an Explore worker, or no rows). The table persists past the run, so the button stays after the run ends —
+    // that's what makes the Job usable for reporting.
+    var exploreDownloadLink: String?
+
     // This object's live progress / on-demand preview slice (Workers only; null for a Channel). Kept
     // value-stable upstream so a non-dragged slot bails out during a drag (see JobController).
     var progress: JobWorkerProgress?
@@ -153,6 +159,47 @@ class JobObjectSlot(
 
             if (props.isPreviewWorker) {
                 renderPreview()
+            }
+
+            if (props.exploreDownloadLink != null) {
+                renderExploreDownload()
+            }
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    // Download the whole accumulated result set of an Explore worker as table.csv — a plain <a href> to the
+    // notation-resolved /job/download endpoint that serves the persisted table even after the run ends (mirrors
+    // Report's OutputTableController download button).
+    private fun ChildrenBuilder.renderExploreDownload() {
+        val downloadLink = props.exploreDownloadLink
+            ?: return
+
+        div {
+            css {
+                marginTop = 0.5.em
+            }
+
+            a {
+                css {
+                    textDecoration = None.none
+                }
+
+                href = downloadLink
+
+                Button {
+                    variant = ButtonVariant.outlined
+                    size = Size.small
+
+                    icon("material-symbols:cloud-download") {
+                        style = unsafeJso {
+                            marginRight = 0.25.em
+                        }
+                    }
+
+                    +"Download"
+                }
             }
         }
     }
