@@ -38,3 +38,25 @@ ChannelClient:
 ChannelServer:
   abstract: true
   class: tech.kzen.auto.common.paradigm.job.api.ChannelServer
+
+
+#######################################################################################################################
+# Semantic refinements of ChannelServer: same class (inherited — no own `class:`), so JobChannelPorts.kindOf,
+# JobChannelCreator, ChannelTypeDefiner, and JobChannelSynthesis keep treating a port declared with one of these
+# as a plain serve port. Only the JS Job editor reads the declared subtype (via JobServeCapability's inheritance
+# chain walk) to choose the interactive card behaviour — replacing the removed Worker-name string gate (CC-17).
+
+
+PreviewServer:
+  abstract: true
+  is: ChannelServer
+
+
+SummaryServer:
+  abstract: true
+  is: ChannelServer
+
+
+TableServer:
+  abstract: true
+  is: ChannelServer

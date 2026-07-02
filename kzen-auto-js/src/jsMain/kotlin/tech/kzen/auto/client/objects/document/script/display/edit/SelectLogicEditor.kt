@@ -118,7 +118,7 @@ class SelectLogicEditor(
                 continue
             }
 
-            if (AutoConventions.isLogic(notation)) {
+            if (AutoConventions.isLogic(graphNotation, path)) {
                 candidates.add(ObjectLocation(
                         path, NotationConventions.mainObjectPath))
                 continue

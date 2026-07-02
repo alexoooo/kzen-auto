@@ -24,6 +24,13 @@ object JobConventions {
     val channelObjectName = ObjectName("Channel")
     val duplexChannelObjectName = ObjectName("DuplexChannel")
 
+    // Semantic ChannelServer subtypes (declared in common-job.yaml, no own `class:` so they resolve to the
+    // ChannelServer class). A Worker declares its `serve` port as one of these to opt into a client capability;
+    // JobServeCapability classifies by inheritance-chain membership, so subtypes are recognized (see CC-17).
+    val previewServerObjectName = ObjectName("PreviewServer")
+    val summaryServerObjectName = ObjectName("SummaryServer")
+    val tableServerObjectName = ObjectName("TableServer")
+
     val workersAttributeName = AttributeName("workers")
     val workersAttributePath = AttributePath.ofName(workersAttributeName)
 

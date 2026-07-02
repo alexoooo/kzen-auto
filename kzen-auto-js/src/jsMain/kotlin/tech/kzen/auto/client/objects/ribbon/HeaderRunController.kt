@@ -142,10 +142,12 @@ class HeaderRunController (
         val documentPath = clientState.navigationRoute.documentPath
             ?: return
 
-        val documentNotation = clientState.graphStructure().graphNotation.documents[documentPath]
-            ?: return
+        val graphNotation = clientState.graphStructure().graphNotation
+        if (graphNotation.documents[documentPath] == null) {
+            return
+        }
 
-        val isLogic = AutoConventions.isLogic(documentNotation)
+        val isLogic = AutoConventions.isLogic(graphNotation, documentPath)
         val clientLogicState = clientState.clientLogicState
         val nextFrame = clientLogicState.logicStatus?.active?.frame
 

@@ -17,6 +17,7 @@ import tech.kzen.lib.common.service.notation.NotationConventions
  */
 object FlowConventions {
     val objectName = ObjectName("Flow")
+    val edgePipeName = ObjectName("EdgePipe")
 
     val verticesAttributeName = AttributeName("vertices")
     val verticesAttributePath = AttributePath.ofName(verticesAttributeName)
@@ -40,6 +41,16 @@ object FlowConventions {
                 ?: return false
 
         return mainObjectIs == objectName.value
+    }
+
+
+    // True when the given archetype is an EdgePipe (or a subtype) rather than a vertex — tested by inheritance
+    // chain, not a direct `is`-name match, so a 3rd-party pipe subtype is recognized (see CC-17). Used by the
+    // editor to route a ribbon-inserted object into `edges` vs `vertices`. Mirrors [inputParameterNames]' chain use.
+    fun isPipeArchetype(graphNotation: GraphNotation, archetypeLocation: ObjectLocation): Boolean {
+        return graphNotation.inheritanceChain(archetypeLocation).any {
+            it.objectPath.name == edgePipeName
+        }
     }
 
 

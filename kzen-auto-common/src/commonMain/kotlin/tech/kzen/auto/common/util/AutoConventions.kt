@@ -1,15 +1,11 @@
 package tech.kzen.auto.common.util
 
-import tech.kzen.auto.common.objects.document.flow.FlowConventions
-import tech.kzen.auto.common.objects.document.job.JobConventions
-import tech.kzen.auto.common.objects.document.report.ReportConventions
-import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.document.DocumentNesting
 import tech.kzen.lib.common.model.document.DocumentPath
+import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
-import tech.kzen.lib.common.model.structure.notation.DocumentNotation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.platform.DateTimeUtils
@@ -75,10 +71,20 @@ object AutoConventions {
     }
 
 
-    fun isLogic(documentNotation: DocumentNotation): Boolean {
-        return ScriptConventions.isScript(documentNotation) ||
-            FlowConventions.isFlow(documentNotation) ||
-            ReportConventions.isReport(documentNotation) ||
-            JobConventions.isJob(documentNotation)
+    val logicObjectName = ObjectName("Logic")
+
+
+    // True when the document's `main` is a runnable Logic (Script / Flow / Job / Report, or a 3rd-party
+    // paradigm) — tested by the main archetype's inheritance chain reaching the common `Logic` marker, so a new
+    // paradigm is recognized without editing this method (see CC-17). The server-side analogue is the
+    // LogicDocument interface each paradigm's `main` archetype implements.
+    fun isLogic(graphNotation: GraphNotation, documentPath: DocumentPath): Boolean {
+        val mainLocation = ObjectLocation(documentPath, NotationConventions.mainObjectPath)
+        if (mainLocation !in graphNotation.coalesce) {
+            return false
+        }
+        return graphNotation.inheritanceChain(mainLocation).any {
+            it.objectPath.name == logicObjectName
+        }
     }
 }

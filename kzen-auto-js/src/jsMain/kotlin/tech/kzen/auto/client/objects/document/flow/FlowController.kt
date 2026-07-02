@@ -88,12 +88,6 @@ class FlowController(
     ClientStateGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
-    companion object {
-        private const val edgePipeName = "EdgePipe"
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
         private val archetype: ObjectLocation,
@@ -256,13 +250,13 @@ class FlowController(
         val archetypeLocation = bridge()?.channel(InsertionKey)?.getAndClearSelection()
             ?: return
 
-        val archetypeNotation = state.clientState!!.graphStructure().graphNotation.coalesce[archetypeLocation]!!
-        val archetypeIs = archetypeNotation.get(NotationConventions.isAttributeName)?.asString()!!
+        val graphNotation = state.clientState!!.graphStructure().graphNotation
+        val archetypeNotation = graphNotation.coalesce[archetypeLocation]!!
 
         val containingObjectLocation = ObjectLocation(
             state.clientState?.navigationRoute?.documentPath!!, NotationConventions.mainObjectPath)
 
-        val isPipe = archetypeIs == edgePipeName
+        val isPipe = FlowConventions.isPipeArchetype(graphNotation, archetypeLocation)
 
         val command =
             if (isPipe) {

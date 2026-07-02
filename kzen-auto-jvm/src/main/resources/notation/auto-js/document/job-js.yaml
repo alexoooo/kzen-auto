@@ -6,6 +6,7 @@ JobController:
   archetype: Job
   ribbonController: RibbonController
   attributeEditorManager: AttributeEditorManager
+  attributeViewManager: AttributeViewManager
 
 
 # Channel-reference picker: lists the Job document's Channel objects in a dropdown and writes the chosen

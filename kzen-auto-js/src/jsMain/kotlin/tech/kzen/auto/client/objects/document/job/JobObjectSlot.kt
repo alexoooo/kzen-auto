@@ -20,19 +20,15 @@ import react.dom.html.ReactHTML.th
 import react.dom.html.ReactHTML.thead
 import react.dom.html.ReactHTML.tr
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
+import tech.kzen.auto.client.objects.document.common.attribute.AttributeViewManager
 import tech.kzen.auto.client.objects.document.common.dragdrop.dragHandle
-import tech.kzen.auto.client.util.NavigationRoute
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.refCallback
 import tech.kzen.auto.common.objects.document.job.JobChannelPorts
 import tech.kzen.auto.common.util.AutoConventions
-import tech.kzen.lib.common.exec.RequestParams
 import tech.kzen.lib.common.model.attribute.AttributeName
-import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.lib.common.model.location.ObjectReference
-import tech.kzen.lib.common.model.location.ObjectReferenceHost
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.metadata.ObjectMetadata
 import web.cssom.*
@@ -44,8 +40,10 @@ external interface JobObjectSlotProps: Props {
     var objectLocation: ObjectLocation
     var indexInParent: Int
 
-    var isPreviewWorker: Boolean
-    var isRunWorker: Boolean
+    // Whether this Worker serves a live preview sample (a PreviewServer serve port) — an inline sample table +
+    // "Larger sample" pull. Derived from JobServeCapability, so any preview-serving Worker qualifies, not only
+    // the built-in PreviewWorker (see CC-17).
+    var showPreview: Boolean
 
     // For an Explore worker with a non-empty PERSISTED table: a ready-to-use <a href> URL that streams the whole
     // result set as table.csv (JobController builds it from the Worker's notation location). Null otherwise (not
@@ -61,6 +59,7 @@ external interface JobObjectSlotProps: Props {
 
     var graphStructure: GraphStructure
     var attributeEditorManager: AttributeEditorManager.Wrapper
+    var attributeViewManager: AttributeViewManager.Wrapper
 
     var isDragSource: Boolean
     var handleColor: Color
@@ -150,14 +149,12 @@ class JobObjectSlot(
                     +statusText(props.progress)
                 }
 
-                if (props.isRunWorker) {
-                    renderRunWorkerLink()
-                }
+                renderAttributeSummaries()
             }
 
             renderAttributeEditors()
 
-            if (props.isPreviewWorker) {
+            if (props.showPreview) {
                 renderPreview()
             }
 
@@ -255,49 +252,34 @@ class JobObjectSlot(
     }
 
 
-    // A Run Worker hosts another Logic (its `instructions`) once per element; surface a drill-in link to that
-    // child document so its independently trace-recorded live execution can be opened. Mirrors the reference
-    // resolution + hash navigation of ReferenceLinkAttributeView.
-    private fun ChildrenBuilder.renderRunWorkerLink() {
-        val graphNotation = props.graphStructure.graphNotation
-
-        val reference = graphNotation
-            .firstAttribute(props.objectLocation, AttributePath.ofName(AttributeName("instructions")))
-            ?.asString()
-            ?.takeIf { it.isNotEmpty() }
-            ?.let { ObjectReference.parse(it) }
+    // Generic per-attribute summary views: any attribute whose metadata declares a `summary:` view is rendered
+    // through the shared AttributeViewManager — no worker-type gate (see CC-17). A RunWorker's `instructions`
+    // declares ReferenceLinkAttributeView, so its child-document drill-in link renders here; any future worker
+    // attribute that declares a summary view gets it for free. Mirrors the Script step header's summary row
+    // (ScriptStepDisplayDefault.findSummaryAttributes / StepHeader.renderSummary).
+    private fun ChildrenBuilder.renderAttributeSummaries() {
+        val objectMetadata = props.graphStructure.graphMetadata.objectMetadata.get(props.objectLocation)
             ?: return
 
-        val documentPath = graphNotation.coalesce
-            .locateOptional(reference, ObjectReferenceHost.ofLocation(props.objectLocation))
-            ?.documentPath
-            ?: return
-
-        a {
-            css {
-                display = Display.inlineFlex
-                alignItems = AlignItems.center
-                marginLeft = 0.75.em
-                fontSize = 0.85.em
-                color = Color("rgba(0, 0, 0, 0.55)")
-                textDecoration = Globals.initial
-                cursor = Cursor.pointer
-                "&:hover" {
-                    color = Color("#1565ff")
-                }
+        for ((attributeName, attributeMetadata) in objectMetadata.attributes.map) {
+            val hasSummaryView = attributeMetadata
+                .attributeMetadataNotation
+                .get(AttributeViewManager.summaryAttributePath.toNesting())
+                ?.asString()
+                ?.isNotEmpty()
+                ?: false
+            if (! hasSummaryView) {
+                continue
             }
 
-            href = NavigationRoute(documentPath, RequestParams.empty).toFragment()
-            title = "Open the document this Run Worker executes"
-
-            onClick = { it.stopPropagation() }
-
-            span { +documentPath.name.value }
-
-            icon("material-symbols:open-in-new") {
-                style = unsafeJso {
-                    fontSize = 1.em
-                    marginLeft = 0.25.em
+            div {
+                key = Key(attributeName.value)
+                css {
+                    marginLeft = 0.75.em
+                }
+                props.attributeViewManager.child(this) {
+                    this.objectLocation = props.objectLocation
+                    this.attributeName = attributeName
                 }
             }
         }

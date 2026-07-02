@@ -2,16 +2,12 @@ package tech.kzen.auto.server.service.impl
 
 import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
-import tech.kzen.auto.common.objects.document.job.JobConventions
-import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.paradigm.flow.service.format.FlowMessageInspector
 import tech.kzen.auto.common.paradigm.logic.LogicConventions
 import tech.kzen.auto.server.exec.LogicCompiler
 import tech.kzen.auto.server.exec.LogicCompilerServices
+import tech.kzen.auto.server.exec.LogicTraceAddressRouting
 import tech.kzen.auto.server.objects.job.service.JobWorkPool
-import tech.kzen.auto.server.exec.job.EngineJobControl
-import tech.kzen.auto.server.exec.report.ExecutionLogicTraceHandle
-import tech.kzen.auto.server.exec.script.ScriptRunContext
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionResult
@@ -58,7 +54,8 @@ import kotlin.time.Clock
  *
  * Script, Flow, Job and Report documents all compile onto the engine now (a document of any other type fails to
  * compile → clean 400). The Job port runs its Workers as concurrent confined child nodes; live worker progress
- * is bridged back to the JS Job UI via [JobConventions.workerProgressPath] (see [mirrorTrace]). A Report runs its
+ * is bridged back to the JS Job UI via [tech.kzen.auto.common.objects.document.job.JobConventions.workerProgressPath]
+ * (see [mirrorTrace]). A Report runs its
  * record pipeline on the run's root node, bridging input / output progress to its literal trace paths.
  *
  * Run-lifecycle convergence: every control action that releases work (resume / step / cancel) is driven on a
@@ -83,6 +80,7 @@ class ServerLogicController(
     private val flowMessageInspector: FlowMessageInspector,
     private val notationMetadataReader: NotationMetadataReader,
     private val jobWorkPool: JobWorkPool,
+    private val traceAddressRoutings: List<LogicTraceAddressRouting>,
     private val environment: () -> GraphEnvironment
 ):
     LogicController
@@ -91,6 +89,12 @@ class ServerLogicController(
     companion object {
         private val logger = LoggerFactory.getLogger(ServerLogicController::class.java)
     }
+
+
+    // The per-flavour trace-address routings, indexed by their reserved marker (assembled at the composition
+    // root). mirrorTrace dispatches by marker with a generic stable-id fallback, so this class names no flavour.
+    private val traceAddressRoutingByMarker: Map<String, LogicTraceAddressRouting> =
+        traceAddressRoutings.associateBy { it.marker }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -562,14 +566,11 @@ class ServerLogicController(
     //
     // The engine attributes an emit to (node, address): the node carries the flavour's root stable id, while
     // the per-element stable id is the address — a Script emits `Address.of(stepStableId.value)` per step, a
-    // Flow `Address.of(vertexStableId.value)` per vertex. The old trace store keys per element by stable id,
-    // so the element id is reconstructed from the address segment (flavour-agnostic). Three flavour-specific
-    // addresses are routed by reserved marker instead: the Script [ScriptRunContext.nextStepAddressMarker]
-    // "next to run" highlight → the fixed next-step trace path (Flow never emits it); a Job Worker's
-    // [EngineJobControl.workerProgressAddressMarker] live progress → that Worker's progress path (keyed by the
-    // node's stable id, which IS the Worker's stable id) — the path the JS Job UI polls; and a Report's
-    // [ExecutionLogicTraceHandle.tracePathAddressMarker] input / output progress → the literal trace path
-    // carried in the remaining address segments (Report's trace paths are by-convention, not per-element).
+    // Flow `Address.of(vertexStableId.value)` per vertex. The old trace store keys per element by stable id, so
+    // the element id is reconstructed from the address segment (flavour-agnostic). A flavour that instead emits
+    // a non-per-element trace at a reserved marker segment (Script's "next to run", a Job Worker's progress, a
+    // Report's input / output progress) contributes a [LogicTraceAddressRouting]; this bridge dispatches by that
+    // marker and names no flavour itself (see CC-17).
     private fun mirrorTrace(state: LogicState) {
         synchronized(state.bridgeLock) {
             val events = state.engine.history(state.bridgedSequence)
@@ -577,23 +578,15 @@ class ServerLogicController(
                 val handle = handleForNode(state, event.nodeId, event.stableId)
                 val address = event.address
                 if (address != null && address.segments.isNotEmpty()) {
-                    when (val segment = address.segments.first()) {
-                        ScriptRunContext.nextStepAddressMarker ->
-                            handle.set(ScriptConventions.nextStepTracePath, event.value)
-
-                        EngineJobControl.workerProgressAddressMarker ->
-                            handle.set(
-                                JobConventions.workerProgressPath(event.stableId), event.value)
-
-                        ExecutionLogicTraceHandle.tracePathAddressMarker ->
-                            // A Report emits its input / output progress at a literal trace path: the remaining
-                            // address segments ARE the LogicTracePath to set (no stable-id translation).
-                            handle.set(
-                                LogicTracePath(address.segments.drop(1)), event.value)
-
-                        else ->
-                            handle.set(
-                                LogicTracePath.ofObjectStableId(ObjectStableId(segment)), event.value)
+                    val segment = address.segments.first()
+                    val routing = traceAddressRoutingByMarker[segment]
+                    if (routing != null) {
+                        handle.set(routing.tracePath(address, event.stableId), event.value)
+                    }
+                    else {
+                        // An ordinary per-element address: the leading segment IS the element stable id.
+                        handle.set(
+                            LogicTracePath.ofObjectStableId(ObjectStableId(segment)), event.value)
                     }
                 }
                 else {

@@ -15,6 +15,7 @@ import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
 import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.objects.document.bridge.InsertionKey
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
+import tech.kzen.auto.client.objects.document.common.attribute.AttributeViewManager
 import tech.kzen.auto.client.objects.document.common.dragdrop.dropZoneRegion
 import tech.kzen.auto.client.objects.ribbon.RibbonController
 import tech.kzen.auto.client.service.global.ClientState
@@ -30,6 +31,7 @@ import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.job.JobChannelDerivation
 import tech.kzen.auto.common.objects.document.job.JobConventions
+import tech.kzen.auto.common.objects.document.job.JobServeCapability
 import tech.kzen.auto.common.objects.document.report.summary.TableSummary
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.exec.ExecutionFailure
@@ -62,6 +64,7 @@ external interface JobControllerProps: Props {
     var objectStableMapper: ObjectStableMapper
     var mirroredGraphStore: MirroredGraphStore
     var attributeEditorManager: AttributeEditorManager.Wrapper
+    var attributeViewManager: AttributeViewManager.Wrapper
 }
 
 
@@ -124,6 +127,7 @@ class JobController(
         private val archetype: ObjectLocation,
         private val ribbonController: RibbonController.Wrapper,
         private val attributeEditorManager: AttributeEditorManager.Wrapper,
+        private val attributeViewManager: AttributeViewManager.Wrapper,
         @Service private val clientStateGlobal: ClientStateGlobal,
         @Service private val restClient: ClientRestApi,
         @Service private val objectStableMapper: ObjectStableMapper,
@@ -154,6 +158,7 @@ class JobController(
                         this.objectStableMapper = this@Wrapper.objectStableMapper
                         this.mirroredGraphStore = this@Wrapper.mirroredGraphStore
                         this.attributeEditorManager = this@Wrapper.attributeEditorManager
+                        this.attributeViewManager = this@Wrapper.attributeViewManager
                         block()
                     }
                 }
@@ -321,9 +326,10 @@ class JobController(
             // Pulled over each Summary's duplex serve channel — the same bridge queryPreviewSlice uses — and
             // pushed to the shared JobSummaryStore the editors observe. Kept (not cleared) once the run ends, so
             // the user can still configure a filter against the last run's values (no persisted teaser fallback).
+            val graphStructure = clientState.graphStructure()
             val summaryWorkerLocations = workerPaths(documentNotation)
-                .filter { isSummaryWorker(documentNotation, it) }
                 .map { ObjectLocation(documentPath, it) }
+                .filter { JobServeCapability.of(graphStructure, it) == JobServeCapability.Capability.Summary }
             if (summaryWorkerLocations.isNotEmpty()) {
                 async {
                     refreshSummaries(clientState, summaryWorkerLocations)
@@ -564,49 +570,17 @@ class JobController(
     }
 
 
-    private fun isPreviewWorker(documentNotation: DocumentNotation, workerPath: ObjectPath): Boolean {
-        val workerIs = documentNotation.objects.notations[workerPath]
-            ?.get(NotationConventions.isAttributeName)
-            ?.asString()
-        return workerIs == "PreviewWorker"
-    }
-
-
-    private fun isRunWorker(documentNotation: DocumentNotation, workerPath: ObjectPath): Boolean {
-        val workerIs = documentNotation.objects.notations[workerPath]
-            ?.get(NotationConventions.isAttributeName)
-            ?.asString()
-        return workerIs == "RunWorker"
-    }
-
-
-    private fun isSummaryWorker(documentNotation: DocumentNotation, workerPath: ObjectPath): Boolean {
-        val workerIs = documentNotation.objects.notations[workerPath]
-            ?.get(NotationConventions.isAttributeName)
-            ?.asString()
-        return workerIs == "SummaryWorker"
-    }
-
-
-    private fun isExploreWorker(documentNotation: DocumentNotation, workerPath: ObjectPath): Boolean {
-        val workerIs = documentNotation.objects.notations[workerPath]
-            ?.get(NotationConventions.isAttributeName)
-            ?.asString()
-        return workerIs == "ExploreWorker"
-    }
-
-
-    // The <a href> download URL for an Explore worker's whole result set (streamed as table.csv from the
-    // notation-resolved /job/download endpoint), or null when unavailable: not an Explore worker, or no rows.
-    // The table is PERSISTED (last-run-wins), so the link stays valid AFTER the run ends — the whole point of a
-    // report. Gated on the last run's row count (from the persisted progress teaser, which survives the run
-    // settling) so the link never points at an empty / never-run Worker. Needs no live run — the URL is a pure
-    // function of the Worker's location.
+    // The <a href> download URL for a Table-serving worker's (e.g. Explore) whole result set (streamed as
+    // table.csv from the notation-resolved /job/download endpoint), or null when unavailable: not a Table-serving
+    // worker, or no rows. The table is PERSISTED (last-run-wins), so the link stays valid AFTER the run ends — the
+    // whole point of a report. Gated on the last run's row count (from the persisted progress teaser, which
+    // survives the run settling) so the link never points at an empty / never-run Worker. Needs no live run — the
+    // URL is a pure function of the Worker's location.
     private fun exploreDownloadLink(
-        documentNotation: DocumentNotation,
+        graphStructure: GraphStructure,
         workerLocation: ObjectLocation
     ): String? {
-        if (! isExploreWorker(documentNotation, workerLocation.objectPath)) {
+        if (JobServeCapability.of(graphStructure, workerLocation) != JobServeCapability.Capability.Table) {
             return null
         }
 
@@ -801,7 +775,7 @@ class JobController(
 
             insertionGap(0, null)
             for ((index, workerLocation) in workers.withIndex()) {
-                renderWorkerSlot(index, workerLocation, documentNotation, graphStructure, active)
+                renderWorkerSlot(index, workerLocation, graphStructure, active)
 
                 // The pipe (if any) for this Worker lives in the gap directly below it (upstream = this Worker).
                 // The last Worker's gap is a plain trailing insert / drop gap.
@@ -817,7 +791,6 @@ class JobController(
     private fun ChildrenBuilder.renderWorkerSlot(
         index: Int,
         workerLocation: ObjectLocation,
-        documentNotation: DocumentNotation,
         graphStructure: GraphStructure,
         active: Boolean
     ) {
@@ -826,9 +799,9 @@ class JobController(
 
             this.objectLocation = workerLocation
             this.indexInParent = index
-            this.isPreviewWorker = isPreviewWorker(documentNotation, workerLocation.objectPath)
-            this.isRunWorker = isRunWorker(documentNotation, workerLocation.objectPath)
-            this.exploreDownloadLink = exploreDownloadLink(documentNotation, workerLocation)
+            this.showPreview =
+                JobServeCapability.of(graphStructure, workerLocation) == JobServeCapability.Capability.Preview
+            this.exploreDownloadLink = exploreDownloadLink(graphStructure, workerLocation)
 
             this.progress = state.workerProgress?.get(workerLocation)
             this.previewDetail = state.previewDetail?.get(workerLocation)
@@ -836,6 +809,7 @@ class JobController(
 
             this.graphStructure = graphStructure
             this.attributeEditorManager = props.attributeEditorManager
+            this.attributeViewManager = props.attributeViewManager
 
             this.isDragSource = state.dragSourceIndex == index
             this.handleColor = dragHandleColor

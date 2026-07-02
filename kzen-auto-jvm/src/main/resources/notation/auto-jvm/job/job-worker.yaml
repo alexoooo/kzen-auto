@@ -210,7 +210,7 @@ SummaryWorker:
       creator: JobChannelCreator
       editor: SelectChannelEditor
     serve:
-      is: ChannelServer
+      is: SummaryServer
       creator: JobChannelCreator
       editor: SelectChannelEditor
     selfLocation:
@@ -247,7 +247,7 @@ PivotWorker:
       creator: JobChannelCreator
       editor: SelectChannelEditor
     serve:
-      is: ChannelServer
+      is: PreviewServer
       creator: JobChannelCreator
       editor: SelectChannelEditor
     pivot:
@@ -366,7 +366,7 @@ PreviewWorker:
       creator: JobChannelCreator
       editor: SelectChannelEditor
     serve:
-      is: ChannelServer
+      is: PreviewServer
       creator: JobChannelCreator
       editor: SelectChannelEditor
     sample: Int
@@ -396,7 +396,7 @@ ExploreWorker:
       creator: JobChannelCreator
       editor: SelectChannelEditor
     serve:
-      is: ChannelServer
+      is: TableServer
       creator: JobChannelCreator
       editor: SelectChannelEditor
     selfLocation:

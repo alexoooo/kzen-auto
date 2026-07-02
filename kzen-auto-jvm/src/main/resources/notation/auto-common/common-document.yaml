@@ -17,11 +17,22 @@ Document:
 
 ###########################################################
 
+# The abstract supertype of the runnable paradigms (Script / Flow / Job / Report, and any 3rd-party paradigm):
+# marks a document whose `main` implements a runnable Logic. AutoConventions.isLogic tests membership by the
+# inheritance chain, so a new paradigm is recognized by declaring `is: Logic` — no code edit (see CC-17). The
+# server-side analogue is the LogicDocument interface each paradigm's `main` archetype implements.
+Logic:
+  abstract: true
+  is: Document
+
+
+###########################################################
+
 # TODO: factor out DocumentArchetype (concrete) vs DocumentRoot (concrete)?
 
 Script:
   abstract: true
-  is: Document
+  is: Logic
   class: tech.kzen.auto.server.objects.script.ScriptDocument
   title: "Script"
   icon: "material-symbols:playlist-play"
@@ -67,7 +78,7 @@ ScriptStep:
 
 Flow:
   abstract: true
-  is: Document
+  is: Logic
   class: tech.kzen.auto.server.objects.flow.FlowDocument
   title: "Flow"
   icon: "material-symbols:device-hub"
@@ -91,7 +102,7 @@ Flow:
 
 Job:
   abstract: true
-  is: Document
+  is: Logic
   class: tech.kzen.auto.server.objects.job.JobDocument
   title: "Job"
   icon: "material-symbols:lan"
@@ -178,7 +189,7 @@ ClassListSpecDefiner:
 
 Report:
   abstract: true
-  is: Document
+  is: Logic
   class: tech.kzen.auto.server.objects.report.ReportDocument
   title: "Report"
   icon: "material-symbols:table-chart"

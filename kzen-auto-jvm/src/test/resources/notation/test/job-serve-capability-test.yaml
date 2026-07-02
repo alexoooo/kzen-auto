@@ -1,0 +1,61 @@
+# Regression net for JobServeCapability (CC-17): a Job whose Workers exercise each serve capability plus a
+# non-serving sink, and a 3rd-party PreviewServer SUBTYPE worker to prove capability classification is by the
+# serve port's inheritance chain — so it recognizes types this code never names. Never run: only its notation +
+# metadata are read (JobServeCapabilityTest).
+
+
+main:
+  is: Job
+
+main.workers/preview:
+  is: PreviewWorker
+
+main.workers/summary:
+  is: SummaryWorker
+
+main.workers/explore:
+  is: ExploreWorker
+
+# Pivot serves preview slices too — the removed isPreviewWorker name list silently omitted it; the capability
+# classifier includes it (the free bug fix).
+main.workers/pivot:
+  is: PivotWorker
+
+# A sink with no serve port — no serve capability.
+main.workers/writer:
+  is: CsvWriterWorker
+
+# A 3rd-party-style Worker whose serve port is a user-defined PreviewServer subtype (reusing PreviewWorker's
+# class). Must classify as Preview purely via the inheritance chain, with no edit to JobServeCapability.
+main.workers/customPreview:
+  is: CustomPreviewWorker
+
+
+#######################################################################################################################
+# Test-only archetypes (unique names, declared once, so there's no whole-graph reference ambiguity).
+
+CustomPreviewServer:
+  abstract: true
+  is: PreviewServer
+
+
+CustomPreviewWorker:
+  abstract: true
+  is: Worker
+  class: tech.kzen.auto.server.objects.job.worker.PreviewWorker
+  input: ""
+  serve: ""
+  sample: 1000
+  meta:
+    input:
+      is: ChannelInput
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    serve:
+      is: CustomPreviewServer
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    sample: Int
+    selfLocation:
+      is: ObjectLocation
+      by: Self
