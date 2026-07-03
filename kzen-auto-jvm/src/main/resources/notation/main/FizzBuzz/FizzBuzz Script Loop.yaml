@@ -16,7 +16,7 @@ main.steps/Loop:
 
 main.steps/Loop.steps/Run:
   is: RunStep
-  instructions: "main/FizzBuzz/FizzBuzz Item.yaml#main"
+  instructions: "main/FizzBuzz/FizzBuzz Script Item.yaml#main"
   arguments:
     number: main.steps/Loop.item/Item
 

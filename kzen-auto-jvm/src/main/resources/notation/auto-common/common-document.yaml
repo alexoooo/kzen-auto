@@ -17,13 +17,17 @@ Document:
 
 ###########################################################
 
-# The abstract supertype of the runnable paradigms (Script / Flow / Job / Report, and any 3rd-party paradigm):
-# marks a document whose `main` implements a runnable Logic. AutoConventions.isLogic tests membership by the
-# inheritance chain, so a new paradigm is recognized by declaring `is: Logic` — no code edit (see CC-17). The
-# server-side analogue is the LogicDocument interface each paradigm's `main` archetype implements.
+# Cross-cutting marker mixed into the runnable paradigms (Script / Flow / Job / Report, and any 3rd-party
+# paradigm): marks a document whose `main` implements a runnable Logic. AutoConventions.isLogic tests membership
+# by the inheritance chain, so a new paradigm is recognized just by mixing in `Logic` — no code edit (see CC-17).
+# NB: this is a BARE marker, NOT `is: Document`. It is composed *alongside* Document — each paradigm declares
+# `is: [Document, Logic]` — never inserted as an intermediate in the Document archetype hierarchy. The sidebar's
+# archetype registry (project-js.yaml `archetypeLocations`) autowires `of: Document` by DIRECT `is` match, so a
+# paradigm must stay a direct Document child to appear in the tree and the create menu; making Logic an `is:
+# Document` intermediate silently drops every paradigm from both. The server-side analogue is the LogicDocument
+# interface each paradigm's `main` archetype implements.
 Logic:
   abstract: true
-  is: Document
 
 
 ###########################################################
@@ -32,7 +36,9 @@ Logic:
 
 Script:
   abstract: true
-  is: Logic
+  is:
+    - Document
+    - Logic
   class: tech.kzen.auto.server.objects.script.ScriptDocument
   title: "Script"
   icon: "material-symbols:playlist-play"
@@ -78,7 +84,9 @@ ScriptStep:
 
 Flow:
   abstract: true
-  is: Logic
+  is:
+    - Document
+    - Logic
   class: tech.kzen.auto.server.objects.flow.FlowDocument
   title: "Flow"
   icon: "material-symbols:device-hub"
@@ -102,7 +110,9 @@ Flow:
 
 Job:
   abstract: true
-  is: Logic
+  is:
+    - Document
+    - Logic
   class: tech.kzen.auto.server.objects.job.JobDocument
   title: "Job"
   icon: "material-symbols:lan"
@@ -189,7 +199,9 @@ ClassListSpecDefiner:
 
 Report:
   abstract: true
-  is: Logic
+  is:
+    - Document
+    - Logic
   class: tech.kzen.auto.server.objects.report.ReportDocument
   title: "Report"
   icon: "material-symbols:table-chart"
