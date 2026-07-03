@@ -2,6 +2,7 @@ package tech.kzen.auto.client.objects.document.report.input.select
 
 import emotion.react.css
 import mui.material.Checkbox
+import mui.system.sx
 import react.ChildrenBuilder
 import react.Key
 import react.Props
@@ -211,7 +212,7 @@ class InputSelectedTableController(
 
                     var allSelected = false
                     Checkbox {
-                        css {
+                        sx {
                             marginTop = (-0.5).em
                             marginBottom = (-0.5).em
                             marginLeft = (-0.25).em

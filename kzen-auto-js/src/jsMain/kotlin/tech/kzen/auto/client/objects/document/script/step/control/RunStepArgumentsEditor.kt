@@ -441,7 +441,7 @@ class RunStepArgumentsEditor(
         +"Unused parameter: $parameterName - ${selectedOption?.label}"
 
         IconButton {
-            css {
+            sx {
                 marginLeft = 0.25.em
             }
             title = "Remove"

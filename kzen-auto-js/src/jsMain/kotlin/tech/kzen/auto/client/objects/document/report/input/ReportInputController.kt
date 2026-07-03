@@ -210,7 +210,7 @@ class ReportInputController(
                     timeout = FadeTimeout(appear = 500, enter = 5000)
 
                     CircularProgress {
-                        css {
+                        sx {
                             width = 2.em
                             height = 2.em
                         }

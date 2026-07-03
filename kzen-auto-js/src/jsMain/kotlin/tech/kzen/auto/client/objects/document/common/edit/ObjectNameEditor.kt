@@ -5,6 +5,7 @@ import kotlinx.coroutines.delay
 import mui.material.IconButton
 import mui.material.Size
 import mui.material.TextField
+import mui.system.sx
 import react.ChildrenBuilder
 import react.Props
 import react.State
@@ -150,7 +151,7 @@ class ObjectNameEditor(
             IconButton {
                 title = "Cancel name edit (keyboard shortcut: Escape)"
 
-                css {
+                sx {
                     marginLeft = (-3).em
                 }
 
@@ -164,7 +165,7 @@ class ObjectNameEditor(
             IconButton {
                 title = "Save name (keyboard shortcut: Enter)"
 
-                css {
+                sx {
                     marginLeft = (-0.5).em
                     marginRight = 0.25.em
                 }

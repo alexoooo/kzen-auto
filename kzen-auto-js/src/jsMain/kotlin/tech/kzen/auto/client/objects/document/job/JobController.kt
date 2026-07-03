@@ -3,6 +3,7 @@ package tech.kzen.auto.client.objects.document.job
 import emotion.react.css
 import js.objects.unsafeJso
 import mui.material.IconButton
+import mui.system.sx
 import react.ChildrenBuilder
 import react.Key
 import react.Props
@@ -645,7 +646,7 @@ class JobController(
         IconButton {
             title = "Insert here"
 
-            css {
+            sx {
                 width = 32.px
                 height = 32.px
                 padding = 0.px

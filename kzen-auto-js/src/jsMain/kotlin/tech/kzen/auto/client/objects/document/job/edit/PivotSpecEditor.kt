@@ -8,6 +8,7 @@ import mui.material.Size
 import mui.material.TextField
 import mui.material.ToggleButton
 import mui.material.ToggleButtonGroup
+import mui.system.sx
 import react.ChildrenBuilder
 import react.Key
 import react.ReactNode
@@ -372,7 +373,7 @@ class PivotSpecEditor(
             ?: return
 
         InputLabel {
-            css {
+            sx {
                 fontSize = 0.8.em
             }
             +CommonEditUtils.formattedLabel(AttributePath.ofName(props.attributeName))

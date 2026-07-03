@@ -134,7 +134,7 @@ class CustomHeader(
                 size = Size.medium
                 this.disabled = editorModified
 
-                css {
+                sx {
                     height = 34.px
                     color = NamedColor.black
                     borderWidth = 2.px

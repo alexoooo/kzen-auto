@@ -201,7 +201,7 @@ class InputBrowserPathController(
 
                     IconButton  {
                         size = Size.small
-                        css {
+                        sx {
                             zIndex = integer(1000)
                         }
 

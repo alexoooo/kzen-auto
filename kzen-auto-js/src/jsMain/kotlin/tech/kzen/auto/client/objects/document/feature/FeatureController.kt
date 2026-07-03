@@ -5,6 +5,7 @@ import js.objects.unsafeJso
 import mui.material.Button
 import mui.material.ButtonVariant
 import mui.material.Size
+import mui.system.sx
 import react.ChildrenBuilder
 import react.Props
 import react.RefObject
@@ -372,7 +373,7 @@ class FeatureController(
     private fun ChildrenBuilder.renderCapture() {
         div {
             Button {
-                css {
+                sx {
                     backgroundColor = NamedColor.white
                 }
                 variant = ButtonVariant.outlined
@@ -398,7 +399,7 @@ class FeatureController(
             }
 
             Button {
-                css {
+                sx {
                     backgroundColor = NamedColor.white
                 }
 
@@ -425,7 +426,7 @@ class FeatureController(
             }
 
             Button {
-                css {
+                sx {
                     backgroundColor = NamedColor.white
                 }
                 variant = ButtonVariant.outlined
@@ -453,7 +454,7 @@ class FeatureController(
             }
 
             Button {
-                css {
+                sx {
                     backgroundColor = NamedColor.white
                 }
                 variant = ButtonVariant.outlined

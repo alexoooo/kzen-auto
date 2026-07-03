@@ -2,6 +2,7 @@ package tech.kzen.auto.client.objects.document.flow
 
 import emotion.react.css
 import mui.material.IconButton
+import mui.system.sx
 import react.ChildrenBuilder
 import react.Props
 import react.State
@@ -515,7 +516,7 @@ class EdgeController(
                 }
 
                 IconButton {
-                    css {
+                    sx {
                         marginTop = (-0.25).em
                         marginRight = (-8).px
                         float = Float.right

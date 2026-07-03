@@ -2,6 +2,7 @@ package tech.kzen.auto.client.objects.document.job.edit
 
 import emotion.react.css
 import mui.material.InputLabel
+import mui.system.sx
 import react.ChildrenBuilder
 import react.Key
 import react.State
@@ -173,7 +174,7 @@ class FormulaMapEditor(
             ?: return
 
         InputLabel {
-            css {
+            sx {
                 fontSize = 0.8.em
             }
             +CommonEditUtils.formattedLabel(AttributePath.ofName(props.attributeName))

@@ -2,6 +2,7 @@ package tech.kzen.auto.client.objects.document.flow
 
 import emotion.react.css
 import mui.material.IconButton
+import mui.system.sx
 import react.ChildrenBuilder
 import react.Key
 import react.Props
@@ -455,7 +456,7 @@ class FlowController(
             }
 
             IconButton {
-                css {
+                sx {
                     if (!state.creating) {
                         opacity = number(0.0)
                         cursor = Cursor.default

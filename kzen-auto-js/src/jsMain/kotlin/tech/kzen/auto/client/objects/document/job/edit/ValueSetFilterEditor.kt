@@ -9,6 +9,7 @@ import mui.material.Size
 import mui.material.TextField
 import mui.material.ToggleButton
 import mui.material.ToggleButtonGroup
+import mui.system.sx
 import react.ChildrenBuilder
 import react.Key
 import react.Props
@@ -305,7 +306,7 @@ class ValueSetFilterEditor(
         val summary = state.upstreamSummary
 
         InputLabel {
-            css {
+            sx {
                 fontSize = 0.8.em
             }
             +CommonEditUtils.formattedLabel(AttributePath.ofName(props.attributeName))

@@ -5,6 +5,7 @@ import js.objects.unsafeJso
 import mui.material.IconButton
 import mui.material.Size
 import mui.material.TextField
+import mui.system.sx
 import react.ChildrenBuilder
 import react.ReactNode
 import react.dom.html.ReactHTML.div
@@ -144,7 +145,7 @@ class FormulaItemController(
                 tr {
                     td {
                         IconButton {
-                            css {
+                            sx {
                                 verticalAlign = VerticalAlign.top
                             }
 

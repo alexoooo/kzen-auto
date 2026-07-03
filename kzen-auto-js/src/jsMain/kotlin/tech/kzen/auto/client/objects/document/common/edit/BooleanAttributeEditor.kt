@@ -1,9 +1,9 @@
 package tech.kzen.auto.client.objects.document.common.edit
 
-import emotion.react.css
 import mui.material.InputLabel
 import mui.material.Switch
 import mui.material.SwitchColor
+import mui.system.sx
 import react.ChildrenBuilder
 import react.Props
 import react.State
@@ -79,7 +79,7 @@ class BooleanAttributeEditor(
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
         InputLabel {
-            css {
+            sx {
                 fontSize = 0.8.em
             }
 
@@ -95,7 +95,7 @@ class BooleanAttributeEditor(
                 color = SwitchColor.default
 
                 if (props.value) {
-                    css {
+                    sx {
                         this.color = NamedColor.black
                     }
                 }

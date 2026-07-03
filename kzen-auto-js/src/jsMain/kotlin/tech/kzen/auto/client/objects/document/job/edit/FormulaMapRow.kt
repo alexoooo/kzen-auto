@@ -5,6 +5,7 @@ import js.objects.unsafeJso
 import mui.material.IconButton
 import mui.material.Size
 import mui.material.TextField
+import mui.system.sx
 import react.ChildrenBuilder
 import react.Props
 import react.ReactNode
@@ -97,7 +98,7 @@ class FormulaMapRow(
                 tr {
                     td {
                         IconButton {
-                            css {
+                            sx {
                                 verticalAlign = VerticalAlign.top
                             }
                             onClick = {

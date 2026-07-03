@@ -1,8 +1,8 @@
 package tech.kzen.auto.client.objects.document.report.run
 
-import emotion.react.css
 import js.objects.unsafeJso
 import mui.material.Fab
+import mui.system.sx
 import react.ChildrenBuilder
 import react.Props
 import react.State
@@ -46,7 +46,7 @@ class ReportRunController(
         }
 
         Fab {
-            css {
+            sx {
                 backgroundColor = NamedColor.white
                 width = 5.em
                 height = 5.em

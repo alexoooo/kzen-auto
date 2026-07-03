@@ -3,6 +3,7 @@ package tech.kzen.auto.client.objects.document.report.input.browse
 import emotion.react.css
 import js.objects.unsafeJso
 import mui.material.Checkbox
+import mui.system.sx
 import react.ChildrenBuilder
 import react.Key
 import react.dom.html.ReactHTML.div
@@ -221,7 +222,7 @@ class InputBrowserTableController(
 
                     var allSelected = false
                     Checkbox {
-                        css {
+                        sx {
                             marginTop = (-0.5).em
                             marginBottom = (-0.5).em
                             marginLeft = (-0.25).em

@@ -5,6 +5,7 @@ import js.objects.unsafeJso
 import mui.material.Size
 import mui.material.ToggleButton
 import mui.material.ToggleButtonGroup
+import mui.system.sx
 import react.ChildrenBuilder
 import react.Props
 import react.State
@@ -138,7 +139,7 @@ class ReportAnalysisController(
                         disabled = editDisabled
                         size = Size.medium
 
-                        css {
+                        sx {
                             height = 34.px
                             color = NamedColor.black
                             borderWidth = 2.px
@@ -161,7 +162,7 @@ class ReportAnalysisController(
                         disabled = editDisabled
                         size = Size.medium
 
-                        css {
+                        sx {
                             height = 34.px
                             color = NamedColor.black
                             borderWidth = 2.px

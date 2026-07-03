@@ -5,6 +5,7 @@ import js.objects.unsafeJso
 import mui.material.IconButton
 import mui.material.Menu
 import mui.material.MenuItem
+import mui.system.sx
 import react.*
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
@@ -687,7 +688,7 @@ class VertexController(
             }
 
             val overfill = 8.px
-            css {
+            sx {
                 marginLeft = overfill
                 width = mainIconWidth.plus(overfill)
                 height = mainIconWidth.plus(overfill)
@@ -757,7 +758,7 @@ class VertexController(
                 IconButton {
                     title = "Message"
 
-                    css {
+                    sx {
                         color = NamedColor.black
 
                         if (isMessagePending) {

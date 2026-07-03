@@ -4,6 +4,7 @@ import emotion.react.css
 import js.objects.unsafeJso
 import kotlinx.browser.window
 import mui.material.IconButton
+import mui.system.sx
 import react.ChildrenBuilder
 import react.Key
 import react.Props
@@ -713,7 +714,7 @@ class ScriptBranchDisplay(
         IconButton {
             title = "Insert step here"
 
-            css {
+            sx {
                 width = 32.px
                 height = 32.px
                 padding = 0.px

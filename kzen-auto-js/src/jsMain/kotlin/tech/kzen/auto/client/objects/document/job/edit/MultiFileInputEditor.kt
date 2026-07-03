@@ -5,6 +5,7 @@ import mui.material.IconButton
 import mui.material.InputLabel
 import mui.material.Size
 import mui.material.TextField
+import mui.system.sx
 import react.ChildrenBuilder
 import react.Key
 import react.ReactNode
@@ -319,7 +320,7 @@ class MultiFileInputEditor(
     //-----------------------------------------------------------------------------------------------------------------
     private fun ChildrenBuilder.renderSelectedPaths(paths: List<String>) {
         InputLabel {
-            css {
+            sx {
                 fontSize = 0.8.em
             }
             +CommonEditUtils.formattedLabel(AttributePath.ofName(props.attributeName))

@@ -5,6 +5,7 @@ import js.objects.unsafeJso
 import mui.material.InputAdornment
 import mui.material.InputAdornmentPosition
 import mui.material.InputLabel
+import mui.system.sx
 import react.ChildrenBuilder
 import react.State
 import react.create
@@ -155,7 +156,7 @@ class ExportSpecEditor(
             ?: return
 
         InputLabel {
-            css {
+            sx {
                 fontSize = 0.8.em
             }
             +CommonEditUtils.formattedLabel(AttributePath.ofName(props.attributeName))

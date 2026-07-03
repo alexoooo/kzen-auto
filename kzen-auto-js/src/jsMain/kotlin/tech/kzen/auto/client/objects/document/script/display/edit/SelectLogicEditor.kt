@@ -3,6 +3,7 @@ package tech.kzen.auto.client.objects.document.script.display.edit
 import emotion.react.css
 import js.objects.unsafeJso
 import mui.material.IconButton
+import mui.system.sx
 import react.ChildrenBuilder
 import react.State
 import react.dom.html.ReactHTML.div
@@ -280,7 +281,7 @@ class SelectLogicEditor(
             }
 
             IconButton {
-                css {
+                sx {
                     marginLeft = 0.25.em
                 }
                 title = "Open the selected script"

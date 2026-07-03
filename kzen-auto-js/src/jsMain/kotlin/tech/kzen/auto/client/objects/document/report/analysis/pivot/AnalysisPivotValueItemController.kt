@@ -3,6 +3,7 @@ package tech.kzen.auto.client.objects.document.report.analysis.pivot
 import emotion.react.css
 import mui.material.IconButton
 import mui.material.Size
+import mui.system.sx
 import react.ChildrenBuilder
 import react.State
 import react.dom.html.ReactHTML.div
@@ -73,7 +74,7 @@ class AnalysisPivotValueItemController(
             IconButton {
                 size = Size.small
 
-                css {
+                sx {
                     float = Float.right
                     marginTop = (-0.25).em
                     marginBottom = (-0.25).em

@@ -204,7 +204,7 @@ class ReportOutputController(
                 disabled = props.runningOrLoading
                 size = Size.medium
 
-                css {
+                sx {
                     height = 34.px
                     color = NamedColor.black
                     borderWidth = 2.px
@@ -225,7 +225,7 @@ class ReportOutputController(
                 value = OutputType.Export.name
                 disabled = props.runningOrLoading
                 size = Size.medium
-                css {
+                sx {
                     height = 34.px
                     color = NamedColor.black
                     borderWidth = 2.px
