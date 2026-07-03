@@ -3,11 +3,11 @@ main:
 
 main.channels/raw:
   is: Channel
-  buffer: 8
+  capacity: 8
 
 main.channels/computed:
   is: Channel
-  buffer: 8
+  capacity: 8
 
 main.workers/reader:
   is: CsvReaderWorker

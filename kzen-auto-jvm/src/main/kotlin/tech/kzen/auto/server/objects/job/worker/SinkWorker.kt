@@ -8,11 +8,11 @@ import tech.kzen.lib.common.model.location.ObjectLocation
 
 /**
  * A SINK Worker — consumes an input stream with no output channel (e.g. a file writer, or the live
- * [PreviewWorker]). The framework owns the drain loop and the batching: it drains one physical input CHUNK at a
- * time, a [JobControl.checkpoint] per chunk (before receiving, so a parked Worker holds no received-but-
+ * [PreviewWorker]). The framework owns the drain loop and the batching: it drains one physical input BATCH at a
+ * time, a [JobControl.checkpoint] per batch (before receiving, so a parked Worker holds no received-but-
  * unprocessed element — at a pause wavefront every not-yet-consumed element is still in the channel, carried
  * forward by [tech.kzen.auto.server.objects.job.channel.JobChannel.drainBuffered] on a migration), dispatches
- * the chunk's elements to [onElement] one by one, throttled progress, and — when a [serve] port is supplied —
+ * the batch's elements to [onElement] one by one, throttled progress, and — when a [serve] port is supplied —
  * the duplex serve loop answering [WorkerBase.onQuery].
  *
  * The framework performs the single `item as In` cast here, made safe by
@@ -30,10 +30,10 @@ abstract class SinkWorker<In>(
         while (true) {
             control.checkpoint()
 
-            val chunk = input.receiveChunk()
+            val batch = input.receiveBatch()
                 ?: break
 
-            for (element in chunk) {
+            for (element in batch) {
                 // Safe by construction: ChannelTypeDefiner checks this port's element type at definition time.
                 @Suppress("UNCHECKED_CAST")
                 onElement(element as In, control)

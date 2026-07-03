@@ -35,6 +35,13 @@ object JobConventions {
     val channelsAttributeName = AttributeName("channels")
     val channelsAttributePath = AttributePath.ofName(channelsAttributeName)
 
+    // A Channel's two Int knobs (see job-jvm.yaml Channel): `batchSize` = elements grouped into one physical
+    // transfer batch (the checkpoint / step unit); `capacity` = how many batches the channel holds before
+    // backpressure (0 = rendezvous handoff). Also declared on the Job archetype (`main`) as the Job-wide
+    // default JobChannelSynthesis stamps onto every auto-synthesized channel.
+    val batchSizeAttributeName = AttributeName("batchSize")
+    val capacityAttributeName = AttributeName("capacity")
+
     // Marks a duplex Channel whose client side is the UI bridge rather than a Worker (see JobExecution).
     val externalAttributeName = AttributeName("external")
 

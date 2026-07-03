@@ -3,6 +3,8 @@ package tech.kzen.auto.client.objects.document.job
 import emotion.react.css
 import js.objects.unsafeJso
 import mui.material.IconButton
+import mui.material.Popover
+import mui.material.PopoverOrigin
 import mui.system.sx
 import react.ChildrenBuilder
 import react.Key
@@ -33,13 +35,19 @@ import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.job.JobChannelDerivation
 import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.auto.common.util.AutoConventions
+import tech.kzen.lib.common.model.attribute.AttributeName
+import tech.kzen.lib.common.model.attribute.AttributePath
+import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.model.structure.notation.DocumentNotation
+import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.model.structure.notation.PositionRelation
+import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.AddObjectCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.ShiftObjectTreeCommand
+import tech.kzen.lib.common.model.structure.notation.cqrs.UpsertAttributeCommand
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.service.notation.NotationConventions
@@ -48,6 +56,7 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import tech.kzen.lib.common.util.naming.NextAvailableName
 import web.cssom.*
 import web.html.HTMLDivElement
+import web.html.HTMLElement
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -84,6 +93,10 @@ external interface JobControllerState: State {
     // computed from card midpoints. Both null when no drag is in progress.
     var dragSourceIndex: Int?
     var dropInsertionIndex: Int?
+
+    // The synthesized channel whose config popover is open (null = closed) and the pipe pill it anchors to.
+    var configChannelName: String?
+    var configAnchor: HTMLElement?
 }
 
 
@@ -172,6 +185,15 @@ class JobController(
     private val onSlotDragStart: (Int) -> Unit = { index -> onDragStart(index) }
     private val onSlotDragEnd: () -> Unit = { onDragEnd() }
 
+    // Stable so JobChannelPipe (RPureComponent) bails on drag-hover re-renders; a clicked pipe reports its
+    // synth-channel name + anchor element and JobController opens the config popover for it.
+    private val onPipeConfigure: (String, HTMLElement) -> Unit = { channelName, anchor ->
+        setState {
+            configChannelName = channelName
+            configAnchor = anchor
+        }
+    }
+
 
     //-----------------------------------------------------------------------------------------------------------------
     private val jobProgressStore by lazy {
@@ -192,6 +214,8 @@ class JobController(
         creating = false
         dragSourceIndex = null
         dropInsertionIndex = null
+        configChannelName = null
+        configAnchor = null
     }
 
 
@@ -518,13 +542,15 @@ class JobController(
         val documentPath = clientState.navigationRoute.documentPath
             ?: return
 
-        val documentNotation = clientState.graphStructure().graphNotation.documents[documentPath]
+        val graphNotation = clientState.graphStructure().graphNotation
+        val documentNotation = graphNotation.documents[documentPath]
             ?: return
 
         if (! JobConventions.isJob(documentNotation)) {
             return
         }
 
+        val mainLocation = ObjectLocation(documentPath, NotationConventions.mainObjectPath)
         val workers = state.workerLocations ?: listOf()
         val connections = state.connectionsByUpstream ?: mapOf()
         val active = clientState.clientLogicState.isActive()
@@ -539,6 +565,9 @@ class JobController(
             onDragOver = { event -> onStageDragOver(event) }
             onDrop = { event -> onStageDrop(event) }
 
+            // Job-wide channel defaults (batchSize / capacity) applied to every auto-synthesized channel.
+            renderJobDefaultsPanel(mainLocation)
+
             if (workers.isEmpty()) {
                 div {
                     css {
@@ -547,11 +576,11 @@ class JobController(
                     }
                     +"Empty Job — add Workers from the ribbon above."
                 }
-                insertionGap(0, null)
+                insertionGap(0, null, documentPath, graphNotation)
                 return@div
             }
 
-            insertionGap(0, null)
+            insertionGap(0, null, documentPath, graphNotation)
             for ((index, workerLocation) in workers.withIndex()) {
                 renderWorkerSlot(index, workerLocation, active)
 
@@ -560,9 +589,11 @@ class JobController(
                 val connection =
                     if (index < workers.size - 1) connections[workerLocation]
                     else null
-                insertionGap(index + 1, connection)
+                insertionGap(index + 1, connection, documentPath, graphNotation)
             }
         }
+
+        renderChannelConfigPopover(documentPath, graphNotation, mainLocation)
     }
 
 
@@ -595,7 +626,12 @@ class JobController(
     // order-driven channel when there is one and the stage is idle; the drop indicator when it's the active
     // drop target; and a "+" insert button while in ribbon insert-mode. Height is reserved so toggling modes
     // never shifts the card layout.
-    private fun ChildrenBuilder.insertionGap(gapIndex: Int, connection: JobChannelDerivation.Connection?) {
+    private fun ChildrenBuilder.insertionGap(
+        gapIndex: Int,
+        connection: JobChannelDerivation.Connection?,
+        documentPath: DocumentPath,
+        graphNotation: GraphNotation
+    ) {
         div {
             css {
                 position = Position.relative
@@ -618,13 +654,84 @@ class JobController(
                 insertionButton(gapIndex)
             }
             else if (connection != null) {
+                val channelName = JobConventions.autoSynthChannelName(
+                    connection.upstreamWorker.objectPath, connection.outputPort)
+                val channelLocation = channelObjectLocation(documentPath, channelName)
+                val mainLocation = ObjectLocation(documentPath, NotationConventions.mainObjectPath)
+
                 JobChannelPipe::class.react {
                     key = Key("pipe:" + connection.upstreamWorker.toReference().asString())
                     upstreamName = connection.upstreamWorker.objectPath.name.value
                     downstreamName = connection.downstreamWorker.objectPath.name.value
+                    this.channelName = channelName
+                    batchSize = effectiveChannelValue(
+                        graphNotation, channelLocation, mainLocation,
+                        JobConventions.batchSizeAttributeName, "1024")
+                    capacity = effectiveChannelValue(
+                        graphNotation, channelLocation, mainLocation,
+                        JobConventions.capacityAttributeName, "0")
+                    onConfigure = onPipeConfigure
                 }
             }
         }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun channelObjectLocation(documentPath: DocumentPath, channelName: String): ObjectLocation {
+        val channelPath = NotationConventions.mainObjectPath.nest(
+            JobConventions.channelsAttributePath, ObjectName(channelName))
+        return ObjectLocation(documentPath, channelPath)
+    }
+
+
+    // A synthesized channel's EFFECTIVE value for [attributeName]: its own override (a materialized Channel
+    // object under the deterministic synth name) if present, else the Job-wide default on `main`, else the
+    // archetype default. Mirrors the server precedence (override object > Job default > archetype).
+    private fun effectiveChannelValue(
+        graphNotation: GraphNotation,
+        channelLocation: ObjectLocation,
+        mainLocation: ObjectLocation,
+        attributeName: AttributeName,
+        archetypeDefault: String
+    ): String {
+        val attributePath = AttributePath.ofName(attributeName)
+        if (channelLocation in graphNotation.coalesce) {
+            val own = graphNotation.firstAttribute(channelLocation, attributePath) as? ScalarAttributeNotation
+            if (own != null) {
+                return own.value
+            }
+        }
+        val jobDefault = graphNotation.firstAttribute(mainLocation, attributePath) as? ScalarAttributeNotation
+        return jobDefault?.value ?: archetypeDefault
+    }
+
+
+    // Materialize the per-channel override object (deterministic synth name, Worker ports left open so the pipe
+    // keeps auto-wiring) seeded with both effective values, if it does not yet exist. Called by
+    // JobChannelNumberField on the first genuine edit — never on open — so peeking at a pipe writes nothing.
+    private suspend fun ensureOverrideChannel(
+        documentPath: DocumentPath,
+        channelLocation: ObjectLocation,
+        batchSize: String,
+        capacity: String
+    ) {
+        val current = props.clientStateGlobal.current()
+            ?: return
+        val currentNotation = current.graphStructure().graphNotation
+        if (channelLocation in currentNotation.coalesce) {
+            return
+        }
+        val currentDocument = currentNotation.documents[documentPath]
+            ?: return
+        val endIndex = currentDocument.objects.notations.map.size
+
+        props.mirroredGraphStore.apply(AddObjectCommand.ofParent(
+            channelLocation, PositionRelation.at(endIndex), JobConventions.channelObjectName))
+        props.mirroredGraphStore.apply(UpsertAttributeCommand(
+            channelLocation, JobConventions.batchSizeAttributeName, ScalarAttributeNotation(batchSize)))
+        props.mirroredGraphStore.apply(UpsertAttributeCommand(
+            channelLocation, JobConventions.capacityAttributeName, ScalarAttributeNotation(capacity)))
     }
 
 
@@ -664,6 +771,142 @@ class JobController(
             icon("material-symbols:add-circle-outline") {
                 style = unsafeJso {
                     fontSize = 1.5.em
+                }
+            }
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    // Job-wide channel defaults: two labelled numeric fields bound to `main`'s batchSize / capacity, applied by
+    // JobChannelSynthesis to every auto-synthesized channel that carries no per-channel override.
+    private fun ChildrenBuilder.renderJobDefaultsPanel(mainLocation: ObjectLocation) {
+        div {
+            css {
+                display = Display.flex
+                alignItems = AlignItems.center
+                gap = 1.em
+                maxWidth = 40.em
+                marginBottom = 1.em
+            }
+
+            div {
+                css {
+                    fontSize = 0.9.em
+                    color = Color("rgba(0, 0, 0, 0.6)")
+                }
+                +"Channel defaults"
+            }
+
+            div {
+                css { width = 8.em }
+                JobChannelNumberField::class.react {
+                    label = "Batch size"
+                    objectLocation = mainLocation
+                    attributeName = JobConventions.batchSizeAttributeName
+                    fallbackValue = "1024"
+                    ensureObject = null
+                    clientStateGlobal = props.clientStateGlobal
+                    mirroredGraphStore = props.mirroredGraphStore
+                }
+            }
+
+            div {
+                css { width = 8.em }
+                JobChannelNumberField::class.react {
+                    label = "Capacity"
+                    objectLocation = mainLocation
+                    attributeName = JobConventions.capacityAttributeName
+                    fallbackValue = "0"
+                    ensureObject = null
+                    clientStateGlobal = props.clientStateGlobal
+                    mirroredGraphStore = props.mirroredGraphStore
+                }
+            }
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    // The per-channel config popover anchored to the clicked pipe: two numeric fields overriding this channel's
+    // batchSize / capacity. Fields display the effective value; the first genuine edit materializes an override
+    // Channel object (ensureOverrideChannel) so merely opening (peeking) writes nothing.
+    private fun ChildrenBuilder.renderChannelConfigPopover(
+        documentPath: DocumentPath,
+        graphNotation: GraphNotation,
+        mainLocation: ObjectLocation
+    ) {
+        val channelName = state.configChannelName
+            ?: return
+        val anchor = state.configAnchor
+            ?: return
+
+        val channelLocation = channelObjectLocation(documentPath, channelName)
+        val effectiveBatch = effectiveChannelValue(
+            graphNotation, channelLocation, mainLocation, JobConventions.batchSizeAttributeName, "1024")
+        val effectiveCapacity = effectiveChannelValue(
+            graphNotation, channelLocation, mainLocation, JobConventions.capacityAttributeName, "0")
+
+        val ensureObject: suspend () -> Unit = {
+            ensureOverrideChannel(documentPath, channelLocation, effectiveBatch, effectiveCapacity)
+        }
+
+        val anchorPoint: PopoverOrigin = unsafeJso {
+            asDynamic().vertical = "bottom"
+            asDynamic().horizontal = "center"
+        }
+        val popoverPoint: PopoverOrigin = unsafeJso {
+            asDynamic().vertical = "top"
+            asDynamic().horizontal = "center"
+        }
+
+        Popover {
+            open = true
+            anchorEl = anchor
+            onClose = { _, _ ->
+                setState {
+                    configChannelName = null
+                    configAnchor = null
+                }
+            }
+            anchorOrigin = anchorPoint
+            transformOrigin = popoverPoint
+
+            div {
+                css {
+                    display = Display.flex
+                    flexDirection = FlexDirection.column
+                    gap = 0.75.em
+                    padding = 1.em
+                    width = 15.em
+                }
+
+                div {
+                    css {
+                        fontSize = 0.85.em
+                        color = Color("rgba(0, 0, 0, 0.6)")
+                    }
+                    +channelName
+                }
+
+                JobChannelNumberField::class.react {
+                    label = "Batch size"
+                    objectLocation = channelLocation
+                    attributeName = JobConventions.batchSizeAttributeName
+                    fallbackValue = effectiveBatch
+                    this.ensureObject = ensureObject
+                    clientStateGlobal = props.clientStateGlobal
+                    mirroredGraphStore = props.mirroredGraphStore
+                }
+
+                JobChannelNumberField::class.react {
+                    label = "Capacity"
+                    objectLocation = channelLocation
+                    attributeName = JobConventions.capacityAttributeName
+                    fallbackValue = effectiveCapacity
+                    this.ensureObject = ensureObject
+                    clientStateGlobal = props.clientStateGlobal
+                    mirroredGraphStore = props.mirroredGraphStore
                 }
             }
         }

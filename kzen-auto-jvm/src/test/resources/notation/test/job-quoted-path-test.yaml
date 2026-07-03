@@ -3,7 +3,7 @@ main:
 
 main.channels/data:
   is: Channel
-  buffer: 8
+  capacity: 8
 
 main.workers/reader:
   is: CsvReaderWorker

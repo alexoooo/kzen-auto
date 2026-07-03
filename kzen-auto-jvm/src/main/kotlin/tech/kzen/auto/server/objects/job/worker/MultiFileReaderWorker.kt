@@ -29,7 +29,7 @@ import java.nio.file.Files
  *
  * STATE MIGRATION: the cursor is `(fileIndex, open-reader-position)`. Only ONE reader is open at a time — the
  * current file's — and it IS the run-scoped state (like [CsvReaderWorker]'s single reader). The source cadence's
- * per-chunk checkpoint sits between chunks with the output flushed, so a paused reader holds no buffered-but-
+ * per-batch checkpoint sits between batches with the output flushed, so a paused reader holds no buffered-but-
  * unsent record. [captureMigrationState] detaches the open reader at its position and carries [fileIndex];
  * [loadMigrationState] re-adopts both — but ONLY if `paths` / `delimiter` / `header` are unchanged — so a pause
  * / edit-config / continue resumes from the exact spot in the current file and reads the remaining files, rather

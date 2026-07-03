@@ -1,6 +1,7 @@
 package tech.kzen.auto.common.objects.document.job
 
 import tech.kzen.lib.common.model.attribute.AttributeName
+import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -62,12 +63,21 @@ class JobChannelSynthesis(
             return Result(graphDefinition, channelLocationsOf(documentNotation, jobDocumentPath))
         }
 
+        // Job-wide channel defaults (declared on the Job archetype, so firstAttribute resolves the archetype
+        // value even when `main` doesn't override): stamped onto every auto-synthesized channel below. A
+        // per-channel override object (kept as-is by ensureChannel) wins; a manual Channel sets its own.
+        val mainLocation = ObjectLocation(jobDocumentPath, NotationConventions.mainObjectPath)
+        val defaultBatchSize = structure.graphNotation
+            .firstAttribute(mainLocation, AttributePath.ofName(JobConventions.batchSizeAttributeName))?.asString()
+        val defaultCapacity = structure.graphNotation
+            .firstAttribute(mainLocation, AttributePath.ofName(JobConventions.capacityAttributeName))?.asString()
+
         var augmentedDoc: DocumentNotation = documentNotation
         for (connection in derivation.connections) {
-            augmentedDoc = wireOneWay(augmentedDoc, connection)
+            augmentedDoc = wireOneWay(augmentedDoc, connection, defaultBatchSize, defaultCapacity)
         }
         for (serve in derivation.serves) {
-            augmentedDoc = wireServe(augmentedDoc, serve)
+            augmentedDoc = wireServe(augmentedDoc, serve, defaultCapacity)
         }
 
         val augmentedNotation = structure.graphNotation.withModifiedDocument(jobDocumentPath, augmentedDoc)
@@ -93,15 +103,20 @@ class JobChannelSynthesis(
 
     private fun wireOneWay(
         documentNotation: DocumentNotation,
-        connection: JobChannelDerivation.Connection
+        connection: JobChannelDerivation.Connection,
+        defaultBatchSize: String?,
+        defaultCapacity: String?
     ): DocumentNotation {
         val channelName = ObjectName(JobConventions.autoSynthChannelName(
             connection.upstreamWorker.objectPath, connection.outputPort))
         val channelObjectPath = channelObjectPath(channelName)
         val channelRef = channelObjectPath.asString()
 
-        var result = ensureChannel(
-            documentNotation, channelObjectPath, ObjectNotation.ofParent(JobConventions.channelObjectName))
+        var channelNotation = ObjectNotation.ofParent(JobConventions.channelObjectName)
+        channelNotation = upsertIfPresent(channelNotation, JobConventions.batchSizeAttributeName, defaultBatchSize)
+        channelNotation = upsertIfPresent(channelNotation, JobConventions.capacityAttributeName, defaultCapacity)
+
+        var result = ensureChannel(documentNotation, channelObjectPath, channelNotation)
         result = setPort(result, connection.upstreamWorker.objectPath, connection.outputPort, channelRef)
         result = setPort(result, connection.downstreamWorker.objectPath, connection.inputPort, channelRef)
         return result
@@ -110,19 +125,32 @@ class JobChannelSynthesis(
 
     private fun wireServe(
         documentNotation: DocumentNotation,
-        serve: JobChannelDerivation.Serve
+        serve: JobChannelDerivation.Serve,
+        defaultCapacity: String?
     ): DocumentNotation {
         val channelName = ObjectName(JobConventions.autoServeChannelName(serve.worker.objectPath))
         val channelObjectPath = channelObjectPath(channelName)
         val channelRef = channelObjectPath.asString()
 
-        val duplexNotation = ObjectNotation
+        // Duplex channels have no batchSize (not batched) — only capacity applies.
+        var duplexNotation = ObjectNotation
             .ofParent(JobConventions.duplexChannelObjectName)
             .upsertAttribute(JobConventions.externalAttributeName, ScalarAttributeNotation("true"))
+        duplexNotation = upsertIfPresent(duplexNotation, JobConventions.capacityAttributeName, defaultCapacity)
 
         var result = ensureChannel(documentNotation, channelObjectPath, duplexNotation)
         result = setPort(result, serve.worker.objectPath, serve.servePort, channelRef)
         return result
+    }
+
+
+    private fun upsertIfPresent(
+        objectNotation: ObjectNotation,
+        attributeName: AttributeName,
+        value: String?
+    ): ObjectNotation {
+        value ?: return objectNotation
+        return objectNotation.upsertAttribute(attributeName, ScalarAttributeNotation(value))
     }
 
 

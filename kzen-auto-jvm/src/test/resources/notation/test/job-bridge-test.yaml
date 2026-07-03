@@ -10,7 +10,7 @@ main:
 # Small batch + buffer so a few step wavefronts leave the Preview partially filled (count > 0) yet far from done.
 main.channels/raw:
   is: Channel
-  buffer: 1
+  capacity: 1
 
 main.channels/queries:
   is: DuplexChannel

@@ -116,7 +116,15 @@ Job:
   class: tech.kzen.auto.server.objects.job.JobDocument
   title: "Job"
   icon: "material-symbols:lan"
+  # Job-wide channel defaults applied by JobChannelSynthesis to every auto-synthesized channel (the common
+  # path carries no `is: Channel` object to tune). A per-channel override object (deterministic synth name)
+  # takes precedence; a manual `is: Channel` object sets its own. Read from notation only — JobDocument takes
+  # no constructor arg for them (like Channel's `elementType`).
+  batchSize: 1024
+  capacity: 0
   meta:
+    batchSize: Int
+    capacity: Int
     workers:
       is: List
       of: Worker

@@ -68,7 +68,7 @@ class FormulaSourceWorkerTest {
                 emitted.add(element)
             }
             override suspend fun flush() {}
-            override fun chunkSize(): Int = 1024
+            override fun batchSize(): Int = 1024
             override fun close() {}
         }
 

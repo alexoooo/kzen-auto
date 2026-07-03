@@ -5,7 +5,7 @@ main:
 # quiescence barrier must report (settled with inFlight==0 while not terminated and no external channel open).
 main.channels/unfed:
   is: Channel
-  buffer: 8
+  capacity: 8
 
 main.workers/writer:
   is: CsvWriterWorker

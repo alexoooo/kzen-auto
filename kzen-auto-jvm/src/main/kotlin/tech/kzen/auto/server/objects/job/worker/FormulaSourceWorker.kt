@@ -23,10 +23,10 @@ import tech.kzen.lib.common.reflect.Service
  * port and any consumer is type-compatible.
  *
  * A [SourceWorker]: the framework owns end-of-stream (closing [output] once [produce] returns), batching, the
- * per-chunk checkpoint, and live progress publication (the source cadence). Compilation + evaluation are heavy /
+ * per-batch checkpoint, and live progress publication (the source cadence). Compilation + evaluation are heavy /
  * potentially blocking, so they run through [JobControl.runBlockingIo] to stay visible to quiescence detection;
- * the framework's per-chunk checkpoint makes the iteration cooperatively pausable / cancellable (one step = one
- * chunk).
+ * the framework's per-batch checkpoint makes the iteration cooperatively pausable / cancellable (one step = one
+ * batch).
  *
  * No state migration: a pause / edit-config / continue restarts the source from scratch (re-evaluates the
  * expression and re-iterates from the top), the safe default — coherent for a pure expression that reproduces
@@ -50,8 +50,8 @@ class FormulaSourceWorker(
         val iterable = control.runBlockingIo { evaluate() }
 
         for (element in iterable) {
-            // The SourceWorker cadence checkpoints + flushes + publishes per chunk, so this loop just emits: one
-            // step surfaces one chunk downstream (cooperative pause / cancel land per chunk).
+            // The SourceWorker cadence checkpoints + flushes + publishes per batch, so this loop just emits: one
+            // step surfaces one batch downstream (cooperative pause / cancel land per batch).
             emit.send(element)
             emitted += 1
         }

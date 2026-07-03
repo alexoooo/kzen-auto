@@ -1,5 +1,6 @@
 main:
   is: Job
+  batchSize: 1
 
 main.workers/Formula Source:
   is: FormulaSourceWorker

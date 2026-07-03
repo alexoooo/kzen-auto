@@ -145,7 +145,7 @@ class ValueSetFilterWorkerTest {
                 forwarded.add(element)
             }
             override suspend fun flush() {}
-            override fun chunkSize(): Int = 1024
+            override fun batchSize(): Int = 1024
             override fun close() {}
         }
 
@@ -165,7 +165,7 @@ class ValueSetFilterWorkerTest {
             // The framework TransformWorker drive loop drains whole chunks: hand it every record as one chunk, then EOF.
             private var delivered = false
 
-            override suspend fun receiveChunk(): List<Any?>? {
+            override suspend fun receiveBatch(): List<Any?>? {
                 if (delivered || records.isEmpty()) {
                     return null
                 }

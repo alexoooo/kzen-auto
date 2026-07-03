@@ -151,7 +151,7 @@ class ExportWriterWorkerTest {
         object: ChannelInput<Any?> {
             private var delivered = false
 
-            override suspend fun receiveChunk(): List<Any?>? {
+            override suspend fun receiveBatch(): List<Any?>? {
                 if (delivered || input.isEmpty()) {
                     return null
                 }

@@ -3,12 +3,12 @@ main:
 
 main.channels/raw:
   is: Channel
-  buffer: 8
+  capacity: 8
   elementType: DataRecord
 
 main.channels/kept:
   is: Channel
-  buffer: 8
+  capacity: 8
   elementType: DataRecord
 
 main.workers/reader:

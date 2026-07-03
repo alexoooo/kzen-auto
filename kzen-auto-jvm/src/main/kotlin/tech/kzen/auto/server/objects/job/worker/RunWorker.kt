@@ -15,7 +15,7 @@ import tech.kzen.lib.common.reflect.Reflect
  * compose reusable sub-Logics into its dataflow rather than only built-in stages.
  *
  * Element-agnostic (the channel carries `Any?`): unlike the typed [DataRecord] stages, what flows is whatever
- * the child consumes / produces. A [TransformWorker], so the framework owns the drain loop, per-chunk
+ * the child consumes / produces. A [TransformWorker], so the framework owns the drain loop, per-batch
  * [JobControl.checkpoint], throttled progress, and end-of-stream close propagation; this Worker only maps each
  * element through its child Logic via [JobControl.host].
  *

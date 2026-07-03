@@ -12,7 +12,7 @@ main.parameters/number:
     class: kotlin.Int
     generics: []
     nullable: false
-  default: 3
+  default: 15
 
 main.steps/Divisible By 3:
   is: FormulaStep

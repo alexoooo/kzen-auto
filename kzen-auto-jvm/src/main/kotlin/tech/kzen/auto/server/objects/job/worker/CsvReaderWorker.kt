@@ -13,8 +13,8 @@ import java.nio.file.Files
  * The CSV input stage as a Job Worker (analogue of `ReportInputReader`, reimplemented Job-native). Reads a
  * delimited text file with full RFC-4180 parsing (quoted fields, embedded delimiters / newlines, doubled
  * quotes) via [CsvRecordReader], emitting one [DataRecord] per row. Batching for transfer is the framework's
- * job (the referenced Channel's chunk size), so this Worker no longer carries a `batch` attribute — it just
- * emits records and the [SourceWorker] cadence chunks + checkpoints + publishes progress per chunk.
+ * job (the referenced Channel's batch size), so this Worker no longer carries a `batch` attribute — it just
+ * emits records and the [SourceWorker] cadence batches + checkpoints + publishes progress per batch.
  *
  * When [header] is true the first record names the columns. When false (a headerless file, e.g. the 1BRC
  * measurement set) every record is data; the schema is then SYNTHESIZED as positional names `c0, c1, …`
@@ -24,9 +24,9 @@ import java.nio.file.Files
  *
  * File IO runs through [JobControl.runBlockingIo] so the read stays visible to quiescence detection.
  *
- * STATE MIGRATION: the open reader IS run-scoped state. The framework's per-chunk checkpoint sits between
- * chunks with the output flushed, so a paused reader holds no buffered-but-unsent record; records it read into
- * the just-flushed chunk ride the OUTPUT channel's carryover ([JobChannel.drainBuffered]), not this Worker.
+ * STATE MIGRATION: the open reader IS run-scoped state. The framework's per-batch checkpoint sits between
+ * batches with the output flushed, so a paused reader holds no buffered-but-unsent record; records it read into
+ * the just-flushed batch ride the OUTPUT channel's carryover ([JobChannel.drainBuffered]), not this Worker.
  * [captureMigrationState] detaches the open reader at its current file position and [loadMigrationState]
  * re-adopts it — but ONLY if `path` / `delimiter` / `header` are unchanged — so a pause / edit-config / continue
  * continues reading from where it left off instead of reopening and re-reading the file from the top. If those

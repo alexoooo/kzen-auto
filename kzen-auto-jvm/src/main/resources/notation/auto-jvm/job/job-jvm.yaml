@@ -5,38 +5,38 @@
 
 
 # A first-class, named, buffered conduit shared by the Workers that reference it. Workers emit / consume single
-# ELEMENTS; the channel transparently batches them into chunks of `chunk` elements for transfer (the batch
-# granularity — also the checkpoint / step unit: one step ≈ one chunk). `buffer` is the channel capacity in
-# CHUNKS: 0 (the default) is a rendezvous handoff, > 0 is a backpressured buffer. `elementType` declares the
+# ELEMENTS; the channel transparently groups them into batches of `batchSize` elements for transfer (the batch
+# granularity — also the checkpoint / step unit: one step ≈ one batch). `capacity` is the channel capacity in
+# BATCHES: 0 (the default) is a rendezvous handoff, > 0 is a backpressured buffer. `elementType` declares the
 # element type carried by the channel (a TypeMetadata; empty = untyped / Any): ChannelTypeDefiner validates at
 # definition time that every referencing Worker port's `of:` element type matches, and that at most one Worker
-# drains it (single-reader). The type is erased at run time (JobChannel takes only `buffer` / `chunk`); it is
+# drains it (single-reader). The type is erased at run time (JobChannel takes only `capacity` / `batchSize`); it is
 # authoring/wiring metadata, so the run-time `item as In` cast in TransformWorker / SinkWorker is safe.
 Channel:
   abstract: true
   class: tech.kzen.auto.server.objects.job.channel.JobChannel
-  buffer: 0
-  chunk: 1024
+  capacity: 0
+  batchSize: 1024
   elementType: ""
   meta:
-    buffer: Int
-    chunk: Int
+    capacity: Int
+    batchSize: Int
     elementType:
       is: TypeMetadata
       by: ChannelTypeDefiner
 
 
 # Duplex (request/reply) counterpart of Channel: client endpoints request a value and suspend until the
-# single serving endpoint replies. Same `buffer` semantics (request-stream capacity). When `external: true`,
+# single serving endpoint replies. Same `capacity` semantics (request-stream capacity). When `external: true`,
 # the client side is not a Worker but the UI bridge: JobExecution opens a client at launch and routes inbound
 # ExecutionRequests addressed to this channel (by name) to the serving Worker (see JobExecution.route).
 DuplexChannel:
   abstract: true
   class: tech.kzen.auto.server.objects.job.channel.DuplexJobChannel
-  buffer: 0
+  capacity: 0
   external: false
   meta:
-    buffer: Int
+    capacity: Int
     external: Boolean
 
 

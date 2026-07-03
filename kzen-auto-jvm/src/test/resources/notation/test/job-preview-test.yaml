@@ -3,7 +3,7 @@ main:
 
 main.channels/raw:
   is: Channel
-  buffer: 8
+  capacity: 8
 
 # UI-facing duplex channel the Preview worker serves slice queries on (the bridge is its client).
 main.channels/queries:

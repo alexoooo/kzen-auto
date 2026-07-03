@@ -14,11 +14,11 @@ import kotlin.test.assertEquals
  * mid-flush on — and [JobChannel.preload] restores it into the rebuilt channel ahead of the live stream, so the
  * consumer sees the exact same sequence it would have without the migration.
  *
- * Workers emit single ELEMENTS ([ChannelOutput.send] buffers; [ChannelOutput.flush] sends them as one chunk);
- * `chunk = 1` makes each [emit] a one-element chunk so the buffered / parked states are element-precise. This
+ * Workers emit single ELEMENTS ([ChannelOutput.send] buffers; [ChannelOutput.flush] sends them as one batch);
+ * `batchSize = 1` makes each [emit] a one-element batch so the buffered / parked states are element-precise. This
  * drives the mechanism DIRECTLY and deterministically: a parked sender is created with
  * [CoroutineStart.UNDISPATCHED], which runs the send synchronously on the calling thread until it suspends on
- * the full channel — so "buffer full + one sender parked mid-flush" is reached with no wall-clock wait.
+ * the full channel — so "channel full + one sender parked mid-flush" is reached with no wall-clock wait.
  */
 class JobChannelCarryoverTest {
     private suspend fun ChannelOutput<Any?>.emit(element: Any?) {
@@ -30,12 +30,12 @@ class JobChannelCarryoverTest {
     //-----------------------------------------------------------------------------------------------------------------
     @Test
     fun drainBufferedCapturesBufferedThenParkedSendInOrder() = runBlocking {
-        val channel = JobChannel(buffer = 2, chunk = 1)
+        val channel = JobChannel(capacity = 2, batchSize = 1)
         val producer = channel.newProducer()
 
-        // Fill the buffer (capacity 2 chunks), then start a third flush that CANNOT complete (buffer full, no
+        // Fill the buffer (capacity 2 batches), then start a third flush that CANNOT complete (channel full, no
         // consumer): UNDISPATCHED runs it synchronously until it suspends inside channel.send, so it is
-        // deterministically parked mid-flush (its chunk held in Producer.inFlight, NOT in the buffer).
+        // deterministically parked mid-flush (its batch held in Producer.inFlight, NOT in the buffer).
         producer.emit("a")
         producer.emit("b")
         val parkedSend = launch(start = CoroutineStart.UNDISPATCHED) { producer.emit("c") }
@@ -50,7 +50,7 @@ class JobChannelCarryoverTest {
 
     @Test
     fun preloadDeliversCarryoverBeforeTheLiveStream() = runBlocking {
-        val rebuilt = JobChannel(buffer = 4, chunk = 1)
+        val rebuilt = JobChannel(capacity = 4, batchSize = 1)
         rebuilt.preload(listOf("a", "b", "c"))
 
         val producer = rebuilt.newProducer()

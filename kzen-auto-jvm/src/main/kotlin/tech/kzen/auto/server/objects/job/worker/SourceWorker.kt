@@ -10,13 +10,13 @@ import tech.kzen.lib.common.model.location.ObjectLocation
  * [produce], emitting single elements via [Emitter.send]; the framework owns everything else:
  *
  * - **Batching + cadence.** [produce]'s [Emitter] runs the SOURCE cadence (see [Emitter.sourceCadence]): it
- *   auto-flushes a chunk, [JobControl.checkpoint]s, and publishes progress every `chunkSize` elements. So the
+ *   auto-flushes a batch, [JobControl.checkpoint]s, and publishes progress every `batchSize` elements. So the
  *   source needs no manual batch loop / checkpoint / publish — it just emits elements — yet it still batches for
- *   throughput, is cooperatively pausable / cancellable, and advances exactly one chunk per step. (A source has
+ *   throughput, is cooperatively pausable / cancellable, and advances exactly one batch per step. (A source has
  *   no input to strand, so flushing at these boundaries keeps migration lossless without further care.)
  * - **End-of-stream.** [output] is closed when [produce] returns, fails, or is cancelled — after a final [flush]
- *   of the trailing partial chunk on normal completion — so a source can never deadlock the pipeline by
- *   forgetting to close, nor drop its last sub-chunk of rows.
+ *   of the trailing partial batch on normal completion — so a source can never deadlock the pipeline by
+ *   forgetting to close, nor drop its last sub-batch of rows.
  */
 abstract class SourceWorker<Out>(
     private val output: ChannelOutput<Any?>,

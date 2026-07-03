@@ -1,0 +1,21 @@
+# Job-wide batchSize / capacity defaults (JobChannelDefaultTest): `main` sets non-archetype batchSize / capacity
+# and, with all Worker ports blank and no Channel objects, JobChannelSynthesis must stamp those defaults onto
+# every auto-synthesized channel (reader.output -> filter.input, filter.output -> writer.input).
+
+
+main:
+  is: Job
+  batchSize: 32
+  capacity: 4
+
+main.workers/reader:
+  is: CsvReaderWorker
+  path: build/job-batchsize-default/input.csv
+
+main.workers/filter:
+  is: FilterWorker
+  where: 'flag eq "yes"'
+
+main.workers/writer:
+  is: CsvWriterWorker
+  path: build/job-batchsize-default/output.csv

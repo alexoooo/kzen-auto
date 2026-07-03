@@ -23,7 +23,7 @@ import tech.kzen.lib.common.reflect.Reflect
  * resolves its key columns against its OWN header (a column absent from a record sorts as an empty/non-numeric
  * field), so a mid-stream schema change is tolerated.
  *
- * IN-MEMORY v1: the whole stream is held in [buffer], and [onComplete] emits it as one flushed chunk. Bounded
+ * IN-MEMORY v1: the whole stream is held in [buffer], and [onComplete] emits it as one flushed batch. Bounded
  * only by heap; a disk-spill external merge sort (and a streamed, back-pressured drain) is the documented
  * follow-up — this Worker is the in-memory baseline the plan calls for. It has NO `serve` port and opens NO
  * scratch dir.

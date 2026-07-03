@@ -5,7 +5,7 @@ main:
 # done — the stable paused state JobStateMigrationTest migrates from.
 main.channels/raw:
   is: Channel
-  buffer: 1
+  capacity: 1
 
 # PreviewWorker requires a serve endpoint; non-external (no UI bridge) keeps the run on the plain
 # quiescence/deadlock path (no external-channel suspension of deadlock detection).

@@ -9,7 +9,7 @@ import tech.kzen.auto.plugin.model.record.FlatFileRecord
  * that names its columns.
  *
  * Replaces the old `RecordBatch` hack. Batching is now a general Channel-framework concern (elements are
- * transparently chunked for cross-Worker transfer — see [tech.kzen.auto.server.objects.job.channel.JobChannel]),
+ * transparently batched for cross-Worker transfer — see [tech.kzen.auto.server.objects.job.channel.JobChannel]),
  * so the DOMAIN element is a single record rather than a batch, and the framework stays agnostic of records /
  * schemas (it just carries `Any?`). The [header] reference is SHARED across every record of a given schema
  * (cheap — one pointer, not a copy), which is what keeps a self-describing element affordable: a Worker that

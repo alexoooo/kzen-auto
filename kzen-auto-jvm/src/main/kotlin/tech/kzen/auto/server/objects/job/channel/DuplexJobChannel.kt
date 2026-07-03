@@ -28,7 +28,7 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 @Reflect
 class DuplexJobChannel(
-    buffer: Int,
+    capacity: Int,
     val external: Boolean
 ) {
     //-----------------------------------------------------------------------------------------------------------------
@@ -40,11 +40,11 @@ class DuplexJobChannel(
 
     //-----------------------------------------------------------------------------------------------------------------
     private val requests: Channel<Pending> =
-        if (buffer <= 0) {
+        if (capacity <= 0) {
             Channel(Channel.RENDEZVOUS)
         }
         else {
-            Channel(buffer)
+            Channel(capacity)
         }
 
     private val openClients = AtomicInteger(0)

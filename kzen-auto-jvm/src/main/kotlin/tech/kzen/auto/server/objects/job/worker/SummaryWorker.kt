@@ -91,7 +91,7 @@ class SummaryWorker(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    // The immutable summary shared with the serve coroutine + used for progress; built fresh after each chunk.
+    // The immutable summary shared with the serve coroutine + used for progress; built fresh after each batch.
     override fun snapshot(): TableSummary =
         currentAccumulation().tableSummary()
 

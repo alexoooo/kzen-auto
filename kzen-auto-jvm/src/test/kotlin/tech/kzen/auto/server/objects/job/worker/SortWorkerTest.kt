@@ -161,7 +161,7 @@ class SortWorkerTest {
                 sink.add(element as DataRecord)
             }
             override suspend fun flush() {}
-            override fun chunkSize(): Int = 1024
+            override fun batchSize(): Int = 1024
             override fun close() {}
         }
 
@@ -170,7 +170,7 @@ class SortWorkerTest {
     private val discardingOutput = object: ChannelOutput<Any?> {
         override suspend fun send(element: Any?) {}
         override suspend fun flush() {}
-        override fun chunkSize(): Int = 1024
+        override fun batchSize(): Int = 1024
         override fun close() {}
     }
 
@@ -180,7 +180,7 @@ class SortWorkerTest {
             // The framework TransformWorker drive loop drains whole chunks: hand it every record as one chunk, then EOF.
             private var delivered = false
 
-            override suspend fun receiveChunk(): List<Any?>? {
+            override suspend fun receiveBatch(): List<Any?>? {
                 if (delivered || records.isEmpty()) {
                     return null
                 }
@@ -199,7 +199,7 @@ class SortWorkerTest {
         object: ChannelInput<Any?> {
             private var delivered = false
 
-            override suspend fun receiveChunk(): List<Any?>? {
+            override suspend fun receiveBatch(): List<Any?>? {
                 if (! delivered) {
                     delivered = true
                     return firstChunk

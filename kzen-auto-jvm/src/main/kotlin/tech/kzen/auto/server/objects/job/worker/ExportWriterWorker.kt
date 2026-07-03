@@ -37,7 +37,7 @@ import kotlin.time.Clock
  * Report's per-group files). Report's `OutputExportSpec.resolvePath` is reused, so extensions / placeholders
  * behave identically.
  *
- * A [SinkWorker] (no output channel, no serve): the framework owns the drain loop, per-chunk checkpoint, and
+ * A [SinkWorker] (no output channel, no serve): the framework owns the drain loop, per-batch checkpoint, and
  * throttled written-row progress. The file is opened in [onStart] and the compression container finalized +
  * closed in [onClose] (completion, failure, cancel alike), the writes running through [JobControl.runBlockingIo]
  * so the IO stays counted by quiescence detection. If the stream is empty (every record filtered upstream) the

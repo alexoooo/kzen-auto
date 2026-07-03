@@ -18,9 +18,9 @@ import java.util.concurrent.atomic.AtomicInteger
  *
  * **Framework batching.** Workers emit / consume single logical ELEMENTS (the domain unit, e.g. a
  * [tech.kzen.auto.server.objects.job.worker.DataRecord] or a scalar), but the physical transfer unit is a
- * CHUNK (a `List<Any?>` of up to [chunkSize] elements) — so the per-element coroutine-channel overhead is
+ * BATCH (a `List<Any?>` of up to [batchSize] elements) — so the per-element coroutine-channel overhead is
  * amortized without any worker hand-rolling batching (the retired `RecordBatch` hack). A producer buffers
- * emitted elements and flushes them as one chunk (see [Producer]); the consumer receives a chunk and yields its
+ * emitted elements and flushes them as one batch (see [Producer]); the consumer receives a batch and yields its
  * elements. Element type is otherwise erased (`Any?`) at run time — the declared `of` / `elementType` is
  * authoring/wiring metadata validated by
  * [tech.kzen.auto.common.objects.document.job.ChannelTypeDefiner] — so a single non-generic class instantiates
@@ -32,35 +32,35 @@ import java.util.concurrent.atomic.AtomicInteger
  *
  * **Migration carryover:** a state migration (pause / edit config / continue) tears the running graph down and
  * rebuilds it, so the in-flight elements a live channel holds would otherwise be lost. [drainBuffered] snapshots
- * everything a channel still holds — carryover not yet delivered, buffered chunks, and any chunk a producer is
+ * everything a channel still holds — carryover not yet delivered, buffered batches, and any batch a producer is
  * parked mid-[Producer.flush] on — FLATTENED to elements in delivery order, while the Workers are parked
  * (quiescent) and BEFORE teardown; the rebuilt channel is seeded via [preload]; [input] then delivers that
  * carryover BEFORE the live channel, so the consumer sees the exact same element stream it would have without
  * the migration. (A producer's `pending` buffer is provably EMPTY at any quiescent barrier — the framework
- * flushes it before every checkpoint — so only the parked-mid-flush chunk needs the volatile capture.)
+ * flushes it before every checkpoint — so only the parked-mid-flush batch needs the volatile capture.)
  */
 @Reflect
 class JobChannel(
-    buffer: Int,
-    chunk: Int
+    capacity: Int,
+    batchSize: Int
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     // Elements per physical transfer unit (the batch granularity). At least 1 so a source always makes progress.
-    private val chunkSize: Int = chunk.coerceAtLeast(1)
+    private val batchSize: Int = batchSize.coerceAtLeast(1)
 
     private val channel: Channel<List<Any?>> =
-        if (buffer <= 0) {
+        if (capacity <= 0) {
             Channel(Channel.RENDEZVOUS)
         }
         else {
-            Channel(buffer)
+            Channel(capacity)
         }
 
     private val openProducers = AtomicInteger(0)
     private val producers = CopyOnWriteArrayList<Producer>()
 
     // Count of endpoints (consumers + producers) currently suspended on a channel op: a consumer awaiting the
-    // next chunk, or a producer parked on a full buffer. The Job-level deadlock monitor
+    // next batch, or a producer parked on a full channel. The Job-level deadlock monitor
     // ([tech.kzen.auto.server.exec.job.JobDeadlockMonitor]) sums this across a run's stream channels — when EVERY
     // non-terminal Worker is blocked on a channel, the pipeline can make no progress, so the Job is deadlocked.
     private val blocked = AtomicInteger(0)
@@ -90,14 +90,14 @@ class JobChannel(
     }
 
 
-    /** Endpoints currently suspended on a channel op (consumers awaiting a chunk + producers on a full buffer). */
+    /** Endpoints currently suspended on a channel op (consumers awaiting a batch + producers on a full channel). */
     fun blockedCount(): Int {
         return blocked.get()
     }
 
 
     // Bracket a suspending channel op so a Worker parked in it counts toward [blockedCount] for the run's
-    // deadlock monitor, and stops counting the instant it resumes (a delivered chunk, EOF, or cancellation).
+    // deadlock monitor, and stops counting the instant it resumes (a delivered batch, EOF, or cancellation).
     private suspend fun <R> tracked(await: suspend () -> R): R {
         blocked.incrementAndGet()
         try {
@@ -122,36 +122,36 @@ class JobChannel(
      * rebuilt channel rather than dropping it. Called from the run driver while the Workers are parked (paused
      * and quiescent) and BEFORE teardown.
      *
-     * Order: not-yet-delivered carryover, then buffered chunks (FIFO), then the chunk a producer is parked
+     * Order: not-yet-delivered carryover, then buffered batches (FIFO), then the batch a producer is parked
      * mid-[Producer.flush] on (that enters the channel next). A producer's `pending` buffer is NOT captured
      * because it is provably empty at a quiescent barrier: the framework flushes it before every checkpoint, so
      * a parked producer is either at a checkpoint (pending empty) or mid-flush (pending drained into [inFlight]).
      */
     fun drainBuffered(): List<Any?> {
-        // Snapshot parked-mid-flush chunks up front (a suspended sender's chunk is NOT in the channel buffer).
+        // Snapshot parked-mid-flush batches up front (a suspended sender's batch is NOT in the channel buffer).
         val parkedSends = producers.mapNotNull { it.inFlight }
 
         val result = ArrayList<Any?>(carryover)
         carryover.clear()
 
-        // Draining the buffer frees space, so a parked sender may resume and move its (same) chunk into the
-        // buffer mid-drain; track buffered chunks by identity so such a chunk is counted exactly once.
+        // Draining the buffer frees space, so a parked sender may resume and move its (same) batch into the
+        // buffer mid-drain; track buffered batches by identity so such a batch is counted exactly once.
         val bufferedByIdentity = Collections.newSetFromMap(IdentityHashMap<List<Any?>, Boolean>())
         while (true) {
             val received = channel.tryReceive()
             if (received.isSuccess) {
-                val chunk = received.getOrThrow()
-                bufferedByIdentity.add(chunk)
-                result.addAll(chunk)
+                val batch = received.getOrThrow()
+                bufferedByIdentity.add(batch)
+                result.addAll(batch)
             }
             else {
                 break
             }
         }
 
-        for (chunk in parkedSends) {
-            if (chunk !in bufferedByIdentity) {
-                result.addAll(chunk)
+        for (batch in parkedSends) {
+            if (batch !in bufferedByIdentity) {
+                result.addAll(batch)
             }
         }
         return result
@@ -165,16 +165,16 @@ class JobChannel(
         // it needs no cross-thread synchronization.
         private val pending = ArrayList<Any?>()
 
-        // The chunk currently being sent, while a full-channel flush is parked (null otherwise). Read by
-        // drainBuffered from the run-driver thread to capture a suspended sender's chunk (not in the buffer).
+        // The batch currently being sent, while a full-channel flush is parked (null otherwise). Read by
+        // drainBuffered from the run-driver thread to capture a suspended sender's batch (not in the buffer).
         @Volatile
         var inFlight: List<Any?>? = null
 
         private var closed = false
 
 
-        override fun chunkSize(): Int {
-            return chunkSize
+        override fun batchSize(): Int {
+            return batchSize
         }
 
 
@@ -188,14 +188,14 @@ class JobChannel(
                 return
             }
 
-            // Move the whole buffer into one chunk BEFORE sending: a park mid-send then holds the entire chunk in
+            // Move the whole buffer into one batch BEFORE sending: a park mid-send then holds the entire batch in
             // inFlight (captured by drainBuffered) with pending empty — no partial-buffer capture is needed.
-            val chunk = ArrayList<Any?>(pending)
+            val batch = ArrayList<Any?>(pending)
             pending.clear()
 
-            inFlight = chunk
+            inFlight = batch
             try {
-                tracked { channel.send(chunk) }
+                tracked { channel.send(batch) }
             }
             finally {
                 inFlight = null
@@ -214,12 +214,12 @@ class JobChannel(
 
     //-----------------------------------------------------------------------------------------------------------------
     private inner class Input: ChannelInput<Any?> {
-        // A partially-consumed chunk, when a raw Worker reads element-by-element via receive() / iterator().
+        // A partially-consumed batch, when a raw Worker reads element-by-element via receive() / iterator().
         private var held: ArrayDeque<Any?>? = null
 
 
-        override suspend fun receiveChunk(): List<Any?>? {
-            // Drain any partially-consumed held chunk first (if receive() was interleaved on this input).
+        override suspend fun receiveBatch(): List<Any?>? {
+            // Drain any partially-consumed held batch first (if receive() was interleaved on this input).
             held?.let { remaining ->
                 if (remaining.isNotEmpty()) {
                     val out = ArrayList<Any?>(remaining)
@@ -230,9 +230,9 @@ class JobChannel(
                 held = null
             }
 
-            // Migration carryover is delivered before the live stream, sliced into chunk-sized pieces.
+            // Migration carryover is delivered before the live stream, sliced into batch-sized pieces.
             if (carryover.isNotEmpty()) {
-                val n = minOf(chunkSize, carryover.size)
+                val n = minOf(batchSize, carryover.size)
                 val out = ArrayList<Any?>(n)
                 repeat(n) { out.add(carryover.removeFirst()) }
                 return out
@@ -248,9 +248,9 @@ class JobChannel(
                 if (h != null && h.isNotEmpty()) {
                     return h.removeFirst()
                 }
-                val chunk = receiveChunk()
+                val batch = receiveBatch()
                     ?: return null
-                held = ArrayDeque(chunk)
+                held = ArrayDeque(batch)
             }
         }
 
@@ -274,12 +274,12 @@ class JobChannel(
                         hasNextElement = true
                         return true
                     }
-                    val chunk = receiveChunk()
-                    if (chunk == null) {
+                    val batch = receiveBatch()
+                    if (batch == null) {
                         ended = true
                         return false
                     }
-                    held = ArrayDeque(chunk)
+                    held = ArrayDeque(batch)
                     return hasNext()
                 }
 

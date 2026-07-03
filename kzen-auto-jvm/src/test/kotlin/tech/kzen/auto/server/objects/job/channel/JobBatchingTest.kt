@@ -11,16 +11,16 @@ import kotlin.test.assertEquals
 
 /**
  * Batching is a general, domain-agnostic Channel-framework capability: a Worker emits single ELEMENTS and the
- * framework groups them into chunks of the channel's configured `chunk` size for transfer (the old per-worker
+ * framework groups them into batches of the channel's configured `batchSize` for transfer (the old per-worker
  * `RecordBatch` hack is gone), so even the untyped scalar lane batches. This drives an [Emitter] with the SOURCE
- * cadence over a real [JobChannel] and asserts the consumer receives the elements grouped into chunk-sized
- * physical chunks — the configured size honoured, with a trailing partial chunk for the remainder.
+ * cadence over a real [JobChannel] and asserts the consumer receives the elements grouped into batch-sized
+ * physical batches — the configured size honoured, with a trailing partial batch for the remainder.
  */
 class JobBatchingTest {
     //-----------------------------------------------------------------------------------------------------------------
     @Test
-    fun sourceCadenceGroupsScalarElementsIntoConfiguredChunks() = runBlocking {
-        val channel = JobChannel(buffer = 8, chunk = 3)
+    fun sourceCadenceGroupsScalarElementsIntoConfiguredBatches() = runBlocking {
+        val channel = JobChannel(capacity = 8, batchSize = 3)
         val producer = channel.newProducer()
 
         val emitter = Emitter<Any?>(producer)
@@ -30,18 +30,18 @@ class JobBatchingTest {
             for (i in 0 until 7) {
                 emitter.send(i)
             }
-            emitter.flush()   // trailing partial chunk, exactly as SourceWorker flushes after produce returns
+            emitter.flush()   // trailing partial batch, exactly as SourceWorker flushes after produce returns
             producer.close()
         }
 
-        val chunks = mutableListOf<List<Any?>>()
+        val batches = mutableListOf<List<Any?>>()
         while (true) {
-            chunks.add(channel.input.receiveChunk() ?: break)
+            batches.add(channel.input.receiveBatch() ?: break)
         }
         sender.join()
 
-        // 7 scalar elements at chunk size 3 → full chunks [0,1,2], [3,4,5], then the trailing [6].
-        assertEquals(listOf<List<Any?>>(listOf(0, 1, 2), listOf(3, 4, 5), listOf(6)), chunks)
+        // 7 scalar elements at batch size 3 → full batches [0,1,2], [3,4,5], then the trailing [6].
+        assertEquals(listOf<List<Any?>>(listOf(0, 1, 2), listOf(3, 4, 5), listOf(6)), batches)
     }
 
 

@@ -11,11 +11,11 @@ import tech.kzen.auto.common.paradigm.job.control.JobControl
  * ([WorkerBase]).
  *
  * Batching is a framework concern: [send] only buffers; the accumulated elements reach the channel (as one
- * chunk) on [flush]. A TRANSFORM leaves [flush] to its drive loop (called once per input chunk, after the whole
- * chunk is consumed — so a parked Worker strands no received element). A SOURCE has no input-chunk boundary the
- * drive loop could hook, so it enables [sourceCadence]: [send] then auto-[flush]es every [ChannelOutput.chunkSize]
+ * batch) on [flush]. A TRANSFORM leaves [flush] to its drive loop (called once per input batch, after the whole
+ * batch is consumed — so a parked Worker strands no received element). A SOURCE has no input-batch boundary the
+ * drive loop could hook, so it enables [sourceCadence]: [send] then auto-[flush]es every [ChannelOutput.batchSize]
  * elements, checkpointing and publishing progress at that boundary — so a source still batches, stays
- * cooperatively pausable, and advances exactly one chunk per step.
+ * cooperatively pausable, and advances exactly one batch per step.
  */
 class Emitter<in T>(
     private val output: ChannelOutput<Any?>
@@ -25,8 +25,8 @@ class Emitter<in T>(
 
 
     /**
-     * Enables the source flush cadence (see class doc): after every [ChannelOutput.chunkSize] [send]s, flush the
-     * chunk, [JobControl.checkpoint], then run [onFlush] (progress publish). Called once by [SourceWorker] before
+     * Enables the source flush cadence (see class doc): after every [ChannelOutput.batchSize] [send]s, flush the
+     * batch, [JobControl.checkpoint], then run [onFlush] (progress publish). Called once by [SourceWorker] before
      * [SourceWorker.produce]; a transform/sink never calls it.
      */
     internal fun sourceCadence(control: JobControl, onFlush: () -> Unit) {
@@ -41,7 +41,7 @@ class Emitter<in T>(
             ?: return
 
         sinceFlush += 1
-        if (sinceFlush >= output.chunkSize()) {
+        if (sinceFlush >= output.batchSize()) {
             output.flush()
             cadence.control.checkpoint()
             cadence.onFlush()

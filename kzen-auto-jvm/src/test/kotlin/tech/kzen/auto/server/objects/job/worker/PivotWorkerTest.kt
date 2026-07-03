@@ -116,7 +116,7 @@ class PivotWorkerTest {
         object: ChannelInput<Any?> {
             private var delivered = false
 
-            override suspend fun receiveChunk(): List<Any?>? {
+            override suspend fun receiveBatch(): List<Any?>? {
                 if (delivered || records.isEmpty()) {
                     return null
                 }
@@ -135,7 +135,7 @@ class PivotWorkerTest {
                 sink.add(element as DataRecord)
             }
             override suspend fun flush() {}
-            override fun chunkSize(): Int = 1024
+            override fun batchSize(): Int = 1024
             override fun close() {}
         }
 

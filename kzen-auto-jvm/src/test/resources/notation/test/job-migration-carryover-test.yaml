@@ -51,10 +51,10 @@ main:
 
 main.channels/raw:
   is: Channel
-  buffer: 4
-  # One element per chunk, so "buffer full + one parked mid-send" is reached at exactly buffer + 1 ELEMENTS —
-  # the element-precise carryover state this test asserts (the channel capacity is counted in one-element chunks).
-  chunk: 1
+  capacity: 4
+  # One element per batch, so "channel full + one parked mid-send" is reached at exactly capacity + 1 ELEMENTS —
+  # the element-precise carryover state this test asserts (the channel capacity is counted in one-element batches).
+  batchSize: 1
 
 main.channels/signal:
   is: DuplexChannel

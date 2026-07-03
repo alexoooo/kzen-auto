@@ -61,7 +61,7 @@ class PreviewWorkerTest {
             // The framework SinkWorker drive loop drains whole chunks: hand it every element as one chunk, then EOF.
             private var delivered = false
 
-            override suspend fun receiveChunk(): List<Any?>? {
+            override suspend fun receiveBatch(): List<Any?>? {
                 if (delivered || elements.isEmpty()) {
                     return null
                 }

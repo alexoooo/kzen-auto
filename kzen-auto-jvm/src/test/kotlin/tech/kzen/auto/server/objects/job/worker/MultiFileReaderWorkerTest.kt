@@ -168,13 +168,13 @@ class MultiFileReaderWorkerTest {
     }
 
 
-    private fun capturingOutput(sink: MutableList<DataRecord>, chunkSize: Int): ChannelOutput<Any?> =
+    private fun capturingOutput(sink: MutableList<DataRecord>, batchSize: Int): ChannelOutput<Any?> =
         object: ChannelOutput<Any?> {
             override suspend fun send(element: Any?) {
                 sink.add(element as DataRecord)
             }
             override suspend fun flush() {}
-            override fun chunkSize(): Int = chunkSize
+            override fun batchSize(): Int = batchSize
             override fun close() {}
         }
 
