@@ -7,8 +7,12 @@ import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.obj.ObjectPath
+import tech.kzen.lib.common.model.structure.notation.GraphNotation
+import tech.kzen.lib.common.model.structure.notation.cqrs.RenameObjectCommand
 import tech.kzen.lib.common.service.metadata.NotationMetadataReader
+import tech.kzen.lib.common.service.notation.NotationReducer
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -18,9 +22,8 @@ import kotlin.test.assertTrue
  * How a Job Channel's `batchSize` / `capacity` reach [JobChannelSynthesis]:
  *  - the Job-wide defaults declared on `main` are stamped onto every auto-synthesized channel (the common path
  *    carries no `is: Channel` object, so a channel would otherwise only ever get the archetype defaults 1024/0);
- *  - a per-channel override — a materialized `is: Channel` object at the deterministic synth name with the Worker
- *    ports left open — is adopted as-is (ensureChannel is idempotent by object path) with its ports filled only
- *    in the run copy, so the override survives AND order-driven auto-wiring still holds.
+ *  - per-channel config lives on the UPSTREAM Worker in its `channels.<outputPort>` map, so it wins over the
+ *    Job-wide default AND follows the Worker across a rename — there is no name-coupled override object.
  */
 class JobChannelDefaultTest {
     @Test
@@ -28,11 +31,7 @@ class JobChannelDefaultTest {
         val documentPath = DocumentPath.parse("test/job-batchsize-default-test.yaml")
 
         val graphNotation = AutoTestUtils.readNotation()
-        val graphDefinition = AutoTestUtils.graphDefinitionAttempt(graphNotation).transitiveSuccessful
-
-        val result = JobChannelSynthesis(NotationMetadataReader())
-            .synthesize(graphDefinition, documentPath)
-
+        val result = synthesize(graphNotation, documentPath)
         val augmentedNotation = result.graphDefinition.graphStructure.graphNotation
 
         // Two adjacent-Worker connections (reader->filter, filter->writer) => two synthesized one-way channels.
@@ -40,14 +39,10 @@ class JobChannelDefaultTest {
 
         for (channelLocation in result.channelLocations) {
             assertEquals(
-                "32",
-                augmentedNotation.firstAttribute(
-                    channelLocation, AttributePath.ofName(JobConventions.batchSizeAttributeName))?.asString(),
+                "32", channelValue(augmentedNotation, channelLocation, JobConventions.batchSizeAttributeName),
                 "batchSize on $channelLocation")
             assertEquals(
-                "4",
-                augmentedNotation.firstAttribute(
-                    channelLocation, AttributePath.ofName(JobConventions.capacityAttributeName))?.asString(),
+                "4", channelValue(augmentedNotation, channelLocation, JobConventions.capacityAttributeName),
                 "capacity on $channelLocation")
         }
 
@@ -56,37 +51,75 @@ class JobChannelDefaultTest {
 
 
     @Test
-    fun perChannelOverrideObjectIsAdoptedBySynthesis() {
-        val documentPath = DocumentPath.parse("test/job-channel-override-test.yaml")
+    fun perWorkerOutputConfigStampedOntoSynthesizedChannel() {
+        val documentPath = DocumentPath.parse("test/job-worker-config-test.yaml")
 
         val graphNotation = AutoTestUtils.readNotation()
-        val graphDefinition = AutoTestUtils.graphDefinitionAttempt(graphNotation).transitiveSuccessful
-
-        val result = JobChannelSynthesis(NotationMetadataReader())
-            .synthesize(graphDefinition, documentPath)
-
+        val result = synthesize(graphNotation, documentPath)
         val augmentedNotation = result.graphDefinition.graphStructure.graphNotation
-        val overrideLocation = ObjectLocation(documentPath, ObjectPath.parse("main.channels/ch__reader__output"))
 
-        // The override object's own batchSize / capacity survive — NOT overwritten by the Job/archetype default.
-        assertEquals(
-            "7",
-            augmentedNotation.firstAttribute(
-                overrideLocation, AttributePath.ofName(JobConventions.batchSizeAttributeName))?.asString())
-        assertEquals(
-            "3",
-            augmentedNotation.firstAttribute(
-                overrideLocation, AttributePath.ofName(JobConventions.capacityAttributeName))?.asString())
+        // reader declares batchSize 7 / capacity 3 on its output => the reader->filter channel carries them.
+        val readerChannel = channelLocation(documentPath, "ch__reader__output")
+        assertEquals("7", channelValue(augmentedNotation, readerChannel, JobConventions.batchSizeAttributeName))
+        assertEquals("3", channelValue(augmentedNotation, readerChannel, JobConventions.capacityAttributeName))
 
-        // The reader's output port was wired to the override channel in the run copy (auto-wiring still holds).
+        // filter declares no config => its output channel falls back to the Job-wide default (1024 / 0).
+        val filterChannel = channelLocation(documentPath, "ch__filter__output")
+        assertEquals("1024", channelValue(augmentedNotation, filterChannel, JobConventions.batchSizeAttributeName))
+        assertEquals("0", channelValue(augmentedNotation, filterChannel, JobConventions.capacityAttributeName))
+
+        // The reader's output port was wired to its channel in the run copy (auto-wiring still holds).
         val readerLocation = ObjectLocation(documentPath, ObjectPath.parse("main.workers/reader"))
         val outputRef = augmentedNotation.firstAttribute(
             readerLocation, AttributePath.ofName(AttributeName("output")))?.asString()
         assertTrue(
             outputRef != null && outputRef.contains("ch__reader__output"),
-            "reader.output wired to the override channel: $outputRef")
+            "reader.output wired to its channel: $outputRef")
 
-        // Two channels total: the adopted override (reused, not duplicated) plus the filter->writer synth channel.
         assertEquals(2, result.channelLocations.size)
+    }
+
+
+    @Test
+    fun workerOutputConfigSurvivesUpstreamWorkerRename() {
+        val documentPath = DocumentPath.parse("test/job-worker-config-test.yaml")
+
+        val graphNotation = AutoTestUtils.readNotation()
+        val readerLocation = ObjectLocation(documentPath, ObjectPath.parse("main.workers/reader"))
+
+        // Rename the upstream Worker: because its batchSize / capacity live ON the Worker, they move with it —
+        // the renamed Worker's channel (ch__loader__output) must still carry 7 / 3. A name-coupled override
+        // object would instead have been orphaned by the rename, reverting the channel to defaults.
+        val renamedNotation = NotationReducer()
+            .applyStructural(graphNotation, RenameObjectCommand(readerLocation, ObjectName("loader")))
+            .graphNotation
+
+        val result = synthesize(renamedNotation, documentPath)
+        val augmentedNotation = result.graphDefinition.graphStructure.graphNotation
+
+        val loaderChannel = channelLocation(documentPath, "ch__loader__output")
+        assertEquals("7", channelValue(augmentedNotation, loaderChannel, JobConventions.batchSizeAttributeName))
+        assertEquals("3", channelValue(augmentedNotation, loaderChannel, JobConventions.capacityAttributeName))
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun synthesize(graphNotation: GraphNotation, documentPath: DocumentPath): JobChannelSynthesis.Result {
+        val graphDefinition = AutoTestUtils.graphDefinitionAttempt(graphNotation).transitiveSuccessful
+        return JobChannelSynthesis(NotationMetadataReader()).synthesize(graphDefinition, documentPath)
+    }
+
+
+    private fun channelLocation(documentPath: DocumentPath, channelName: String): ObjectLocation {
+        return ObjectLocation(documentPath, ObjectPath.parse("main.channels/$channelName"))
+    }
+
+
+    private fun channelValue(
+        graphNotation: GraphNotation,
+        channelLocation: ObjectLocation,
+        attributeName: AttributeName
+    ): String? {
+        return graphNotation.firstAttribute(channelLocation, AttributePath.ofName(attributeName))?.asString()
     }
 }

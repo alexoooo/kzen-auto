@@ -12,6 +12,16 @@ Worker:
   # inherits WorkerDisplayDefault; a Worker overrides it to add behaviour (see job-worker.yaml). Inert server-side
   # (a plain String, in isManaged so it's never an editor), mirroring ScriptStep's `display:` marker (see CC-17).
   display: WorkerDisplayDefault
+  # Per-output channel config lives in a free-form `channels` map keyed by output-port name, e.g.
+  # `channels: { output: { batchSize: 7, capacity: 3 } }` — one entry per output port, so a Worker can tune each
+  # of its output channels independently. JobChannelSynthesis reads `channels.<port>.<knob>` from the upstream
+  # Worker and stamps it onto that port's one-way channel (precedence: Worker value > the Job-wide default on
+  # `main` > the Channel archetype default). Because it lives on the Worker it follows the Worker across rename /
+  # reorder — no name-coupled override object. DELIBERATELY UNDECLARED in `meta`: a free-form map infers to no
+  # metadata (NotationMetadataReader.inferMetadata returns null for a MapAttributeNotation), so it renders no
+  # Worker-card editor, isn't defined, and never triggers a "Missing" drop — yet it is preserved in notation and
+  # readable via firstAttribute, and its Int leaves need no String workaround. The channel's inline editor edits
+  # it. Absent = inherit.
   meta:
     display: String
 

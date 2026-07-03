@@ -112,14 +112,41 @@ class JobChannelSynthesis(
         val channelObjectPath = channelObjectPath(channelName)
         val channelRef = channelObjectPath.asString()
 
+        // Per-output config lives on the upstream Worker in its `channels.<outputPort>` map (absent = inherit):
+        // its own non-blank value wins, else the Job-wide default. Living on the Worker, it follows the Worker
+        // across rename / reorder — the channel object carries no name-coupled override. Keyed by output port so
+        // a Worker can tune each of its output channels independently.
+        val upstreamNotation = documentNotation.objects.notations.map[connection.upstreamWorker.objectPath]
+        val batchSize = workerConfigValue(
+            upstreamNotation, connection.outputPort, JobConventions.batchSizeAttributeName)
+            ?: defaultBatchSize
+        val capacity = workerConfigValue(
+            upstreamNotation, connection.outputPort, JobConventions.capacityAttributeName)
+            ?: defaultCapacity
+
         var channelNotation = ObjectNotation.ofParent(JobConventions.channelObjectName)
-        channelNotation = upsertIfPresent(channelNotation, JobConventions.batchSizeAttributeName, defaultBatchSize)
-        channelNotation = upsertIfPresent(channelNotation, JobConventions.capacityAttributeName, defaultCapacity)
+        channelNotation = upsertIfPresent(channelNotation, JobConventions.batchSizeAttributeName, batchSize)
+        channelNotation = upsertIfPresent(channelNotation, JobConventions.capacityAttributeName, capacity)
 
         var result = ensureChannel(documentNotation, channelObjectPath, channelNotation)
         result = setPort(result, connection.upstreamWorker.objectPath, connection.outputPort, channelRef)
         result = setPort(result, connection.downstreamWorker.objectPath, connection.inputPort, channelRef)
         return result
+    }
+
+
+    // The Worker's OWN `channels.<outputPort>.<knob>` value, or null when unset / blank so the caller falls back
+    // to the Job-wide default. Read from the Worker's own notation (not inheritance-resolved — the Worker
+    // archetype declares no default map).
+    private fun workerConfigValue(
+        workerNotation: ObjectNotation?,
+        outputPort: AttributeName,
+        knob: AttributeName
+    ): String? {
+        return workerNotation
+            ?.get(JobConventions.workerOutputKnobPath(outputPort, knob))
+            ?.asString()
+            ?.ifBlank { null }
     }
 
 

@@ -97,16 +97,49 @@ tasks.withType<ProcessResources> {
 }
 
 
+// Deterministic bundle refresh for the frontend dev launch. FrontendDevelopment.kt serves the esbuild bundle
+// straight from kzen-auto-js/build/dist/js/productionExecutable/, and that bundle can silently go stale: the
+// Kotlin/JS DEVELOPMENT and PRODUCTION executables' compileSync tasks write the SAME per-module dir
+// (build/js/packages/<pkg>/kotlin — esbuild's input; see the same ambiguity flagged in kzen-auto-js's
+// build.gradle.kts), so after a production build (jar / build / publishToMavenLocal / an umbrella build) an
+// up-to-date `-PjsWatch` dev sync can leave the prod bundle in place and esbuild re-bundles stale content —
+// the "I must run `clean` first" symptom. Wiping ONLY those two artifacts (the shared compileSync destination
+// + the final bundle) before the JS pipeline runs makes a single `frontendDevelopment` deterministically
+// rebundle the current sources in the current mode. Kotlin compile outputs / incremental caches are left
+// intact, so recompilation stays incremental; the standalone `-t :kzen-auto-js:jsEsbuildBundle` watch loop is
+// untouched (this clean only enters the graph via frontendDevelopment).
+val jsBundleProject = project(":kzen-auto-js")
+val cleanFrontendBundle = tasks.register<Delete>("cleanFrontendBundle") {
+    description = "Wipe the stale-prone JS bundle artifacts so frontendDevelopment serves the latest UI"
+    delete(
+        rootProject.layout.buildDirectory.dir("js/packages/${rootProject.name}-${jsBundleProject.name}/kotlin"),
+        jsBundleProject.layout.buildDirectory.dir("dist/js/productionExecutable"))
+}
+
+// The JS bundle producers must run AFTER the wipe (else compileSync/esbuild could run first and be deleted,
+// or esbuild could bundle an emptied input dir). mustRunAfter is a no-op when cleanFrontendBundle isn't in
+// the graph, so direct `:kzen-auto-js:jsEsbuildBundle` invocations (the watch loop) are unaffected.
+jsBundleProject.tasks.matching {
+    it.name == "jsDevelopmentExecutableCompileSync" ||
+        it.name == "jsProductionExecutableCompileSync" ||
+        it.name == "jsEsbuildBundle"
+}.configureEach {
+    mustRunAfter(cleanFrontendBundle)
+}
+
+
 // Single-command frontend dev launch (alternative to an IDE run config — see FrontendDevelopment.kt):
 //   ./gradlew :kzen-auto-jvm:frontendDevelopment -PjsWatch
-// `classes` pulls in processResources -> jsEsbuildBundle, so the served bundle is rebuilt from the latest
-// sources before the server binds. With -PjsWatch that's the unminified DEVELOPMENT executable (symbols
-// preserved, faster build); without it, the minified production bundle. workingDir is the kzen-auto root
-// because FrontendDevelopment resolves kzen-auto-js/build/dist/... relative to the process cwd (an IDE
-// launch runs with cwd = project root). Debuggable from IntelliJ's Gradle tool window (right-click → Debug).
+// `cleanFrontendBundle` wipes the stale-prone bundle artifacts and `classes` pulls in processResources ->
+// jsEsbuildBundle, so the served bundle is deterministically rebuilt from the latest sources before the server
+// binds. With -PjsWatch that's the unminified DEVELOPMENT executable (symbols preserved, faster build); without
+// it, the minified production bundle. workingDir is the kzen-auto root because FrontendDevelopment resolves
+// kzen-auto-js/build/dist/... relative to the process cwd (an IDE launch runs with cwd = project root).
+// Debuggable from IntelliJ's Gradle tool window (right-click → Debug).
 tasks.register<JavaExec>("frontendDevelopment") {
     group = "application"
-    description = "Run FrontendDevelopment, rebuilding the JS bundle first (-PjsWatch for the dev/unminified bundle)"
+    description = "Run FrontendDevelopment, deterministically rebuilding the JS bundle first (-PjsWatch for the dev/unminified bundle)"
+    dependsOn(cleanFrontendBundle)
     dependsOn("classes")
     mainClass.set("tech.kzen.auto.server.dev.FrontendDevelopmentKt")
     classpath = sourceSets.main.get().runtimeClasspath

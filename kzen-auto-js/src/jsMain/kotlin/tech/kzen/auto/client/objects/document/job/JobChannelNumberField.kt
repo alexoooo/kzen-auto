@@ -14,11 +14,16 @@ import tech.kzen.auto.client.wrap.FunctionWithDebounce
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.lodash
 import tech.kzen.auto.client.wrap.setState
-import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.AttributeNotation
+import tech.kzen.lib.common.model.structure.notation.GraphNotation
+import tech.kzen.lib.common.model.structure.notation.PositionRelation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
+import tech.kzen.lib.common.model.structure.notation.cqrs.InsertMapEntryInAttributeCommand
+import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
+import tech.kzen.lib.common.model.structure.notation.cqrs.RemoveInAttributeCommand
+import tech.kzen.lib.common.model.structure.notation.cqrs.UpdateInAttributeCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.UpsertAttributeCommand
 import tech.kzen.lib.common.service.store.MirroredGraphStore
 import web.html.HTMLInputElement
@@ -28,18 +33,19 @@ import web.html.HTMLInputElement
 external interface JobChannelNumberFieldProps: Props {
     var label: String
 
-    // The object holding the attribute. For the Job-defaults panel this is `main` (always present); for a
-    // per-channel override it is the (possibly not-yet-materialized) synthesized-channel object.
+    // The object holding the attribute — always an existing object: `main` for the Job-wide defaults panel, or
+    // the upstream Worker for a per-channel config field.
     var objectLocation: ObjectLocation
-    var attributeName: AttributeName
 
-    // The value to display when [objectLocation] carries no explicit scalar for [attributeName] — the effective
-    // default the parent resolved (Job-wide default, else archetype default).
+    // The path to the value: a top-level name (`main.batchSize`, the Job-wide default) OR a nested path
+    // (`channels.<port>.batchSize` on a Worker). The path SHAPE also picks the semantics: a nested leaf can be
+    // left blank to inherit the effective default (and cleared to revert); a top-level attribute is the base of
+    // the precedence with no removal command, so it always shows a value.
+    var attributePath: AttributePath
+
+    // The effective default shown when [objectLocation] carries no own value at [attributePath] — as a greyed
+    // placeholder for a nested (inheritable) field, or as the displayed value for a top-level one.
     var fallbackValue: String
-
-    // Materializes [objectLocation] (seeded with the effective defaults) before the first write, when it does
-    // not yet exist; null when the object is always present (e.g. `main`). Invoked only on a genuine edit.
-    var ensureObject: (suspend () -> Unit)?
 
     var clientStateGlobal: ClientStateGlobal
     var mirroredGraphStore: MirroredGraphStore
@@ -48,18 +54,23 @@ external interface JobChannelNumberFieldProps: Props {
 
 external interface JobChannelNumberFieldState: State {
     var value: String?
-    var attributeNotation: AttributeNotation?
+
+    // The object's OWN (not inheritance-resolved) notation at the path: non-null = an explicit override,
+    // null = inheriting. Gates value updates so mid-edit typing is never clobbered by an unrelated re-render.
+    var ownNotation: AttributeNotation?
 }
 
 
 //---------------------------------------------------------------------------------------------------------------------
-// A small labelled numeric field for a Job Channel's `batchSize` / `capacity`. Mirrors AttributePathValueEditor's
-// observe-and-debounce shape (self-hydrates from notation, gates value updates on the observed attribute so
-// typing is never clobbered by an unrelated re-render, flushes pending edits on unmount) but adds the two things
-// the generic editor cannot: it falls back to a parent-supplied effective default when the object/attribute is
-// absent, and it MATERIALIZES the object on the first genuine edit (create-on-edit) rather than on open. Like
-// SelectClosePolicyEditor it writes ONLY on a real user change, so mount-time hydration is never echoed back as a
-// no-op command.
+// A small labelled numeric field for a Job channel's `batchSize` / `capacity`. Mirrors AttributePathValueEditor's
+// observe-and-debounce shape (self-hydrates from notation, gates value updates on the observed value so typing is
+// never clobbered, flushes pending edits on unmount), but distinguishes an explicit OVERRIDE from an inherited
+// default: it reads the object's OWN value (not inheritance-resolved), so a nested per-channel field renders BLANK
+// with the effective default as a greyed placeholder while inheriting, and shows a solid value once overridden.
+// Clearing an overridden nested field reverts it to inheriting (removes the override). A top-level field
+// (`main.batchSize`, the Job-wide default) has no lower-precedence default to revert to and no attribute-removal
+// command, so it always shows a value. Like SelectClosePolicyEditor it writes ONLY on a real user change, so
+// mount-time hydration is never echoed back as a no-op command.
 class JobChannelNumberField(
     props: JobChannelNumberFieldProps
 ):
@@ -69,7 +80,7 @@ class JobChannelNumberField(
     //-----------------------------------------------------------------------------------------------------------------
     override fun JobChannelNumberFieldState.init(props: JobChannelNumberFieldProps) {
         value = null
-        attributeNotation = null
+        ownNotation = null
     }
 
 
@@ -93,26 +104,45 @@ class JobChannelNumberField(
     }, 1000)
 
 
+    // Blank means "inherit the effective default" only for a nested per-channel knob (`channels.<port>.<knob>`,
+    // revertible via RemoveInAttributeCommand). A top-level Job-wide default is the base of the precedence and
+    // has no attribute-removal command, so it is never left blank.
+    private fun inheritable(): Boolean {
+        return props.attributePath.nesting.segments.isNotEmpty()
+    }
+
+
+    // The object's OWN value at the path (NOT inheritance-resolved), so an inheriting field reads null rather
+    // than the ancestor's value. Presence here — regardless of whether it equals the default — is what makes the
+    // value an explicit override.
+    private fun readOwnNotation(graphNotation: GraphNotation): AttributeNotation? {
+        val objectNotation = graphNotation.documents[props.objectLocation.documentPath]
+            ?.objects?.notations?.map?.get(props.objectLocation.objectPath)
+            ?: return null
+        return objectNotation.get(props.attributePath)
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     override fun onClientState(clientState: ClientState) {
         val graphNotation = clientState.graphStructure().graphNotation
 
-        val attributeNotation: AttributeNotation? =
+        val own: AttributeNotation? =
             if (props.objectLocation in graphNotation.coalesce) {
-                graphNotation.firstAttribute(props.objectLocation, AttributePath.ofName(props.attributeName))
+                readOwnNotation(graphNotation)
             }
             else {
                 null
             }
 
-        // Gate on the observed attribute (not every publish) so mid-edit typing isn't clobbered.
-        if (state.attributeNotation == attributeNotation) {
+        // Gate on the observed own value (not every publish) so mid-edit typing isn't clobbered.
+        if (state.ownNotation == own) {
             return
         }
 
         setState {
-            this.attributeNotation = attributeNotation
-            this.value = (attributeNotation as? ScalarAttributeNotation)?.value ?: props.fallbackValue
+            this.ownNotation = own
+            this.value = (own as? ScalarAttributeNotation)?.value?.ifBlank { null }
         }
     }
 
@@ -127,37 +157,75 @@ class JobChannelNumberField(
 
 
     // Write only on a genuine change — no componentDidUpdate write, so hydration is never echoed as a no-op.
+    // Clearing an overridden nested field reverts it to inheriting.
     private suspend fun submitEdit() {
-        val text = state.value
-            ?: return
-        val parsed = text.toIntOrNull()
-            ?: return
-        val canonical = parsed.toString()
+        val text = state.value?.trim().orEmpty()
+        val currentOverride = (state.ownNotation as? ScalarAttributeNotation)?.value?.ifBlank { null }
 
-        val current = (state.attributeNotation as? ScalarAttributeNotation)?.value
-        if (canonical == current) {
-            // Already this value.
-            return
-        }
-        if (current == null && canonical == props.fallbackValue) {
-            // Object/attribute absent and the user (re)typed the current effective default — no override needed.
+        if (text.isEmpty()) {
+            // Cleared → revert to the inherited default by removing the override. Only a nested leaf has a
+            // removal command (and a lower-precedence default to fall back to); a top-level default stays.
+            if (currentOverride != null && inheritable()) {
+                props.mirroredGraphStore.apply(RemoveInAttributeCommand(
+                    props.objectLocation, props.attributePath, true))
+            }
             return
         }
 
-        props.ensureObject?.invoke()
-        props.mirroredGraphStore.apply(UpsertAttributeCommand(
-            props.objectLocation, props.attributeName, ScalarAttributeNotation(canonical)))
+        val canonical = text.toIntOrNull()?.toString()
+            ?: return
+        if (canonical == currentOverride) {
+            // Already this override.
+            return
+        }
+
+        props.mirroredGraphStore.apply(writeCommand(ScalarAttributeNotation(canonical)))
+    }
+
+
+    // Persist [value] at [attributePath], picking the command by path shape: a top-level attribute is a plain
+    // upsert; a nested leaf is updated in place when present, or inserted (creating the intermediate
+    // `channels.<port>` maps) on first override.
+    private fun writeCommand(value: ScalarAttributeNotation): NotationCommand {
+        val attributePath = props.attributePath
+        return when {
+            attributePath.nesting.segments.isEmpty() ->
+                UpsertAttributeCommand(props.objectLocation, attributePath.attribute, value)
+
+            state.ownNotation != null ->
+                UpdateInAttributeCommand(props.objectLocation, attributePath, value)
+
+            else ->
+                InsertMapEntryInAttributeCommand(
+                    props.objectLocation,
+                    attributePath.parent(),
+                    PositionRelation.afterLast,
+                    attributePath.nesting.segments.last(),
+                    value,
+                    true)
+        }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
+        val inheritable = inheritable()
+
         TextField {
             fullWidth = true
             size = Size.small
 
             label = ReactNode(props.label)
-            value = state.value ?: props.fallbackValue
+
+            if (inheritable) {
+                // Blank while inheriting: the effective default shows as a greyed placeholder, so an overridden
+                // value (solid text) reads distinctly from an inherited one.
+                value = state.value ?: ""
+                placeholder = props.fallbackValue
+            }
+            else {
+                value = state.value?.ifBlank { null } ?: props.fallbackValue
+            }
 
             onChange = {
                 val target = it.target as HTMLInputElement

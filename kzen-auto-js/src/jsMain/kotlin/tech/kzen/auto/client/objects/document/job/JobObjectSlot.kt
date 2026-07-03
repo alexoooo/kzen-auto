@@ -45,7 +45,7 @@ external interface JobObjectSlotProps: Props {
 // its `display:` marker by WorkerDisplayManager (the analog of ScriptStepSlot). The slot itself carries no
 // Worker-type knowledge — the card (header / editors / preview / download / summary poll) is entirely contributed
 // by the Worker archetype's declared display component (see CC-17). The Channels between Workers are NOT cards —
-// they render as gold pipes in the gaps (JobChannelPipe), derived from Worker order. A memoized RPureComponent so
+// they render as gold pipes in the gaps (JobChannelDisplay), derived from Worker order. A memoized RPureComponent so
 // the frequent drag-hover re-renders of JobController — which only change the drop indicator, not any card's props
 // — bail out here. Registers its root element with JobCardRowRegistry so the stage can map a drag cursor onto an
 // insertion index by card midpoints.

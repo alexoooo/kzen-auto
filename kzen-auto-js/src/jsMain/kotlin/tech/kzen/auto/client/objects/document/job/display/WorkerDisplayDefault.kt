@@ -249,6 +249,9 @@ class WorkerDisplayDefault(
     // `editor:` metadata. Channel-endpoint ports are order-managed (the gold pipes between cards), not per-Worker.
     private fun ChildrenBuilder.renderAttributeEditors(objectMetadata: ObjectMetadata) {
         for ((attributeName, attributeMetadata) in objectMetadata.attributes.map) {
+            // Per-output channel config lives in a free-form `channels` map, which infers to no metadata and so
+            // never appears in this meta-attribute loop — no explicit exclusion needed. Channel-endpoint ports
+            // are order-managed (the gold pipes between cards), not per-Worker editors.
             if (AutoConventions.isManaged(attributeName) ||
                     JobChannelPorts.isChannelPort(attributeMetadata.type)) {
                 continue

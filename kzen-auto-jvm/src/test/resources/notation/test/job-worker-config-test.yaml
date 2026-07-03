@@ -1,0 +1,28 @@
+# Per-output channel config on the upstream Worker (JobChannelDefaultTest): the reader Worker declares its own
+# batchSize / capacity in its `channels.output` map, which JobChannelSynthesis stamps onto the one-way channel
+# that output feeds (precedence: Worker output config > the Job-wide default on `main` > the Channel archetype
+# default). Because the config lives ON the Worker (keyed by output port) it follows the Worker across rename /
+# reorder — there is NO name-coupled override Channel object. `filter` declares no config, so its output channel
+# falls back to the Job-wide default.
+
+
+main:
+  is: Job
+  batchSize: 1024
+  capacity: 0
+
+main.workers/reader:
+  is: CsvReaderWorker
+  path: build/job-worker-config/input.csv
+  channels:
+    output:
+      batchSize: 7
+      capacity: 3
+
+main.workers/filter:
+  is: FilterWorker
+  where: 'flag eq "yes"'
+
+main.workers/writer:
+  is: CsvWriterWorker
+  path: build/job-worker-config/output.csv

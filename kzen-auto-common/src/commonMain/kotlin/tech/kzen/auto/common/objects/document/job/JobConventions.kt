@@ -3,6 +3,7 @@ package tech.kzen.auto.common.objects.document.job
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
+import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.obj.ObjectPath
@@ -37,10 +38,31 @@ object JobConventions {
 
     // A Channel's two Int knobs (see job-jvm.yaml Channel): `batchSize` = elements grouped into one physical
     // transfer batch (the checkpoint / step unit); `capacity` = how many batches the channel holds before
-    // backpressure (0 = rendezvous handoff). Also declared on the Job archetype (`main`) as the Job-wide
-    // default JobChannelSynthesis stamps onto every auto-synthesized channel.
+    // backpressure (0 = rendezvous handoff). Three roles: the flat Job-wide default on the Job archetype
+    // (`main`); the leaf-segment names inside a Worker's per-output `channels` map (see below); and the flat
+    // stamp targets on the synthesized Channel object.
     val batchSizeAttributeName = AttributeName("batchSize")
     val capacityAttributeName = AttributeName("capacity")
+
+    // A Worker's per-output channel config: a free-form map keyed by output-port name, each value a map of the
+    // knobs above — `channels: { <port>: { batchSize, capacity } }`. Reused string "channels" is distinct from
+    // [channelsAttributeName] above (that nests the Job DOCUMENT's Channel OBJECTS under `main`; this is plain
+    // config data on a WORKER — different object, different mechanism). Undeclared in the Worker's `meta` on
+    // purpose (a map infers to no metadata → no card editor, no definition, no "Missing" drop), so there is no
+    // constant pair for the map's own metadata; only these path builders address it.
+    val workerChannelsAttributeName = AttributeName("channels")
+
+    // `channels.<port>` — the config container for one output port (used to create / clear the whole entry).
+    fun workerOutputConfigPath(outputPort: AttributeName): AttributePath {
+        return AttributePath.ofName(workerChannelsAttributeName)
+            .nest(AttributeSegment.ofKey(outputPort.value))
+    }
+
+    // `channels.<port>.<knob>` — a single knob leaf for one output port (read by synthesis, edited by the field).
+    fun workerOutputKnobPath(outputPort: AttributeName, knob: AttributeName): AttributePath {
+        return workerOutputConfigPath(outputPort)
+            .nest(AttributeSegment.ofKey(knob.value))
+    }
 
     // Marks a duplex Channel whose client side is the UI bridge rather than a Worker (see JobExecution).
     val externalAttributeName = AttributeName("external")
