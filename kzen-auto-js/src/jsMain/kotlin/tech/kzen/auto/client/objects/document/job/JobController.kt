@@ -34,7 +34,6 @@ import tech.kzen.auto.common.objects.document.job.JobChannelDerivation
 import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.attribute.AttributeName
-import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
@@ -556,14 +555,16 @@ class JobController(
             return
         }
 
-        val mainLocation = ObjectLocation(documentPath, NotationConventions.mainObjectPath)
+        val main = ObjectLocation(documentPath, NotationConventions.mainObjectPath)
         val workers = state.workerLocations ?: listOf()
         val connections = state.connectionsByUpstream ?: mapOf()
         val active = clientState.clientLogicState.isActive()
 
         div {
             css {
-                margin = Margin(5.em, 2.em, 2.em, 2.em)
+                margin = Margin(2.em, 2.em, 2.em, 2.em)
+                // Positioning context for the floating Channel-defaults panel (top-right, like Script's controls).
+                position = Position.relative
             }
 
             // The whole stage is one drop zone; the drop index is computed from the cursor Y (onStageDragOver).
@@ -571,8 +572,13 @@ class JobController(
             onDragOver = { event -> onStageDragOver(event) }
             onDrop = { event -> onStageDrop(event) }
 
-            // Job-wide channel defaults (batchSize / capacity) applied to every auto-synthesized channel.
-            renderJobDefaultsPanel(mainLocation)
+            // Job-wide channel defaults (batchSize / capacity) applied to every auto-synthesized channel — floated
+            // at the top-right (rendered before the empty/populated split so it shows in both).
+            JobChannelDefaults::class.react {
+                mainLocation = main
+                clientStateGlobal = props.clientStateGlobal
+                mirroredGraphStore = props.mirroredGraphStore
+            }
 
             if (workers.isEmpty()) {
                 div {
@@ -662,13 +668,13 @@ class JobController(
                 justifyContent = JustifyContent.center
                 maxWidth = 40.em
 
-                // The expanded card sizes its own gap; the compact chevron / drop / insert modes get a reserved
-                // height so toggling modes never shifts the card layout. A collapsed channel uses minHeight (not
-                // a fixed height) so a customized channel's caption + bottom margin add intrinsic height instead
-                // of being clipped.
-                if (! (expanded && ! state.creating)) {
+                // Reserved height depends ONLY on the gap's own content, never on insert-mode — so entering /
+                // leaving insert-mode never reflows the cards (mirrors ScriptBranchDisplay). The expanded card
+                // sizes its own gap; a collapsed channel uses minHeight (not a fixed height) so a customized
+                // channel's caption + bottom margin add intrinsic height instead of being clipped; an empty gap
+                // is a thin strip. The "+" appears as an absolute overlay (below), contributing no height.
+                if (! expanded) {
                     when {
-                        state.creating -> height = 2.em
                         connection != null -> minHeight = if (customized) 2.6.em else 1.5.em
                         else -> height = 0.75.em
                     }
@@ -679,10 +685,9 @@ class JobController(
                 dropZoneRegion()
             }
 
-            if (state.creating) {
-                insertionButton(gapIndex)
-            }
-            else if (connection != null) {
+            // The channel pipe stays mounted in every mode — the insert "+" is layered ON TOP (below),
+            // never replaces it.
+            if (connection != null) {
                 JobChannelDisplay::class.react {
                     key = Key("channel:" + connection.upstreamWorker.toReference().asString())
                     upstreamName = connection.upstreamWorker.objectPath.name.value
@@ -706,6 +711,23 @@ class JobController(
                     onClear = onChannelClear
                     clientStateGlobal = props.clientStateGlobal
                     mirroredGraphStore = props.mirroredGraphStore
+                }
+            }
+
+            // Insert-mode: the "+" is an absolute overlay anchored to the RIGHT of the gap (like dropZoneRegion,
+            // out of flow) so it ADDS an insertion point without displacing, resizing, or covering the centred
+            // channel pipe / its caption. Skipped over an expanded editor, where a "+" makes no sense.
+            if (state.creating && ! expanded) {
+                div {
+                    css {
+                        position = Position.absolute
+                        top = 0.px
+                        bottom = 0.px
+                        right = 1.em
+                        display = Display.flex
+                        alignItems = AlignItems.center
+                    }
+                    insertionButton(gapIndex)
                 }
             }
         }
@@ -769,54 +791,4 @@ class JobController(
             }
         }
     }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    // Job-wide channel defaults: two labelled numeric fields bound to `main`'s batchSize / capacity, applied by
-    // JobChannelSynthesis to every auto-synthesized channel that carries no per-channel override.
-    private fun ChildrenBuilder.renderJobDefaultsPanel(mainLocation: ObjectLocation) {
-        div {
-            css {
-                display = Display.flex
-                alignItems = AlignItems.center
-                gap = 1.em
-                maxWidth = 40.em
-                marginBottom = 1.em
-            }
-
-            div {
-                css {
-                    fontSize = 0.9.em
-                    color = Color("rgba(0, 0, 0, 0.6)")
-                }
-                +"Channel defaults"
-            }
-
-            div {
-                css { width = 8.em }
-                JobChannelNumberField::class.react {
-                    label = "Batch size"
-                    objectLocation = mainLocation
-                    attributePath = AttributePath.ofName(JobConventions.batchSizeAttributeName)
-                    fallbackValue = "1024"
-                    clientStateGlobal = props.clientStateGlobal
-                    mirroredGraphStore = props.mirroredGraphStore
-                }
-            }
-
-            div {
-                css { width = 8.em }
-                JobChannelNumberField::class.react {
-                    label = "Capacity"
-                    objectLocation = mainLocation
-                    attributePath = AttributePath.ofName(JobConventions.capacityAttributeName)
-                    fallbackValue = "0"
-                    clientStateGlobal = props.clientStateGlobal
-                    mirroredGraphStore = props.mirroredGraphStore
-                }
-            }
-        }
-    }
-
-
 }

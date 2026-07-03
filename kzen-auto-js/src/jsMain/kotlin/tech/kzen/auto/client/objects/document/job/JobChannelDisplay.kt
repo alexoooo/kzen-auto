@@ -157,8 +157,8 @@ class JobChannelDisplay(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    // The COLLAPSED chevron flanked by two connector lines, so the channel reads as plumbing joining the Worker
-    // cards above and below it. When customized, a caption below the chevron shows the override values so they're
+    // The COLLAPSED gold chevron pointing down into the Worker card below it, marking the channel between two
+    // adjacent Workers. When customized, a caption below the chevron shows the override values so they're
     // visible without expanding.
     private fun ChildrenBuilder.renderCollapsed() {
         // Only the EXPLICITLY overridden knobs are summarized; an inherited (defaulted) knob is omitted. A
@@ -182,43 +182,31 @@ class JobChannelDisplay(
                 css {
                     display = Display.flex
                     alignItems = AlignItems.center
-                    width = 100.pct
+                    justifyContent = JustifyContent.center
+                    width = 2.4.em
+                    height = 1.9.em
+                    paddingBottom = 12.px
+                    clipPath = JobChannelDisplayStyle.downwardChevron
+                    // Customized → bold gold; inheriting the defaults → pale, so a tuned channel stands out.
+                    if (customized) {
+                        backgroundColor = JobChannelDisplayStyle.border
+                        color = NamedColor.white
+                    }
+                    else {
+                        backgroundColor = JobChannelDisplayStyle.fill
+                        color = JobChannelDisplayStyle.accent
+                    }
+                    cursor = Cursor.pointer
+                }
+                title = "${props.upstreamName} → ${props.downstreamName} " +
+                        "(batch size ${props.batchSize}, capacity ${props.capacity}) — " +
+                        if (customized) "customized; click to edit" else "click to customize"
+
+                onClick = {
+                    props.onToggle(props.upstreamWorker)
                 }
 
-                connectorLine()
-
-                div {
-                    css {
-                        display = Display.flex
-                        alignItems = AlignItems.center
-                        justifyContent = JustifyContent.center
-                        width = 2.4.em
-                        height = 1.9.em
-                        paddingBottom = 12.px
-                        clipPath = JobChannelDisplayStyle.downwardChevron
-                        // Customized → bold gold; inheriting the defaults → pale, so a tuned channel stands out.
-                        if (customized) {
-                            backgroundColor = JobChannelDisplayStyle.border
-                            color = NamedColor.white
-                        }
-                        else {
-                            backgroundColor = JobChannelDisplayStyle.fill
-                            color = JobChannelDisplayStyle.accent
-                        }
-                        cursor = Cursor.pointer
-                    }
-                    title = "${props.upstreamName} → ${props.downstreamName} " +
-                            "(batch size ${props.batchSize}, capacity ${props.capacity}) — " +
-                            if (customized) "customized; click to edit" else "click to customize"
-
-                    onClick = {
-                        props.onToggle(props.upstreamWorker)
-                    }
-
-                    icon("material-symbols:keyboard-arrow-down") {}
-                }
-
-                connectorLine()
+                icon("material-symbols:keyboard-arrow-down") {}
             }
 
             // The overridden values, visible while collapsed so a customized channel doesn't have to be opened
@@ -242,7 +230,7 @@ class JobChannelDisplay(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    // The EXPANDED inline editor: the gold connector lines flank a downward-chevron card (an `upstream →
+    // The EXPANDED inline editor: a downward-chevron card (an `upstream →
     // downstream` header + Delete / Collapse buttons + the two batchSize / capacity fields) that edits the
     // UPSTREAM Worker's per-output config (`channels.<outputPort>`) directly. Clicking an ambient area of the
     // card (its padding / the header route text) collapses it back to the compact chevron — the same
@@ -257,11 +245,10 @@ class JobChannelDisplay(
             css {
                 display = Display.flex
                 alignItems = AlignItems.center
+                justifyContent = JustifyContent.center
                 width = 100.pct
                 marginBottom = JobChannelDisplayStyle.marginBottom
             }
-
-            connectorLine()
 
             div {
                 css {
@@ -362,21 +349,6 @@ class JobChannelDisplay(
                         mirroredGraphStore = props.mirroredGraphStore
                     }
                 }
-            }
-
-            connectorLine()
-        }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    // The gold connector segment flanking the chevron / card.
-    private fun ChildrenBuilder.connectorLine() {
-        div {
-            css {
-                flexGrow = number(1.0)
-                height = 2.px
-                backgroundColor = JobChannelDisplayStyle.border
             }
         }
     }
