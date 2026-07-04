@@ -2,9 +2,9 @@ package tech.kzen.auto.client.objects.document.script.display.dependency
 
 import emotion.react.css
 import js.objects.unsafeJso
-import kotlinx.browser.window
+import kotlinx.browser.document
 import mui.material.IconButton
-import mui.system.sx
+import org.w3c.dom.Element
 import react.ChildrenBuilder
 import react.Key
 import react.Props
@@ -202,21 +202,21 @@ class ScriptBranchDisplay(
     }
 
 
-    // Capture window scroll just before React commits this branch's DOM mutations. The stage is
-    // window-scrolled (no overflow container — see ProjectController), so scrollY is the position
-    // to preserve.
+    // Capture the stage pane's scroll just before React commits this branch's DOM mutations. The stage
+    // scrolls inside ProjectController's data-stage-scroll pane (not the window), so its scrollTop is the
+    // position to preserve.
     override fun getSnapshotBeforeUpdate(
         prevProps: StepListDisplayProps,
         prevState: StepListDisplayState
     ): Any {
-        return window.scrollY
+        return stageScrollPane()?.scrollTop ?: 0.0
     }
 
 
-    // The browser does not reliably hold window scroll when step rows are added/removed (scroll
-    // anchoring fails on the structural change, jumping the viewport to the top); restore the
-    // captured position so it stays put. Gated on a row-count change so in-place updates (drag
-    // hover, dependency edges, attribute edits — which never moved scroll) are untouched.
+    // The browser does not reliably hold the pane's scroll when step rows are added/removed (scroll
+    // anchoring fails on the structural change, jumping to the top); restore the captured position so it
+    // stays put. Gated on a row-count change so in-place updates (drag hover, dependency edges, attribute
+    // edits — which never moved scroll) are untouched.
     override fun componentDidUpdate(
         prevProps: StepListDisplayProps,
         prevState: StepListDisplayState,
@@ -226,19 +226,27 @@ class ScriptBranchDisplay(
             return
         }
 
-        val targetScrollY = snapshot as Double
+        val pane = stageScrollPane()
+            ?: return
+        val targetScrollTop = snapshot as Double
 
         // Restore synchronously, then again on the next animation frame. ScriptDependencyOverlay
         // (a sibling of the top-level branch) reacts to the row-ref churn by scheduling a remeasure
         // in requestAnimationFrame; that remeasure calls getBoundingClientRect, forcing a layout in
-        // which the browser re-applies its failed anchoring and re-jumps the window — clobbering the
+        // which the browser re-applies its failed anchoring and re-jumps the pane — clobbering the
         // synchronous restore. Our rAF is scheduled from here (commit layout phase, after the
         // overlay's was scheduled during the mutation phase), so it runs last and has the final say
         // before paint. Nested branches have no such sibling overlay, so the sync restore already
         // sufficed there; the rAF restore is a harmless no-op for them.
-        window.scrollTo(window.scrollX, targetScrollY)
-        requestAnimationFrame { window.scrollTo(window.scrollX, targetScrollY) }
+        pane.scrollTop = targetScrollTop
+        requestAnimationFrame { pane.scrollTop = targetScrollTop }
     }
+
+
+    // The stage's scroll container (ProjectController's data-stage-scroll pane). Queried rather than
+    // ref-threaded because it lives several controllers above this deeply-nested branch.
+    private fun stageScrollPane(): Element? =
+        document.querySelector("[data-stage-scroll]")
 
 
     override fun onClientState(clientState: ClientState) {
@@ -711,18 +719,19 @@ class ScriptBranchDisplay(
             return
         }
 
+        // NB: size overrides MUST live in a `css {}` block, not `sx {}`. An emotion `css` class has no
+        //     competing MUI rule for width/height, so `width`/`height` win and clamp the button to a compact
+        //     32x32 (the intended, pre-regression size). `padding`/`backgroundColor`, by contrast, lose here
+        //     to `.MuiIconButton-root` (which sets both) — which is exactly what we want: MUI's 8px padding is
+        //     kept and the (formerly present) white background stays invisible. Switching this to `sx {}` made
+        //     `sx` win everything, surfacing the white background as an outline and dropping padding to 0 —
+        //     that regression is what broke the look and the "Plus Circle" self-test template match.
         IconButton {
             title = "Insert step here"
 
-            sx {
+            css {
                 width = 32.px
                 height = 32.px
-                padding = 0.px
-                backgroundColor = NamedColor.white
-
-                hover {
-                    backgroundColor = NamedColor.white
-                }
             }
 
             onClick = {

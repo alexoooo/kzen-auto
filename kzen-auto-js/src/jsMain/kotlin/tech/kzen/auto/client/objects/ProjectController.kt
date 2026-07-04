@@ -587,13 +587,24 @@ class ProjectController(
         }
 
         div {
-            css {
-                marginTop = headerHeight
-                marginLeft = effectiveWidth
+            // NB: dedicated scroll pane for the stage. It is pinned to the region right of the fixed sidebar
+            //     and below the fixed header, and owns the stage's scroll (both axes) via overflow:auto.
+            //     Previously the stage was window-scrolled with no container, so horizontal window scroll slid
+            //     the leftmost content — including the insert "+" buttons — UNDER the fixed sidebar (z-index
+            //     999), where it silently intercepted clicks (a Selenium "element click intercepted" on the
+            //     last insert button). Scrolling within this pane can never move content left of `left`, so the
+            //     leftmost content stays clear of the sidebar. ScriptBranchDisplay's step-add/remove scroll-jump
+            //     preserve reads/writes THIS element's scrollTop (found via the data-stage-scroll marker),
+            //     not window scroll.
+            asDynamic()["data-stage-scroll"] = ""
 
-                // BFC so the error banner's top margin creates a gap below the header instead of collapsing
-                // into this container's own marginTop.
-                display = Display.flowRoot
+            css {
+                position = Position.fixed
+                top = headerHeight
+                left = effectiveWidth
+                right = 0.px
+                bottom = 0.px
+                overflow = Auto.auto
             }
 
             div {
@@ -604,6 +615,9 @@ class ProjectController(
                     }
 
                     color = NamedColor.red
+                    // A long single-token message (e.g. a serialized command carrying a long document name)
+                    // would otherwise force the stage wide; break anywhere so the banner wraps instead.
+                    overflowWrap = OverflowWrap.anywhere
                 }
                 +"Command error: ${state.commandErrorMessage} - ${state.commandErrorRequest}"
             }
@@ -656,6 +670,7 @@ class ProjectController(
                             key = Key(line.location.asString())
                             css {
                                 marginTop = 0.25.em
+                                overflowWrap = OverflowWrap.anywhere
                             }
                             +"${line.location.asString()} — ${line.detail}"
                         }
