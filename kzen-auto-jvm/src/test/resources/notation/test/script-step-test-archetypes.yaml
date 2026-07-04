@@ -58,6 +58,27 @@ FailStep:
       by: Self
 
 
+# Asserts whether the resource under `key` has already been disposed (in ResourceDisposalLog) at the point it
+# runs, throwing on mismatch — placed after a RunStep to prove an ancestor-scoped resource outlives its opener's
+# child settle.
+AssertDisposedStep:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.server.exec.script.test.AssertDisposedStep
+  icon: "material-symbols:fact-check"
+  title: "Assert disposed (test)"
+  key: ""
+  expectedDisposed: false
+  meta:
+    key:
+      is: String
+    expectedDisposed:
+      is: Boolean
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
 # Fails its first invocation (globally) then succeeds, returning its referenced `input` — a transient failure
 # that clears on retry, for exercising pause-on-error park-then-resume of a nested-Logic Worker's child.
 FlakyStep:

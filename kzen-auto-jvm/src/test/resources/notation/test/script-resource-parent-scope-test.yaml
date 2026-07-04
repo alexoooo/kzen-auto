@@ -1,0 +1,16 @@
+# Parent-scoped resource fixture (ScriptExtensibilityTest): a parent Script runs a child Script that opens a
+# resource under `sut` with the `parent` close policy, then asserts the resource is STILL open after the child
+# has settled (a self-scoped resource would already be disposed here). The engine disposes it when this parent
+# Script settles.
+
+main:
+  is: Script
+
+main.steps/Run:
+  is: RunStep
+  instructions: "test/script-resource-parent-scope-child-test.yaml#main"
+
+main.steps/CheckStillOpen:
+  is: AssertDisposedStep
+  key: sut
+  expectedDisposed: false

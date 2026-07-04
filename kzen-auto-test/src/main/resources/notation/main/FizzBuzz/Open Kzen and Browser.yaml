@@ -6,13 +6,14 @@ main.steps/Start SUT:
   name: main
   fixture: fixtures/empty-project
   port: 18082
+  closePolicy: parent
 
 main.steps/Wait:
   is: WaitStep
 
 main.steps/Open Browser:
   is: BrowserOpenStep
-  closePolicy: manual
+  closePolicy: parentKeepOnFailure
 
 main.steps/Navigate:
   is: BrowserGetStep

@@ -69,6 +69,18 @@ class SelectClosePolicyEditor(
 
                 ResourceClosePolicy.KeepOnFailure ->
                     "Keep on failure — close on success/cancel, keep on a failed run to inspect"
+
+                ResourceClosePolicy.ParentDocument ->
+                    "Parent — close when the calling Script (one level up) finishes"
+
+                ResourceClosePolicy.ParentDocumentKeepOnFailure ->
+                    "Parent, keep on failure — close when the caller finishes, keep if it failed"
+
+                ResourceClosePolicy.Run ->
+                    "Run — close when the whole run finishes"
+
+                ResourceClosePolicy.RunKeepOnFailure ->
+                    "Run, keep on failure — close at run end, keep if the run failed"
             }
         }
     }

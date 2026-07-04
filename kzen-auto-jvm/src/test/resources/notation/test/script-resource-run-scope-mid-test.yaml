@@ -1,0 +1,15 @@
+# Intermediate document for script-resource-run-scope-test.yaml: runs the leaf that opens the `run`-scoped
+# resource, then asserts it survived the leaf's settle (a `run`-scoped resource is owned by the root, not this
+# mid document).
+
+main:
+  is: Script
+
+main.steps/Run:
+  is: RunStep
+  instructions: "test/script-resource-run-scope-leaf-test.yaml#main"
+
+main.steps/CheckStillOpen:
+  is: AssertDisposedStep
+  key: sut
+  expectedDisposed: false

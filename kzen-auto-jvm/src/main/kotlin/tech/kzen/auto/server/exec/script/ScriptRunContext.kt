@@ -14,6 +14,7 @@ import tech.kzen.lib.common.exec.engine.ClosePolicy
 import tech.kzen.lib.common.exec.engine.Execution
 import tech.kzen.lib.common.exec.engine.Logic
 import tech.kzen.lib.common.exec.engine.PauseReason
+import tech.kzen.lib.common.exec.engine.ResourceScope
 import tech.kzen.lib.common.exec.logic.ResourceClosePolicy
 import tech.kzen.lib.common.exec.tuple.TupleComponentName
 import tech.kzen.lib.common.exec.tuple.TupleDefinition
@@ -146,7 +147,8 @@ class ScriptRunContext(
     //------------------------------------------------------------------------------------------ StepExecution: resources
     override fun openResource(key: String, value: Any?, closePolicy: ResourceClosePolicy, closer: () -> Unit) {
         resources.put(key, value)
-        execution.resource(key, closePolicy.toEnginePolicy()) {
+        val (scope, enginePolicy) = closePolicy.toEngine()
+        execution.resource(key, enginePolicy, scope) {
             resources.remove(key)
             closer()
         }
@@ -327,12 +329,17 @@ class ScriptRunContext(
     }
 
 
-    // Map the notation-level close policy an opening step declares to the engine's resource close policy.
-    private fun ResourceClosePolicy.toEnginePolicy(): ClosePolicy {
+    // Decompose the notation-level close policy an opening step declares into the engine's two orthogonal
+    // primitives: which node owns the resource (ResourceScope) and how that node's settle disposes it (ClosePolicy).
+    private fun ResourceClosePolicy.toEngine(): Pair<ResourceScope, ClosePolicy> {
         return when (this) {
-            ResourceClosePolicy.Auto -> ClosePolicy.Auto
-            ResourceClosePolicy.Manual -> ClosePolicy.Manual
-            ResourceClosePolicy.KeepOnFailure -> ClosePolicy.KeepOnFailure
+            ResourceClosePolicy.Auto -> ResourceScope.Self to ClosePolicy.Auto
+            ResourceClosePolicy.Manual -> ResourceScope.Self to ClosePolicy.Manual
+            ResourceClosePolicy.KeepOnFailure -> ResourceScope.Self to ClosePolicy.KeepOnFailure
+            ResourceClosePolicy.ParentDocument -> ResourceScope.Parent to ClosePolicy.Auto
+            ResourceClosePolicy.ParentDocumentKeepOnFailure -> ResourceScope.Parent to ClosePolicy.KeepOnFailure
+            ResourceClosePolicy.Run -> ResourceScope.Root to ClosePolicy.Auto
+            ResourceClosePolicy.RunKeepOnFailure -> ResourceScope.Root to ClosePolicy.KeepOnFailure
         }
     }
 }

@@ -35,6 +35,10 @@ import kotlin.test.assertIs
  *   disposes each resource per its [ResourceClosePolicy][tech.kzen.lib.common.exec.logic.ResourceClosePolicy] when
  *   the run settles: Auto always, Manual never (auto), KeepOnFailure only when the run did not fail.
  *
+ * - [parentScopedResourceOutlivesChildAndDisposesAtParent] / [runScopedResourceOutlivesEveryAncestorUntilRoot]
+ *   check the ancestor-scoped policies (`parent` / `run`): a resource a child sub-Script opens is owned by an
+ *   ancestor node, so it outlives the opener's own settle and disposes only when that ancestor settles.
+ *
  * The tests share the process-global [ResourceDisposalLog] and reset it per run, so they rely on the suite's
  * sequential execution (as the other static-fixture engine tests do).
  */
@@ -72,6 +76,28 @@ class ScriptExtensibilityTest {
         val outcome = runScript("test/script-resource-failure-test.yaml")
         assertIs<Outcome.Failed>(outcome)
         assertEquals(setOf("auto"), ResourceDisposalLog.disposed())
+    }
+
+
+    @Test
+    fun parentScopedResourceOutlivesChildAndDisposesAtParent() {
+        // A child sub-Script opens `sut` with the `parent` policy; the parent's AssertDisposedStep (which runs
+        // after the child settled) would throw if `sut` were already disposed, so a Success proves it outlived
+        // the child, and the disposal set proves it was disposed when the parent settled.
+        val outcome = runScript("test/script-resource-parent-scope-test.yaml")
+        assertIs<Outcome.Success>(outcome)
+        assertEquals(setOf("sut"), ResourceDisposalLog.disposed())
+    }
+
+
+    @Test
+    fun runScopedResourceOutlivesEveryAncestorUntilRoot() {
+        // root → mid → leaf; the leaf opens `sut` with the `run` policy. AssertDisposedStep in both mid (after the
+        // leaf settled) and root (after mid settled) would throw if it had been disposed early, so a Success proves
+        // it survived both ancestor settles, and the disposal set proves it was disposed at the root settle.
+        val outcome = runScript("test/script-resource-run-scope-test.yaml")
+        assertIs<Outcome.Success>(outcome)
+        assertEquals(setOf("sut"), ResourceDisposalLog.disposed())
     }
 
 
