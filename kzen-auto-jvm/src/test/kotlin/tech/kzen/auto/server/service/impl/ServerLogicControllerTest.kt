@@ -34,6 +34,10 @@ class ServerLogicControllerTest {
     private val foreachMain = ObjectLocation(foreachPath, ObjectPath.parse("main"))
     private val foreachResult = ObjectLocation(foreachPath, ObjectPath.parse("main.steps/Result"))
 
+    private val waitPath = DocumentPath.parse("test/script-engine-literal-wait-test.yaml")
+    private val waitMain = ObjectLocation(waitPath, ObjectPath.parse("main"))
+    private val waitResult = ObjectLocation(waitPath, ObjectPath.parse("main.steps/Result"))
+
     private lateinit var context: KzenAutoContext
 
 
@@ -93,6 +97,31 @@ class ServerLogicControllerTest {
 
         controller.continueOrStart(runId, snapshot)
         awaitDone()
+    }
+
+
+    @Test
+    fun waitStepDoesNotFalselyPauseAndRunsToCompletion() {
+        // A WaitStep's coroutine `delay` frees its engine dispatch task; unless the engine dispatcher counts a
+        // pending delay as in-flight, `awaitQuiescent` mistakes that idle for the quiescent wavefront and the
+        // run false-settles to Paused mid-step (and, having already settled, never clears when the delay
+        // elapses). Regression guard: the run must remain active through the wait and settle to Done — pre-fix
+        // this hung in a spurious Paused and `awaitDone` would time out.
+        val controller = context.serverLogicController
+        val runId = controller.start(waitMain, snapshot)
+            ?: fail("Unable to start run")
+
+        controller.continueOrStart(runId, snapshot)
+        awaitDone()
+
+        val traceSnapshot = context.logicTraceStore.lookupRun(runId, LogicTraceQuery(LogicTracePath.root))
+            ?: fail("No run trace")
+        val resultStableId = context.objectStableMapper.objectStableId(waitResult)
+        val resultEntry = traceSnapshot.values[LogicTracePath.ofObjectStableId(resultStableId)]
+        assertNotNull(resultEntry, "Result step value not bridged into trace store")
+        val resultTrace = StepTrace.ofExecutionValue(resultEntry.value)
+        assertEquals(StepTrace.State.Done, resultTrace.state)
+        assertEquals("hello", resultTrace.displayValue.get())
     }
 
 

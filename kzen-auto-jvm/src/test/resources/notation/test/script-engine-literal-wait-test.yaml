@@ -8,7 +8,7 @@ main:
 
 main.steps/Delay:
   is: WaitStep
-  milliseconds: 1
+  milliseconds: 200
 
 main.steps/Greeting:
   is: TextLiteralStep
