@@ -207,9 +207,17 @@ class WorkerDisplayDefault(
 
         val parts = mutableListOf<String>()
         progress.status?.let { parts.add(it) }
-        if (progress.counts.isNotEmpty()) {
-            parts.add(progress.counts.entries.joinToString(" ") { "${it.key}=${it.value}" })
+
+        // Generic scalar progress entries (read / seen / kept / written / …): every non-structured value the
+        // Worker published, rendered key=value. Structured payloads (List / Map values — a Preview teaser, a
+        // Summary table) are skipped here; the Worker's own display parses those. No Worker key names appear in
+        // this general card.
+        val scalarEntries = progress.progressMap.entries
+            .filter { (_, value) -> value != null && value !is List<*> && value !is Map<*, *> }
+        if (scalarEntries.isNotEmpty()) {
+            parts.add(scalarEntries.joinToString(" ") { "${it.key}=${it.value}" })
         }
+
         return if (parts.isEmpty()) "—" else parts.joinToString(" · ")
     }
 

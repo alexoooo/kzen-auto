@@ -20,8 +20,8 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
  * logic trace store, read for the interactive Job view. Mirrors the Flow store's mostRecent -> lookupRun
  * query pair, reading both the Worker's terminal STATUS (bare stable-id path, written by JobExecution) and
  * its live PROGRESS (the `progress` child path, written by each Worker via `JobControl.publishProgress`) from
- * the one snapshot — counts (read / seen / kept / written / computed) and, for a PreviewWorker, a teaser of
- * the sampled rows.
+ * the one snapshot. The progress payload is an opaque per-Worker map; this store does not interpret its keys —
+ * each Worker's display parses its own out of [JobWorkerProgress.progressMap].
  */
 class JobProgressStore(
     private val restClient: ClientRestApi,

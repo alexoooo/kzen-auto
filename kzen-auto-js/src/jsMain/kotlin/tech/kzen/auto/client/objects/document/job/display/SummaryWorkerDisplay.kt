@@ -48,8 +48,9 @@ external interface SummaryWorkerDisplayProps: WorkerDisplayProps {
 
 //---------------------------------------------------------------------------------------------------------------------
 // Display for a summary-serving Worker (SummaryWorker): the default card, with a compact per-column body rendered
-// from the TableSummary the Worker PUSHES to its trace (props.common.progress.tableSummary) — live during the run
-// and persisted after, so it survives run-end + a browser refresh, exactly like PreviewWorkerDisplay's teaser.
+// from the TableSummary the Worker PUSHES to its trace (parsed here from props.common.progress.progressMap's own
+// "summary" key) — live during the run and persisted after, so it survives run-end + a browser refresh, exactly
+// like PreviewWorkerDisplay's teaser.
 // SEPARATELY, a background poll PULLS this Worker's live TableSummary over its duplex `serve` channel and writes its
 // OWN entry into the document-scoped JobSummaryStore (reached through the DocumentBridge). The value-set-filter /
 // pivot editors downstream observe that store to source a column's distinct values — they are unchanged; only the
@@ -202,12 +203,12 @@ class SummaryWorkerDisplay(
     // browser refresh). Empty until the first progress push lands, so the card is header-only until then.
     private fun ChildrenBuilder.renderSummary() {
         val progress = props.common.progress
-        val tableSummary = progress?.tableSummary
+        val tableSummary = parseSummary(progress?.progressMap?.get("summary"))
         if (tableSummary == null || tableSummary.isEmpty()) {
             return
         }
 
-        val totalRows = progress.rowCount
+        val totalRows = progress?.longValue("count")
             ?: tableSummary.columnSummaries.map.values.maxOfOrNull { it.count }
             ?: 0L
 
@@ -231,6 +232,17 @@ class SummaryWorkerDisplay(
                 renderColumn(headerLabel.asString(), columnSummary)
             }
         }
+    }
+
+
+    // This display owns the schema of the progress its Worker publishes: the "summary" key (the pushed per-column
+    // TableSummary via common.progress). Kept here, not in the shared JobWorkerProgress, so a 3rd-party Worker's
+    // payload never touches general code. Same shape as the duplex serve reply parsed in querySummary.
+    @Suppress("UNCHECKED_CAST")
+    private fun parseSummary(raw: Any?): TableSummary? {
+        val collection = raw as? Map<String, Map<String, Any>>
+            ?: return null
+        return TableSummary.fromCollection(collection)
     }
 
 

@@ -88,7 +88,7 @@ class ExploreWorkerDisplay(
     // /job/download endpoint, shown only once the persisted table has rows (survives the run settling). Mirrors
     // Report's OutputTableController download button.
     private fun ChildrenBuilder.renderExploreDownload() {
-        val rowCount = props.common.progress?.rowCount ?: 0L
+        val rowCount = props.common.progress?.longValue("count") ?: 0L
         if (rowCount <= 0L) {
             return
         }

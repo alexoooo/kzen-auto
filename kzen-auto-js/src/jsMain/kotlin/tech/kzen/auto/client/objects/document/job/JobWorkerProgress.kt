@@ -1,80 +1,48 @@
 package tech.kzen.auto.client.objects.document.job
 
-import tech.kzen.auto.common.objects.document.report.summary.TableSummary
-
 
 /**
  * A Worker's live progress as shown in the Job UI: its lifecycle [status] (started / done / failed, from the
- * bare trace path), scalar [counts] (read / seen / kept / written / computed), and — for a PreviewWorker — a
- * sampled [header] + [rows] teaser and the total [rowCount]; a SummaryWorker instead pushes its per-column
- * [tableSummary]. Parsed from the structured progress map a Worker publishes via `JobControl.publishProgress`
- * (and, for the on-demand duplex query, from the PreviewWorker's slice reply, which has the same shape).
+ * bare trace path) and the opaque [progressMap] the Worker published via `JobControl.publishProgress` (and, for
+ * the on-demand duplex query, the Worker's serve reply, which has the same shape).
+ *
+ * This type is deliberately schema-agnostic — the mirror of the server's opaque `Map<String, Any?>` progress
+ * contract (`WorkerBase.progress`). It knows nothing about any specific Worker's payload keys: a per-type
+ * `WorkerDisplay` parses its own keys out of [progressMap] (e.g. PreviewWorkerDisplay reads "header"/"rows",
+ * SummaryWorkerDisplay reads "summary"), and the default card renders only [status] plus the generic scalar
+ * entries. Do NOT add a Worker-specific field here — that reintroduces the god object and breaks 3rd-party
+ * extensibility.
  */
 data class JobWorkerProgress(
     val status: String?,
-    val counts: Map<String, String>,
-    val header: List<String>,
-    val rows: List<List<String>>,
-    val rowCount: Long?,
-    val tableSummary: TableSummary?
+    val progressMap: Map<String, Any?>
 ) {
+    // Generic numeric coercion of one progress key — no Worker schema named here. Shared by the displays that
+    // read the conventional "count" key (over the wire an integer can arrive as Long / Int / Double / String).
+    fun longValue(key: String): Long? {
+        return when (val value = progressMap[key]) {
+            is Long -> value
+            is Int -> value.toLong()
+            is Double -> value.toLong()
+            is String -> value.toLongOrNull()
+            else -> null
+        }
+    }
+
+
     companion object {
         fun ofProgressMap(status: String?, raw: Any?): JobWorkerProgress {
             val map = raw as? Map<*, *>
 
-            val counts = LinkedHashMap<String, String>()
-            var header = listOf<String>()
-            var rows = listOf<List<String>>()
-            var rowCount: Long? = null
-            var tableSummary: TableSummary? = null
-
+            val progressMap = LinkedHashMap<String, Any?>()
             if (map != null) {
                 for ((rawKey, rawValue) in map) {
                     val key = rawKey as? String ?: continue
-                    when (key) {
-                        "header" ->
-                            header = (rawValue as? List<*>)?.map { it.toString() } ?: listOf()
-
-                        "rows" ->
-                            rows = (rawValue as? List<*>)?.map { row ->
-                                (row as? List<*>)?.map { it.toString() } ?: listOf()
-                            } ?: listOf()
-
-                        "count" ->
-                            rowCount = toLong(rawValue)
-
-                        "summary" ->
-                            tableSummary = parseSummary(rawValue)
-
-                        // The duplex slice reply also carries its offset; not shown, ignore.
-                        "offset" -> {}
-
-                        else ->
-                            counts[key] = rawValue?.toString() ?: ""
-                    }
+                    progressMap[key] = rawValue
                 }
             }
 
-            return JobWorkerProgress(status, counts, header, rows, rowCount, tableSummary)
-        }
-
-
-        @Suppress("UNCHECKED_CAST")
-        private fun parseSummary(raw: Any?): TableSummary? {
-            val collection = raw as? Map<String, Map<String, Any>>
-                ?: return null
-            return TableSummary.fromCollection(collection)
-        }
-
-
-        private fun toLong(value: Any?): Long? {
-            return when (value) {
-                is Long -> value
-                is Int -> value.toLong()
-                is Double -> value.toLong()
-                is String -> value.toLongOrNull()
-                else -> null
-            }
+            return JobWorkerProgress(status, progressMap)
         }
     }
 }
