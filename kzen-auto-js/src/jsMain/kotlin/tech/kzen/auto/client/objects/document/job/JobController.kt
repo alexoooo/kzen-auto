@@ -744,9 +744,23 @@ class JobController(
         setState {
             expandedChannels = next
         }
+
+        // A default channel carries no override — `channels` is undeclared in the Worker's meta, so there is no
+        // container to remove and RemoveInAttributeCommand would throw server-side ("Structured container
+        // expected: channels - null"). Deleting an already-default channel is a no-op; collapsing the editor
+        // above is the whole action.
+        val configPath = JobConventions.workerOutputConfigPath(outputPort)
+        val graphNotation = props.clientStateGlobal.current()
+            ?.graphStructure()?.graphNotation
+            ?: return
+        val hasOverride = graphNotation.firstAttribute(workerLocation, configPath) != null
+        if (! hasOverride) {
+            return
+        }
+
         async {
             props.mirroredGraphStore.apply(RemoveInAttributeCommand(
-                workerLocation, JobConventions.workerOutputConfigPath(outputPort), true))
+                workerLocation, configPath, true))
         }
     }
 
