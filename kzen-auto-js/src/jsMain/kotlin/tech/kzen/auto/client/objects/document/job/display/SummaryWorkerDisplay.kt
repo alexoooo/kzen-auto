@@ -20,7 +20,6 @@ import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.contextValue
 import tech.kzen.auto.client.wrap.installContextType
 import tech.kzen.auto.client.wrap.react
-import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.auto.common.objects.document.report.summary.ColumnSummary
 import tech.kzen.auto.common.objects.document.report.summary.NominalValueSummary
@@ -47,27 +46,21 @@ external interface SummaryWorkerDisplayProps: WorkerDisplayProps {
 }
 
 
-external interface SummaryWorkerDisplayState: State {
-    // The latest TableSummary pulled from this Worker's serve channel, rendered as the card body. Retained after
-    // the run ends (the poll only runs while active) so the card keeps showing the final summary; also written to
-    // JobSummaryStore for the downstream filter / pivot editors.
-    var tableSummary: TableSummary?
-}
-
-
 //---------------------------------------------------------------------------------------------------------------------
-// Display for a summary-serving Worker (SummaryWorker): the default card, plus a background poll that pulls this
-// Worker's live TableSummary over its duplex `serve` channel and writes its OWN entry into the document-scoped
-// JobSummaryStore (reached through the DocumentBridge). The value-set-filter / pivot editors downstream observe
-// that store to source a column's distinct values — they are unchanged; only the producer poll moved here from
-// JobController, so the generic controller carries no summary awareness (see CC-17). The store is self-constructing
-// (JobSummaryStore.Key.create), so no owner needs to provide it; this card owns only its own entry, removing it on
-// unmount (Worker deleted). Kept across a run's end so a filter can still be configured against the last values.
+// Display for a summary-serving Worker (SummaryWorker): the default card, with a compact per-column body rendered
+// from the TableSummary the Worker PUSHES to its trace (props.common.progress.tableSummary) — live during the run
+// and persisted after, so it survives run-end + a browser refresh, exactly like PreviewWorkerDisplay's teaser.
+// SEPARATELY, a background poll PULLS this Worker's live TableSummary over its duplex `serve` channel and writes its
+// OWN entry into the document-scoped JobSummaryStore (reached through the DocumentBridge). The value-set-filter /
+// pivot editors downstream observe that store to source a column's distinct values — they are unchanged; only the
+// producer poll moved here from JobController, so the generic controller carries no summary awareness (see CC-17).
+// The store is self-constructing (JobSummaryStore.Key.create), so no owner needs to provide it; this card owns only
+// its own entry, removing it on unmount (Worker deleted). Kept across a run's end so a filter can still be configured.
 @Suppress("unused")
 class SummaryWorkerDisplay(
     props: SummaryWorkerDisplayProps
 ):
-    RPureComponent<SummaryWorkerDisplayProps, SummaryWorkerDisplayState>(props),
+    RPureComponent<SummaryWorkerDisplayProps, State>(props),
     ClientStateGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -108,11 +101,6 @@ class SummaryWorkerDisplay(
     //-----------------------------------------------------------------------------------------------------------------
     init {
         installContextType(DocumentBridgeContext)
-    }
-
-
-    override fun SummaryWorkerDisplayState.init(props: SummaryWorkerDisplayProps) {
-        tableSummary = null
     }
 
 
@@ -160,15 +148,9 @@ class SummaryWorkerDisplay(
         val summary = querySummary(clientState)
             ?: return
         // Self-constructing channel: whichever card / editor touches the key first creates the one document-scoped
-        // store; this card writes only its own entry (value-gated inside put).
+        // store; this card writes only its own entry (value-gated inside put). The CARD itself renders from the
+        // pushed trace summary (props.common.progress), not from this pull — this pull exists only for the editors.
         contextValue<DocumentBridge?>()?.channel(JobSummaryStore.Key)?.put(props.common.objectLocation, summary)
-
-        // Also keep it in local state so this card can render it; value-gated so an unchanged poll doesn't re-render.
-        if (summary != state.tableSummary) {
-            setState {
-                tableSummary = summary
-            }
-        }
     }
 
 
@@ -214,17 +196,20 @@ class SummaryWorkerDisplay(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    // A compact, read-only view of the per-column TableSummary this Worker serves: a row-count caption, then one
-    // block per column with its detected type and a one-line detail (numeric stats / top nominal values / a small
-    // sample). The same summary also feeds the downstream filter / pivot editors (JobSummaryStore); this only
-    // surfaces it on the card itself. Empty until the first poll lands (nothing renders, so the card is header-only).
+    // A compact, read-only view of the per-column TableSummary the Worker pushes to its trace: a row-count caption,
+    // then one block per column with its detected type and a one-line detail (numeric stats / top nominal values /
+    // a small sample). Read from props.common.progress so it's live during the run and persisted after (survives a
+    // browser refresh). Empty until the first progress push lands, so the card is header-only until then.
     private fun ChildrenBuilder.renderSummary() {
-        val tableSummary = state.tableSummary
+        val progress = props.common.progress
+        val tableSummary = progress?.tableSummary
         if (tableSummary == null || tableSummary.isEmpty()) {
             return
         }
 
-        val totalRows = tableSummary.columnSummaries.map.values.maxOfOrNull { it.count } ?: 0L
+        val totalRows = progress.rowCount
+            ?: tableSummary.columnSummaries.map.values.maxOfOrNull { it.count }
+            ?: 0L
 
         div {
             css {

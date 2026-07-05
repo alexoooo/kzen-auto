@@ -1,19 +1,22 @@
 package tech.kzen.auto.client.objects.document.job
 
+import tech.kzen.auto.common.objects.document.report.summary.TableSummary
+
 
 /**
  * A Worker's live progress as shown in the Job UI: its lifecycle [status] (started / done / failed, from the
  * bare trace path), scalar [counts] (read / seen / kept / written / computed), and — for a PreviewWorker — a
- * sampled [header] + [rows] teaser and the total [rowCount]. Parsed from the structured progress map a Worker
- * publishes via `JobControl.publishProgress` (and, for the on-demand duplex query, from the PreviewWorker's
- * slice reply, which has the same shape).
+ * sampled [header] + [rows] teaser and the total [rowCount]; a SummaryWorker instead pushes its per-column
+ * [tableSummary]. Parsed from the structured progress map a Worker publishes via `JobControl.publishProgress`
+ * (and, for the on-demand duplex query, from the PreviewWorker's slice reply, which has the same shape).
  */
 data class JobWorkerProgress(
     val status: String?,
     val counts: Map<String, String>,
     val header: List<String>,
     val rows: List<List<String>>,
-    val rowCount: Long?
+    val rowCount: Long?,
+    val tableSummary: TableSummary?
 ) {
     companion object {
         fun ofProgressMap(status: String?, raw: Any?): JobWorkerProgress {
@@ -23,6 +26,7 @@ data class JobWorkerProgress(
             var header = listOf<String>()
             var rows = listOf<List<String>>()
             var rowCount: Long? = null
+            var tableSummary: TableSummary? = null
 
             if (map != null) {
                 for ((rawKey, rawValue) in map) {
@@ -39,6 +43,9 @@ data class JobWorkerProgress(
                         "count" ->
                             rowCount = toLong(rawValue)
 
+                        "summary" ->
+                            tableSummary = parseSummary(rawValue)
+
                         // The duplex slice reply also carries its offset; not shown, ignore.
                         "offset" -> {}
 
@@ -48,7 +55,15 @@ data class JobWorkerProgress(
                 }
             }
 
-            return JobWorkerProgress(status, counts, header, rows, rowCount)
+            return JobWorkerProgress(status, counts, header, rows, rowCount, tableSummary)
+        }
+
+
+        @Suppress("UNCHECKED_CAST")
+        private fun parseSummary(raw: Any?): TableSummary? {
+            val collection = raw as? Map<String, Map<String, Any>>
+                ?: return null
+            return TableSummary.fromCollection(collection)
         }
 
 

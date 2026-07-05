@@ -96,8 +96,18 @@ class SummaryWorker(
         currentAccumulation().tableSummary()
 
 
-    override fun progress(snapshot: Any?): Map<String, Any?> =
-        mapOf("count" to count)
+    // Push both the running row count AND the (bounded — ≤100 buckets / ≤100 sample per column) TableSummary to
+    // the trace, so the card renders from the persisted push (survives run-end + browser refresh, like Preview's
+    // teaser) rather than only from a live serve pull. snapshot() already builds this each publish for the serve
+    // latestSnapshot, so this only adds its serialization. The full summary is still served on demand (onQuery)
+    // for the downstream filter / pivot editors.
+    override fun progress(snapshot: Any?): Map<String, Any?> {
+        val tableSummary = snapshot as? TableSummary
+            ?: TableSummary.empty
+        return mapOf(
+            "count" to count,
+            "summary" to tableSummary.toCollection())
+    }
 
 
     override fun onQuery(request: Any?, snapshot: Any?): ExecutionResult {
