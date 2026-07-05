@@ -223,11 +223,17 @@ class PivotSpecEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    // The PivotWorker carries its pivot config as a TOP-LEVEL `pivot` attribute, unlike Report's `analysis.pivot`
+    // — so every shared PivotSpec command builder is given this base path (its default targets Report's nesting).
+    private fun pivotPath(): AttributePath =
+        AttributePath.ofName(props.attributeName)
+
+
     // Named apply* (not on*) so they don't shadow child props of the same role inside the react { } blocks.
     private fun applyAddRow(headerLabel: HeaderLabel) {
         async {
             props.mirroredGraphStore.apply(
-                PivotSpec.addRowCommand(props.objectLocation, headerLabel))
+                PivotSpec.addRowCommand(props.objectLocation, headerLabel, pivotPath()))
         }
     }
 
@@ -235,7 +241,7 @@ class PivotSpecEditor(
     private fun applyRemoveRow(headerLabel: HeaderLabel) {
         async {
             props.mirroredGraphStore.apply(
-                PivotSpec.removeRowCommand(props.objectLocation, headerLabel))
+                PivotSpec.removeRowCommand(props.objectLocation, headerLabel, pivotPath()))
         }
     }
 
@@ -243,7 +249,7 @@ class PivotSpecEditor(
     private fun applyAddValue(headerLabel: HeaderLabel) {
         async {
             props.mirroredGraphStore.apply(
-                PivotSpec.addValueCommand(props.objectLocation, headerLabel))
+                PivotSpec.addValueCommand(props.objectLocation, headerLabel, pivotPath()))
         }
     }
 
@@ -251,7 +257,7 @@ class PivotSpecEditor(
     private fun applyRemoveValue(headerLabel: HeaderLabel) {
         async {
             props.mirroredGraphStore.apply(
-                PivotSpec.removeValueCommand(props.objectLocation, headerLabel))
+                PivotSpec.removeValueCommand(props.objectLocation, headerLabel, pivotPath()))
         }
     }
 
@@ -259,7 +265,7 @@ class PivotSpecEditor(
     private fun applyAddValueType(headerLabel: HeaderLabel, valueType: PivotValueType) {
         async {
             props.mirroredGraphStore.apply(
-                PivotSpec.addValueTypeCommand(props.objectLocation, headerLabel, valueType))
+                PivotSpec.addValueTypeCommand(props.objectLocation, headerLabel, valueType, pivotPath()))
         }
     }
 
@@ -267,7 +273,7 @@ class PivotSpecEditor(
     private fun applyRemoveValueType(headerLabel: HeaderLabel, valueType: PivotValueType) {
         async {
             props.mirroredGraphStore.apply(
-                PivotSpec.removeValueTypeCommand(props.objectLocation, headerLabel, valueType))
+                PivotSpec.removeValueTypeCommand(props.objectLocation, headerLabel, valueType, pivotPath()))
         }
     }
 

@@ -39,10 +39,13 @@ data class PivotSpec(
         val pivotAttributeName = AttributeName("pivot")
 
         private val rowsKey = AttributeSegment.ofKey("rows")
-        private val rowsAttributePath = ReportConventions.pivotAttributePath.nest(rowsKey)
-
         private val valuesKey = AttributeSegment.ofKey("values")
-        private val valuesAttributePath = ReportConventions.pivotAttributePath.nest(valuesKey)
+
+        // The pivot spec's base attribute path differs by host document: the Report document nests it under
+        // `analysis.pivot` (the default here), while the Job PivotWorker carries it as a top-level `pivot`
+        // attribute (see [pivotAttributeName]). Every command builder therefore takes the base `pivotPath` so it
+        // writes to the right rows list / values map — the read side already parametrizes via [ofNotation] /
+        // [Definer]. A Job editor passes AttributePath.ofName(pivotAttributeName).
 
 
         fun ofNotation(attributeNotation: MapAttributeNotation): PivotSpec {
@@ -65,36 +68,51 @@ data class PivotSpec(
         }
 
 
-        fun addRowCommand(mainLocation: ObjectLocation, headerLabel: HeaderLabel): NotationCommand {
+        fun addRowCommand(
+            mainLocation: ObjectLocation,
+            headerLabel: HeaderLabel,
+            pivotPath: AttributePath = ReportConventions.pivotAttributePath
+        ): NotationCommand {
             return InsertListItemInAttributeCommand(
                 mainLocation,
-                rowsAttributePath,
+                rowsAttributePath(pivotPath),
                 PositionRelation.afterLast,
                 ScalarAttributeNotation(headerLabel.asString()))
         }
 
 
-        fun removeRowCommand(mainLocation: ObjectLocation, headerLabel: HeaderLabel): NotationCommand {
+        fun removeRowCommand(
+            mainLocation: ObjectLocation,
+            headerLabel: HeaderLabel,
+            pivotPath: AttributePath = ReportConventions.pivotAttributePath
+        ): NotationCommand {
             return RemoveListItemInAttributeCommand(
                 mainLocation,
-                rowsAttributePath,
+                rowsAttributePath(pivotPath),
                 ScalarAttributeNotation(headerLabel.asString()),
                 false)
         }
 
 
-        fun clearRowCommand(mainLocation: ObjectLocation): NotationCommand {
+        fun clearRowCommand(
+            mainLocation: ObjectLocation,
+            pivotPath: AttributePath = ReportConventions.pivotAttributePath
+        ): NotationCommand {
             return UpdateInAttributeCommand(
                 mainLocation,
-                rowsAttributePath,
+                rowsAttributePath(pivotPath),
                 ListAttributeNotation.empty)
         }
 
 
-        fun addValueCommand(mainLocation: ObjectLocation, headerLabel: HeaderLabel): NotationCommand {
+        fun addValueCommand(
+            mainLocation: ObjectLocation,
+            headerLabel: HeaderLabel,
+            pivotPath: AttributePath = ReportConventions.pivotAttributePath
+        ): NotationCommand {
             return InsertMapEntryInAttributeCommand(
                 mainLocation,
-                valuesAttributePath,
+                valuesAttributePath(pivotPath),
                 PositionRelation.afterLast,
                 AttributeSegment.ofKey(headerLabel.asString()),
                 ListAttributeNotation.empty,
@@ -102,38 +120,58 @@ data class PivotSpec(
         }
 
 
-        fun removeValueCommand(mainLocation: ObjectLocation, headerLabel: HeaderLabel): NotationCommand {
+        fun removeValueCommand(
+            mainLocation: ObjectLocation,
+            headerLabel: HeaderLabel,
+            pivotPath: AttributePath = ReportConventions.pivotAttributePath
+        ): NotationCommand {
             return RemoveInAttributeCommand(
                 mainLocation,
-                valuePath(headerLabel),
+                valuePath(pivotPath, headerLabel),
                 false)
         }
 
 
         fun addValueTypeCommand(
-            mainLocation: ObjectLocation, headerLabel: HeaderLabel, valueType: PivotValueType
+            mainLocation: ObjectLocation,
+            headerLabel: HeaderLabel,
+            valueType: PivotValueType,
+            pivotPath: AttributePath = ReportConventions.pivotAttributePath
         ): NotationCommand {
             return InsertListItemInAttributeCommand(
                 mainLocation,
-                valuePath(headerLabel),
+                valuePath(pivotPath, headerLabel),
                 PositionRelation.afterLast,
                 ScalarAttributeNotation(valueType.name))
         }
 
 
         fun removeValueTypeCommand(
-            mainLocation: ObjectLocation, headerLabel: HeaderLabel, valueType: PivotValueType
+            mainLocation: ObjectLocation,
+            headerLabel: HeaderLabel,
+            valueType: PivotValueType,
+            pivotPath: AttributePath = ReportConventions.pivotAttributePath
         ): NotationCommand {
             return RemoveListItemInAttributeCommand(
                 mainLocation,
-                valuePath(headerLabel),
+                valuePath(pivotPath, headerLabel),
                 ScalarAttributeNotation(valueType.name),
                 false)
         }
 
 
-        private fun valuePath(headerLabel: HeaderLabel): AttributePath {
-            return valuesAttributePath.nest(AttributeSegment.ofKey(headerLabel.asString()))
+        private fun rowsAttributePath(pivotPath: AttributePath): AttributePath {
+            return pivotPath.nest(rowsKey)
+        }
+
+
+        private fun valuesAttributePath(pivotPath: AttributePath): AttributePath {
+            return pivotPath.nest(valuesKey)
+        }
+
+
+        private fun valuePath(pivotPath: AttributePath, headerLabel: HeaderLabel): AttributePath {
+            return valuesAttributePath(pivotPath).nest(AttributeSegment.ofKey(headerLabel.asString()))
         }
     }
 
