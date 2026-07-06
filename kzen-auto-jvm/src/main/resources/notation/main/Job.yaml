@@ -1,0 +1,26 @@
+main:
+  is: Job
+  capacity: 10
+
+main.workers/Multi-File Reader:
+  is: MultiFileReaderWorker
+  paths:
+    - "C:/~/data/measurements-100000.txt"
+  delimiter: ";"
+  header: false
+
+main.workers/Pivot:
+  is: PivotWorker
+  pivot:
+    rows:
+      - "0|c0"
+    values:
+      "0|c1":
+        - Count
+        - Sum
+        - Average
+        - Min
+        - Max
+
+main.workers/Preview:
+  is: PreviewWorker
