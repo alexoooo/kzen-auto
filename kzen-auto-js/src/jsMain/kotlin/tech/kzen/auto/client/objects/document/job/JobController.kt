@@ -313,10 +313,6 @@ class JobController(
                 }
             }
         }
-
-        // The per-Worker preview-slice and summary serve-channel pulls that used to live here are now owned by
-        // each Worker's own card (PreviewWorkerDisplay / SummaryWorkerDisplay), which observe the run status and
-        // pull their own serve channel — so this controller no longer knows about any Worker type (see CC-17).
     }
 
 

@@ -45,7 +45,6 @@ class NavigationGlobal:
 
 
     private fun publish() {
-        // NB: previously paused the retired dataflow run-loop here on a pending "return" navigation.
         returnPending = false
 
         val observersCopy = observers.toList()

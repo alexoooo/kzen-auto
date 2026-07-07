@@ -418,8 +418,7 @@ class HeaderRunController (
     }
 
 
-    // Compact icon for a header run-control button: smaller than the former 1.5em and with no right
-    // margin (these buttons are icon-only), to keep the single-row control cluster narrow.
+    // Compact icon for a header run-control button; no right margin (icon-only) keeps the control cluster narrow.
     private fun ChildrenBuilder.controlIcon(name: String) {
         span {
             css {

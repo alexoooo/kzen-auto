@@ -25,7 +25,7 @@ class ScriptDependencyAnalysisTest {
         assertTrue(
             ScriptStepDependency(location("main.steps/Source"), location("main.steps/Derived")) in analysis.edges)
 
-        // back-ticked reference (`` `My Source` + 2 ``) — the old plain-identifier regex missed this
+        // back-ticked reference (`` `My Source` + 2 ``) — an escaped step name must still resolve to a dependency
         assertTrue(
             ScriptStepDependency(location("main.steps/My Source"), location("main.steps/Backtick User")) in analysis.edges)
 

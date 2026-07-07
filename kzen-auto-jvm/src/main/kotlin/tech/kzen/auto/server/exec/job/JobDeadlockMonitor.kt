@@ -47,9 +47,8 @@ class JobDeadlockMonitor(
         // Re-check the pipeline this often while it is running.
         private const val pollIntervalMillis = 50L
 
-        // Consecutive all-blocked polls before declaring deadlock — absorbs a transient wavefront where a channel
-        // handoff briefly leaves every Worker suspended, so only quiescence SUSTAINED across ~200 ms reaches a
-        // verdict. The Job-scoped analogue of the old JobExecution deadlock grace, expressed as poll ticks.
+        // Consecutive all-blocked polls before declaring deadlock: a channel handoff can briefly leave every
+        // Worker suspended, so only quiescence sustained across ~200 ms reaches a verdict.
         private const val graceThreshold = 4
     }
 

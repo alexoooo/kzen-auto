@@ -13,7 +13,7 @@ class SmokeSelfTest: SelfTestBase() {
         check(runId.isNotBlank()) { "expected a non-blank logic run id, got: '$runId'" }
 
         // Trace-based success check: fails if ANY step in the run errored — independent of pauseOnError.
-        // (The old `active == null` check could pass even when a step threw; see kzen-auto-test/AGENTS.md.)
+        // (An `active == null` check alone can pass even when a step threw; see kzen-auto-test/AGENTS.md.)
         testerClient.awaitSuccess("main/FizzBuzz/FizzBuzz.yaml")
 
         val expected = (1..100).joinToString(prefix = "[", postfix = "]", separator = ", ") { n ->

@@ -5,5 +5,5 @@ import tech.kzen.auto.client.objects.document.script.display.dependency.ScriptSt
 
 
 // Owner-provided: ScriptController provides the shared cross-branch drag source into the DocumentBridge
-// in render(); every nested ScriptBranchDisplay looks it up. Replaces the former ScriptStepDragStoreContext.
+// in render(); every nested ScriptBranchDisplay looks it up.
 object ScriptDragStoreKey : BridgeKey<ScriptStepDragStore>

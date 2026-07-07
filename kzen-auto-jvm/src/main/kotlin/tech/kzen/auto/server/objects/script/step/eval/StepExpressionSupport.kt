@@ -70,8 +70,7 @@ object StepExpressionSupport {
 
     // Compile, load, instantiate and evaluate the expression against the current values of the in-scope
     // predecessors / bindings (resolved on demand via [valueResolver], in the same order as [nonUnitTypes]).
-    // The only coupling to the runtime is this resolver — a function from an in-scope object's location to
-    // its current value — so the engine flavour can supply its own without the legacy ScriptExecutionContext.
+    // The only runtime coupling is that resolver, so any engine flavour can supply its own.
     fun evaluate(
         selfLocation: ObjectLocation,
         returnType: String,

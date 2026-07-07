@@ -92,12 +92,11 @@ class ReportRun(
         private const val preCachePartitionCount = 3
         private const val recordDisruptorBufferSize = 32 * 1024
 
-        // MULTI (not SINGLE, as the legacy ReportExecution used): the record ring is published from two
-        // threads — the input pipeline's last model-stage thread (records) and the run coroutine (the
-        // end-of-data sentinel in waitForProcessingToFinish). They are sequenced by awaitEndOfData (never
-        // concurrent), so SINGLE happened to work in production, but LMAX's SingleProducerSequencer
-        // conservatively asserts on producer-thread identity (assertions are on under test). MULTI is the
-        // correct sequencer for more than one producer thread.
+        // MULTI, not SINGLE: the record ring is published from two threads — the input pipeline's last
+        // model-stage thread (records) and the run coroutine (the end-of-data sentinel in
+        // waitForProcessingToFinish). awaitEndOfData sequences them (never concurrent), so SINGLE would
+        // appear to work, but LMAX's SingleProducerSequencer asserts on producer-thread identity
+        // (assertions are on under test).
         private val recordProducerType = ProducerType.MULTI
 
 
@@ -319,9 +318,9 @@ class ReportRun(
             reportInputTrace.startReading()
 
             while (!failed.get()) {
-                // Settle at a boundary: suspends while paused, throws CancellationException on cancel (the
-                // coroutine-model successor to the old `control.pollCommand() == Cancel`). Setting `cancelled`
-                // before rethrowing lets the finally below mark this file's parse as not-cleanly-finished.
+                // Settle at a boundary: suspends while paused, throws CancellationException on cancel. Setting
+                // `cancelled` before rethrowing lets the finally below mark this file's parse as
+                // not-cleanly-finished.
                 try {
                     execution.checkpoint()
                 }

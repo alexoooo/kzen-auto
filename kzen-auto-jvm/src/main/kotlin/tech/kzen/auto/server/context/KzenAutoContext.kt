@@ -217,8 +217,7 @@ class KzenAutoContext(
 
     override fun close() {
         // Cancelling the active run settles its root node, which disposes the run-scoped resources (a browser
-        // opened with closePolicy Auto/KeepOnFailure) via the engine — replacing the former WebDriverContext
-        // process-singleton shutdown quit.
+        // opened with closePolicy Auto/KeepOnFailure) via the engine.
         serverLogicController.close()
     }
 }

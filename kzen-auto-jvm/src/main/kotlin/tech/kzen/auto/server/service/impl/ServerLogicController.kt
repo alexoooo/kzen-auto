@@ -507,8 +507,7 @@ class ServerLogicController(
         executor.execute {
             state.engine.awaitQuiescent()
             if (migration != null) {
-                // Step after an edit: rebuild from the edit and park at the new definition's first wavefront —
-                // a bounded step-after-edit (matching the old executor's re-park-fresh-then-report-paused).
+                // Step after an edit: rebuild from the edit and park at the new definition's first wavefront.
                 state.engine.migrate(migration, paused = true)
             }
             else {
@@ -566,7 +565,7 @@ class ServerLogicController(
     //
     // The engine attributes an emit to (node, address): the node carries the flavour's root stable id, while
     // the per-element stable id is the address — a Script emits `Address.of(stepStableId.value)` per step, a
-    // Flow `Address.of(vertexStableId.value)` per vertex. The old trace store keys per element by stable id, so
+    // Flow `Address.of(vertexStableId.value)` per vertex. The trace store keys per element by stable id, so
     // the element id is reconstructed from the address segment (flavour-agnostic). A flavour that instead emits
     // a non-per-element trace at a reserved marker segment (Script's "next to run", a Job Worker's progress, a
     // Report's input / output progress) contributes a [LogicTraceAddressRouting]; this bridge dispatches by that
@@ -695,8 +694,7 @@ class ServerLogicController(
 
     // The live frame tree (sidebar run indicator) shows only active frames: a completed child node lingers in
     // the engine's tree (for trace/history), but is pruned here so a hosted child that ran to completion
-    // (step-over / step-out) no longer counts toward the paused stack depth — matching the old frame tree,
-    // which removed a guest frame on close.
+    // (step-over / step-out) doesn't count toward the paused stack depth.
     private fun nodeToFrame(node: Node): LogicRunFrameInfo {
         return LogicRunFrameInfo(
             objectStableMapper.objectLocation(node.stableId),

@@ -76,10 +76,9 @@ external interface FlowControllerState: State {
 
 
 //---------------------------------------------------------------------------------------------------------------------
-// The modernized "graph" / "time series" UI. Renders the same vertex/edge grid as the legacy
-// GraphController (reusing CellController), but sources its VisualFlowModel from the logic trace
-// store (via FlowProgressStore) rather than the retired VisualDataflowRepository, and relies on the
-// global logic ribbon (HeaderRunController) for Run / Step / Pause / Stop instead of a bespoke FAB.
+// The Flow document UI: a vertex/edge grid (CellController) whose per-vertex VisualFlowModel is
+// rebuilt from the logic trace store (via FlowProgressStore); run control comes from the global
+// logic ribbon (HeaderRunController).
 @Suppress("unused")
 class FlowController(
     props: FlowControllerProps

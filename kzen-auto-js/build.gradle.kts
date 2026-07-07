@@ -113,9 +113,8 @@ yarn.ignoreScripts = false
 // Bundles the Kotlin/JS per-module CommonJS output with esbuild instead of webpack. esbuild ships
 // per-platform native binaries via npm so it stays Windows/Linux/macOS agnostic. The output filename
 // + dist location match what the JVM server serves (build/dist/js/productionExecutable/<jsModuleName>.js)
-// and what ProcessResources copies. Icons no longer contribute to the bundle at all: they're fetched on
-// demand by name from the JVM backend (see IconLoader / IconCollectionHandler), so there's no icon
-// dependency for esbuild to bundle.
+// and what ProcessResources copies. Icons aren't bundled: they're fetched on demand by name from
+// the JVM backend (see IconLoader / IconCollectionHandler).
 
 val npmPackageName = "${rootProject.name}-${project.name}"
 // The compileSync output dir holds one .js per Gradle module (kotlin-kotlin-stdlib.js,
@@ -176,7 +175,7 @@ val jsEsbuildBundle = tasks.register<Exec>("jsEsbuildBundle") {
     commandLine(invocation)
 }
 
-// esbuild (jsEsbuildBundle) replaces webpack for this module; disable the now-unused webpack tasks so
+// esbuild (jsEsbuildBundle) replaces webpack for this module; disable the webpack tasks so
 // `build`/`assemble` don't pay the webpack cost. Re-enable them to fall back to webpack.
 tasks.matching {
     it.name == "jsBrowserProductionWebpack" ||

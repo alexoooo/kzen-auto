@@ -65,7 +65,7 @@ class LogicTraceStoreRenameTest {
         checkNotNull(snapshot)
         assertEquals(ExecutionValue.of("done"), snapshot.values[stablePath]?.value)
 
-        // Server no longer emits location-keyed paths (neither old nor new name)
+        // Location-keyed paths are never emitted — neither the original nor the renamed name appears
         assertNull(snapshot.values[LogicTracePath.ofObjectLocation(stepLocation)])
         assertNull(snapshot.values[LogicTracePath.ofObjectLocation(objectLocation("a.yaml", "Step1Renamed"))])
     }

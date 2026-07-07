@@ -115,7 +115,7 @@ class ExploreWorkerTest {
             assertTrue(Files.exists(workerScratch.resolve(IndexedCsvTable.tableFile)))
         }
         finally {
-            // The output is persistent now, so the Worker no longer deletes it — the test cleans up its own dir.
+            // The Worker's output is persistent (it never deletes its own dir) — the test cleans up.
             if (Files.exists(workerScratch)) {
                 WorkUtils.recursivelyDeleteDir(workerScratch)
             }

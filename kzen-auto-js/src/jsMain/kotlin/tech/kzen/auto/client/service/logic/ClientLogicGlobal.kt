@@ -357,9 +357,8 @@ class ClientLogicGlobal(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    // "Slow motion" run: the browser auto-issues Step repeatedly with a fixed dwell between steps, so
-    // each step's result is visible before the next (reintroduces the old paced dataflow run-loop). Pure
-    // client pacing — no server/REST change; the run is just a normal stepped run.
+    // "Slow motion" run: the browser auto-issues Step with a fixed dwell, so each step's result is
+    // visible before the next. Pure client pacing over a normal stepped run — nothing server-side.
     //
     // Termination: the loop stops when the run finishes (status active == null — covers success and,
     // with pause-on-error off, a failing step that terminates the run) or when any manual control or

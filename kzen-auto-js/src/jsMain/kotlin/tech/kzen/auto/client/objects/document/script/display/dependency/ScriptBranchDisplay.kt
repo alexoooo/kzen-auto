@@ -719,13 +719,11 @@ class ScriptBranchDisplay(
             return
         }
 
-        // NB: size overrides MUST live in a `css {}` block, not `sx {}`. An emotion `css` class has no
-        //     competing MUI rule for width/height, so `width`/`height` win and clamp the button to a compact
-        //     32x32 (the intended, pre-regression size). `padding`/`backgroundColor`, by contrast, lose here
-        //     to `.MuiIconButton-root` (which sets both) — which is exactly what we want: MUI's 8px padding is
-        //     kept and the (formerly present) white background stays invisible. Switching this to `sx {}` made
-        //     `sx` win everything, surfacing the white background as an outline and dropping padding to 0 —
-        //     that regression is what broke the look and the "Plus Circle" self-test template match.
+        // NB: size overrides MUST be `css {}`, not `sx {}`: the emotion class wins width/height (no
+        //     competing MUI rule) but loses padding/background to `.MuiIconButton-root` — desired,
+        //     keeping MUI's 8px padding and the invisible background. With `sx {}` every property wins:
+        //     the white background surfaces as an outline and padding drops to 0, breaking the look and
+        //     the "Plus Circle" self-test template match.
         IconButton {
             title = "Insert step here"
 

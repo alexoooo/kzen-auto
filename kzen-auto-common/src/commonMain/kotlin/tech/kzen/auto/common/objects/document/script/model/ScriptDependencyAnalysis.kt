@@ -67,9 +67,9 @@ data class ScriptDependencyAnalysis(
                 graphDefinitionAttempt,
                 branchOfStep)
 
-            // Key every in-document object by the bare identifier content its name maps to, so a step named
-            // "my step" (referenced as `` `my step` ``) is matched — the old plain-identifier regex missed it.
-            // Collisions (two names escaping to the same identifier) keep the last, a documented limitation.
+            // Key each in-document object by the identifier its name escapes to, so a back-ticked reference
+            // (`` `my step` ``) is matched. Collisions (two names escaping to the same identifier) keep the
+            // last, a documented limitation.
             val locationByIdentifierContent = coalesce.map.keys
                 .asSequence()
                 .filter { it.documentPath == documentPath }
@@ -114,8 +114,8 @@ data class ScriptDependencyAnalysis(
                 val objectNotation = coalesce[targetLocation]
                     ?: continue
                 walkValueScalars(objectDefinition, objectNotation) { stringValue ->
-                    // Lexer-derived references: respects strings/comments/back-ticks and skips member selectors,
-                    // unlike the previous word-boundary regex (see KotlinExpressionAnalyzer).
+                    // Lexer-derived references: respects strings/comments/back-ticks and skips member selectors
+                    // (see KotlinExpressionAnalyzer).
                     for (referencedIdentifier in KotlinExpressionAnalyzer.referencedIdentifiers(stringValue)) {
                         val sourceLocation = locationByIdentifierContent[referencedIdentifier]
                             ?: continue

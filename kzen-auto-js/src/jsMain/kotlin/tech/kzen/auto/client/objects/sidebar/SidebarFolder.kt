@@ -180,7 +180,7 @@ class SidebarFolder(
 
     //-----------------------------------------------------------------------------------------------------------------
     // This folder (incl. the synthetic root) is a drop target: a dragged document/folder dropped here moves into
-    // its content nesting. The same invalid destinations the old picker filtered are rejected here.
+    // its content nesting.
     private fun canAcceptDrop(): Boolean {
         val source = props.dragSourcePath
             ?: return false

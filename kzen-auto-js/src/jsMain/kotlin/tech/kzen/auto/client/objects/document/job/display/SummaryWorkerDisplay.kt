@@ -53,8 +53,8 @@ external interface SummaryWorkerDisplayProps: WorkerDisplayProps {
 // like PreviewWorkerDisplay's teaser.
 // SEPARATELY, a background poll PULLS this Worker's live TableSummary over its duplex `serve` channel and writes its
 // OWN entry into the document-scoped JobSummaryStore (reached through the DocumentBridge). The value-set-filter /
-// pivot editors downstream observe that store to source a column's distinct values — they are unchanged; only the
-// producer poll moved here from JobController, so the generic controller carries no summary awareness (see CC-17).
+// pivot editors observe that store for a column's distinct values; this card is the only producer, so the
+// generic controller carries no summary awareness (see CC-17).
 // The store is self-constructing (JobSummaryStore.Key.create), so no owner needs to provide it; this card owns only
 // its own entry, removing it on unmount (Worker deleted). Kept across a run's end so a filter can still be configured.
 @Suppress("unused")

@@ -69,8 +69,8 @@ class EngineJobControl(
 
 
     override suspend fun <R> runBlockingIo(block: () -> R): R {
-        // Run inline on the engine dispatcher thread so the work stays counted by the CountingDispatcher (the
-        // thread is occupied → inFlight stays positive), matching the old JobControlImpl: visible to quiescence.
+        // Run inline on the engine dispatcher thread: the CountingDispatcher keeps counting it (inFlight
+        // stays positive), so blocking I/O stays visible to quiescence detection.
         return block()
     }
 

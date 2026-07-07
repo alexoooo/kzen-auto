@@ -587,15 +587,13 @@ class ProjectController(
         }
 
         div {
-            // NB: dedicated scroll pane for the stage. It is pinned to the region right of the fixed sidebar
-            //     and below the fixed header, and owns the stage's scroll (both axes) via overflow:auto.
-            //     Previously the stage was window-scrolled with no container, so horizontal window scroll slid
-            //     the leftmost content — including the insert "+" buttons — UNDER the fixed sidebar (z-index
-            //     999), where it silently intercepted clicks (a Selenium "element click intercepted" on the
-            //     last insert button). Scrolling within this pane can never move content left of `left`, so the
-            //     leftmost content stays clear of the sidebar. ScriptBranchDisplay's step-add/remove scroll-jump
-            //     preserve reads/writes THIS element's scrollTop (found via the data-stage-scroll marker),
-            //     not window scroll.
+            // NB: dedicated scroll pane for the stage: pinned right of the fixed sidebar and below the fixed
+            //     header, owning the stage's scroll (both axes) via overflow:auto. Window scroll would slide
+            //     the leftmost content — including the insert "+" buttons — under the fixed sidebar, which
+            //     silently intercepts clicks (Selenium "element click intercepted"). Scroll within this pane
+            //     can't move content left of `left`, keeping it clear of the sidebar. ScriptBranchDisplay's
+            //     step-add/remove scroll-jump preserve reads/writes THIS element's scrollTop (via the
+            //     data-stage-scroll marker), not window scroll.
             asDynamic()["data-stage-scroll"] = ""
 
             css {

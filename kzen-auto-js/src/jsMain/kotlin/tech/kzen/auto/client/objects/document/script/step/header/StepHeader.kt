@@ -115,10 +115,9 @@ class StepHeader(
             //     within (name text, pencil, delete, chevron) stop propagation so they don't also toggle.
 
             // Top row: run icon · name · action buttons, centred against each other. The collapsed-state
-            // summary lives in a row BELOW this one (not the same flex line), so this row's height is driven
-            // only by the constant icon/name/buttons — the icon and right-cluster buttons hold a fixed
-            // vertical position whether or not the summary is present (previously the summary grew this row
-            // and, under center alignment, shoved them down on collapse).
+            // summary lives in its own row BELOW, so this row's height is constant and the icon/buttons hold
+            // a fixed vertical position — on a shared flex line the summary would grow the row and, under
+            // centre alignment, shove them down on collapse.
             div {
                 css {
                     display = Display.flex
@@ -196,8 +195,7 @@ class StepHeader(
                 minWidth = 0.px
             }
 
-            // Spacer matching the run icon's footprint, so the summary stays indented under the name now
-            // that it's a row below the icon/name row (rather than nested in the old name+summary column).
+            // Spacer matching the run icon's footprint, so the summary row below stays indented under the name.
             div {
                 css {
                     width = runIconSize

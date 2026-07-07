@@ -103,12 +103,11 @@ class JobRunWorkerTest {
 
     @Test
     fun childFailureUnderPauseOnErrorParksThenResumesToSuccess() {
-        // The first hosted child's FlakyStep throws. With pause-on-error on, the child's own recoverable boundary
-        // parks it Suspended(Error) and — because the engine coordinates pause centrally — the whole Job comes to
-        // a quiescent paused wavefront rather than failing. A plain resume re-runs the (now-cleared) step to
-        // success and the remaining elements process, so all three reach the sink. This is the old RunWorker
-        // pause-on-error capability (a nested child halts the Job for inspect + resume), regained with no explicit
-        // halt request — a child breakpoint IS a run-wide pause.
+        // The first hosted child's FlakyStep throws. With pause-on-error on, the child's recoverable boundary
+        // parks it Suspended(Error) and the engine's centrally-coordinated pause brings the whole Job to a
+        // quiescent paused wavefront rather than failing — a child breakpoint IS a run-wide pause, with no
+        // explicit halt request. A plain resume re-runs the (now-cleared) step to success and the remaining
+        // elements process, so all three reach the sink.
         val engine = newEngine("test/job-run-flaky-test.yaml")
         val outcome =
             try {

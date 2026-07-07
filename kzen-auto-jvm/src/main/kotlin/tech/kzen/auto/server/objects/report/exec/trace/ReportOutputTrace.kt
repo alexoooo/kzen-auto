@@ -19,8 +19,8 @@ class ReportOutputTrace(
 
     //-----------------------------------------------------------------------------------------------------------------
     init {
-        // The old (LogicTraceStore-backed) handle republishes on query; the engine adapter's register is a
-        // no-op (push-only), so [nextOutput] also pushes below. Harmless on the old path (an extra set).
+        // The LogicTraceStore-backed handle republishes on query; ExecutionLogicTraceHandle's register is a
+        // no-op (push-only), so [nextOutput] also pushes below — a harmless extra set on the store-backed path.
         logicTraceHandle.register {
             publishUpdate()
         }
