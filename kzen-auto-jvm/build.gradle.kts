@@ -200,6 +200,10 @@ tasks.getByName<Jar>("jar") {
 
 val sourcesJar = tasks.register<Jar>("sourcesJar") {
     archiveClassifier.set("sources")
+    // allSource includes the generated-resources srcDir (copyIconCollection's output, registered above),
+    // so sourcesJar consumes that task's output — declare the dependency (Gradle task-validation would
+    // otherwise fail the publish, which is the only path that builds sourcesJar).
+    dependsOn(copyIconCollection)
     from(sourceSets.main.get().allSource)
 }
 
