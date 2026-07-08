@@ -19,6 +19,7 @@ import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.FunctionWithDebounce
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.iconify.icon
+import tech.kzen.auto.client.wrap.inputLabelSlotProps
 import tech.kzen.auto.client.wrap.lodash
 import tech.kzen.auto.client.wrap.setState
 import web.cssom.VerticalAlign
@@ -129,7 +130,7 @@ class FormulaMapRow(
                             // is sequenced after this write rather than racing it.
                             onBlur = { submitDebounce.flush() }
 
-                            InputLabelProps = unsafeJso {
+                            inputLabelSlotProps = unsafeJso {
                                 shrink = true
                             }
                         }

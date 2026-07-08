@@ -4,6 +4,7 @@ package tech.kzen.auto.client.wrap
 import js.objects.unsafeJso
 import js.reflect.unsafeCast
 import mui.material.InputBaseProps
+import mui.material.InputLabelProps
 import mui.material.TextFieldProps
 import react.*
 import kotlin.reflect.KClass
@@ -98,10 +99,24 @@ fun <T : Any> refCallback(block: (T) -> Cleanup?): RefCallback<T> =
     unsafeCast(block)
 
 
-inline var TextFieldProps.InputProps: InputBaseProps
+// MUI 9 removed TextField's legacy InputProps/InputLabelProps in favour of slotProps.{input,inputLabel},
+// and the wrapper doesn't type slotProps on TextField — these write it directly, merging into any
+// slotProps already present (e.g. the Autocomplete renderInput params spread in MuiAutocompleteField).
+inline var TextFieldProps.inputSlotProps: InputBaseProps
     get() = TODO("Prop is write-only!")
     set(value) {
-        asDynamic().InputProps = value
+        val slotProps = asDynamic().slotProps ?: unsafeJso()
+        slotProps.input = value
+        asDynamic().slotProps = slotProps
+    }
+
+
+inline var TextFieldProps.inputLabelSlotProps: InputLabelProps
+    get() = TODO("Prop is write-only!")
+    set(value) {
+        val slotProps = asDynamic().slotProps ?: unsafeJso()
+        slotProps.inputLabel = value
+        asDynamic().slotProps = slotProps
     }
 
 

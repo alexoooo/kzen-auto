@@ -183,7 +183,7 @@ class FormulaItemController(
                             disabled = props.runningOrLoading
                             this.error = error != null
 
-                            InputLabelProps = unsafeJso {
+                            inputLabelSlotProps = unsafeJso {
                                 shrink = true
                             }
                         }

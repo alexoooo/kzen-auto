@@ -8,6 +8,7 @@ main.steps/Start SUT:
   name: formula-error-sut
   fixture: fixtures/formula-error
   port: 18083
+  closePolicy: parent
 
 main.steps/Open Browser:
   is: BrowserOpenStep

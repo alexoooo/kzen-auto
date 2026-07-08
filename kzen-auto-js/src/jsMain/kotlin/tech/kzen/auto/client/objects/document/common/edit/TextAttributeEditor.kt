@@ -182,7 +182,7 @@ class TextAttributeEditor(
             error = props.invalid
 
             if (props.InputProps != null) {
-                InputProps = props.InputProps!!
+                inputSlotProps = props.InputProps!!
             }
         }
     }

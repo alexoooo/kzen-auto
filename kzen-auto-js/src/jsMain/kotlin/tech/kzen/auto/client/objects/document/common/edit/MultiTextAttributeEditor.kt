@@ -163,7 +163,7 @@ class MultiTextAttributeEditor(
             error = props.invalid
 
             if (props.InputProps != null) {
-                InputProps = props.InputProps!!
+                inputSlotProps = props.InputProps!!
             }
 
 //            if (props.style != null) {

@@ -15,7 +15,7 @@ import web.cssom.NamedColor
 import web.cssom.px
 
 
-// Spreads MUI's AutocompleteRenderInputParams onto the TextField props (InputProps / inputProps / id /
+// Spreads MUI's AutocompleteRenderInputParams onto the TextField props (slotProps / id / disabled /
 // ...), which renderInput must forward for the combobox input to be wired up. Kept as a NON-inline
 // top-level function so the js(...) Object.assign call is legal (js() is rejected inside inline lambdas).
 private fun objectAssign(target: Any, source: Any) {

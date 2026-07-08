@@ -100,7 +100,7 @@ class InputBrowserFilterController(
 //                +"kg"
 //            }
 
-            InputProps = unsafeJso {
+            inputSlotProps = unsafeJso {
                 startAdornment = InputAdornment.create {
                     position = InputAdornmentPosition.start
                     icon("material-symbols:search") {}

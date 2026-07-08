@@ -18,7 +18,7 @@ val devMode = providers.gradleProperty("jsWatch").isPresent
 
 kotlin {
     js {
-        useCommonJs()
+        useEsModules()
         binaries.executable()
 
         browser {
@@ -124,7 +124,7 @@ val npmPackageName = "${rootProject.name}-${project.name}"
 // lands in a sibling file, the entry stays byte-identical, and jsEsbuildBundle wrongly stays UP-TO-DATE.
 val esbuildInputDir = rootProject.layout.buildDirectory
     .dir("js/packages/$npmPackageName/kotlin")
-val esbuildEntry = esbuildInputDir.map { it.file("$npmPackageName.js") }
+val esbuildEntry = esbuildInputDir.map { it.file("$npmPackageName.mjs") }
 val esbuildOutFile = layout.buildDirectory
     .file("dist/js/productionExecutable/${project.name}.js")
 
