@@ -20,7 +20,11 @@ data class KzenAutoConfig(
     //  ProcessHandle.onExit backup that reaps this child if the parent dies. Together they bind this
     //  child's lifetime to its parent's on every OS (see KzenAutoMain.startManagedLifeline).
     val managedLifeline: Boolean = false,
-    val parentPid: Long? = null
+    val parentPid: Long? = null,
+
+    // Version + build timestamp of the running artifact, loaded from a baked-in classpath resource
+    //  by the entry point (see BuildInfo). Surfaced to the client via indexPage as logo hover text.
+    val buildInfo: BuildInfo? = null
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {

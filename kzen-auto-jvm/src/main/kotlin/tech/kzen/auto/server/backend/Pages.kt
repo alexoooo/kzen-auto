@@ -27,6 +27,13 @@ fun HTML.indexPage(
             charset = "UTF-8"
         }
 
+        // Version + build timestamp of the running server, read by the client to show as logo hover
+        //  text (see HeaderController.renderLogo). Empty when no build stamp is present (dev run).
+        meta {
+            name = "kzen-build"
+            content = kzenAutoConfig.buildInfo?.display() ?: ""
+        }
+
         link("$staticResourcePath/favicon.png", "icon", "image/png")
         link("$staticResourcePath/style.css", "stylesheet", "text/css")
         link("$staticResourcePath/normalize.css", "stylesheet", "text/css")

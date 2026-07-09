@@ -18,6 +18,7 @@ import tech.kzen.auto.common.api.staticResourcePath
 import tech.kzen.auto.server.api.IconCollectionHandler
 import tech.kzen.auto.server.api.RestHandler
 import tech.kzen.auto.server.backend.indexPage
+import tech.kzen.auto.server.context.BuildInfo
 import tech.kzen.auto.server.context.KzenAutoConfig
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.lib.common.util.ImmutableByteArray
@@ -34,7 +35,7 @@ private const val indexFilePath = "/$indexFileName"
 
 //---------------------------------------------------------------------------------------------------------------------
 fun main(args: Array<String>) {
-    val context = kzenAutoInit(args, kzenAutoJsModuleName)
+    val context = kzenAutoInit(args, kzenAutoJsModuleName, BuildInfo.load("/kzen-auto-build.properties"))
 
     if (context.config.managedLifeline) {
         startManagedLifeline()
@@ -84,7 +85,7 @@ private fun startParentWatchdog(parentPid: Long) {
 
 
 //---------------------------------------------------------------------------------------------------------------------
-fun kzenAutoInit(args: Array<String>, jsModuleName: String): KzenAutoContext {
+fun kzenAutoInit(args: Array<String>, jsModuleName: String, buildInfo: BuildInfo? = null): KzenAutoContext {
     // disable headless mode for Robot-based automation
     System.setProperty("java.awt.headless", "false")
 
@@ -96,7 +97,8 @@ fun kzenAutoInit(args: Array<String>, jsModuleName: String): KzenAutoContext {
         host = "127.0.0.1",
         moduleRoot = KzenAutoConfig.readModuleRoot(args),
         managedLifeline = KzenAutoConfig.readManagedLifeline(args),
-        parentPid = KzenAutoConfig.readParentPid(args))
+        parentPid = KzenAutoConfig.readParentPid(args),
+        buildInfo = buildInfo)
 
     val context = KzenAutoContext.create(config)
 

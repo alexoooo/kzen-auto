@@ -1,6 +1,9 @@
 @file:Suppress("UnstableApiUsage")
 
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.time.OffsetDateTime
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 
 
 plugins {
@@ -83,6 +86,29 @@ sourceSets.main {
 }
 
 
+// Build stamp: version + build timestamp written into the generated-resources dir (already a resource
+// srcDir above), so it lands in the jar at /kzen-auto-build.properties. Read at startup by BuildInfo
+// and surfaced as logo hover text (see indexPage / HeaderController). Deliberately never up-to-date so
+// every build re-stamps the moment of build — only resource processing + the thin jar re-run, not
+// Kotlin compilation. The resource name is module-specific: kzen-project-jvm carries kzen-auto-jvm.jar
+// on its classpath too, so a shared name would collide.
+val generateBuildInfo = tasks.register("generateBuildInfo") {
+    val buildInfoFile = iconCollectionDir.map { it.file("kzen-auto-build.properties") }
+    val buildVersion = version.toString()
+    outputs.file(buildInfoFile)
+    outputs.upToDateWhen { false }
+    doLast {
+        val timestamp = OffsetDateTime.now()
+            .truncatedTo(ChronoUnit.SECONDS)
+            .format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+        buildInfoFile.get().asFile.apply {
+            parentFile.mkdirs()
+            writeText("version=$buildVersion\ntimestamp=$timestamp\n")
+        }
+    }
+}
+
+
 tasks.withType<ProcessResources> {
     val jsProject = project(":kzen-auto-js")
 
@@ -90,6 +116,7 @@ tasks.withType<ProcessResources> {
     val bundleTask = jsProject.tasks.named("jsEsbuildBundle")
     dependsOn(bundleTask)
     dependsOn(copyIconCollection)
+    dependsOn(generateBuildInfo)
 
     from(jsProject.layout.buildDirectory.dir("dist/js/productionExecutable")) {
         into("static")
@@ -200,10 +227,12 @@ tasks.getByName<Jar>("jar") {
 
 val sourcesJar = tasks.register<Jar>("sourcesJar") {
     archiveClassifier.set("sources")
-    // allSource includes the generated-resources srcDir (copyIconCollection's output, registered above),
-    // so sourcesJar consumes that task's output — declare the dependency (Gradle task-validation would
-    // otherwise fail the publish, which is the only path that builds sourcesJar).
+    // allSource includes the generated-resources srcDir (copyIconCollection's + generateBuildInfo's
+    // output, registered above), so sourcesJar consumes those tasks' output — declare the dependencies
+    // (Gradle task-validation would otherwise fail the publish, which is the only path that builds
+    // sourcesJar).
     dependsOn(copyIconCollection)
+    dependsOn(generateBuildInfo)
     from(sourceSets.main.get().allSource)
 }
 
