@@ -36,23 +36,20 @@ private const val indexFilePath = "/$indexFileName"
 //---------------------------------------------------------------------------------------------------------------------
 fun main(args: Array<String>) {
     val context = kzenAutoInit(args, kzenAutoJsModuleName, BuildInfo.load("/kzen-auto-build.properties"))
-
-    if (context.config.managedLifeline) {
-        startManagedLifeline()
-    }
-    context.config.parentPid?.let { startParentWatchdog(it) }
-
     kzenAutoMain(context)
 }
 
 
-// Managed-child lifeline (intentionally duplicated in kzen-launcher's KzenLauncherMain — the
-//  launcher depends on neither kzen-lib nor kzen-auto, so there is no shared home worth the coupling
-//  for ~20 lines). The spawning parent keeps our stdin open as a PIPE; when it closes that stream
-//  (graceful stop) or dies (the OS then closes the inherited pipe on every platform) we observe EOF.
-//  The parent may also send a "SHUTDOWN" line. Either way exitProcess(0) runs the shutdown hook
-//  registered in kzenAutoInit (context.close()) for a graceful, resource-disposing exit —
-//  OS-agnostic, unlike Process.destroy() which is a hookless hard kill (TerminateProcess) on Windows.
+// Managed-child lifeline. Wired from kzenAutoInit (below) — NOT from each main() — so every kzen-auto-
+//  based server inherits it: kzen-auto's own KzenAutoMain AND kzen-project's KzenProjectMain, which
+//  reaches the server only through kzenAutoInit/kzenAutoMain and previously (silently) had no reaper, so
+//  project children orphaned the shell. (kzen-launcher's KzenLauncherMain intentionally duplicates these
+//  ~20 lines — it depends on neither kzen-lib nor kzen-auto, so there's no shared home worth the coupling.)
+//  The spawning parent keeps our stdin open as a PIPE; when it closes that stream (graceful stop) or dies
+//  (the OS then closes the inherited pipe on every platform) we observe EOF. The parent may also send a
+//  "SHUTDOWN" line. Either way exitProcess(0) runs the shutdown hook registered in kzenAutoInit
+//  (context.close()) for a graceful, resource-disposing exit — OS-agnostic, unlike Process.destroy()
+//  which is a hookless hard kill (TerminateProcess) on Windows.
 private fun startManagedLifeline() {
     val thread = Thread({
         try {
@@ -105,6 +102,16 @@ fun kzenAutoInit(args: Array<String>, jsModuleName: String, buildInfo: BuildInfo
     Runtime.getRuntime().addShutdownHook(Thread {
         context.close()
     })
+
+    // Bind this process's lifetime to the spawning parent's, so a shell-spawned child never outlives it
+    //  (this is what prevents orphaned server JVMs). Wired here rather than in each main() so EVERY
+    //  consumer of kzenAutoInit inherits it — notably KzenProjectMain, which reaches the server only
+    //  through here. Gated on the managed flags, which only the shell passes; dev/standalone runs omit
+    //  them and start no watchers. Registered after the shutdown hook so exitProcess runs context.close().
+    if (config.managedLifeline) {
+        startManagedLifeline()
+    }
+    config.parentPid?.let { startParentWatchdog(it) }
 
     return context
 }
