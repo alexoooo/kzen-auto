@@ -6,7 +6,7 @@ const val javaVersion = 26
 const val jvmToolchainVersion = 26
 
 
-const val kzenLibVersion = "0.29.1"
+const val kzenLibVersion = "0.29.2-SNAPSHOT"
 
 
 const val ktorVersion = "3.5.1"
