@@ -154,7 +154,12 @@ private fun Routing.routeRequests(
         }
     }
 
-    staticResources(staticResourcePath, staticResourceDir)
+    // Revalidate the SPA bundle (and all static assets) on every load so an upgraded build is picked
+    //  up instead of a stale cached copy. If ever served over the internet / a CDN, switch to
+    //  content-hashed immutable filenames (esbuild [hash]) to avoid the per-load revalidation.
+    staticResources(staticResourcePath, staticResourceDir) {
+        cacheControl { listOf(CacheControl.NoCache(null)) }
+    }
 
     routeIcons()
 
