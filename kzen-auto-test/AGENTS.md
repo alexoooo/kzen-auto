@@ -51,7 +51,7 @@ The kzen-auto fat jar is wired as an automatic `:kzen-auto-jvm:jar` task depende
 
 Override the kzen-auto jar (e.g. point at a CI-cached jar to skip the local `:kzen-auto-jvm:jar` rebuild):
 ```powershell
-./gradlew :kzen-auto-test:selfTest -PkzenAutoJar=C:/path/to/kzen-auto-jvm-0.29.1-SNAPSHOT.jar
+./gradlew :kzen-auto-test:selfTest -PkzenAutoJar=C:/path/to/kzen-auto-jvm-<version>.jar
 ```
 
 ## Port pinning
