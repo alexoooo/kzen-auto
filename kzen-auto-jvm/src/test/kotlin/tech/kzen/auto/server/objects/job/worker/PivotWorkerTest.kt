@@ -2,6 +2,7 @@ package tech.kzen.auto.server.objects.job.worker
 
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
+import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotSpec
@@ -80,7 +81,7 @@ class PivotWorkerTest {
         val forwarded = mutableListOf<DataRecord>()
 
         val worker = PivotWorker(
-            chunkedInput(records), capturingOutput(forwarded), emptyServer, pivot, selfLocation)
+            chunkedInput(listOf(records)), capturingOutput(forwarded), emptyServer, pivot, selfLocation)
         worker.run(ScratchJobControl(workerScratch))
 
         // A/B: the emitted pivot rows match the direct builder's, under the same output header.
@@ -90,6 +91,49 @@ class PivotWorkerTest {
 
         // The scratch dir is closed-then-deleted once the run settles.
         assertFalse(Files.exists(workerScratch))
+    }
+
+
+    // The progress wire contract lock with PreviewWorkerDisplay (job-worker.yaml assigns it as this Worker's
+    // display): every push must parse the way the display does — a numeric total under the count key, a list of
+    // strings under the header key, a list of rows under the rows key. Periodic (non-forced) pushes carry a
+    // bounded teaser page of the live pivot; the final forced push carries the full table (up to the query
+    // limit) — the same rows the Worker emits downstream.
+    @Test
+    fun progressPushesParseAsPreviewDisplayExpectsWithBoundedTeaser() = runBlocking {
+        // 15 distinct cities -> 15 pivot rows, exceeding the teaser bound.
+        val records = (1..15).map { record("city$it", it.toString()) }
+        val pivot = pivotSpec()
+
+        val workerScratch = Files.createTempDirectory("pivot-worker-progress")
+        val forwarded = mutableListOf<DataRecord>()
+        val control = ScratchJobControl(workerScratch)
+
+        val worker = PivotWorker(
+            chunkedInput(records.chunked(5)), capturingOutput(forwarded), emptyServer, pivot, selfLocation)
+        worker.run(control)
+
+        assertTrue(control.progressPushes.isNotEmpty())
+        for ((push, force) in control.progressPushes) {
+            // PreviewWorkerDisplay's parse semantics: longValue(count), parseHeader, parseRows.
+            assertTrue(push[JobConventions.progressCountKey] is Long)
+            val header = push[JobConventions.progressHeaderKey] as List<*>
+            assertTrue(header.isNotEmpty() && header.all { it is String })
+            val rows = push[JobConventions.progressRowsKey] as List<*>
+            assertTrue(rows.all { it is List<*> })
+
+            if (! force) {
+                assertTrue(rows.size <= JobConventions.progressTeaserRowCount)
+            }
+        }
+
+        // The final forced push carries the whole pivot: the same rows emitted downstream, and the total count.
+        val (finalPush, finalForce) = control.progressPushes.last()
+        assertTrue(finalForce)
+        assertEquals(15L, finalPush[JobConventions.progressCountKey])
+        assertEquals(
+            forwarded.map { it.record.toList() },
+            finalPush[JobConventions.progressRowsKey])
     }
 
 
@@ -112,16 +156,15 @@ class PivotWorkerTest {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun chunkedInput(records: List<DataRecord>): ChannelInput<Any?> =
+    private fun chunkedInput(chunks: List<List<DataRecord>>): ChannelInput<Any?> =
         object: ChannelInput<Any?> {
-            private var delivered = false
+            private var next = 0
 
             override suspend fun receiveBatch(): List<Any?>? {
-                if (delivered || records.isEmpty()) {
+                if (next >= chunks.size) {
                     return null
                 }
-                delivered = true
-                return records
+                return chunks[next++]
             }
 
             override suspend fun receive(): Any? = error("unused")
@@ -154,7 +197,11 @@ class PivotWorkerTest {
 
     //-----------------------------------------------------------------------------------------------------------------
     // Returns a real, created scratch dir; a PivotWorker opens its H2 stores under it and deletes it in onClose.
+    // The progress pushes (value + force) are recorded so the wire contract can be asserted; bypasses
+    // EngineJobControl's throttle, so every push lands.
     private class ScratchJobControl(private val scratchDir: Path): JobControl {
+        val progressPushes = mutableListOf<Pair<Map<String, Any?>, Boolean>>()
+
         override suspend fun checkpoint() {}
         override suspend fun <R> runBlockingIo(block: () -> R): R = block()
 
@@ -163,7 +210,9 @@ class PivotWorkerTest {
             return scratchDir.toString()
         }
 
-        override fun publishProgress(location: ObjectLocation, value: Map<String, Any?>, force: Boolean) {}
+        override fun publishProgress(location: ObjectLocation, value: Map<String, Any?>, force: Boolean) {
+            progressPushes.add(value to force)
+        }
         override suspend fun host(instructions: ObjectLocation, input: Any?) =
             throw UnsupportedOperationException("A PivotWorker hosts no child")
     }

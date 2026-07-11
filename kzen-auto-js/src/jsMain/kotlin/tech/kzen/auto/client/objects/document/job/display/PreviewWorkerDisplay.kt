@@ -226,7 +226,7 @@ class PreviewWorkerDisplay(
                     fontSize = 0.8.em
                     color = NamedColor.gray
                 }
-                val count = shown?.longValue("count")
+                val count = shown?.longValue(JobConventions.progressCountKey)
                 val suffix = when {
                     detail != null -> " (live — larger sample)"
                     active -> " (live)"
@@ -250,16 +250,17 @@ class PreviewWorkerDisplay(
     }
 
 
-    // This display owns the schema of the progress its Worker publishes: the sampled "header" / "rows" keys
-    // (the always-on teaser via common.progress, and the on-demand slice reply — same shape). Kept here, not in
-    // the shared JobWorkerProgress, so a 3rd-party Worker's payload never touches general code.
+    // This display owns the schema of the progress its Worker publishes: the sampled header / rows keys
+    // (the always-on teaser via common.progress, and the on-demand slice reply — same shape), shared with the
+    // server side via JobConventions. Kept here, not in the shared JobWorkerProgress, so a 3rd-party Worker's
+    // payload never touches general code.
     private fun parseHeader(map: Map<String, Any?>): List<String> {
-        return (map["header"] as? List<*>)?.map { it.toString() } ?: listOf()
+        return (map[JobConventions.progressHeaderKey] as? List<*>)?.map { it.toString() } ?: listOf()
     }
 
 
     private fun parseRows(map: Map<String, Any?>): List<List<String>> {
-        return (map["rows"] as? List<*>)?.map { row ->
+        return (map[JobConventions.progressRowsKey] as? List<*>)?.map { row ->
             (row as? List<*>)?.map { it.toString() } ?: listOf()
         } ?: listOf()
     }

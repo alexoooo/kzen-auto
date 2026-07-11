@@ -111,9 +111,19 @@ abstract class WorkerBase(
 
     /**
      * Throttled live progress pushed to the Worker's trace (row counts, a teaser sample, …), derived from the
-     * just-captured [snapshot] ([snapshot] is null unless overridden). Default none.
+     * just-captured [snapshot] ([snapshot] is null unless overridden). Default none. Override the force-aware
+     * variant below instead when the teaser and the final payload differ.
      */
     protected open fun progress(snapshot: Any?): Map<String, Any?>? = null
+
+
+    /**
+     * Force-aware variant of [progress]: force = true only on the final end-of-stream publish, letting a
+     * Worker push a bounded teaser periodically but the full payload once at the end (every emit is retained
+     * in engine history, so periodic pushes must be O(bounded) — see JobConventions.progressTeaserRowCount).
+     * Defaults to the force-agnostic [progress]; override exactly one of the two.
+     */
+    protected open fun progress(snapshot: Any?, force: Boolean): Map<String, Any?>? = progress(snapshot)
 
 
     /** Answers one duplex request as a pure read of the latest [snapshot]. Default echoes the snapshot. */
@@ -121,14 +131,17 @@ abstract class WorkerBase(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    /** Captures the snapshot for queries (when serving) and publishes the derived [progress] to the trace. */
+    /**
+     * Captures the snapshot for queries (when serving) and publishes the derived [progress] to the trace.
+     * [force] reaches the progress hook (teaser vs final payload) as well as the publish throttle.
+     */
     protected fun publish(control: JobControl, force: Boolean = false) {
         val snapshot = snapshot()
         if (serve != null && snapshot != null) {
             latestSnapshot = snapshot
         }
 
-        val progressValue = progress(snapshot)
+        val progressValue = progress(snapshot, force)
         if (progressValue != null) {
             control.publishProgress(selfLocation, progressValue, force)
         }

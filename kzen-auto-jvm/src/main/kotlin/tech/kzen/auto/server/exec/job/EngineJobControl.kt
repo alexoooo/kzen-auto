@@ -101,6 +101,10 @@ class EngineJobControl(
 
         // The emit address is the Worker node's; the Worker's own stable id (the node's stableId) is what the
         // bridge keys the progress path on, so [location] (always this Worker's own location) is not needed here.
+        // NOTE: every emit is retained in the engine's unbounded history, and old progress values are never
+        // read back — payload bounding (WorkerBase's teaser-vs-final progress contract) is the mitigation
+        // until the engine gains transient (non-retained) emits (see
+        // kzen/plans/2026-07-05_logic-engine-improvements.md phase 4); then mark this emit non-retained.
         execution.emit(progressAddress, ExecutionValue.of(value))
     }
 

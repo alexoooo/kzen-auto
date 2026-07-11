@@ -105,9 +105,12 @@ class ExploreWorkerTest {
             // A/B: the served slice matches the direct IndexedCsvTable's preview exactly.
             assertEquals(expected, served)
 
-            // The running row count reached the trace (under "count", matching PreviewWorker — so the client
-            // parses it as JobWorkerProgress.rowCount and can gate the download link on there being data).
-            assertEquals(records.size.toLong(), control.progressValues.last()["count"])
+            // The running row count reached the trace (under the shared count key, matching PreviewWorker — so
+            // the client parses it as JobWorkerProgress.rowCount and can gate the download link on there
+            // being data).
+            assertEquals(
+                records.size.toLong(),
+                control.progressValues.last()[JobConventions.progressCountKey])
 
             // The output dir and its table.csv PERSIST once the run settles (NOT swept) — so the result stays
             // browsable / downloadable after the run ends.

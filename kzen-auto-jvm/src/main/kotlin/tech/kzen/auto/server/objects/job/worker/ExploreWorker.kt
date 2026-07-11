@@ -117,10 +117,10 @@ class ExploreWorker(
 
 
     override fun progress(snapshot: Any?): Map<String, Any?> {
-        // "count" (matching PreviewWorker) so the client parses it as the total row count and can gate the
-        // download link on there being data to download.
+        // The count key (matching PreviewWorker) so the client parses it as the total row count and can gate
+        // the download link on there being data to download.
         val view = snapshot as? ExploreView
-        return mapOf("count" to (view?.rowCount ?: 0L))
+        return mapOf(JobConventions.progressCountKey to (view?.rowCount ?: 0L))
     }
 
 

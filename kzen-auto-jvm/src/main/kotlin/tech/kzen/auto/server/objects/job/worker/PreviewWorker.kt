@@ -16,8 +16,10 @@ import tech.kzen.lib.common.reflect.Reflect
  * A SINK Worker that shows a LIVE sample of the data flowing into it — the interactive replacement for writing
  * to a file. It exercises BOTH UI communication paths, now unified on the framework-owned [snapshot]:
  *
- * - **Trace (push):** a small teaser (the most recent [teaserRows] rows + the running total count) is derived
- *   from the snapshot and published to the Worker's trace as data streams in, for the always-on live view.
+ * - **Trace (push):** a small teaser (the most recent [JobConventions.progressTeaserRowCount] rows + the
+ *   running total count) is derived from the snapshot and published to the Worker's trace as data streams in,
+ *   for the always-on live view; the final (forced) end-of-stream push carries the full window instead, so
+ *   the post-run card keeps the whole sample.
  * - **Duplex query (pull):** the Worker answers on-demand slice requests (`offset` / `limit`) from the SAME
  *   snapshot over an (external, UI-facing) duplex Channel ([onQuery]) — the browser→worker request/reply path
  *   for reading a richer sample than the teaser carries.
@@ -115,12 +117,21 @@ class PreviewWorker(
         Snapshot(header, ArrayList(window), count)
 
 
-    override fun progress(snapshot: Any?): Map<String, Any?> {
+    // Push is a teaser, pull is the payload: periodic pushes carry only the most recent teaser rows (the
+    // window is oldest -> newest), while the final forced push keeps the full window for the post-run card.
+    override fun progress(snapshot: Any?, force: Boolean): Map<String, Any?> {
         val snap = snapshot as Snapshot
+        val rows =
+            if (force) {
+                snap.rows
+            }
+            else {
+                snap.rows.takeLast(JobConventions.progressTeaserRowCount)
+            }
         return mapOf(
-            "header" to snap.header,
-            "rows" to snap.rows,
-            "count" to snap.count)
+            JobConventions.progressHeaderKey to snap.header,
+            JobConventions.progressRowsKey to rows,
+            JobConventions.progressCountKey to snap.count)
     }
 
 
@@ -142,10 +153,10 @@ class PreviewWorker(
             }
 
         return ExecutionSuccess.ofValue(ExecutionValue.of(mapOf(
-            "header" to (snap?.header ?: listOf()),
-            "rows" to slice,
-            "count" to (snap?.count ?: 0L),
-            "offset" to offset.toLong())))
+            JobConventions.progressHeaderKey to (snap?.header ?: listOf()),
+            JobConventions.progressRowsKey to slice,
+            JobConventions.progressCountKey to (snap?.count ?: 0L),
+            JobConventions.previewOffsetParameter to offset.toLong())))
     }
 
 

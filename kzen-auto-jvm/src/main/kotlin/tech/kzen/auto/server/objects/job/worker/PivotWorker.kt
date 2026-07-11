@@ -41,7 +41,7 @@ import java.nio.file.Path
  * the live disk-backed builder from the serve coroutine is race-free because a Worker runs SINGLE-THREADED on
  * its own node coroutine (see [tech.kzen.auto.server.exec.job.EngineJobControl]): the serve loop only runs while
  * the work coroutine is parked at a checkpoint / awaiting input, never concurrently with an [onElement] mutation.
- * A running row count is pushed to the trace.
+ * A running row count plus a bounded teaser page of the live pivot is pushed to the trace (see [progress]).
  *
  * LIVE-EDIT MIGRATION: P4 baseline is RESTART on a live edit (the [WorkerBase] default — no state carried), which
  * is coherent because the scratch path is deterministic per `(runId, stableId)` and runId is migrate-stable, so
@@ -125,9 +125,20 @@ class PivotWorker(
     }
 
 
-    override fun progress(snapshot: Any?): Map<String, Any?> {
+    // Push is a teaser, pull is the payload: periodic pushes carry the running row count plus a bounded first
+    // page of the live pivot (matching what PreviewWorkerDisplay renders); the final forced push carries up to
+    // [defaultQueryLimit] rows for the post-run card. Reading the live builder here is safe for the same
+    // reason [onQuery] does it (single-threaded Worker; the final forced publish runs before [onClose]).
+    override fun progress(snapshot: Any?, force: Boolean): Map<String, Any?> {
         val view = snapshot as? PivotView
-        return mapOf("rows" to (view?.rowCount ?: 0L))
+            ?: return mapOf(JobConventions.progressCountKey to 0L)
+
+        val limit = if (force) defaultQueryLimit else JobConventions.progressTeaserRowCount
+        val preview = view.builder.preview(view.values, 0, limit)
+        return mapOf(
+            JobConventions.progressCountKey to view.rowCount,
+            JobConventions.progressHeaderKey to preview.renderedHeader,
+            JobConventions.progressRowsKey to preview.rows)
     }
 
 

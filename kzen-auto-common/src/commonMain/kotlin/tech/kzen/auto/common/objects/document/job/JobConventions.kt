@@ -97,6 +97,18 @@ object JobConventions {
     const val previewOffsetParameter = "offset"
     const val previewLimitParameter = "limit"
 
+    // Well-known keys of the otherwise-opaque worker progress map, shared by the built-in workers (JVM) and
+    // their displays (JS) so the wire contract can't drift. Third-party workers may use any keys with their
+    // own displays.
+    const val progressCountKey = "count"
+    const val progressHeaderKey = "header"
+    const val progressRowsKey = "rows"
+    const val progressSummaryKey = "summary"
+
+    // Max rows a non-forced (periodic) progress push may carry: push is a teaser, pull is the payload — every
+    // emit is retained in engine history, so periodic pushes must be O(bounded).
+    const val progressTeaserRowCount = 10
+
 
     // Deterministic name for the one-way channel auto-synthesized to carry one adjacent-Worker connection
     // (order-driven wiring — see [JobChannelSynthesis]): `ch__<upstreamWorkerLeaf>__<outputPort>`. A pure

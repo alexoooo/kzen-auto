@@ -16,6 +16,7 @@ import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.react
+import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
@@ -88,7 +89,7 @@ class ExploreWorkerDisplay(
     // /job/download endpoint, shown only once the persisted table has rows (survives the run settling). Mirrors
     // Report's OutputTableController download button.
     private fun ChildrenBuilder.renderExploreDownload() {
-        val rowCount = props.common.progress?.longValue("count") ?: 0L
+        val rowCount = props.common.progress?.longValue(JobConventions.progressCountKey) ?: 0L
         if (rowCount <= 0L) {
             return
         }

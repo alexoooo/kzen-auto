@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.objects.job.worker
 
+import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.auto.common.objects.document.report.listing.HeaderLabelMap
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.objects.document.report.summary.TableSummary
@@ -28,7 +29,8 @@ import tech.kzen.lib.common.reflect.Reflect
  * - **Pull:** answers on-demand [TableSummary] queries over its external duplex `serve` Channel ([onQuery]) — the
  *   source the JS value-set-filter editor reads distinct values from (a column's [NominalValueSummary] histogram
  *   keys), the Job analogue of Report's `FilterItemController` reading `tableSummary`.
- * - **Push:** publishes a running row count to its trace for the always-on live card.
+ * - **Push:** publishes a running row count to its trace for the always-on live card; the final end-of-stream
+ *   push adds the full [TableSummary], so the post-run card renders from the persisted trace.
  *
  * The summary columns are discovered from the FIRST record's header (all its columns); later records map onto
  * them by name via [RecordHeaderIndex] (a column absent from a given record is skipped). LIVE-EDIT MIGRATION: the
@@ -96,17 +98,20 @@ class SummaryWorker(
         currentAccumulation().tableSummary()
 
 
-    // Push both the running row count AND the (bounded — ≤100 buckets / ≤100 sample per column) TableSummary to
-    // the trace, so the card renders from the persisted push (survives run-end + browser refresh, like Preview's
-    // teaser) rather than only from a live serve pull. snapshot() already builds this each publish for the serve
-    // latestSnapshot, so this only adds its serialization. The full summary is still served on demand (onQuery)
-    // for the downstream filter / pivot editors.
-    override fun progress(snapshot: Any?): Map<String, Any?> {
+    // Push is a teaser, pull is the payload: periodic pushes carry only the running row count (every emit is
+    // retained in engine history, so serializing the full TableSummary per publish grows it without bound);
+    // the final forced push adds the full summary, so the card renders it from the persisted push after the
+    // run (survives run-end + browser refresh, like Preview's teaser). During the run the full summary is
+    // served on demand (onQuery) for the downstream filter / pivot editors.
+    override fun progress(snapshot: Any?, force: Boolean): Map<String, Any?> {
+        if (! force) {
+            return mapOf(JobConventions.progressCountKey to count)
+        }
         val tableSummary = snapshot as? TableSummary
             ?: TableSummary.empty
         return mapOf(
-            "count" to count,
-            "summary" to tableSummary.toCollection())
+            JobConventions.progressCountKey to count,
+            JobConventions.progressSummaryKey to tableSummary.toCollection())
     }
 
 
