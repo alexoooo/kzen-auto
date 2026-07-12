@@ -1,6 +1,7 @@
 package tech.kzen.auto.common.objects.document.target
 
 import tech.kzen.auto.common.objects.document.DocumentArchetype
+import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
@@ -34,6 +35,14 @@ class TargetDocument(
 
         const val paramTarget = "target"
 
+        /**
+         * Marks DOM elements that display target patches or screenshots (previews, crop lists,
+         * capture surfaces) so that a script automating the kzen-auto UI itself never treats a
+         * preview of a target as the target: the locator drops visual matches inside a marked
+         * element.
+         */
+        const val previewDataAttribute = "data-kzen-target-preview"
+
 
         val archetypeObjectName = ObjectName("Target")
 
@@ -57,5 +66,28 @@ class TargetDocument(
 
             return resources.digests.isNotEmpty()
         }
+
+
+        /**
+         * Match-score threshold for tolerant (NCC) matching, on the document's main object:
+         * `tolerance: 0.8` accepts any window scoring at least 0.8 when exact matching finds
+         * nothing. Absent or [exactTolerance] (or higher) means exact-only — every pre-existing
+         * document keeps today's behaviour.
+         */
+        fun tolerance(documentNotation: DocumentNotation): Double? {
+            val mainObjectNotation =
+                documentNotation.objects.notations[NotationConventions.mainObjectPath]
+                ?: return null
+
+            return mainObjectNotation
+                .get(toleranceAttributeName)
+                ?.asString()
+                ?.toDoubleOrNull()
+        }
+
+
+        val toleranceAttributeName = AttributeName("tolerance")
+
+        const val exactTolerance = 1.0
     }
 }

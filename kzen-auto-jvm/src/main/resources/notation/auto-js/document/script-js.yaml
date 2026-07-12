@@ -143,6 +143,11 @@ RunStepArgumentsEditor:
 TargetSpecEditor:
   is: AttributeEditor
   class: tech.kzen.auto.client.objects.document.script.display.edit.TargetSpecEditor$Wrapper
+  meta:
+    targetTypes:
+      is: List
+      of: TargetTypeDisplay
+      by: Autowired
 
 
 SelectClosePolicyEditor:
@@ -153,6 +158,40 @@ SelectClosePolicyEditor:
 TargetAttributeView:
   is: AttributeView
   class: tech.kzen.auto.client.objects.document.script.display.view.TargetAttributeView$Wrapper
+  meta:
+    targetTypes:
+      is: List
+      of: TargetTypeDisplay
+      by: Autowired
+
+
+# Per-target-type client fragments (dropdown label, value row, collapsed summary), autowired into
+# the TargetSpecEditor / TargetAttributeView hosts and matched by the `type:` notation value — a
+# new target type contributes its UI by registering an `is: TargetTypeDisplay` object (the
+# notation/server counterparts are TargetSpecType in common-action.yaml and TargetTypeLocator).
+TargetTypeDisplay:
+  abstract: true
+  class: tech.kzen.auto.client.objects.document.script.display.target.TargetTypeDisplay
+  meta:
+    objectLocation:
+      is: ObjectLocation
+      by: Self
+
+FocusTargetDisplay:
+  is: TargetTypeDisplay
+  class: tech.kzen.auto.client.objects.document.script.display.target.FocusTargetTypeDisplay
+
+TextTargetDisplay:
+  is: TargetTypeDisplay
+  class: tech.kzen.auto.client.objects.document.script.display.target.TextTargetTypeDisplay
+
+XpathTargetDisplay:
+  is: TargetTypeDisplay
+  class: tech.kzen.auto.client.objects.document.script.display.target.XpathTargetTypeDisplay
+
+VisualTargetDisplay:
+  is: TargetTypeDisplay
+  class: tech.kzen.auto.client.objects.document.script.display.target.VisualTargetTypeDisplay
 
 
 #######################################################################################################################

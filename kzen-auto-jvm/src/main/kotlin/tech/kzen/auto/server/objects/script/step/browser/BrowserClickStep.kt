@@ -1,15 +1,9 @@
 package tech.kzen.auto.server.objects.script.step.browser
 
-import org.openqa.selenium.OutputType
+import org.openqa.selenium.WebElement
 import org.openqa.selenium.remote.RemoteWebDriver
 import tech.kzen.auto.common.objects.document.target.TargetSpec
-import tech.kzen.auto.server.objects.script.api.ScriptStep
-import tech.kzen.auto.server.objects.script.api.ScriptStepDefinition
-import tech.kzen.auto.server.objects.script.api.StepExecution
-import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
 import tech.kzen.auto.server.service.target.TargetLocator
-import tech.kzen.auto.server.service.webdriver.WebDriverSupport
-import tech.kzen.lib.common.exec.BinaryExecutionValue
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
@@ -17,29 +11,14 @@ import tech.kzen.lib.common.reflect.Service
 
 @Reflect
 class BrowserClickStep(
-    private val target: TargetSpec,
+    target: TargetSpec,
     @Suppress("unused") selfLocation: ObjectLocation,
-    @Service private val targetLocator: TargetLocator
+    @Service targetLocator: TargetLocator
 ):
-    ScriptStep
+    BrowserTargetStep(target, targetLocator)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    override fun definition(scriptDefinitionContext: ScriptDefinitionContext): ScriptStepDefinition {
-        return ScriptStepDefinition.empty
-    }
-
-
-    override suspend fun run(execution: StepExecution): Any? {
-        val driver = execution.resource(WebDriverSupport.resourceKey) as? RemoteWebDriver
-            ?: error("Browser is not open")
-
-        val match = targetLocator.locateElement(target, driver)
-        match.error?.let {
-            error(it)
-        }
-
-        val element = match.webElement!!
-
+    override suspend fun act(element: WebElement, driver: RemoteWebDriver): Any? {
         if (element.tagName.lowercase() == "input" &&
                 element.getAttribute("type")?.lowercase() == "submit") {
             element.submit()
@@ -47,10 +26,6 @@ class BrowserClickStep(
         else {
             element.click()
         }
-
-        val screenshotPng = driver.getScreenshotAs(OutputType.BYTES)
-        execution.traceDetail(BinaryExecutionValue(screenshotPng))
-
         return null
     }
 }

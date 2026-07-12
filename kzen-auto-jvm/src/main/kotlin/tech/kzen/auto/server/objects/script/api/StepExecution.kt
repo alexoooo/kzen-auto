@@ -81,6 +81,14 @@ interface StepExecution {
         traceDetail(ExecutionValue.ofArbitrary(detail) ?: ExecutionValue.of(detail.toString()))
     }
 
+    /**
+     * Record a short human-readable diagnostic for the currently-running step — e.g. which target crop
+     * matched and where — surfaced as the step's
+     * [note][tech.kzen.auto.common.objects.document.script.model.StepTrace.note] beside the detail
+     * (it persists into the step's Done trace, so a run is diagnosable after the fact).
+     */
+    fun traceNote(note: String)
+
 
     //------------------------------------------------------------------------------------------ StepExecution: resources
     /**

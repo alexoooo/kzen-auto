@@ -6,6 +6,9 @@ main.steps/Click:
   target:
     type: Text
     value: Result
+    # "Result" also shows in the already-added step's card; the ribbon entry is the first
+    # (migrated from the pre-policy silent first-match when `unique` became the default)
+    policy: first
 
 main.steps/Run:
   is: RunStep
@@ -22,6 +25,9 @@ main.steps/Click 3:
   target:
     type: Xpath
     value: "(//label[text()='Code'])[last()]/..//textarea"
+    # The multiline editor renders a second (hidden) autosize-shadow textarea; the visible one is
+    # the first (migrated from the pre-policy silent first-match when `unique` became the default)
+    policy: first
 
 main.steps/Write:
   is: BrowserWriteStep

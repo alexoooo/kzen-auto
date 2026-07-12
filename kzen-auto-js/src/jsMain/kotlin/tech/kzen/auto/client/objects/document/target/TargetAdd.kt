@@ -18,6 +18,7 @@ import tech.kzen.auto.client.wrap.cropper.CropperWrapper
 import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
+import tech.kzen.auto.common.objects.document.target.TargetDocument
 import tech.kzen.lib.platform.IoUtils
 import web.cssom.*
 
@@ -124,6 +125,11 @@ class TargetAdd(
                 minHeight = 200.px
                 maxHeight = 1024.px
             }
+
+            // The capture surface displays a screenshot that can itself contain the target's
+            // pixels — never a match when a script automates the kzen-auto UI itself
+            // (see TargetLocator)
+            asDynamic()[TargetDocument.previewDataAttribute] = ""
 
             CropperWrapper::class.react {
                 src = props.screenshotDataUrl

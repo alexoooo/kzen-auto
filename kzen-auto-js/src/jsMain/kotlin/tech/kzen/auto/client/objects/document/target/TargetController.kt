@@ -41,6 +41,7 @@ import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.location.ResourceLocation
 import tech.kzen.lib.common.model.structure.GraphStructure
+import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.*
 import tech.kzen.lib.common.model.structure.resource.ResourceName
 import tech.kzen.lib.common.model.structure.resource.ResourceNesting
@@ -241,6 +242,17 @@ class TargetController(
             ?: return false
 
         return TargetDocument.hasCrops(documentNotation)
+    }
+
+
+    private fun tolerance(): Double? {
+        val documentPath = state.documentPath
+            ?: return null
+
+        val documentNotation = state.graphStructure?.graphNotation?.documents?.get(documentPath)
+            ?: return null
+
+        return TargetDocument.tolerance(documentNotation)
     }
 
 
@@ -540,6 +552,21 @@ class TargetController(
     }
 
 
+    private fun onToleranceChange(tolerance: Double) {
+        val documentPath = state.documentPath
+            ?: return
+
+        // The command success clears locateResult (crops/settings changed), so the overlay
+        // re-locates at the new tolerance right away
+        async {
+            props.mirroredGraphStore.apply(UpsertAttributeCommand(
+                ObjectLocation(documentPath, NotationConventions.mainObjectPath),
+                TargetDocument.toleranceAttributeName,
+                ScalarAttributeNotation(tolerance.toString())))
+        }
+    }
+
+
     private fun onSave(cropPng: ByteArray) {
         val documentPath = state.documentPath
             ?: return
@@ -596,8 +623,10 @@ class TargetController(
                     screenshotDataUrl = state.screenshotDataUrl
                     locateResult = state.locateResult
                     locating = state.locating
+                    tolerance = tolerance()
 
                     onRemove = ::onRemove
+                    onToleranceChange = ::onToleranceChange
                 }
 
             TargetSection.add -> {

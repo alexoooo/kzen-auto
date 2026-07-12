@@ -400,6 +400,7 @@ class ScriptStepDisplayDefault(
                     if (trace.detail !is BinaryExecutionValue) {
                         renderDetail(trace.detail)
                     }
+                    renderNote(trace.note)
                 }
             }
         }
@@ -435,6 +436,7 @@ class ScriptStepDisplayDefault(
         if (trace.detail !is BinaryExecutionValue) {
             renderDetail(trace.detail)
         }
+        renderNote(trace.note)
         renderError(trace.error)
     }
 
@@ -483,6 +485,23 @@ class ScriptStepDisplayDefault(
 
         traceSection("Error") {
             +"Error: $message"
+        }
+    }
+
+
+    private fun ChildrenBuilder.renderNote(note: String?) {
+        if (note == null) {
+            return
+        }
+
+        traceSection("Note") {
+            div {
+                css {
+                    color = Color("rgba(0, 0, 0, 0.55)")
+                    fontSize = 0.85.em
+                }
+                +note
+            }
         }
     }
 

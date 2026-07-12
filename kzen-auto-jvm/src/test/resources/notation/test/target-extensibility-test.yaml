@@ -1,0 +1,25 @@
+# Third-party proof for the open target-type set (see TargetExtensibilityTest): the CssSelector
+# type registers through the same seams a third-party module would use — an `is: TargetSpecType`
+# notation object autowired into the shared definer/creator — with no edit to any shared object.
+
+CssSelectorTargetType:
+  is: TargetSpecType
+  typeName: CssSelector
+  valueKind: text
+  class: tech.kzen.auto.server.service.target.test.CssSelectorTargetSpecType
+
+
+TargetSpecHolder:
+  abstract: true
+  class: tech.kzen.auto.server.service.target.test.TargetSpecHolder
+  meta:
+    target:
+      is: TargetSpec
+
+
+holder:
+  is: TargetSpecHolder
+  target:
+    type: CssSelector
+    value: "#login"
+    policy: first

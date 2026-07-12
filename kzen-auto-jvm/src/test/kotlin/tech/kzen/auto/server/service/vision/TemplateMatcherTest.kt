@@ -19,6 +19,7 @@ class TemplateMatcherTest {
         private const val benchmarkSourceHeight = 1080
         private const val benchmarkCropSize = 32
         private const val locateBenchmarkBudgetMillis = 1_000L
+        private const val scoredBenchmarkBudgetMillis = 5_000L
     }
 
 
@@ -236,6 +237,200 @@ class TemplateMatcherTest {
         val located = TemplateMatcher.locate(source, crop)
 
         assertTrue(located.isEmpty(), "unexpected exact match: $located")
+    }
+
+
+    /**
+     * The positive counterpart (calibration): zero-mean grayscale NCC scores the drifted icon
+     * 0.850 at its true location — the global maximum. This measurement is what calibrates the
+     * tolerance presets (Normal 0.8 catches same-machine rasterization drift; Strict 0.9 does
+     * not) — re-run it before moving any preset.
+     */
+    @Test
+    fun rasterizationDriftFoundAtNormalTolerance() {
+        val source = resourceGrid("/vision/rasterization-drift-screenshot.png")
+        val crop = resourceGrid("/vision/rasterization-drift-crop.png")
+
+        val normal = TemplateMatcher.locateScored(source, crop, 0.8)
+
+        assertEquals(1, normal.matches.size, "expected single match: ${normal.matches}")
+        val match = normal.matches.single()
+        assertEquals(Rectangle(374, 518, 21, 17), match.rect)
+        assertEquals(1.0, match.scale)
+        assertTrue(match.score in 0.8..0.9, "score outside calibrated range: ${match.score}")
+    }
+
+
+    /** Below-threshold results still report the best candidate — the "how close was it"
+     *  diagnostic that guides tolerance tuning. */
+    @Test
+    fun rasterizationDriftRejectedAtStrictWithBestCandidateReported() {
+        val source = resourceGrid("/vision/rasterization-drift-screenshot.png")
+        val crop = resourceGrid("/vision/rasterization-drift-crop.png")
+
+        val strict = TemplateMatcher.locateScored(source, crop, 0.9)
+
+        assertTrue(strict.matches.isEmpty(), "unexpected match: ${strict.matches}")
+        // The diagnostic reports the crop at its own scale — the true icon location, not a
+        // cross-scale candidate (smaller windows inflate NCC on less evidence)
+        val best = checkNotNull(strict.best)
+        assertEquals(Rectangle(374, 518, 21, 17), best.rect)
+        assertEquals(1.0, best.scale)
+        assertTrue(best.score in 0.8..0.9, "score outside calibrated range: ${best.score}")
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun gradientCrossCrop(size: Int): BufferedImage {
+        // Gradient background with a dark cross: enough luminance structure for NCC
+        val crop = BufferedImage(size, size, BufferedImage.TYPE_INT_RGB)
+        for (y in 0 until size) {
+            for (x in 0 until size) {
+                val shade = 128 + (x + y) * 96 / (2 * size)
+                crop.setRGB(x, y, (shade shl 16) or (shade shl 8) or shade)
+            }
+        }
+        for (i in 0 until size) {
+            crop.setRGB(i, size / 2, 0x202020)
+            crop.setRGB(size / 2, i, 0x202020)
+        }
+        return crop
+    }
+
+
+    private fun texturedCrop(size: Int): BufferedImage {
+        // Deterministic per-pixel pseudo-random shades (LCG): discriminative under rescaling,
+        // unlike a smooth gradient, which self-correlates across neighbouring scales
+        val crop = BufferedImage(size, size, BufferedImage.TYPE_INT_RGB)
+        var seed = 0x12345678L
+        for (y in 0 until size) {
+            for (x in 0 until size) {
+                seed = (seed * 6364136223846793005L + 1442695040888963407L)
+                val shade = ((seed ushr 40) and 0xFF).toInt()
+                crop.setRGB(x, y, (shade shl 16) or (shade shl 8) or shade)
+            }
+        }
+        return crop
+    }
+
+
+    @Test
+    fun noisePerturbedPatchFoundByScoreWhereExactMisses() {
+        val size = 16
+        val crop = gradientCrossCrop(size)
+
+        val perturbed = gradientCrossCrop(size)
+        for (i in 0 until size step 3) {
+            // Shift some pixels' brightness — enough to break pixel equality, not the pattern
+            val rgb = perturbed.getRGB(i, i) and 0xFFFFFF
+            val shade = ((rgb and 0xFF) + 24).coerceAtMost(255)
+            perturbed.setRGB(i, i, (shade shl 16) or (shade shl 8) or shade)
+        }
+
+        val source = image(200, 150).embed(perturbed, 60, 40)
+        val sourceGrid = RgbGrid.ofImage(source)
+        val cropGrid = RgbGrid.ofImage(crop)
+
+        assertTrue(TemplateMatcher.locate(sourceGrid, cropGrid).isEmpty(),
+            "perturbation failed to break exact match")
+
+        val scored = TemplateMatcher.locateScored(sourceGrid, cropGrid, 0.8)
+        assertEquals(1, scored.matches.size, "expected single match: ${scored.matches}")
+        assertEquals(Rectangle(60, 40, size, size), scored.matches.single().rect)
+
+        // And rejected just above its own score: the threshold is a real cutoff
+        val aboveScore = TemplateMatcher.locateScored(
+            sourceGrid, cropGrid, scored.matches.single().score + 0.001)
+        assertTrue(aboveScore.matches.isEmpty(), "threshold not honoured: ${aboveScore.matches}")
+        assertEquals(Rectangle(60, 40, size, size), checkNotNull(aboveScore.best).rect)
+    }
+
+
+    @Test
+    fun rescaledPatchFoundThroughScalePyramid() {
+        val size = 16
+        val crop = texturedCrop(size)
+        val cropGrid = RgbGrid.ofImage(crop)
+
+        // The screen renders the target at 1.25x the captured crop (monitor-scale drift)
+        val rendered = TemplateMatcher.rescale(cropGrid, 1.25)
+        val source = image(200, 150)
+        for (y in 0 until rendered.height) {
+            for (x in 0 until rendered.width) {
+                source.setRGB(60 + x, 40 + y, rendered.get(x, y))
+            }
+        }
+        val sourceGrid = RgbGrid.ofImage(source)
+
+        assertTrue(TemplateMatcher.locate(sourceGrid, cropGrid).isEmpty(),
+            "rescaled rendering should not exact-match")
+
+        val scored = TemplateMatcher.locateScored(sourceGrid, cropGrid, 0.8)
+        assertEquals(1, scored.matches.size, "expected single match: ${scored.matches}")
+        val match = scored.matches.single()
+        assertEquals(1.25, match.scale)
+        assertEquals(Rectangle(60, 40, rendered.width, rendered.height), match.rect)
+    }
+
+
+    @Test
+    fun nonMaxSuppressionCollapsesAdjacentHits() {
+        val size = 16
+        val crop = gradientCrossCrop(size)
+        val source = image(200, 150)
+            .embed(crop, 60, 40)
+            .embed(crop, 130, 90)
+
+        // Permissive threshold: origins adjacent to each true match also score high;
+        // NMS must collapse them to the two local maxima
+        val scored = TemplateMatcher.locateScored(
+            RgbGrid.ofImage(source), RgbGrid.ofImage(crop), 0.5)
+
+        for ((i, a) in scored.matches.withIndex()) {
+            for (b in scored.matches.drop(i + 1)) {
+                assertTrue(
+                    kotlin.math.abs(a.rect.x - b.rect.x) >= a.rect.width / 2 ||
+                            kotlin.math.abs(a.rect.y - b.rect.y) >= a.rect.height / 2,
+                    "adjacent matches not suppressed: $a vs $b")
+            }
+        }
+
+        val exact = scored.matches.filter { it.score > 0.999 }.map { it.rect }.toSet()
+        assertEquals(
+            setOf(
+                Rectangle(60, 40, size, size),
+                Rectangle(130, 90, size, size)),
+            exact)
+    }
+
+
+    /**
+     * NCC-path performance canary, analogous to [commonColourBackgroundLocatesWellUnderASecond]:
+     * a mostly-flat screenshot skips windows via the integral-image variance test. More generous
+     * budget than the exact path — the tolerant scan only runs after exact matching found nothing.
+     */
+    @Test
+    fun scoredLocateOnFlatBackgroundWellUnderBudget() {
+        val crop = gradientCrossCrop(benchmarkCropSize)
+
+        val originX = 600
+        val originY = 400
+        val source = image(benchmarkSourceWidth, benchmarkSourceHeight)
+            .embed(crop, originX, originY)
+
+        val sourceGrid = RgbGrid.ofImage(source)
+        val cropGrid = RgbGrid.ofImage(crop)
+
+        val startNanos = System.nanoTime()
+        val scored = TemplateMatcher.locateScored(sourceGrid, cropGrid, 0.8)
+        val elapsedMillis = (System.nanoTime() - startNanos) / 1_000_000
+
+        assertEquals(1, scored.matches.size, "expected single match: ${scored.matches}")
+        assertEquals(
+            Rectangle(originX, originY, benchmarkCropSize, benchmarkCropSize),
+            scored.matches.single().rect)
+        assertTrue(elapsedMillis < scoredBenchmarkBudgetMillis,
+            "locateScored took ${elapsedMillis}ms (budget ${scoredBenchmarkBudgetMillis}ms)")
     }
 
 

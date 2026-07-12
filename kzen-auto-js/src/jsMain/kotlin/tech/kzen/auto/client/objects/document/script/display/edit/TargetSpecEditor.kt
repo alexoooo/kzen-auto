@@ -1,30 +1,27 @@
 package tech.kzen.auto.client.objects.document.script.display.edit
 
 
-import emotion.react.css
 import js.objects.unsafeJso
-import mui.material.Size
-import mui.material.TextField
 import react.ChildrenBuilder
 import react.State
 import react.dom.html.ReactHTML.div
-import react.dom.onChange
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorProps
+import tech.kzen.auto.client.objects.document.script.display.target.TargetTypeDisplay
+import tech.kzen.auto.client.objects.document.script.display.target.TargetValueEditorContext
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
+import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.client.wrap.select.SelectOption
 import tech.kzen.auto.client.wrap.select.muiAutocompleteField
-import tech.kzen.auto.common.objects.document.target.TargetDocument
 import tech.kzen.auto.common.objects.document.target.TargetSpecDefiner
-import tech.kzen.auto.common.objects.document.target.TargetType
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.location.ObjectReference
-import tech.kzen.lib.common.model.location.ObjectReferenceHost
+import tech.kzen.lib.common.model.structure.notation.AttributeNotation
 import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
@@ -33,25 +30,28 @@ import tech.kzen.lib.common.model.structure.notation.cqrs.RenamedDocumentRefacto
 import tech.kzen.lib.common.model.structure.notation.cqrs.UpsertAttributeCommand
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
-import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.common.service.store.MirroredGraphStore
 import tech.kzen.lib.platform.collect.toPersistentMap
-import web.cssom.em
-import web.html.HTMLInputElement
 
 
 //---------------------------------------------------------------------------------------------------------------------
+external interface TargetSpecEditorProps: AttributeEditorProps {
+    var navigationGlobal: NavigationGlobal
+    var targetTypes: List<TargetTypeDisplay>
+}
+
+
 external interface TargetSpecEditorState: State {
-    var targetType: TargetType?
+    var typeName: String?
+    var value: String?
 
-    var targetText: String?
-    var targetTextPending: Boolean
+    // Set by a committed (non-debounced) value change: componentDidUpdate writes immediately
+    var immediateWrite: Boolean
 
-    var targetLocation: ObjectLocation?
-    var targetRenaming: Boolean
+    var renaming: Boolean
 
-    var visualTargets: List<ObjectLocation>?
+    var clientState: ClientState?
 
     // False until the first onClientState hydration; gates componentDidUpdate so the undefined→loaded
     // transition isn't echoed back to the notation as a spurious UpsertAttributeCommand on mount/expand.
@@ -60,11 +60,16 @@ external interface TargetSpecEditorState: State {
 
 
 //---------------------------------------------------------------------------------------------------------------------
+/**
+ * Type-agnostic host of the `target:` attribute editor: the Target Type dropdown lists the
+ * registered [TargetTypeDisplay]s, and the selected type's fragment renders the value row —
+ * this host owns only the notation write machinery (see the fragment for the per-type UI).
+ */
 @Suppress("unused")
 class TargetSpecEditor(
-    props: AttributeEditorProps
+    props: TargetSpecEditorProps
 ):
-    RPureComponent<AttributeEditorProps, TargetSpecEditorState>(props),
+    RPureComponent<TargetSpecEditorProps, TargetSpecEditorState>(props),
     LocalGraphStore.Observer,
     ClientStateGlobal.Observer
 {
@@ -72,15 +77,19 @@ class TargetSpecEditor(
     @Reflect
     class Wrapper(
         objectLocation: ObjectLocation,
+        private val targetTypes: List<TargetTypeDisplay>,
         @Service private val clientStateGlobal: ClientStateGlobal,
-        @Service private val mirroredGraphStore: MirroredGraphStore
+        @Service private val mirroredGraphStore: MirroredGraphStore,
+        @Service private val navigationGlobal: NavigationGlobal
     ):
         AttributeEditor(objectLocation)
     {
         override fun ChildrenBuilder.child(block: AttributeEditorProps.() -> Unit) {
             TargetSpecEditor::class.react {
+                targetTypes = this@Wrapper.targetTypes
                 clientStateGlobal = this@Wrapper.clientStateGlobal
                 mirroredGraphStore = this@Wrapper.mirroredGraphStore
+                navigationGlobal = this@Wrapper.navigationGlobal
                 block()
             }
         }
@@ -100,7 +109,7 @@ class TargetSpecEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun TargetSpecEditorState.init(props: AttributeEditorProps) {
+    override fun TargetSpecEditorState.init(props: TargetSpecEditorProps) {
         initialized = false
     }
 
@@ -113,71 +122,33 @@ class TargetSpecEditor(
                 as? MapAttributeNotation
             ?: return
 
-        val targetType = attributeNotation
+        val typeName = attributeNotation
             .get(TargetSpecDefiner.typeKey)
             ?.asString()
-            ?.let { name -> TargetType.entries.find { it.name == name } }
             ?: return
 
         setState {
-            this.targetType = targetType
+            this.typeName = typeName
+            value = attributeNotation.get(TargetSpecDefiner.valueKey)?.asString()
             initialized = true
 
-            targetTextPending = false
-            targetRenaming = false
-            if (targetType == TargetType.Focus) {
-                targetText = null
-                targetLocation = null
-            }
-            else {
-                val value = attributeNotation
-                    .get(TargetSpecDefiner.valueKey)
-                    ?.asString()
+            immediateWrite = false
+            renaming = false
 
-                if (targetType == TargetType.Text ||
-                    targetType == TargetType.Xpath) {
-                    targetText = value
-                    targetLocation = null
-                }
-                else if (value != null) {
-                    val objectReferenceHost = ObjectReferenceHost.ofLocation(props.objectLocation)
-                    val reference = ObjectReference.parse(value)
-
-                    targetText = null
-                    targetLocation = clientState.graphStructure().graphNotation.coalesce
-                        .locateOptional(reference, objectReferenceHost)
-                }
-                else {
-                    targetText = null
-                    targetLocation = null
-                }
-            }
-
-            visualTargets = visualTargets(clientState)
+            this.clientState = clientState
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun visualTargets(clientState: ClientState): List<ObjectLocation> {
-        val targetMains = mutableListOf<ObjectLocation>()
-
-        for ((path, notation) in
-                clientState.graphStructure().graphNotation.documents.map
-        ) {
-            if (TargetDocument.isTarget(notation)) {
-                targetMains.add(ObjectLocation(
-                    path, NotationConventions.mainObjectPath))
-            }
-        }
-
-        return targetMains
+    private fun typeDisplay(typeName: String?): TargetTypeDisplay? {
+        return props.targetTypes.find { it.typeName == typeName }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidUpdate(
-        prevProps: AttributeEditorProps,
+        prevProps: TargetSpecEditorProps,
         prevState: TargetSpecEditorState,
         snapshot: Any
     ) {
@@ -189,25 +160,27 @@ class TargetSpecEditor(
             return
         }
 
-        if (state.targetType != prevState.targetType) {
-            // Only Focus is complete without a value. For the other types, upserting {type} alone
-            // would fail the document definition (blocking the run ribbon) until the value is
-            // typed — hold the write until the value edit below carries both segments.
-            if (state.targetType == TargetType.Focus) {
+        if (state.typeName != prevState.typeName) {
+            // Types with a value would fail the document definition (blocking the run ribbon) if
+            // {type} upserted alone — hold the write until the value edit carries both segments.
+            if (typeDisplay(state.typeName)?.hasValue == false) {
                 editAttributeCommandAsync()
             }
         }
-        else if (state.targetText != prevState.targetText) {
-            submitDebounce.apply()
-        }
-        else if (state.targetLocation != prevState.targetLocation) {
-            if (state.targetRenaming) {
+        else if (state.value != prevState.value) {
+            if (state.renaming) {
                 setState {
-                    targetRenaming = false
+                    renaming = false
                 }
             }
-            else {
+            else if (state.immediateWrite) {
+                setState {
+                    immediateWrite = false
+                }
                 editAttributeCommandAsync()
+            }
+            else {
+                submitDebounce.apply()
             }
         }
     }
@@ -239,13 +212,20 @@ class TargetSpecEditor(
     ) {
         when (event) {
             is RenamedDocumentRefactorEvent -> {
-                if (event.removedUnderOldName.documentPath == state.targetLocation?.documentPath) {
-                    val newLocation =
-                            state.targetLocation!!.copy(documentPath = event.createdWithNewName.destination)
+                // A reference-valued target follows its renamed document (the refactor already
+                // rewrote the notation; `renaming` suppresses the echo write). A free-text value
+                // that doesn't parse as a reference is simply not affected.
+                val reference = state.value?.let {
+                    runCatching { ObjectReference.parse(it) }.getOrNull()
+                }
+
+                if (reference?.path == event.removedUnderOldName.documentPath) {
+                    val newReference = ObjectReference(
+                        reference.name, reference.nesting, event.createdWithNewName.destination)
 
                     setState {
-                        targetLocation = newLocation
-                        targetRenaming = true
+                        value = newReference.asString()
+                        renaming = true
                     }
                 }
             }
@@ -267,21 +247,31 @@ class TargetSpecEditor(
 
 
     private suspend fun editAttributeCommand() {
-        val attributeMap =
-                mutableMapOf<AttributeSegment, ScalarAttributeNotation>()
+        val typeName = state.typeName
+            ?: return
+
+        val attributeMap = mutableMapOf<AttributeSegment, AttributeNotation>()
 
         attributeMap[TargetSpecDefiner.typeSegment] =
-                ScalarAttributeNotation(state.targetType!!.name)
+                ScalarAttributeNotation(typeName)
 
-        if (state.targetText != null) {
+        state.value?.let {
             attributeMap[TargetSpecDefiner.valueSegment] =
-                    ScalarAttributeNotation(state.targetText!!)
+                    ScalarAttributeNotation(it)
         }
-        else if (state.targetLocation != null) {
-            val globalReference = state.targetLocation!!.toReference()
 
-            attributeMap[TargetSpecDefiner.valueSegment] =
-                    ScalarAttributeNotation(globalReference.asString())
+        // Preserve keys this editor doesn't own (e.g. `policy:`) across a rewrite
+        val currentNotation = state.clientState
+            ?.graphStructure()
+            ?.graphNotation
+            ?.firstAttribute(props.objectLocation, props.attributeName)
+            as? MapAttributeNotation
+
+        currentNotation?.map?.forEach { (segment, notation) ->
+            if (segment != TargetSpecDefiner.typeSegment &&
+                    segment != TargetSpecDefiner.valueSegment) {
+                attributeMap[segment] = notation
+            }
         }
 
         val attributeNotation = MapAttributeNotation(attributeMap.toPersistentMap())
@@ -290,39 +280,32 @@ class TargetSpecEditor(
                 props.objectLocation,
                 props.attributeName,
                 attributeNotation))
-
-        if (state.targetText != null) {
-            setState {
-                targetTextPending = false
-            }
-        }
     }
 
 
-    private fun onTypeChange(newType: TargetType) {
+    private fun onTypeChange(newTypeName: String) {
         // A pending debounced text write would fire after the value fields are cleared, emitting
         // a value-less target map; the pre-switch text (if any) was already committed by onBlur.
         submitDebounce.cancel()
 
         setState {
-            targetType = newType
-            targetText = null
-            targetLocation = null
+            typeName = newTypeName
+            value = null
         }
     }
 
 
-    private fun onTextChange(newValue: String) {
+    private fun onValueEdit(newValue: String) {
         setState {
-            targetText = newValue
-            targetTextPending = true
+            value = newValue
         }
     }
 
 
-    private fun onVisualTargetChange(value: ObjectLocation?) {
+    private fun onValueChange(newValue: String) {
         setState {
-            targetLocation = value
+            value = newValue
+            immediateWrite = true
         }
     }
 
@@ -331,30 +314,33 @@ class TargetSpecEditor(
     override fun ChildrenBuilder.render() {
         renderSelectType()
 
-        if (state.targetType == TargetType.Text ||
-                state.targetType == TargetType.Xpath) {
-            renderTextual()
-        }
-        else if (state.targetType == TargetType.Visual) {
-            renderVisualSelect()
+        val display = typeDisplay(state.typeName)
+            ?: return
+
+        val context = TargetValueEditorContext(
+            value = state.value,
+            objectLocation = props.objectLocation,
+            clientState = state.clientState,
+            navigationGlobal = props.navigationGlobal,
+            onValueChange = ::onValueChange,
+            onValueEdit = ::onValueEdit,
+            onEditCommit = { submitDebounce.flush() })
+
+        with(display) {
+            renderValueEditor(context)
         }
     }
 
 
     private fun ChildrenBuilder.renderSelectType() {
-        val targetType = state.targetType
+        val typeName = state.typeName
             ?: return
 
-        val typeOptions = TargetType.entries
+        val typeOptions = props.targetTypes
             .map { type ->
                 val option: SelectOption = unsafeJso {
-                    value = type.name
-                    label = when (type) {
-                        TargetType.Focus -> "Currently focused"
-                        TargetType.Text -> "Containing text"
-                        TargetType.Xpath -> "Matching XPath"
-                        TargetType.Visual -> "Visual"
-                    }
+                    value = type.typeName
+                    label = type.editorLabel
                 }
                 option
             }
@@ -364,50 +350,9 @@ class TargetSpecEditor(
             muiAutocompleteField(
                 label = "Target Type",
                 options = typeOptions,
-                selectedOption = typeOptions.find { it.value == targetType.name },
-                onSelect = { onTypeChange(TargetType.valueOf(it.value)) },
+                selectedOption = typeOptions.find { it.value == typeName },
+                onSelect = { onTypeChange(it.value) },
                 disableClearable = true)
         }
-    }
-
-
-    private fun ChildrenBuilder.renderTextual() {
-        TextField {
-            fullWidth = true
-            size = Size.small
-            value = state.targetText ?: ""
-
-            onChange = {
-                val target = it.target as HTMLInputElement
-                onTextChange(target.value)
-            }
-
-            // Commit the pending debounced edit on focus loss, so a following separate command is
-            // sequenced after this write rather than racing it (see AttributePathValueEditor).
-            onBlur = { submitDebounce.flush() }
-        }
-    }
-
-
-    private fun ChildrenBuilder.renderVisualSelect() {
-        val visualTargets = state.visualTargets
-            ?: return
-
-        val selectOptions = visualTargets
-                .map {
-                    val option: SelectOption = unsafeJso {
-                        value = it.asString()
-                        label = it.documentPath.name.value
-                    }
-                    option
-                }
-                .toTypedArray()
-
-        muiAutocompleteField(
-            label = "Target",
-            options = selectOptions,
-            selectedOption = selectOptions.find { it.value == state.targetLocation?.asString() },
-            onSelect = { onVisualTargetChange(ObjectLocation.parse(it.value)) },
-            disableClearable = true)
     }
 }

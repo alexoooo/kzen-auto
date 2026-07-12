@@ -4,18 +4,23 @@ import tech.kzen.lib.common.api.AttributeCreator
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.definition.MapAttributeDefinition
 import tech.kzen.lib.common.model.definition.ObjectDefinition
-import tech.kzen.lib.common.model.definition.ReferenceAttributeDefinition
 import tech.kzen.lib.common.model.definition.ValueAttributeDefinition
 import tech.kzen.lib.common.model.instance.GraphInstance
 import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.lib.common.model.location.ObjectReferenceHost
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.service.context.environment.GraphEnvironment
 
 
+/**
+ * Instantiates a [TargetSpec] from the definition [TargetSpecDefiner] produced, dispatching to
+ * the registered [TargetSpecType] whose name matches the defined `type` (autowired: adding a
+ * target type requires no edit here).
+ */
 @Reflect
-class TargetSpecCreator: AttributeCreator {
+class TargetSpecCreator(
+    private val types: List<TargetSpecType>
+): AttributeCreator {
     override fun create(
         objectLocation: ObjectLocation,
         attributeName: AttributeName,
@@ -31,38 +36,26 @@ class TargetSpecCreator: AttributeCreator {
         val typeDefinition =
             attributeDefinition[TargetSpecDefiner.typeKey] as ValueAttributeDefinition
         val typeName = typeDefinition.value as String
-        val targetType = TargetType.entries.find { it.name == typeName }
+
+        val type = types.find { it.typeName == typeName }
             ?: throw IllegalArgumentException(
                 "Unknown target type: $typeName - $objectLocation - $attributeName")
+
+        val policyName =
+            (attributeDefinition[TargetMatchPolicy.policyKey] as? ValueAttributeDefinition)
+                ?.value as? String
+        val policyIndex =
+            (attributeDefinition[TargetMatchPolicy.indexKey] as? ValueAttributeDefinition)
+                ?.value as? Int
+
+        val policy = TargetMatchPolicy.parse(policyName, policyIndex)
+            ?: throw IllegalArgumentException(
+                "Unknown target policy: $policyName - $objectLocation - $attributeName")
 
         val valueDefinition =
             attributeDefinition[TargetSpecDefiner.valueKey]
 
-        return when (targetType) {
-            TargetType.Focus ->
-                FocusTarget
-
-            TargetType.Text -> {
-                val value = (valueDefinition as ValueAttributeDefinition).value as String
-                TextTarget(value)
-            }
-
-            TargetType.Xpath -> {
-                val value = (valueDefinition as ValueAttributeDefinition).value as String
-                XpathTarget(value)
-            }
-
-            TargetType.Visual -> {
-                val value = (valueDefinition as ReferenceAttributeDefinition).objectReference!!
-
-                val location = partialGraphInstance.objectInstances.locate(
-                    value, ObjectReferenceHost.ofLocation(objectLocation))
-
-                val targetDocument =
-                    partialGraphInstance[location]?.reference as TargetDocument
-
-                VisualTarget(targetDocument)
-            }
-        }
+        return type.createSpec(
+            valueDefinition, policy, objectLocation, partialGraphInstance)
     }
 }

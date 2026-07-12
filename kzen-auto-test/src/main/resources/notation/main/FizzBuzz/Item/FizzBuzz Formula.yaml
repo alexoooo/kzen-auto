@@ -22,6 +22,9 @@ main.steps/Click 3:
   target:
     type: Xpath
     value: "//label[text()='Code']/..//textarea"
+    # The multiline editor renders a second (hidden) autosize-shadow textarea; the visible one is
+    # the first (migrated from the pre-policy silent first-match when `unique` became the default)
+    policy: first
 
 main.steps/Write:
   is: BrowserWriteStep

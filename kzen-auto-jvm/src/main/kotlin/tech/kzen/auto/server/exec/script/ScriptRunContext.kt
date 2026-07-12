@@ -89,11 +89,13 @@ class ScriptRunContext(
 
     private var resultValue: TupleValue? = null
 
-    // The step the spine is currently running (whose trace [traceDetail] updates), and the detail it has
-    // recorded so far — carried into the step's Done / Error trace so a screenshot persists past Running.
+    // The step the spine is currently running (whose trace [traceDetail] / [traceNote] updates), and the
+    // detail + note it has recorded so far — carried into the step's Done / Error trace so a screenshot
+    // (and its diagnostic note) persists past Running.
     // Saved / restored around each step so a nested branch (an If / loop body) doesn't clobber its parent's.
     private var currentStableId: ObjectStableId? = null
     private var currentDetail: ExecutionValue = NullExecutionValue
+    private var currentNote: String? = null
 
 
     //----------------------------------------------------------------------------------------- StepExecution: control
@@ -154,6 +156,17 @@ class ScriptRunContext(
     }
 
 
+    override fun traceNote(note: String) {
+        val stableId = currentStableId
+            ?: error("No step is running")
+        currentNote = note
+
+        // Re-emit the running step's trace so the note shows immediately; markDone then re-emits it
+        // on the Done trace so it persists.
+        emitStepTrace(stableId, StepTrace.State.Running, NullExecutionValue, currentDetail)
+    }
+
+
     //------------------------------------------------------------------------------------------ StepExecution: resources
     override fun openResource(key: String, value: Any?, closePolicy: ResourceClosePolicy, closer: () -> Unit) {
         resources.put(key, value)
@@ -193,10 +206,12 @@ class ScriptRunContext(
             publishNextStep(stableId)
             execution.checkpoint()
 
-            // Track this step as the current one so its [traceDetail] (a screenshot) attributes to it and carries
-            // into its Done / Error trace; saved / restored so a nested branch it runs doesn't clobber it.
+            // Track this step as the current one so its [traceDetail] (a screenshot) and [traceNote] attribute
+            // to it and carry into its Done / Error trace; saved / restored so a nested branch it runs doesn't
+            // clobber it.
             val previousStableId = currentStableId
             val previousDetail = currentDetail
+            val previousNote = currentNote
             currentStableId = stableId
             try {
                 // Pause-on-error (logic-spec §4): the engine renders the failure (Error trace) then, if
@@ -210,6 +225,7 @@ class ScriptRunContext(
                         ExceptionUtils.message(error))
                 }) {
                     currentDetail = NullExecutionValue
+                    currentNote = null
                     emitStepTrace(stableId, StepTrace.State.Running, NullExecutionValue, currentDetail)
                     step.run(this)
                 }
@@ -218,6 +234,7 @@ class ScriptRunContext(
             finally {
                 currentStableId = previousStableId
                 currentDetail = previousDetail
+                currentNote = previousNote
             }
         }
         publishNextStep(null)
@@ -329,7 +346,10 @@ class ScriptRunContext(
         detail: ExecutionValue = NullExecutionValue,
         error: String? = null
     ) {
-        val trace = StepTrace(state, display, detail, error)
+        // NB: currentNote belongs to the step the spine is currently running; every emit site except
+        // [adoptCompleted] (which emits for a replayed step while the note is the parent's) targets it.
+        val note = if (stableId == currentStableId) currentNote else null
+        val trace = StepTrace(state, display, detail, error, note)
         execution.emit(Address.of(stableId.value), trace.asExecutionValue())
     }
 

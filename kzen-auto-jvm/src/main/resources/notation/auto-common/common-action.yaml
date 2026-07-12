@@ -35,9 +35,49 @@ TargetSpec:
 
 TargetSpecCreator:
   class: tech.kzen.auto.common.objects.document.target.TargetSpecCreator
+  meta:
+    types:
+      is: List
+      of: TargetSpecType
+      by: Autowired
 
 TargetSpecDefiner:
   class: tech.kzen.auto.common.objects.document.target.TargetSpecDefiner
+
+# Open target-type set: each target type registers an `is: TargetSpecType` object declaring the
+# `type:` name it handles (`typeName:`) and its value shape (`valueKind: none|text|reference`,
+# read by TargetSpecDefiner straight from notation), with the runtime instantiation code in its
+# `class:` (autowired into TargetSpecCreator, matched by the same typeName) — so a new type
+# (including from a third-party module) needs no edit to any shared object. Server-side locate
+# handling registers a TargetTypeLocator with the TargetLocator service; client editor/summary
+# fragments register `is: TargetTypeDisplay` (see script-js.yaml).
+TargetSpecType:
+  abstract: true
+  class: tech.kzen.auto.common.objects.document.target.TargetSpecType
+
+FocusTargetType:
+  is: TargetSpecType
+  typeName: Focus
+  valueKind: none
+  class: tech.kzen.auto.common.objects.document.target.FocusTargetSpecType
+
+TextTargetType:
+  is: TargetSpecType
+  typeName: Text
+  valueKind: text
+  class: tech.kzen.auto.common.objects.document.target.TextTargetSpecType
+
+XpathTargetType:
+  is: TargetSpecType
+  typeName: Xpath
+  valueKind: text
+  class: tech.kzen.auto.common.objects.document.target.XpathTargetSpecType
+
+VisualTargetType:
+  is: TargetSpecType
+  typeName: Visual
+  valueKind: reference
+  class: tech.kzen.auto.common.objects.document.target.VisualTargetSpecType
 #
 #
 ############################################################

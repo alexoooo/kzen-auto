@@ -11,7 +11,10 @@ data class StepTrace(
     val state: State,
     val displayValue: ExecutionValue,
     val detail: ExecutionValue,
-    val error: String?
+    val error: String?,
+
+    // Short human-readable diagnostic beside the detail — e.g. which target crop matched and where
+    val note: String? = null
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -19,6 +22,7 @@ data class StepTrace(
         private const val displayKey = "display"
         private const val detailKey = "detail"
         private const val errorKey = "error"
+        private const val noteKey = "note"
 
 
         fun ofExecutionValue(executionValue: ExecutionValue): StepTrace {
@@ -27,7 +31,8 @@ data class StepTrace(
                 State.valueOf((executionValue.values[stateKey] as TextExecutionValue).value),
                 executionValue.values[displayKey]!!,
                 executionValue.values[detailKey]!!,
-                (executionValue.values[errorKey] as? TextExecutionValue)?.value
+                (executionValue.values[errorKey] as? TextExecutionValue)?.value,
+                (executionValue.values[noteKey] as? TextExecutionValue)?.value
             )
         }
     }
@@ -52,7 +57,8 @@ data class StepTrace(
             stateKey to TextExecutionValue(state.name),
             displayKey to displayValue,
             detailKey to detail,
-            errorKey to ExecutionValue.of(error)
+            errorKey to ExecutionValue.of(error),
+            noteKey to ExecutionValue.of(note)
         ))
     }
 }

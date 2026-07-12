@@ -1,11 +1,13 @@
 package tech.kzen.auto.server.objects.target
 
+import tech.kzen.auto.common.objects.document.target.TargetCropMatches
 import tech.kzen.auto.common.objects.document.target.TargetDocument
 import tech.kzen.auto.common.objects.document.target.TargetLocateResult
 import tech.kzen.auto.common.objects.document.target.TargetMatchRect
 import tech.kzen.auto.common.paradigm.detached.DetachedAction
 import tech.kzen.auto.server.service.target.TargetLocator
 import tech.kzen.auto.server.service.vision.RgbGrid
+import tech.kzen.auto.server.service.vision.TemplateMatcher
 import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionResult
 import tech.kzen.lib.common.exec.ExecutionSuccess
@@ -64,10 +66,19 @@ class TargetLocateAction(
         val result = TargetLocateResult(
             screenshotGrid.width,
             screenshotGrid.height,
-            matchesByCrop.mapValues { (_, matches) ->
-                matches.map { TargetMatchRect(it.x, it.y, it.width, it.height) }
+            matchesByCrop.mapValues { (_, cropMatches) ->
+                TargetCropMatches(
+                    cropMatches.matches.map { matchRect(it) },
+                    cropMatches.bestRejected?.let { matchRect(it) })
             })
 
         return ExecutionSuccess.ofValue(result.asExecutionValue())
+    }
+
+
+    private fun matchRect(match: TemplateMatcher.ScoredMatch): TargetMatchRect {
+        return TargetMatchRect(
+            match.rect.x, match.rect.y, match.rect.width, match.rect.height,
+            match.score, match.scale)
     }
 }

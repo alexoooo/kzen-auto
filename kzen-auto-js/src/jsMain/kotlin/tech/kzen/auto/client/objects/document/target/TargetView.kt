@@ -11,10 +11,14 @@ import react.Props
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.img
+import react.dom.html.ReactHTML.option
+import react.dom.html.ReactHTML.select
 import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.iconify.icon
+import tech.kzen.auto.common.objects.document.target.TargetCropMatches
+import tech.kzen.auto.common.objects.document.target.TargetDocument
 import tech.kzen.auto.common.objects.document.target.TargetLocateResult
 import tech.kzen.auto.common.objects.document.target.TargetMatchRect
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -22,6 +26,7 @@ import tech.kzen.lib.common.model.location.ResourceLocation
 import tech.kzen.lib.common.model.structure.resource.ResourceListing
 import tech.kzen.lib.common.model.structure.resource.ResourcePath
 import web.cssom.*
+import kotlin.math.round
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -34,7 +39,11 @@ external interface TargetViewProps: Props {
     var locateResult: TargetLocateResult?
     var locating: Boolean?
 
+    // Match-score threshold from the document notation; null = exact-only
+    var tolerance: Double?
+
     var onRemove: (ResourcePath) -> Unit
+    var onToleranceChange: (Double) -> Unit
 }
 
 
@@ -58,6 +67,33 @@ class TargetView(
         private fun matchColour(cropIndex: Int): String {
             return matchPalette[cropIndex % matchPalette.size]
         }
+
+
+        // Calibrated against the rasterization-drift fixture (same-machine desktop capture
+        // scores ~0.85 against a fresh capture — Normal catches it, Strict doesn't); see
+        // TemplateMatcherTest.rasterizationDriftFoundAtNormalTolerance
+        private val tolerancePresets = listOf(
+            "Exact" to TargetDocument.exactTolerance,
+            "Strict" to 0.9,
+            "Normal" to 0.8,
+            "Loose" to 0.7)
+
+
+        private fun formatScore(score: Double): String {
+            return (round(score * 100) / 100).toString()
+        }
+
+
+        private fun matchAnnotation(match: TargetMatchRect): String? {
+            if (match.score >= TargetDocument.exactTolerance) {
+                return null
+            }
+            val scoreText = formatScore(match.score)
+            return when (match.scale) {
+                1.0 -> scoreText
+                else -> "$scoreText ×${match.scale}"
+            }
+        }
     }
 
 
@@ -80,7 +116,7 @@ class TargetView(
 
             renderCropRows()
 
-            // TODO: tolerance control (per-document match threshold)
+            renderToleranceControl()
 
             renderOverlay()
         }
@@ -99,7 +135,7 @@ class TargetView(
                 ResourceLocation(props.documentPath, resourcePath))
 
             val matches = matchesByCrop?.get(resourcePath)
-            totalMatches += matches?.size ?: 0
+            totalMatches += matches?.matches?.size ?: 0
 
             div {
                 css {
@@ -126,6 +162,9 @@ class TargetView(
                         marginRight = 0.5.em
                     }
                     src = resourceUri
+
+                    // Never a match when a script automates the kzen-auto UI itself (see TargetLocator)
+                    asDynamic()[TargetDocument.previewDataAttribute] = ""
                 }
 
                 span {
@@ -172,19 +211,30 @@ class TargetView(
     }
 
 
-    private fun matchSummary(matches: List<TargetMatchRect>?): String {
-        if (matches == null) {
+    private fun matchSummary(cropMatches: TargetCropMatches?): String {
+        if (cropMatches == null) {
             return when {
                 props.locating == true -> "locating…"
                 else -> ""
             }
         }
 
-        return when (matches.size) {
-            0 -> "no match"
+        val matches = cropMatches.matches
+
+        if (matches.isEmpty()) {
+            val closest = cropMatches.closest
+                ?: return "no match"
+            return "no match (closest ${formatScore(closest.score)} at [${closest.x}, ${closest.y}])"
+        }
+
+        val count = when (matches.size) {
             1 -> "1 match"
             else -> "${matches.size} matches"
         }
+
+        val annotation = matchAnnotation(matches.maxBy { it.score })
+            ?: return count
+        return "$count ($annotation)"
     }
 
 
@@ -214,6 +264,56 @@ class TargetView(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    /**
+     * Match-score threshold for tolerant matching, written to the document (`tolerance:` on the
+     * main object): Exact keeps today's pixel-equality behaviour; lower presets accept
+     * rasterization drift (Normal) or bolder rendering differences (Loose). Re-locates live.
+     */
+    private fun ChildrenBuilder.renderToleranceControl() {
+        val effective = props.tolerance ?: TargetDocument.exactTolerance
+        val custom = tolerancePresets.none { it.second == effective }
+
+        div {
+            css {
+                display = Display.flex
+                alignItems = AlignItems.center
+                gap = 0.5.em
+                marginBottom = 0.25.em
+            }
+
+            span {
+                +"Tolerance:"
+            }
+
+            select {
+                value = effective.toString()
+                onChange = {
+                    val selected = it.currentTarget.value.toDoubleOrNull()
+                    if (selected != null && selected != effective) {
+                        props.onToleranceChange(selected)
+                    }
+                }
+
+                for ((label, presetValue) in tolerancePresets) {
+                    option {
+                        value = presetValue.toString()
+                        +label
+                    }
+                }
+
+                if (custom) {
+                    // A hand-edited threshold that isn't one of the presets
+                    option {
+                        value = effective.toString()
+                        +"Custom ($effective)"
+                    }
+                }
+            }
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     private fun ChildrenBuilder.renderOverlay() {
         val screenshotDataUrl = props.screenshotDataUrl
             ?: return
@@ -225,6 +325,10 @@ class TargetView(
                 position = Position.relative
                 marginTop = 0.5.em
             }
+
+            // The displayed screenshot can itself contain the target's pixels — never a match
+            // when a script automates the kzen-auto UI itself (see TargetLocator)
+            asDynamic()[TargetDocument.previewDataAttribute] = ""
 
             img {
                 css {
@@ -242,7 +346,7 @@ class TargetView(
                 for (resourcePath in props.resources.digests.keys) {
                     val colour = matchColour(cropIndex)
 
-                    for (match in locateResult.matchesByCrop[resourcePath].orEmpty()) {
+                    for (match in locateResult.matchesByCrop[resourcePath]?.matches.orEmpty()) {
                         div {
                             css {
                                 position = Position.absolute
@@ -254,6 +358,24 @@ class TargetView(
                                 // Outline (not border) so the ring sits outside the match
                                 // without covering its pixels
                                 outline = Outline(2.px, LineStyle.solid, Color(colour))
+                            }
+
+                            val annotation = matchAnnotation(match)
+                            if (annotation != null) {
+                                div {
+                                    css {
+                                        position = Position.absolute
+                                        bottom = 100.pct
+                                        left = (-2).px
+                                        padding = Padding(0.px, 2.px)
+                                        backgroundColor = Color(colour)
+                                        color = NamedColor.white
+                                        fontSize = 10.px
+                                        lineHeight = number(1.4)
+                                        whiteSpace = WhiteSpace.nowrap
+                                    }
+                                    +annotation
+                                }
                             }
                         }
                     }

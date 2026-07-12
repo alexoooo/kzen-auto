@@ -172,6 +172,32 @@ When adding a new document type, expect to:
 2. Add a `*Controller` in `kzen-auto-js/.../objects/document/<type>/`.
 3. Register the document type in the auto-generated module (regenerated, not hand-edited — see § 8).
 
+### Target — open target-type set
+
+The `target:` attribute on browser steps (`{type, value?, policy?, index?}`) is an **open set**:
+each target type registers three fragments, and no shared file mentions any concrete type.
+(1) An `is: TargetSpecType` notation object (common-action.yaml) declares the `type:` name it
+handles (`typeName:`) and its value shape (`valueKind: none | text | reference`) — the shared
+`TargetSpecDefiner` reads these straight from notation (a definer cannot take autowired
+instances: it is instantiated mid-definition, before other objects exist), while the object's
+`class:` (a `TargetSpecType` subclass) is autowired into `TargetSpecCreator` and instantiates
+the runtime `TargetSpec`. (2) Server-side, a `TargetTypeLocator` registered with the
+`TargetLocator` service (built-ins at construction; third parties via `register()`) resolves the
+spec to a `WebElement`. (3) Client-side, an `is: TargetTypeDisplay` object (script-js.yaml)
+contributes the type's dropdown label, value-editor row, and collapsed summary, autowired into
+the `TargetSpecEditor` / `TargetAttributeView` hosts. The `policy:` key (`unique` default —
+ambiguity fails loudly — or `first` / `nth` + `index` / `best`) is uniform across types and
+enforced by `TargetLocator.selectByPolicy`. The acceptance proof is
+`TargetExtensibilityTest` + the test-only `CssSelectorTarget`: a full type added with zero
+shared-code edits. This is the same contract Workers, Steps, and Flow vertices honour.
+
+Actuation is **browser-first**: every locator resolves against the Selenium driver, and desktop
+(`ScreenshotTaker` / AWT `Robot`) capture exists only as a capture-source convenience in the
+Target document screen — there are no desktop click/type steps. `ScreenshotTaker` is the future
+hook if desktop RPA becomes concrete; the locator SPI's driver-typed context is the seam to
+retype into a capture+actuation surface then (decision recorded 2026-07-12, target-improvements
+plan phase 7).
+
 ### `CustomDocument` — structured UI + raw-YAML escape hatch
 
 `CustomDocument` has two editing modes, toggled in the header (`DocumentViewMode.View | .Raw`, persisted via `CustomGlobal`). **View mode** (`CustomView` + `CustomCreate`) is a structured UI for prototype-driven object creation: `CustomConventions.listPrototypes(graphNotation)` discovers every object marked `is: Prototype` anywhere in the graph and exposes them in the `+ Add` dropdown. UI-created objects nest under `main.objects/<Name>` (`CustomConventions.objectsAttributePath`); the `main.logic` list is a separate selection of which objects participate in execution, toggleable per-object in the view. **Raw mode** (`DocumentRaw`) is a plain-text YAML editor — `<textarea>` with a synced line-number gutter (`YamlEditor` under `objects/document/common/edit/`), Ctrl/Cmd+S to Save — and enforces no nesting convention; any structure that parses is accepted. Comments and key order are **not** preserved across the parse → deparse round trip.
