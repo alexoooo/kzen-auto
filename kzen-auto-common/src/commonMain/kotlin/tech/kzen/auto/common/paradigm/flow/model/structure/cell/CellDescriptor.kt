@@ -63,7 +63,19 @@ data class EdgeDescriptor(
 //---------------------------------------------------------------------------------------------------------------------
 data class VertexDescriptor(
         val objectLocation: ObjectLocation,
+
+        /**
+         * All declared inputs (required and optional), in metadata order. Geometry is keyed to this:
+         * the vertex occupies one grid column per declared input, wired or not.
+         */
         val inputNames: List<AttributeName>,
+
+        /**
+         * The subset of [inputNames] declared as RequiredInput. An unwired required input keeps the
+         * vertex permanently not-ready (a structure lint finding); an unwired optional input doesn't.
+         */
+        val requiredInputNames: List<AttributeName>,
+
         override val indexInContainer: Int,
         override val coordinate: CellCoordinate
 ): CellDescriptor() {
@@ -71,6 +83,7 @@ data class VertexDescriptor(
         fun fromNotation(
                 indexInVertices: Int,
                 inputNames: List<AttributeName>,
+                requiredInputNames: List<AttributeName>,
                 objectLocation: ObjectLocation,
                 objectNotation: ObjectNotation
         ): VertexDescriptor {
@@ -79,6 +92,7 @@ data class VertexDescriptor(
             return VertexDescriptor(
                     objectLocation,
                     inputNames,
+                    requiredInputNames,
                     indexInVertices,
                     coordinate)
         }

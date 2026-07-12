@@ -29,6 +29,7 @@ import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.common.objects.document.flow.FlowConventions
+import tech.kzen.auto.common.objects.document.flow.FlowStructureValidator
 import tech.kzen.auto.common.objects.document.flow.FlowWiring
 import tech.kzen.auto.common.paradigm.flow.model.exec.VisualFlowModel
 import tech.kzen.auto.common.paradigm.flow.model.structure.FlowDag
@@ -318,6 +319,8 @@ class FlowController(
         val flowMatrix = FlowMatrix.cellDescriptorLayers(
             state.clientState!!.graphStructure(), verticesNotation, edgesNotation)
 
+        renderStructureFindings(flowMatrix)
+
         if (flowMatrix.isEmpty()) {
             div {
                 css {
@@ -349,6 +352,62 @@ class FlowController(
                     state.clientState!!,
                     visualFlowModel,
                     flowMatrix)
+            }
+        }
+    }
+
+
+    // The same pre-run structure lint FlowLogicCompiler refuses to compile on, surfaced the moment
+    // the mistake is made — a misplaced pipe otherwise silently rewires or disconnects the flow.
+    //
+    // NB: this container `div` is ALWAYS emitted (left empty when there are no findings) so the grid
+    //     rendered after it keeps a stable child index across finding toggles — mirrors
+    //     StageController.renderDefinitionErrors (see the remount rationale there).
+    private fun ChildrenBuilder.renderStructureFindings(flowMatrix: FlowMatrix) {
+        val documentPath = state.clientState?.navigationRoute?.documentPath
+        val graphNotation = state.clientState?.graphStructure()?.graphNotation
+
+        val findings =
+            if (documentPath == null || graphNotation == null) {
+                listOf()
+            }
+            else {
+                FlowStructureValidator.validate(
+                    ObjectLocation(documentPath, NotationConventions.mainObjectPath),
+                    graphNotation,
+                    flowMatrix)
+            }
+
+        div {
+            if (findings.isEmpty()) {
+                return@div
+            }
+
+            css {
+                margin = 1.em
+                padding = 0.5.em
+                color = NamedColor.red
+                borderWidth = 1.px
+                borderStyle = LineStyle.solid
+                borderColor = NamedColor.red
+                borderRadius = 4.px
+            }
+
+            div {
+                css {
+                    fontWeight = FontWeight.bold
+                }
+                +"This flow has a structure error and can't run until it's fixed"
+            }
+
+            for (finding in findings) {
+                div {
+                    key = Key(finding)
+                    css {
+                        marginTop = 0.25.em
+                    }
+                    +finding
+                }
             }
         }
     }

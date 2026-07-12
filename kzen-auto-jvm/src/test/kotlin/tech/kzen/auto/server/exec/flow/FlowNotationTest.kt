@@ -4,6 +4,7 @@ import kotlinx.coroutines.runBlocking
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.exec.LogicCompilerServices
 import tech.kzen.auto.server.util.AutoTestUtils
+import tech.kzen.lib.common.exec.engine.LogicFailure
 import tech.kzen.lib.common.exec.engine.NodeStatus
 import tech.kzen.lib.common.exec.engine.Outcome
 import tech.kzen.lib.common.exec.engine.PauseReason
@@ -18,7 +19,9 @@ import tech.kzen.lib.server.exec.engine.RunEngine
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
+import kotlin.test.assertTrue
 
 
 /**
@@ -91,6 +94,45 @@ class FlowNotationTest {
         finally {
             engine.close()
         }
+    }
+
+
+    @Test
+    fun appendTextRunsWithOnlyOptionalSuffixWired() {
+        // AppendText declares two OptionalInputs; only `suffix` is wired (the FlowInput sits above
+        // its column). Its "possibly one" contract holds: the vertex runs with `prefix` empty and
+        // emits the suffix text alone.
+        val outcome = runFlow("test/flow-optional-input-test.yaml", argument("x", "hello"))
+        assertEquals("hello", assertIs<Outcome.Success>(outcome).value.find(TupleComponentName("out")))
+    }
+
+
+    @Test
+    fun selectLastMergesWhicheverBranchProducedEachIteration() {
+        // Reduced FizzBuzz Flow Loop shape: SelectLast's two OptionalInputs are BOTH wired, but
+        // per iteration only one branch may produce (the filter drops odd values). An empty
+        // wired optional must not gate readiness — SelectLast runs every iteration with
+        // whichever branch produced (1 -> 1, 2 -> "Even", 3 -> 3; the loop keeps the last).
+        val outcome = runFlow("test/flow-select-last-test.yaml")
+        assertEquals(3, assertIs<Outcome.Success>(outcome).value.find(TupleComponentName("last")))
+    }
+
+
+    @Test
+    fun unwiredRequiredInputRefusesToCompile() {
+        val failure = assertFailsWith<LogicFailure> {
+            engineFor("test/flow-invalid-unwired-required-test.yaml")
+        }
+        assertTrue(failure.message!!.contains("Required input 'input' of 'FinvOutput'"))
+    }
+
+
+    @Test
+    fun duplicateParameterNameRefusesToCompile() {
+        val failure = assertFailsWith<LogicFailure> {
+            engineFor("test/flow-invalid-duplicate-parameter-test.yaml")
+        }
+        assertTrue(failure.message!!.contains("Duplicate input parameter name: 'x'"))
     }
 
 

@@ -5,6 +5,7 @@ import tech.kzen.auto.common.paradigm.flow.model.exec.VisualVertexModel
 import tech.kzen.auto.common.paradigm.flow.model.exec.VisualVertexPhase
 import tech.kzen.auto.common.paradigm.flow.model.structure.FlowDag
 import tech.kzen.auto.common.paradigm.flow.model.structure.FlowMatrix
+import tech.kzen.auto.common.paradigm.flow.model.structure.cell.VertexDescriptor
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -44,7 +45,7 @@ object FlowUtils {
             }
 
             if (firstLayerReady == -1 &&
-                    isLayerReady(layer, visualFlowModel, flowMatrix, flowDag)) {
+                    isLayerReady(layer, visualFlowModel, flowMatrix)) {
                 firstLayerReady = index
             }
         }
@@ -65,7 +66,6 @@ object FlowUtils {
         return nextInLayer(
                 nextLayer,
                 flowMatrix,
-                flowDag,
                 visualFlowModel)
     }
 
@@ -94,8 +94,7 @@ object FlowUtils {
     private fun isLayerReady(
             layer: List<ObjectLocation>,
             visualFlowModel: VisualFlowModel,
-            flowMatrix: FlowMatrix,
-            flowDag: FlowDag
+            flowMatrix: FlowMatrix
     ): Boolean {
         for (vertexLocation in layer) {
             val visualVertexModel = visualFlowModel.vertices[vertexLocation]
@@ -108,23 +107,7 @@ object FlowUtils {
             val vertexDescriptor = flowMatrix.verticesByLocation[vertexLocation]
                     ?: continue
 
-            val predecessors = flowDag.predecessors[vertexLocation]
-                    ?: listOf()
-
-            if (vertexDescriptor.inputNames.size != predecessors.size) {
-                // TODO: unify with nextInLayer
-                continue
-            }
-
-            if (predecessors.isEmpty()) {
-                return true
-            }
-
-            val hasInputsAvailable = predecessors
-                    .map { visualFlowModel.vertices[it] }
-                    .any { it?.message != null }
-
-            if (hasInputsAvailable) {
+            if (inputsReady(vertexDescriptor, flowMatrix, visualFlowModel)) {
                 return true
             }
         }
@@ -133,10 +116,49 @@ object FlowUtils {
     }
 
 
+    /**
+     * Per-input readiness, honouring the declared contract:
+     * - a required input must be wired (else the vertex is permanently not-ready — the structure
+     *   lint reports it before a run gets this far) and its upstream must hold a message;
+     * - an optional input never gates on its own, wired or not: layer order guarantees its
+     *   upstream has settled by the time this vertex's layer is considered, so an empty wired
+     *   optional means the upstream produced nothing this pass (e.g. a filter dropping the
+     *   value) and the vertex runs without it — the FizzBuzz SelectLast pattern;
+     * - at least one wired input must hold a message (with nothing to consume the vertex isn't
+     *   ready); vertices with no inputs (sources) are always ready.
+     */
+    private fun inputsReady(
+            vertexDescriptor: VertexDescriptor,
+            flowMatrix: FlowMatrix,
+            visualFlowModel: VisualFlowModel
+    ): Boolean {
+        var anyMessage = false
+
+        for (inputName in vertexDescriptor.inputNames) {
+            val wiredPredecessor = flowMatrix.traceVertexBackFrom(vertexDescriptor, inputName)
+
+            if (wiredPredecessor == null) {
+                if (inputName in vertexDescriptor.requiredInputNames) {
+                    return false
+                }
+                continue
+            }
+
+            if (visualFlowModel.vertices[wiredPredecessor.objectLocation]?.message != null) {
+                anyMessage = true
+            }
+            else if (inputName in vertexDescriptor.requiredInputNames) {
+                return false
+            }
+        }
+
+        return anyMessage || vertexDescriptor.inputNames.isEmpty()
+    }
+
+
     private fun nextInLayer(
             layer: List<ObjectLocation>,
             flowMatrix: FlowMatrix,
-            flowDag: FlowDag,
             visualFlowModel: VisualFlowModel
     ): ObjectLocation? {
         if (layer.isEmpty()) {
@@ -149,7 +171,6 @@ object FlowUtils {
         var minEpoch = Int.MAX_VALUE
         var candidate: ObjectLocation? = null
 
-        nextVertex@
         for (vertexLocation in layer) {
             val visualVertexModel = visualFlowModel.vertices[vertexLocation]
                     ?: VisualVertexModel.empty
@@ -165,21 +186,11 @@ object FlowUtils {
                 continue
             }
 
-            val predecessors = flowDag.predecessors[vertexLocation]
-                    ?: listOf()
-
             val vertexDescriptor = flowMatrix.verticesByLocation[vertexLocation]
                     ?: continue
 
-            if (vertexDescriptor.inputNames.size != predecessors.size) {
-                // TODO: consider handling optional OptionalInput
+            if (! inputsReady(vertexDescriptor, flowMatrix, visualFlowModel)) {
                 continue
-            }
-
-            for (predecessor in predecessors) {
-                if (visualFlowModel.vertices[predecessor]?.message == null) {
-                    continue@nextVertex
-                }
             }
 
             minEpoch = visualVertexModel.epoch

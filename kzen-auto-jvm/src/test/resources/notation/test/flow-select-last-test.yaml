@@ -1,0 +1,54 @@
+# Reduced "FizzBuzz Flow Loop" shape: the source fans out into a steady branch (straight down
+# column 0) and a filter branch that only produces on even values; SelectLast (two wired
+# OptionalInputs) merges whichever branch produced each iteration.
+main:
+  is: Flow
+  vertices:
+  - FselSource
+  - FselFilter
+  - FselReplace
+  - FselSelect
+  - FselResult
+  edges:
+  - orientation: TopToBottomAndRight
+    row: 1
+    column: 0
+  - orientation: LeftToBottom
+    row: 1
+    column: 1
+  - orientation: TopToBottom
+    row: 2
+    column: 0
+  - orientation: TopToBottom
+    row: 3
+    column: 0
+
+FselSource:
+  is: IntRangeSource
+  from: 1
+  to: 3
+  row: 0
+  column: 0
+
+FselFilter:
+  is: DivisibleFilter
+  divisor: 2
+  row: 2
+  column: 1
+
+FselReplace:
+  is: ReplaceProcessor
+  replacement: "Even"
+  row: 3
+  column: 1
+
+FselSelect:
+  is: SelectLast
+  row: 4
+  column: 0
+
+FselResult:
+  is: FlowOutput
+  result: "last"
+  row: 5
+  column: 0

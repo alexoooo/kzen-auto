@@ -1,0 +1,26 @@
+main:
+  is: Flow
+  vertices:
+  - FoptInput
+  - FoptAppend
+  - FoptOutput
+  edges: []
+
+# Feeds AppendText's second input only: `suffix` sits at column 1 (one column per declared input,
+# `prefix` at 0), so the input above column 1 wires it while `prefix` stays optional-and-open.
+FoptInput:
+  is: FlowInput
+  parameter: "x"
+  row: 0
+  column: 1
+
+FoptAppend:
+  is: AppendText
+  row: 1
+  column: 0
+
+FoptOutput:
+  is: FlowOutput
+  result: "out"
+  row: 2
+  column: 0

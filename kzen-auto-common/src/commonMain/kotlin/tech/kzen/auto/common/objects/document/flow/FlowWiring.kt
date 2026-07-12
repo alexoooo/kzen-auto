@@ -39,9 +39,39 @@ class FlowWiring: AttributeDefiner {
         }
 
 
+        fun isRequiredInput(attributeMetadataMap: MapAttributeNotation): Boolean {
+            val isSegment = attributeMetadataMap[NotationConventions.isAttributeSegment]
+                as? ScalarAttributeNotation
+                ?: return false
+
+            return isSegment.value == requiredInputName.value
+        }
+
+
         fun findInputs(
             vertexLocation: ObjectLocation,
             graphStructure: GraphStructure
+        ): List<AttributeName> {
+            return findInputs(vertexLocation, graphStructure) {
+                isInput(it)
+            }
+        }
+
+
+        fun findRequiredInputs(
+            vertexLocation: ObjectLocation,
+            graphStructure: GraphStructure
+        ): List<AttributeName> {
+            return findInputs(vertexLocation, graphStructure) {
+                isRequiredInput(it)
+            }
+        }
+
+
+        private fun findInputs(
+            vertexLocation: ObjectLocation,
+            graphStructure: GraphStructure,
+            predicate: (MapAttributeNotation) -> Boolean
         ): List<AttributeName> {
             val cellMetadata = graphStructure.graphMetadata.objectMetadata[vertexLocation]!!
 
@@ -49,7 +79,7 @@ class FlowWiring: AttributeDefiner {
                 .attributes
                 .map
                 .filter {
-                    isInput(it.value.attributeMetadataNotation)
+                    predicate(it.value.attributeMetadataNotation)
                 }
                 .map {
                     it.key
@@ -116,7 +146,8 @@ class FlowWiring: AttributeDefiner {
 
 
             else ->
-                TODO("Unknown: $attributeClass")
+                return AttributeDefinitionAttempt.failure(
+                    "Unknown flow channel type '$attributeClass': $objectLocation - $attributeName")
         }
 
         return AttributeDefinitionAttempt.success(

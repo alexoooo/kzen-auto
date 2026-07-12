@@ -1,0 +1,13 @@
+# Structurally invalid on purpose: the FlowOutput's required `input` has no wired predecessor.
+# FlowNotationTest asserts FlowLogicCompiler refuses to compile it with the lint finding.
+main:
+  is: Flow
+  vertices:
+  - FinvOutput
+  edges: []
+
+FinvOutput:
+  is: FlowOutput
+  result: "out"
+  row: 0
+  column: 0

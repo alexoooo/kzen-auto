@@ -81,10 +81,12 @@ data class FlowMatrix(
                 val objectNotation = graphStructure.graphNotation.coalesce[objectLocation]!!
 
                 val inputNames = FlowWiring.findInputs(objectLocation, graphStructure)
+                val requiredInputNames = FlowWiring.findRequiredInputs(objectLocation, graphStructure)
 
                 VertexDescriptor.fromNotation(
                         it.index,
                         inputNames,
+                        requiredInputNames,
                         objectLocation,
                         objectNotation)
             }

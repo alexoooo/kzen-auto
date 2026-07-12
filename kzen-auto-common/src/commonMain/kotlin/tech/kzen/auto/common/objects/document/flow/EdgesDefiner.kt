@@ -39,13 +39,21 @@ class EdgesDefiner: AttributeDefiner {
             .values
             .withIndex()
             .map {
-                EdgeDescriptor.fromNotation(
-                    it.index,
-                    it.value as MapAttributeNotation
-                )
-            }
-            .map {
-                ValueAttributeDefinition(it)
+                val edgeDescriptor =
+                    try {
+                        EdgeDescriptor.fromNotation(
+                            it.index,
+                            it.value as? MapAttributeNotation
+                                ?: throw IllegalArgumentException("Edge must be a map: ${it.value}"))
+                    }
+                    catch (e: IllegalArgumentException) {
+                        // Malformed notation (bad/missing orientation or row/column) fails the
+                        // definition with a message instead of crashing it.
+                        return AttributeDefinitionAttempt.failure(
+                            "Malformed edge ${it.index} in $objectLocation: ${e.message}")
+                    }
+
+                ValueAttributeDefinition(edgeDescriptor)
             }
 
         return AttributeDefinitionAttempt.success(

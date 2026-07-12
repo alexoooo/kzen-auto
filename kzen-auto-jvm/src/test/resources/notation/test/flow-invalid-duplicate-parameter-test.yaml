@@ -1,0 +1,20 @@
+# Structurally invalid on purpose: two FlowInput vertices claim the same `parameter` name.
+# FlowNotationTest asserts FlowLogicCompiler refuses to compile it with the lint finding.
+main:
+  is: Flow
+  vertices:
+  - FdupAlpha
+  - FdupBeta
+  edges: []
+
+FdupAlpha:
+  is: FlowInput
+  parameter: "x"
+  row: 0
+  column: 0
+
+FdupBeta:
+  is: FlowInput
+  parameter: "x"
+  row: 0
+  column: 1
