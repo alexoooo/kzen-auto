@@ -31,7 +31,9 @@ class TargetSpecCreator: AttributeCreator {
         val typeDefinition =
             attributeDefinition[TargetSpecDefiner.typeKey] as ValueAttributeDefinition
         val typeName = typeDefinition.value as String
-        val targetType = TargetType.valueOf(typeName)
+        val targetType = TargetType.entries.find { it.name == typeName }
+            ?: throw IllegalArgumentException(
+                "Unknown target type: $typeName - $objectLocation - $attributeName")
 
         val valueDefinition =
             attributeDefinition[TargetSpecDefiner.valueKey]

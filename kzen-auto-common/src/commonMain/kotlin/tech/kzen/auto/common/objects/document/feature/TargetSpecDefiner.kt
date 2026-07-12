@@ -47,8 +47,9 @@ class TargetSpecDefiner: AttributeDefiner {
                 ?: return AttributeDefinitionAttempt.failure(
                         "Target 'type' not found: $objectLocation")
 
-        @Suppress("MoveVariableDeclarationIntoWhen")
-        val targetType = TargetType.valueOf(typeName)
+        val targetType = TargetType.entries.find { it.name == typeName }
+                ?: return AttributeDefinitionAttempt.failure(
+                        "Unknown target 'type': $typeName - $objectLocation")
 
         val valueDefinition = when (targetType) {
             TargetType.Focus ->

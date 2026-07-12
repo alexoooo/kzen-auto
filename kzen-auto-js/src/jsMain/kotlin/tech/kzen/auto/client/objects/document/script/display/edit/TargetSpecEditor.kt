@@ -116,7 +116,7 @@ class TargetSpecEditor(
         val targetType = attributeNotation
             .get(TargetSpecDefiner.typeKey)
             ?.asString()
-            ?.let { TargetType.valueOf(it) }
+            ?.let { name -> TargetType.entries.find { it.name == name } }
             ?: return
 
         setState {
@@ -190,7 +190,12 @@ class TargetSpecEditor(
         }
 
         if (state.targetType != prevState.targetType) {
-            editAttributeCommandAsync()
+            // Only Focus is complete without a value. For the other types, upserting {type} alone
+            // would fail the document definition (blocking the run ribbon) until the value is
+            // typed — hold the write until the value edit below carries both segments.
+            if (state.targetType == TargetType.Focus) {
+                editAttributeCommandAsync()
+            }
         }
         else if (state.targetText != prevState.targetText) {
             submitDebounce.apply()
@@ -295,6 +300,10 @@ class TargetSpecEditor(
 
 
     private fun onTypeChange(newType: TargetType) {
+        // A pending debounced text write would fire after the value fields are cleared, emitting
+        // a value-less target map; the pre-switch text (if any) was already committed by onBlur.
+        submitDebounce.cancel()
+
         setState {
             targetType = newType
             targetText = null

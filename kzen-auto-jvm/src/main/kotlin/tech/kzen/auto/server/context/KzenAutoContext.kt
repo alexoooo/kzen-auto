@@ -33,6 +33,7 @@ import tech.kzen.auto.server.service.storage.JobOutputStorageArea
 import tech.kzen.auto.server.service.storage.ManagedStorageRegistry
 import tech.kzen.auto.server.service.storage.ReportStorageArea
 import tech.kzen.auto.server.service.storage.StorageLruEvictor
+import tech.kzen.auto.server.service.vision.VisionService
 import tech.kzen.auto.server.util.WorkUtils
 import tech.kzen.lib.common.codegen.KzenLibCommonModule
 import tech.kzen.lib.common.service.context.GraphCreator
@@ -110,6 +111,8 @@ class KzenAutoContext(
 
     val notationMedia: NotationMedia = ReadWriteNotationMedia(
         fileMedia, readOnlyMedia)
+
+    val visionService = VisionService(notationMedia)
 
     private val notationParser: NotationParser = YamlNotationParser()
 
@@ -205,6 +208,7 @@ class KzenAutoContext(
             .put(ClassName(ObjectStableMapper::class.qualifiedName!!), objectStableMapper)
             .put(ClassName(CachedKotlinCompiler::class.qualifiedName!!), cachedKotlinCompiler)
             .put(ClassName(NotationMedia::class.qualifiedName!!), notationMedia)
+            .put(ClassName(VisionService::class.qualifiedName!!), visionService)
             .put(ClassName(NotationMetadataReader::class.qualifiedName!!), notationMetadataReader)
             .put(ClassName(LocalGraphStore::class.qualifiedName!!), graphStore)
             .put(ClassName(LogicTraceStore::class.qualifiedName!!), logicTraceStore)

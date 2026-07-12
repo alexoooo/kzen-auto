@@ -1,0 +1,19 @@
+main:
+  is: Script
+
+main.steps/Open browser:
+  is: BrowserOpenStep
+
+main.steps/Browse to URL:
+  is: BrowserGetStep
+  location: "http://localhost:8080/index.html#main/Script.yaml"
+  screenshotDelayMilliseconds: 3000
+
+main.steps/Click:
+  is: BrowserClickStep
+  target:
+    type: Visual
+    value: "main/Action Target/~main.yaml#main"
+
+main.steps/Close browser:
+  is: BrowserCloseStep

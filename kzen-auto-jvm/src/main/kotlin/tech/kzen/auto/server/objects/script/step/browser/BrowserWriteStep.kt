@@ -9,13 +9,12 @@ import tech.kzen.auto.server.objects.script.api.ScriptStep
 import tech.kzen.auto.server.objects.script.api.ScriptStepDefinition
 import tech.kzen.auto.server.objects.script.api.StepExecution
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
-import tech.kzen.auto.server.service.vision.VisionUtils
+import tech.kzen.auto.server.service.vision.VisionService
 import tech.kzen.auto.server.service.webdriver.WebDriverSupport
 import tech.kzen.lib.common.exec.BinaryExecutionValue
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
-import tech.kzen.lib.common.service.media.NotationMedia
 
 
 @Reflect
@@ -24,7 +23,7 @@ class BrowserWriteStep(
     private val target: TargetSpec,
     private val overwrite: Boolean,
     @Suppress("unused") selfLocation: ObjectLocation,
-    @Service private val notationMedia: NotationMedia
+    @Service private val visionService: VisionService
 ):
     ScriptStep
 {
@@ -38,7 +37,7 @@ class BrowserWriteStep(
         val driver = execution.resource(WebDriverSupport.resourceKey) as? RemoteWebDriver
             ?: error("Browser is not open")
 
-        val match = VisionUtils.locateElement(target, driver, notationMedia)
+        val match = visionService.locateElement(target, driver)
         match.error?.let {
             error(it)
         }
