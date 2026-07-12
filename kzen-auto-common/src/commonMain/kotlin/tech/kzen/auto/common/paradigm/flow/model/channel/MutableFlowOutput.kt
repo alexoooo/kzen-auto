@@ -34,6 +34,15 @@ class MutableFlowOutput<T>:
     }
 
 
+    // Reset the injected channel to its pristine state. A vertex instance lives for the whole run, so the
+    // runner calls this before each process(): a process() that set() an item then threw would otherwise
+    // leave it buffered to re-emit on pause-on-error resume.
+    fun clear() {
+        buffer.clear()
+        streamHasNext = false
+    }
+
+
     fun bufferIsEmpty(): Boolean {
         return buffer.isEmpty()
     }

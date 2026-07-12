@@ -1,0 +1,21 @@
+# IntRangeSource 1..3 streams straight down into an AccumulateSink (vertically adjacent, so no explicit
+# pipe needed). After the run the sink's traced state must hold the full accumulation ["1","2","3"] —
+# proving the run-end force-flush re-emits the final frame that trace throttling would otherwise drop.
+main:
+  is: Flow
+  vertices:
+  - FaccSource
+  - FaccSink
+  edges: []
+
+FaccSource:
+  is: IntRangeSource
+  from: 1
+  to: 3
+  row: 0
+  column: 0
+
+FaccSink:
+  is: AccumulateSink
+  row: 1
+  column: 0

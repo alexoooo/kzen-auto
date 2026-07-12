@@ -1,0 +1,28 @@
+# A 1..2000 stream through a 3-vertex chain (source -> processor -> sink, all vertically adjacent) must
+# finish well under a loose wall-clock bound: the run builds its graph once, so cost stays linear in the
+# item count rather than paying a graph build per vertex execution.
+main:
+  is: Flow
+  vertices:
+  - FbenchSource
+  - FbenchReplace
+  - FbenchSink
+  edges: []
+
+FbenchSource:
+  is: IntRangeSource
+  from: 1
+  to: 2000
+  row: 0
+  column: 0
+
+FbenchReplace:
+  is: ReplaceProcessor
+  replacement: "x"
+  row: 1
+  column: 0
+
+FbenchSink:
+  is: AccumulateSink
+  row: 2
+  column: 0

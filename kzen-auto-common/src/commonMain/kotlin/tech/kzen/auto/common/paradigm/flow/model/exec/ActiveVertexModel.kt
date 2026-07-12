@@ -6,7 +6,7 @@ class ActiveVertexModel(
         var message: Any?,
         val remainingBatch: MutableList<Any>,
         var streamHasNext: Boolean,
-        var epoch: Long,
+        var epoch: Int,
 
         // TODO: factor out to be visual-only for performance?
         var error: String?

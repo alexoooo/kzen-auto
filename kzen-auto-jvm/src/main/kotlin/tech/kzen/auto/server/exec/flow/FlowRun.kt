@@ -24,6 +24,7 @@ import tech.kzen.lib.common.exec.tuple.TupleComponentValue
 import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.document.DocumentPath
+import tech.kzen.lib.common.model.instance.GraphInstance
 import tech.kzen.lib.common.model.instance.ObjectInstance
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.service.context.GraphCreator
@@ -35,17 +36,14 @@ import tech.kzen.lib.platform.collect.toPersistentMap
 
 
 /**
- * One run of a [FlowLogic]'s dataflow DAG on the new engine: the coroutine-shaped successor to
- * [tech.kzen.auto.server.objects.flow.FlowExecution]'s re-entrant `continueOrStart`. Position lives on this
- * coroutine's stack, so a vertex is a step boundary ([Execution.checkpoint] before running it) and the engine
- * drives pause / step / cancel centrally — there is no pollCommand / budget / depth arithmetic, and a
- * [RunLogicVertex] is just [Execution.host] (no [tech.kzen.auto.server.objects.flow.FlowExecution] `pausedChildren`
- * cache: the suspension is held on the host call's frame).
+ * One run of a [FlowLogic]'s dataflow DAG on the engine. Position lives on this coroutine's stack, so a vertex
+ * is a step boundary ([Execution.checkpoint] before running it) and the engine drives pause / step / cancel
+ * centrally; a [RunLogicVertex] is hosted via [Execution.host], its suspension held on the host call's frame.
  *
- * The per-vertex mechanics (input population, batch/stream draining, loop-iteration clearing, and the
- * [VisualVertexModel] tracing the client rebuilds its visual model from) are ported from [FlowExecution]; the
- * trace is emitted with [Execution.emit] at the vertex's stable-id address, which the controller's trace bridge
- * routes back to the same per-vertex trace path the old store used.
+ * Per vertex: inputs are populated from upstream messages, batch/stream output is drained across iterations, a
+ * loop iteration is cleared to re-run downstream, and a [VisualVertexModel] is emitted with [Execution.emit] at
+ * the vertex's stable-id address for the client to rebuild its visual model from (the controller's trace bridge
+ * routes that address to the per-vertex trace path).
  *
  * Pause-on-error (logic-spec §4) is wired via [Execution.recoverable] around each vertex: a vertex failure is
  * rendered (error + trace) and, when pause-on-error is enabled, parks the vertex Suspended(Error) for fix +
@@ -54,9 +52,7 @@ import tech.kzen.lib.platform.collect.toPersistentMap
  * Live-edit migration (logic-spec §5): the per-vertex progress ([activeVertices]) and harvested output
  * ([outputAccumulator]) are carried across a pause -> edit -> resume by the Flow root node's
  * [Execution.onCapture] / [Execution.restored] as a [FlowMigrationState] (keyed by stable id), so the rebuilt
- * run continues from the live frontier instead of restarting — the clean-room successor to the way the retired
- * [tech.kzen.auto.server.objects.flow.FlowExecution] kept these same stable-id-keyed fields alive across
- * `continueOrStart` re-entries.
+ * run continues from the live frontier instead of restarting.
  */
 class FlowRun(
     private val execution: Execution,
@@ -68,9 +64,27 @@ class FlowRun(
     private val graphEnvironment: GraphEnvironment
 ) {
     //-----------------------------------------------------------------------------------------------------------------
+    private companion object {
+        // A checkpoint that took longer than this to return means the engine paused/stepped at it — always
+        // trace those (stepping fidelity). Below it we are free-running, so per-vertex traces are throttled.
+        const val steppingGapNanos = 50_000_000L      // 50 ms
+
+        // During free-running, emit at most one trace per vertex per this window.
+        const val traceThrottleNanos = 100_000_000L   // 100 ms
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     // Per-vertex runtime, keyed by stable id so it survives renames; output vertices' harvested values.
     private val activeVertices = mutableMapOf<ObjectStableId, ActiveVertexModel>()
     private val outputAccumulator = mutableMapOf<TupleComponentName, Any?>()
+
+    // Wall-clock nanos of each vertex's last emitted trace, for throttling hot free-running loops.
+    private val lastTraceNanos = mutableMapOf<ObjectStableId, Long>()
+
+    // The run's single graph instance — built once in run() and reused for every vertex execution and
+    // retrace (a live edit builds a fresh FlowRun, so it stays valid for this run's whole lifetime).
+    private lateinit var runInstance: GraphInstance
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -94,6 +108,13 @@ class FlowRun(
             catch (e: Exception) {
                 throw LogicFailure("Flow structure error: ${ExceptionUtils.message(e)}")
             }
+
+        // graphDefinition is immutable for a FlowRun's life (a live edit builds a new FlowRun via
+        // migration), so one graph build serves every vertex execution and retrace for the whole run.
+        runInstance = GraphCreator.createGraph(
+            graphDefinition.filterTransitive(documentPath), graphEnvironment)
+
+        var lastCheckpointReturn: Long? = null
 
         while (true) {
             var next = FlowUtils.next(matrix, dag, snapshotVisual(matrix))
@@ -119,11 +140,19 @@ class FlowRun(
             // here (the engine drives stepping by depth; the client highlights FlowUtils.next as "next").
             execution.checkpoint()
 
+            // The engine only suspends checkpoint() while paused/stepping, so a large gap since the last
+            // return is the observable proxy for "the user is stepping" — always trace those (fidelity),
+            // and throttle the µs-apart free-running executions below.
+            val checkpointReturn = System.nanoTime()
+            val pausedOrStepping =
+                lastCheckpointReturn?.let { checkpointReturn - it >= steppingGapNanos } ?: true
+            lastCheckpointReturn = checkpointReturn
+
             val nextStableId = stableId(next)
-            val instance = createInstance(next)
+            val instance = instanceFor(next)
             seedIfAbsent(nextStableId, instance)
 
-            traceVertex(nextStableId, instance, running = true)
+            traceVertex(nextStableId, instance, running = true, force = pausedOrStepping)
 
             val reference = instance.reference
 
@@ -131,7 +160,7 @@ class FlowRun(
             // Step Into descends into it; Step Over / Step Out / Run run it to completion.
             if (reference is RunLogicVertex) {
                 runChildVertex(next, nextStableId, instance, matrix)
-                traceVertex(nextStableId, instance, running = false)
+                traceVertex(nextStableId, instance, running = false, force = pausedOrStepping)
                 continue
             }
 
@@ -140,12 +169,12 @@ class FlowRun(
             // if off, the failure propagates and the run fails.
             execution.recoverable({ t ->
                 activeVertices[nextStableId]?.error = ExceptionUtils.message(t)
-                traceVertex(nextStableId, instance, running = false)
+                traceVertex(nextStableId, instance, running = false, force = true)
             }) {
                 runOneVertex(next, nextStableId, instance, matrix)
             }
 
-            traceVertex(nextStableId, instance, running = false)
+            traceVertex(nextStableId, instance, running = false, force = pausedOrStepping)
 
             if (reference is FlowOutputVertex) {
                 outputAccumulator[reference.tupleComponentName] = activeVertices[nextStableId]?.message
@@ -184,7 +213,7 @@ class FlowRun(
         // failure, then park Error (fix + resume re-hosts) or propagate. A child cancel always propagates.
         val result = execution.recoverable({ t ->
             activeVertexModel.error = ExceptionUtils.message(t)
-            traceVertex(stableId, instance, running = false)
+            traceVertex(stableId, instance, running = false, force = true)
         }) {
             execution.host(childLogic.childStableId, childLogic.logic, inputs)
         }
@@ -244,6 +273,10 @@ class FlowRun(
         val flowVertex = reference as FlowVertex<Any?>
 
         populateInputs(instance, vertexLocation, matrix)
+
+        // The instance's output channel is shared across this vertex's executions, so reset it before
+        // running: a process() that emitted then threw would otherwise leave a stale item to re-emit.
+        (instance.constructorAttributes[FlowUtils.mainOutputAttributeName] as? MutableFlowOutput<*>)?.clear()
 
         val nextState =
             when {
@@ -326,7 +359,7 @@ class FlowRun(
     /**
      * Start the next loop iteration when a source still has buffered stream/batch items: clear the messages on
      * the last layer that still hasNext (so it re-emits) and reset epochs on the layers below it (so they
-     * re-run). Ported from [tech.kzen.auto.server.objects.flow.FlowExecution.clearIterationForLoop].
+     * re-run).
      */
     private fun clearIterationForLoop(dag: FlowDag) {
         val lastRowWithNext = dag.layers.indexOfLast { layer ->
@@ -369,39 +402,32 @@ class FlowRun(
 
     /**
      * The run is complete: clear every lingering in-flight message but keep each vertex's state (e.g. an
-     * accumulating sink's list) and epoch, then re-trace so the client drops the last item's message envelopes
-     * and ingress highlighting while displayed results stay. Ported from
-     * [tech.kzen.auto.server.objects.flow.FlowExecution.clearMessagesAtEnd].
+     * accumulating sink's list) and epoch, then force a final trace for EVERY vertex — so throttling during
+     * free-running can't leave any card on a stale intermediate frame, and the client drops the last item's
+     * message envelopes and ingress highlighting while displayed results stay.
      */
     private fun clearMessagesAtEnd(matrix: FlowMatrix) {
-        val toRetrace = mutableListOf<Pair<ObjectLocation, ObjectStableId>>()
         for (vertexLocation in matrix.verticesByLocation.keys) {
             val vertexStableId = stableId(vertexLocation)
             val model = activeVertices[vertexStableId]
                 ?: continue
-            if (model.message != null) {
-                model.message = null
-                toRetrace.add(vertexLocation to vertexStableId)
-            }
+            model.message = null
+            val instance = runInstance[vertexLocation]
+                ?: continue
+            traceVertex(vertexStableId, instance, running = false, force = true)
         }
-
-        retrace(toRetrace)
     }
 
 
     // Re-record the trace of each given vertex from its (already mutated) in-memory model, so the client
-    // repaints the change without losing the vertex's displayed state. One graph build per call suffices.
+    // repaints the change without losing the vertex's displayed state. Left throttled (force = false): a
+    // loop boundary that force-re-serialized a reset downstream accumulator every iteration would undo the
+    // trace bounding — during stepping the wall-clock throttle still lets these through (last emit was long ago).
     private fun retrace(toRetrace: List<Pair<ObjectLocation, ObjectStableId>>) {
-        if (toRetrace.isEmpty()) {
-            return
-        }
-
-        val graphInstance = GraphCreator.createGraph(
-            graphDefinition.filterTransitive(documentPath), graphEnvironment)
         for ((vertexLocation, vertexStableId) in toRetrace) {
-            val instance = graphInstance[vertexLocation]
+            val instance = runInstance[vertexLocation]
                 ?: continue
-            traceVertex(vertexStableId, instance, running = false)
+            traceVertex(vertexStableId, instance, running = false, force = false)
         }
     }
 
@@ -431,12 +457,11 @@ class FlowRun(
     }
 
 
-    private fun createInstance(vertexLocation: ObjectLocation): ObjectInstance {
-        // A fresh instance per execution gives clean injected channels (MutableInput / output buffer); the
-        // persistent runtime lives in the ActiveVertexModel, not the instance.
-        val graphInstance = GraphCreator.createGraph(
-            graphDefinition.filterTransitive(documentPath), graphEnvironment)
-        return graphInstance[vertexLocation]
+    // The vertex's instance from the run's single graph build. Its injected channels are reset by the runner
+    // (inputs via populateInputs' set-or-clear, output via MutableFlowOutput.clear before process); the
+    // persistent runtime lives in the ActiveVertexModel, not the instance.
+    private fun instanceFor(vertexLocation: ObjectLocation): ObjectInstance {
+        return runInstance[vertexLocation]
             ?: throw IllegalStateException("Vertex not found: $vertexLocation")
     }
 
@@ -459,7 +484,7 @@ class FlowRun(
                         null,
                         if (model.message != null) NullExecutionValue else null,
                         model.hasNext(),
-                        model.epoch.toInt(),
+                        model.epoch,
                         model.error)
                 }
         }
@@ -470,18 +495,43 @@ class FlowRun(
     private fun traceVertex(
         stableId: ObjectStableId,
         instance: ObjectInstance,
-        running: Boolean
+        running: Boolean,
+        force: Boolean
     ) {
         val model = activeVertices[stableId]
             ?: return
 
-        val stateValue = model.state?.let {
-            @Suppress("UNCHECKED_CAST")
-            (instance.reference as FlowVertex<Any>).inspectState(it)
+        // Throttle hot free-running loops: skip the (potentially expensive) inspect + emit unless forced
+        // (stepping / error / final flush) or this vertex hasn't emitted within the throttle window. The
+        // gate is checked BEFORE inspectState so an accumulating sink's O(state) serialization is skipped.
+        val now = System.nanoTime()
+        if (!force) {
+            val last = lastTraceNanos[stableId]
+            if (last != null && now - last < traceThrottleNanos) {
+                return
+            }
+        }
+        lastTraceNanos[stableId] = now
+
+        // Inspection is non-fatal (a trace must never fail a run the vertex itself survived): fall back to a
+        // truncated toString if inspectState / inspectMessage throws.
+        val stateValue = model.state?.let { state ->
+            try {
+                @Suppress("UNCHECKED_CAST")
+                (instance.reference as FlowVertex<Any>).inspectState(state)
+            }
+            catch (e: Exception) {
+                FlowMessageInspector.truncatedToString(state)
+            }
         }
 
-        val messageValue = model.message?.let {
-            flowMessageInspector.inspectMessage(it)
+        val messageValue = model.message?.let { message ->
+            try {
+                flowMessageInspector.inspectMessage(message)
+            }
+            catch (e: Exception) {
+                FlowMessageInspector.truncatedToString(message)
+            }
         }
 
         val visualVertexModel = VisualVertexModel(
@@ -489,7 +539,7 @@ class FlowRun(
             stateValue,
             messageValue,
             model.hasNext(),
-            model.epoch.toInt(),
+            model.epoch,
             model.error)
 
         // The vertex's stable id is the emit address; the controller's trace bridge routes it to the per-vertex
