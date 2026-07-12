@@ -128,4 +128,13 @@ object CommonRestApi {
     // Served by the JVM backend from a bundled collection resource; the JS bundle holds no icon data.
     const val iconCollectionPrefix = "/icon/"
     const val paramIcons = "icons"
+
+    // storage management (server-owned disk areas): summary of all areas, bundle listing per area,
+    // per-bundle delete (responds with an error message, or empty on success)
+    private const val storagePrefix = "/storage/"
+    const val storageSummary = "${storagePrefix}summary"
+    const val storageBundleList = "${storagePrefix}bundles"
+    const val storageBundleDelete = "${storagePrefix}delete"
+    const val paramStorageArea = "area"
+    const val paramStorageBundle = "bundle"
 }

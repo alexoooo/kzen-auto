@@ -3,12 +3,18 @@ package tech.kzen.auto.server.service.compile
 import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
 import com.google.common.util.concurrent.Striped
-import tech.kzen.auto.server.objects.report.service.ReportWorkPool
+import tech.kzen.auto.server.service.storage.DirectoryStorageArea
+import tech.kzen.auto.server.service.storage.ManagedStorageArea
+import tech.kzen.auto.server.service.storage.StorageLruEvictor
 import tech.kzen.auto.server.util.WorkUtils
 import java.net.URLClassLoader
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.attribute.FileTime
+import java.time.Instant
 import java.time.LocalDateTime
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.jar.JarFile
 
 
 class CachedKotlinCompiler(
@@ -19,7 +25,7 @@ class CachedKotlinCompiler(
     companion object {
         private const val codeCacheDir = "code-cache"
         private const val jarExtension = ".jar"
-//        private const val sourceExtension = ".kt"
+        private const val classFileExtension = ".class"
         private const val errorFile = "err.txt"
         private const val successFile = "success.txt"
 
@@ -34,6 +40,24 @@ class CachedKotlinCompiler(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    // Pairs a loaded main class with the URLClassLoader owning its jar file handle, so eviction and deletion
+    // can release the handle (a held handle blocks jar deletion on Windows). Close is idempotent: both the
+    // synchronous delete path and Caffeine's async removal listener call it.
+    private class LoadedCode(
+        val clazz: Class<out Any>,
+        private val loader: URLClassLoader
+    ) {
+        private val closed = AtomicBoolean()
+
+        fun close() {
+            if (closed.compareAndSet(false, true)) {
+                loader.close()
+            }
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     private val cacheDir = workUtils.resolve(codeCacheDir)
 
     // Hot loaded expression classes, keyed by content signature (className + source digest, so an entry can
@@ -41,16 +65,20 @@ class CachedKotlinCompiler(
     // Each retained Class pins its own URLClassLoader in Metaspace, so this is a bounded (size-capped) cache
     // rather than an unbounded map: a long-lived process compiles far more distinct expressions over its
     // lifetime than are live at once, and an evicted entry is transparently rebuilt from the durable on-disk
-    // jar on next request.
-    private val loadedClasses: Cache<String, Class<out Any>> = Caffeine.newBuilder()
+    // jar on next request. Removal closes the loader, releasing the jar file handle.
+    private val loadedClasses: Cache<String, LoadedCode> = Caffeine.newBuilder()
         .maximumSize(loadedClassCacheSize)
+        .removalListener<String, LoadedCode> { _, value, _ -> value?.close() }
         .build()
 
-    // Fixed set of monitors guarding tryCompile's check-then-act against the on-disk cache directory, so two
-    // concurrent compiles of the same source don't race (one writing the jar while the other reads a
-    // half-written one). Striped rather than one-monitor-per-signature so the table stays bounded; distinct
-    // signatures may share a stripe, which only adds harmless serialization.
+    // Fixed set of monitors guarding every disk mutation of a signature dir (compile, load, delete, evict), so
+    // concurrent compiles of the same source don't race a half-written jar, and a delete can't pull a jar out
+    // from under an in-progress load. Striped rather than one-monitor-per-signature so the table stays bounded;
+    // distinct signatures may share a stripe, which only adds harmless serialization.
     private val compileLocks = Striped.lock(compileLockStripes)
+
+    @Volatile
+    private var evictor: StorageLruEvictor? = null
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -105,27 +133,63 @@ class CachedKotlinCompiler(
         val signature = kotlinCode.signature()
 
         loadedClasses.getIfPresent(signature)?.let {
-            return it
+            return it.clazz
         }
 
-        val codeDir = cacheDir.resolve(signature)
-        val outputJar = outputJar(codeDir, kotlinCode.mainClassName)
+        val lock = compileLocks.get(signature)
+        lock.lock()
+        try {
+            loadedClasses.getIfPresent(signature)?.let {
+                return it.clazz
+            }
 
-        val sourceClassLoader = URLClassLoader(
-            arrayOf(outputJar.toUri().toURL()),
-            classLoader)
+            val codeDir = cacheDir.resolve(signature)
+            val outputJar = outputJar(codeDir, kotlinCode.mainClassName)
 
-        val fullClassName = KotlinCode.classNamePrefix + kotlinCode.mainClassName
-        val loaded =
+            val sourceClassLoader = URLClassLoader(
+                arrayOf(outputJar.toUri().toURL()),
+                classLoader)
+
+            val fullClassName = KotlinCode.classNamePrefix + kotlinCode.mainClassName
+
+            var loaded: Class<out Any>? = null
             try {
-                sourceClassLoader.loadClass(fullClassName)
+                val mainClass = sourceClassLoader.loadClass(fullClassName)
+                defineJarClasses(outputJar, sourceClassLoader)
+                loadedClasses.put(signature, LoadedCode(mainClass, sourceClassLoader))
+                loaded = mainClass
             }
             catch (e: ClassNotFoundException) {
                 return null
             }
+            finally {
+                if (loaded == null) {
+                    sourceClassLoader.close()
+                }
+            }
+            return loaded
+        }
+        finally {
+            lock.unlock()
+        }
+    }
 
-        loadedClasses.put(signature, loaded)
-        return loaded
+
+    // Defines every class in the jar up front (without static initialization), so a later loader close —
+    // which releases the jar file handle for deletion — can't break in-flight code on a lazy load of a
+    // nested or lambda class.
+    private fun defineJarClasses(outputJar: Path, classLoader: ClassLoader) {
+        JarFile(outputJar.toFile()).use { jar ->
+            for (entry in jar.entries()) {
+                if (!entry.name.endsWith(classFileExtension)) {
+                    continue
+                }
+                val binaryName = entry.name
+                    .removeSuffix(classFileExtension)
+                    .replace('/', '.')
+                Class.forName(binaryName, false, classLoader)
+            }
+        }
     }
 
 
@@ -137,30 +201,44 @@ class CachedKotlinCompiler(
         val signature = kotlinCode.signature()
 
         val lock = compileLocks.get(signature)
+
+        var compiledNew = false
+        val error: String?
+
         lock.lock()
         try {
             val codeDir = cacheDir.resolve(signature)
 
             val previouslyCompiled = Files.exists(codeDir)
             if (!previouslyCompiled) {
-                return tryCompileNew(kotlinCode, codeDir, classLoader)
+                error = tryCompileNew(kotlinCode, codeDir, classLoader)
+                compiledNew = error == null
             }
-
-            val previousError = readErrorFile(codeDir)
-            if (previousError != null) {
-                return previousError
+            else {
+                val previousError = readErrorFile(codeDir)
+                if (previousError != null) {
+                    error = previousError
+                }
+                else if (hasSuccess(codeDir)) {
+                    // Refresh the LRU signal so a hot entry isn't the next eviction candidate.
+                    Files.setLastModifiedTime(successFile(codeDir), FileTime.from(Instant.now()))
+                    error = null
+                }
+                else {
+                    WorkUtils.deleteDirThrowing(codeDir)
+                    error = tryCompileNew(kotlinCode, codeDir, classLoader)
+                    compiledNew = error == null
+                }
             }
-
-            if (hasSuccess(codeDir)) {
-                return null
-            }
-
-            ReportWorkPool.deleteDir(codeDir)
-            return tryCompileNew(kotlinCode, codeDir, classLoader)
         }
         finally {
             lock.unlock()
         }
+
+        if (compiledNew) {
+            evictor?.maybeEvict()
+        }
+        return error
     }
 
 
@@ -192,5 +270,69 @@ class CachedKotlinCompiler(
             .resolve(mainClassName + jarExtension)
             .toAbsolutePath()
             .normalize()
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    /**
+     * Releases the signature's classloader (if loaded) and deletes its cache dir. The next request for the
+     * same source transparently recompiles; a Class already handed out keeps executing (see [defineJarClasses]).
+     *
+     * @return null on success, human-readable error otherwise
+     */
+    fun deleteEntry(signature: String): String? {
+        val lock = compileLocks.get(signature)
+        lock.lock()
+        try {
+            loadedClasses.asMap().remove(signature)?.close()
+
+            val codeDir = cacheDir.resolve(signature)
+            if (Files.exists(codeDir)) {
+                WorkUtils.deleteDirThrowing(codeDir)
+            }
+            return null
+        }
+        catch (e: Exception) {
+            return e.message ?: e.toString()
+        }
+        finally {
+            lock.unlock()
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    fun attachEvictor(evictor: StorageLruEvictor) {
+        check(this.evictor == null) { "Evictor already attached" }
+        this.evictor = evictor
+    }
+
+
+    fun storageArea(budgetBytes: Long): ManagedStorageArea {
+        return object: DirectoryStorageArea(
+            "code-cache",
+            "Compiled formulas",
+            "Kotlin expressions (formula columns, script steps) compiled to jars. Rebuilt on demand if " +
+                "deleted; least recently used entries are evicted automatically over the size budget.",
+            cacheDir,
+            budgetBytes = budgetBytes
+        ) {
+            override fun bundleLastModified(bundleDir: Path): Long {
+                val success = successFile(bundleDir)
+                return when {
+                    Files.exists(success) ->
+                        Files.getLastModifiedTime(success).toMillis()
+
+                    else ->
+                        dirLastModified(bundleDir)
+                }
+            }
+
+            override fun deleteBundle(bundleKey: String): String? {
+                resolveBundleDir(bundleKey)
+                    ?: return "Unknown bundle: $bundleKey"
+                return deleteEntry(bundleKey)
+            }
+        }
     }
 }

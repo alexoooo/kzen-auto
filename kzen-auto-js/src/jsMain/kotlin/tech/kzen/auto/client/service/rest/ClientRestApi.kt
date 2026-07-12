@@ -3,6 +3,8 @@ package tech.kzen.auto.client.service.rest
 import tech.kzen.auto.client.util.*
 import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.util.data.DataLocationInfo
+import tech.kzen.auto.common.util.storage.StorageAreaInfo
+import tech.kzen.auto.common.util.storage.StorageBundleInfo
 import tech.kzen.auto.platform.encodeURIComponent
 import tech.kzen.lib.client.ClientJsonUtils
 import tech.kzen.lib.common.exec.ExecutionResult
@@ -798,6 +800,43 @@ class ClientRestApi(
             @Suppress("UNCHECKED_CAST")
             DataLocationInfo.ofCollection(it as Map<String, String>)
         }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    suspend fun storageSummary(): List<StorageAreaInfo> {
+        val responseText = getOrPut(CommonRestApi.storageSummary)
+        val responseList = ClientJsonUtils.toList(JSON.parse(responseText))
+
+        return responseList.map {
+            @Suppress("UNCHECKED_CAST")
+            StorageAreaInfo.ofCollection(it as Map<String, String>)
+        }
+    }
+
+
+    suspend fun storageBundleList(areaId: String): List<StorageBundleInfo> {
+        val responseText = getOrPut(
+            CommonRestApi.storageBundleList,
+            CommonRestApi.paramStorageArea to areaId)
+
+        val responseList = ClientJsonUtils.toList(JSON.parse(responseText))
+
+        return responseList.map {
+            @Suppress("UNCHECKED_CAST")
+            StorageBundleInfo.ofCollection(it as Map<String, String>)
+        }
+    }
+
+
+    /**
+     * @return error message, or empty on success
+     */
+    suspend fun storageBundleDelete(areaId: String, bundleKey: String): String {
+        return getOrPut(
+            CommonRestApi.storageBundleDelete,
+            CommonRestApi.paramStorageArea to areaId,
+            CommonRestApi.paramStorageBundle to bundleKey)
     }
 
 

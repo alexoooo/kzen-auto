@@ -37,6 +37,20 @@ class WorkUtils(
                 .map(Path::toFile)
                 .forEach(File::delete)
         }
+
+
+        /**
+         * Recursive delete that fails loudly: an undeletable entry (e.g. a file locked by an open handle
+         * on Windows) throws, whereas [recursivelyDeleteDir] silently skips it.
+         */
+        fun deleteDirThrowing(dir: Path) {
+            val toDelete = Files.walk(dir).use { stream ->
+                stream.sorted(Comparator.reverseOrder()).toList()
+            }
+            for (path in toDelete) {
+                Files.delete(path)
+            }
+        }
     }
 
 

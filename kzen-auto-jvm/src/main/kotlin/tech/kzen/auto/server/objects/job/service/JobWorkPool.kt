@@ -90,6 +90,18 @@ class JobWorkPool(
     }
 
 
+    /** Root of all [workerOutputDir]s, for storage management. */
+    fun workerOutputBase(): Path {
+        return outputBase
+    }
+
+
+    /** Root of all transient scratch dirs, for storage management (display-only; self-cleaning). */
+    fun scratchBase(): Path {
+        return base
+    }
+
+
     /**
      * Delete the entire scratch tree of run [runId] (all its Workers' dirs). Idempotent — a no-op if the run
      * never created a scratch dir. Called from [JobRun]'s run-root Auto resource when the run settles.

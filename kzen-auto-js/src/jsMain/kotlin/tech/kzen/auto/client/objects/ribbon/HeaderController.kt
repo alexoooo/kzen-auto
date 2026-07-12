@@ -227,6 +227,7 @@ class HeaderController(
     private fun ChildrenBuilder.renderRightFloat() {
         renderTitle()
         renderRunNavigation()
+        renderStorageManager()
     }
 
 
@@ -266,6 +267,20 @@ class HeaderController(
                 clientStateGlobal = props.clientStateGlobal
                 clientLogicGlobal = props.clientLogicGlobal
                 navigationGlobal = props.navigationGlobal
+            }
+        }
+    }
+
+
+    private fun ChildrenBuilder.renderStorageManager() {
+        div {
+            css {
+                display = Display.inlineBlock
+                marginLeft = 0.5.em
+            }
+
+            StorageManagerController::class.react {
+                restClient = props.restClient
             }
         }
     }

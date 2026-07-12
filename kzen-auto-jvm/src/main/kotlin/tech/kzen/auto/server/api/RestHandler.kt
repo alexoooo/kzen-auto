@@ -9,9 +9,12 @@ import tech.kzen.auto.server.objects.job.service.JobWorkPool
 import tech.kzen.auto.server.objects.report.exec.output.flat.IndexedCsvTable
 import tech.kzen.auto.server.objects.report.service.FileListingAction
 import tech.kzen.auto.server.paradigm.detached.ExecutionDownloadResult
+import tech.kzen.auto.common.util.storage.StorageAreaInfo
+import tech.kzen.auto.common.util.storage.StorageBundleInfo
 import tech.kzen.auto.server.service.exec.ModelDetachedExecutor
 import tech.kzen.auto.server.service.exec.ModelTaskRepository
 import tech.kzen.auto.server.service.impl.ServerLogicController
+import tech.kzen.auto.server.service.storage.ManagedStorageRegistry
 import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionResult
 import tech.kzen.lib.common.exec.RequestParams
@@ -58,7 +61,8 @@ class RestHandler(
     private val serverLogicController: ServerLogicController,
     private val objectStableMapper: ObjectStableMapper,
     private val fileListingAction: FileListingAction,
-    private val jobWorkPool: JobWorkPool
+    private val jobWorkPool: JobWorkPool,
+    private val managedStorageRegistry: ManagedStorageRegistry
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     fun scan(parameters: Parameters): Map<String, Any> {
@@ -969,6 +973,52 @@ class RestHandler(
         }
 
         return listing.map { it.toCollection() }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    fun storageSummary(): List<Map<String, String>> {
+        return managedStorageRegistry.areas().map { area ->
+            val bundles = area.bundles()
+            StorageAreaInfo(
+                area.id,
+                area.displayName,
+                area.description,
+                bundles.sumOf { it.sizeBytes },
+                bundles.size,
+                area.deletable,
+                area.budgetBytes
+            ).toCollection()
+        }
+    }
+
+
+    fun storageBundleList(parameters: Parameters): List<Map<String, String>> {
+        val areaId: String = parameters.getParam(CommonRestApi.paramStorageArea) { it }
+        val area = managedStorageRegistry.find(areaId)
+            ?: error("Unknown storage area: $areaId")
+
+        return area
+            .bundles()
+            .sortedByDescending { it.sizeBytes }
+            .map {
+                StorageBundleInfo(it.key, it.displayName, it.sizeBytes, it.lastModifiedMillis, it.active)
+                    .toCollection()
+            }
+    }
+
+
+    /**
+     * @return error message, or empty on success
+     */
+    fun storageBundleDelete(parameters: Parameters): String {
+        val areaId: String = parameters.getParam(CommonRestApi.paramStorageArea) { it }
+        val bundleKey: String = parameters.getParam(CommonRestApi.paramStorageBundle) { it }
+
+        val area = managedStorageRegistry.find(areaId)
+            ?: return "Unknown storage area: $areaId"
+
+        return area.deleteBundle(bundleKey) ?: ""
     }
 
 

@@ -13,7 +13,6 @@ import tech.kzen.lib.common.util.yaml.YamlParser
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.stream.Collectors
 
 
 class ReportWorkPool(
@@ -21,7 +20,6 @@ class ReportWorkPool(
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger(ReportWorkPool::class.java)
-        private const val oldDirLimit = 10
 
         val defaultReportDir = Path.of("report")
         private val reportInfoFile = Path.of("report.yaml")
@@ -34,15 +32,7 @@ class ReportWorkPool(
 
         fun deleteDir(tempDir: Path) {
             try {
-                // NB: .toList throws "Unresolved reference" with Kotlin 1.5.10
-                val toDelete = Files
-                    .walk(tempDir)
-                    .sorted(Comparator.reverseOrder())
-                    .collect(Collectors.toList())
-
-                for (path in toDelete) {
-                    Files.delete(path)
-                }
+                WorkUtils.deleteDirThrowing(tempDir)
             }
             catch (e: Exception) {
                 logger.error("Unable to cleanup", e)

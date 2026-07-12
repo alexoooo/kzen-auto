@@ -27,6 +27,12 @@ import tech.kzen.auto.server.service.impl.ServerLogicController
 import tech.kzen.auto.server.service.plugin.HostReportDefinitionRepository
 import tech.kzen.auto.server.service.plugin.MultiDefinitionRepository
 import tech.kzen.auto.server.service.plugin.ReportDefinitionRepository
+import tech.kzen.auto.server.service.storage.DirectoryStorageArea
+import tech.kzen.auto.server.service.storage.FilterIndexStorageArea
+import tech.kzen.auto.server.service.storage.JobOutputStorageArea
+import tech.kzen.auto.server.service.storage.ManagedStorageRegistry
+import tech.kzen.auto.server.service.storage.ReportStorageArea
+import tech.kzen.auto.server.service.storage.StorageLruEvictor
 import tech.kzen.auto.server.util.WorkUtils
 import tech.kzen.lib.common.codegen.KzenLibCommonModule
 import tech.kzen.lib.common.service.context.GraphCreator
@@ -50,6 +56,7 @@ import tech.kzen.lib.server.notation.FileNotationMedia
 import tech.kzen.lib.server.notation.locate.FileNotationLocator
 import tech.kzen.lib.server.notation.locate.GradleLocator
 import java.lang.AutoCloseable
+import java.nio.file.Paths
 
 
 class KzenAutoContext(
@@ -77,6 +84,14 @@ class KzenAutoContext(
         fun forTest(): KzenAutoContext {
             return create(KzenAutoConfig(jsModuleName = "kzen-auto-js"))
         }
+
+
+        // Size budget for the compiled-expression cache; least recently used entries beyond it are
+        // evicted (transparently recompiled on next use).
+        private const val codeCacheBudgetBytes = 1024L * 1024 * 1024
+
+        // Rolling server logs, cwd-relative (see logback.xml LOG_DIR).
+        private val logDir = Paths.get("logs")
     }
 
 
@@ -162,6 +177,10 @@ class KzenAutoContext(
     val detachedExecutor = ModelDetachedExecutor(
         graphStore, graphCreator) { graphEnvironment }
 
+    // Areas are registered (and the code-cache evictor attached) in init(), where the
+    // active-run checks can capture serverLogicController without construction-order cycles.
+    val managedStorageRegistry = ManagedStorageRegistry()
+
     val restHandler = RestHandler(
         notationMedia,
         notationParser,
@@ -171,7 +190,8 @@ class KzenAutoContext(
         serverLogicController,
         objectStableMapper,
         fileListingAction,
-        jobWorkPool)
+        jobWorkPool,
+        managedStorageRegistry)
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -212,6 +232,48 @@ class KzenAutoContext(
                 objectStableMapper.objectStableId(location)
             }
         }
+
+        initManagedStorage()
+    }
+
+
+    private fun initManagedStorage() {
+        val anyRunActive = { serverLogicController.status().active != null }
+
+        val codeCacheArea = cachedKotlinCompiler.storageArea(codeCacheBudgetBytes)
+        val codeCacheEvictor = StorageLruEvictor(codeCacheArea)
+        cachedKotlinCompiler.attachEvictor(codeCacheEvictor)
+
+        managedStorageRegistry.register(codeCacheArea)
+
+        managedStorageRegistry.register(ReportStorageArea(
+            workUtils.resolve(ReportWorkPool.defaultReportDir), reportWorkPool))
+
+        managedStorageRegistry.register(FilterIndexStorageArea(
+            workUtils.resolve(FilterIndex.indexDirName), anyRunActive))
+
+        managedStorageRegistry.register(JobOutputStorageArea(
+            jobWorkPool.workerOutputBase(),
+            { runBlocking { graphStore.graphNotation() } },
+            anyRunActive))
+
+        managedStorageRegistry.register(DirectoryStorageArea(
+            "job-scratch",
+            "Job scratch",
+            "Transient per-run compute state of Job workers; cleaned up automatically when the run " +
+                "settles and at server start.",
+            jobWorkPool.scratchBase(),
+            deletable = false))
+
+        managedStorageRegistry.register(DirectoryStorageArea(
+            "logs",
+            "Logs",
+            "Rolling server logs; old archives are pruned automatically.",
+            logDir,
+            deletable = false))
+
+        // Reclaims budget overshoot accumulated while no evictor was attached (prior process).
+        codeCacheEvictor.maybeEvict()
     }
 
 

@@ -172,6 +172,25 @@ private fun Routing.routeRequests(
 
     routeObjectStable(context.restHandler)
     routeFileListing(context.restHandler)
+    routeStorage(context.restHandler)
+}
+
+
+private fun Routing.routeStorage(
+    restHandler: RestHandler
+) {
+    get(CommonRestApi.storageSummary) {
+        val response = restHandler.storageSummary()
+        call.respond(response)
+    }
+    get(CommonRestApi.storageBundleList) {
+        val response = restHandler.storageBundleList(call.parameters)
+        call.respond(response)
+    }
+    get(CommonRestApi.storageBundleDelete) {
+        val response = restHandler.storageBundleDelete(call.parameters)
+        call.respond(response)
+    }
 }
 
 
