@@ -128,14 +128,14 @@ class TargetView(
         val matchesByCrop = props.locateResult?.matchesByCrop
 
         var cropIndex = 0
-        var totalMatches = 0
+        val allMatches = mutableListOf<TargetMatchRect>()
 
         for (resourcePath in props.resources.digests.keys) {
             val resourceUri = props.restClient.resourceUri(
                 ResourceLocation(props.documentPath, resourcePath))
 
             val matches = matchesByCrop?.get(resourcePath)
-            totalMatches += matches?.matches?.size ?: 0
+            allMatches.addAll(matches?.matches.orEmpty())
 
             div {
                 css {
@@ -189,11 +189,15 @@ class TargetView(
         }
 
         if (matchesByCrop != null) {
+            // Overlapping matches from different crops are the same target (mirrors the click
+            // path's collapse of matches that resolve to the same element)
+            val distinctTargets = TargetLocateResult.distinctTargetCount(allMatches)
+
             div {
                 css {
                     marginBottom = 0.25.em
                     color =
-                        if (totalMatches == 1) {
+                        if (distinctTargets == 1) {
                             NamedColor.green
                         }
                         else {
@@ -201,10 +205,19 @@ class TargetView(
                         }
                 }
 
-                +when (totalMatches) {
-                    1 -> "1 match — target uniquely located"
-                    0 -> "No matches — target not found"
-                    else -> "$totalMatches matches — target is not unique (must match exactly one)"
+                +when {
+                    distinctTargets == 0 ->
+                        "No matches — target not found"
+
+                    distinctTargets == 1 && allMatches.size == 1 ->
+                        "1 match — target uniquely located"
+
+                    distinctTargets == 1 ->
+                        "${allMatches.size} matches agree on one target — uniquely located"
+
+                    else ->
+                        "$distinctTargets distinct targets — target is not unique " +
+                                "(must match exactly one)"
                 }
             }
         }

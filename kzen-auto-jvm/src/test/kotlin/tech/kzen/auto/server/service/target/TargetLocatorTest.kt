@@ -2,6 +2,7 @@ package tech.kzen.auto.server.service.target
 
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
+import org.openqa.selenium.WebElement
 import tech.kzen.auto.common.objects.document.target.TargetDocument
 import tech.kzen.auto.common.objects.document.target.TargetMatchPolicy
 import tech.kzen.auto.server.service.vision.RgbGrid
@@ -19,6 +20,7 @@ import tech.kzen.lib.common.util.ImmutableByteArray
 import java.awt.Rectangle
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
+import java.lang.reflect.Proxy
 import javax.imageio.ImageIO
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -272,6 +274,79 @@ class TargetLocatorTest {
             0)
 
         assertEquals("Matched desktop.png (32x26) at [10, 20] (score 0.85 at scale 1.5)", note)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    @Test
+    fun matchNoteReportsCropAgreement() {
+        val note = TargetLocator.matchNote(
+            TargetLocator.CropMatch(
+                ResourcePath.parse("desktop.png"),
+                TemplateMatcher.ScoredMatch(Rectangle(10, 20, 21, 17), 1.0, 1.0)),
+            0,
+            3)
+
+        assertEquals("Matched desktop.png (21x17) at [10, 20] (3 crops agree)", note)
+    }
+
+
+    /**
+     * Several crops matching the same element are one candidate (the crops agree on the target);
+     * matches with no resolved element stay distinct.
+     */
+    @Test
+    fun matchesOnSameElementCollapseToOneCandidate() {
+        val sameElement = stubElement()
+        val otherElement = stubElement()
+
+        val agreeing1 = cropMatch("exact.png", 75, 612)
+        val agreeing2 = cropMatch("tolerant.png", 78, 618)
+        val other = cropMatch("other.png", 400, 100)
+        val unresolved1 = cropMatch("unresolved-1.png", 500, 200)
+        val unresolved2 = cropMatch("unresolved-2.png", 600, 300)
+
+        val ordered = listOf(agreeing1, agreeing2, other, unresolved1, unresolved2)
+        val elementByMatch = mapOf(
+            agreeing1 to sameElement,
+            agreeing2 to sameElement,
+            other to otherElement,
+            unresolved1 to null,
+            unresolved2 to null)
+
+        assertEquals(
+            listOf(agreeing1, other, unresolved1, unresolved2),
+            TargetLocator.collapseByElement(ordered, elementByMatch))
+
+        assertEquals(
+            TargetLocator.PolicySelection.Selected(agreeing1),
+            TargetLocator.selectByPolicy(
+                TargetLocator.collapseByElement(
+                    listOf(agreeing1, agreeing2),
+                    mapOf(agreeing1 to sameElement, agreeing2 to sameElement)),
+                TargetMatchPolicy.Unique))
+    }
+
+
+    private fun cropMatch(resourcePath: String, x: Int, y: Int): TargetLocator.CropMatch {
+        return TargetLocator.CropMatch(
+            ResourcePath.parse(resourcePath),
+            TemplateMatcher.ScoredMatch(Rectangle(x, y, 21, 17), 1.0, 1.0))
+    }
+
+
+    private fun stubElement(): WebElement {
+        return Proxy.newProxyInstance(
+            javaClass.classLoader,
+            arrayOf(WebElement::class.java)
+        ) { proxy, method, args ->
+            when (method.name) {
+                "hashCode" -> System.identityHashCode(proxy)
+                "equals" -> proxy === args!![0]
+                "toString" -> "StubElement"
+                else -> throw UnsupportedOperationException(method.name)
+            }
+        } as WebElement
     }
 
 

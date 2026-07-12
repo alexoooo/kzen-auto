@@ -84,6 +84,20 @@ class TargetLocator(
         }
 
 
+        /**
+         * A Target document's crops are alternative appearances of the same target, so matches
+         * that resolve to the same element collapse into the first (best-ordered) one — the
+         * crops agree on the target, which is confirmation rather than ambiguity. Matches with
+         * no resolved element stay distinct (nothing established they are the same target).
+         */
+        fun collapseByElement(
+            ordered: List<CropMatch>,
+            elementByMatch: Map<CropMatch, WebElement?>
+        ): List<CropMatch> {
+            return ordered.distinctBy { elementByMatch[it] ?: it }
+        }
+
+
         fun notFoundMessage(
             matchesByCrop: Map<ResourcePath, CropMatches>,
             screenshotWidth: Int,
@@ -133,7 +147,8 @@ class TargetLocator(
 
         fun matchNote(
             match: CropMatch,
-            previewCount: Int
+            previewCount: Int,
+            agreeingCropCount: Int = 1
         ): String {
             val tolerant = match.match.score < TargetDocument.exactTolerance
             val scoreSuffix =
@@ -141,9 +156,14 @@ class TargetLocator(
                 else if (match.match.scale == 1.0) { " (score ${formatScore(match.match.score)})" }
                 else { " (score ${formatScore(match.match.score)} at scale ${match.match.scale})" }
 
+            val agreementSuffix =
+                if (agreeingCropCount > 1) { " ($agreeingCropCount crops agree)" }
+                else { "" }
+
             return "Matched ${match.resourcePath.asString()} " +
                     "(${match.rect.width}x${match.rect.height}) at [${match.rect.x}, ${match.rect.y}]" +
                     scoreSuffix +
+                    agreementSuffix +
                     previewSuffix(previewCount)
         }
 
@@ -306,15 +326,17 @@ class TargetLocator(
                         compareBy({ it.rect.y }, { it.rect.x }))
             }
 
+        val collapsed = collapseByElement(ordered, elementByMatch)
+
         val match =
-            when (val selection = selectByPolicy(ordered, policy)) {
+            when (val selection = selectByPolicy(collapsed, policy)) {
                 is PolicySelection.Selected ->
                     selection.candidate
 
                 is PolicySelection.Rejected ->
                     return Result(null,
                         if (policy == TargetMatchPolicy.Unique) {
-                            ambiguousMessage(ordered, previews.size,
+                            ambiguousMessage(collapsed, previews.size,
                                 screenshotGrid.width, screenshotGrid.height)
                         }
                         else {
@@ -328,7 +350,13 @@ class TargetLocator(
                 "No element at match [${match.rect.centerX.roundToInt()}, ${match.rect.centerY.roundToInt()}] " +
                 "(screenshot ${screenshotGrid.width}x${screenshotGrid.height}, CSS scale $cssScale)")
 
-        return Result(element, null, matchNote(match, previews.size))
+        val agreeingCropCount = ordered
+            .filter { elementByMatch[it] == element }
+            .map { it.resourcePath }
+            .distinct()
+            .size
+
+        return Result(element, null, matchNote(match, previews.size, agreeingCropCount))
     }
 
 

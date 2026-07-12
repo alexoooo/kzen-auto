@@ -35,6 +35,30 @@ data class StepTrace(
                 (executionValue.values[noteKey] as? TextExecutionValue)?.value
             )
         }
+
+
+        /**
+         * [ofExecutionValue] for values that might not be step traces — a run's trace snapshot
+         * mixes step traces with other entries (run-root index, worker values), and consumers
+         * scanning the whole run (e.g. for traced browser screenshots) need to tell them apart.
+         */
+        fun ofExecutionValueOrNull(executionValue: ExecutionValue): StepTrace? {
+            if (executionValue !is MapExecutionValue) {
+                return null
+            }
+
+            val stateName = (executionValue.values[stateKey] as? TextExecutionValue)?.value
+            val state = State.entries.firstOrNull { it.name == stateName }
+                ?: return null
+
+            return StepTrace(
+                state,
+                executionValue.values[displayKey] ?: return null,
+                executionValue.values[detailKey] ?: return null,
+                (executionValue.values[errorKey] as? TextExecutionValue)?.value,
+                (executionValue.values[noteKey] as? TextExecutionValue)?.value
+            )
+        }
     }
 
 

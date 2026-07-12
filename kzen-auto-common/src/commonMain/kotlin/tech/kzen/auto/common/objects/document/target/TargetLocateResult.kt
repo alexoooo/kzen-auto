@@ -39,6 +39,40 @@ data class TargetLocateResult(
                     }
                     .toMap())
         }
+
+
+        /**
+         * How many distinct targets the matches appear to indicate: overlapping rectangles
+         * cluster as one target. Mirrors the click path's collapse of matches that resolve to
+         * the same element — a Target document's crops are alternative appearances of the same
+         * target, so several crops agreeing on a spot is confirmation, not ambiguity. Geometry
+         * stands in for element identity because the preview has no DOM (the screenshot can be
+         * a desktop capture).
+         */
+        fun distinctTargetCount(matches: List<TargetMatchRect>): Int {
+            val clusters = mutableListOf<MutableList<TargetMatchRect>>()
+
+            for (match in matches) {
+                val overlapping = clusters.filter { cluster ->
+                    cluster.any { it.overlaps(match) }
+                }
+
+                if (overlapping.isEmpty()) {
+                    clusters.add(mutableListOf(match))
+                }
+                else {
+                    // The new match can bridge previously separate clusters
+                    val merged = overlapping.first()
+                    for (other in overlapping.drop(1)) {
+                        merged.addAll(other)
+                        clusters.remove(other)
+                    }
+                    merged.add(match)
+                }
+            }
+
+            return clusters.size
+        }
     }
 
 
@@ -126,6 +160,12 @@ data class TargetMatchRect(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    fun overlaps(that: TargetMatchRect): Boolean {
+        return x < that.x + that.width && that.x < x + width &&
+                y < that.y + that.height && that.y < y + height
+    }
+
+
     fun asExecutionValue(): ExecutionValue {
         return MapExecutionValue(mapOf(
             xKey to LongExecutionValue(x.toLong()),

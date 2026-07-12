@@ -26,12 +26,14 @@ import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.api.CommonRestApi
+import tech.kzen.auto.common.objects.document.script.model.StepTrace
 import tech.kzen.auto.common.objects.document.target.TargetDocument
 import tech.kzen.auto.common.objects.document.target.TargetLocateResult
 import tech.kzen.auto.common.paradigm.logic.LogicConventions
 import tech.kzen.lib.common.exec.BinaryExecutionValue
 import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.exec.ExecutionSuccess
+import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.RequestParams
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceEntry
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
@@ -419,9 +421,21 @@ class TargetController(
         return snapshotCollection
             .values
             .map { LogicTraceEntry.ofCollection(it) }
-            .filter { it.value is BinaryExecutionValue }
             .sortedBy { it.sequence }
-            .map { it.value as BinaryExecutionValue }
+            .mapNotNull { traceScreenshot(it.value) }
+    }
+
+
+    /**
+     * A browser step's screenshot rides its step trace as the `detail` binary; other trace
+     * entries (run-root index, non-browser steps) carry no screenshot.
+     */
+    private fun traceScreenshot(value: ExecutionValue): BinaryExecutionValue? {
+        if (value is BinaryExecutionValue) {
+            return value
+        }
+
+        return StepTrace.ofExecutionValueOrNull(value)?.detail as? BinaryExecutionValue
     }
 
 

@@ -39,4 +39,37 @@ class TargetLocateActionTest {
 
         assertEquals(result, roundTripped)
     }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    /**
+     * Overlapping matches (several crops finding the same spot, possibly at slightly different
+     * offsets/scales) count as ONE target for the preview's uniqueness summary; disjoint
+     * matches stay distinct. Transitive: a match bridging two clusters merges them.
+     */
+    @Test
+    fun overlappingMatchesCountAsOneTarget() {
+        assertEquals(0, TargetLocateResult.distinctTargetCount(listOf()))
+
+        // The user-observed shape: three crops agree on the sidebar icon within a few pixels
+        val agreeing = listOf(
+            TargetMatchRect(75, 612, 21, 17, 1.0, 1.0),
+            TargetMatchRect(78, 618, 23, 19, 0.98, 1.1),
+            TargetMatchRect(78, 619, 32, 26, 0.84, 1.5))
+        assertEquals(1, TargetLocateResult.distinctTargetCount(agreeing))
+
+        val elsewhere = TargetMatchRect(400, 100, 21, 17, 1.0, 1.0)
+        assertEquals(2, TargetLocateResult.distinctTargetCount(agreeing + elsewhere))
+
+        // Edge-adjacent (touching, not overlapping) rectangles are distinct
+        assertEquals(2, TargetLocateResult.distinctTargetCount(listOf(
+            TargetMatchRect(0, 0, 10, 10, 1.0, 1.0),
+            TargetMatchRect(10, 0, 10, 10, 1.0, 1.0))))
+
+        // A wide match bridging two otherwise-disjoint matches merges all three
+        assertEquals(1, TargetLocateResult.distinctTargetCount(listOf(
+            TargetMatchRect(0, 0, 10, 10, 1.0, 1.0),
+            TargetMatchRect(30, 0, 10, 10, 1.0, 1.0),
+            TargetMatchRect(5, 5, 30, 10, 1.0, 1.0))))
+    }
 }
