@@ -1,4 +1,4 @@
-package tech.kzen.auto.common.objects.document.feature
+package tech.kzen.auto.common.objects.document.target
 
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -11,9 +11,8 @@ import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.service.notation.NotationConventions
 
 
-// see: https://en.wikipedia.org/wiki/Feature_(computer_vision)
 @Reflect
-class FeatureDocument(
+class TargetDocument(
     val objectLocation: ObjectLocation,
     val documentNotation: DocumentNotation
 ):
@@ -21,18 +20,18 @@ class FeatureDocument(
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        private val featureJvmPath = DocumentPath.parse("auto-jvm/feature/feature-jvm.yaml")
+        private val targetJvmPath = DocumentPath.parse("auto-jvm/target/target-jvm.yaml")
 
 
         val screenshotTakerLocation = ObjectLocation(
-            featureJvmPath,
+            targetJvmPath,
             ObjectPath(ObjectName("ScreenshotTaker"), ObjectNesting.root))
 
 
-        val archetypeObjectName = ObjectName("Feature")
+        val archetypeObjectName = ObjectName("Target")
 
 
-        fun isFeature(documentNotation: DocumentNotation): Boolean {
+        fun isTarget(documentNotation: DocumentNotation): Boolean {
             val mainObjectNotation =
                     documentNotation.objects.notations[NotationConventions.mainObjectPath]
                     ?: return false

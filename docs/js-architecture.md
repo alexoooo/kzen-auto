@@ -310,7 +310,7 @@ Snapshot captured 2026-05-11 *before* the kotlin-wrappers `2025.12.11` → `2026
 | Files using string-literal `key = "..."` | 2 — `objects/document/report/output/OutputTableController.kt`, `objects/document/graph/GraphController.kt` |
 | Files using single-type-arg `ChangeEvent<C>` | 2 — `objects/document/common/AttributePathValueEditor.kt`, `objects/document/graph/edit/AttributePathValueEditorOld.kt` |
 | `…Old.kt` files (stale, candidates for deletion before refactor) | 5 under `objects/document/graph/edit/` |
-| Top builder/setState hotspots | `objects/document/feature/FeatureController.kt` (14), `objects/document/graph/GraphController.kt` (11), `objects/ProjectController.kt` (11) |
+| Top builder/setState hotspots | `objects/document/target/TargetController.kt` (14), `objects/document/graph/GraphController.kt` (11), `objects/ProjectController.kt` (11) |
 
 **Implications for the wrappers bump (what we expected):**
 

@@ -1,4 +1,4 @@
-package tech.kzen.auto.common.objects.document.feature
+package tech.kzen.auto.common.objects.document.target
 
 
 // NB: values referenced in notation, looked up via valueOf

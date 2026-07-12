@@ -33,7 +33,7 @@ data class SidebarModel(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    // Nested sidebar tree. A document (file OR directory-document like Feature) is always a LEAF — it is opened,
+    // Nested sidebar tree. A document (file OR directory-document like Target) is always a LEAF — it is opened,
     // not expanded. A folder is a pure directory (DocumentForm.Folder) with its own explicit notation entry (one
     // entry per directory) and no document of its own; its children are the paths nested directly under it.
     sealed interface SidebarNode
@@ -154,7 +154,7 @@ data class SidebarModel(
                     folderNames.add(path.name.value)
                 }
                 else {
-                    // a document at this level → leaf (file documents and directory-documents like Feature)
+                    // a document at this level → leaf (file documents and directory-documents like Target)
                     val archetype = archetypeOfDocument[path]
                     if (archetype != null) {
                         files.add(SidebarDocumentNode(path, archetype))

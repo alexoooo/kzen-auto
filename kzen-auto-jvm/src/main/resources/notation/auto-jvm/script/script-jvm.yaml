@@ -1,6 +1,6 @@
 
 
-# NB: referenced in FeatureDocument
+# NB: referenced in ScriptConventions
 ScriptValidator:
   class: tech.kzen.auto.server.objects.script.ScriptValidator
 

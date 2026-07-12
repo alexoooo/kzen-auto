@@ -67,7 +67,7 @@ external interface SidebarFolderState: State {
 
 //---------------------------------------------------------------------------------------------------------------------
 // Renders one folder and its subtree: the synthetic root "Project" folder when `node` is null, otherwise a nested
-// pure folder. Only folders are expandable (chevron); every document — including directory-documents like Feature
+// pure folder. Only folders are expandable (chevron); every document — including directory-documents like Target
 // — is a leaf rendered by SidebarDocument. "New ..." creates under this folder's content nesting.
 class SidebarFolder(
     props: SidebarFolderProps

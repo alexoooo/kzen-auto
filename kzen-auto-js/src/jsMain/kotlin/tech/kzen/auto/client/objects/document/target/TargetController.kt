@@ -1,4 +1,4 @@
-package tech.kzen.auto.client.objects.document.feature
+package tech.kzen.auto.client.objects.document.target
 
 import emotion.react.css
 import js.objects.unsafeJso
@@ -27,7 +27,7 @@ import tech.kzen.auto.client.wrap.cropper.CropperWrapper
 import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
-import tech.kzen.auto.common.objects.document.feature.FeatureDocument
+import tech.kzen.auto.common.objects.document.target.TargetDocument
 import tech.kzen.lib.common.exec.BinaryExecutionValue
 import tech.kzen.lib.common.exec.ExecutionSuccess
 import tech.kzen.lib.common.exec.RequestParams
@@ -51,14 +51,14 @@ import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------
-external interface FeatureControllerProps: Props {
+external interface TargetControllerProps: Props {
     var mirroredGraphStore: MirroredGraphStore
     var navigationGlobal: NavigationGlobal
     var restClient: ClientRestApi
 }
 
 
-external interface FeatureControllerState: State {
+external interface TargetControllerState: State {
     var documentPath: DocumentPath?
     var graphStructure: GraphStructure?
 
@@ -71,10 +71,10 @@ external interface FeatureControllerState: State {
 
 //---------------------------------------------------------------------------------------------------------------------
 @Suppress("unused")
-class FeatureController(
-    props: FeatureControllerProps
+class TargetController(
+    props: TargetControllerProps
 ):
-    RPureComponent<FeatureControllerProps, FeatureControllerState>(props),
+    RPureComponent<TargetControllerProps, TargetControllerState>(props),
     NavigationGlobal.Observer,
     LocalGraphStore.Observer
 {
@@ -104,7 +104,7 @@ class FeatureController(
         override fun body(): ReactWrapper<Props> {
             return object: ReactWrapper<Props> {
                 override fun ChildrenBuilder.child(block: Props.() -> Unit) {
-                    FeatureController::class.react {
+                    TargetController::class.react {
                         mirroredGraphStore = this@Wrapper.mirroredGraphStore
                         navigationGlobal = this@Wrapper.navigationGlobal
                         restClient = this@Wrapper.restClient
@@ -121,7 +121,7 @@ class FeatureController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun FeatureControllerState.init(props: FeatureControllerProps) {
+    override fun TargetControllerState.init(props: TargetControllerProps) {
         documentPath = null
         graphStructure = null
 
@@ -153,8 +153,8 @@ class FeatureController(
 
 
     override fun componentDidUpdate(
-        prevProps: FeatureControllerProps,
-        prevState: FeatureControllerState,
+        prevProps: TargetControllerProps,
+        prevState: TargetControllerState,
         snapshot: Any
     ) {
         if (state.screenshotDataUrl == null && state.requestingScreenshot != true) {
@@ -211,7 +211,7 @@ class FeatureController(
         async {
 //            console.log("doRequestScreenshot", screenshotTakerLocation.toString())
             val result = props.restClient.performDetached(
-                FeatureDocument.screenshotTakerLocation)
+                TargetDocument.screenshotTakerLocation)
 
             if (result is ExecutionSuccess) {
                 val screenshotPng = result.value as BinaryExecutionValue

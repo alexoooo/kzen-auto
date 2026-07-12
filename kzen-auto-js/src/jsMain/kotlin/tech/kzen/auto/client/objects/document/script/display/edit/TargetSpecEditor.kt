@@ -17,9 +17,9 @@ import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.client.wrap.select.SelectOption
 import tech.kzen.auto.client.wrap.select.muiAutocompleteField
-import tech.kzen.auto.common.objects.document.feature.FeatureDocument
-import tech.kzen.auto.common.objects.document.feature.TargetSpecDefiner
-import tech.kzen.auto.common.objects.document.feature.TargetType
+import tech.kzen.auto.common.objects.document.target.TargetDocument
+import tech.kzen.auto.common.objects.document.target.TargetSpecDefiner
+import tech.kzen.auto.common.objects.document.target.TargetType
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -160,18 +160,18 @@ class TargetSpecEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun visualTargets(clientState: ClientState): List<ObjectLocation> {
-        val featureMains = mutableListOf<ObjectLocation>()
+        val targetMains = mutableListOf<ObjectLocation>()
 
         for ((path, notation) in
                 clientState.graphStructure().graphNotation.documents.map
         ) {
-            if (FeatureDocument.isFeature(notation)) {
-                featureMains.add(ObjectLocation(
+            if (TargetDocument.isTarget(notation)) {
+                targetMains.add(ObjectLocation(
                     path, NotationConventions.mainObjectPath))
             }
         }
 
-        return featureMains
+        return targetMains
     }
 
 
@@ -320,7 +320,7 @@ class TargetSpecEditor(
     }
 
 
-    private fun onVisualFeatureChange(value: ObjectLocation?) {
+    private fun onVisualTargetChange(value: ObjectLocation?) {
         setState {
             targetLocation = value
         }
@@ -362,7 +362,7 @@ class TargetSpecEditor(
 
         div {
             muiAutocompleteField(
-                label = "Target",
+                label = "Target Type",
                 options = typeOptions,
                 selectedOption = typeOptions.find { it.value == targetType.name },
                 onSelect = { onTypeChange(TargetType.valueOf(it.value)) },
@@ -404,10 +404,10 @@ class TargetSpecEditor(
                 .toTypedArray()
 
         muiAutocompleteField(
-            label = "Feature",
+            label = "Target",
             options = selectOptions,
             selectedOption = selectOptions.find { it.value == state.targetLocation?.asString() },
-            onSelect = { onVisualFeatureChange(ObjectLocation.parse(it.value)) },
+            onSelect = { onVisualTargetChange(ObjectLocation.parse(it.value)) },
             disableClearable = true)
     }
 }

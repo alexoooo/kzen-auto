@@ -1,10 +1,13 @@
-package tech.kzen.auto.server.service.vision
+package tech.kzen.auto.server.service.target
 
 import org.openqa.selenium.By
 import org.openqa.selenium.OutputType
 import org.openqa.selenium.WebElement
 import org.openqa.selenium.remote.RemoteWebDriver
-import tech.kzen.auto.common.objects.document.feature.*
+import tech.kzen.auto.common.objects.document.target.*
+import tech.kzen.auto.server.service.vision.RgbGrid
+import tech.kzen.auto.server.service.vision.TemplateMatcher
+import tech.kzen.auto.server.service.vision.VisionUtils
 import tech.kzen.lib.common.model.location.ResourceLocation
 import tech.kzen.lib.common.service.media.NotationMedia
 import tech.kzen.lib.common.util.digest.Digest
@@ -18,7 +21,7 @@ import kotlin.math.roundToInt
 /**
  * Locates action targets in the browser under automation.
  */
-class VisionService(
+class TargetLocator(
     private val notationMedia: NotationMedia
 ) {
     //-----------------------------------------------------------------------------------------------------------------
@@ -92,7 +95,7 @@ class VisionService(
                 driver.findElement(By.xpath(target.xpath))
 
             is VisualTarget -> {
-                val targetLocation = locateElement(target.feature, driver)
+                val targetLocation = locateElement(target.document, driver)
 
                 if (targetLocation.isError()) {
                     return targetLocation
@@ -107,7 +110,7 @@ class VisionService(
 
 
     suspend fun locateElement(
-        target: FeatureDocument,
+        target: TargetDocument,
         driver: RemoteWebDriver
     ): Result {
         val screenshotPngBytes = driver.getScreenshotAs(OutputType.BYTES)
@@ -137,13 +140,13 @@ class VisionService(
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun locateAll(
-        target: FeatureDocument,
+        target: TargetDocument,
         screenshotGrid: RgbGrid,
         limit: Int = Int.MAX_VALUE
     ): List<Rectangle> {
         val documentPath = target.objectLocation.documentPath
         val resourceListing = target.documentNotation.resources
-            ?: error("Feature document has no resources: $documentPath")
+            ?: error("Target document has no resources: $documentPath")
 
         val sourceHistogram = TemplateMatcher.quantizedColorHistogram(screenshotGrid)
 

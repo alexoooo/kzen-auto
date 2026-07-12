@@ -1,4 +1,4 @@
-package tech.kzen.auto.common.objects.document.feature
+package tech.kzen.auto.common.objects.document.target
 
 import tech.kzen.lib.common.api.AttributeCreator
 import tech.kzen.lib.common.model.attribute.AttributeName
@@ -58,10 +58,10 @@ class TargetSpecCreator: AttributeCreator {
                 val location = partialGraphInstance.objectInstances.locate(
                     value, ObjectReferenceHost.ofLocation(objectLocation))
 
-                val featureDocument=
-                    partialGraphInstance[location]?.reference as FeatureDocument
+                val targetDocument =
+                    partialGraphInstance[location]?.reference as TargetDocument
 
-                VisualTarget(featureDocument)
+                VisualTarget(targetDocument)
             }
         }
     }

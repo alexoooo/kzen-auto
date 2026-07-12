@@ -1,0 +1,6 @@
+
+
+TargetController:
+  is: DocumentController
+  class: tech.kzen.auto.client.objects.document.target.TargetController$Wrapper
+  archetype: Target

@@ -26,7 +26,7 @@
 #
 TargetSpec:
   abstract: true
-  class: tech.kzen.auto.common.objects.document.feature.TargetSpec
+  class: tech.kzen.auto.common.objects.document.target.TargetSpec
   meta:
     ref:
       by: TargetSpecDefiner
@@ -34,10 +34,10 @@ TargetSpec:
       editor: TargetSpecEditor
 
 TargetSpecCreator:
-  class: tech.kzen.auto.common.objects.document.feature.TargetSpecCreator
+  class: tech.kzen.auto.common.objects.document.target.TargetSpecCreator
 
 TargetSpecDefiner:
-  class: tech.kzen.auto.common.objects.document.feature.TargetSpecDefiner
+  class: tech.kzen.auto.common.objects.document.target.TargetSpecDefiner
 #
 #
 ############################################################

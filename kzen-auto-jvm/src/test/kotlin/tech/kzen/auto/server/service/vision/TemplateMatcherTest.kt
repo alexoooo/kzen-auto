@@ -217,7 +217,7 @@ class TemplateMatcherTest {
 
     //-----------------------------------------------------------------------------------------------------------------
     /**
-     * Real-world fixture: an Action Target crop (a `<>` code icon, cropped from a desktop
+     * Real-world fixture: a Target crop (a `<>` code icon, cropped from a desktop
      * screenshot) against a separately captured desktop screenshot of the same UI. The icon is
      * visibly present, but rasterized differently — 19x12 vs 18x11 glyph footprint, every
      * antialiased edge shade shifted — so exact matching finds nothing. This is the technique's

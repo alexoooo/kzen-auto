@@ -162,7 +162,7 @@ Each subdirectory under `kzen-auto-js/src/jsMain/kotlin/tech/kzen/auto/client/ob
 | `data/` | Data schema | Field definitions / format |
 | `plugin/` | Plugin registry | Upload / register plugin JARs |
 | `registry/` | Object registry | Browse / add custom objects from the library |
-| `feature/` | Feature extraction | Screenshot regions, computer-vision targets |
+| `target/` | Target | Element targeting: screenshot-crop visual matching today; selectors / expressions planned |
 | `custom/` | CustomDocument | Hybrid editor: structured UI for prototype-driven object creation + raw-YAML escape hatch |
 | `common/` | *(not a document type)* | Shared attribute editors used by every controller above |
 

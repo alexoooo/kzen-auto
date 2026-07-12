@@ -1,6 +1,0 @@
-
-# NB: referenced in FeatureDocument
-ScreenshotTaker:
-  class: tech.kzen.auto.server.objects.feature.ScreenshotTaker
-
-

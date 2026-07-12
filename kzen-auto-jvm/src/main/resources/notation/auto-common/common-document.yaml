@@ -142,11 +142,11 @@ Job:
 #################################################################
 
 
-Feature:
+Target:
   abstract: true
   is: Document
-  class: tech.kzen.auto.common.objects.document.feature.FeatureDocument
-  title: "Action Target"
+  class: tech.kzen.auto.common.objects.document.target.TargetDocument
+  title: "Target"
   icon: "material-symbols:crop"
   directory: true
   meta:

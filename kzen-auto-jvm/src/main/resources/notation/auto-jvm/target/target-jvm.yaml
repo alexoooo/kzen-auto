@@ -1,0 +1,6 @@
+
+# NB: referenced in TargetDocument
+ScreenshotTaker:
+  class: tech.kzen.auto.server.objects.target.ScreenshotTaker
+
+

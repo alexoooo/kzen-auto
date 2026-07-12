@@ -3,12 +3,12 @@ package tech.kzen.auto.server.objects.script.step.browser
 import org.openqa.selenium.Keys
 import org.openqa.selenium.OutputType
 import org.openqa.selenium.remote.RemoteWebDriver
-import tech.kzen.auto.common.objects.document.feature.TargetSpec
+import tech.kzen.auto.common.objects.document.target.TargetSpec
 import tech.kzen.auto.server.objects.script.api.ScriptStep
 import tech.kzen.auto.server.objects.script.api.ScriptStepDefinition
 import tech.kzen.auto.server.objects.script.api.StepExecution
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
-import tech.kzen.auto.server.service.vision.VisionService
+import tech.kzen.auto.server.service.target.TargetLocator
 import tech.kzen.auto.server.service.webdriver.WebDriverSupport
 import tech.kzen.lib.common.exec.BinaryExecutionValue
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -20,7 +20,7 @@ import tech.kzen.lib.common.reflect.Service
 class BrowserFocusStep(
     private val target: TargetSpec,
     @Suppress("unused") selfLocation: ObjectLocation,
-    @Service private val visionService: VisionService
+    @Service private val targetLocator: TargetLocator
 ):
     ScriptStep
 {
@@ -34,7 +34,7 @@ class BrowserFocusStep(
         val driver = execution.resource(WebDriverSupport.resourceKey) as? RemoteWebDriver
             ?: error("Browser is not open")
 
-        val match = visionService.locateElement(target, driver)
+        val match = targetLocator.locateElement(target, driver)
         match.error?.let {
             error(it)
         }

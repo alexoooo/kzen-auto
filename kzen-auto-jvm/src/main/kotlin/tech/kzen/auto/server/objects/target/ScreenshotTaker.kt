@@ -1,4 +1,4 @@
-package tech.kzen.auto.server.objects.feature
+package tech.kzen.auto.server.objects.target
 
 import tech.kzen.auto.common.paradigm.detached.DetachedAction
 import tech.kzen.lib.common.exec.*

@@ -1,4 +1,4 @@
-package tech.kzen.auto.common.objects.document.feature
+package tech.kzen.auto.common.objects.document.target
 
 
 sealed class TargetSpec
@@ -18,5 +18,5 @@ data class XpathTarget(
 
 
 data class VisualTarget(
-    val feature: FeatureDocument
+    val document: TargetDocument
 ): TargetSpec()
