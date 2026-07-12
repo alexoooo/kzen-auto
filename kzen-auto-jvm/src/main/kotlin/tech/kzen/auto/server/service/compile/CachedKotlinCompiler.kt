@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.service.compile
 
-import com.google.common.cache.Cache
-import com.google.common.cache.CacheBuilder
+import com.github.benmanes.caffeine.cache.Cache
+import com.github.benmanes.caffeine.cache.Caffeine
 import com.google.common.util.concurrent.Striped
 import tech.kzen.auto.server.objects.report.service.ReportWorkPool
 import tech.kzen.auto.server.util.WorkUtils
@@ -38,10 +38,11 @@ class CachedKotlinCompiler(
 
     // Hot loaded expression classes, keyed by content signature (className + source digest, so an entry can
     // never be stale; the classloader parent is process-stable, so the signature alone is a sufficient key).
-    // Each retained Class pins its own URLClassLoader in Metaspace, so this is a bounded LRU rather than an
-    // unbounded map: a long-lived process compiles far more distinct expressions over its lifetime than are
-    // live at once, and an evicted entry is transparently rebuilt from the durable on-disk jar on next request.
-    private val loadedClasses: Cache<String, Class<out Any>> = CacheBuilder.newBuilder()
+    // Each retained Class pins its own URLClassLoader in Metaspace, so this is a bounded (size-capped) cache
+    // rather than an unbounded map: a long-lived process compiles far more distinct expressions over its
+    // lifetime than are live at once, and an evicted entry is transparently rebuilt from the durable on-disk
+    // jar on next request.
+    private val loadedClasses: Cache<String, Class<out Any>> = Caffeine.newBuilder()
         .maximumSize(loadedClassCacheSize)
         .build()
 
