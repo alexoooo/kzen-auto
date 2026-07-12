@@ -4,3 +4,8 @@ ScreenshotTaker:
   class: tech.kzen.auto.server.objects.target.ScreenshotTaker
 
 
+# NB: referenced in TargetDocument
+TargetLocateAction:
+  class: tech.kzen.auto.server.objects.target.TargetLocateAction
+
+

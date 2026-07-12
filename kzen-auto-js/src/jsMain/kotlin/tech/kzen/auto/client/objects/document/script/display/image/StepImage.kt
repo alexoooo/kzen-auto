@@ -9,5 +9,5 @@ import tech.kzen.lib.platform.IoUtils
 internal fun pngUrl(screenshot: BinaryExecutionValue): String =
     screenshot.cache("img") {
         val base64 = IoUtils.base64Encode(screenshot.value)
-        "data:png/png;base64,$base64"
+        "data:image/png;base64,$base64"
     }

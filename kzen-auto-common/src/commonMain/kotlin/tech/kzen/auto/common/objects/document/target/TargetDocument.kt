@@ -28,6 +28,13 @@ class TargetDocument(
             ObjectPath(ObjectName("ScreenshotTaker"), ObjectNesting.root))
 
 
+        val targetLocateLocation = ObjectLocation(
+            targetJvmPath,
+            ObjectPath(ObjectName("TargetLocateAction"), ObjectNesting.root))
+
+        const val paramTarget = "target"
+
+
         val archetypeObjectName = ObjectName("Target")
 
 

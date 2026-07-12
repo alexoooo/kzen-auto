@@ -9,6 +9,7 @@ import tech.kzen.auto.server.service.vision.RgbGrid
 import tech.kzen.auto.server.service.vision.TemplateMatcher
 import tech.kzen.auto.server.service.vision.VisionUtils
 import tech.kzen.lib.common.model.location.ResourceLocation
+import tech.kzen.lib.common.model.structure.resource.ResourcePath
 import tech.kzen.lib.common.service.media.NotationMedia
 import tech.kzen.lib.common.util.digest.Digest
 import tech.kzen.lib.platform.toInputStream
@@ -165,6 +166,34 @@ class TargetLocator(
         }
 
         return allMatches
+    }
+
+
+    /**
+     * Every crop's matches, keyed by resource path — no uniqueness and no limit; the preview's
+     * job is to show everything. The click path goes through [locateAll]'s limited scan instead.
+     */
+    suspend fun locateAllByCrop(
+        target: TargetDocument,
+        screenshotGrid: RgbGrid
+    ): Map<ResourcePath, List<Rectangle>> {
+        val documentPath = target.objectLocation.documentPath
+        val resourceListing = target.documentNotation.resources
+            ?: error("Target document has no resources: $documentPath")
+
+        val sourceHistogram = TemplateMatcher.quantizedColorHistogram(screenshotGrid)
+
+        val matchesByCrop = mutableMapOf<ResourcePath, List<Rectangle>>()
+
+        for ((resourcePath, digest) in resourceListing.digests) {
+            val cropGrid = cropGrid(
+                ResourceLocation(documentPath, resourcePath), digest)
+
+            matchesByCrop[resourcePath] = TemplateMatcher.locate(
+                screenshotGrid, cropGrid, sourceHistogram = sourceHistogram)
+        }
+
+        return matchesByCrop
     }
 
 
