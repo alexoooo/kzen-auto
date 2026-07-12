@@ -17,11 +17,43 @@ import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
  * the compiled `evaluate` in the same order.
  */
 object StepExpressionCompiler {
+    // The inference-mode member holding the user's expression: its return type is left to the compiler to infer,
+    // so [FormulaStep] recovers the expression's value type by reflecting this function's return type (see
+    // StepReturnTypeInference). Kept in sync with the reflection lookup by name.
+    const val probeFunctionName = "probe"
+
+
+    // The forced-return form: `evaluate` returns exactly [returnType], so a value that does not conform is a
+    // compile error the caller surfaces as the step's validation error ([ResultStep] against its declared result
+    // type, [DoWhileStep] against Boolean).
     fun generateCode(
         mainClassName: String,
         returnType: String,
         code: String,
         scope: Map<ObjectPath, TypeMetadata>
+    ): KotlinCode {
+        return generate(mainClassName, scope, evaluateReturnType = returnType, probe = false, code = code)
+    }
+
+
+    // The inference form: the user's expression is an inferred [probeFunctionName] member and `evaluate` delegates
+    // to it. [FormulaStep] uses this for both validation (reflect the probe's return type) and execution (call
+    // `evaluate`), so a single content signature compiles once and serves both.
+    fun generateInferenceCode(
+        mainClassName: String,
+        code: String,
+        scope: Map<ObjectPath, TypeMetadata>
+    ): KotlinCode {
+        return generate(mainClassName, scope, evaluateReturnType = "Any?", probe = true, code = code)
+    }
+
+
+    private fun generate(
+        mainClassName: String,
+        scope: Map<ObjectPath, TypeMetadata>,
+        evaluateReturnType: String,
+        probe: Boolean,
+        code: String = ""
     ): KotlinCode {
         val imports = generateImports(scope.values)
 
@@ -39,6 +71,30 @@ object StepExpressionCompiler {
                 "}"
             }
 
+        val body =
+            if (probe) {
+                """
+    fun $probeFunctionName() = run {
+$code
+    }
+
+    override fun evaluate(predecessorValues: List<Any?>): $evaluateReturnType {
+        this.predecessorValues = predecessorValues
+        return $probeFunctionName()
+    }
+"""
+            }
+            else {
+                """
+    override fun evaluate(predecessorValues: List<Any?>): $evaluateReturnType {
+        this.predecessorValues = predecessorValues
+        return run {
+$code
+        }
+    }
+"""
+            }
+
         val generatedCode = """
 $imports
 
@@ -46,13 +102,7 @@ class $mainClassName: ${ StepExpression::class.java.simpleName } {
     private var predecessorValues: List<Any?> = listOf()
 
     ${accessors.joinToString("\n")}
-
-    override fun evaluate(predecessorValues: List<Any?>): $returnType {
-        this.predecessorValues = predecessorValues
-        return run {
-$code
-        }
-    }
+$body
 }
 """
         return KotlinCode(

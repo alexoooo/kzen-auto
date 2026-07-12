@@ -16,7 +16,6 @@ import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
-import tech.kzen.lib.platform.ClassNames
 
 
 /**
@@ -60,10 +59,13 @@ class DoWhileStep(
 
 
     private fun evaluateCondition(execution: StepExecution): Boolean {
-        val scope = nonUnitScope(conditionScopeTypes(execution.scriptTree, execution.scriptValidation))
+        val scope = StepExpressionSupport.resolveNonUnit(
+            conditionScopeTypes(execution.scriptTree, execution.scriptValidation))
+            ?: error("Unresolved in-scope types for: $selfLocation")
         val value = StepExpressionSupport.evaluate(
             selfLocation, "Boolean", condition, scope,
-            { execution.referencedValue(it) }, cachedKotlinCompiler)
+            { execution.referencedValue(it) }, cachedKotlinCompiler,
+            instanceCache = { signature, factory -> execution.perRunSingleton(signature, factory) })
         return value as? Boolean
             ?: error("Do-while condition is not a boolean: $selfLocation")
     }
@@ -71,16 +73,13 @@ class DoWhileStep(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun definition(scriptDefinitionContext: ScriptDefinitionContext): ScriptStepDefinition? {
-        val scopeNullable = conditionScopeTypes(
-            scriptDefinitionContext.scriptTree, scriptDefinitionContext.scriptValidation)
-
         // Defer (null) until every in-scope value's type is known — like ForEachStep defers on `items`.
         // The ScriptValidator iterates to a fixpoint, so a later pass resolves the body step types.
-        if (scopeNullable.values.any { it == null }) {
-            return null
-        }
+        val scope = StepExpressionSupport.resolveNonUnit(
+            conditionScopeTypes(scriptDefinitionContext.scriptTree, scriptDefinitionContext.scriptValidation))
+            ?: return null
 
-        val code = generateConditionCode(nonUnitScope(scopeNullable))
+        val code = generateConditionCode(scope)
         val error = cachedKotlinCompiler.tryCompile(code, ClassLoaderUtils.dynamicParentClassLoader())
         if (error != null) {
             return ScriptStepDefinition(null, error)
@@ -107,24 +106,7 @@ class DoWhileStep(
         scriptTree: ScriptTree,
         scriptValidation: ScriptValidation
     ): Map<ObjectPath, TypeMetadata?> {
-        val builder = LinkedHashMap<ObjectPath, TypeMetadata?>()
-
         val bindings = scriptTree.inScopeBindingPaths(selfLocation.objectPath)
-        val bodyPaths = bodySteps.map { it.objectPath }
-
-        for (path in bodyPaths + bindings) {
-            builder[path] = scriptValidation.stepValidations[path]?.typeMetadata
-        }
-
-        return builder
-    }
-
-
-    // Drop Unit-typed values (e.g. WaitStep) — they carry no usable value and only the named, typed
-    // results are addressable from the condition.
-    @Suppress("UNCHECKED_CAST")
-    private fun nonUnitScope(scopeNullable: Map<ObjectPath, TypeMetadata?>): Map<ObjectPath, TypeMetadata> {
-        return (scopeNullable as Map<ObjectPath, TypeMetadata>)
-            .filterValues { it.className != ClassNames.kotlinUnit }
+        return StepExpressionSupport.typesOf(bodySteps.map { it.objectPath } + bindings, scriptValidation)
     }
 }

@@ -12,10 +12,10 @@ import tech.kzen.lib.common.model.structure.notation.GraphNotation
 
 
 /**
- * The per-run, per-Script context a [ScriptStep] executes against — the engine-agnostic successor to the old
- * ScriptExecutionContext. A step reads its in-scope values, settles boundaries, runs nested branches, hosts a
- * child Logic, and (for a Result step) sets the Script result THROUGH this façade; everything that varies per
- * run lives here, while a step's static configuration and services come from its own constructor.
+ * The per-run, per-Script context a [ScriptStep] executes against — engine-agnostic. A step reads its in-scope
+ * values, settles boundaries, runs nested branches, hosts a child Logic, and (for a Result step) sets the Script
+ * result THROUGH this façade; everything that varies per run lives here, while a step's static configuration and
+ * services come from its own constructor.
  *
  * This is what makes Script steps third-party-extensible: a step is an ordinary `@Reflect` notation object whose
  * [ScriptStep.run] the engine invokes polymorphically — exactly like a `FlowVertex` or a `Worker`, with no
@@ -38,6 +38,13 @@ interface StepExecution {
 
     /** Self-pause as an explicit breakpoint (the Pause step) — distinct from an ordinary boundary settle. */
     suspend fun pauseHere()
+
+    /**
+     * Return the value cached under [key] for this run, computing it once via [factory] on first request. The run
+     * coroutine owns the cache single-threadedly, so the memoized value needs no locking — used to reuse a
+     * compiled-expression instance across a loop's iterations, keyed by the expression's content signature.
+     */
+    fun <T: Any> perRunSingleton(key: String, factory: () -> T): T
 
 
     //-----------------------------------------------------------------------------------------------------------------

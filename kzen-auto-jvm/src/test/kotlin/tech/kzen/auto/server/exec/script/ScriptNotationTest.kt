@@ -17,6 +17,7 @@ import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertTrue
 
 
 /**
@@ -87,6 +88,20 @@ class ScriptNotationTest {
     fun runStepInvokesChildScriptWithArgument() {
         val outcome = runScript("test/script-engine-run-test.yaml")
         assertEquals(7, assertIs<Outcome.Success>(outcome).value.mainComponentValue())
+    }
+
+
+    @Test
+    fun largeForeachOverAFormulaStaysFast() {
+        // Regression guard for the loaded-class cache: a 1000-iteration ForEach whose body is a Formula (plus the
+        // sum + result Formulas) evaluates thousands of times. Rebuilding a URLClassLoader per evaluation would
+        // take orders of magnitude longer than this bound; the cached load keeps it well under a second.
+        val start = System.nanoTime()
+        val outcome = runScript("test/script-engine-foreach-benchmark-test.yaml")
+        val elapsedMillis = (System.nanoTime() - start) / 1_000_000
+
+        assertEquals(1_001_000, assertIs<Outcome.Success>(outcome).value.mainComponentValue())
+        assertTrue(elapsedMillis < 20_000, "1000-iteration ForEach took ${elapsedMillis}ms")
     }
 
 

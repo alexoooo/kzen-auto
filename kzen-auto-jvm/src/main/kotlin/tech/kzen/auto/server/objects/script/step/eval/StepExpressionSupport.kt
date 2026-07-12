@@ -27,15 +27,23 @@ object StepExpressionSupport {
         scriptTree: ScriptTree,
         scriptValidation: ScriptValidation
     ): Map<ObjectPath, TypeMetadata?> {
-        val builder = mutableMapOf<ObjectPath, TypeMetadata?>()
-
         val predecessors = scriptTree.predecessors(selfLocation.objectPath)
         val bindings = scriptTree.inScopeBindingPaths(selfLocation.objectPath)
+        return typesOf(predecessors + bindings, scriptValidation)
+    }
 
-        for (predecessor in predecessors + bindings) {
-            builder[predecessor] = scriptValidation.stepValidations[predecessor]?.typeMetadata
+
+    // The current validated types of the given in-scope paths, preserving order (the accessor index the
+    // generated expression uses). A null value means the referenced object's type is not yet resolved. Used by
+    // [inScopeTypes] (predecessors + bindings) and by DoWhileStep (its body children + bindings).
+    fun typesOf(
+        paths: Iterable<ObjectPath>,
+        scriptValidation: ScriptValidation
+    ): Map<ObjectPath, TypeMetadata?> {
+        val builder = LinkedHashMap<ObjectPath, TypeMetadata?>()
+        for (path in paths) {
+            builder[path] = scriptValidation.stepValidations[path]?.typeMetadata
         }
-
         return builder
     }
 
@@ -62,25 +70,55 @@ object StepExpressionSupport {
         code: String,
         scope: Map<ObjectPath, TypeMetadata>
     ): KotlinCode {
-        val mainClassName = "Eval_" + StepExpressionCompiler.sanitizeName(selfLocation.objectPath.name.value)
         return StepExpressionCompiler.generateCode(
-            mainClassName, returnType, code, scope)
+            mainClassName(selfLocation), returnType, code, scope)
+    }
+
+
+    // The inference form of the expression (see [StepExpressionCompiler.generateInferenceCode]): [FormulaStep]
+    // uses it for both validation (reflect the inferred return type) and execution (call `evaluate`), so the
+    // single content signature compiles once and serves both.
+    fun generateInferenceCode(
+        selfLocation: ObjectLocation,
+        code: String,
+        scope: Map<ObjectPath, TypeMetadata>
+    ): KotlinCode {
+        return StepExpressionCompiler.generateInferenceCode(
+            mainClassName(selfLocation), code, scope)
+    }
+
+
+    private fun mainClassName(selfLocation: ObjectLocation): String {
+        return "Eval_" + StepExpressionCompiler.sanitizeName(selfLocation.objectPath.name.value)
     }
 
 
     // Compile, load, instantiate and evaluate the expression against the current values of the in-scope
     // predecessors / bindings (resolved on demand via [valueResolver], in the same order as [nonUnitTypes]).
     // The only runtime coupling is that resolver, so any engine flavour can supply its own.
+    //
+    // [infer] selects the codegen form: a type-inferring step ([FormulaStep]) sets it so the same source it
+    // validated against is executed here (one compile serves both); a forced-return step keeps [returnType].
+    // [instanceCache] reuses the compiled instance across a loop's iterations, keyed by content signature; the
+    // default builds a fresh instance each call, so a caller that does not thread a run cache is unchanged.
     fun evaluate(
         selfLocation: ObjectLocation,
         returnType: String,
         code: String,
         nonUnitTypes: Map<ObjectPath, TypeMetadata>,
         valueResolver: (ObjectLocation) -> Any?,
-        compiler: CachedKotlinCompiler
+        compiler: CachedKotlinCompiler,
+        infer: Boolean = false,
+        instanceCache: (signature: String, factory: () -> StepExpression) -> StepExpression = { _, factory -> factory() }
     ): Any? {
         val classLoader = ClassLoaderUtils.dynamicParentClassLoader()
-        val generatedCode = generateCode(selfLocation, returnType, code, nonUnitTypes)
+        val generatedCode =
+            if (infer) {
+                generateInferenceCode(selfLocation, code, nonUnitTypes)
+            }
+            else {
+                generateCode(selfLocation, returnType, code, nonUnitTypes)
+            }
 
         val error = compiler.tryCompile(generatedCode, classLoader)
         check(error == null) {
@@ -95,7 +133,9 @@ object StepExpressionSupport {
         @Suppress("UNCHECKED_CAST")
         val classCast = clazz as Class<StepExpression>
 
-        val instance = classCast.getDeclaredConstructor().newInstance()
+        val instance = instanceCache(generatedCode.signature()) {
+            classCast.getDeclaredConstructor().newInstance()
+        }
 
         val predecessorValues = nonUnitTypes.map {
             val objectLocation = selfLocation.documentPath.toObjectLocation(it.key)

@@ -12,3 +12,23 @@ main.steps/IntFormula:
 main.steps/RangeFormula:
   is: FormulaStep
   code: 1..100
+
+main.steps/NullableFormula:
+  is: FormulaStep
+  code: 'null as String?'
+
+main.steps/ListFormula:
+  is: FormulaStep
+  code: 'listOf(1, 2)'
+
+main.steps/UnitFormula:
+  is: FormulaStep
+  code: Unit
+
+main.steps/LongFormula:
+  is: FormulaStep
+  code: 42L
+
+main.steps/CharFormula:
+  is: FormulaStep
+  code: "'x'"

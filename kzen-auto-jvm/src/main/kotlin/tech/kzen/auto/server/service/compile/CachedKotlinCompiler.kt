@@ -1,5 +1,8 @@
 package tech.kzen.auto.server.service.compile
 
+import com.google.common.cache.Cache
+import com.google.common.cache.CacheBuilder
+import com.google.common.util.concurrent.Striped
 import tech.kzen.auto.server.objects.report.service.ReportWorkPool
 import tech.kzen.auto.server.util.WorkUtils
 import java.net.URLClassLoader
@@ -19,11 +22,34 @@ class CachedKotlinCompiler(
 //        private const val sourceExtension = ".kt"
         private const val errorFile = "err.txt"
         private const val successFile = "success.txt"
+
+        // Upper bound on hot loaded expression classes held in memory (see [loadedClasses]). The working set of
+        // distinct expressions live at once is the target; over a long-lived process this stays far below the
+        // total distinct expressions ever compiled.
+        private const val loadedClassCacheSize = 10_000L
+
+        // Number of monitors striping [compileLocks]; fixed so the lock table does not grow per distinct signature.
+        private const val compileLockStripes = 64
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     private val cacheDir = workUtils.resolve(codeCacheDir)
+
+    // Hot loaded expression classes, keyed by content signature (className + source digest, so an entry can
+    // never be stale; the classloader parent is process-stable, so the signature alone is a sufficient key).
+    // Each retained Class pins its own URLClassLoader in Metaspace, so this is a bounded LRU rather than an
+    // unbounded map: a long-lived process compiles far more distinct expressions over its lifetime than are
+    // live at once, and an evicted entry is transparently rebuilt from the durable on-disk jar on next request.
+    private val loadedClasses: Cache<String, Class<out Any>> = CacheBuilder.newBuilder()
+        .maximumSize(loadedClassCacheSize)
+        .build()
+
+    // Fixed set of monitors guarding tryCompile's check-then-act against the on-disk cache directory, so two
+    // concurrent compiles of the same source don't race (one writing the jar while the other reads a
+    // half-written one). Striped rather than one-monitor-per-signature so the table stays bounded; distinct
+    // signatures may share a stripe, which only adds harmless serialization.
+    private val compileLocks = Striped.lock(compileLockStripes)
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -76,24 +102,29 @@ class CachedKotlinCompiler(
         classLoader: ClassLoader
     ): Class<out Any>? {
         val signature = kotlinCode.signature()
+
+        loadedClasses.getIfPresent(signature)?.let {
+            return it
+        }
+
         val codeDir = cacheDir.resolve(signature)
         val outputJar = outputJar(codeDir, kotlinCode.mainClassName)
-
-//        val classDir = codeDir.resolve(buildDir)
-//        val classUrl = classDir.toUri().toURL()
 
         val sourceClassLoader = URLClassLoader(
             arrayOf(outputJar.toUri().toURL()),
             classLoader)
 
-        @Suppress("LiftReturnOrAssignment")
-        try {
-            val fullClassName = KotlinCode.classNamePrefix + kotlinCode.mainClassName
-            return sourceClassLoader.loadClass(fullClassName)
-        }
-        catch (e: ClassNotFoundException) {
-            return null
-        }
+        val fullClassName = KotlinCode.classNamePrefix + kotlinCode.mainClassName
+        val loaded =
+            try {
+                sourceClassLoader.loadClass(fullClassName)
+            }
+            catch (e: ClassNotFoundException) {
+                return null
+            }
+
+        loadedClasses.put(signature, loaded)
+        return loaded
     }
 
 
@@ -102,24 +133,33 @@ class CachedKotlinCompiler(
         kotlinCode: KotlinCode,
         classLoader: ClassLoader
     ): String? {
-        val codeDir = cacheDir.resolve(kotlinCode.signature())
+        val signature = kotlinCode.signature()
 
-        val previouslyCompiled = Files.exists(codeDir)
-        if (!previouslyCompiled) {
+        val lock = compileLocks.get(signature)
+        lock.lock()
+        try {
+            val codeDir = cacheDir.resolve(signature)
+
+            val previouslyCompiled = Files.exists(codeDir)
+            if (!previouslyCompiled) {
+                return tryCompileNew(kotlinCode, codeDir, classLoader)
+            }
+
+            val previousError = readErrorFile(codeDir)
+            if (previousError != null) {
+                return previousError
+            }
+
+            if (hasSuccess(codeDir)) {
+                return null
+            }
+
+            ReportWorkPool.deleteDir(codeDir)
             return tryCompileNew(kotlinCode, codeDir, classLoader)
         }
-
-        val previousError = readErrorFile(codeDir)
-        if (previousError != null) {
-            return previousError
+        finally {
+            lock.unlock()
         }
-
-        if (hasSuccess(codeDir)) {
-            return null
-        }
-
-        ReportWorkPool.deleteDir(codeDir)
-        return tryCompileNew(kotlinCode, codeDir, classLoader)
     }
 
 

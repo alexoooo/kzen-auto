@@ -19,8 +19,8 @@ import tech.kzen.lib.common.reflect.Service
 /**
  * Sets the Script's return value: a body step holding a Kotlin expression that must evaluate to the
  * Script's declared `main` result type (the result signature at the top of the stage). The last Result
- * step executed wins (Visual-Basic style) — its value is captured in [ScriptExecutionContext.setMainResult]
- * and returned by the Script once it completes. With no declared result signature the Script is void, so a
+ * step executed wins (Visual-Basic style) — its value is captured via [StepExecution.setResult] and
+ * returned by the Script once it completes. With no declared result signature the Script is void, so a
  * Result step is a validation error; a type mismatch surfaces as the step's compile error like [FormulaStep].
  */
 @Reflect
@@ -51,7 +51,8 @@ class ResultStep(
 
         val value = StepExpressionSupport.evaluate(
             selfLocation, declaredType.toSimple(), code, nonUnitPredecessorTypes,
-            { execution.referencedValue(it) }, cachedKotlinCompiler)
+            { execution.referencedValue(it) }, cachedKotlinCompiler,
+            instanceCache = { signature, factory -> execution.perRunSingleton(signature, factory) })
 
         execution.setResult(TupleValue.ofMain(value))
         return value

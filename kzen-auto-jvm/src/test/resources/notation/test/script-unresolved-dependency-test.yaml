@@ -1,0 +1,10 @@
+main:
+  is: Script
+
+main.steps/Broken:
+  is: FormulaStep
+  code: "@@@ not valid kotlin"
+
+main.steps/Dependent:
+  is: FormulaStep
+  code: Broken

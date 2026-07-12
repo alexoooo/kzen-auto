@@ -1,0 +1,30 @@
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.Int
+      generics: []
+      nullable: false
+
+main.steps/Range:
+  is: FormulaStep
+  code: "1..1000"
+
+main.steps/Loop:
+  is: ForEachStep
+  items: main.steps/Range
+
+main.steps/Loop.item/Item:
+  is: ForEachItemBinding
+
+main.steps/Loop.steps/Doubled:
+  is: FormulaStep
+  code: "Item * 2"
+
+main.steps/Total:
+  is: FormulaStep
+  code: "Loop.sum()"
+
+main.steps/Result:
+  is: ResultStep
+  code: Total

@@ -3,6 +3,7 @@ package tech.kzen.auto.server.objects.script.step.eval
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import tech.kzen.auto.common.objects.document.script.model.ScriptValidation
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.objects.script.ScriptValidator
 import tech.kzen.auto.server.util.AutoTestUtils
@@ -59,12 +60,70 @@ class FormulaStepTest {
     }
 
 
+    @Test
+    fun infersNullableType() {
+        assertEquals(
+            TypeMetadata(ClassNames.kotlinString, listOf(), true),
+            typeMetadataFor("main.steps/NullableFormula"))
+    }
+
+
+    @Test
+    fun infersGenericListType() {
+        assertEquals(
+            TypeMetadata(ClassNames.kotlinList, listOf(TypeMetadata(ClassNames.kotlinInt, listOf(), false)), false),
+            typeMetadataFor("main.steps/ListFormula"))
+    }
+
+
+    @Test
+    fun infersUnitType() {
+        assertEquals(
+            TypeMetadata(ClassNames.kotlinUnit, listOf(), false),
+            typeMetadataFor("main.steps/UnitFormula"))
+    }
+
+
+    @Test
+    fun infersLongType() {
+        assertEquals(
+            TypeMetadata(ClassNames.kotlinLong, listOf(), false),
+            typeMetadataFor("main.steps/LongFormula"))
+    }
+
+
+    @Test
+    fun typeOutsideTheVisibleSetApproximatesToAny() {
+        // A Char is not a known-importable builtin and not registry-declared, so it approximates to Any rather
+        // than crashing (the reachable TODO the old diagnostic-parsing inference hit).
+        assertEquals(
+            TypeMetadata(ClassNames.kotlinAny, listOf(), false),
+            typeMetadataFor("main.steps/CharFormula"))
+    }
+
+
+    @Test
+    fun unresolvableDependencyGetsAnExplicitDiagnostic() {
+        val validation = scriptValidationFor("test/script-unresolved-dependency-test.yaml")
+        assertEquals(
+            "Unresolved: circular or unavailable dependency",
+            validation.stepValidations[ObjectPath.parse("main.steps/Dependent")]?.errorMessage)
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private fun typeMetadataFor(stepObjectPath: String): TypeMetadata? {
+        return scriptValidationFor("test/formula-step-type-inference-test.yaml")
+            .stepValidations[ObjectPath.parse(stepObjectPath)]
+            ?.typeMetadata
+    }
+
+
+    private fun scriptValidationFor(documentPathString: String): ScriptValidation {
         val graphNotation = AutoTestUtils.readNotation()
         val graphDefinitionAttempt = AutoTestUtils.graphDefinitionAttempt(graphNotation)
 
-        val documentPath = DocumentPath.parse("test/formula-step-type-inference-test.yaml")
+        val documentPath = DocumentPath.parse(documentPathString)
 
         val stepGraphDefinition = graphDefinitionAttempt
             .transitiveSuccessful
@@ -72,12 +131,10 @@ class FormulaStepTest {
 
         val graphInstance = GraphCreator.createGraph(stepGraphDefinition, context.graphEnvironment)
 
-        val scriptValidation = ScriptValidator.validate(
+        return ScriptValidator.validate(
             documentPath,
             graphNotation,
             stepGraphDefinition,
             graphInstance)
-
-        return scriptValidation.stepValidations[ObjectPath.parse(stepObjectPath)]?.typeMetadata
     }
 }

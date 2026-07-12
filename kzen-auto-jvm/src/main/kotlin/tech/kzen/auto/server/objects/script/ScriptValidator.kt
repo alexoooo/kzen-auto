@@ -40,14 +40,14 @@ class ScriptValidator(
             documentPath: DocumentPath,
             graphNotation: GraphNotation,
             graphDefinition: GraphDefinition,
-            graphInstance: GraphInstance
+            graphInstance: GraphInstance,
+            scriptTree: ScriptTree = ScriptTree.read(documentPath, graphDefinition)
         ): ScriptValidation {
             val documentNotation = graphNotation.documents[documentPath]
                 ?: throw IllegalArgumentException("Document not found: $documentPath")
 
             val objectRegistryScan = ObjectRegistryDocument.scan(graphNotation)
 
-            val scriptTree = ScriptTree.read(documentPath, graphDefinition)
             val stepValidationBuffer = mutableMapOf<ObjectPath, StepValidation>()
             val resultSignature = ResultSignatureDefiner.parse(
                 graphNotation.firstAttribute(
@@ -86,6 +86,14 @@ class ScriptValidator(
                 stepValidationBuffer.putAll(nextValidations)
 
                 remainingSteps.removeAll(nextValidations.keys)
+            }
+
+            // A step still unresolved once the fixpoint stops making progress depends on a cycle or on an
+            // object that never defines a type; give it an explicit entry so the editor shows the problem
+            // rather than nothing.
+            for (survivor in remainingSteps) {
+                stepValidationBuffer.putIfAbsent(
+                    survivor, StepValidation(null, "Unresolved: circular or unavailable dependency"))
             }
 
             return ScriptValidation(stepValidationBuffer)

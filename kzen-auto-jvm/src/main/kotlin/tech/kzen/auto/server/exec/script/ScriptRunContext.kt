@@ -83,6 +83,10 @@ class ScriptRunContext(
     // A RunStep's linked child Logic, compiled on demand and cached for this run (a RunStep in a loop reuses it).
     private val childLogics = HashMap<ObjectLocation, Logic>()
 
+    // Per-run memo backing [perRunSingleton] — a compiled-expression instance reused across a loop's iterations,
+    // keyed by content signature. Confined to the run coroutine, so no locking.
+    private val perRunSingletons = HashMap<String, Any>()
+
     private var resultValue: TupleValue? = null
 
     // The step the spine is currently running (whose trace [traceDetail] updates), and the detail it has
@@ -100,6 +104,12 @@ class ScriptRunContext(
 
     override suspend fun pauseHere() {
         execution.pauseHere(PauseReason.Explicit)
+    }
+
+
+    @Suppress("UNCHECKED_CAST")
+    override fun <T: Any> perRunSingleton(key: String, factory: () -> T): T {
+        return perRunSingletons.getOrPut(key) { factory() } as T
     }
 
 
