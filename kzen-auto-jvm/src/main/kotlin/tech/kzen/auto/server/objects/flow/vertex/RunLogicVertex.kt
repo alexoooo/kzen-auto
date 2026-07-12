@@ -14,7 +14,7 @@ import tech.kzen.lib.common.reflect.Reflect
  * this vertex's emitted message (which downstream vertices wire to via the [output] channel).
  *
  * The invocation needs the run's [tech.kzen.lib.common.exec.logic.LogicHandle], which a [process] call
- * cannot reach, so [tech.kzen.auto.server.objects.flow.FlowExecution] special-cases this vertex (like it
+ * cannot reach, so [FlowRun][tech.kzen.auto.server.exec.flow.FlowRun] special-cases this vertex (like it
  * does [FlowInputVertex] / [FlowOutputVertex]): it starts the child execution, steps/runs it, and sets
  * the message directly. [process] is therefore never called and [output] is never written — the channel
  * is declared only so the vertex renders an egress funnel. The child participates in stepping (Step Into
@@ -29,6 +29,6 @@ class RunLogicVertex(
     StatelessFlowVertex
 {
     override fun process() {
-        throw IllegalStateException("RunLogicVertex is executed by FlowExecution, not process()")
+        throw IllegalStateException("RunLogicVertex is executed by FlowRun, not process()")
     }
 }

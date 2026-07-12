@@ -12,7 +12,7 @@ import tech.kzen.lib.common.reflect.Reflect
  * [tech.kzen.auto.server.objects.script.step.value.ArgumentStep], but as a graph vertex. Downstream
  * vertices wire to it via the [output] channel.
  *
- * The argument value is injected by [tech.kzen.auto.server.objects.flow.FlowExecution] from the run's
+ * The argument value is injected by [FlowRun][tech.kzen.auto.server.exec.flow.FlowRun] from the run's
  * [tech.kzen.lib.common.exec.tuple.TupleValue] arguments (a [process] call cannot reach them), so
  * [process] is intentionally a no-op and [output] is never written — the channel is declared only so
  * the vertex renders an egress funnel. [FlowDocument][tech.kzen.auto.server.objects.flow.FlowDocument]
@@ -29,6 +29,6 @@ class FlowInputVertex(
 
 
     override fun process() {
-        // No-op: the message is seeded from the run arguments by FlowExecution.
+        // No-op: the message is seeded from the run arguments by FlowRun.
     }
 }

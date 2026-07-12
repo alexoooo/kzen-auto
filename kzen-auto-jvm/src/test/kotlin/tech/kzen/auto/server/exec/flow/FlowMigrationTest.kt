@@ -26,9 +26,7 @@ import kotlin.test.assertTrue
 
 /**
  * Engine-side coverage of the Flow flavour's live-edit state migration (logic-spec §5): pause -> edit config ->
- * resume, driven directly through [RunEngine.migrate] (exactly what the controller's edit-detection does). It
- * re-proves on the new engine what the retired re-entrant [tech.kzen.auto.server.objects.flow.FlowExecution]
- * gave for free by keeping its stable-id-keyed per-vertex fields alive across `continueOrStart` re-entries: a
+ * resume, driven directly through [RunEngine.migrate] (exactly what the controller's edit-detection does). A
  * mid-DAG edit RESUMES from the carried per-vertex progress ([FlowRun] capturing / restoring [FlowMigrationState])
  * rather than restarting.
  *

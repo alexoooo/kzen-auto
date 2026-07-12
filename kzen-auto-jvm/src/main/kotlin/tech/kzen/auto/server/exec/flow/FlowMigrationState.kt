@@ -14,11 +14,9 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableId
  * harvested values.
  *
  * The rebuilt [FlowRun] adopts this map before walking the DAG, so [FlowUtils.next][tech.kzen.auto.common.paradigm.flow.util.FlowUtils]
- * re-selects from the carried progress and the run continues from the live frontier instead of restarting — the
- * clean-room successor to the way the retired [tech.kzen.auto.server.objects.flow.FlowExecution] kept these same
- * stable-id-keyed instance fields alive across `continueOrStart` re-entries (it re-read the edited definition each
- * pass without tearing the progress down). Carrying the progress is what stops a non-idempotent sink from
- * re-processing the already-consumed prefix and a non-replayable source from re-emitting it after an edit.
+ * re-selects from the carried progress and the run continues from the live frontier instead of restarting.
+ * Carrying the progress is what stops a non-idempotent sink from re-processing the already-consumed prefix and a
+ * non-replayable source from re-emitting it after an edit.
  *
  * A vertex the edit removed simply isn't re-selected by the rebuilt DAG (the walker, snapshot and end-of-run
  * clearing all iterate the new matrix), so its carried entry is inert — the best-effort default of spec §5.

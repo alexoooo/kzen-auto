@@ -8,7 +8,7 @@ import tech.kzen.lib.common.reflect.Reflect
 
 /**
  * A Flow result, modelled as a sink vertex with a single input (and no output — it is a terminal node).
- * [tech.kzen.auto.server.objects.flow.FlowExecution] special-cases it (like [FlowInputVertex]): it
+ * [FlowRun][tech.kzen.auto.server.exec.flow.FlowRun] special-cases it (like [FlowInputVertex]): it
  * captures the upstream input as this vertex's message and harvests that into the run's result
  * [tech.kzen.lib.common.exec.tuple.TupleValue] under [tupleComponentName], so [process] is never called.
  * [FlowDocument][tech.kzen.auto.server.objects.flow.FlowDocument] reads [tupleComponentName] to build
@@ -25,6 +25,6 @@ class FlowOutputVertex(
 
 
     override fun process() {
-        // No-op: FlowExecution captures the upstream input as this sink's value.
+        // No-op: FlowRun captures the upstream input as this sink's value.
     }
 }
