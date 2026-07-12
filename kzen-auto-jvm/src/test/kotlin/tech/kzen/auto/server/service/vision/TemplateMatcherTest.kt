@@ -223,10 +223,10 @@ class TemplateMatcherTest {
      * antialiased edge shade shifted — so exact matching finds nothing. This is the technique's
      * documented boundary (capture and match must share one rendering), not a matcher defect.
      *
-     * Calibration data for score-based matching (feature plan phase 4): best zero-mean grayscale
-     * NCC over this pair measures ~0.85 at (374, 518), the true icon location and the global
-     * maximum — below the 0.95 default threshold that phase pre-decided, so this fixture should
-     * become its positive test and inform the default.
+     * Calibration data for score-based matching (target-improvements plan phase 5): best zero-mean
+     * grayscale NCC over this pair measures ~0.85 at (374, 518), the true icon location and the
+     * global maximum — the fixture becomes that phase's positive test and calibrates its
+     * suggested tolerance levels.
      */
     @Test
     fun rasterizationDriftFindsNoExactMatch() {
