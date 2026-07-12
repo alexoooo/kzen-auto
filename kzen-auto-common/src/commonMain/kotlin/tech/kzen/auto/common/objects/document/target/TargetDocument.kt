@@ -49,5 +49,13 @@ class TargetDocument(
 
             return mainObjectIs == archetypeObjectName.value
         }
+
+
+        fun hasCrops(documentNotation: DocumentNotation): Boolean {
+            val resources = documentNotation.resources
+                ?: return false
+
+            return resources.digests.isNotEmpty()
+        }
     }
 }

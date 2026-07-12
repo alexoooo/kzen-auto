@@ -10,7 +10,6 @@ import mui.system.sx
 import react.ChildrenBuilder
 import react.Props
 import react.State
-import react.dom.html.ReactHTML.a
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.img
 import react.dom.html.ReactHTML.option
@@ -21,7 +20,6 @@ import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.objects.document.script.display.image.pngUrl
 import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.service.rest.ClientRestApi
-import tech.kzen.auto.client.util.NavigationRoute
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.iconify.icon
@@ -92,9 +90,9 @@ external interface TargetControllerState: State {
 //---------------------------------------------------------------------------------------------------------------------
 /**
  * Two routed sub-pages: View (how do the captured patches match, live) and Add (capture a new
- * patch), selected by the `section` hash param so a refresh keeps the page and the tabs are
- * real links. The screenshot can come from the desktop (with an optional delay to alt-tab) or
- * from a run's browser trace (bit-identical to what matching saw).
+ * patch), selected by the `section` hash param via the [TargetHeader] tabs. The screenshot can
+ * come from the desktop (with an optional delay to alt-tab) or from a run's browser trace
+ * (bit-identical to what matching saw).
  */
 @Suppress("unused")
 class TargetController(
@@ -106,10 +104,6 @@ class TargetController(
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        private const val sectionKey = "section"
-        private const val sectionView = "view"
-        private const val sectionAdd = "add"
-
         private const val sourceScreen = "screen"
         private const val sourceBrowser = "browser"
 
@@ -134,7 +128,13 @@ class TargetController(
 
         override fun header(): ReactWrapper<Props> {
             return object: ReactWrapper<Props> {
-                override fun ChildrenBuilder.child(block: Props.() -> Unit) {}
+                override fun ChildrenBuilder.child(block: Props.() -> Unit) {
+                    TargetHeader::class.react {
+                        mirroredGraphStore = this@Wrapper.mirroredGraphStore
+                        navigationGlobal = this@Wrapper.navigationGlobal
+                        block()
+                    }
+                }
             }
         }
 
@@ -237,11 +237,10 @@ class TargetController(
         val documentPath = state.documentPath
             ?: return false
 
-        val resources = state
-            .graphStructure?.graphNotation?.documents?.get(documentPath)?.resources
+        val documentNotation = state.graphStructure?.graphNotation?.documents?.get(documentPath)
             ?: return false
 
-        return resources.digests.isNotEmpty()
+        return TargetDocument.hasCrops(documentNotation)
     }
 
 
@@ -557,20 +556,9 @@ class TargetController(
 
             // Jump to View so the new crop's match is visible right away
             props.navigationGlobal.parameterize(
-                (state.parameters ?: RequestParams.empty).set(sectionKey, sectionView))
+                (state.parameters ?: RequestParams.empty)
+                    .set(TargetSection.parameterKey, TargetSection.view))
         }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    private fun activeSection(): String {
-        val requested = state.parameters?.get(sectionKey)
-
-        if (requested == sectionView || requested == sectionAdd) {
-            return requested
-        }
-
-        return if (hasCrops()) { sectionView } else { sectionAdd }
     }
 
 
@@ -587,20 +575,19 @@ class TargetController(
         val resources = documentNotation.resources
             ?: return
 
-        val section = activeSection()
+        val section = TargetSection.active(state.parameters, hasCrops())
 
         div {
             css {
                 padding = Padding(1.em, 1.em, 0.5.em, 1.em)
             }
 
-            renderSectionTabs(documentPath, section)
             renderSourceControls()
             renderStatus()
         }
 
         when (section) {
-            sectionView ->
+            TargetSection.view ->
                 TargetView::class.react {
                     this.documentPath = documentPath
                     this.resources = resources
@@ -613,7 +600,7 @@ class TargetController(
                     onRemove = ::onRemove
                 }
 
-            sectionAdd -> {
+            TargetSection.add -> {
                 val screenshotDataUrl = state.screenshotDataUrl
                 if (screenshotDataUrl != null) {
                     TargetAdd::class.react {
@@ -622,60 +609,6 @@ class TargetController(
                     }
                 }
             }
-        }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    private fun ChildrenBuilder.renderSectionTabs(
-        documentPath: DocumentPath,
-        activeSection: String
-    ) {
-        div {
-            css {
-                marginBottom = 0.5.em
-            }
-
-            renderSectionTab(documentPath, activeSection, sectionView, "View")
-            renderSectionTab(documentPath, activeSection, sectionAdd, "Add")
-        }
-    }
-
-
-    private fun ChildrenBuilder.renderSectionTab(
-        documentPath: DocumentPath,
-        activeSection: String,
-        section: String,
-        label: String
-    ) {
-        val parameters = state.parameters ?: RequestParams.empty
-        val active = section == activeSection
-
-        a {
-            css {
-                display = Display.inlineBlock
-                padding = Padding(0.25.em, 1.em)
-                marginRight = 0.5.em
-                color = Globals.inherit
-                textDecoration =
-                    if (active) { None.none }
-                    else { Globals.initial }
-                fontWeight =
-                    if (active) { FontWeight.bold }
-                    else { FontWeight.normal }
-                backgroundColor =
-                    if (active) { NamedColor.white }
-                    else { Color("transparent") }
-                borderRadius = 3.px
-            }
-
-            draggable = false
-            href = NavigationRoute(
-                documentPath,
-                parameters.set(sectionKey, section)
-            ).toFragment()
-
-            +label
         }
     }
 
