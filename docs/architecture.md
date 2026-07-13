@@ -109,7 +109,7 @@ The companion-object `init` block registers SPI metadata with kzen-lib's `Reflec
 | `graphStore` | `DirectGraphStore` | In-process notation store; the canonical mirror target for `ClientRestGraphStore` |
 | `detachedExecutor` | `ModelDetachedExecutor` | Detached-paradigm runner |
 | `modelTaskRepository` | `ModelTaskRepository` | Task-paradigm registry + runner (observer on `graphStore`) |
-| `serverLogicController` | `ServerLogicController` | Logic-paradigm state machine (see § 3 gotcha); runs Script **and Flow** |
+| `serverLogicController` | `ServerLogicController` | Logic-paradigm state machine (see § 3 gotcha); runs Script **and Flow**; observer on `graphStore` (event-driven live-edit detection) |
 | `flowMessageInspector` | `FlowMessageInspector` | Injected (via `graphEnvironment`) into Flow vertices for message inspection / tracing |
 | `objectStableMapper` | `ObjectStableMapper` (kzen-lib) | Process-global `ObjectLocation ↔ ObjectStableId` bimap; `graphStore.observe(...)` at boot + pre-warmed over the initial notation (see [`../../kzen-lib/docs/architecture.md`](../../kzen-lib/docs/architecture.md#stable-identity-objectstablemapper)) |
 | `logicTraceStore` | `LogicTraceStore` (kzen-lib) | In-memory, stable-id-keyed trace store; constructed with `objectStableMapper` |
@@ -119,7 +119,7 @@ The companion-object `init` block registers SPI metadata with kzen-lib's `Reflec
 
 The Selenium / WebDriver browser handle is **no longer a context service**: it is a per-run resource keyed `"browser"` in the Script run's resource registry (opened by `BrowserOpenStep`, read by the action steps via `StepExecution.resource(...)`, disposed per its `closePolicy` when its owning document settles). `WebDriverSupport` holds only the shared key + quiet-quit helper. This replaced the former `webDriverContext` process singleton (removes a global; allows concurrent runs). The `closePolicy` also selects *which* document owns the handle's lifetime — its own (`auto`/`manual`/`keepOnFailure`), the calling document one level up (`parent`/`parentKeepOnFailure`), or the whole run (`run`/`runKeepOnFailure`) — so a sub-script can open the SUT but bind it to the enclosing test (see kzen-lib `ResourceScope`).
 
-Construction is self-initializing: the private `init()` (run by `create()`/`forTest()`) subscribes the task repository **and `objectStableMapper`** to the graph store via `graphStore.observe(...)` — the same observer mechanism described in § 2 — then pre-warms the mapper by iterating the boot notation. The shutdown hook calls `context.close()`, which cancels the active run — settling its root node disposes any run-scoped resources (an open browser) through the engine.
+Construction is self-initializing: the private `init()` (run by `create()`/`forTest()`) subscribes the task repository, `objectStableMapper`, **and `serverLogicController`** (its edit-dirty flag for live-edit detection) to the graph store via `graphStore.observe(...)` — the same observer mechanism described in § 2 — then pre-warms the mapper by iterating the boot notation. The shutdown hook calls `context.close()`, which cancels the active run — settling its root node disposes any run-scoped resources (an open browser) through the engine.
 
 ## 5. Backend execution model
 

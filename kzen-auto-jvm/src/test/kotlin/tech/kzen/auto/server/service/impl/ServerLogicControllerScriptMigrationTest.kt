@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.service.impl
 
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
@@ -90,6 +91,12 @@ class ServerLogicControllerScriptMigrationTest {
         }
         assertTrue(isDone(runId, flagLocation), "Flag should complete before the edit")
         assertFalse(isDone(runId, resultLocation), "Result must not have run before the edit")
+
+        // The edit was fabricated OUT-OF-BAND (NotationReducer on a local notation copy — the graph store never
+        // saw a command), so hand the controller the store notification production would have delivered: edit
+        // detection is event-driven (the controller observes the graph store), and a release only reconciles
+        // against the baseline once some notation event has landed.
+        runBlocking { controller.onStoreRefresh(edited) }
 
         // Resume against the edited snapshot: the controller detects the change, recompiles, and migrates.
         controller.continueOrStart(runId, edited)

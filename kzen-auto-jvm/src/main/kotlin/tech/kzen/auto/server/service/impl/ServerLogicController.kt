@@ -33,6 +33,8 @@ import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.ObjectNotation
+import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
+import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
 import tech.kzen.lib.common.service.context.environment.GraphEnvironment
 import tech.kzen.lib.common.service.metadata.NotationMetadataReader
 import tech.kzen.lib.common.service.store.LocalGraphStore
@@ -68,7 +70,9 @@ import kotlin.time.Clock
  * run's `snapshotGraphDefinitionAttempt` each time it releases work. When that definition differs from the one
  * the live run was compiled against (a pause → edit → resume), [pendingMigration] recompiles the root [Logic]
  * and the executor calls [RunEngine.migrate] at the quiescent barrier instead of plain resume / step — so the
- * edit takes effect on the live run. This is flavour-agnostic: a Job carries its Worker state + channel
+ * edit takes effect on the live run. Detection is event-driven: this controller observes the graph store (as a
+ * [LocalGraphStore.Observer], registered at the composition root) to set a coarse edit-dirty flag, so a clean
+ * release skips the closure compare entirely (slow motion would otherwise pay it per tick). This is flavour-agnostic: a Job carries its Worker state + channel
  * carryover across the rebuild (see [tech.kzen.auto.server.exec.job.JobRun]); a Script / Flow registers no
  * capture yet, so it cleanly restarts on the edited definition (the safe best-effort §5 default).
  */
@@ -83,7 +87,8 @@ class ServerLogicController(
     private val traceAddressRoutings: List<LogicTraceAddressRouting>,
     private val environment: () -> GraphEnvironment
 ):
-    LogicController
+    LogicController,
+    LocalGraphStore.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -114,8 +119,9 @@ class ServerLogicController(
         // actually edited. Updated on each migrate so the next compare is vs the currently-running notation.
         var baselineNotations: Map<ObjectLocation, ObjectNotation>
     ) {
-        // Set once, immediately after construction (the observer references this state).
+        // Set once, immediately after construction (the observers reference this state).
         lateinit var traceBridge: AutoCloseable
+        lateinit var frameBridge: AutoCloseable
 
         // Per-engine-node trace buffer handles, created lazily on a node's first mirrored event (see
         // [handleForNode]) and cached for the run. Keying each node's trace by its own node id — the same id
@@ -123,12 +129,6 @@ class ServerLogicController(
         // instead of ghosting the prior invocation's per-step values. Touched only from the trace bridge,
         // which is serialized on [bridgeLock].
         val nodeHandles = HashMap<NodeId, LogicTraceHandle>()
-
-        // Nodes whose trace buffer has already been evicted on frame close (§7 streaming bounding): a node that
-        // hosted with retainTrace = false, evicted once it settled terminal (see [evictClosedFrames]). Tracked so
-        // the once-per-frame eviction is idempotent across the many publishes a run emits. Touched only from the
-        // trace bridge, serialized on [bridgeLock].
-        val evictedNodes = HashSet<NodeId>()
 
         // The engine has been launched (the root coroutine started). A fresh run is created but not launched;
         // the first drive (resume / step) — or a pause-at-entry — launches it.
@@ -160,10 +160,40 @@ class ServerLogicController(
     //-----------------------------------------------------------------------------------------------------------------
     private var stateOrNull: LogicState? = null
 
+    // A notation edit MAY have landed since [pendingMigration] last reconciled — the cheap first stage of
+    // live-edit detection (fed by the graphStore observer callbacks below; registered at the composition root).
+    // Coarse by design (an edit to an unrelated document also sets it): the closure compare in
+    // [pendingMigration] is the precise second stage; this flag only spares a clean release from recomputing
+    // the transitive-closure notation map on every drive (slow motion pays that per tick).
+    @Volatile
+    private var editDirty = false
+
     private val executor = Executors.newSingleThreadExecutor { runnable ->
         Thread(runnable, "ServerLogicController-execution").apply {
             isDaemon = true
         }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override suspend fun onCommandSuccess(
+        event: NotationEvent,
+        graphDefinition: GraphDefinitionAttempt,
+        attachment: LocalGraphStore.Attachment
+    ) {
+        editDirty = true
+    }
+
+
+    override suspend fun onCommandFailure(
+        command: NotationCommand,
+        cause: Throwable,
+        attachment: LocalGraphStore.Attachment
+    ) {}
+
+
+    override suspend fun onStoreRefresh(graphDefinitionAttempt: GraphDefinitionAttempt) {
+        editDirty = true
     }
 
 
@@ -252,6 +282,7 @@ class ServerLogicController(
             runId, runExecutionId, engine, root,
             closureNotations(graphDefinitionAttempt, root.documentPath))
         state.traceBridge = engine.observe { mirrorTrace(state) }
+        state.frameBridge = engine.observeFrames { node -> onFrameClosed(state, node) }
         stateOrNull = state
 
         // Register the run's ROOT trace buffer up front, so the run is discoverable by its root location via
@@ -341,9 +372,11 @@ class ServerLogicController(
                 }
             }
 
-            state.running -> {
+            state.running || state.stepping -> {
                 state.pauseRequested = true
-                // Signal directly; the in-flight run settles at its next boundary and the driving task converges it.
+                // Signal directly; the in-flight run settles at its next boundary and the driving task converges
+                // it. Covers a long in-flight step too (e.g. a step-over of a sub-script): the engine's pause
+                // overrides the stepping command, parking the run at its next boundary mid-step.
                 state.engine.pause()
             }
 
@@ -548,6 +581,7 @@ class ServerLogicController(
         }
         stateOrNull = null
         state.traceBridge.close()
+        state.frameBridge.close()
         state.engine.close()
     }
 
@@ -595,37 +629,25 @@ class ServerLogicController(
                     state.bridgedSequence = event.sequence
                 }
             }
-
-            // §7 retention-vs-bounding: after mirroring this wavefront's events (so a just-closed frame's final
-            // events are already recorded), reclaim the trace buffer of any frame that closed and opted OUT of
-            // retention — bounding a streaming host to its live frames instead of leaking one buffer per element.
-            evictClosedFrames(state)
         }
     }
 
 
-    // Evict the trace buffer of every frame that has settled terminal while hosting with retainTrace = false
-    // (see [tech.kzen.lib.common.exec.engine.Node.retainTrace] / [tech.kzen.lib.common.exec.engine.Execution.host]):
-    // a long STREAMING host (one child per element) opts its per-element frames out of retention so their finished
-    // buffers don't accumulate for the life of the run. A retained frame (the default — a Script RunStep's
-    // sub-script, whose per-iteration screenshot strip needs every finished invocation) is never touched, so
-    // post-run review is unaffected; the run root is retained by construction. Eviction is once-per-frame
-    // ([LogicState.evictedNodes]) and idempotent across the run's many publishes. Called under [bridgeLock].
-    private fun evictClosedFrames(state: LogicState) {
-        forEachNode(state.engine.snapshot().root) { node ->
-            if (node.status is NodeStatus.Terminal && !node.retainTrace && node.id !in state.evictedNodes) {
-                state.evictedNodes.add(node.id)
-                state.nodeHandles.remove(node.id)
-                logicTraceStore.evict(LogicRunExecutionId(state.runId, LogicExecutionId(node.id.value)))
-            }
+    // §7 retention-vs-bounding: the engine signals each frame's close exactly once, after its final events are
+    // in history. For a frame that opted OUT of retention (see [tech.kzen.lib.common.exec.engine.Node.retainTrace]
+    // / [tech.kzen.lib.common.exec.engine.Execution.host]) — a long STREAMING host's per-element child — mirror
+    // those final events, then reclaim its trace buffer, bounding the store to live frames instead of leaking one
+    // buffer per element. A retained frame (the default — a Script RunStep's sub-script, whose per-iteration
+    // screenshot strip needs every finished invocation) is never touched, so post-run review is unaffected; the
+    // run root is retained by construction. Fires on an engine dispatcher thread; serialized on [bridgeLock].
+    private fun onFrameClosed(state: LogicState, node: Node) {
+        if (node.retainTrace) {
+            return
         }
-    }
-
-
-    private fun forEachNode(node: Node, action: (Node) -> Unit) {
-        action(node)
-        for (child in node.children) {
-            forEachNode(child, action)
+        synchronized(state.bridgeLock) {
+            mirrorTrace(state)
+            state.nodeHandles.remove(node.id)
+            logicTraceStore.evict(LogicRunExecutionId(state.runId, LogicExecutionId(node.id.value)))
         }
     }
 
@@ -734,12 +756,13 @@ class ServerLogicController(
 
 
     // The recompiled root [Logic] to migrate the live run onto when its notation changed under a live edit, or
-    // null to resume / step the existing tree. The change signal is the transitive-closure object NOTATIONS (see
-    // [closureNotations] / [LogicState.baselineNotations]) — deterministic, so a no-edit release never migrates.
-    // Only a LAUNCHED run migrates — an unlaunched engine has no live state to re-point, so the first release
-    // just runs the start-time logic. A recompile failure (a mid-edit incomplete definition), or any failure
-    // recomputing the closure, falls back to null — keeping the prior definition running rather than killing the
-    // run.
+    // null to resume / step the existing tree. The change detection is two-stage: the cheap [editDirty] flag
+    // (event-driven, coarse — set by any notation command) gates the precise transitive-closure NOTATION compare
+    // (see [closureNotations] / [LogicState.baselineNotations]) — deterministic, so a no-edit release never
+    // migrates, and a clean release skips the closure recompute entirely. Only a LAUNCHED run migrates — an
+    // unlaunched engine has no live state to re-point, so the first release just runs the start-time logic. A
+    // recompile failure (a mid-edit incomplete definition), or any failure recomputing the closure, falls back
+    // to null — keeping the prior definition running rather than killing the run.
     private fun pendingMigration(
         state: LogicState,
         snapshotGraphDefinitionAttempt: GraphDefinitionAttempt?
@@ -747,6 +770,12 @@ class ServerLogicController(
         if (!state.launched) {
             return null
         }
+
+        if (!editDirty) {
+            return null
+        }
+        // Clear BEFORE reconciling: an edit landing mid-compare re-sets it, so the next drive re-checks.
+        editDirty = false
 
         return try {
             val attempt = graphDefinitionAttempt(snapshotGraphDefinitionAttempt)
@@ -760,6 +789,8 @@ class ServerLogicController(
             logic
         }
         catch (e: Throwable) {
+            // Keep the prior definition running, but stay dirty so the next release retries the reconcile.
+            editDirty = true
             logger.warn("Unable to recompile edited logic, keeping prior definition: {}", state.rootLocation, e)
             null
         }
@@ -804,6 +835,7 @@ class ServerLogicController(
             if (state != null) {
                 stateOrNull = null
                 state.traceBridge.close()
+                state.frameBridge.close()
                 state.engine.close()
             }
         }

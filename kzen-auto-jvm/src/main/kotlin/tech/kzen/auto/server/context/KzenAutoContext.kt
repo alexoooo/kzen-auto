@@ -228,6 +228,7 @@ class KzenAutoContext(
         runBlocking {
             graphStore.observe(modelTaskRepository)
             graphStore.observe(objectStableMapper)
+            graphStore.observe(serverLogicController)
 
             // Pre-warm so stable ids reflect names-at-boot deterministically, independent
             // of first-access order during run execution. Notation-level enumeration so
