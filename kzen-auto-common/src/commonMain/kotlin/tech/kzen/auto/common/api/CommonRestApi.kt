@@ -81,6 +81,9 @@ object CommonRestApi {
     const val paramPauseOnError = "pauseOnError"
     const val paramStepMode = "stepMode"
 
+    // Repeated: one full ObjectLocation.asString() per breakpoint element.
+    const val paramBreakpoint = "breakpoint"
+
 
     private const val actionPrefix = "/action/"
 
@@ -108,6 +111,7 @@ object CommonRestApi {
     const val logicStepOut = "${logicPrefix}stepOut"
     const val logicStartAndStep = "${logicPrefix}startStep"
     const val logicSetPauseOnError = "${logicPrefix}setPauseOnError"
+    const val logicSetBreakpoints = "${logicPrefix}breakpoints"
 
     // Streaming download of a Job Explore Worker's PERSISTED result as a table.csv attachment (raw file bytes,
     // not a JSON ExecutionResult). The Worker's on-disk table is keyed on its notation identity, so this

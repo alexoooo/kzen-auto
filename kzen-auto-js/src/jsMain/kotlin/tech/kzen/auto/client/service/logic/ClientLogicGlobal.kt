@@ -14,11 +14,13 @@ import tech.kzen.lib.common.exec.logic.run.model.LogicRunResponse
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunState
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import kotlin.time.Duration.Companion.milliseconds
 
 
 class ClientLogicGlobal(
-    private val restClient: ClientRestApi
+    private val restClient: ClientRestApi,
+    private val objectStableMapper: ObjectStableMapper
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -149,10 +151,12 @@ class ClientLogicGlobal(
             delay(1)
             val logicRunId =
                 if (paused) {
-                    restClient.logicStartAndStep(mainLocation, pauseOnError, stepMode)
+                    restClient.logicStartAndStep(
+                        mainLocation, pauseOnError, stepMode, currentBreakpointLocations())
                 }
                 else {
-                    restClient.logicStartAndRun(mainLocation, pauseOnError)
+                    restClient.logicStartAndRun(
+                        mainLocation, pauseOnError, currentBreakpointLocations())
                 }
 
             clientLogicState = clientLogicState.copy(
@@ -250,6 +254,49 @@ class ClientLogicGlobal(
         async {
             restClient.logicSetPauseOnError(logicRunId, pauseOnError)
         }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    // Toggle a breakpoint on a step/element (the gutter dot). Stable-id keyed so the dot follows a rename;
+    // volatile, never persisted to notation. If a run is active the replace-set is pushed immediately
+    // (fire and forget, like setPauseOnErrorAsync); otherwise the set rides the next run start.
+    fun toggleBreakpointAsync(stepLocation: ObjectLocation) {
+        val stableId = objectStableMapper.objectStableId(stepLocation)
+        val breakpoints = clientLogicState.breakpoints
+
+        clientLogicState = clientLogicState.copy(
+            breakpoints =
+                if (stableId in breakpoints) { breakpoints - stableId }
+                else { breakpoints + stableId })
+        publish()
+
+        val logicRunId = clientLogicState.logicStatus?.active?.id
+            ?: return
+
+        async {
+            restClient.logicSetBreakpoints(logicRunId, currentBreakpointLocations())
+        }
+    }
+
+
+    // The breakpoint set as current locations (what crosses the wire — stable ids are client-local).
+    // Ids whose element no longer exists (deleted step / document) are pruned rather than pushed.
+    private fun currentBreakpointLocations(): List<ObjectLocation> {
+        val breakpoints = clientLogicState.breakpoints
+        if (breakpoints.isEmpty()) {
+            return listOf()
+        }
+
+        val locationById = breakpoints.associateWith { objectStableMapper.objectLocationOrNull(it) }
+
+        val stale = locationById.filterValues { it == null }.keys
+        if (stale.isNotEmpty()) {
+            clientLogicState = clientLogicState.copy(breakpoints = breakpoints - stale)
+            publish()
+        }
+
+        return locationById.values.filterNotNull()
     }
 
 
@@ -392,7 +439,9 @@ class ClientLogicGlobal(
                 // the first tick (without this it would descend on the bootstrap and only climb out on the first
                 // subsequent Step Over — see ServerLogicController.startStep).
                 val logicRunId = restClient.logicStartAndStep(
-                    mainLocation, pauseOnError, if (stepOver) StepMode.Over else StepMode.Into)
+                    mainLocation, pauseOnError,
+                    if (stepOver) StepMode.Over else StepMode.Into,
+                    currentBreakpointLocations())
                 if (logicRunId == null) {
                     clientLogicState = clientLogicState.copy(
                         slowLooping = false,

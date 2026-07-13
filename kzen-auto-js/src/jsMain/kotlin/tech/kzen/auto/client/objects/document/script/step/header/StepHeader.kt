@@ -44,6 +44,12 @@ external interface StepHeaderProps: Props {
     var expanded: Boolean?
     var onToggleExpanded: (() -> Unit)?
 
+    // Breakpoint gutter dot (rendered only when the callback is present — hosts without breakpoint
+    // support are unaffected). The unset dot is invisible until the enclosing card's :hover reveals it
+    // (the card owns that CSS rule — see ScriptStepDisplayDefault).
+    var breakpoint: Boolean?
+    var onToggleBreakpoint: (() -> Unit)?
+
     var mirroredGraphStore: MirroredGraphStore
 }
 
@@ -60,6 +66,12 @@ class StepHeader(
         const val defaultRunDescription = "Run"
 
         private val runIconSize = 40.px
+
+        // The card's hover-reveal rule targets the dot by state, so a SET dot keeps full opacity under hover.
+        const val breakpointDotAttribute = "data-breakpoint-dot"
+        const val breakpointDotSet = "set"
+        const val breakpointDotUnset = "unset"
+        private val breakpointColor = Color("#c62828")
 
 
         fun icon(graphStructure: GraphStructure, objectLocation: ObjectLocation): String {
@@ -156,6 +168,39 @@ class StepHeader(
                     color = NamedColor.black
                     fontSize = 1.75.em
                 }
+            }
+        }
+    }
+
+
+    // Rendered in the right cluster, immediately left of the Delete button.
+    private fun ChildrenBuilder.renderBreakpointDot() {
+        val onToggleBreakpoint = props.onToggleBreakpoint
+            ?: return
+        val breakpoint = props.breakpoint ?: false
+
+        div {
+            asDynamic()[breakpointDotAttribute] =
+                if (breakpoint) { breakpointDotSet } else { breakpointDotUnset }
+
+            css {
+                width = 12.px
+                height = 12.px
+                flexShrink = number(0.0)
+                borderRadius = 50.pct
+                backgroundColor = breakpointColor
+                cursor = Cursor.pointer
+                marginRight = 0.5.em
+                // The unset dot is invisible; the enclosing card's :hover rule reveals it faintly.
+                opacity = number(if (breakpoint) 1.0 else 0.0)
+            }
+
+            title = if (breakpoint) { "Remove breakpoint" } else { "Add breakpoint" }
+
+            // stopPropagation: the dot owns the toggle; don't also trip the card's click-to-expand.
+            onClick = {
+                it.stopPropagation()
+                onToggleBreakpoint()
             }
         }
     }
@@ -272,6 +317,8 @@ class StepHeader(
                     variant = ChipVariant.outlined
                 }
             }
+
+            renderBreakpointDot()
 
             if (!props.managed) {
                 IconButton {

@@ -7,6 +7,7 @@ import tech.kzen.auto.common.objects.document.script.model.StepTrace
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
+import tech.kzen.lib.common.exec.logic.run.model.LogicRunResponse
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunState
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceQuery
@@ -98,6 +99,29 @@ class ServerLogicControllerTest {
         // Engine-owned position (checkpoint at:): parked at the first step's boundary, the frame names it.
         assertEquals(foreachFirstStep, active.frame.position)
 
+        controller.continueOrStart(runId, snapshot)
+        awaitDone()
+    }
+
+
+    @Test
+    fun setBreakpointsParksRunExplicitPausedAtStep() {
+        val controller = context.serverLogicController
+        val runId = controller.start(foreachMain, snapshot)
+            ?: fail("Unable to start run")
+
+        // Breakpoint locations resolve to stable ids server-side; a full-speed run parks ExplicitPaused
+        // at the breakpointed step, with the frame position naming it.
+        assertEquals(LogicRunResponse.Submitted, controller.setBreakpoints(runId, listOf(foreachResult)))
+        controller.continueOrStart(runId, snapshot)
+        awaitState(LogicRunState.ExplicitPaused)
+
+        val active = controller.status().active
+            ?: fail("Run is not active while paused at breakpoint")
+        assertEquals(foreachResult, active.frame.position)
+
+        // Replace-set with empty clears; the run resumes past the boundary and completes.
+        assertEquals(LogicRunResponse.Submitted, controller.setBreakpoints(runId, listOf()))
         controller.continueOrStart(runId, snapshot)
         awaitDone()
     }

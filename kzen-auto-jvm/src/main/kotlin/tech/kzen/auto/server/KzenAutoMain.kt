@@ -250,8 +250,33 @@ private fun Routing.routeLogic(
             call.respondText(response)
         }
     }
+    // PUT twin: the client falls back to a form body when a long breakpoint list overflows the GET URL limit.
+    put(CommonRestApi.logicStartAndRun) {
+        val parameters = call.receiveParameters()
+        val response = restHandler.logicStart(parameters, false)
+        if (response == null) {
+            call.respondText(
+                "Unable to start logic run",
+                status = HttpStatusCode.BadRequest)
+        }
+        else {
+            call.respondText(response)
+        }
+    }
     get(CommonRestApi.logicStartAndStep) {
         val response = restHandler.logicStart(call.parameters, true)
+        if (response == null) {
+            call.respondText(
+                "Unable to start logic run",
+                status = HttpStatusCode.BadRequest)
+        }
+        else {
+            call.respondText(response)
+        }
+    }
+    put(CommonRestApi.logicStartAndStep) {
+        val parameters = call.receiveParameters()
+        val response = restHandler.logicStart(parameters, true)
         if (response == null) {
             call.respondText(
                 "Unable to start logic run",
@@ -279,6 +304,15 @@ private fun Routing.routeLogic(
     }
     get(CommonRestApi.logicSetPauseOnError) {
         val response = restHandler.logicSetPauseOnError(call.parameters)
+        call.respondText(response)
+    }
+    get(CommonRestApi.logicSetBreakpoints) {
+        val response = restHandler.logicSetBreakpoints(call.parameters)
+        call.respondText(response)
+    }
+    put(CommonRestApi.logicSetBreakpoints) {
+        val parameters = call.receiveParameters()
+        val response = restHandler.logicSetBreakpoints(parameters)
         call.respondText(response)
     }
     get(CommonRestApi.logicContinueStep) {

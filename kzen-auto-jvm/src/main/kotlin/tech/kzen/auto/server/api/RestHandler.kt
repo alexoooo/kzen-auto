@@ -1134,6 +1134,14 @@ class RestHandler(
         }
             ?: return null
 
+        // Start-time breakpoints ride the start request and are set before the drive below launches the
+        // engine — race-free (a follow-up PUT after startRun could miss the earliest steps).
+        val breakpoints: List<ObjectLocation> = parameters.getParamList(
+            CommonRestApi.paramBreakpoint, ObjectLocation::parse)
+        if (breakpoints.isNotEmpty()) {
+            serverLogicController.setBreakpoints(logicRunId, breakpoints)
+        }
+
         val response = runBlocking {
             if (paused) {
                 // Atomic launch-park-then-first-step (see ServerLogicController.startStep) — NOT a separate
@@ -1248,6 +1256,20 @@ class RestHandler(
         val response = runBlocking {
             serverLogicController.continueOrStart(runId)
         }
+
+        return response.name
+    }
+
+
+    fun logicSetBreakpoints(parameters: Parameters): String {
+        val runId: LogicRunId = parameters.getParam(CommonRestApi.paramRunId) {
+            value -> LogicRunId(value)
+        }
+
+        val breakpoints: List<ObjectLocation> = parameters.getParamList(
+            CommonRestApi.paramBreakpoint, ObjectLocation::parse)
+
+        val response = serverLogicController.setBreakpoints(runId, breakpoints)
 
         return response.name
     }

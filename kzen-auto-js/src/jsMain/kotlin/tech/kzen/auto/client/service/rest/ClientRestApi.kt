@@ -651,13 +651,15 @@ class ClientRestApi(
 
     suspend fun logicStartAndRun(
         objectLocation: ObjectLocation,
-        pauseOnError: Boolean
+        pauseOnError: Boolean,
+        breakpoints: Collection<ObjectLocation> = listOf()
     ): LogicRunId? {
         val response = getOrPut(
             CommonRestApi.logicStartAndRun,
             CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
             CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
-            CommonRestApi.paramPauseOnError to pauseOnError.toString())
+            CommonRestApi.paramPauseOnError to pauseOnError.toString(),
+            *breakpointParams(breakpoints))
 
         return when {
             response.isEmpty() -> null
@@ -669,14 +671,16 @@ class ClientRestApi(
     suspend fun logicStartAndStep(
         objectLocation: ObjectLocation,
         pauseOnError: Boolean,
-        stepMode: StepMode = StepMode.Into
+        stepMode: StepMode = StepMode.Into,
+        breakpoints: Collection<ObjectLocation> = listOf()
     ): LogicRunId? {
         val response = getOrPut(
             CommonRestApi.logicStartAndStep,
             CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
             CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
             CommonRestApi.paramPauseOnError to pauseOnError.toString(),
-            CommonRestApi.paramStepMode to stepMode.name)
+            CommonRestApi.paramStepMode to stepMode.name,
+            *breakpointParams(breakpoints))
 
         return when {
             response.isEmpty() -> null
@@ -745,6 +749,28 @@ class ClientRestApi(
             CommonRestApi.paramPauseOnError to pauseOnError.toString())
 
         return LogicRunResponse.valueOf(response)
+    }
+
+
+    // Replace-set: the whole breakpoint set every time (getOrPut falls back to a PUT form body when a long
+    // list overflows the GET URL limit).
+    suspend fun logicSetBreakpoints(
+        runId: LogicRunId,
+        breakpoints: Collection<ObjectLocation>
+    ): LogicRunResponse {
+        val response = getOrPut(
+            CommonRestApi.logicSetBreakpoints,
+            CommonRestApi.paramRunId to runId.value,
+            *breakpointParams(breakpoints))
+
+        return LogicRunResponse.valueOf(response)
+    }
+
+
+    private fun breakpointParams(breakpoints: Collection<ObjectLocation>): Array<Pair<String, String>> {
+        return breakpoints
+            .map { CommonRestApi.paramBreakpoint to it.asString() }
+            .toTypedArray()
     }
 
 

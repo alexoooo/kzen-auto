@@ -448,6 +448,24 @@ class ServerLogicController(
     }
 
 
+    // Replace the run's breakpoint set (run-scoped, volatile — the client re-pushes at run start and on each
+    // toggle). Locations resolve to stable ids here, so engine-side breakpoints survive rename; signal-only,
+    // like [pause] — takes effect at the next named boundary any execution reaches.
+    @Synchronized
+    fun setBreakpoints(runId: LogicRunId, locations: List<ObjectLocation>): LogicRunResponse {
+        val state = stateOrNull
+            ?: return LogicRunResponse.NotFound
+
+        if (state.runId != runId) {
+            return LogicRunResponse.RunIdMismatch
+        }
+
+        state.engine.setBreakpoints(
+            locations.map { objectStableMapper.objectStableId(it) }.toSet())
+        return LogicRunResponse.Submitted
+    }
+
+
     @Synchronized
     override fun continueOrStart(
         runId: LogicRunId,

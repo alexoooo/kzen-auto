@@ -88,10 +88,10 @@ class ClientContext private constructor() {
 
     val navigationGlobal = NavigationGlobal()
 
-    val clientLogicGlobal = ClientLogicGlobal(
-        restClient)
-
     val objectStableMapper = ObjectStableMapper()
+
+    val clientLogicGlobal = ClientLogicGlobal(
+        restClient, objectStableMapper)
 
     val clientStateGlobal = ClientStateGlobal()
 
