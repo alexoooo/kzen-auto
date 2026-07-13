@@ -6,7 +6,6 @@ import tech.kzen.auto.server.objects.script.api.StepExecution
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
 import tech.kzen.lib.common.exec.logic.model.LogicType
 import tech.kzen.lib.common.exec.tuple.TupleDefinition
-import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.platform.ClassNames
@@ -16,7 +15,6 @@ import tech.kzen.lib.platform.ClassNames
 class NumberRangeStep(
     private val from: Int,
     private val to: Int,
-    @Suppress("unused") private val selfLocation: ObjectLocation
 ):
     ScriptStep
 {

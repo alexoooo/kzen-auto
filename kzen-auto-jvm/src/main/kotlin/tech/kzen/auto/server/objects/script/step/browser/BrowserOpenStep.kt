@@ -10,14 +10,12 @@ import tech.kzen.auto.server.objects.script.api.StepExecution
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
 import tech.kzen.auto.server.service.webdriver.WebDriverSupport
 import tech.kzen.lib.common.exec.logic.ResourceClosePolicy
-import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 
 
 @Reflect
 class BrowserOpenStep(
     private val closePolicy: ResourceClosePolicy,
-    @Suppress("unused") selfLocation: ObjectLocation
 ):
     ScriptStep
 {

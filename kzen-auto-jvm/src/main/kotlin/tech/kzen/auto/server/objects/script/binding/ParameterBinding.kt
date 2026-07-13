@@ -5,7 +5,6 @@ import tech.kzen.auto.server.objects.script.api.ScriptValueBinding
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
 import tech.kzen.lib.common.exec.logic.model.LogicType
 import tech.kzen.lib.common.exec.tuple.TupleDefinition
-import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.reflect.Reflect
 
@@ -22,7 +21,6 @@ import tech.kzen.lib.common.reflect.Reflect
 class ParameterBinding(
     private val type: TypeMetadata,
     @Suppress("unused") private val default: Any?,
-    @Suppress("unused") private val selfLocation: ObjectLocation
 ):
     ScriptValueBinding()
 {

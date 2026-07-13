@@ -42,6 +42,7 @@ class StepNavigationTest {
     private val rootPath = DocumentPath.parse("test/step-nav-test.yaml")
     private val childPath = DocumentPath.parse("test/step-nav-child-test.yaml")
     private val runFirstPath = DocumentPath.parse("test/step-nav-runfirst-test.yaml")
+    private val foreachPath = DocumentPath.parse("test/script-engine-foreach-test.yaml")
 
     private val mainLocation = ObjectLocation(rootPath, ObjectPath.parse("main"))
     private val runLocation = ObjectLocation(rootPath, ObjectPath.parse("main.steps/Run"))
@@ -50,6 +51,10 @@ class StepNavigationTest {
     private val childBLocation = ObjectLocation(childPath, ObjectPath.parse("main.steps/ChildB"))
     private val runFirstMainLocation = ObjectLocation(runFirstPath, ObjectPath.parse("main"))
     private val runFirstLastLocation = ObjectLocation(runFirstPath, ObjectPath.parse("main.steps/Last"))
+    private val foreachMainLocation = ObjectLocation(foreachPath, ObjectPath.parse("main"))
+    private val foreachLoopLocation = ObjectLocation(foreachPath, ObjectPath.parse("main.steps/Loop"))
+    private val foreachBodyLocation = ObjectLocation(foreachPath, ObjectPath.parse("main.steps/Loop.steps/Doubled"))
+    private val foreachTotalLocation = ObjectLocation(foreachPath, ObjectPath.parse("main.steps/Total"))
 
     private lateinit var context: KzenAutoContext
 
@@ -184,14 +189,81 @@ class StepNavigationTest {
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    // Inline-branch stepping is FRAME-only: a ForEach's body boundaries share the loop's frame (depth stays
+    // 0 throughout), so step-over advances exactly one boundary — walking the loop body / iterations one at
+    // a time — and step-out exits the DOCUMENT (only a hosted child, a deeper frame, runs free under Over).
+    // Fixture: Range -> Loop (ForEach, body Doubled, 3 iterations) -> Total -> Result.
+
+    @Test
+    fun stepOverWalksForEachOneBoundaryAtATime() {
+        val runId = startPausedAt(foreachMainLocation)
+
+        step(runId)                              // run Range, pause before Loop
+        assertPausedAtDepth(0)
+        assertNextToRun(runId, foreachLoopLocation)
+
+        stepOver(runId)                          // enter the loop, pause before Doubled (iteration 1)
+        assertPausedAtDepth(0)                   // same frame — a branch has no frame of its own
+        assertNextToRun(runId, foreachBodyLocation)
+
+        stepOver(runId)                          // pause before Doubled (iteration 2)
+        assertNextToRun(runId, foreachBodyLocation)
+
+        stepOver(runId)                          // pause before Doubled (iteration 3)
+        assertNextToRun(runId, foreachBodyLocation)
+
+        stepOver(runId)                          // loop done, pause before Total
+        assertPausedAtDepth(0)
+        assertNextToRun(runId, foreachTotalLocation)
+
+        resume(runId)
+        awaitDone()
+    }
+
+
+    @Test
+    fun stepIntoForEachDescendsIntoBody() {
+        val runId = startPausedAt(foreachMainLocation)
+
+        step(runId)                              // run Range, pause before Loop
+        step(runId)                              // step INTO Loop -> pause before Doubled (iteration 1)
+        assertPausedAtDepth(0)                   // same frame — a branch has no frame of its own
+        assertNextToRun(runId, foreachBodyLocation)
+
+        resume(runId)
+        awaitDone()
+    }
+
+
+    @Test
+    fun stepOutOfLoopBodyExitsDocument() {
+        val runId = startPausedAt(foreachMainLocation)
+
+        step(runId)                              // run Range, pause before Loop
+        step(runId)                              // step INTO Loop -> pause before Doubled (iteration 1)
+        assertNextToRun(runId, foreachBodyLocation)
+
+        // Step-out exits the frame — the single-document run finishes (the loop's remaining iterations and
+        // Total/Result run free); parking at a PARENT is pinned by the RunStep-based step-out test above.
+        context.serverLogicController.stepOut(runId, snapshot)
+        awaitDone()
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     private val snapshot: GraphDefinitionAttempt
         get() = AutoTestUtils.graphDefinitionAttempt(AutoTestUtils.readNotation())
 
 
     private fun startPaused(): LogicRunId {
+        return startPausedAt(mainLocation)
+    }
+
+
+    private fun startPausedAt(location: ObjectLocation): LogicRunId {
         val controller = context.serverLogicController
         val snapshot = snapshot
-        val runId = controller.start(mainLocation, snapshot)
+        val runId = controller.start(location, snapshot)
             ?: fail("Unable to start run")
         // Pause-at-entry: the run was created but never set running, so pause() lands paused immediately.
         controller.pause(runId)

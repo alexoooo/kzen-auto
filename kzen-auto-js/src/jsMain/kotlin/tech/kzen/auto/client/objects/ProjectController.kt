@@ -145,8 +145,11 @@ class ProjectController(
     // Auto-follow bookkeeping (plain fields — they must not trigger a render; they mutate on the publish
     // path). `followingRun` = are we currently shadowing the run's deepest executing document?
     // `lastAutoNavigated` = the document WE last goto'd, used to break the goto→hashchange→publish loop.
+    // `lastRunRootDocument` = the run's root document, remembered while a run is live so the run FINISHING
+    // (frame gone from the status) can still navigate back up to it.
     private var followingRun: Boolean = false
     private var lastAutoNavigated: DocumentPath? = null
+    private var lastRunRootDocument: DocumentPath? = null
 
     // Debounces the traced-document query: re-check only when the run status actually changes.
     private var lastTraceFetchKey: String? = null
@@ -431,10 +434,22 @@ class ProjectController(
         runDepths: Map<DocumentPath, Int>
     ) {
         if (frame == null) {
+            // Run finished (or was cancelled): if we auto-navigated the user into a sub-document and the run
+            // ended there (its LAST step was a RunStep, so no parent boundary followed to pull us back up),
+            // finish the follow by returning to the run's root document. Guarded on lastAutoNavigated so a
+            // user who wandered off manually isn't yanked anywhere.
+            val runRoot = lastRunRootDocument
+            val current = clientState.navigationRoute.documentPath
+            if (followingRun && runRoot != null && current != null &&
+                    current == lastAutoNavigated && current != runRoot) {
+                props.navigationGlobal.goto(runRoot)
+            }
             followingRun = false
             lastAutoNavigated = null
+            lastRunRootDocument = null
             return
         }
+        lastRunRootDocument = frame.objectLocation.documentPath
 
         // Follow only on a *settled* (non-executing) state, NOT the transient Stepping status — for slow-motion
         // exactly as for manual stepping. A Step Over / Step Out briefly pushes a child frame on the stack

@@ -5,14 +5,12 @@ import tech.kzen.auto.server.objects.script.api.ScriptStepDefinition
 import tech.kzen.auto.server.objects.script.api.StepExecution
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
 import tech.kzen.auto.test.server.process.KzenAutoSubprocessRegistry
-import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 
 
 @Reflect
 class StopKzenAutoStep(
     private val name: String,
-    @Suppress("unused") selfLocation: ObjectLocation
 ):
     ScriptStep
 {

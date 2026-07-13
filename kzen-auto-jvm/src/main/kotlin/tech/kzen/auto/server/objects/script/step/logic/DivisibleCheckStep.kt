@@ -14,7 +14,6 @@ import tech.kzen.lib.common.reflect.Reflect
 class DivisibleCheckStep(
     private val number: ObjectLocation,
     private val divisor: Int,
-    @Suppress("unused") selfLocation: ObjectLocation
 ):
     ScriptStep
 {

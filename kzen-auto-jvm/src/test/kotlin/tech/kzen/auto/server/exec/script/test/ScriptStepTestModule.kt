@@ -21,37 +21,37 @@ object ScriptStepTestModule: ModuleReflection {
     override fun register(reflectionRegistry: ReflectionRegistry) {
         reflectionRegistry.put(
             "tech.kzen.auto.server.exec.script.test.ShoutStep",
-            listOf("input", "selfLocation")
+            listOf("input")
         ) { args ->
-            ShoutStep(args[0] as ObjectLocation, args[1] as ObjectLocation)
+            ShoutStep(args[0] as ObjectLocation)
         }
 
         reflectionRegistry.put(
             "tech.kzen.auto.server.exec.script.test.OpenResourceTestStep",
-            listOf("key", "closePolicy", "selfLocation")
+            listOf("key", "closePolicy")
         ) { args ->
-            OpenResourceTestStep(args[0] as String, args[1] as String, args[2] as ObjectLocation)
+            OpenResourceTestStep(args[0] as String, args[1] as String)
         }
 
         reflectionRegistry.put(
             "tech.kzen.auto.server.exec.script.test.FailStep",
-            listOf("message", "selfLocation")
+            listOf("message")
         ) { args ->
-            FailStep(args[0] as String, args[1] as ObjectLocation)
+            FailStep(args[0] as String)
         }
 
         reflectionRegistry.put(
             "tech.kzen.auto.server.exec.script.test.FlakyStep",
-            listOf("input", "selfLocation")
+            listOf("input")
         ) { args ->
-            FlakyStep(args[0] as ObjectLocation, args[1] as ObjectLocation)
+            FlakyStep(args[0] as ObjectLocation)
         }
 
         reflectionRegistry.put(
             "tech.kzen.auto.server.exec.script.test.AssertDisposedStep",
-            listOf("key", "expectedDisposed", "selfLocation")
+            listOf("key", "expectedDisposed")
         ) { args ->
-            AssertDisposedStep(args[0] as String, args[1] as Boolean, args[2] as ObjectLocation)
+            AssertDisposedStep(args[0] as String, args[1] as Boolean)
         }
     }
 }

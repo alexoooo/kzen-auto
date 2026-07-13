@@ -17,9 +17,6 @@ ShoutStep:
     input:
       is: ObjectLocation
       by: Nominal
-    selfLocation:
-      is: ObjectLocation
-      by: Self
 
 
 # Opens a run-scoped resource under `key` with the named `closePolicy` (a plain String parsed in the step),
@@ -37,9 +34,6 @@ OpenResourceTestStep:
       is: String
     closePolicy:
       is: String
-    selfLocation:
-      is: ObjectLocation
-      by: Self
 
 
 # Always throws — drives the run to a terminal Outcome.Failed to exercise failure-branch resource disposal.
@@ -53,9 +47,6 @@ FailStep:
   meta:
     message:
       is: String
-    selfLocation:
-      is: ObjectLocation
-      by: Self
 
 
 # Asserts whether the resource under `key` has already been disposed (in ResourceDisposalLog) at the point it
@@ -74,9 +65,6 @@ AssertDisposedStep:
       is: String
     expectedDisposed:
       is: Boolean
-    selfLocation:
-      is: ObjectLocation
-      by: Self
 
 
 # Fails its first invocation (globally) then succeeds, returning its referenced `input` — a transient failure
@@ -92,6 +80,3 @@ FlakyStep:
     input:
       is: ObjectLocation
       by: Nominal
-    selfLocation:
-      is: ObjectLocation
-      by: Self

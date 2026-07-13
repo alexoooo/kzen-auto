@@ -9,7 +9,6 @@ import tech.kzen.auto.server.objects.script.api.StepExecution
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
 import tech.kzen.auto.server.service.webdriver.WebDriverSupport
 import tech.kzen.lib.common.exec.BinaryExecutionValue
-import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 
 
@@ -17,7 +16,6 @@ import tech.kzen.lib.common.reflect.Reflect
 class BrowserGetStep(
     private val location: String,
     private val screenshotDelayMilliseconds: Long,
-    @Suppress("unused") selfLocation: ObjectLocation
 ):
     ScriptStep
 {

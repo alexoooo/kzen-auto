@@ -14,7 +14,6 @@ import tech.kzen.lib.common.reflect.Reflect
 class LogicalAndStep(
     private val condition: ObjectLocation,
     private val and: ObjectLocation,
-    @Suppress("unused") selfLocation: ObjectLocation
 ):
     ScriptStep
 {

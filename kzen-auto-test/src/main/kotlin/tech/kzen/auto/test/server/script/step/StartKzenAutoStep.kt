@@ -9,7 +9,6 @@ import tech.kzen.auto.test.server.process.FixtureCopier
 import tech.kzen.auto.test.server.process.KzenAutoProcess
 import tech.kzen.auto.test.server.process.KzenAutoSubprocessRegistry
 import tech.kzen.lib.common.exec.logic.ResourceClosePolicy
-import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
 import java.nio.file.Paths
@@ -21,7 +20,6 @@ class StartKzenAutoStep(
     private val fixture: String,
     private val port: Int,
     private val closePolicy: ResourceClosePolicy,
-    @Suppress("unused") selfLocation: ObjectLocation,
     @Service private val config: KzenAutoConfig
 ):
     ScriptStep

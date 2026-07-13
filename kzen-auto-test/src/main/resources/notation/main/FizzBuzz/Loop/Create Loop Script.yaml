@@ -18,6 +18,7 @@ main:
   target:
     type: Text
     value: New Script...
+  delaySeconds: 0.5
 
 main.steps/Click:
   is: BrowserClickStep

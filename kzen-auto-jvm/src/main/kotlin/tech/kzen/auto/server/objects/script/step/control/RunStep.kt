@@ -19,7 +19,6 @@ import tech.kzen.lib.common.reflect.Reflect
 class RunStep(
     private val instructions: ObjectLocation,
     private val arguments: Map<String, ObjectLocation>,
-    @Suppress("unused") private val selfLocation: ObjectLocation
 ):
     ScriptStep
 {

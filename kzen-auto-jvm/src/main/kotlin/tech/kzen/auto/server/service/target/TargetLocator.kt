@@ -49,11 +49,14 @@ class TargetLocator(
         /**
          * Resolve a [TargetMatchPolicy] over ordered [candidates]. [Best][TargetMatchPolicy.Best]
          * selects the first candidate — callers with scores order by score first; others treat
-         * it as First (see the policy's contract).
+         * it as First (see the policy's contract). [describe], when provided, names each offending
+         * candidate in a [Unique][TargetMatchPolicy.Unique] ambiguity rejection, so the error says
+         * WHAT matched (e.g. a menu item still mounted mid-close) rather than just how many.
          */
         fun <T> selectByPolicy(
             candidates: List<T>,
-            policy: TargetMatchPolicy
+            policy: TargetMatchPolicy,
+            describe: ((T) -> String)? = null
         ): PolicySelection<T> {
             if (candidates.isEmpty()) {
                 return PolicySelection.Rejected("Target not found")
@@ -65,8 +68,13 @@ class TargetLocator(
                         PolicySelection.Selected(candidates.single())
                     }
                     else {
+                        val described = describe?.let { describer ->
+                            candidates
+                                .take(diagnosticMatchLimit)
+                                .joinToString(", ", prefix = ": ") { describer(it) }
+                        } ?: ""
                         PolicySelection.Rejected(
-                            "More than one target found (${candidates.size})")
+                            "More than one target found (${candidates.size})$described")
                     }
 
                 TargetMatchPolicy.First, TargetMatchPolicy.Best ->
@@ -81,6 +89,21 @@ class TargetLocator(
                             "Target index ${policy.index} out of range (${candidates.size} matches)")
                     }
             }
+        }
+
+
+        /**
+         * Short human-readable identity of a matched element for ambiguity diagnostics:
+         * its tag plus (trimmed, whitespace-collapsed) visible text.
+         */
+        fun describeElement(element: WebElement): String {
+            val text = element.text.trim().replace(Regex("\\s+"), " ")
+            val quoted = when {
+                text.isEmpty() -> ""
+                text.length > 40 -> " \"${text.take(40)}…\""
+                else -> " \"$text\""
+            }
+            return "<${element.tagName}>$quoted"
         }
 
 

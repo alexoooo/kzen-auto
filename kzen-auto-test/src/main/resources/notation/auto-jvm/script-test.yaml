@@ -17,7 +17,6 @@ StartKzenAutoStep:
       is: String
       summary: TextAttributeView
     port: Int
-    selfLocation: SelfLocation
 
 
 StopKzenAutoStep:
@@ -32,4 +31,3 @@ StopKzenAutoStep:
     name:
       is: String
       summary: TextAttributeView
-    selfLocation: SelfLocation

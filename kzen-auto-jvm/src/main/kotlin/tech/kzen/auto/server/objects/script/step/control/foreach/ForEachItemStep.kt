@@ -5,7 +5,6 @@ import tech.kzen.auto.server.objects.script.api.ScriptValueBinding
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
 import tech.kzen.lib.common.exec.logic.model.LogicType
 import tech.kzen.lib.common.exec.tuple.TupleDefinition
-import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 
 
@@ -14,7 +13,6 @@ import tech.kzen.lib.common.reflect.Reflect
 // not to a body-row step, so this is never executed.
 @Reflect
 class ForEachItemStep(
-    @Suppress("unused") private val selfLocation: ObjectLocation
 ):
     ScriptValueBinding()
 {

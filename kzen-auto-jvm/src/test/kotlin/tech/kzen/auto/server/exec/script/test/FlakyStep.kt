@@ -22,7 +22,6 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 class FlakyStep(
     private val input: ObjectLocation,
-    @Suppress("unused") selfLocation: ObjectLocation
 ):
     ScriptStep
 {

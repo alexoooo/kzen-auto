@@ -45,8 +45,15 @@ class ForEachStep(
         // outcomes from the replay set so each body step executes live instead of short-circuiting on them.
         execution.dropReplay(bodySteps)
 
+        val size = (iterable as? Collection<*>)?.size
         val output = ArrayList<Any?>()
-        for (item in iterable) {
+        for ((index, item) in iterable.withIndex()) {
+            // Live loop progress on the ForEach card: the loop is the current step here, so the detail
+            // attributes to it (the client renders it as "item: ..."), and markDone carries the final
+            // iteration's detail into the Done trace.
+            val counter = if (size != null) "${index + 1} of $size" else "${index + 1}"
+            execution.traceDetail("$item ($counter)")
+
             execution.bind(itemBinding, item)
             output.add(execution.runSteps(bodySteps))
         }

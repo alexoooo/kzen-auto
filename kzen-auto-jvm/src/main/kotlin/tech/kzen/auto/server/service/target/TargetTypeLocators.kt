@@ -54,7 +54,10 @@ object TextTargetLocator: TargetTypeLocator {
                 By.xpath("//input[contains(@value,$xpathEscaped)]"))
         }
 
-        return when (val selection = TargetLocator.selectByPolicy(candidates, spec.policy)) {
+        val selection = TargetLocator.selectByPolicy(
+            candidates, spec.policy, TargetLocator::describeElement)
+
+        return when (selection) {
             is TargetLocator.PolicySelection.Selected ->
                 TargetLocator.Result(selection.candidate, null)
 
@@ -81,7 +84,10 @@ object XpathTargetLocator: TargetTypeLocator {
         spec as XpathTarget
         val candidates = driver.findElements(By.xpath(spec.xpath))
 
-        return when (val selection = TargetLocator.selectByPolicy(candidates, spec.policy)) {
+        val selection = TargetLocator.selectByPolicy(
+            candidates, spec.policy, TargetLocator::describeElement)
+
+        return when (selection) {
             is TargetLocator.PolicySelection.Selected ->
                 TargetLocator.Result(selection.candidate, null)
 

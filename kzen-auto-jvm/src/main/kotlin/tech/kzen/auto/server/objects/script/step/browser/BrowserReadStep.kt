@@ -8,7 +8,6 @@ import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
 import tech.kzen.auto.server.service.target.TargetLocator
 import tech.kzen.lib.common.exec.logic.model.LogicType
 import tech.kzen.lib.common.exec.tuple.TupleDefinition
-import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
 
@@ -17,10 +16,10 @@ import tech.kzen.lib.common.reflect.Service
 class BrowserReadStep(
     target: TargetSpec,
     private val attribute: String,
-    @Suppress("unused") selfLocation: ObjectLocation,
+    delaySeconds: Double,
     @Service targetLocator: TargetLocator
 ):
-    BrowserTargetStep(target, targetLocator)
+    BrowserTargetStep(target, delaySeconds, targetLocator)
 {
     //-----------------------------------------------------------------------------------------------------------------
     override fun definition(scriptDefinitionContext: ScriptDefinitionContext): ScriptStepDefinition {

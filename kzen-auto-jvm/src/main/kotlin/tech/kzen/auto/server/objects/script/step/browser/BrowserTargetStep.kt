@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.objects.script.step.browser
 
+import kotlinx.coroutines.delay
 import org.openqa.selenium.OutputType
 import org.openqa.selenium.WebElement
 import org.openqa.selenium.remote.RemoteWebDriver
@@ -11,16 +12,19 @@ import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
 import tech.kzen.auto.server.service.target.TargetLocator
 import tech.kzen.auto.server.service.webdriver.WebDriverSupport
 import tech.kzen.lib.common.exec.BinaryExecutionValue
+import kotlin.math.roundToLong
+import kotlin.time.Duration.Companion.milliseconds
 
 
 /**
  * The shared frame of every browser step that acts on a located target: resolve the browser,
  * locate the target (failing with the locator's diagnostic, recording its match note), [act],
- * then screenshot the page as the step's trace detail (feeding the run's film strip).
- * A concrete step supplies only its action.
+ * wait out the configured settle delay, then screenshot the page as the step's trace detail
+ * (feeding the run's film strip). A concrete step supplies only its action.
  */
 abstract class BrowserTargetStep(
     private val target: TargetSpec,
+    private val delaySeconds: Double,
     private val targetLocator: TargetLocator
 ): ScriptStep {
     //-----------------------------------------------------------------------------------------------------------------
@@ -43,6 +47,13 @@ abstract class BrowserTargetStep(
         }
 
         val result = act(match.webElement!!, driver)
+
+        // Let the action's consequences settle before the screenshot and the next step — e.g. a click
+        // that dismisses a menu leaves it mounted through its closing transition (~300ms), during which
+        // its items still match the next step's Text target and break the unique-match requirement.
+        if (delaySeconds > 0) {
+            delay((delaySeconds * 1000).roundToLong().milliseconds)
+        }
 
         val screenshotPng = driver.getScreenshotAs(OutputType.BYTES)
         execution.traceDetail(BinaryExecutionValue(screenshotPng))

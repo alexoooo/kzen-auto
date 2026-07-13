@@ -74,7 +74,6 @@ ParameterBinding:
     default:
       is: Object
       by: ParameterDefaultDefiner
-    selfLocation: SelfLocation
 
 
 # Deprecated: superseded by ParameterBinding (rowless typed parameters). Retained until existing scripts
@@ -90,7 +89,6 @@ ArgumentStep:
     parameter:
       is: String
       summary: TextAttributeView
-    selfLocation: SelfLocation
 
 
 BooleanLiteralStep:
@@ -104,7 +102,6 @@ BooleanLiteralStep:
     value:
       is: Boolean
       summary: TextAttributeView
-    selfLocation: SelfLocation
 
 
 TextLiteralStep:
@@ -118,7 +115,6 @@ TextLiteralStep:
     value:
       is: String
       summary: TextAttributeView
-    selfLocation: SelfLocation
 
 
 FormulaStep:
@@ -167,7 +163,6 @@ NumberLiteralStep:
     value:
       is: Double
       summary: TextAttributeView
-    selfLocation: SelfLocation
 
 
 NumberRangeStep:
@@ -185,7 +180,6 @@ NumberRangeStep:
     to:
       is: Int
       summary: TextAttributeView
-    selfLocation: SelfLocation
 
 
 DivisibleCheckStep:
@@ -202,7 +196,6 @@ DivisibleCheckStep:
       by: Nominal
       editor: SelectStepEditor
     divisor: Int
-    selfLocation: SelfLocation
 
 
 LogicalAndStep:
@@ -222,7 +215,6 @@ LogicalAndStep:
       is: ObjectLocation
       by: Nominal
       editor: SelectStepEditor
-    selfLocation: SelfLocation
 
 
 DisplayValueStep:
@@ -237,7 +229,6 @@ DisplayValueStep:
       is: ObjectLocation
       by: Nominal
       editor: SelectStepEditor
-    selfLocation: SelfLocation
 
 
 RunStep:
@@ -262,7 +253,6 @@ RunStep:
         - ObjectLocation
       by: Nominal
       editor: RunStepArgumentsEditor
-    selfLocation: SelfLocation
 
 
 WaitStep:
@@ -276,7 +266,6 @@ WaitStep:
     milliseconds:
       is: Long
       summary: TextAttributeView
-    selfLocation: SelfLocation
 
 
 PauseStep:
@@ -350,7 +339,6 @@ ForEachItemStep:
   icon: "material-symbols:share"
   title: "Item"
   meta:
-    selfLocation: SelfLocation
 
 
 DoWhileStep:
@@ -387,7 +375,6 @@ BrowserOpenStep:
   title: "Open browser"
   description: "Open a new browser window (existing one will be closed)"
   meta:
-    selfLocation: SelfLocation
 
 
 BrowserCloseStep:
@@ -398,7 +385,6 @@ BrowserCloseStep:
   title: "Close browser"
   description: "Close the browser window"
   meta:
-    selfLocation: SelfLocation
 
 
 BrowserGetStep:
@@ -415,7 +401,6 @@ BrowserGetStep:
       is: String
       summary: TextAttributeView
     screenshotDelayMilliseconds: Long
-    selfLocation: SelfLocation
 
 
 BrowserClickStep:
@@ -426,11 +411,12 @@ BrowserClickStep:
   title: "Click"
   target:
     type: Focus
+  delaySeconds: 0
   meta:
     target:
       is: TargetSpec
       summary: TargetAttributeView
-    selfLocation: SelfLocation
+    delaySeconds: Double
 
 
 BrowserReadStep:
@@ -443,6 +429,7 @@ BrowserReadStep:
   target:
     type: Focus
   attribute: ""
+  delaySeconds: 0
   meta:
     target:
       is: TargetSpec
@@ -450,7 +437,7 @@ BrowserReadStep:
     attribute:
       is: String
       summary: TextAttributeView
-    selfLocation: SelfLocation
+    delaySeconds: Double
 
 
 BrowserWriteStep:
@@ -464,6 +451,7 @@ BrowserWriteStep:
   target:
     type: Focus
   overwrite: false
+  delaySeconds: 0
   meta:
     text:
       is: String
@@ -475,7 +463,7 @@ BrowserWriteStep:
     overwrite:
       is: Boolean
       summary: TextAttributeView
-    selfLocation: SelfLocation
+    delaySeconds: Double
 
 
 BrowserSubmitStep:
@@ -486,11 +474,12 @@ BrowserSubmitStep:
   title: "Submit"
   target:
     type: Focus
+  delaySeconds: 0
   meta:
     target:
       is: TargetSpec
       summary: TargetAttributeView
-    selfLocation: SelfLocation
+    delaySeconds: Double
 
 
 BrowserEscapeStep:
@@ -500,7 +489,6 @@ BrowserEscapeStep:
   icon: "material-symbols:cancel-presentation"
   title: "Escape"
   meta:
-    selfLocation: SelfLocation
 
 
 BrowserEnterStep:
@@ -510,7 +498,6 @@ BrowserEnterStep:
   icon: "material-symbols:keyboard-return"
   title: "Enter"
   meta:
-    selfLocation: SelfLocation
 
 
 #BrowserFocusStep:

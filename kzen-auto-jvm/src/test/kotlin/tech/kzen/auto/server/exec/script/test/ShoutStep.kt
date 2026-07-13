@@ -18,7 +18,6 @@ import tech.kzen.lib.common.model.location.ObjectLocation
  */
 class ShoutStep(
     private val input: ObjectLocation,
-    @Suppress("unused") selfLocation: ObjectLocation
 ):
     ScriptStep
 {

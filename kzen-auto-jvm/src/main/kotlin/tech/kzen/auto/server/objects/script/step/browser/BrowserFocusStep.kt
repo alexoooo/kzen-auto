@@ -5,7 +5,6 @@ import org.openqa.selenium.WebElement
 import org.openqa.selenium.remote.RemoteWebDriver
 import tech.kzen.auto.common.objects.document.target.TargetSpec
 import tech.kzen.auto.server.service.target.TargetLocator
-import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
 
@@ -13,10 +12,10 @@ import tech.kzen.lib.common.reflect.Service
 @Reflect
 class BrowserFocusStep(
     target: TargetSpec,
-    @Suppress("unused") selfLocation: ObjectLocation,
+    delaySeconds: Double,
     @Service targetLocator: TargetLocator
 ):
-    BrowserTargetStep(target, targetLocator)
+    BrowserTargetStep(target, delaySeconds, targetLocator)
 {
     //-----------------------------------------------------------------------------------------------------------------
     override suspend fun act(element: WebElement, driver: RemoteWebDriver): Any? {

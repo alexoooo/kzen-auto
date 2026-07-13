@@ -73,15 +73,18 @@ class ScriptProgressStore(
 
         // The per-path snapshot drives live step state and non-RunStep thumbnails: the live frame's
         // own buffer (single execution) when this document is executing, else merged across the run. If the
-        // single-execution lookup misses (a just-evicted / racing frame), fall back to the merged run so the
-        // view still renders. (The next-step highlight reads the frame's position, not this snapshot.)
+        // single-execution lookup misses, the live frame simply hasn't emitted yet (its buffer opens on the
+        // first mirrored event — after the park at its first step boundary), so its trace IS empty: render
+        // that, NOT a run-merged fallback, which would ghost the PREVIOUS same-document invocation's retained
+        // values onto a freshly-entered sub-script until its first step's emit clears them.
+        // (The next-step highlight reads the frame's position, not this snapshot.)
         @Suppress("MoveVariableDeclarationIntoWhen", "RedundantSuppression")
         val progressResult =
             if (activeFrame != null) {
                 lookupQuery(logicRunExecutionId, LogicTraceQuery(LogicTracePath.root))
                     .let { frameResult ->
                         if (frameResult is ClientError) {
-                            lookupRunQuery(logicRunId, LogicTraceQuery(LogicTracePath.root))
+                            ClientResult.ofSuccess(LogicTraceSnapshot(mapOf()))
                         }
                         else {
                             frameResult

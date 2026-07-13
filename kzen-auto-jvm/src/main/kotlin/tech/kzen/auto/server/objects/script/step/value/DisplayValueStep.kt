@@ -12,7 +12,6 @@ import tech.kzen.lib.common.reflect.Reflect
 @Reflect
 class DisplayValueStep(
     private val text: ObjectLocation,
-    @Suppress("unused") selfLocation: ObjectLocation
 ):
     ScriptStep
 {
