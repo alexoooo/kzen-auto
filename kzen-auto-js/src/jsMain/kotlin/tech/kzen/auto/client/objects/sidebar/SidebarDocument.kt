@@ -115,6 +115,7 @@ class SidebarDocument(
 
         sidebarRow(
             props.depth,
+            selected = props.selected,
             executing = (props.executingDepth != null),
             rowAttributes = {
                 sidebarDragSource(props.documentPath, props.onDragItemStart, props.onDragItemEnd)

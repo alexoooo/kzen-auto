@@ -38,6 +38,8 @@ object SidebarRow {
 
 fun ChildrenBuilder.sidebarRow(
     depth: Int,
+    // selected = this document is the one currently open in the main view
+    selected: Boolean = false,
     // highlighted = this row is the active drag-and-drop target (a folder a document/folder is hovering over)
     highlighted: Boolean = false,
     // executing = this document is part of the active logic run's frame tree (green run indicator)
@@ -55,6 +57,11 @@ fun ChildrenBuilder.sidebarRow(
             width = 100.pct
             boxSizing = BoxSizing.borderBox
             paddingLeft = SidebarRow.indent(depth)
+
+            // blue tint (no outline) = currently open document; executing/drag-over states below override it
+            if (selected) {
+                backgroundColor = Color("rgba(100, 159, 255, 0.18)")
+            }
 
             // green = currently executing; a drag-over highlight (blue, below) overrides it while dragging
             if (executing) {
