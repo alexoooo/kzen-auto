@@ -4,12 +4,10 @@ import tech.kzen.auto.client.objects.document.script.model.ScriptState
 import tech.kzen.auto.client.objects.document.script.step.header.StepHeader
 import tech.kzen.auto.client.objects.document.script.step.header.StepNameEditor
 import tech.kzen.auto.client.service.global.ClientState
-import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.objects.document.script.model.StepTrace
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceEntry
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
 import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.lib.common.service.store.normal.ObjectStableId
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 
 
@@ -61,11 +59,6 @@ fun computeStepTraceInfo(
         ?.value
         ?.let { StepTrace.ofExecutionValue(it) }
 
-    val nextStableId = traceValues
-        ?.get(ScriptConventions.nextStepTracePath)
-        ?.value
-        ?.get()
-        ?.let { ObjectStableId(it as String) }
-
-    return StepTraceInfo(trace, nextStableId == stableId)
+    // "Next to run" is the live frame's engine-owned position (checkpoint at:), riding the status poll.
+    return StepTraceInfo(trace, scriptState.progress.nextToRun == objectLocation)
 }

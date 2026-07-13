@@ -33,9 +33,9 @@ import tech.kzen.lib.common.util.ExceptionUtils
  * never shared, so it needs no synchronization.
  *
  * Trace emission mirrors the former MultiStep so the existing client display is unchanged: a step's live value
- * is a [StepTrace] addressed by its stable id, and the "next step to run" highlight is a reserved-address emit
- * ([nextStepAddressMarker]) the controller's trace bridge routes to
- * [tech.kzen.auto.common.objects.document.script.ScriptConventions.nextStepTracePath].
+ * is a [StepTrace] addressed by its stable id. The "next step to run" highlight is engine-owned position: the
+ * per-step boundary names its step ([Execution.checkpoint]'s `at`), the engine records it as the node's
+ * position, and the client reads it off the run frame in LogicStatus.
  *
  * LIVE-EDIT MIGRATION (logic-spec §5): as each step finishes its outcome is recorded in [completedOutcomes] (the
  * capture source); on the rebuilt run [restore] seeds [restoredOutcomes] from the predecessor's capture so the
@@ -50,15 +50,6 @@ class ScriptRunContext(
     // per top-level run, threaded to a hosted child in [host]. See [ScriptRunResources].
     private val resources: ScriptRunResources
 ): StepExecution {
-    //-----------------------------------------------------------------------------------------------------------------
-    companion object {
-        // Reserved emit address marking the "next step to run" highlight, distinct from a step's own value
-        // address (which is the step's stable id). The trace bridge recognizes it and routes to the fixed
-        // next-step trace path; a stable id can never collide (it is an ObjectLocation string).
-        const val nextStepAddressMarker = "\$next-step"
-    }
-
-
     //----------------------------------------------------------------------------------------- per-Script structures
     override val scriptTree: ScriptTree get() = structure.scriptTree
     override val scriptValidation: ScriptValidation get() = structure.scriptValidation
@@ -203,8 +194,7 @@ class ScriptRunContext(
             }
 
             val step = scriptStepAt(stepLocation)
-            publishNextStep(stableId)
-            execution.checkpoint()
+            execution.checkpoint(stableId)
 
             // Track this step as the current one so its [traceDetail] (a screenshot) and [traceNote] attribute
             // to it and carry into its Done / Error trace; saved / restored so a nested branch it runs doesn't
@@ -237,7 +227,6 @@ class ScriptRunContext(
                 currentNote = previousNote
             }
         }
-        publishNextStep(null)
         return last
     }
 
@@ -330,12 +319,6 @@ class ScriptRunContext(
         stepValues[stableId] = value
         completedOutcomes[stableId] = value
         emitStepTrace(stableId, StepTrace.State.Done, displayOf(value), currentDetail)
-    }
-
-
-    private fun publishNextStep(stableId: ObjectStableId?) {
-        val value = if (stableId == null) NullExecutionValue else ExecutionValue.of(stableId.value)
-        execution.emit(Address.of(nextStepAddressMarker), value)
     }
 
 

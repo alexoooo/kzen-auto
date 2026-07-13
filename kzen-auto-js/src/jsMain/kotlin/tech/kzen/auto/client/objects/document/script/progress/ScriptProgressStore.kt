@@ -58,6 +58,7 @@ class ScriptProgressStore(
                     it.copy(
                         logicRunExecutionId = null,
                         logicTraceSnapshot = null,
+                        nextToRun = null,
                         traceEvents = listOf(),
                         runStepRepresentative = mapOf(),
                         runStepOwnedExecutions = mapOf(),
@@ -70,10 +71,10 @@ class ScriptProgressStore(
 
         val logicRunId = logicRunExecutionId.logicRunId
 
-        // The per-path snapshot drives live step state / next-step and non-RunStep thumbnails: the live frame's
+        // The per-path snapshot drives live step state and non-RunStep thumbnails: the live frame's
         // own buffer (single execution) when this document is executing, else merged across the run. If the
         // single-execution lookup misses (a just-evicted / racing frame), fall back to the merged run so the
-        // view still renders.
+        // view still renders. (The next-step highlight reads the frame's position, not this snapshot.)
         @Suppress("MoveVariableDeclarationIntoWhen", "RedundantSuppression")
         val progressResult =
             if (activeFrame != null) {
@@ -99,6 +100,7 @@ class ScriptProgressStore(
                         it.copy(
                             logicRunExecutionId = logicRunExecutionId,
                             logicTraceSnapshot = null,
+                            nextToRun = null,
                             traceEvents = listOf(),
                             runStepRepresentative = mapOf(),
                             runStepOwnedExecutions = mapOf(),
@@ -140,6 +142,7 @@ class ScriptProgressStore(
                         it.copy(
                             logicRunExecutionId = logicRunExecutionId,
                             logicTraceSnapshot = snapshot,
+                            nextToRun = activeFrame?.position,
                             traceEvents = events,
                             runStepRepresentative = runStepRepresentative,
                             runStepOwnedExecutions = runStepOwnedExecutions,

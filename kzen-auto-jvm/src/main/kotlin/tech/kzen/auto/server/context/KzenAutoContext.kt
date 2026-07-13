@@ -8,7 +8,6 @@ import tech.kzen.auto.server.api.RestHandler
 import tech.kzen.auto.server.codegen.KzenAutoJvmModule
 import tech.kzen.auto.server.exec.job.JobTraceAddressRouting
 import tech.kzen.auto.server.exec.report.ReportTraceAddressRouting
-import tech.kzen.auto.server.exec.script.ScriptTraceAddressRouting
 import tech.kzen.auto.server.objects.job.service.JobWorkPool
 import tech.kzen.auto.server.objects.plugin.PluginReportDefinitionRepository
 import tech.kzen.auto.server.objects.report.exec.calc.CalculatedColumnEval
@@ -174,7 +173,7 @@ class KzenAutoContext(
     val serverLogicController = ServerLogicController(
         graphStore, objectStableMapper, logicTraceStore, cachedKotlinCompiler, flowMessageInspector,
         notationMetadataReader, jobWorkPool,
-        listOf(ScriptTraceAddressRouting, JobTraceAddressRouting, ReportTraceAddressRouting)
+        listOf(JobTraceAddressRouting, ReportTraceAddressRouting)
     ) { graphEnvironment }
 
     val detachedExecutor = ModelDetachedExecutor(

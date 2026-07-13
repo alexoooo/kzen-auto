@@ -138,7 +138,8 @@ class FlowRun(
 
             // The vertex is the step boundary: settle BEFORE running it, so a paused / stepping run pauses
             // here (the engine drives stepping by depth; the client highlights FlowUtils.next as "next").
-            execution.checkpoint()
+            val nextStableId = stableId(next)
+            execution.checkpoint(nextStableId)
 
             // The engine only suspends checkpoint() while paused/stepping, so a large gap since the last
             // return is the observable proxy for "the user is stepping" — always trace those (fidelity),
@@ -148,7 +149,6 @@ class FlowRun(
                 lastCheckpointReturn?.let { checkpointReturn - it >= steppingGapNanos } ?: true
             lastCheckpointReturn = checkpointReturn
 
-            val nextStableId = stableId(next)
             val instance = instanceFor(next)
             seedIfAbsent(nextStableId, instance)
 

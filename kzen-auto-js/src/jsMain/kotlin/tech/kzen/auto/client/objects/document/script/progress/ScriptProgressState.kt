@@ -3,6 +3,7 @@ package tech.kzen.auto.client.objects.document.script.progress
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceEvent
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceSnapshot
+import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.service.store.normal.ObjectStableId
 
 
@@ -10,6 +11,11 @@ data class ScriptProgressState(
     val loaded: Boolean = false,
     val logicRunExecutionId: LogicRunExecutionId? = null,
     val logicTraceSnapshot: LogicTraceSnapshot? = null,
+
+    // The "next step to run" highlight: the viewed document's live frame position from the LogicStatus
+    // poll (engine-owned, checkpoint at:) — null when the document isn't live (which clears the highlight
+    // after completion).
+    val nextToRun: ObjectLocation? = null,
 
     // Accumulated trace-event timeline for the current run, sorted by sequence, fetched incrementally
     // by ScriptProgressStore. Value-agnostic; a screenshot is an event whose value is a

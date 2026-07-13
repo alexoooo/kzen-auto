@@ -41,7 +41,7 @@ class EngineJobControl(
     companion object {
         // Reserved emit address tagging a Worker's live-progress payload, distinct from any other value the
         // Worker node emits; the controller's trace bridge recognizes it and routes to the Worker's progress
-        // trace path. Symmetric with ScriptRunContext.nextStepAddressMarker; a stable id can never collide.
+        // trace path. A stable id can never collide (it is an ObjectLocation string).
         const val workerProgressAddressMarker = "\$job-progress"
 
         // Minimum spacing between (non-forced) progress emits per Worker, mirroring JobControlImpl — a forced

@@ -14,7 +14,7 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableId
  * stable-id addresses needs none — the bridge's default stable-id path applies.
  */
 interface LogicTraceAddressRouting {
-    // The reserved leading address segment this routing claims (e.g. "$next-step", "$job-progress").
+    // The reserved leading address segment this routing claims (e.g. "$job-progress").
     val marker: String
 
     // Where to write the event's value, given its full within-node [address] and the emitting node's stable id.

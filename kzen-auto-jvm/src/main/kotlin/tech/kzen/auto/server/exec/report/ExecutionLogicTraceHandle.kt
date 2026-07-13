@@ -18,7 +18,7 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableId
  * ids — so each [set] is emitted under the reserved [tracePathAddressMarker] address with the literal path
  * segments trailing, and [tech.kzen.auto.server.service.impl.ServerLogicController]'s trace bridge routes it
  * straight back to that [LogicTracePath] in the [tech.kzen.lib.server.exec.logic.trace.LogicTraceStore] the JS
- * Report UI polls (symmetric with the Script next-step / Job worker-progress markers).
+ * Report UI polls (symmetric with the Job worker-progress marker).
  *
  * NB: [emit] is called from disruptor consumer threads (output trace) as well as the run coroutine (input
  * trace); the engine's emit is lock-guarded, so this is safe. The pull-style [register] hook has no engine

@@ -723,7 +723,8 @@ class ServerLogicController(
             LogicExecutionId(node.id.value),
             node.children
                 .filter { it.status !is NodeStatus.Terminal }
-                .map { nodeToFrame(it) })
+                .map { nodeToFrame(it) },
+            node.position?.let { objectStableMapper.objectLocation(it) })
     }
 
 

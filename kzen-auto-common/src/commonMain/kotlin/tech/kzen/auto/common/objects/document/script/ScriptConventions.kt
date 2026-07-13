@@ -1,6 +1,5 @@
 package tech.kzen.auto.common.objects.document.script
 
-import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.location.AttributeLocation
@@ -44,8 +43,6 @@ object ScriptConventions {
 
     val instructionsAttributeName = AttributeName("instructions")
     val instructionsAttributePath = AttributePath.ofName(instructionsAttributeName)
-
-    val nextStepTracePath = LogicTracePath(listOf("next-step"))
 
 
     // The steps of a branch in document order: the objects nested directly under attributeLocation's

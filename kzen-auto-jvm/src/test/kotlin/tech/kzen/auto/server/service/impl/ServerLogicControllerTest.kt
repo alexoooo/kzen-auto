@@ -3,7 +3,6 @@ package tech.kzen.auto.server.service.impl
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.objects.document.script.model.StepTrace
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.util.AutoTestUtils
@@ -32,6 +31,7 @@ class ServerLogicControllerTest {
     //-----------------------------------------------------------------------------------------------------------------
     private val foreachPath = DocumentPath.parse("test/script-engine-foreach-test.yaml")
     private val foreachMain = ObjectLocation(foreachPath, ObjectPath.parse("main"))
+    private val foreachFirstStep = ObjectLocation(foreachPath, ObjectPath.parse("main.steps/Range"))
     private val foreachResult = ObjectLocation(foreachPath, ObjectPath.parse("main.steps/Result"))
 
     private val waitPath = DocumentPath.parse("test/script-engine-literal-wait-test.yaml")
@@ -75,9 +75,9 @@ class ServerLogicControllerTest {
         assertEquals(StepTrace.State.Done, resultTrace.state)
         assertEquals("12", resultTrace.displayValue.get())
 
-        // The "next to run" highlight is cleared once the run completes.
-        val nextStep = traceSnapshot.values[ScriptConventions.nextStepTracePath]
-        assertNull(nextStep?.value?.get(), "Next-step highlight should be cleared after completion")
+        // The retired next-step reserved marker is never written: position rides the status frame instead.
+        val nextStep = traceSnapshot.values[LogicTracePath(listOf("next-step"))]
+        assertNull(nextStep, "Reserved next-step trace path should no longer exist")
     }
 
 
@@ -94,6 +94,9 @@ class ServerLogicControllerTest {
             ?: fail("Run is not active while paused")
         assertEquals(runId, active.id)
         assertEquals(foreachMain, active.frame.objectLocation)
+
+        // Engine-owned position (checkpoint at:): parked at the first step's boundary, the frame names it.
+        assertEquals(foreachFirstStep, active.frame.position)
 
         controller.continueOrStart(runId, snapshot)
         awaitDone()

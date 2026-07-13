@@ -3,20 +3,16 @@ package tech.kzen.auto.server.service.impl
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.lib.common.exec.engine.StepMode
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunFrameInfo
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunState
-import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
-import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceQuery
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
-import tech.kzen.lib.common.service.store.normal.ObjectStableId
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.fail
@@ -30,15 +26,15 @@ import kotlin.test.fail
  * provably behaviour-preserving.
  *
  * The discriminator is the live frame-tree depth from [ServerLogicController.status] (Step Into descends one
- * level deeper; Step Over / Step Out stay at / return to the caller level) plus the published "next to run"
- * step (so Step Over is distinguished from a no-op pause-before-Run: the child must have been consumed).
+ * level deeper; Step Over / Step Out stay at / return to the caller level) plus the frame's "next to run"
+ * position (so Step Over is distinguished from a no-op pause-before-Run: the child must have been consumed).
  *
  * Root steps: First (NumberLiteral) -> Run (RunStep -> child) -> Last (NumberLiteral).
  * Child steps: ChildA (NumberLiteral) -> ChildB (NumberLiteral).
  *
  * Now runs against the [tech.kzen.lib.server.exec.engine.RunEngine] that backs [ServerLogicController]: the
  * same Step Into / Over / Out behaviour is preserved, now driven by the engine's uniform checkpoint-before-step
- * boundaries and the Script flavour's re-emitted `next-step` highlight (start+pause settles before the first
+ * boundaries and the engine-owned per-frame position (`checkpoint(at:)` — start+pause settles before the first
  * step; each step then advances exactly one).
  */
 class StepNavigationTest {
@@ -235,13 +231,19 @@ class StepNavigationTest {
 
 
     private fun assertNextToRun(runId: LogicRunId, expected: ObjectLocation) {
-        val snapshot = context.logicTraceStore.lookupRun(
-            runId, LogicTraceQuery(LogicTracePath.root))
-            ?: fail("No run trace")
-        val nextStableId = snapshot.values[ScriptConventions.nextStepTracePath]?.value?.get()
-            ?.let { ObjectStableId(it as String) }
-        assertEquals(
-            context.objectStableMapper.objectStableId(expected), nextStableId, "next to run")
+        val active = context.serverLogicController.status().active
+            ?: fail("Run is not active")
+        assertEquals(runId, active.id)
+        val frame = frameForDocument(active.frame, expected.documentPath)
+            ?: fail("No live frame for ${expected.documentPath}")
+        assertEquals(expected, frame.position, "next to run")
+    }
+
+
+    // Deepest live frame showing the given document (matches the client's LogicRunFrames.frameForDocument).
+    private fun frameForDocument(frame: LogicRunFrameInfo, documentPath: DocumentPath): LogicRunFrameInfo? {
+        val deeper = frame.dependencies.firstNotNullOfOrNull { frameForDocument(it, documentPath) }
+        return deeper ?: frame.takeIf { it.objectLocation.documentPath == documentPath }
     }
 
 
