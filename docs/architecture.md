@@ -109,7 +109,7 @@ The companion-object `init` block registers SPI metadata with kzen-lib's `Reflec
 | `graphStore` | `DirectGraphStore` | In-process notation store; the canonical mirror target for `ClientRestGraphStore` |
 | `detachedExecutor` | `ModelDetachedExecutor` | Detached-paradigm runner |
 | `modelTaskRepository` | `ModelTaskRepository` | Task-paradigm registry + runner (observer on `graphStore`) |
-| `serverLogicController` | `ServerLogicController` | Logic-paradigm state machine (see § 3 gotcha); runs Script **and Flow**; observer on `graphStore` (event-driven live-edit detection) |
+| `serverLogicController` | `ServerLogicController` | Logic-paradigm state machine (see § 3 gotcha); runs Script **and Flow**; observer on `graphStore` (event-driven live-edit detection: coarse edit-dirty flag, then a precise closure content-digest compare via kzen-lib `GraphDefinition.transitiveDigest`) |
 | `flowMessageInspector` | `FlowMessageInspector` | Injected (via `graphEnvironment`) into Flow vertices for message inspection / tracing |
 | `objectStableMapper` | `ObjectStableMapper` (kzen-lib) | Process-global `ObjectLocation ↔ ObjectStableId` bimap; `graphStore.observe(...)` at boot + pre-warmed over the initial notation (see [`../../kzen-lib/docs/architecture.md`](../../kzen-lib/docs/architecture.md#stable-identity-objectstablemapper)) |
 | `logicTraceStore` | `LogicTraceStore` (kzen-lib) | In-memory, stable-id-keyed trace store; constructed with `objectStableMapper` |
