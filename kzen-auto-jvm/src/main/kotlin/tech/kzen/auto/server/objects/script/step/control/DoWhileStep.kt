@@ -2,6 +2,7 @@ package tech.kzen.auto.server.objects.script.step.control
 
 import tech.kzen.auto.common.objects.document.script.model.ScriptTree
 import tech.kzen.auto.common.objects.document.script.model.ScriptValidation
+import tech.kzen.auto.server.objects.script.api.ScriptControlSignal
 import tech.kzen.auto.server.objects.script.api.ScriptStep
 import tech.kzen.auto.server.objects.script.api.ScriptStepDefinition
 import tech.kzen.auto.server.objects.script.api.StepExecution
@@ -63,6 +64,22 @@ class DoWhileStep(
             replayInFlight = false
 
             execution.runSteps(bodySteps)
+
+            // Control flow (see [ScriptControlSignal]): Finish -> exit; a signal targeting an OUTER loop or End
+            // Script -> propagate; Skip (or none) -> fall through to the condition (standard do-while continue).
+            when (execution.consumeLoopSignal(selfLocation)) {
+                is ScriptControlSignal.FinishLoop -> {
+                    execution.recordCarry(selfLocation, null)
+                    return null
+                }
+                is ScriptControlSignal.SkipIteration ->
+                    Unit  // proceed to condition evaluation
+                else ->
+                    if (execution.pendingControlSignal() != null) {
+                        execution.recordCarry(selfLocation, null)
+                        return null
+                    }
+            }
 
             iterations += 1
             execution.recordCarry(selfLocation, iterations)

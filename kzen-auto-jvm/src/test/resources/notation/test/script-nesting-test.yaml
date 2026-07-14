@@ -1,0 +1,36 @@
+# Fixture for ScriptNestingAnalysisTest: a step at the root, an outer ForEach, an inner DoWhile, and an If inside
+# the inner loop. Exercises enclosing-loop enumeration (innermost-first), rerun-flag detection over both loop
+# types, and exclusion of If branches (then) and the document root (which do not re-run).
+main:
+  is: Script
+
+main.steps/Flag:
+  is: FormulaStep
+  code: "true"
+
+main.steps/RootStep:
+  is: FormulaStep
+  code: "1"
+
+main.steps/OuterRange:
+  is: FormulaStep
+  code: "1..2"
+
+main.steps/OuterLoop:
+  is: ForEachStep
+  items: main.steps/OuterRange
+
+main.steps/OuterLoop.item/OuterItem:
+  is: ForEachItemBinding
+
+main.steps/OuterLoop.steps/InnerLoop:
+  is: DoWhileStep
+  condition: "false"
+
+main.steps/OuterLoop.steps/InnerLoop.steps/Branch:
+  is: IfStep
+  condition: main.steps/Flag
+
+main.steps/OuterLoop.steps/InnerLoop.steps/Branch.then/DeepStep:
+  is: FormulaStep
+  code: "2"

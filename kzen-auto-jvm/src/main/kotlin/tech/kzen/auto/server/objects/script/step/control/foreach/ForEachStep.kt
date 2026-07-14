@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.objects.script.step.control.foreach
 
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
+import tech.kzen.auto.server.objects.script.api.ScriptControlSignal
 import tech.kzen.auto.server.objects.script.api.ScriptStep
 import tech.kzen.auto.server.objects.script.api.ScriptStepDefinition
 import tech.kzen.auto.server.objects.script.api.StepExecution
@@ -113,7 +114,27 @@ class ForEachStep(
             execution.traceDetail("$item ($counter)")
 
             execution.bind(itemBinding, item)
-            output.add(execution.runSteps(bodySteps))
+            val bodyValue = execution.runSteps(bodySteps)
+
+            // Control flow (see [ScriptControlSignal]): Skip -> this iteration contributes nothing, continue;
+            // Finish -> exit with the outputs collected so far; a signal targeting an OUTER loop or End Script ->
+            // propagate (the enclosing spine short-circuits this loop as a pass-through). The cursor carry is
+            // cleared on any signal exit so a stale cursor never migrates (same as normal completion).
+            when (execution.consumeLoopSignal(selfLocation)) {
+                is ScriptControlSignal.FinishLoop -> {
+                    execution.recordCarry(selfLocation, null)
+                    return output
+                }
+                is ScriptControlSignal.SkipIteration ->
+                    Unit  // contribute nothing for this iteration
+                else -> {
+                    if (execution.pendingControlSignal() != null) {
+                        execution.recordCarry(selfLocation, null)
+                        return output
+                    }
+                    output.add(bodyValue)
+                }
+            }
             index += 1
         }
 

@@ -1,0 +1,17 @@
+# Parent Script hosting the endScript child: the child returns 5 via End Script, then the CALLER continues (its
+# RunStep value is 5, and the following Result computes Call + 1 = 6). Proves End Script does not cross host().
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.Int
+      generics: []
+      nullable: false
+
+main.steps/Call:
+  is: RunStep
+  instructions: "test/script-control-endscript-child-test.yaml#main"
+
+main.steps/Result:
+  is: ResultStep
+  code: "Call + 1"

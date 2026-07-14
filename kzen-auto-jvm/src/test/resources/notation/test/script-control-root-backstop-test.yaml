@@ -1,0 +1,25 @@
+# A mistargeted ControlStep: Stray sits at the document root and targets a sibling loop that already completed,
+# so it is NOT an enclosing loop. ControlStep validation flags it (Run-blocking); and at runtime the signal
+# reaches the Script root unconsumed and the backstop (consumeRootSignalOrFail) fails the run.
+main:
+  is: Script
+
+main.steps/Range:
+  is: FormulaStep
+  code: "1..2"
+
+main.steps/Loop:
+  is: ForEachStep
+  items: main.steps/Range
+
+main.steps/Loop.item/It:
+  is: ForEachItemBinding
+
+main.steps/Loop.steps/Body:
+  is: FormulaStep
+  code: "It"
+
+main.steps/Stray:
+  is: ControlStep
+  loop: main.steps/Loop
+  action: finishLoop

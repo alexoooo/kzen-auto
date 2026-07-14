@@ -1,0 +1,25 @@
+# Skip Iteration (continue) inside a DoWhile: the first iteration skips before its remaining body runs, and Skip
+# proceeds to CONDITION evaluation (standard do-while continue). The condition references Counter, which the skip
+# left produced (it ran before the Skip), so no backstop fires. Loop runs while Counter < 3 => CountingStep runs 3x.
+main:
+  is: Script
+
+main.steps/Loop:
+  is: DoWhileStep
+  condition: "Counter < 3"
+
+main.steps/Loop.steps/Counter:
+  is: CountingStep
+
+main.steps/Loop.steps/IsFirst:
+  is: FormulaStep
+  code: "Counter == 1"
+
+main.steps/Loop.steps/Branch:
+  is: IfStep
+  condition: main.steps/Loop.steps/IsFirst
+
+main.steps/Loop.steps/Branch.then/Skip:
+  is: ControlStep
+  loop: main.steps/Loop
+  action: skipIteration

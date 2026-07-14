@@ -1,0 +1,17 @@
+# ResultStep `then: endScript` (return) at the document root: captures the result (1) and ends the Script, so the
+# later Tail (a CountingStep) never runs. Result == 1; CountingStep ran 0 times.
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.Int
+      generics: []
+      nullable: false
+
+main.steps/Early:
+  is: ResultStep
+  code: "1"
+  then: endScript
+
+main.steps/Tail:
+  is: CountingStep

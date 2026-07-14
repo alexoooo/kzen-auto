@@ -45,6 +45,10 @@ class ScriptLogic(
 
         context.runSteps(rootStepLocations)
 
+        // Control flow: an End Script signal (return) that unwound to the root is consumed here; a Skip / Finish
+        // reaching the root is a mistargeted control step and fails the run (validation should prevent it).
+        context.consumeRootSignalOrFail()
+
         return context.result()
             ?: TupleValue.empty
     }

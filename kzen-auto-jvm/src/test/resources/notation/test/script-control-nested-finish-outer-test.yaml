@@ -1,0 +1,43 @@
+# Nested loops: a ControlStep in the INNER body targets the OUTER loop (finishLoop) when OuterItem == 2. The
+# inner loop unwinds (propagates the signal) and the outer loop consumes it. The inner Tail (a CountingStep)
+# therefore runs only during the outer's first iteration (2 inner iterations) — count == 2.
+main:
+  is: Script
+
+main.steps/OuterRange:
+  is: FormulaStep
+  code: "1..3"
+
+main.steps/OuterLoop:
+  is: ForEachStep
+  items: main.steps/OuterRange
+
+main.steps/OuterLoop.item/OuterItem:
+  is: ForEachItemBinding
+
+main.steps/OuterLoop.steps/InnerRange:
+  is: FormulaStep
+  code: "1..2"
+
+main.steps/OuterLoop.steps/InnerLoop:
+  is: ForEachStep
+  items: main.steps/OuterLoop.steps/InnerRange
+
+main.steps/OuterLoop.steps/InnerLoop.item/InnerItem:
+  is: ForEachItemBinding
+
+main.steps/OuterLoop.steps/InnerLoop.steps/Check:
+  is: FormulaStep
+  code: "OuterItem == 2"
+
+main.steps/OuterLoop.steps/InnerLoop.steps/Branch:
+  is: IfStep
+  condition: main.steps/OuterLoop.steps/InnerLoop.steps/Check
+
+main.steps/OuterLoop.steps/InnerLoop.steps/Branch.then/FinishOuter:
+  is: ControlStep
+  loop: main.steps/OuterLoop
+  action: finishLoop
+
+main.steps/OuterLoop.steps/InnerLoop.steps/Tail:
+  is: CountingStep

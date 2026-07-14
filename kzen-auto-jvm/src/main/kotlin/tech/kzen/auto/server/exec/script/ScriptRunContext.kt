@@ -4,6 +4,7 @@ import tech.kzen.auto.common.objects.document.script.model.ScriptTree
 import tech.kzen.auto.common.objects.document.script.model.ScriptValidation
 import tech.kzen.auto.common.objects.document.script.model.StepTrace
 import tech.kzen.auto.server.exec.LogicCompiler
+import tech.kzen.auto.server.objects.script.api.ScriptControlSignal
 import tech.kzen.auto.server.objects.script.api.ScriptStep
 import tech.kzen.auto.server.objects.script.api.StepExecution
 import tech.kzen.lib.common.exec.BinaryExecutionValue
@@ -43,6 +44,12 @@ import tech.kzen.lib.common.util.ExceptionUtils
  * outcomes. A mid-flight step (a loop between iterations) additionally carries opaque sub-state ([carryStates] /
  * [restoredCarries], via [recordCarry] / [restoredCarry]) so it can resume where it left off — a loop at its
  * current iteration. See [ScriptMigrationState] for the carried shape and its bounds.
+ *
+ * CONTROL FLOW: a step may raise a [ScriptControlSignal] (continue / break / return) via [raiseControlSignal];
+ * the spine ([runSteps]) short-circuits on it and a loop ([consumeLoopSignal]) or the root
+ * ([consumeRootSignalOrFail]) consumes it within the SAME engine release — so a signal is never captured by
+ * [captureState] nor migrated. That is why an End Script that terminates the run needs no per-step capture: the
+ * run goes terminal (no park), and a terminal run is never replayed.
  */
 class ScriptRunContext(
     private val execution: Execution,
@@ -83,6 +90,12 @@ class ScriptRunContext(
     private val perRunSingletons = HashMap<String, Any>()
 
     private var resultValue: TupleValue? = null
+
+    // A pending control-flow completion signal (continue/break/return — see [ScriptControlSignal]) and the stable
+    // id of the step that raised it. Release-local: the spine short-circuits on it and a loop / the root consumes
+    // it within the same engine release, so it is never captured by [captureState] nor migrated.
+    private var pendingSignal: ScriptControlSignal? = null
+    private var pendingSignalRaisedBy: ObjectStableId? = null
 
     // The step the spine is currently running (whose trace [traceDetail] / [traceNote] updates), and the
     // detail + note it has recorded so far — carried into the step's Done / Error trace so a screenshot
@@ -130,6 +143,35 @@ class ScriptRunContext(
 
     override fun setResult(value: TupleValue) {
         resultValue = value
+    }
+
+
+    //------------------------------------------------------------------------------------ StepExecution: control flow
+    override fun raiseControlSignal(signal: ScriptControlSignal) {
+        check(currentStableId != null) { "No step is running" }
+        pendingSignal = signal
+        pendingSignalRaisedBy = currentStableId
+    }
+
+
+    override fun consumeLoopSignal(selfLocation: ObjectLocation): ScriptControlSignal? {
+        val signal = pendingSignal
+        val target = when (signal) {
+            is ScriptControlSignal.SkipIteration -> signal.target
+            is ScriptControlSignal.FinishLoop -> signal.target
+            else -> return null  // no signal, or EndScript (never loop-consumed)
+        }
+        if (objectStableMapper.objectStableId(target) == objectStableMapper.objectStableId(selfLocation)) {
+            pendingSignal = null
+            pendingSignalRaisedBy = null
+            return signal
+        }
+        return null
+    }
+
+
+    override fun pendingControlSignal(): ScriptControlSignal? {
+        return pendingSignal
     }
 
 
@@ -229,6 +271,11 @@ class ScriptRunContext(
                 // each (re-)try repaints Running (and clears the prior try's detail). A failed step is never
                 // markDone'd, so on resume / migrate it re-runs.
                 last = execution.recoverable({ error ->
+                    // A step that errored after raising a signal re-raises on its successful retry, so a failed
+                    // try must never leave a signal pending across the resulting park (no signal coexists with a
+                    // park — the release-local invariant).
+                    pendingSignal = null
+                    pendingSignalRaisedBy = null
                     emitStepTrace(
                         stableId, StepTrace.State.Error, NullExecutionValue, currentDetail,
                         ExceptionUtils.message(error))
@@ -238,7 +285,22 @@ class ScriptRunContext(
                     emitStepTrace(stableId, StepTrace.State.Running, NullExecutionValue, currentDetail)
                     step.run(this)
                 }
+
+                // Control flow (continue/break/return — see [ScriptControlSignal]): after the step runs, a pending
+                // signal short-circuits the walk. A CONTAINER the signal merely passed through (an If, or a loop
+                // propagating an outer signal) gets a Done trace NAMING the signal but no completedOutcomes entry
+                // (a container's value is never referenced from outside its scope, so skipping markDone is safe);
+                // the step that RAISED the signal gets its normal Done. Either way the remaining steps do not run —
+                // a loop ([consumeLoopSignal]) or the root ([consumeRootSignalOrFail]) consumes the signal.
+                val signal = pendingSignal
+                if (signal != null && pendingSignalRaisedBy != stableId) {
+                    emitStepTrace(stableId, StepTrace.State.Done, displayOf(signalDisplay(signal)), currentDetail)
+                    return last
+                }
                 markDone(stableId, last)
+                if (signal != null) {
+                    return last
+                }
             }
             finally {
                 currentStableId = previousStableId
@@ -297,6 +359,25 @@ class ScriptRunContext(
 
     fun result(): TupleValue? {
         return resultValue
+    }
+
+
+    /**
+     * Root-level control-signal disposition, called by [ScriptLogic] after the root [runSteps]:
+     * [ScriptControlSignal.EndScript] is the intended terminator (return semantics — consumed here); a Skip /
+     * Finish reaching the root has no enclosing loop to consume it (a mistargeted control step), so fail loudly
+     * (ControlStep validation should make this unreachable).
+     */
+    fun consumeRootSignalOrFail() {
+        when (val signal = pendingSignal) {
+            null, ScriptControlSignal.EndScript -> {
+                pendingSignal = null
+                pendingSignalRaisedBy = null
+            }
+            is ScriptControlSignal.SkipIteration, is ScriptControlSignal.FinishLoop ->
+                error("Loop control signal reached the Script root without an enclosing loop " +
+                        "(mistargeted control step): $signal")
+        }
     }
 
 
@@ -368,6 +449,17 @@ class ScriptRunContext(
 
     private fun displayOf(value: Any?): ExecutionValue {
         return ExecutionValue.of(value.toString())
+    }
+
+
+    // The trace label a container passed-through by a control signal shows (decision 17) — a clearly-non-value
+    // marker, not real step data. The client (phase 5) may refine the wording.
+    private fun signalDisplay(signal: ScriptControlSignal): String {
+        return when (signal) {
+            is ScriptControlSignal.SkipIteration -> "→ skip iteration"
+            is ScriptControlSignal.FinishLoop -> "→ finish loop"
+            ScriptControlSignal.EndScript -> "→ end script"
+        }
     }
 
 

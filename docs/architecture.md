@@ -44,6 +44,26 @@ The four paradigms:
 
 > **Flow (2026-06-19).** The former **Graph** / "Time Series" visual document (`GraphDocument`, driven by the bespoke `/dataflow/*` engine) was modernized into **Flow** (`server/objects/flow/FlowDocument`), which implements kzen-lib's `Logic`: one vertex execution = one step, run through `ServerLogicController` + `/logic/*`, with dedicated input/output vertices supplying parameters and a return value. The standalone dataflow execution engine — `ActiveDataflowRepository`, `VisualDataflowRepository`, `VisualDataflowLoop`, the `ActiveVisualProvider`/`VisualDataflowProvider`, and the `/dataflow/*` routes — was **retired** (clean rename, no `Graph` compat archetype). The low-level vertex/topology SPI (`FlowVertex`, `FlowMatrix`, `FlowDag`, `FlowUtils`, `VisualVertexModel`) and the vertex/edge rendering (`CellController`, `EdgeController`, `VertexController`) are **reused** by Flow — only the execution and visual-service layers were removed. The client `document/flow/FlowController` rebuilds per-vertex visual state from the logic trace store (`FlowProgressStore`), like `ScriptProgressStore`. **Full rename (2026-06-19):** the `paradigm.dataflow` and `objects.document.graph` / `server.objects.graph` packages and all `Dataflow*` class names were renamed to `paradigm.flow` / `objects.document.flow` / `server.objects.flow.vertex` and `Flow*` (`Dataflow`→`FlowVertex`, `DataflowMatrix`→`FlowMatrix`, `DataflowWiring`→`FlowWiring`, `VisualDataflowModel`→`VisualFlowModel`, etc.); notation archetype `Dataflow`→`FlowVertex`, `StreamDataflow`→`StreamFlowVertex`, `DataflowWiring`→`FlowWiring`. The unused `FolderDocument` was also removed.
 
+> **Script control flow (2026-07-14).** The Script flavour gained structured control flow —
+> `continue` / `break` / `return` — as **completion signals, not exceptions** (`ScriptControlSignal`:
+> `SkipIteration` / `FinishLoop` / `EndScript`, in `server/objects/script/api/`). A throwable would be
+> caught by the engine's `Execution.recoverable {}` catch-all and rendered as a step failure
+> (error-parked under pause-on-error); a signal instead is a pending field on `ScriptRunContext` that
+> the spine (`runSteps`) short-circuits on and a targeted consumer clears — **zero kzen-lib change**,
+> `logic-spec.md` untouched. A new **ControlStep** (`action: skipIteration | finishLoop`, targeting an
+> enclosing loop via `loop:`) raises Skip/Finish; **ResultStep** gained `then: keepRunning | endScript`
+> (default `keepRunning` = today's last-Result-wins; `endScript` raises `EndScript` after capturing the
+> result). A loop (`ForEachStep` / `DoWhileStep`) consumes a signal targeting itself via
+> `StepExecution.consumeLoopSignal`; a signal for an outer loop / the root propagates (the enclosing
+> spine traces the passed-through container as Done-with-no-outcome and short-circuits). `EndScript`
+> unwinds to `ScriptLogic.run` and never crosses a `host()` boundary (a hosted child runs in its own
+> context), so it is a proper `return` from the current document. Signals are **release-local**: raised
+> and consumed within one engine release, never captured/migrated — so an End-Script-terminated run goes
+> terminal (no park) and is never replayed. Loop membership is **notation-driven**: a loop flags its body
+> branch `rerun: true` (`meta.steps.rerun`), read by the shared `ScriptNestingAnalysis`
+> (kzen-auto-common) — a third-party loop step opts into loop semantics declaratively, no shared-code
+> edit. (execution-control plan phase XC4.)
+
 ## 2. Client-server graph synchronization
 
 The browser holds a **mirror** of the server's notation graph, applies edits locally for instant UI feedback, and replays the same `NotationCommand` to the server over REST. CQRS means both sides converge by applying identical commands.

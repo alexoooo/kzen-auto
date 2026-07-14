@@ -31,6 +31,12 @@ interface ScriptStep {
      * The nested step-list branches this step owns (an If's then/else, a loop's body), or empty for a leaf.
      * The spine recurses through these to expand the live-edit replay set ([StepExecution.dropReplay]); a control
      * step overrides to expose its branches so the mechanism stays generic — no per-type knowledge in the spine.
+     *
+     * A LOOP step additionally flags the branch it re-runs as `rerun: true` in its `meta.<branch>` notation
+     * metadata (e.g. ForEachStep/DoWhileStep `meta.steps.rerun`) and consumes a control signal targeting itself
+     * via [StepExecution.consumeLoopSignal] after running that branch. A third-party loop step joins loop
+     * semantics declaratively by declaring both — ControlStep may then target it and move-to jumps into its body
+     * are excluded — with no change to shared code (read by `ScriptNestingAnalysis`).
      */
     fun nestedStepLists(): List<List<ObjectLocation>> {
         return listOf()

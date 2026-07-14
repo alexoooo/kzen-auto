@@ -143,12 +143,15 @@ ResultStep:
   icon: "material-symbols:keyboard-return"
   title: "Result"
   code: ""
+  then: "keepRunning"
   meta:
     code:
       is: String
       multiline: true
       editor: KotlinExpressionEditor
       summary: TextAttributeView
+    then:
+      is: String
     selfLocation: SelfLocation
 
 
@@ -319,6 +322,9 @@ ForEachStep:
       is: List
       of: ScriptStep
       by: NestedList
+      # This branch re-runs each iteration (read by ScriptNestingAnalysis): a ControlStep may target this loop,
+      # and a move-to jump into this body is invalid (execution-control decision 8). Inert for definition.
+      rerun: true
     selfLocation: SelfLocation
 
 ForEachItemBinding:
@@ -360,6 +366,29 @@ DoWhileStep:
       is: List
       of: ScriptStep
       by: NestedList
+      # This branch re-runs each iteration (read by ScriptNestingAnalysis) — see ForEachStep.steps.rerun.
+      rerun: true
+    selfLocation: SelfLocation
+
+
+# Structured loop control (continue / break): raises a completion signal targeting an enclosing loop so the loop
+# skips the rest of this iteration (action: skipIteration) or exits (action: finishLoop). Produces no value. A
+# `loop` that is not a `rerun`-flagged enclosing ancestor is a validation error that blocks Run.
+ControlStep:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.server.objects.script.step.control.ControlStep
+  icon: "material-symbols:step-out"
+  title: "Loop Control"
+  loop: ""
+  action: "skipIteration"
+  meta:
+    loop:
+      is: ObjectLocation
+      by: Nominal
+      editor: SelectStepEditor
+    action:
+      is: String
     selfLocation: SelfLocation
 
 #######################################################################################################################

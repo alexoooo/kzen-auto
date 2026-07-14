@@ -67,6 +67,27 @@ interface StepExecution {
     fun setResult(value: TupleValue)
 
 
+    //------------------------------------------------------------------------------------ StepExecution: control flow
+    /**
+     * Raise a control-flow completion signal (continue / break / return — see [ScriptControlSignal]). MUST be a
+     * step's TERMINAL action: no [checkpoint] / [pauseHere] / [host] / [runSteps] may follow in the same run, or a
+     * park would strand a live signal. The spine short-circuits the remaining steps; a loop ([consumeLoopSignal])
+     * or the Script root consumes it. Signals never survive a checkpoint, migrate, or cross a [host] boundary.
+     */
+    fun raiseControlSignal(signal: ScriptControlSignal)
+
+    /**
+     * For a loop step: return-and-clear a [ScriptControlSignal.SkipIteration] / [ScriptControlSignal.FinishLoop]
+     * targeting [selfLocation] (stable-id compare), else null — leaving a signal targeting an OUTER loop or the
+     * Script root ([ScriptControlSignal.EndScript]) pending for the enclosing frame to consume. Part of the loop
+     * step contract (a `rerun`-flagged loop consumes its own Skip/Finish; see [ScriptStep.nestedStepLists]).
+     */
+    fun consumeLoopSignal(selfLocation: ObjectLocation): ScriptControlSignal?
+
+    /** Peek the pending control signal without clearing it — a loop uses it to detect a foreign signal to propagate. */
+    fun pendingControlSignal(): ScriptControlSignal?
+
+
     //-----------------------------------------------------------------------------------------------------------------
     /**
      * Record opaque mid-flight migration sub-state for the step at [location] — the step-granularity parallel of

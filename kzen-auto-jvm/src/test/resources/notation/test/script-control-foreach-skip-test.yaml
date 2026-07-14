@@ -1,0 +1,41 @@
+# Skip Iteration (continue) inside a ForEach: iteration where Item == 2 is skipped (its remaining steps do not
+# run, nothing is collected for it); iterations 1 and 3 collect their Tail (a CountingStep). Also proves the
+# signal passes through the enclosing If (verify case 5). Result = [1, 2].sum() = 3; CountingStep ran twice.
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.Int
+      generics: []
+      nullable: false
+
+main.steps/Range:
+  is: FormulaStep
+  code: "1..3"
+
+main.steps/Loop:
+  is: ForEachStep
+  items: main.steps/Range
+
+main.steps/Loop.item/Item:
+  is: ForEachItemBinding
+
+main.steps/Loop.steps/IsTwo:
+  is: FormulaStep
+  code: "Item == 2"
+
+main.steps/Loop.steps/Branch:
+  is: IfStep
+  condition: main.steps/Loop.steps/IsTwo
+
+main.steps/Loop.steps/Branch.then/Skip:
+  is: ControlStep
+  loop: main.steps/Loop
+  action: skipIteration
+
+main.steps/Loop.steps/Tail:
+  is: CountingStep
+
+main.steps/Result:
+  is: ResultStep
+  code: "Loop.sum()"

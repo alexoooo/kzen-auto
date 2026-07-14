@@ -1,0 +1,45 @@
+# Finish Loop (break) inside a ForEach over 1..5: iteration where Item == 3 exits the loop with the outputs
+# collected so far ([1, 2]); the step AFTER the loop still runs. Result = Loop.sum() + After = 3 + 10 = 13.
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.Int
+      generics: []
+      nullable: false
+
+main.steps/Range:
+  is: FormulaStep
+  code: "1..5"
+
+main.steps/Loop:
+  is: ForEachStep
+  items: main.steps/Range
+
+main.steps/Loop.item/Item:
+  is: ForEachItemBinding
+
+main.steps/Loop.steps/IsThree:
+  is: FormulaStep
+  code: "Item == 3"
+
+main.steps/Loop.steps/Branch:
+  is: IfStep
+  condition: main.steps/Loop.steps/IsThree
+
+main.steps/Loop.steps/Branch.then/Finish:
+  is: ControlStep
+  loop: main.steps/Loop
+  action: finishLoop
+
+main.steps/Loop.steps/Tail:
+  is: FormulaStep
+  code: "Item"
+
+main.steps/After:
+  is: FormulaStep
+  code: "10"
+
+main.steps/Result:
+  is: ResultStep
+  code: "Loop.sum() + After"

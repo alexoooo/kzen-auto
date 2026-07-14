@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.objects.script.step.eval
 
+import tech.kzen.auto.server.objects.script.api.ScriptControlSignal
 import tech.kzen.auto.server.objects.script.api.ScriptStep
 import tech.kzen.auto.server.objects.script.api.ScriptStepDefinition
 import tech.kzen.auto.server.objects.script.api.StepExecution
@@ -22,10 +23,16 @@ import tech.kzen.lib.common.reflect.Service
  * step executed wins (Visual-Basic style) — its value is captured via [StepExecution.setResult] and
  * returned by the Script once it completes. With no declared result signature the Script is void, so a
  * Result step is a validation error; a type mismatch surfaces as the step's compile error like [FormulaStep].
+ *
+ * [then] adds `return` semantics: `keepRunning` (default, back-compatible — last Result wins and the walk
+ * continues) or `endScript`, which raises [ScriptControlSignal.EndScript] after capturing the result, ending the
+ * current Script document (in a hosted sub-Script the sub-Script returns and the caller's RunStep continues — a
+ * signal never crosses a `host()` boundary).
  */
 @Reflect
 class ResultStep(
     private val code: String,
+    private val then: String,
     private val selfLocation: ObjectLocation,
     @Service private val cachedKotlinCompiler: CachedKotlinCompiler
 ):
@@ -34,6 +41,8 @@ class ResultStep(
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private const val noResultDeclared = "No result type declared in the Script signature"
+        const val keepRunning = "keepRunning"
+        const val endScript = "endScript"
     }
 
 
@@ -55,12 +64,22 @@ class ResultStep(
             instanceCache = { signature, factory -> execution.perRunSingleton(signature, factory) })
 
         execution.setResult(TupleValue.ofMain(value))
+
+        // `return` semantics: end the current Script document after capturing the result (see [ScriptControlSignal]).
+        if (then == endScript) {
+            execution.raiseControlSignal(ScriptControlSignal.EndScript)
+        }
+
         return value
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun definition(scriptDefinitionContext: ScriptDefinitionContext): ScriptStepDefinition? {
+        if (then != keepRunning && then != endScript) {
+            return ScriptStepDefinition(null, "Invalid result step 'then': $then")
+        }
+
         val declaredType = declaredMainType(scriptDefinitionContext.resultSignature)
             ?: return ScriptStepDefinition(null, noResultDeclared)
 

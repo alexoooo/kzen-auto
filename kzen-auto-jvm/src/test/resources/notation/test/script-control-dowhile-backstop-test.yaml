@@ -1,0 +1,26 @@
+# Skip Iteration in a DoWhile whose condition references a value the skip left UNPRODUCED (Later runs after the
+# Skip, so it never executes). The condition compiles (Later : Int) but at runtime referencedValue(Later) hits the
+# existing "No value produced" backstop => the run fails (Outcome.Failed), the decided runtime policy.
+main:
+  is: Script
+
+main.steps/Loop:
+  is: DoWhileStep
+  condition: "Later < 10"
+
+main.steps/Loop.steps/Guard:
+  is: FormulaStep
+  code: "true"
+
+main.steps/Loop.steps/Branch:
+  is: IfStep
+  condition: main.steps/Loop.steps/Guard
+
+main.steps/Loop.steps/Branch.then/Skip:
+  is: ControlStep
+  loop: main.steps/Loop
+  action: skipIteration
+
+main.steps/Loop.steps/Later:
+  is: FormulaStep
+  code: "5"
