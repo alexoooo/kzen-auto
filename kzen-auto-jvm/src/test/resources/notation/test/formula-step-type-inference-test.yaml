@@ -32,3 +32,7 @@ main.steps/LongFormula:
 main.steps/CharFormula:
   is: FormulaStep
   code: "'x'"
+
+main.steps/NothingFormula:
+  is: FormulaStep
+  code: 'error("intentional failure")'

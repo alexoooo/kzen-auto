@@ -39,6 +39,11 @@ import kotlin.test.assertIs
  *   check the ancestor-scoped policies (`parent` / `run`): a resource a child sub-Script opens is owned by an
  *   ancestor node, so it outlives the opener's own settle and disposes only when that ancestor settles.
  *
+ * - [openResourceSurvivesLiveEditMigration] checks the live-edit barrier (logic-spec §5 "open resources"):
+ *   a resource opened before a [RunEngine.migrate] is NOT disposed by the teardown — its registration is
+ *   lifted and re-adopted by the rebuilt node — and its handle is still readable afterward (the
+ *   "edit-while-paused quits the browser" regression case).
+ *
  * The tests share the process-global [ResourceDisposalLog] and reset it per run, so they rely on the suite's
  * sequential execution (as the other static-fixture engine tests do).
  */
@@ -101,6 +106,53 @@ class ScriptExtensibilityTest {
     }
 
 
+    @Test
+    fun openResourceSurvivesLiveEditMigration() {
+        // Park the run at the boundary AFTER the opening step (resource live), then drive the live-edit
+        // barrier — RunEngine.migrate with a recompiled Logic — and resume. The rebuilt run replays the
+        // completed opening step without re-executing it, so the ReadResourceStep would throw if the barrier
+        // had disposed the handle (the pre-fix behaviour); Success proves the lifted registration was
+        // re-adopted with its value, and the disposal set proves the closer still fired (exactly once) when
+        // the run settled.
+        ScriptStepTestModule.register()
+        ResourceDisposalLog.reset()
+
+        context = KzenAutoContext.forTest()
+
+        val scriptLocation = ObjectLocation(
+            DocumentPath.parse("test/script-resource-migration-test.yaml"),
+            ObjectPath.parse("main"))
+
+        val graphNotation = AutoTestUtils.readNotation()
+        val graphDefinition = AutoTestUtils.graphDefinitionAttempt(graphNotation).transitiveSuccessful
+
+        fun compile() = LogicCompiler.compile(
+            scriptLocation, graphNotation, graphDefinition, compilerServices())
+
+        val engine = RunEngine(
+            compile(), context.objectStableMapper.objectStableId(scriptLocation), TupleValue.empty)
+        try {
+            // First step parks before the opening step; second runs it (resource opens) and parks before Read.
+            engine.step()
+            engine.awaitQuiescent()
+            engine.step()
+            engine.awaitQuiescent()
+            assertEquals(emptySet<String>(), ResourceDisposalLog.disposed(),
+                "the resource is open and undisposed at the migration barrier")
+
+            engine.migrate(compile(), paused = false)
+            val outcome = runBlocking { engine.await() }
+
+            assertIs<Outcome.Success>(outcome)
+            assertEquals(setOf("sut"), ResourceDisposalLog.disposed(),
+                "the surviving resource is disposed exactly once, at the run's settle")
+        }
+        finally {
+            engine.close()
+        }
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private fun runScript(documentPathString: String, inputs: TupleValue = TupleValue.empty): Outcome {
         ScriptStepTestModule.register()
@@ -118,14 +170,7 @@ class ScriptExtensibilityTest {
             scriptLocation,
             graphNotation,
             graphDefinition,
-            LogicCompilerServices(
-                context.graphEnvironment,
-                context.objectStableMapper,
-                context.cachedKotlinCompiler,
-                context.flowMessageInspector,
-                context.notationMetadataReader,
-                context.jobWorkPool,
-                LogicRunExecutionId.random()))
+            compilerServices())
 
         val engine = RunEngine(logic, context.objectStableMapper.objectStableId(scriptLocation), inputs)
         return try {
@@ -137,5 +182,17 @@ class ScriptExtensibilityTest {
         finally {
             engine.close()
         }
+    }
+
+
+    private fun compilerServices(): LogicCompilerServices {
+        return LogicCompilerServices(
+            context.graphEnvironment,
+            context.objectStableMapper,
+            context.cachedKotlinCompiler,
+            context.flowMessageInspector,
+            context.notationMetadataReader,
+            context.jobWorkPool,
+            LogicRunExecutionId.random())
     }
 }

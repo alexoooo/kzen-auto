@@ -1,8 +1,10 @@
 main:
   is: Script
 
-# A Formula that throws at run time (type Nothing, so it compiles cleanly — no validation error blocks
-# the run — then fails when evaluated). This is the SUT-side failure the self-test must detect.
+# A Formula that throws at run time: the expression's whole type is Nothing, which the probe codegen must
+# compile cleanly (K2 refuses an inferred-Nothing declaration — the regression this fixture guards against;
+# the self-test asserts NO pre-run validation error), then it fails when evaluated. This runtime failure is
+# the SUT-side error the self-test must detect.
 main.steps/Throw:
   is: FormulaStep
   code: 'error("intentional failure")'

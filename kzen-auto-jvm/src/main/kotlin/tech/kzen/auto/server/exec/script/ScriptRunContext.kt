@@ -44,11 +44,7 @@ import tech.kzen.lib.common.util.ExceptionUtils
  */
 class ScriptRunContext(
     private val execution: Execution,
-    private val structure: ScriptRunStructure,
-
-    // The run-scoped resource handles (a browser) this Script shares with the Scripts it hosts — one instance
-    // per top-level run, threaded to a hosted child in [host]. See [ScriptRunResources].
-    private val resources: ScriptRunResources
+    private val structure: ScriptRunStructure
 ): StepExecution {
     //----------------------------------------------------------------------------------------- per-Script structures
     override val scriptTree: ScriptTree get() = structure.scriptTree
@@ -159,24 +155,22 @@ class ScriptRunContext(
 
 
     //------------------------------------------------------------------------------------------ StepExecution: resources
+    // Delegated wholly to the engine, which stores the live handle with the registration: reading walks the
+    // ancestor chain (so a hosted child — Script, Flow, or Job — borrows the handle its host opened), and the
+    // registration survives a live edit with its owning frame's stable identity (logic-spec §5/§6).
     override fun openResource(key: String, value: Any?, closePolicy: ResourceClosePolicy, closer: () -> Unit) {
-        resources.put(key, value)
         val (scope, enginePolicy) = closePolicy.toEngine()
-        execution.resource(key, enginePolicy, scope) {
-            resources.remove(key)
-            closer()
-        }
+        execution.resource(key, enginePolicy, scope, value, closer)
     }
 
 
     override fun resource(key: String): Any? {
-        return resources.get(key)
+        return execution.resourceValue(key)
     }
 
 
     override fun releaseResource(key: String) {
         execution.releaseResource(key)
-        resources.remove(key)
     }
 
 
@@ -243,12 +237,6 @@ class ScriptRunContext(
         val child = childLogics.getOrPut(instructions) {
             LogicCompiler.compile(
                 instructions, structure.graphNotation, structure.graphDefinition, structure.services)
-        }
-
-        // Share this run's resource registry with a hosted child Script so a browser opened here is the same
-        // browser the callee drives (a Flow / Job child has no Script resources to inherit).
-        if (child is ScriptLogic) {
-            child.inheritResources(resources)
         }
 
         // The hosting RunStep ([currentStableId], set by the spine before it invoked this step) is the child's

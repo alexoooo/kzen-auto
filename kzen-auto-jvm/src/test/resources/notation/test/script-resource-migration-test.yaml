@@ -1,0 +1,17 @@
+# Resource-survives-live-edit fixture (ScriptExtensibilityTest): the first step opens a resource under `sut`,
+# the test parks the run before the second step and drives RunEngine.migrate (the pause → edit → resume
+# barrier), and the second step reads the handle back — throwing if the barrier had disposed it (the
+# "edit-while-paused quits the browser" bug). The engine must lift the registration at the barrier, re-adopt it
+# on the rebuilt node (same stable id), and still dispose it exactly once when the run settles.
+
+main:
+  is: Script
+
+main.steps/Open:
+  is: OpenResourceTestStep
+  key: sut
+  closePolicy: auto
+
+main.steps/Read:
+  is: ReadResourceStep
+  key: sut

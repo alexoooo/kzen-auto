@@ -71,9 +71,12 @@ import kotlin.time.Clock
  * and the executor calls [RunEngine.migrate] at the quiescent barrier instead of plain resume / step — so the
  * edit takes effect on the live run. Detection is event-driven: this controller observes the graph store (as a
  * [LocalGraphStore.Observer], registered at the composition root) to set a coarse edit-dirty flag, so a clean
- * release skips the closure compare entirely (slow motion would otherwise pay it per tick). This is flavour-agnostic: a Job carries its Worker state + channel
- * carryover across the rebuild (see [tech.kzen.auto.server.exec.job.JobRun]); a Script / Flow registers no
- * capture yet, so it cleanly restarts on the edited definition (the safe best-effort §5 default).
+ * release skips the closure compare entirely (slow motion would otherwise pay it per tick). This is
+ * flavour-agnostic: a Job carries its Worker state + channel carryover across the rebuild (see
+ * [tech.kzen.auto.server.exec.job.JobRun]); a Script carries its completed step outcomes + result (see
+ * [tech.kzen.auto.server.exec.script.ScriptMigrationState]) — and the engine itself carries open resource
+ * registrations (a browser) by owning frame; a Flow registers no capture yet, so it cleanly restarts on the
+ * edited definition (the safe best-effort §5 default).
  */
 class ServerLogicController(
     private val graphStore: LocalGraphStore,

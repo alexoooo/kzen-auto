@@ -23,25 +23,13 @@ class ScriptLogic(
     private val structure: ScriptRunStructure,
     private val logicSignature: LogicSignature
 ): Logic {
-    // The parent run's resource registry when this Script is hosted by a RunStep (set by
-    // [ScriptRunContext.host] before hosting), so a browser opened in the parent is shared. Null for a
-    // top-level run, which then owns a fresh registry.
-    private var inheritedResources: ScriptRunResources? = null
-
-
-    /** Share the hosting run's resource registry with this callee (see [ScriptRunContext.host]). */
-    fun inheritResources(resources: ScriptRunResources) {
-        inheritedResources = resources
-    }
-
-
     override fun signature(): LogicSignature {
         return logicSignature
     }
 
 
     override suspend fun run(execution: Execution): TupleValue {
-        val context = ScriptRunContext(execution, structure, inheritedResources ?: ScriptRunResources())
+        val context = ScriptRunContext(execution, structure)
 
         // Live-edit migration (logic-spec §5): adopt the predecessor run's completed work (read once at start) so
         // the spine replays-short-circuits completed steps, and register the capture so a later edit carries this

@@ -14,6 +14,7 @@ import tech.kzen.lib.common.service.context.GraphCreator
 import tech.kzen.lib.platform.ClassName
 import tech.kzen.lib.platform.ClassNames
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 
 class FormulaStepTest {
@@ -99,6 +100,21 @@ class FormulaStepTest {
         assertEquals(
             TypeMetadata(ClassNames.kotlinAny, listOf(), false),
             typeMetadataFor("main.steps/CharFormula"))
+    }
+
+
+    @Test
+    fun nothingTypedExpressionCompilesCleanly() {
+        // An expression whose whole type is Nothing (e.g. `error(...)`) must compile with NO validation error
+        // and throw at run time — K2 refuses an inferred-Nothing declaration, so the probe codegen must use a
+        // shape that never declares Nothing directly. The inferred type approximates to Any (like Char above).
+        val validation = scriptValidationFor("test/formula-step-type-inference-test.yaml")
+            .stepValidations[ObjectPath.parse("main.steps/NothingFormula")]
+        assertNull(validation?.errorMessage,
+            "a Nothing-typed expression is valid: it fails at run time, not validation time")
+        assertEquals(
+            TypeMetadata(ClassNames.kotlinAny, listOf(), false),
+            validation?.typeMetadata)
     }
 
 

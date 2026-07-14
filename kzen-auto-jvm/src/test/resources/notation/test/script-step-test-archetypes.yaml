@@ -67,6 +67,20 @@ AssertDisposedStep:
       is: Boolean
 
 
+# Reads the live handle of the resource under `key` and returns it, throwing when no such resource is open —
+# placed after a migration barrier to prove an open resource survived a live edit with its value readable.
+ReadResourceStep:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.server.exec.script.test.ReadResourceStep
+  icon: "material-symbols:visibility"
+  title: "Read resource (test)"
+  key: ""
+  meta:
+    key:
+      is: String
+
+
 # Fails its first invocation (globally) then succeeds, returning its referenced `input` — a transient failure
 # that clears on retry, for exercising pause-on-error park-then-resume of a nested-Logic Worker's child.
 FlakyStep:

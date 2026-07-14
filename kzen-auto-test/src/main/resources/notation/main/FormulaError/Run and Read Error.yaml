@@ -8,6 +8,30 @@ main.steps/Open Script:
     type: Text
     value: Throwing Formula
 
+# Expand BEFORE running: a pre-run validation error's text renders ONLY in the expanded body
+# (ScriptStepDisplayDefault.renderValidation — a title-less div; collapsed shows just a tooltip icon).
+# The expansion persists across the run, so the runtime Error section below needs no second click —
+# and if it ever collapsed, the Read Error step would fail loudly, never a silent pass.
+main.steps/Expand Step:
+  is: BrowserClickStep
+  target:
+    type: Xpath
+    value: "//button[@title='Expand']"
+
+# Let the async validation refresh arrive and the expanded body render.
+main.steps/Settle Validation:
+  is: WaitStep
+  milliseconds: 2000
+
+# Capture the whole page BEFORE the run: the test asserts this contains no "Error:" text — a formula
+# that fails validation (e.g. inferred-Nothing compile error) shows up here, where the runtime-error
+# XPath below cannot see it. Read of //body never fails on absence, so the check lives in JUnit.
+main.steps/Read Before Run:
+  is: BrowserReadStep
+  target:
+    type: Xpath
+    value: "//body"
+
 main.steps/Click Run:
   is: BrowserClickStep
   target:
@@ -31,16 +55,8 @@ main.steps/Await.steps/State:
     value: "//button[@title='Run' or @title='Pause' or @title='Continue running']"
   attribute: title
 
-# Expand the failed step: its Error section (ScriptStepDisplayDefault.renderError) renders ONLY in the
-# expanded body — the collapsed card shows just Result/Detail. The failing Script has one step, so its
-# header chevron is the sole "Expand" button.
-main.steps/Expand Step:
-  is: BrowserClickStep
-  target:
-    type: Xpath
-    value: "//button[@title='Expand']"
-
-# Let the error trace arrive from the run and the expanded body render.
+# Let the error trace arrive from the run and the expanded body render (the step is already expanded —
+# see Expand Step above; the runtime Error section renders only in the expanded body).
 main.steps/Settle:
   is: WaitStep
   milliseconds: 2000

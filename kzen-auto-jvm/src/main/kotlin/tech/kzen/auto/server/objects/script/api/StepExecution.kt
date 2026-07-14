@@ -92,13 +92,15 @@ interface StepExecution {
 
     //------------------------------------------------------------------------------------------ StepExecution: resources
     /**
-     * Open a run-scoped resource (e.g. a browser) under [key]: store [value] for later [resource] reads by any
-     * step of this run — and any Script it hosts — and register its disposal with the engine per [closePolicy]
-     * so it is torn down when the owning run settles. Re-opening the same key replaces the prior handle + closer.
+     * Open a run-scoped resource (e.g. a browser) under [key]: register [value] and its disposal with the
+     * engine per [closePolicy], so later [resource] reads see the handle from any step of this run — and any
+     * document it hosts (Script, Flow, or Job — the engine reads along the host chain) — and it is torn down
+     * when the owning document settles. The registration survives a live edit with its owning frame
+     * (logic-spec §5 "open resources"). Re-opening the same key replaces the prior handle + closer.
      */
     fun openResource(key: String, value: Any?, closePolicy: ResourceClosePolicy, closer: () -> Unit)
 
-    /** The live handle a prior [openResource] stored under [key], or null if none is open. */
+    /** The live handle a prior [openResource] stored under [key] (here or in a hosting ancestor), or null if none is open. */
     fun resource(key: String): Any?
 
     /**

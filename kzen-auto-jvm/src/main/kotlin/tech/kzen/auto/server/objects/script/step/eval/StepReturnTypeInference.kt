@@ -6,14 +6,16 @@ import tech.kzen.lib.platform.ClassName
 import tech.kzen.lib.platform.ClassNames
 import kotlin.reflect.KClass
 import kotlin.reflect.KType
-import kotlin.reflect.full.declaredFunctions
+import kotlin.reflect.full.declaredMemberProperties
 
 
 /**
- * Recovers a [FormulaStep]'s value type by reflecting the return type of the inference member the compiler
- * inferred for the user's expression (`StepExpressionCompiler.generateInferenceCode` emits it as
- * [StepExpressionCompiler.probeFunctionName]) — so the type comes from the Kotlin compiler's own inference,
- * not from parsing diagnostic text.
+ * Recovers a [FormulaStep]'s value type by reflecting the type the compiler inferred for the user's
+ * expression: `StepExpressionCompiler.generateInferenceCode` emits it as a lambda-valued property
+ * ([StepExpressionCompiler.probePropertyName], type `() -> T`), whose single type argument is the
+ * expression's type — so the type comes from the Kotlin compiler's own inference, not from parsing
+ * diagnostic text. (A property holding a lambda rather than a plain inferred member so a `Nothing`-typed
+ * expression compiles — see the probe's doc in StepExpressionCompiler.)
  *
  * A classifier is exposed as its concrete [ClassName] only when it is "visible": a known-importable builtin
  * ([visibleBuiltins]) or a type the registry scan declares. Anything else — an internal / synthetic type a
@@ -40,9 +42,15 @@ object StepReturnTypeInference {
 
 
     fun inferReturnType(clazz: Class<out Any>, objectRegistryScan: ObjectRegistryScan): TypeMetadata {
-        val probe = clazz.kotlin.declaredFunctions
-            .first { it.name == StepExpressionCompiler.probeFunctionName }
-        return probe.returnType.toTypeMetadata(objectRegistryScan)
+        val probe = clazz.kotlin.declaredMemberProperties
+            .first { it.name == StepExpressionCompiler.probePropertyName }
+
+        // The probe's type is Function0<T>; its single argument is the expression's inferred type. The null
+        // branch (a star projection with no type) cannot occur for an inferred lambda, but approximates to
+        // Any rather than crashing.
+        val valueType = probe.returnType.arguments.single().type
+        return valueType?.toTypeMetadata(objectRegistryScan)
+            ?: TypeMetadata(ClassNames.kotlinAny, listOf(), false)
     }
 
 

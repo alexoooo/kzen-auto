@@ -7,7 +7,8 @@ import tech.kzen.lib.common.reflect.ReflectionRegistry
 
 /**
  * Hand-written reflection registration for the test-only Script steps ([ShoutStep], [OpenResourceTestStep],
- * [FailStep], [FlakyStep], [AssertDisposedStep]) — the test-source equivalent of the KSP-generated `KzenAutoJvmModule`. The test source set has no
+ * [FailStep], [FlakyStep], [AssertDisposedStep], [ReadResourceStep]) — the test-source equivalent of the
+ * KSP-generated `KzenAutoJvmModule`. The test source set has no
  * KSP pass (the build declares only the main `ksp(...)` dependency), so these classes carry no `@Reflect`
  * annotation and are registered manually instead, mirroring exactly what the processor would emit: constructor
  * argument names + a factory that maps resolved args onto the constructor.
@@ -52,6 +53,13 @@ object ScriptStepTestModule: ModuleReflection {
             listOf("key", "expectedDisposed")
         ) { args ->
             AssertDisposedStep(args[0] as String, args[1] as Boolean)
+        }
+
+        reflectionRegistry.put(
+            "tech.kzen.auto.server.exec.script.test.ReadResourceStep",
+            listOf("key")
+        ) { args ->
+            ReadResourceStep(args[0] as String)
         }
     }
 }

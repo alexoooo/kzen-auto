@@ -52,6 +52,22 @@ class SmokeSelfTest: SelfTestBase() {
 
         testerClient.awaitSuccess("main/FormulaError/FormulaError.yaml")
 
+        // The throwing Formula must be VALID before the run — its Nothing-typed expression compiles cleanly
+        // and only fails when evaluated. A pre-run validation error (e.g. the inferred-Nothing compile error)
+        // renders as a title-less "Error: ..." div the runtime-error XPath can't see, so it is asserted here
+        // against the whole-page capture taken before Run was clicked.
+        val preRun = testerClient.readDisplayedValue(
+            documentPath = "main/FormulaError/Run and Read Error.yaml",
+            objectPath = "main.steps/Read Before Run"
+        ).trim()
+
+        check(preRun.contains("Throwing Formula")) {
+            "expected the pre-run capture to show the opened script, got: '$preRun'"
+        }
+        check(!preRun.contains("Error:")) {
+            "expected no pre-run (validation) error, got: '$preRun'"
+        }
+
         val observedError = testerClient.readDisplayedValue(
             documentPath = "main/FormulaError/Run and Read Error.yaml",
             objectPath = "main.steps/Read Error"
@@ -59,6 +75,11 @@ class SmokeSelfTest: SelfTestBase() {
 
         check(observedError.contains("intentional failure")) {
             "expected the SUT's formula error to be captured, got: '$observedError'"
+        }
+        check(!observedError.contains("Unable to compile")) {
+            "expected a genuine run-time throw, not a compile failure (whose message quotes the generated " +
+                    "source, making contains(\"intentional failure\") pass for the wrong reason), " +
+                    "got: '$observedError'"
         }
     }
 }

@@ -17,10 +17,14 @@ import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
  * the compiled `evaluate` in the same order.
  */
 object StepExpressionCompiler {
-    // The inference-mode member holding the user's expression: its return type is left to the compiler to infer,
-    // so [FormulaStep] recovers the expression's value type by reflecting this function's return type (see
-    // StepReturnTypeInference). Kept in sync with the reflection lookup by name.
-    const val probeFunctionName = "probe"
+    // The inference-mode member holding the user's expression as a lambda: the property's type is left to the
+    // compiler to infer (`() -> T`), so [FormulaStep] recovers the expression's value type by reflecting the
+    // property type's single argument (see StepReturnTypeInference). A lambda-valued property rather than an
+    // expression-body function because K2 refuses a declaration whose own inferred type is `Nothing`
+    // (IMPLICIT_NOTHING_RETURN_TYPE, a hard error regardless of visibility) — `() -> Nothing` is not `Nothing`,
+    // so an expression like `error(...)` compiles and fails at run time as the user intends. Kept in sync with
+    // the reflection lookup by name.
+    const val probePropertyName = "probe"
 
 
     // The forced-return form: `evaluate` returns exactly [returnType], so a value that does not conform is a
@@ -36,8 +40,8 @@ object StepExpressionCompiler {
     }
 
 
-    // The inference form: the user's expression is an inferred [probeFunctionName] member and `evaluate` delegates
-    // to it. [FormulaStep] uses this for both validation (reflect the probe's return type) and execution (call
+    // The inference form: the user's expression is an inferred [probePropertyName] member and `evaluate` delegates
+    // to it. [FormulaStep] uses this for both validation (reflect the probe's value type) and execution (call
     // `evaluate`), so a single content signature compiles once and serves both.
     fun generateInferenceCode(
         mainClassName: String,
@@ -74,13 +78,13 @@ object StepExpressionCompiler {
         val body =
             if (probe) {
                 """
-    fun $probeFunctionName() = run {
+    val $probePropertyName = { run {
 $code
-    }
+    } }
 
     override fun evaluate(predecessorValues: List<Any?>): $evaluateReturnType {
         this.predecessorValues = predecessorValues
-        return $probeFunctionName()
+        return $probePropertyName()
     }
 """
             }
