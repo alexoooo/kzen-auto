@@ -18,6 +18,7 @@ import tech.kzen.auto.server.objects.report.service.ColumnListingAction
 import tech.kzen.auto.server.objects.report.service.FileListingAction
 import tech.kzen.auto.server.objects.report.service.FilterIndex
 import tech.kzen.auto.server.objects.report.service.ReportWorkPool
+import tech.kzen.auto.server.objects.script.ScriptValidationCache
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.auto.server.service.compile.ScriptKotlinCompiler
 import tech.kzen.auto.server.service.exec.ModelDetachedExecutor
@@ -147,6 +148,7 @@ class KzenAutoContext(
     val kotlinCompiler = ScriptKotlinCompiler()
     val cachedKotlinCompiler = CachedKotlinCompiler(kotlinCompiler, workUtils)
     val calculatedColumnEval = CalculatedColumnEval(cachedKotlinCompiler)
+    val scriptValidationCache = ScriptValidationCache()
 
 
     private val basicDefinitionRepository = HostReportDefinitionRepository(listOf(
@@ -171,8 +173,8 @@ class KzenAutoContext(
     // serverLogicController and definitionRepository themselves, so eager wiring would be cyclic.
     // The provider is only invoked at request/run time, long after construction completes.
     val serverLogicController = ServerLogicController(
-        graphStore, objectStableMapper, logicTraceStore, cachedKotlinCompiler, flowMessageInspector,
-        notationMetadataReader, jobWorkPool,
+        graphStore, objectStableMapper, logicTraceStore, cachedKotlinCompiler, scriptValidationCache,
+        flowMessageInspector, notationMetadataReader, jobWorkPool,
         listOf(JobTraceAddressRouting, ReportTraceAddressRouting)
     ) { graphEnvironment }
 
@@ -206,6 +208,7 @@ class KzenAutoContext(
             .put(ClassName(GraphCreator::class.qualifiedName!!), graphCreator)
             .put(ClassName(ObjectStableMapper::class.qualifiedName!!), objectStableMapper)
             .put(ClassName(CachedKotlinCompiler::class.qualifiedName!!), cachedKotlinCompiler)
+            .put(ClassName(ScriptValidationCache::class.qualifiedName!!), scriptValidationCache)
             .put(ClassName(NotationMedia::class.qualifiedName!!), notationMedia)
             .put(ClassName(TargetLocator::class.qualifiedName!!), targetLocator)
             .put(ClassName(NotationMetadataReader::class.qualifiedName!!), notationMetadataReader)

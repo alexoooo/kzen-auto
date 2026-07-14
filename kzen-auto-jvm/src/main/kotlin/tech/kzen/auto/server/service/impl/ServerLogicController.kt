@@ -8,6 +8,7 @@ import tech.kzen.auto.server.exec.LogicCompiler
 import tech.kzen.auto.server.exec.LogicCompilerServices
 import tech.kzen.auto.server.exec.LogicTraceAddressRouting
 import tech.kzen.auto.server.objects.job.service.JobWorkPool
+import tech.kzen.auto.server.objects.script.ScriptValidationCache
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionResult
@@ -86,6 +87,7 @@ class ServerLogicController(
     private val objectStableMapper: ObjectStableMapper,
     private val logicTraceStore: LogicTraceStore,
     private val cachedKotlinCompiler: CachedKotlinCompiler,
+    private val scriptValidationCache: ScriptValidationCache,
     private val flowMessageInspector: FlowMessageInspector,
     private val notationMetadataReader: NotationMetadataReader,
     private val jobWorkPool: JobWorkPool,
@@ -779,8 +781,8 @@ class ServerLogicController(
             attempt.graphStructure.graphNotation,
             attempt.transitiveSuccessful,
             LogicCompilerServices(
-                environment(), objectStableMapper, cachedKotlinCompiler, flowMessageInspector,
-                notationMetadataReader, jobWorkPool, runExecutionId))
+                environment(), objectStableMapper, cachedKotlinCompiler, scriptValidationCache,
+                flowMessageInspector, notationMetadataReader, jobWorkPool, runExecutionId))
     }
 
 

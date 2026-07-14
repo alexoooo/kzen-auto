@@ -188,6 +188,7 @@ class JobMigrationTest {
                 context.graphEnvironment,
                 context.objectStableMapper,
                 context.cachedKotlinCompiler,
+                context.scriptValidationCache,
                 context.flowMessageInspector,
                 context.notationMetadataReader,
                 context.jobWorkPool,

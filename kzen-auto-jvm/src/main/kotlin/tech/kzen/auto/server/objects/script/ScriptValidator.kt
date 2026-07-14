@@ -32,7 +32,8 @@ import tech.kzen.lib.common.service.store.LocalGraphStore
 class ScriptValidator(
     @Service private val graphStore: LocalGraphStore,
     @Service private val graphCreator: GraphCreator,
-    @Service private val environment: GraphEnvironment
+    @Service private val environment: GraphEnvironment,
+    @Service private val scriptValidationCache: ScriptValidationCache
 ): DetachedAction {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -152,18 +153,24 @@ class ScriptValidator(
 
         val graphDefinitionAttempt = graphStore.graphDefinition()
 
-        val stepGraphDefinition = graphDefinitionAttempt
-            .transitiveSuccessful
-            .filterTransitive(documentPath)
+        // A cache hit skips graph filtering and instantiation entirely (keyed on the FULL definition:
+        // linked-callee and registry edits must invalidate, and the key must match the run-compile path's).
+        val scriptValidation = scriptValidationCache.scriptValidation(
+            documentPath, graphDefinitionAttempt.transitiveSuccessful
+        ) {
+            val stepGraphDefinition = graphDefinitionAttempt
+                .transitiveSuccessful
+                .filterTransitive(documentPath)
 
-        val graphInstance = graphCreator
-            .createGraph(stepGraphDefinition, environment)
+            val graphInstance = graphCreator
+                .createGraph(stepGraphDefinition, environment)
 
-        val scriptValidation = validate(
-            documentPath,
-            graphDefinitionAttempt.graphStructure.graphNotation,
-            stepGraphDefinition,
-            graphInstance)
+            validate(
+                documentPath,
+                graphDefinitionAttempt.graphStructure.graphNotation,
+                stepGraphDefinition,
+                graphInstance)
+        }
 
         return ExecutionSuccess.ofValue(scriptValidation.asExecutionValue())
     }

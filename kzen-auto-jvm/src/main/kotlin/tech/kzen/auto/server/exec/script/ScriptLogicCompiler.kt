@@ -52,8 +52,10 @@ object ScriptLogicCompiler {
         val graphInstance = GraphCreator.createGraph(
             graphDefinition.filterTransitive(documentPath), services.graphEnvironment)
         val scriptTree = ScriptTree.read(documentPath, graphDefinition)
-        val scriptValidation = ScriptValidator.validate(
-            documentPath, graphNotation, graphDefinition, graphInstance, scriptTree)
+        val scriptValidation = services.scriptValidationCache.scriptValidation(documentPath, graphDefinition) {
+            ScriptValidator.validate(
+                documentPath, graphNotation, graphDefinition, graphInstance, scriptTree)
+        }
         val resultSignature = ResultSignatureDefiner.parse(
             graphNotation.firstAttribute(scriptLocation, ScriptConventions.resultsAttributePath))
 
