@@ -40,7 +40,9 @@ import tech.kzen.lib.common.util.ExceptionUtils
  * LIVE-EDIT MIGRATION (logic-spec §5): as each step finishes its outcome is recorded in [completedOutcomes] (the
  * capture source); on the rebuilt run [restore] seeds [restoredOutcomes] from the predecessor's capture so the
  * spine can replay-short-circuit completed steps and a re-running loop can [dropReplay] its body's stale
- * outcomes. See [ScriptMigrationState] for the carried shape and its bounds.
+ * outcomes. A mid-flight step (a loop between iterations) additionally carries opaque sub-state ([carryStates] /
+ * [restoredCarries], via [recordCarry] / [restoredCarry]) so it can resume where it left off — a loop at its
+ * current iteration. See [ScriptMigrationState] for the carried shape and its bounds.
  */
 class ScriptRunContext(
     private val execution: Execution,
@@ -66,6 +68,12 @@ class ScriptRunContext(
     // The predecessor run's completed outcomes, seeded by [restore] across a live edit; consulted by the spine to
     // replay-short-circuit and pruned by a re-running loop ([dropReplay]). Empty on a fresh (non-migration) run.
     private val restoredOutcomes = HashMap<ObjectStableId, Any?>()
+
+    // Opaque per-step mid-flight migration sub-state ([StepExecution.recordCarry]) — a loop's iteration cursor —
+    // carried alongside [completedOutcomes]: [carryStates] is the live capture source, [restoredCarries] the
+    // predecessor run's carries seeded by [restore] (read via [StepExecution.restoredCarry], pruned by [dropReplay]).
+    private val carryStates = LinkedHashMap<ObjectStableId, Any?>()
+    private val restoredCarries = HashMap<ObjectStableId, Any?>()
 
     // A RunStep's linked child Logic, compiled on demand and cached for this run (a RunStep in a loop reuses it).
     private val childLogics = HashMap<ObjectLocation, Logic>()
@@ -122,6 +130,23 @@ class ScriptRunContext(
 
     override fun setResult(value: TupleValue) {
         resultValue = value
+    }
+
+
+    //------------------------------------------------------------------------------------------- StepExecution: carry
+    override fun recordCarry(location: ObjectLocation, state: Any?) {
+        val stableId = objectStableMapper.objectStableId(location)
+        if (state == null) {
+            carryStates.remove(stableId)
+        }
+        else {
+            carryStates[stableId] = state
+        }
+    }
+
+
+    override fun restoredCarry(location: ObjectLocation): Any? {
+        return restoredCarries[objectStableMapper.objectStableId(location)]
     }
 
 
@@ -225,10 +250,21 @@ class ScriptRunContext(
     }
 
 
+    // The generic iteration reset (see the [StepExecution.dropReplay] contract): beyond the replay set, also
+    // prunes the capture source — so a mid-iteration capture carries only the current iteration's completed
+    // prefix — and the restored carries, so a nested loop's cursor from a different enclosing iteration is
+    // never consumed by a later fresh pass. [stepValues] (the live value graph) is deliberately untouched.
+    // The engine-side discard tells the run that hosted-child invocations launched from these steps (a
+    // RunStep in the loop body) are abandoned — a fresh invocation must not adopt the pre-edit one's
+    // migration capture (logic-spec §5 "invocation identity").
     override fun dropReplay(steps: List<ObjectLocation>) {
-        for (stableId in nestedStableIds(steps)) {
+        val stableIds = nestedStableIds(steps)
+        for (stableId in stableIds) {
             restoredOutcomes.remove(stableId)
+            restoredCarries.remove(stableId)
+            completedOutcomes.remove(stableId)
         }
+        execution.discardCaptured(stableIds)
     }
 
 
@@ -263,13 +299,14 @@ class ScriptRunContext(
     /** Seed the carried-over completed work from the predecessor run's capture (read once at run start). */
     fun restore(state: ScriptMigrationState) {
         restoredOutcomes.putAll(state.completedOutcomes)
+        restoredCarries.putAll(state.stepCarry)
         resultValue = state.result
     }
 
 
     /** Snapshot the run's completed work for carry-over at the migration barrier (see [ScriptMigrationState]). */
     fun captureState(): ScriptMigrationState {
-        return ScriptMigrationState(LinkedHashMap(completedOutcomes), resultValue)
+        return ScriptMigrationState(LinkedHashMap(completedOutcomes), LinkedHashMap(carryStates), resultValue)
     }
 
 

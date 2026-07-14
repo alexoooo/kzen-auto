@@ -67,6 +67,26 @@ interface StepExecution {
     fun setResult(value: TupleValue)
 
 
+    //-----------------------------------------------------------------------------------------------------------------
+    /**
+     * Record opaque mid-flight migration sub-state for the step at [location] — the step-granularity parallel of
+     * the engine's `onCapture`: it rides the Script's live-edit capture (keyed by the step's rename-stable id)
+     * and is readable on the rebuilt run via [restoredCarry]. A loop records its iteration cursor here so a
+     * pause -> edit -> resume continues at the current iteration instead of restarting; any step type — including
+     * third-party — can carry its own state the same way. Pass null to CLEAR: a step that ran to completion must
+     * clear its carry so a stale cursor never migrates (its completed outcome carries instead).
+     */
+    fun recordCarry(location: ObjectLocation, state: Any?)
+
+    /**
+     * The mid-flight state the step at [location] [recordCarry]'d in the pre-edit run, or null on a fresh run
+     * (or when the step completed and cleared it). A restored carry survives ANY edit — the step decides how to
+     * resume against the new definition (added nested steps run live, removed ones drop out — the logic-spec §5
+     * element-level contract).
+     */
+    fun restoredCarry(location: ObjectLocation): Any?
+
+
     //-------------------------------------------------------------------------------------------- StepExecution: tracing
     /**
      * Record a trace detail for the currently-running step — a screenshot ([tech.kzen.lib.common.exec.BinaryExecutionValue],
@@ -119,8 +139,14 @@ interface StepExecution {
     suspend fun runSteps(steps: List<ObjectLocation>): Any?
 
     /**
-     * Drop the given steps — and everything nested within them — from the live-edit replay set, so they execute
-     * live rather than re-adopting a stale outcome. A loop that did not complete pre-edit calls this on its body.
+     * Reset the given steps — and everything nested within them — for a fresh pass: drop them from the live-edit
+     * replay set (so they execute live rather than re-adopting a stale outcome), drop their restored carries
+     * (so a nested loop's cursor from a different enclosing iteration is never consumed), drop their entries
+     * from the migration capture source (so a capture taken mid-iteration carries only the CURRENT iteration's
+     * completed prefix — the invariant mid-loop resume replays against), and discard the engine's migration
+     * captures of hosted-child invocations these steps launched (a RunStep's sub-document — a fresh invocation
+     * must not adopt the pre-edit one's state; logic-spec §5 "invocation identity"). A loop calls this at the
+     * start of every iteration except one it is resuming mid-flight, whose prefix must stay replayable.
      */
     fun dropReplay(steps: List<ObjectLocation>)
 

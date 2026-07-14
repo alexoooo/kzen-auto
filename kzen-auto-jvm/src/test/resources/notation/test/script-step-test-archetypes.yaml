@@ -81,6 +81,16 @@ ReadResourceStep:
       is: String
 
 
+# Increments a process-global counter each invocation and returns the running count — placed inside a loop body
+# so the mid-loop migration-resume tests can observe whether completed iterations re-executed.
+CountingStep:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.server.exec.script.test.CountingStep
+  icon: "material-symbols:tag"
+  title: "Counting (test)"
+
+
 # Fails its first invocation (globally) then succeeds, returning its referenced `input` — a transient failure
 # that clears on retry, for exercising pause-on-error park-then-resume of a nested-Logic Worker's child.
 FlakyStep:

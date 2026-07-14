@@ -1,0 +1,31 @@
+# DoWhile mid-loop migration-resume fixture (ServerLogicControllerLoopMigrationTest): the body's CountingStep
+# returns the global running count, and the condition loops while it is under 4 — so a clean run is exactly 4
+# iterations (counts 1..4). Second gives the iteration a second boundary so a step-driven pause can land
+# mid-iteration; Post is the unrelated edit target (10 -> 99) and the Result (DoWhile itself returns no value).
+
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.Int
+      generics: []
+      nullable: false
+
+main.steps/Loop:
+  is: DoWhileStep
+  condition: "Count < 4"
+
+main.steps/Loop.steps/Count:
+  is: CountingStep
+
+main.steps/Loop.steps/Second:
+  is: FormulaStep
+  code: "Count * 10"
+
+main.steps/Post:
+  is: FormulaStep
+  code: "10"
+
+main.steps/Result:
+  is: ResultStep
+  code: "Post"

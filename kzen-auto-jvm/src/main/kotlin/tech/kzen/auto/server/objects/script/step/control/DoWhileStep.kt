@@ -38,17 +38,39 @@ class DoWhileStep(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    // MID-LOOP MIGRATION RESUME (logic-spec §5): reaching here means the loop did NOT complete pre-edit; a
+    // coroutine's do/while can't be re-pointed at the rebuilt body, so it re-enters from the top and resumes
+    // from its restored carry (the completed-iteration count, a mid-flight marker): the in-flight iteration's
+    // completed body prefix replays to the frontier, then the condition evaluates against the refreshed values —
+    // no completed iteration re-runs (unlike ForEach there are no per-iteration outputs to seed, and no
+    // iterations to skip: prior iterations left no state the loop needs). With no carry the loop starts fresh
+    // (see ForEachStep for the full cursor rationale).
     override suspend fun run(execution: StepExecution): Any? {
-        // Reaching here means the loop did NOT complete pre-edit; a coroutine's do/while can't be re-pointed at
-        // the rebuilt body, so it restarts from the first iteration — drop the body's stale per-iteration
-        // outcomes from the replay set so each body step executes live (see ForEachStep for the full rationale).
-        execution.dropReplay(bodySteps)
+        val restored = execution.restoredCarry(selfLocation) as? Int
+        var iterations = restored ?: 0
 
+        // Re-record at entry: the rebuilt run's carry starts empty, so a second edit before the next iteration
+        // completes must still capture the mid-flight marker (also covers a pause during the first iteration).
+        execution.recordCarry(selfLocation, iterations)
+
+        var replayInFlight = restored != null
         do {
+            // Iteration reset (see [StepExecution.dropReplay]) — skipped for a resumed in-flight iteration,
+            // whose completed body prefix must stay replayable.
+            if (!replayInFlight) {
+                execution.dropReplay(bodySteps)
+            }
+            replayInFlight = false
+
             execution.runSteps(bodySteps)
+
+            iterations += 1
+            execution.recordCarry(selfLocation, iterations)
         }
         while (evaluateCondition(execution))
 
+        // Completed: the loop's own outcome carries; a stale marker must not.
+        execution.recordCarry(selfLocation, null)
         return null
     }
 

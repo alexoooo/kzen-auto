@@ -1,0 +1,39 @@
+# Mid-loop migration-resume fixture (ServerLogicControllerLoopMigrationTest): a ForEach over a re-iterable
+# Collection whose body has a side-effect counter (CountingStep) followed by a second step, so a step-driven
+# pause can land mid-iteration (Count done, Second not). Post is the unrelated edit target (10 -> 99).
+# Count returns the global running count (iteration i yields i+1), Second multiplies it by 10, so the loop
+# collects [10, 20, 30, 40] and Result = 100 + Post — any re-executed iteration skews the sum observably.
+
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.Int
+      generics: []
+      nullable: false
+
+main.steps/Items:
+  is: FormulaStep
+  code: "(1..4).toList()"
+
+main.steps/Loop:
+  is: ForEachStep
+  items: main.steps/Items
+
+main.steps/Loop.item/Item:
+  is: ForEachItemBinding
+
+main.steps/Loop.steps/Count:
+  is: CountingStep
+
+main.steps/Loop.steps/Second:
+  is: FormulaStep
+  code: "Count * 10"
+
+main.steps/Post:
+  is: FormulaStep
+  code: "10"
+
+main.steps/Result:
+  is: ResultStep
+  code: "Loop.sum() + Post"

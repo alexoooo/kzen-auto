@@ -4,7 +4,7 @@ main:
 
 main.steps/Number range:
   is: NumberRangeStep
-  to: 100
+  to: 110
 
 main.steps/Range:
   is: FormulaStep
@@ -19,6 +19,10 @@ main.steps/Loop.steps/Run:
   instructions: "main/FizzBuzz/FizzBuzz Script Item.yaml#main"
   arguments:
     number: main.steps/Loop.item/Item
+
+main.steps/Loop.steps/Formula 2:
+  is: FormulaStep
+  code: Run
 
 main.steps/Loop.item/Item:
   is: ForEachItemBinding

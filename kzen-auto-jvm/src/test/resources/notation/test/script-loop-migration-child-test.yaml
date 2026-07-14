@@ -1,0 +1,32 @@
+# Hosted-child fixture for the loop migration-resume tests: takes a `number` argument and returns
+# `number * 10`, with a CountingStep first so each invocation (and any re-execution) is observable via the
+# global count, and a second/third boundary so a step-driven pause can land INSIDE the child mid-invocation.
+# The returned value is item-dependent — a stale-capture adoption (another invocation's state) is visible as
+# a wrong value in the hosting loop's collected output.
+
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.Int
+      generics: []
+      nullable: false
+
+main.parameters/number:
+  is: ParameterBinding
+  type:
+    class: kotlin.Int
+    generics: []
+    nullable: false
+  default: 0
+
+main.steps/Count:
+  is: CountingStep
+
+main.steps/Val:
+  is: FormulaStep
+  code: "number * 10"
+
+main.steps/Result:
+  is: ResultStep
+  code: "Val"

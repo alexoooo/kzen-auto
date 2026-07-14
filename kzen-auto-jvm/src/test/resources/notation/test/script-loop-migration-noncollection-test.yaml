@@ -1,0 +1,42 @@
+# Non-Collection variant of script-loop-child-migration-test.yaml: the items value is a sequence-wrapped
+# Iterable (neither a Collection nor a progression). The loop cursor carries the LIVE iterator across the
+# migration, so even this shape RESUMES at its current iteration — no re-iterability constraint, no restart.
+# The body hosts the same child sub-script, so the resume also proves child-invocation identity across the
+# generic Iterable path.
+
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.Int
+      generics: []
+      nullable: false
+
+main.steps/Items:
+  is: FormulaStep
+  code: "listOf(1, 2, 3, 4).asSequence().asIterable()"
+
+main.steps/Loop:
+  is: ForEachStep
+  items: main.steps/Items
+
+main.steps/Loop.item/Item:
+  is: ForEachItemBinding
+
+main.steps/Loop.steps/Run:
+  is: RunStep
+  instructions: "test/script-loop-migration-child-test.yaml#main"
+  arguments:
+    number: main.steps/Loop.item/Item
+
+main.steps/Loop.steps/After:
+  is: FormulaStep
+  code: "Run"
+
+main.steps/Post:
+  is: FormulaStep
+  code: "10"
+
+main.steps/Result:
+  is: ResultStep
+  code: "Loop.sum() + Post"
