@@ -1,0 +1,34 @@
+# Hosted-child fixture for the per-iteration trace-reset tests: like script-loop-migration-child-test.yaml
+# (CountingStep first so a step-driven pause can land inside the child mid-invocation; item-dependent return
+# value) plus a BinaryDetailStep whose binary trace detail joins the run's retained history film-strip — so
+# the tests can assert the film-strip survives each iteration's live-value reset.
+
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.Int
+      generics: []
+      nullable: false
+
+main.parameters/number:
+  is: ParameterBinding
+  type:
+    class: kotlin.Int
+    generics: []
+    nullable: false
+  default: 0
+
+main.steps/Count:
+  is: CountingStep
+
+main.steps/Snap:
+  is: BinaryDetailStep
+
+main.steps/Val:
+  is: FormulaStep
+  code: "number * 10"
+
+main.steps/Result:
+  is: ResultStep
+  code: "Val"

@@ -20,10 +20,6 @@ main.steps/Loop.steps/Run:
   arguments:
     number: main.steps/Loop.item/Item
 
-main.steps/Loop.steps/Formula 2:
-  is: FormulaStep
-  code: Run
-
 main.steps/Loop.item/Item:
   is: ForEachItemBinding
 

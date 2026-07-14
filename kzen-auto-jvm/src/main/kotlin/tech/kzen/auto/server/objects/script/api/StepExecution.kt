@@ -145,8 +145,11 @@ interface StepExecution {
      * from the migration capture source (so a capture taken mid-iteration carries only the CURRENT iteration's
      * completed prefix — the invariant mid-loop resume replays against), and discard the engine's migration
      * captures of hosted-child invocations these steps launched (a RunStep's sub-document — a fresh invocation
-     * must not adopt the pre-edit one's state; logic-spec §5 "invocation identity"). A loop calls this at the
-     * start of every iteration except one it is resuming mid-flight, whose prefix must stay replayable.
+     * must not adopt the pre-edit one's state; logic-spec §5 "invocation identity"). It also resets the steps'
+     * emitted traces plus the retained trace values of the hosted invocations they launched, so each iteration
+     * presents a fresh trace while the film-strip history survives (logic-spec §7 resettable live state).
+     * A loop calls this at the start of every iteration except one it is resuming mid-flight, whose prefix
+     * must stay replayable.
      */
     fun dropReplay(steps: List<ObjectLocation>)
 

@@ -12,6 +12,7 @@ import tech.kzen.auto.server.objects.script.ScriptValidationCache
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionResult
+import tech.kzen.lib.common.exec.engine.Address
 import tech.kzen.lib.common.exec.engine.Logic
 import tech.kzen.lib.common.exec.engine.Node
 import tech.kzen.lib.common.exec.engine.NodeId
@@ -19,6 +20,7 @@ import tech.kzen.lib.common.exec.engine.NodeStatus
 import tech.kzen.lib.common.exec.engine.Outcome
 import tech.kzen.lib.common.exec.engine.PauseReason
 import tech.kzen.lib.common.exec.engine.StepMode
+import tech.kzen.lib.common.exec.engine.TraceReset
 import tech.kzen.lib.common.exec.logic.run.LogicController
 import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
@@ -131,6 +133,7 @@ class ServerLogicController(
         // Set once, immediately after construction (the observers reference this state).
         lateinit var traceBridge: AutoCloseable
         lateinit var frameBridge: AutoCloseable
+        lateinit var resetBridge: AutoCloseable
 
         // Per-engine-node trace buffer handles, created lazily on a node's first mirrored event (see
         // [handleForNode]) and cached for the run. Keying each node's trace by its own node id — the same id
@@ -295,6 +298,7 @@ class ServerLogicController(
                 root.documentPath))
         state.traceBridge = engine.observe { mirrorTrace(state) }
         state.frameBridge = engine.observeFrames { node -> onFrameClosed(state, node) }
+        state.resetBridge = engine.observeResets { reset -> onTraceReset(state, reset) }
         stateOrNull = state
 
         // Register the run's ROOT trace buffer up front, so the run is discoverable by its root location via
@@ -612,6 +616,7 @@ class ServerLogicController(
         stateOrNull = null
         state.traceBridge.close()
         state.frameBridge.close()
+        state.resetBridge.close()
         state.engine.close()
     }
 
@@ -641,16 +646,7 @@ class ServerLogicController(
                 val handle = handleForNode(state, event.nodeId, event.stableId)
                 val address = event.address
                 if (address != null && address.segments.isNotEmpty()) {
-                    val segment = address.segments.first()
-                    val routing = traceAddressRoutingByMarker[segment]
-                    if (routing != null) {
-                        handle.set(routing.tracePath(address, event.stableId), event.value)
-                    }
-                    else {
-                        // An ordinary per-element address: the leading segment IS the element stable id.
-                        handle.set(
-                            LogicTracePath.ofObjectStableId(ObjectStableId(segment)), event.value)
-                    }
+                    handle.set(tracePathOf(address, event.stableId), event.value)
                 }
                 else {
                     handle.append(event.stableId, event.value)
@@ -659,6 +655,34 @@ class ServerLogicController(
                     state.bridgedSequence = event.sequence
                 }
             }
+        }
+    }
+
+
+    // The bridge's uniform address→trace-path mapping: a reserved marker segment routes per-flavour
+    // ([LogicTraceAddressRouting]); otherwise the leading segment IS the element stable id.
+    private fun tracePathOf(address: Address, stableId: ObjectStableId): LogicTracePath {
+        val segment = address.segments.first()
+        val routing = traceAddressRoutingByMarker[segment]
+        return routing?.tracePath(address, stableId)
+            ?: LogicTracePath.ofObjectStableId(ObjectStableId(segment))
+    }
+
+
+    // Per-iteration trace reset (logic-spec §7 resettable live state). The engine signals it synchronously
+    // from the resetting spine, so draining pending history FIRST (everything the superseded pass emitted has
+    // a lower sequence) and then clearing gives exact ordering: the pass's values are mirrored, then removed,
+    // and the fresh pass's emits arrive after. (i) the resetting node's own buffer drops the addressed paths;
+    // (ii) buffers of invocations hosted from the dropped call-sites — transitive, via the store-recorded
+    // execution linkage, which covers pre-migration invocations the rebuilt engine tree no longer knows —
+    // drop all values. Events (the film-strip) survive both.
+    private fun onTraceReset(state: LogicState, reset: TraceReset) {
+        synchronized(state.bridgeLock) {
+            mirrorTrace(state)
+            logicTraceStore.clearValues(
+                LogicRunExecutionId(state.runId, LogicExecutionId(reset.nodeId.value)),
+                reset.addresses.map { tracePathOf(it, reset.stableId) })
+            logicTraceStore.clearValues(state.runId, reset.callSites)
         }
     }
 
@@ -847,6 +871,7 @@ class ServerLogicController(
                 stateOrNull = null
                 state.traceBridge.close()
                 state.frameBridge.close()
+                state.resetBridge.close()
                 state.engine.close()
             }
         }

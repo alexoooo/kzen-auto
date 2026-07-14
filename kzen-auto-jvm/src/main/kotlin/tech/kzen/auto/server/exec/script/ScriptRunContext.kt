@@ -256,7 +256,10 @@ class ScriptRunContext(
     // never consumed by a later fresh pass. [stepValues] (the live value graph) is deliberately untouched.
     // The engine-side discard tells the run that hosted-child invocations launched from these steps (a
     // RunStep in the loop body) are abandoned — a fresh invocation must not adopt the pre-edit one's
-    // migration capture (logic-spec §5 "invocation identity").
+    // migration capture (logic-spec §5 "invocation identity"). The engine-side reset is the OBSERVABLE half:
+    // the steps' emitted traces (the addresses mirror [emitStepTrace]) and the retained trace values of the
+    // hosted invocations their RunSteps launched clear, so the fresh pass presents a fresh trace while the
+    // film-strip history survives (logic-spec §7 resettable live state).
     override fun dropReplay(steps: List<ObjectLocation>) {
         val stableIds = nestedStableIds(steps)
         for (stableId in stableIds) {
@@ -265,6 +268,7 @@ class ScriptRunContext(
             completedOutcomes.remove(stableId)
         }
         execution.discardCaptured(stableIds)
+        execution.resetEmitted(stableIds.map { Address.of(it.value) }, stableIds)
     }
 
 

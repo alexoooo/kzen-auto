@@ -91,6 +91,17 @@ CountingStep:
   title: "Counting (test)"
 
 
+# Traces a small binary detail (a stand-in screenshot) that joins the run's retained history film-strip —
+# placed inside a loop body so the per-iteration trace-reset tests can assert the film-strip survives while
+# live per-step values clear.
+BinaryDetailStep:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.server.exec.script.test.BinaryDetailStep
+  icon: "material-symbols:photo-camera"
+  title: "Binary detail (test)"
+
+
 # Fails its first invocation (globally) then succeeds, returning its referenced `input` — a transient failure
 # that clears on retry, for exercising pause-on-error park-then-resume of a nested-Logic Worker's child.
 FlakyStep:
