@@ -71,7 +71,10 @@ import kotlin.time.Clock
  * and the executor calls [RunEngine.migrate] at the quiescent barrier instead of plain resume / step — so the
  * edit takes effect on the live run. Detection is event-driven: this controller observes the graph store (as a
  * [LocalGraphStore.Observer], registered at the composition root) to set a coarse edit-dirty flag, so a clean
- * release skips the closure compare entirely (slow motion would otherwise pay it per tick). This is
+ * release skips the closure compare entirely (slow motion would otherwise pay it per tick). The compared
+ * closure spans the root document PLUS its linked logic documents (a RunStep sub-script, a Flow RunLogic
+ * callee, a Job RunWorker callee — recursively, discovered from notation by [LinkedLogicDocuments]), so
+ * editing a paused caller's callee migrates the caller even though the `instructions` link is weak. This is
  * flavour-agnostic: a Job carries its Worker state + channel carryover across the rebuild (see
  * [tech.kzen.auto.server.exec.job.JobRun]); a Script carries its completed step outcomes + result (see
  * [tech.kzen.auto.server.exec.script.ScriptMigrationState]) — and the engine itself carries open resource
@@ -111,9 +114,10 @@ class ServerLogicController(
         val engine: RunEngine,
         val rootLocation: ObjectLocation,
 
-        // Content digest of the transitive-closure NOTATION (root document + everything it references) the live
-        // engine tree was last compiled against — the change-detection baseline for a live edit
-        // (GraphDefinition.transitiveDigest). Keyed off notation, NOT the compiled definition: a fresh definition
+        // Content digest of the transitive-closure NOTATION (root document + everything it references, PLUS
+        // each linked logic document's closure — weakly-referenced callees a plain root closure cannot see;
+        // LinkedLogicDocuments.transitiveDigest) the live engine tree was last compiled against — the
+        // change-detection baseline for a live edit. Keyed off notation, NOT the compiled definition: a fresh definition
         // build embeds freshly-constructed mutable runtime scaffolding (e.g. a Flow vertex's MutableFlowOutput /
         // MutableRequiredInput channel instances) with identity equality, so two builds of the SAME notation are
         // never definition-equal — which would make every no-edit step / resume spuriously migrate (a step then
@@ -283,7 +287,10 @@ class ServerLogicController(
 
         val state = LogicState(
             runId, runExecutionId, engine, root,
-            graphDefinitionAttempt.transitiveSuccessful.transitiveDigest(root.documentPath))
+            LinkedLogicDocuments.transitiveDigest(
+                graphDefinitionAttempt.transitiveSuccessful,
+                graphDefinitionAttempt.graphStructure,
+                root.documentPath))
         state.traceBridge = engine.observe { mirrorTrace(state) }
         state.frameBridge = engine.observeFrames { node -> onFrameClosed(state, node) }
         stateOrNull = state
@@ -780,7 +787,8 @@ class ServerLogicController(
     // The recompiled root [Logic] to migrate the live run onto when its notation changed under a live edit, or
     // null to resume / step the existing tree. The change detection is two-stage: the cheap [editDirty] flag
     // (event-driven, coarse — set by any notation command) gates the precise transitive-closure content-digest
-    // compare (GraphDefinition.transitiveDigest vs [LogicState.baselineClosureDigest]) — deterministic, so a
+    // compare ([LinkedLogicDocuments.transitiveDigest] — root document ∪ linked logic documents — vs
+    // [LogicState.baselineClosureDigest]) — deterministic, so a
     // no-edit release never migrates, and a clean release skips the closure recompute entirely. Only a LAUNCHED
     // run migrates — an unlaunched engine has no live state to re-point, so the first release just runs the
     // start-time logic. A recompile failure (a mid-edit incomplete definition), or any failure recomputing the
@@ -801,7 +809,8 @@ class ServerLogicController(
 
         return try {
             val attempt = graphDefinitionAttempt(snapshotGraphDefinitionAttempt)
-            val editedDigest = attempt.transitiveSuccessful.transitiveDigest(state.rootLocation.documentPath)
+            val editedDigest = LinkedLogicDocuments.transitiveDigest(
+                attempt.transitiveSuccessful, attempt.graphStructure, state.rootLocation.documentPath)
             if (editedDigest == state.baselineClosureDigest) {
                 return null
             }
