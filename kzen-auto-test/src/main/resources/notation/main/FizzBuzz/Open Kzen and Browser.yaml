@@ -5,7 +5,6 @@ main.steps/Start SUT:
   is: StartKzenAutoStep
   name: main
   fixture: fixtures/empty-project
-  port: 18082
   closePolicy: parent
 
 main.steps/Wait:
@@ -16,8 +15,8 @@ main.steps/Open Browser:
   closePolicy: parentKeepOnFailure
 
 main.steps/Navigate:
-  is: BrowserGetStep
-  location: "http://127.0.0.1:18082/"
+  is: BrowserGetSutStep
+  name: main
   screenshotDelayMilliseconds: 1000
 
 main.steps/Wait 2:

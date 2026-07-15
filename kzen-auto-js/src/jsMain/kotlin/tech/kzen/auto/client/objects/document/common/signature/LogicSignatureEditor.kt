@@ -206,7 +206,7 @@ class LogicSignatureEditor:
             }
             else {
                 val analysis = ScriptDependencyAnalysis.analyze(
-                    clientState.graphDefinitionAttempt, props.objectLocation.documentPath)
+                    clientState.graphDefinitionAttempt.successful(), props.objectLocation.documentPath)
                 StepDependencyEdges.compute(parameterLocations, analysis)
             }
 

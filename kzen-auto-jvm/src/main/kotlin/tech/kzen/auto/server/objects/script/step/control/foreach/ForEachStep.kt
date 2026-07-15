@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.objects.script.step.control.foreach
 
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
+import tech.kzen.auto.common.util.TraceDisplay
 import tech.kzen.auto.server.objects.script.api.ScriptControlSignal
 import tech.kzen.auto.server.objects.script.api.ScriptStep
 import tech.kzen.auto.server.objects.script.api.ScriptStepDefinition
@@ -36,6 +37,13 @@ class ForEachStep(
      * and the [totalSize] for the progress counter. Best-effort by design (logic-spec §5): the iterator belongs
      * to the pre-edit items value, so an edit to the items PRODUCER is not reflected until the loop next starts
      * — far better for interactive development than re-running completed iterations' side effects from scratch.
+     *
+     * [collectedOutputs] is likewise the LIVE list, not a per-iteration snapshot of it — the same "carry live
+     * state as-is" rule the iterator follows, and O(1) per iteration rather than the O(n) copy that made a long
+     * loop quadratic. Aliasing is sound because a migration barrier can only land on a `checkpoint`, which the
+     * spine takes per body step: at every reachable capture point the live list holds exactly the completed
+     * iterations, which is what a snapshot taken at this iteration's start would have held. Restore copies it
+     * ([ArrayList] below), so the rebuilt run never mutates the carried list.
      */
     private class LoopCursor(
         val iterator: Iterator<*>,
@@ -66,6 +74,13 @@ class ForEachStep(
             ?: error("ForEach step has no item binding: $selfLocation")
 
         val cursor = execution.restoredCarry(selfLocation) as? LoopCursor
+
+        // Collect each iteration's value only if something reads this loop's own value. Nothing does when the
+        // loop is (say) the Script's last root step — [ScriptLogic] discards the root sequence's value — and
+        // collecting then costs a list that pins every iteration's terminal object for the run's lifetime. The
+        // loop still returns a well-typed (empty) List, which is what its declared type promises and all any
+        // in-scope expression step needs, since those resolve every in-scope value regardless of use.
+        val collecting = execution.isValueReferenced(selfLocation)
 
         val iterator: Iterator<*>
         val output: ArrayList<Any?>
@@ -104,14 +119,16 @@ class ForEachStep(
             // The cursor is (re-)recorded at each iteration's start, so a pause anywhere in the body migrates
             // with the live iterator and this iteration's item. Re-recording on the resumed run's first pass
             // matters too: its carry starts empty, so a SECOND edit must still capture the cursor.
-            execution.recordCarry(selfLocation, LoopCursor(iterator, item, index, output.toList(), size))
+            execution.recordCarry(selfLocation, LoopCursor(iterator, item, index, output, size))
             replayInFlight = false
 
             // Live loop progress on the ForEach card: the loop is the current step here, so the detail
             // attributes to it (the client renders it as "item: ..."), and markDone carries the final
-            // iteration's detail into the Done trace.
+            // iteration's detail into the Done trace. The item is capped like any other trace display — it is
+            // built here rather than passed through the spine's displayOf, so it bounds itself.
             val counter = if (size != null) "${index + 1} of $size" else "${index + 1}"
-            execution.traceDetail("$item ($counter)")
+            val itemDisplay = TraceDisplay.truncatedToString(item, TraceDisplay.maxScriptTraceChars)
+            execution.traceDetail("$itemDisplay ($counter)")
 
             execution.bind(itemBinding, item)
             val bodyValue = execution.runSteps(bodySteps)
@@ -132,7 +149,9 @@ class ForEachStep(
                         execution.recordCarry(selfLocation, null)
                         return output
                     }
-                    output.add(bodyValue)
+                    if (collecting) {
+                        output.add(bodyValue)
+                    }
                 }
             }
             index += 1

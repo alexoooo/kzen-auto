@@ -15,8 +15,9 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
  * The immutable, per-Script compilation artefacts a [ScriptRunContext] needs to run the step archetypes: the
  * instantiated graph (to resolve a step location to its `@Reflect` [tech.kzen.auto.server.objects.script.api.ScriptStep]
  * instance), the notation / definition (to host a RunStep's linked child), and the validated Script structures
- * the expression steps type against. Produced once by [ScriptLogicCompiler]; shared by every run of the
- * resulting [ScriptLogic] (a fresh [ScriptRunContext] per run holds the mutable state).
+ * the expression steps type against, and the statically-derived [valueReferencedSteps] a collecting step consults
+ * (see [ScriptValueReferences]). Produced once by [ScriptLogicCompiler]; shared by every run of the resulting
+ * [ScriptLogic] (a fresh [ScriptRunContext] per run holds the mutable state).
  */
 class ScriptRunStructure(
     val scriptLocation: ObjectLocation,
@@ -26,6 +27,7 @@ class ScriptRunStructure(
     val scriptTree: ScriptTree,
     val scriptValidation: ScriptValidation,
     val resultSignature: TupleDefinition,
+    val valueReferencedSteps: Set<ObjectLocation>,
     val services: LogicCompilerServices
 ) {
     val objectStableMapper: ObjectStableMapper get() = services.objectStableMapper

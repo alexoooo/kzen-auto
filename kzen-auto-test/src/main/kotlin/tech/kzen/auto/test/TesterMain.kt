@@ -10,9 +10,12 @@ import kotlin.io.path.listDirectoryEntries
 
 
 object TesterMain {
-    // Hardcoded port — BrowserGetStep.location is a static YAML field that cannot yet
-    //  interpolate Script parameters, so the tester URL must match what the test-suite
-    //  YAMLs hard-code. Swap to FreePort once interpolation lands.
+    // The INTERACTIVE tester's port: what a bare IDE gutter run (or `runTester`) binds when given no
+    //  --server.port=, and what kzen-auto-test/AGENTS.md tells you to browse. Fixed on purpose — a
+    //  bookmarkable URL is the whole point.
+    //
+    //  selfTest does NOT use this: SelfTestBase takes a free port instead, so a developer's own tester
+    //  can sit here indefinitely without ever contending with a self-test run.
     const val TESTER_PORT = 18081
 
     private const val kzenAutoJarProperty = "kzenAutoJar"

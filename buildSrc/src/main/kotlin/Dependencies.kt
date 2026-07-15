@@ -25,7 +25,7 @@ const val commonsIoVersion = "2.22.0"
 const val migzVersion = "2.0.beta-1"
 const val caffeineVersion = "3.2.4"
 
-const val seleniumVersion = "4.45.0"
+const val seleniumVersion = "4.46.0"
 const val webdrivermanagerVersion = "6.3.4"
 
 

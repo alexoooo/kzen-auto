@@ -4,6 +4,7 @@ import tech.kzen.auto.common.objects.document.script.model.ScriptJumpAnalysis
 import tech.kzen.auto.common.objects.document.script.model.ScriptTree
 import tech.kzen.auto.common.objects.document.script.model.ScriptValidation
 import tech.kzen.auto.common.objects.document.script.model.StepTrace
+import tech.kzen.auto.common.util.TraceDisplay
 import tech.kzen.auto.server.exec.LogicCompiler
 import tech.kzen.auto.server.objects.script.api.ScriptControlSignal
 import tech.kzen.auto.server.objects.script.api.ScriptStep
@@ -147,6 +148,11 @@ class ScriptRunContext(
     }
 
 
+    override fun isValueReferenced(location: ObjectLocation): Boolean {
+        return location in structure.valueReferencedSteps
+    }
+
+
     override fun argument(name: TupleComponentName): Any? {
         return execution.inputs.find(name)
     }
@@ -219,7 +225,9 @@ class ScriptRunContext(
         emitStepTrace(stableId, StepTrace.State.Running, NullExecutionValue, detail)
 
         // A binary detail (a screenshot) also joins the run's retained history film-strip, surviving loop
-        // iterations and nested runs (the value-agnostic timeline — see [Execution.log]).
+        // iterations and nested runs (the value-agnostic timeline — see [Execution.log]). This is the ONLY
+        // retained copy: the trace emits above are transient (see [emitStepTrace]), so a screenshot is stored
+        // once rather than once per emit that happens to carry it as its detail.
         if (detail is BinaryExecutionValue) {
             execution.log(detail)
         }
@@ -539,12 +547,23 @@ class ScriptRunContext(
         // [adoptCompleted] (which emits for a replayed step while the note is the parent's) targets it.
         val note = if (stableId == currentStableId) currentNote else null
         val trace = StepTrace(state, display, detail, error, note)
-        execution.emit(Address.of(stableId.value), trace.asExecutionValue())
+
+        // TRANSIENT (logic-spec §7 retention-vs-bounding): a StepTrace is the step's CURRENT state, and the live
+        // latest-value-per-address view is the only thing that ever reads it — trace queries project the engine's
+        // live map ([RunEngineLogicTrace]), while the append-only history serves the film strip alone (its
+        // log-style events). Retaining these would grow history without bound and without a reader: a loop emits
+        // ~2 events per body step per iteration, and a screenshot step would store its binary a second and third
+        // time (inside the Running and Done traces) beside the one [execution.log] copy that is actually read.
+        execution.emit(Address.of(stableId.value), trace.asExecutionValue(), retain = false)
     }
 
 
+    // Human-facing only, and bounded: the value graph ([stepValues]) keeps the whole value, so downstream
+    // expressions and the Script's result are unaffected — this caps just the string that reaches the trace,
+    // the wire, and every client poll.
     private fun displayOf(value: Any?): ExecutionValue {
-        return ExecutionValue.of(value.toString())
+        return ExecutionValue.of(
+            TraceDisplay.truncatedToString(value, TraceDisplay.maxScriptTraceChars))
     }
 
 

@@ -222,7 +222,7 @@ class ScriptDependencyOverlay(
         }
 
         return ScriptDependencyAnalysis
-            .analyze(clientState.graphDefinitionAttempt, documentPath)
+            .analyze(clientState.graphDefinitionAttempt.successful(), documentPath)
             .crossBranchEdges()
     }
 

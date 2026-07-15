@@ -72,6 +72,18 @@ class KzenAutoProcess private constructor(
                 "cwd does not exist: ${cwd.toAbsolutePath()}"
             }
 
+            // Pre-flight. [isAvailable] below accepts ANY HTTP 200 on the port, so it cannot tell our
+            //  child apart from someone else's kzen-auto already listening there. Establishing that
+            //  nothing holds the port BEFORE we spawn is what makes that probe sound: if the port was
+            //  free and something now answers, it is ours. Without this, a stale instance answers the
+            //  first poll within ~250ms, our child dies on a BindException, and the harness silently
+            //  drives the STALE process — running the whole suite against code nobody just built.
+            check(FreePort.isFree(port)) {
+                "cannot start '$name': port $port is already in use — another kzen-auto (an interactive " +
+                    "tester? a leftover SUT?) is listening on it. Stop it, or let the harness pick a " +
+                    "free port (SelfTestBase defaults to one; StartKzenAutoStep does so on `port: 0`)."
+            }
+
             val process = ProcessBuilder(command)
                 .directory(cwd.toFile())
                 .redirectErrorStream(true)
@@ -83,7 +95,7 @@ class KzenAutoProcess private constructor(
             }
 
             try {
-                waitUntilAvailable(port, startupTimeoutMs)
+                waitUntilAvailable(process, name, port, startupTimeoutMs)
             }
             catch (e: Throwable) {
                 process.destroyForcibly()
@@ -118,19 +130,32 @@ class KzenAutoProcess private constructor(
         }
 
 
-        private fun waitUntilAvailable(port: Int, timeoutMs: Long) {
+        private fun waitUntilAvailable(process: Process, name: String, port: Int, timeoutMs: Long) {
             val deadline = System.currentTimeMillis() + timeoutMs
             while (System.currentTimeMillis() < deadline) {
                 if (isAvailable(port)) {
                     return
                 }
+
+                // A dead child will never answer, so waiting out the full timeout only delays the
+                //  report and buries the cause. Fail now, naming the exit code — this is what turns a
+                //  bad classpath / an OOM / a lost port race into an immediate, diagnosable error.
+                if (! process.isAlive) {
+                    throw IllegalStateException(
+                        "'$name' exited with code ${process.exitValue()} before responding on port " +
+                            "$port — see the [$name] output above for the cause")
+                }
+
                 Thread.sleep(pollIntervalMs)
             }
             throw IllegalStateException(
-                "kzen-auto did not respond on port $port within ${timeoutMs}ms")
+                "'$name' did not respond on port $port within ${timeoutMs}ms")
         }
 
 
+        // Deliberately identity-blind: any kzen-auto answering 200 on the port satisfies this (`/` 302s,
+        //  and HttpURLConnection follows it to /index.html). That is only sound because [spawn]
+        //  established the port was free beforehand — do not call this without that guard.
         private fun isAvailable(port: Int): Boolean {
             return try {
                 val connection = URI("http://127.0.0.1:$port/")

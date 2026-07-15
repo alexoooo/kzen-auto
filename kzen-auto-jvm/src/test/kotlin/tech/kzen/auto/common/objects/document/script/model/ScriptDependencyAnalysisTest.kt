@@ -19,7 +19,7 @@ class ScriptDependencyAnalysisTest {
         val graphNotation = AutoTestUtils.readNotation()
         val graphDefinitionAttempt = AutoTestUtils.graphDefinitionAttempt(graphNotation)
 
-        val analysis = ScriptDependencyAnalysis.analyze(graphDefinitionAttempt, documentPath)
+        val analysis = ScriptDependencyAnalysis.analyze(graphDefinitionAttempt.successful(), documentPath)
 
         // plain identifier reference (`Source + 1`)
         assertTrue(
@@ -39,7 +39,7 @@ class ScriptDependencyAnalysisTest {
         val graphNotation = AutoTestUtils.readNotation()
         val graphDefinitionAttempt = AutoTestUtils.graphDefinitionAttempt(graphNotation)
 
-        val analysis = ScriptDependencyAnalysis.analyze(graphDefinitionAttempt, documentPath)
+        val analysis = ScriptDependencyAnalysis.analyze(graphDefinitionAttempt.successful(), documentPath)
 
         // `threshold * 2` references the parameter by name: parameter is the source, the step is the target.
         val parameterEdge = ScriptStepDependency(
@@ -48,6 +48,31 @@ class ScriptDependencyAnalysisTest {
 
         // the parameter lives in a different branch than the step, so it is drawn by the cross-branch overlay
         assertTrue(parameterEdge in analysis.crossBranchEdges())
+    }
+
+
+    @Test
+    fun namesCollidingOnOneIdentifierAllBecomeSources() {
+        val collisionPath = DocumentPath.parse("test/script-name-collision-test.yaml")
+        val graphNotation = AutoTestUtils.readNotation()
+        val graphDefinitionAttempt = AutoTestUtils.graphDefinitionAttempt(graphNotation)
+
+        val analysis = ScriptDependencyAnalysis.analyze(graphDefinitionAttempt.successful(), collisionPath)
+
+        fun collisionLocation(objectPath: String) =
+            ObjectLocation(collisionPath, ObjectPath.parse(objectPath))
+
+        val user = collisionLocation("main.steps/Branch.then/Shadow User")
+
+        // `Shadowed + 1` cannot be attributed to one of the two same-named steps from its text, so BOTH get the
+        // edge. Over-reporting is the safe direction: a dropped edge would let ScriptValueReferences call a value
+        // unread when something reads it.
+        assertTrue(
+            ScriptStepDependency(collisionLocation("main.steps/Shadowed"), user) in analysis.edges,
+            "the root-level `Shadowed` must be reported as a source")
+        assertTrue(
+            ScriptStepDependency(collisionLocation("main.steps/Branch.then/Shadowed"), user) in analysis.edges,
+            "the branch-nested `Shadowed` must be reported as a source")
     }
 
 

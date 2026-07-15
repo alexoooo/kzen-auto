@@ -275,7 +275,7 @@ class ScriptMoveToArrow(
         // already-run earlier step), and the consumer is at/after the target (drop set → re-runs). Purely
         // advisory (never disables); the real backstop is the runtime "No value produced" error-park.
         val edges = ScriptDependencyAnalysis
-            .analyze(clientState.graphDefinitionAttempt, documentPath)
+            .analyze(clientState.graphDefinitionAttempt.successful(), documentPath)
             .edges
         val warnTargets = validTargets
             .filter { target ->

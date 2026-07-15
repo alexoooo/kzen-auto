@@ -267,7 +267,8 @@ class ScriptBranchDisplay(
                 StepDependencyEdges.EMPTY
             }
             else {
-                val analysis = ScriptDependencyAnalysis.analyze(clientState.graphDefinitionAttempt, documentPath)
+                val analysis = ScriptDependencyAnalysis.analyze(
+                    clientState.graphDefinitionAttempt.successful(), documentPath)
                 StepDependencyEdges.compute(steps, analysis)
             }
         }

@@ -1,0 +1,21 @@
+# A long side-effect loop: the shape whose retained trace used to grow without bound (~2 events per body step
+# per iteration, forever). Script's step traces are transient emits, so this run must append NOTHING to the
+# engine's history — the loop's own value is unreferenced, so it collects nothing either.
+
+main:
+  is: Script
+
+main.steps/Range:
+  is: FormulaStep
+  code: "1..10000"
+
+main.steps/Loop:
+  is: ForEachStep
+  items: main.steps/Range
+
+main.steps/Loop.item/Item:
+  is: ForEachItemBinding
+
+main.steps/Loop.steps/Doubled:
+  is: FormulaStep
+  code: "Item * 2"

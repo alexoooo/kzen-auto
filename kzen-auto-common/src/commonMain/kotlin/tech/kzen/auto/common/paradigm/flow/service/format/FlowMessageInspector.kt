@@ -1,5 +1,6 @@
 package tech.kzen.auto.common.paradigm.flow.service.format
 
+import tech.kzen.auto.common.util.TraceDisplay
 import tech.kzen.lib.common.exec.ExecutionValue
 import kotlin.reflect.KClass
 
@@ -16,18 +17,9 @@ import kotlin.reflect.KClass
 class FlowMessageInspector {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        const val maxTraceChars = 1024
-
         fun truncatedToString(value: Any): ExecutionValue {
-            val asString = value.toString()
-            val bounded =
-                if (asString.length > maxTraceChars) {
-                    asString.take(maxTraceChars) + "…"
-                }
-                else {
-                    asString
-                }
-            return ExecutionValue.of(bounded)
+            return ExecutionValue.of(
+                TraceDisplay.truncatedToString(value, TraceDisplay.maxFlowTraceChars))
         }
     }
 

@@ -1,0 +1,18 @@
+# The display-only bounding contract: `Big`'s 10k-char value is capped in the TRACE, while the value graph
+# keeps it whole — `Result` reads Big.length and must still see all 10000.
+
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.Int
+      generics: []
+      nullable: false
+
+main.steps/Big:
+  is: FormulaStep
+  code: '"x".repeat(10000)'
+
+main.steps/Result:
+  is: ResultStep
+  code: Big.length

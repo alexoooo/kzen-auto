@@ -10,13 +10,36 @@ StartKzenAutoStep:
   description: "Spawn a vanilla kzen-auto JVM as a system-under-test"
   name: "main"
   fixture: ""
-  port: 18082
+  # 0 = pick a free port at run time, so a SUT never contends with a developer's own kzen-auto
+  #  instances. Navigate to it with BrowserGetSutStep, which addresses the SUT by name. Pin a
+  #  literal port only when you want a predictable URL to attach to.
+  port: 0
   meta:
     name: String
     fixture:
       is: String
       summary: TextAttributeView
     port: Int
+
+
+BrowserGetSutStep:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.test.server.script.step.BrowserGetSutStep
+  icon: "material-symbols:http"
+  title: "Browse to SUT"
+  description: "Navigate the browser to a running SUT, addressed by name"
+  name: "main"
+  path: ""
+  screenshotDelayMilliseconds: 0
+  meta:
+    name:
+      is: String
+      summary: TextAttributeView
+    path:
+      is: String
+      summary: TextAttributeView
+    screenshotDelayMilliseconds: Long
 
 
 StopKzenAutoStep:

@@ -52,6 +52,18 @@ interface StepExecution {
     fun referencedValue(location: ObjectLocation): Any?
 
     /**
+     * Does anything in this Script read [location]'s value — an expression naming it, an attribute referencing it,
+     * or the branch it terminates? A step that accumulates a value at some cost (a loop collecting every
+     * iteration's output) can skip the accumulation when the answer is false, and still return a well-typed empty
+     * result. Statically derived at compile time and deliberately conservative: an uncertain answer is always
+     * `true`, so acting on `false` is safe (see [ScriptValueReferences][tech.kzen.auto.server.exec.script.ScriptValueReferences]).
+     *
+     * NB: do NOT infer this from [referencedValue] call sites — an expression step resolves EVERY in-scope value
+     * whether or not its code names it, so at run time everything looks referenced.
+     */
+    fun isValueReferenced(location: ObjectLocation): Boolean
+
+    /**
      * A named argument this Script invocation was called with — the run inputs a hosting
      * [RunStep][tech.kzen.auto.server.objects.script.step.control.RunStep] passed, resolved by component name.
      */

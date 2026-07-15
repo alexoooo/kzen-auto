@@ -59,12 +59,18 @@ object ScriptLogicCompiler {
         val resultSignature = ResultSignatureDefiner.parse(
             graphNotation.firstAttribute(scriptLocation, ScriptConventions.resultsAttributePath))
 
-        val structure = ScriptRunStructure(
-            scriptLocation, graphNotation, graphDefinition, graphInstance,
-            scriptTree, scriptValidation, resultSignature, services)
-
         val rootStepLocations = ScriptConventions.orderedDirectChildLocations(
             graphNotation, AttributeLocation(scriptLocation, ScriptConventions.stepsAttributePath))
+
+        // Which step values anything actually reads — one document-wide static scan per compile (so once per run,
+        // and once per hosted-child document via ScriptRunContext's childLogics cache). Lets a collecting step skip
+        // the work when nothing will look; see [ScriptValueReferences] for why it is compile-time and conservative.
+        val valueReferencedSteps = ScriptValueReferences.analyze(
+            documentPath, graphDefinition, graphInstance, rootStepLocations)
+
+        val structure = ScriptRunStructure(
+            scriptLocation, graphNotation, graphDefinition, graphInstance,
+            scriptTree, scriptValidation, resultSignature, valueReferencedSteps, services)
 
         val parameters = ScriptConventions.orderedDirectChildLocations(
             graphNotation, AttributeLocation(scriptLocation, ScriptConventions.parametersAttributePath))

@@ -1,0 +1,29 @@
+# Two steps share the name `Shadowed`: an ObjectPath is name + nesting, so `main.steps/Shadowed` and
+# `main.steps/Branch.then/Shadowed` are distinct steps that both escape to the identifier `Shadowed`.
+#
+# `Shadow User`'s code names `Shadowed`, and the text alone cannot say which one it means. The analysis must
+# therefore report BOTH as sources: attributing to a single winner would drop an edge, and a dropped edge means
+# ScriptValueReferences would call a value unread when something reads it.
+
+main:
+  is: Script
+
+main.steps/Shadowed:
+  is: FormulaStep
+  code: 1
+
+main.steps/Flag:
+  is: FormulaStep
+  code: "true"
+
+main.steps/Branch:
+  is: IfStep
+  condition: main.steps/Flag
+
+main.steps/Branch.then/Shadowed:
+  is: FormulaStep
+  code: 2
+
+main.steps/Branch.then/Shadow User:
+  is: FormulaStep
+  code: Shadowed + 1

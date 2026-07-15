@@ -58,8 +58,6 @@ tasks.named<Test>("test") {
     // expensive end-to-end suite runs from the `selfTest` task instead, so
     // umbrella `./gradlew build` does not spawn Chrome on every aggregate build.
     exclude("**/*SelfTest.class")
-    // Empty by design until fast unit tests land — Gradle 9 otherwise fails the task.
-    failOnNoDiscoveredTests = false
 }
 
 
@@ -103,4 +101,11 @@ val selfTest = tasks.register<Test>("selfTest") {
             resolvedKzenAutoJar
         ).joinToString(File.pathSeparator))
     systemProperty("testerMainClass", "tech.kzen.auto.test.TesterMain")
+
+    // Optional pin. Absent (the norm), SelfTestBase takes a free port, so a self-test never contends
+    // with an interactive tester on TesterMain.TESTER_PORT. Pass -PtesterPort=<n> when you want to open
+    // the self-test's own tester in a browser mid-run.
+    project.findProperty("testerPort")?.toString()?.let {
+        systemProperty("testerPort", it)
+    }
 }

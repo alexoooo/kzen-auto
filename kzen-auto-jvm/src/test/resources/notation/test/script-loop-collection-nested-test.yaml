@@ -1,0 +1,35 @@
+# Both halves of the referenced rule in one run:
+#
+#  - `Inner` is the TERMINAL of `Outer`'s body branch, so its value IS read — it becomes the value `Outer`
+#    collects each iteration. It must collect.
+#  - `Outer` is the terminal of the ROOT step list, whose value ScriptLogic discards, and nothing else
+#    references it. It must NOT collect.
+
+main:
+  is: Script
+
+main.steps/Outer Range:
+  is: FormulaStep
+  code: "1..2"
+
+main.steps/Outer:
+  is: ForEachStep
+  items: main.steps/Outer Range
+
+main.steps/Outer.item/Outer Item:
+  is: ForEachItemBinding
+
+main.steps/Outer.steps/Inner Range:
+  is: FormulaStep
+  code: "1..2"
+
+main.steps/Outer.steps/Inner:
+  is: ForEachStep
+  items: main.steps/Outer.steps/Inner Range
+
+main.steps/Outer.steps/Inner.item/Inner Item:
+  is: ForEachItemBinding
+
+main.steps/Outer.steps/Inner.steps/Product:
+  is: FormulaStep
+  code: "`Outer Item` * `Inner Item`"

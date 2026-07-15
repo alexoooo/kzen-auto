@@ -38,18 +38,25 @@ data class ScriptDependencyAnalysis(
             AttributeName("else"))
 
 
+        /**
+         * NB: takes a [GraphDefinition] — the successful subset — rather than the [GraphDefinitionAttempt] a
+         * client caller holds, because only the notation and the object definitions are read, and the server
+         * (which compiles from a [GraphDefinition] and never has an attempt) needs the same analysis to decide
+         * which step values are worth collecting. A client passes `attempt.successful()`, whose
+         * `objectDefinitions` are the attempt's own — so the result is identical either way.
+         */
         fun analyze(
-            graphDefinitionAttempt: GraphDefinitionAttempt,
+            graphDefinition: GraphDefinition,
             documentPath: DocumentPath
         ): ScriptDependencyAnalysis {
-            val graphNotation = graphDefinitionAttempt.graphStructure.graphNotation
+            val graphNotation = graphDefinition.graphStructure.graphNotation
             val coalesce = graphNotation.coalesce
             val mainObjectLocation = documentPath.toMainObjectLocation()
 
             val branchOfStep = mutableMapOf<ObjectLocation, AttributeLocation>()
             walkBranch(
                 AttributeLocation(mainObjectLocation, ScriptConventions.stepsAttributePath),
-                graphDefinitionAttempt,
+                graphDefinition,
                 branchOfStep)
 
             if (branchOfStep.isEmpty()) {
@@ -64,19 +71,25 @@ data class ScriptDependencyAnalysis(
             // circuits to EMPTY.
             walkBranch(
                 AttributeLocation(mainObjectLocation, ScriptConventions.parametersAttributePath),
-                graphDefinitionAttempt,
+                graphDefinition,
                 branchOfStep)
 
             // Key each in-document object by the identifier its name escapes to, so a back-ticked reference
-            // (`` `my step` ``) is matched. Collisions (two names escaping to the same identifier) keep the
-            // last, a documented limitation.
-            val locationByIdentifierContent = coalesce.map.keys
+            // (`` `my step` ``) is matched.
+            //
+            // Collisions are real and must OVER-report: an ObjectPath is name + nesting, so `main.steps/Foo` and
+            // `main.steps/If.then/Foo` are distinct steps sharing one identifier, and an expression naming `Foo`
+            // cannot be attributed to one of them from the text alone. Every candidate therefore gets the edge.
+            // Over-reporting is the safe direction for both consumers: the client draws a surplus dependency
+            // line, and [valueReferencedSteps] keeps collecting a value it might not have needed. Attributing to
+            // a single winner would instead LOSE an edge — which for the value-referenced set means silently
+            // eliding a value that is genuinely read.
+            val locationsByIdentifierContent = coalesce.map.keys
                 .asSequence()
                 .filter { it.documentPath == documentPath }
-                .associate { location ->
+                .groupBy { location ->
                     ExpressionUtils.identifierContent(
-                        ExpressionUtils.escapeKotlinVariableName(location.objectPath.name.value)
-                    ) to location
+                        ExpressionUtils.escapeKotlinVariableName(location.objectPath.name.value))
                 }
 
             val edges = mutableSetOf<ScriptStepDependency>()
@@ -98,7 +111,7 @@ data class ScriptDependencyAnalysis(
 
             val documentLocations = coalesce.map.keys.filter { it.documentPath == documentPath }
             for (targetLocation in documentLocations) {
-                val objectDefinition = graphDefinitionAttempt.objectDefinitions[targetLocation]
+                val objectDefinition = graphDefinition.objectDefinitions[targetLocation]
                     ?: continue
                 val host = ObjectReferenceHost.ofLocation(targetLocation)
 
@@ -117,12 +130,14 @@ data class ScriptDependencyAnalysis(
                     // Lexer-derived references: respects strings/comments/back-ticks and skips member selectors
                     // (see KotlinExpressionAnalyzer).
                     for (referencedIdentifier in KotlinExpressionAnalyzer.referencedIdentifiers(stringValue)) {
-                        val sourceLocation = locationByIdentifierContent[referencedIdentifier]
+                        val sourceLocations = locationsByIdentifierContent[referencedIdentifier]
                             ?: continue
-                        if (sourceLocation == targetLocation) {
-                            continue
+                        for (sourceLocation in sourceLocations) {
+                            if (sourceLocation == targetLocation) {
+                                continue
+                            }
+                            classifyEdge(sourceLocation, targetLocation)
                         }
-                        classifyEdge(sourceLocation, targetLocation)
                     }
                 }
             }
@@ -133,12 +148,12 @@ data class ScriptDependencyAnalysis(
 
         private fun walkBranch(
             branchAttributeLocation: AttributeLocation,
-            graphDefinitionAttempt: GraphDefinitionAttempt,
+            graphDefinition: GraphDefinition,
             branchOfStep: MutableMap<ObjectLocation, AttributeLocation>
         ) {
             // Steps are the objects nested under this branch attribute, in document order — probing a branch
             // a step doesn't have (e.g. Run.steps) just yields an empty list.
-            val graphNotation = graphDefinitionAttempt.graphStructure.graphNotation
+            val graphNotation = graphDefinition.graphStructure.graphNotation
             val steps = ScriptConventions.orderedDirectChildLocations(
                 graphNotation, branchAttributeLocation)
 
@@ -148,7 +163,7 @@ data class ScriptDependencyAnalysis(
             for (step in steps) {
                 for (nestedName in branchAttributeNames) {
                     val nestedAttrLocation = AttributeLocation(step, AttributePath.ofName(nestedName))
-                    walkBranch(nestedAttrLocation, graphDefinitionAttempt, branchOfStep)
+                    walkBranch(nestedAttrLocation, graphDefinition, branchOfStep)
                 }
             }
         }
@@ -211,6 +226,20 @@ data class ScriptDependencyAnalysis(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    /**
+     * Every object whose *value* something else reads — an expression naming it, or an attribute referencing it.
+     *
+     * This is a lower bound on "is it consumed?", not the whole answer: it does not know that a branch's terminal
+     * step becomes its container's value (structural containment is deliberately not a data dep — see
+     * `classifyEdge`), and it is blind to steps `branchOfStep` never classified. A caller deciding whether a value
+     * can be elided must union in the terminals and bail out when the analysis is incomplete — see
+     * `ScriptValueReferences`, which does both against the authoritative step tree.
+     */
+    fun valueReferencedSources(): Set<ObjectLocation> {
+        return edges.mapTo(mutableSetOf()) { it.source }
+    }
+
+
     fun crossBranchEdges(): List<ScriptStepDependency> {
         return edges.filter { branchOfStep[it.source] != branchOfStep[it.target] }
     }
