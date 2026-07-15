@@ -34,3 +34,13 @@ main.steps/OuterLoop.steps/InnerLoop.steps/Branch:
 main.steps/OuterLoop.steps/InnerLoop.steps/Branch.then/DeepStep:
   is: FormulaStep
   code: "2"
+
+# A root-level If (not inside any loop) so ScriptJumpAnalysis can exercise a valid descend target: jumping to
+# ThenStep re-runs TopIf's condition (the descend/ancestor set) and parks at ThenStep.
+main.steps/TopIf:
+  is: IfStep
+  condition: main.steps/Flag
+
+main.steps/TopIf.then/ThenStep:
+  is: FormulaStep
+  code: "3"

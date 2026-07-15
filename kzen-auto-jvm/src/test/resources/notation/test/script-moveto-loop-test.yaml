@@ -1,0 +1,23 @@
+# Move-to loop fixture (ScriptMoveToTest): a ForEach over 1..3 whose body is a side-effect CountingStep. A jump
+# TO the loop step restarts it at iteration 0 (its body outcomes drop); a jump INTO the loop body is rejected
+# (execution-control decision 3 — loop bodies are out of scope for v1 move-to).
+main:
+  is: Script
+
+main.steps/Range:
+  is: FormulaStep
+  code: "1..3"
+
+main.steps/Loop:
+  is: ForEachStep
+  items: main.steps/Range
+
+main.steps/Loop.item/Item:
+  is: ForEachItemBinding
+
+main.steps/Loop.steps/Body:
+  is: CountingStep
+
+main.steps/Total:
+  is: FormulaStep
+  code: "Loop.sum()"

@@ -71,7 +71,12 @@ data class StepTrace(
 
         // Step failed under pause-on-error: rendered as an error and re-run on resume (NOT skipped
         // like Done). Cleared back to Done once a re-run succeeds.
-        Error
+        Error,
+
+        // Short-circuited by a move-to (Set Next Statement) without producing a value: the rebuilt run's spine
+        // walked past it to reach a later target. Re-runs like Idle if execution comes back around (e.g. a
+        // later backward jump). A reference to a skipped step's (absent) value error-parks the referencing step.
+        Skipped
     }
 
 

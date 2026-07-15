@@ -40,7 +40,7 @@ object ScriptNestingAnalysis {
         scriptTree: ScriptTree,
         target: ObjectPath
     ): List<ObjectLocation> {
-        val path = pathTo(scriptTree, target)
+        val path = enclosingPath(scriptTree, target)
             ?: return listOf()
 
         val result = ArrayList<ObjectLocation>()
@@ -74,15 +74,20 @@ object ScriptNestingAnalysis {
     }
 
 
-    // The ancestors of [target] in [node]'s subtree, OUTERMOST-first, each paired with the attribute of that
-    // ancestor under which the path continues toward [target]. Null when [target] is not in the subtree.
-    private fun pathTo(node: ScriptTree, target: ObjectPath): List<Pair<ObjectPath, AttributeName>>? {
+    /**
+     * The ancestors of [target] in [node]'s subtree, OUTERMOST-first (starting at [node] itself — the root
+     * `main` when called on a root [ScriptTree]), each paired with the attribute of that ancestor under which
+     * the path continues toward [target]. Null when [target] is not in the subtree. The descend containers a
+     * move-to jump must re-run (its enclosing IfSteps) are the non-`main` entries; the hosting attributes feed
+     * [isReRunAttribute] for loop-body detection (execution-control phase 2 ScriptJumpAnalysis).
+     */
+    fun enclosingPath(node: ScriptTree, target: ObjectPath): List<Pair<ObjectPath, AttributeName>>? {
         for ((attributeName, childTrees) in node.children) {
             for (childTree in childTrees) {
                 if (childTree.objectPath == target) {
                     return listOf(node.objectPath to attributeName)
                 }
-                val below = pathTo(childTree, target)
+                val below = enclosingPath(childTree, target)
                 if (below != null) {
                     return listOf(node.objectPath to attributeName) + below
                 }

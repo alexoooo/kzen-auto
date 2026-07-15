@@ -1333,6 +1333,25 @@ class RestHandler(
     }
 
 
+    fun logicMoveTo(parameters: Parameters): String {
+        val runId: LogicRunId = parameters.getParam(CommonRestApi.paramRunId) {
+            value -> LogicRunId(value)
+        }
+
+        val documentPath: DocumentPath = parameters.getParam(
+            CommonRestApi.paramDocumentPath, DocumentPath::parse)
+        val objectPath: ObjectPath = parameters.getParam(
+            CommonRestApi.paramObjectPath, ObjectPath::parse)
+        val target = ObjectLocation(documentPath, objectPath)
+
+        val response = runBlocking {
+            serverLogicController.moveTo(runId, target)
+        }
+
+        return response.name
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     fun objectStableMapperSnapshot(): Map<String, String> {
         val snapshot = objectStableMapper.snapshot()

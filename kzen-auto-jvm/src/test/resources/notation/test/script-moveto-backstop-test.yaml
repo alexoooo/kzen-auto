@@ -1,0 +1,14 @@
+# Move-to backstop fixture (ScriptMoveToTest): C references B, so a forward jump PAST B (skipping it value-less)
+# makes C hit the existing "No value produced" backstop — under pause-on-error it error-parks on C (decision 2).
+main:
+  is: Script
+
+main.steps/A:
+  is: CountingStep
+
+main.steps/B:
+  is: CountingStep
+
+main.steps/C:
+  is: FormulaStep
+  code: "B + 1"

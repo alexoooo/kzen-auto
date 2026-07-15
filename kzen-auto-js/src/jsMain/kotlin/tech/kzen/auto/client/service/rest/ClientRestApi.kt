@@ -807,6 +807,20 @@ class ClientRestApi(
     }
 
 
+    suspend fun logicMoveTo(
+        runId: LogicRunId,
+        target: ObjectLocation
+    ): LogicRunResponse {
+        val response = getOrPut(
+            CommonRestApi.logicMoveTo,
+            CommonRestApi.paramRunId to runId.value,
+            CommonRestApi.paramDocumentPath to target.documentPath.asString(),
+            CommonRestApi.paramObjectPath to target.objectPath.asString())
+
+        return LogicRunResponse.valueOf(response)
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     // Lists the immediate children (files + subdirectories) of `directory` matching `filter`, via the
     // document-agnostic /file-listing route (reuses the server's FileListingAction). Used by the Job

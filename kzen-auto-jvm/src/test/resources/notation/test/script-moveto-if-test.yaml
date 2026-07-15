@@ -1,0 +1,23 @@
+# Move-to If-descend fixture (ScriptMoveToTest): a jump to a step INSIDE an If branch must re-run the If's
+# condition (the descend set) with the If's own checkpoint suppressed, adopt the pre-target branch steps, and
+# park at the target. T1 / T2 are side-effect CountingSteps so descend (T1 kept, T2 re-run) is observable.
+main:
+  is: Script
+
+main.steps/Flag:
+  is: FormulaStep
+  code: "true"
+
+main.steps/Gate:
+  is: IfStep
+  condition: main.steps/Flag
+
+main.steps/Gate.then/T1:
+  is: CountingStep
+
+main.steps/Gate.then/T2:
+  is: CountingStep
+
+main.steps/After:
+  is: FormulaStep
+  code: "1"

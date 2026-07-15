@@ -109,6 +109,7 @@ object CommonRestApi {
     const val logicContinueStep = "${logicPrefix}step"
     const val logicStepOver = "${logicPrefix}stepOver"
     const val logicStepOut = "${logicPrefix}stepOut"
+    const val logicMoveTo = "${logicPrefix}moveTo"
     const val logicStartAndStep = "${logicPrefix}startStep"
     const val logicSetPauseOnError = "${logicPrefix}setPauseOnError"
     const val logicSetBreakpoints = "${logicPrefix}breakpoints"

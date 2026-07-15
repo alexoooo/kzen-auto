@@ -404,6 +404,45 @@ class ClientLogicGlobal(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    // Move-to (Set Next Statement): reposition the paused run to [target] without executing the intervening steps
+    // (backward = re-run from there, forward = skip over). Unlike step / pause, [target] is supplied by the caller
+    // (the draggable next-to-run arrow / "Set next step here" action — phase 3), not read from status. A Rejected
+    // response (unsupported / structurally-invalid target) is surfaced distinctly from other control failures.
+    fun moveToAsync(target: ObjectLocation) {
+        cancelSlowLoop()
+        val logicRunId = clientLogicState.logicStatus?.active?.id
+            ?: return
+
+        clientLogicState = clientLogicState.copy(
+            pending = ClientLogicState.Pending.Step,
+            controlError = null)
+        publish()
+
+        async {
+            delay(1)
+            val response = restClient.logicMoveTo(logicRunId, target)
+
+            clientLogicState = clientLogicState.copy(
+                pending = ClientLogicState.Pending.None)
+
+            if (response != LogicRunResponse.Submitted) {
+                clientLogicState = clientLogicState.copy(
+                    controlError =
+                        if (response == LogicRunResponse.Rejected) "Can't move to this step"
+                        else "Unable to move")
+            }
+            else {
+                delay(10)
+                lookupStatus()
+                scheduleRefresh()
+            }
+
+            publish()
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     // "Slow motion" run: the browser auto-issues Step with a fixed dwell, so each step's result is
     // visible before the next. Pure client pacing over a normal stepped run — nothing server-side.
     //

@@ -30,6 +30,13 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableId
  * definition (a carried iterator whose items producer the edit changed) keeps its pre-edit course until its
  * natural end, which interactive development prefers over re-running completed side effects. All of this is
  * in-memory within one JVM run, like the rest of the migration state.
+ *
+ * COALESCING (move-to, execution-control phase 2): [completedOutcomes] records a completed CONTAINER (an If, a
+ * loop) as one entry, WITHOUT re-inserting its branch contents — so after any migrate / jump, the individual
+ * outcomes of a completed branch's steps are gone. A later move-to jump back INTO such a branch therefore
+ * treats its value-less pre-target steps as skipped (they had run; their values are no longer carried); a
+ * reference to one error-parks the referencing step (the decided runtime policy — [ScriptRunContext.referencedValue]).
+ * Jumping to the earliest needed step instead re-runs everything. Accepted v1 behaviour.
  */
 data class ScriptMigrationState(
     val completedOutcomes: Map<ObjectStableId, Any?>,

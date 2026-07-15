@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.exec.script
 
+import tech.kzen.auto.common.objects.document.script.model.ScriptJumpAnalysis
 import tech.kzen.auto.common.objects.document.script.model.ScriptTree
 import tech.kzen.auto.common.objects.document.script.model.ScriptValidation
 import tech.kzen.auto.common.objects.document.script.model.StepTrace
@@ -45,6 +46,13 @@ import tech.kzen.lib.common.util.ExceptionUtils
  * [restoredCarries], via [recordCarry] / [restoredCarry]) so it can resume where it left off — a loop at its
  * current iteration. See [ScriptMigrationState] for the carried shape and its bounds.
  *
+ * MOVE-TO (Set Next Statement, execution-control phase 2): a migration may carry a jump target
+ * ([Execution.moveTarget]); [restore] then performs outcome-set surgery instead of a plain restore (drop the
+ * target and everything at/after it, mark the pre-target skips value-less, run the descend ancestors with their
+ * checkpoint suppressed), so the rebuilt paused spine re-runs from / skips to the target and parks there. The
+ * surgery is computed by the notation-driven [ScriptJumpAnalysis]; the jump shares the migrate barrier, so an
+ * edit-then-jump takes both in one rebuild.
+ *
  * CONTROL FLOW: a step may raise a [ScriptControlSignal] (continue / break / return) via [raiseControlSignal];
  * the spine ([runSteps]) short-circuits on it and a loop ([consumeLoopSignal]) or the root
  * ([consumeRootSignalOrFail]) consumes it within the SAME engine release — so a signal is never captured by
@@ -75,6 +83,14 @@ class ScriptRunContext(
     // The predecessor run's completed outcomes, seeded by [restore] across a live edit; consulted by the spine to
     // replay-short-circuit and pruned by a re-running loop ([dropReplay]). Empty on a fresh (non-migration) run.
     private val restoredOutcomes = HashMap<ObjectStableId, Any?>()
+
+    // Move-to (Set Next Statement) surgery, seeded by [restore] when the migration carried a jump target: steps
+    // the rebuilt spine short-circuits with NO value ([skippedSteps] — forward-skipped over; a later reference
+    // to one error-parks via [referencedValue]) and the jump target's ancestor containers, which the spine runs
+    // (re-evaluating an If's condition) but does NOT park at ([descendSteps]), so the paused rebuild parks at the
+    // target rather than the ancestor's boundary. Both empty on an ordinary run / edit-migrate.
+    private val skippedSteps = HashSet<ObjectStableId>()
+    private val descendSteps = HashSet<ObjectStableId>()
 
     // Opaque per-step mid-flight migration sub-state ([StepExecution.recordCarry]) — a loop's iteration cursor —
     // carried alongside [completedOutcomes]: [carryStates] is the live capture source, [restoredCarries] the
@@ -247,6 +263,14 @@ class ScriptRunContext(
         for (stepLocation in steps) {
             val stableId = objectStableMapper.objectStableId(stepLocation)
 
+            // Move-to (Set Next Statement) forward-skip: the rebuilt spine walked past this step to reach a later
+            // target, so it produces NO value (a later reference to it error-parks via [referencedValue]) — no
+            // checkpoint, no outcome. `last` is left untouched (a skipped step contributes nothing).
+            if (stableId in skippedSteps) {
+                emitStepTrace(stableId, StepTrace.State.Skipped, NullExecutionValue)
+                continue
+            }
+
             // Live-edit replay (logic-spec §5): a step that completed in the pre-edit run re-adopts its outcome
             // without re-executing — no "next to run" highlight, no checkpoint boundary, no work.
             if (restoredOutcomes.containsKey(stableId)) {
@@ -255,7 +279,14 @@ class ScriptRunContext(
             }
 
             val step = scriptStepAt(stepLocation)
-            execution.checkpoint(stableId)
+
+            // Move-to descend: an ancestor of the jump target runs (an If re-evaluates its condition) but its
+            // checkpoint is suppressed (claim-once), so the paused rebuild parks at the target inside its branch,
+            // not at the ancestor's own boundary. Ordinary steps always take the boundary.
+            val suppressBoundary = descendSteps.remove(stableId)
+            if (! suppressBoundary) {
+                execution.checkpoint(stableId)
+            }
 
             // Track this step as the current one so its [traceDetail] (a screenshot) and [traceNote] attribute
             // to it and carry into its Done / Error trace; saved / restored so a nested branch it runs doesn't
@@ -381,11 +412,76 @@ class ScriptRunContext(
     }
 
 
-    /** Seed the carried-over completed work from the predecessor run's capture (read once at run start). */
-    fun restore(state: ScriptMigrationState) {
-        restoredOutcomes.putAll(state.completedOutcomes)
-        restoredCarries.putAll(state.stepCarry)
+    /**
+     * Seed the carried-over completed work from the predecessor run's capture (read once at run start).
+     *
+     * When the migration barrier carried a move-to [moveTarget] (Set Next Statement) that resolves to a valid
+     * jump in the current [ScriptTree] ([jumpPlanFor]), apply outcome-set surgery instead of a plain restore:
+     * drop the target and everything at/after it in document order, plus the descend ancestors (an enclosing
+     * If) — so the rebuilt paused spine re-runs from (backward) or skips to (forward) the target and parks there.
+     * Steps the walk visits before the target but keeps no outcome for become [skippedSteps] (value-less); the
+     * ancestors become [descendSteps] (run, checkpoint suppressed). An unsupported / unresolvable [moveTarget]
+     * falls back to a full restore — the engine ignore-contract (the controller's `canMoveTo` gate normally
+     * makes that unreachable). The carried [result] is kept (decision 11); a Result at/after the target re-runs.
+     */
+    fun restore(state: ScriptMigrationState, moveTarget: ObjectStableId?) {
+        val plan = moveTarget?.let { jumpPlanFor(it) }
+        if (plan == null) {
+            restoredOutcomes.putAll(state.completedOutcomes)
+            restoredCarries.putAll(state.stepCarry)
+            resultValue = state.result
+            return
+        }
+
+        val documentPath = structure.scriptLocation.documentPath
+        val dropStableIds = plan.dropSet.mapTo(HashSet()) {
+            objectStableMapper.objectStableId(ObjectLocation(documentPath, it))
+        }
+
+        for ((stableId, value) in state.completedOutcomes) {
+            if (stableId !in dropStableIds) {
+                restoredOutcomes[stableId] = value
+            }
+        }
+        for ((stableId, carry) in state.stepCarry) {
+            // A dropped loop restarts at iteration 0, so its stale cursor must not carry (else it would resume
+            // mid-iteration instead of restarting).
+            if (stableId !in dropStableIds) {
+                restoredCarries[stableId] = carry
+            }
+        }
         resultValue = state.result
+
+        for (ancestor in plan.ancestors) {
+            descendSteps.add(objectStableMapper.objectStableId(ObjectLocation(documentPath, ancestor)))
+        }
+        for (preceding in plan.precedingOnPath) {
+            val stableId = objectStableMapper.objectStableId(ObjectLocation(documentPath, preceding))
+            if (stableId !in restoredOutcomes) {
+                skippedSteps.add(stableId)
+            }
+        }
+
+        // Reset the dropped steps' stale displays: the rebuilt spine parks at the target and never re-walks to
+        // them, so their old Done / Error traces would otherwise linger. (Skipped steps get their Skipped trace
+        // from the spine when the walk reaches them; the target repaints Running at its checkpoint.)
+        for (stableId in dropStableIds) {
+            emitStepTrace(stableId, StepTrace.State.Idle, NullExecutionValue)
+        }
+    }
+
+
+    // Resolve a move-to target stable id against the CURRENT structure to a valid [ScriptJumpAnalysis.ScriptJumpPlan],
+    // or null when it does not resolve to a jumpable step in this Script's root document (the ignore-contract).
+    private fun jumpPlanFor(moveTarget: ObjectStableId): ScriptJumpAnalysis.ScriptJumpPlan? {
+        val targetLocation = objectStableMapper.objectLocationOrNull(moveTarget)
+            ?: return null
+        if (targetLocation.documentPath != structure.scriptLocation.documentPath) {
+            return null
+        }
+        return ScriptJumpAnalysis
+            .plan(structure.graphNotation, targetLocation.documentPath, structure.scriptTree, targetLocation.objectPath)
+            .takeIf { it.valid }
     }
 
 

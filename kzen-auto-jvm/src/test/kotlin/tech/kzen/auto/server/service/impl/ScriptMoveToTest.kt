@@ -1,0 +1,246 @@
+package tech.kzen.auto.server.service.impl
+
+import org.junit.After
+import org.junit.Before
+import org.junit.Test
+import tech.kzen.auto.server.context.KzenAutoContext
+import tech.kzen.auto.server.exec.script.test.CountingStep
+import tech.kzen.auto.server.exec.script.test.ScriptStepTestModule
+import tech.kzen.auto.server.util.AutoTestUtils
+import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
+import tech.kzen.lib.common.exec.logic.run.model.LogicRunResponse
+import tech.kzen.lib.common.exec.logic.run.model.LogicRunState
+import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
+import tech.kzen.lib.common.model.document.DocumentPath
+import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.model.obj.ObjectPath
+import kotlin.test.assertEquals
+import kotlin.test.fail
+
+
+/**
+ * End-to-end move-to (Set Next Statement) coverage (execution-control phase XC2) driven through the real
+ * [ServerLogicController] + [tech.kzen.lib.server.exec.engine.RunEngine]: backward re-run, forward skip (and the
+ * value backstop), the no-op frontier jump, jump after terminal, a loop-step restart, a loop-body rejection, and
+ * an If-branch descend. Each fixture uses the test-only [CountingStep] so re-execution is observable via the
+ * process-global count; the suite resets it per test and relies on sequential execution (as the sibling
+ * static-fixture engine tests do).
+ */
+class ScriptMoveToTest {
+    //-----------------------------------------------------------------------------------------------------------------
+    private val linearPath = DocumentPath.parse("test/script-moveto-test.yaml")
+    private val backstopPath = DocumentPath.parse("test/script-moveto-backstop-test.yaml")
+    private val loopPath = DocumentPath.parse("test/script-moveto-loop-test.yaml")
+    private val ifPath = DocumentPath.parse("test/script-moveto-if-test.yaml")
+
+    private lateinit var context: KzenAutoContext
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    @Before
+    fun setUp() {
+        ScriptStepTestModule.register()
+        CountingStep.reset()
+        context = KzenAutoContext.forTest()
+    }
+
+
+    @After
+    fun tearDown() {
+        if (::context.isInitialized) {
+            context.close()
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    @Test
+    fun backwardJumpReRunsFromTarget() {
+        val runId = startPaused(linearPath)      // before A
+        step(runId)                              // A, before B
+        step(runId)                              // B, before C
+        step(runId)                              // C, before D
+        assertEquals(3, CountingStep.count.get())
+
+        assertEquals(LogicRunResponse.Submitted, moveTo(runId, linearPath, "main.steps/B"))
+        awaitState(LogicRunState.Paused)
+        assertNextToRun(runId, ObjectLocation(linearPath, ObjectPath.parse("main.steps/B")))
+        assertEquals(3, CountingStep.count.get())   // the jump itself runs nothing
+
+        resume(runId)
+        awaitDone()
+        assertEquals(6, CountingStep.count.get())   // B, C, D re-ran; A (kept) did not
+    }
+
+
+    @Test
+    fun forwardJumpSkipsInterveningSteps() {
+        val runId = startPaused(linearPath)      // before A
+        step(runId)                              // A, before B
+        assertEquals(1, CountingStep.count.get())
+
+        assertEquals(LogicRunResponse.Submitted, moveTo(runId, linearPath, "main.steps/D"))
+        awaitState(LogicRunState.Paused)
+        assertNextToRun(runId, ObjectLocation(linearPath, ObjectPath.parse("main.steps/D")))
+        assertEquals(1, CountingStep.count.get())   // B, C skipped (not run)
+
+        resume(runId)
+        awaitDone()
+        assertEquals(2, CountingStep.count.get())   // only A and D ran
+    }
+
+
+    @Test
+    fun noOpJumpToTheFrontierRunsNothing() {
+        val runId = startPaused(linearPath)      // parked before A (the frontier)
+        assertEquals(LogicRunResponse.Submitted, moveTo(runId, linearPath, "main.steps/A"))
+        assertNextToRun(runId, ObjectLocation(linearPath, ObjectPath.parse("main.steps/A")))
+        assertEquals(0, CountingStep.count.get())
+    }
+
+
+    @Test
+    fun jumpAfterTerminalReturnsNotFound() {
+        val runId = startPaused(linearPath)
+        resume(runId)
+        awaitDone()
+        assertEquals(LogicRunResponse.NotFound, moveTo(runId, linearPath, "main.steps/A"))
+    }
+
+
+    @Test
+    fun forwardJumpPastAReferencedStepErrorParks() {
+        val runId = startPaused(backstopPath, pauseOnError = true)   // before A
+        step(runId)                              // A, before B
+
+        // Skip B (value-less), park before C; C references B, so on resume it hits the "No value produced"
+        // backstop and error-parks (decision 2). awaitState fails the test if ErrorPaused is never reached.
+        assertEquals(LogicRunResponse.Submitted, moveTo(runId, backstopPath, "main.steps/C"))
+        awaitState(LogicRunState.Paused)
+        resume(runId)
+        awaitState(LogicRunState.ErrorPaused)
+    }
+
+
+    @Test
+    fun loopBodyTargetIsRejected() {
+        val runId = startPaused(loopPath)        // before Range
+        assertEquals(
+            LogicRunResponse.Rejected,
+            moveTo(runId, loopPath, "main.steps/Loop.steps/Body"))
+    }
+
+
+    @Test
+    fun jumpToLoopStepRestartsIt() {
+        val runId = startPaused(loopPath)        // before Range
+        step(runId)                              // Range, before Loop
+        stepOver(runId)                          // enter loop, before Body iteration 1
+        stepOver(runId)                          // before Body iteration 2 (iter 1 body ran)
+        stepOver(runId)                          // before Body iteration 3 (iter 2 body ran)
+        stepOver(runId)                          // loop done, before Total (iter 3 body ran)
+        assertEquals(3, CountingStep.count.get())
+
+        assertEquals(LogicRunResponse.Submitted, moveTo(runId, loopPath, "main.steps/Loop"))
+        awaitState(LogicRunState.Paused)
+        assertNextToRun(runId, ObjectLocation(loopPath, ObjectPath.parse("main.steps/Loop")))
+        assertEquals(3, CountingStep.count.get())
+
+        resume(runId)
+        awaitDone()
+        assertEquals(6, CountingStep.count.get())   // the loop restarted at iteration 0: 3 more body runs
+    }
+
+
+    @Test
+    fun jumpIntoAnIfBranchDescendsAndParks() {
+        val runId = startPaused(ifPath)          // before Flag
+        step(runId)                              // Flag, before Gate
+        step(runId)                              // into Gate (condition true), before T1
+        step(runId)                              // T1, before T2
+        step(runId)                              // T2, before After (Gate completes)
+        assertEquals(2, CountingStep.count.get())
+
+        // Backward into the If branch: Gate re-runs its condition (descend, checkpoint suppressed), T1 is
+        // adopted (kept), and the run parks at T2 — nothing re-executes yet.
+        assertEquals(LogicRunResponse.Submitted, moveTo(runId, ifPath, "main.steps/Gate.then/T2"))
+        awaitState(LogicRunState.Paused)
+        assertNextToRun(runId, ObjectLocation(ifPath, ObjectPath.parse("main.steps/Gate.then/T2")))
+        assertEquals(2, CountingStep.count.get())
+
+        resume(runId)
+        awaitDone()
+        assertEquals(3, CountingStep.count.get())   // only T2 re-ran; T1 (kept) did not
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private val snapshot: GraphDefinitionAttempt
+        get() = AutoTestUtils.graphDefinitionAttempt(AutoTestUtils.readNotation())
+
+
+    private fun startPaused(documentPath: DocumentPath, pauseOnError: Boolean = false): LogicRunId {
+        val controller = context.serverLogicController
+        val main = ObjectLocation(documentPath, ObjectPath.parse("main"))
+        val runId = controller.start(main, snapshot, pauseOnError)
+            ?: fail("Unable to start run")
+        // Pause-at-entry: the run was created but never set running, so pause() lands paused immediately.
+        controller.pause(runId)
+        awaitState(LogicRunState.Paused)
+        return runId
+    }
+
+
+    private fun step(runId: LogicRunId) {
+        context.serverLogicController.step(runId, snapshot)
+        awaitState(LogicRunState.Paused)
+    }
+
+
+    private fun stepOver(runId: LogicRunId) {
+        context.serverLogicController.stepOver(runId, snapshot)
+        awaitState(LogicRunState.Paused)
+    }
+
+
+    private fun resume(runId: LogicRunId) {
+        context.serverLogicController.continueOrStart(runId, snapshot)
+    }
+
+
+    private fun moveTo(runId: LogicRunId, documentPath: DocumentPath, objectPath: String): LogicRunResponse {
+        return context.serverLogicController.moveTo(
+            runId, ObjectLocation(documentPath, ObjectPath.parse(objectPath)), snapshot)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun assertNextToRun(runId: LogicRunId, expected: ObjectLocation) {
+        val active = context.serverLogicController.status().active
+            ?: fail("Run is not active")
+        assertEquals(runId, active.id)
+        assertEquals(expected, active.frame.position, "next to run")
+    }
+
+
+    private fun awaitState(state: LogicRunState) {
+        for (attempt in 0 until 500) {
+            if (context.serverLogicController.status().active?.state == state) {
+                return
+            }
+            Thread.sleep(10)
+        }
+        fail("Run did not reach $state (was ${context.serverLogicController.status().active?.state})")
+    }
+
+
+    private fun awaitDone() {
+        for (attempt in 0 until 500) {
+            if (context.serverLogicController.status().active == null) {
+                return
+            }
+            Thread.sleep(10)
+        }
+        fail("Run did not complete")
+    }
+}

@@ -64,6 +64,24 @@ The four paradigms:
 > (kzen-auto-common) — a third-party loop step opts into loop semantics declaratively, no shared-code
 > edit. (execution-control plan phase XC4.)
 
+> **Script move-to / Set Next Statement (2026-07-14).** A settled (paused or **error-parked**) Script run
+> can be repositioned to a target step **without executing the intervening steps** — backward = re-run from
+> the target, forward = skip over — via `ServerLogicController.moveTo` / `/logic/moveTo`. It is realised as a
+> **self-migration**: the engine carries the target as an opaque one-shot `Execution.moveTarget` through the
+> `RunEngine.migrate` barrier (kzen-lib `Repositionable`, execution-control phase XC1), and Script interprets
+> it at restore time where the outcome maps live — **no engine `when` over flavours** (a non-`Repositionable`
+> Logic ignores the target and rebuilds at its existing frontier). `ScriptRunContext.restore` performs
+> **outcome-set surgery** computed by the notation-driven `ScriptJumpAnalysis` (kzen-auto-common, layered on
+> `ScriptNestingAnalysis`): the target and everything at/after it drop from the carried capture (so a jump to
+> a loop step restarts it at iteration 0), the value-less pre-target steps become a **skip set**
+> (short-circuited with no value and a new `StepTrace.State.Skipped`; a later reference to one error-parks via
+> the existing `referencedValue` "No value produced" backstop), and the descend **ancestors** (an enclosing
+> `IfStep`) run — re-evaluating their condition — with their `checkpoint` suppressed, so the paused rebuild
+> parks at the target rather than the ancestor's boundary. A jump always recompiles from the current notation
+> and shares the migrate barrier (an edit-then-jump takes both in one rebuild). **Loop bodies are out of scope
+> v1**: a target inside a `rerun` branch is rejected (`canMoveTo` → `LogicRunResponse.Rejected`); a jump to
+> the loop step itself is allowed. (execution-control plan phase XC2; the client arrow affordance is XC3.)
+
 ## 2. Client-server graph synchronization
 
 The browser holds a **mirror** of the server's notation graph, applies edits locally for instant UI feedback, and replays the same `NotationCommand` to the server over REST. CQRS means both sides converge by applying identical commands.
@@ -111,7 +129,7 @@ Routes are declared in `KzenAutoMain.kt` (`routeNotationQuery`, `routeNotationCo
 | Notation commands | `/command/...` | `/command/document/create`, `/command/object/add`, `/command/attribute/upsert`, `/command/refactor/rename`, `/command/resource/add` | CQRS commands against the notation graph |
 | Detached | `/action/...` | `/action/detached`, `/action/download` | Detached-paradigm one-shot actions; `/action/download` returns a file body with `Content-Disposition` |
 | Task | `/task/...` | `/task/submit`, `/task/query`, `/task/cancel`, `/task/lookup` | Long-running background jobs (Task paradigm) |
-| Logic | `/logic/...` | `/logic/status`, `/logic/startRun`, `/logic/startStep`, `/logic/run`, `/logic/step`, `/logic/stepOver`, `/logic/stepOut`, `/logic/pause`, `/logic/cancel`, `/logic/request`, `/logic/breakpoints` | Step / step-over / step-out / pause / resume of a logic-paradigm run (Script **and Flow**); `/logic/breakpoints` replace-sets the run's breakpoint elements (repeated `breakpoint` params, each a full `ObjectLocation`; the same params ride `/logic/startRun` / `/logic/startStep` so start-time breakpoints can't miss early steps) |
+| Logic | `/logic/...` | `/logic/status`, `/logic/startRun`, `/logic/startStep`, `/logic/run`, `/logic/step`, `/logic/stepOver`, `/logic/stepOut`, `/logic/moveTo`, `/logic/pause`, `/logic/cancel`, `/logic/request`, `/logic/breakpoints` | Step / step-over / step-out / move-to / pause / resume of a logic-paradigm run (Script **and Flow**); `/logic/breakpoints` replace-sets the run's breakpoint elements (repeated `breakpoint` params, each a full `ObjectLocation`; the same params ride `/logic/startRun` / `/logic/startStep` so start-time breakpoints can't miss early steps); `/logic/moveTo` (Script only) repositions a settled run's pointer to a target step (`path` + `object`) without executing the intervening steps — see the Script move-to note in § 1 — returning `Rejected` for an unsupported target |
 
 Most endpoints are GET (idempotent commands carry their payload in the query string); large or text-heavy command bodies — notation upserts, list inserts, multi-value updates — also have PUT variants taking form parameters. There are no WebSocket or SSE channels.
 

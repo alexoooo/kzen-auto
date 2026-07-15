@@ -1,0 +1,17 @@
+# Linear move-to (Set Next Statement) fixture (ScriptMoveToTest): four side-effect CountingSteps in sequence, so
+# backward re-run and forward skip are observable via the process-global count (no cross-references, so jumps are
+# clean — no value backstop). A ResultStep captures the last step's value for the no-op / terminal assertions.
+main:
+  is: Script
+
+main.steps/A:
+  is: CountingStep
+
+main.steps/B:
+  is: CountingStep
+
+main.steps/C:
+  is: CountingStep
+
+main.steps/D:
+  is: CountingStep

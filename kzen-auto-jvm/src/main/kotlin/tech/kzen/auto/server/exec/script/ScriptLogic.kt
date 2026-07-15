@@ -1,10 +1,13 @@
 package tech.kzen.auto.server.exec.script
 
+import tech.kzen.auto.common.objects.document.script.model.ScriptJumpAnalysis
 import tech.kzen.lib.common.exec.engine.Execution
 import tech.kzen.lib.common.exec.engine.Logic
 import tech.kzen.lib.common.exec.engine.LogicSignature
+import tech.kzen.lib.common.exec.engine.Repositionable
 import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.service.store.normal.ObjectStableId
 
 
 /**
@@ -22,9 +25,26 @@ class ScriptLogic(
     private val parameters: List<ScriptParameter>,
     private val structure: ScriptRunStructure,
     private val logicSignature: LogicSignature
-): Logic {
+): Logic, Repositionable {
     override fun signature(): LogicSignature {
         return logicSignature
+    }
+
+
+    /**
+     * A move-to (Set Next Statement) target is jumpable iff it resolves to a step in this Script's root document
+     * that [ScriptJumpAnalysis] accepts (a real step, not a binding, not inside a loop body). Static structural
+     * check only — the controller gates on this before rebuilding, so an unsupported target is rejected without
+     * tearing the run down.
+     */
+    override fun canMoveTo(target: ObjectStableId): Boolean {
+        val targetLocation = structure.objectStableMapper.objectLocationOrNull(target)
+            ?: return false
+        if (targetLocation.documentPath != structure.scriptLocation.documentPath) {
+            return false
+        }
+        return ScriptJumpAnalysis.isValidTarget(
+            structure.graphNotation, targetLocation.documentPath, structure.scriptTree, targetLocation.objectPath)
     }
 
 
@@ -33,8 +53,9 @@ class ScriptLogic(
 
         // Live-edit migration (logic-spec §5): adopt the predecessor run's completed work (read once at start) so
         // the spine replays-short-circuits completed steps, and register the capture so a later edit carries this
-        // run's completed work forward. Null on a fresh run -> nothing to adopt, everything runs live.
-        (execution.restored as? ScriptMigrationState)?.let { context.restore(it) }
+        // run's completed work forward. Null on a fresh run -> nothing to adopt, everything runs live. A migration
+        // may also carry a move-to target (Set Next Statement); restore applies the jump surgery when it does.
+        (execution.restored as? ScriptMigrationState)?.let { context.restore(it, execution.moveTarget) }
         execution.onCapture { context.captureState() }
 
         for (parameter in parameters) {

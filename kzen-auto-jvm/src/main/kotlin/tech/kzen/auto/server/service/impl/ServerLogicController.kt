@@ -19,6 +19,7 @@ import tech.kzen.lib.common.exec.engine.NodeId
 import tech.kzen.lib.common.exec.engine.NodeStatus
 import tech.kzen.lib.common.exec.engine.Outcome
 import tech.kzen.lib.common.exec.engine.PauseReason
+import tech.kzen.lib.common.exec.engine.Repositionable
 import tech.kzen.lib.common.exec.engine.StepMode
 import tech.kzen.lib.common.exec.engine.TraceReset
 import tech.kzen.lib.common.exec.logic.run.LogicController
@@ -547,6 +548,80 @@ class ServerLogicController(
         snapshotGraphDefinitionAttempt: GraphDefinitionAttempt?
     ): LogicRunResponse {
         return drive(runId, StepMode.Out, snapshotGraphDefinitionAttempt)
+    }
+
+
+    /**
+     * Move-to (Set Next Statement): reposition a settled run's pointer to [target] without executing the
+     * intervening steps — backward = re-run from the target, forward = skip over. Realised as a self-migration
+     * carrying the target through the engine barrier (execution-control phase 2); only a [Repositionable] root
+     * Logic whose structure resolves the target honours it. Unlike step / resume, a jump ALWAYS recompiles from
+     * the current notation (a jump is itself a migrate — it shares the barrier with any concurrent edit, so an
+     * edit-then-jump takes both in one rebuild) and is refusable: an unsupported / structurally-invalid target,
+     * or a recompile failure, returns [LogicRunResponse.Rejected] with the run left untouched. Allowed while
+     * paused OR error-parked (jumping PAST a failing step is a headline use case); rejected while running.
+     */
+    @Synchronized
+    fun moveTo(
+        runId: LogicRunId,
+        target: ObjectLocation,
+        snapshotGraphDefinitionAttempt: GraphDefinitionAttempt? = null
+    ): LogicRunResponse {
+        val state = stateOrNull
+            ?: return LogicRunResponse.NotFound
+
+        if (state.runId != runId) {
+            return LogicRunResponse.RunIdMismatch
+        }
+
+        check(!state.running && !state.stepping) { "Can't move, already running" }
+        check(!state.cancelRequested) { "Can't move, cancel already requested" }
+        check(state.launched) { "Can't move an unlaunched run" }
+
+        val targetId = objectStableMapper.objectStableId(target)
+
+        // No-op guard: already parked at the target — a rebuild is not free and is lossy (the coalescing note).
+        val rootNode = state.engine.snapshot().root
+        if (rootNode.status is NodeStatus.Suspended && rootNode.position == targetId) {
+            return LogicRunResponse.Submitted
+        }
+
+        // A jump ALWAYS recompiles from the current notation (decision 10), updating the closure baseline like
+        // pendingMigration — so an edit-then-jump takes both in one rebuild. A recompile failure is refusable
+        // (unlike pendingMigration's keep-running fallback): return Rejected, run untouched (nothing torn down).
+        val logic = try {
+            val attempt = graphDefinitionAttempt(snapshotGraphDefinitionAttempt)
+            val editedDigest = LinkedLogicDocuments.transitiveDigest(
+                attempt.transitiveSuccessful, attempt.graphStructure, state.rootLocation.documentPath)
+            val compiled = compileLogic(state.rootLocation, attempt, state.runExecutionId)
+            state.baselineClosureDigest = editedDigest
+            editDirty = false
+            compiled
+        }
+        catch (e: Throwable) {
+            logger.warn("Unable to recompile for move-to, keeping prior definition: {}", state.rootLocation, e)
+            return LogicRunResponse.Rejected
+        }
+
+        // Capability gate: reject an unsupported flavour or a structurally-invalid target (loop body / binding /
+        // unknown id) BEFORE the executor tears anything down — the run keeps its current state.
+        if (logic !is Repositionable || ! logic.canMoveTo(targetId)) {
+            return LogicRunResponse.Rejected
+        }
+
+        state.pauseRequested = false
+        state.stepping = true
+
+        executor.execute {
+            state.engine.awaitQuiescent()
+            state.engine.migrate(logic, paused = true, moveTarget = targetId)
+            state.engine.awaitQuiescent()
+            synchronized(this@ServerLogicController) {
+                settleAfterDrive(state)
+            }
+        }
+
+        return LogicRunResponse.Submitted
     }
 
 
