@@ -24,9 +24,9 @@ import kotlin.test.fail
 /**
  * Integration coverage for [ServerLogicController] running a Script on the new
  * [tech.kzen.lib.server.exec.engine.RunEngine]: the control surface (start / continueOrStart / step) drives
- * the engine end-to-end, [ServerLogicController.status] reflects the engine snapshot, and the engine's emitted
- * trace events are bridged back into the [tech.kzen.lib.server.exec.logic.trace.LogicTraceStore] the client
- * reads.
+ * the engine end-to-end, [ServerLogicController.status] reflects the engine snapshot, and the trace values the
+ * client reads are served by projecting the engine at query time
+ * ([tech.kzen.auto.server.exec.RunEngineLogicTrace]).
  */
 class ServerLogicControllerTest {
     //-----------------------------------------------------------------------------------------------------------------
@@ -67,7 +67,7 @@ class ServerLogicControllerTest {
 
         // The Result step's value (Loop.sum() == 12) reached the trace store via the engine -> trace bridge,
         // shaped as a StepTrace exactly as the client expects (Done state + display value).
-        val traceSnapshot = context.logicTraceStore.lookupRun(runId, LogicTraceQuery(LogicTracePath.root))
+        val traceSnapshot = context.logicTrace.lookupRun(runId, LogicTraceQuery(LogicTracePath.root))
             ?: fail("No run trace")
         val resultStableId = context.objectStableMapper.objectStableId(foreachResult)
         val resultEntry = traceSnapshot.values[LogicTracePath.ofObjectStableId(resultStableId)]
@@ -141,7 +141,7 @@ class ServerLogicControllerTest {
         controller.continueOrStart(runId, snapshot)
         awaitDone()
 
-        val traceSnapshot = context.logicTraceStore.lookupRun(runId, LogicTraceQuery(LogicTracePath.root))
+        val traceSnapshot = context.logicTrace.lookupRun(runId, LogicTraceQuery(LogicTracePath.root))
             ?: fail("No run trace")
         val resultStableId = context.objectStableMapper.objectStableId(waitResult)
         val resultEntry = traceSnapshot.values[LogicTracePath.ofObjectStableId(resultStableId)]

@@ -23,10 +23,12 @@ import kotlin.test.fail
  *
  * The bug this guards: a Job's Workers are each hosted as their OWN engine node (registering their own stable id
  * in the trace history), but the Job ROOT (`main`) only HOSTS them and emits no trace event of its own — unlike a
- * Script / Flow root, whose per-element emits self-register it. So `LogicTraceStore.mostRecent(main)` returned
+ * Script / Flow root, whose per-element emits self-register it. So `mostRecent(main)` returned
  * null and [tech.kzen.auto.client.objects.document.job.JobProgressStore.fetchWorkerProgress] bailed on its very
  * first line, hiding ALL live worker progress (an empty Preview) even though the progress was correctly in the
- * trace. The assertions mirror that read path: mostRecent(main) must resolve the run, and lookupRun(runId) at the
+ * trace. (The engine-served view resolves this structurally now — the run's root node exists from engine
+ * construction, so mostRecent(main) resolves it before any emit.) The assertions mirror that read path:
+ * mostRecent(main) must resolve the run, and lookupRun(runId) at the
  * Preview's [JobConventions.workerProgressPath] must carry the live sample.
  */
 class JobFormulaPreviewReproTest {
@@ -59,12 +61,12 @@ class JobFormulaPreviewReproTest {
 
         // JobProgressStore.fetchWorkerProgress FIRST resolves the run via mostRecent(main); a null here is the bug
         // (the Preview never even fetches its worker progress).
-        val recent = context.logicTraceStore.mostRecent(jobLocation)
+        val recent = context.logicTrace.mostRecent(jobLocation)
         assertNotNull(recent, "the JS resolves the run via mostRecent(main); null => the Preview never fetches")
         assertEquals(runId, recent.logicRunId, "mostRecent resolves to THIS run")
 
         // Then it reads the Preview's live sample from the whole-run snapshot at the worker-progress path.
-        val snapshot = context.logicTraceStore.lookupRun(recent.logicRunId, LogicTraceQuery(LogicTracePath.root))
+        val snapshot = context.logicTrace.lookupRun(recent.logicRunId, LogicTraceQuery(LogicTracePath.root))
             ?: fail("run snapshot not found")
         val progressPath = JobConventions.workerProgressPath(
             context.objectStableMapper.objectStableId(previewLocation))

@@ -6,13 +6,12 @@ import tech.kzen.auto.common.paradigm.flow.service.format.FlowMessageInspector
 import tech.kzen.auto.common.paradigm.logic.LogicConventions
 import tech.kzen.auto.server.exec.LogicCompiler
 import tech.kzen.auto.server.exec.LogicCompilerServices
-import tech.kzen.auto.server.exec.LogicTraceAddressRouting
+import tech.kzen.auto.server.exec.RunTraceAccess
 import tech.kzen.auto.server.objects.job.service.JobWorkPool
 import tech.kzen.auto.server.objects.script.ScriptValidationCache
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionResult
-import tech.kzen.lib.common.exec.engine.Address
 import tech.kzen.lib.common.exec.engine.Logic
 import tech.kzen.lib.common.exec.engine.Node
 import tech.kzen.lib.common.exec.engine.NodeId
@@ -21,7 +20,6 @@ import tech.kzen.lib.common.exec.engine.Outcome
 import tech.kzen.lib.common.exec.engine.PauseReason
 import tech.kzen.lib.common.exec.engine.Repositionable
 import tech.kzen.lib.common.exec.engine.StepMode
-import tech.kzen.lib.common.exec.engine.TraceReset
 import tech.kzen.lib.common.exec.logic.run.LogicController
 import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
@@ -31,8 +29,6 @@ import tech.kzen.lib.common.exec.logic.run.model.LogicRunFrameInfo
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunResponse
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunState
 import tech.kzen.lib.common.exec.logic.run.model.LogicStatus
-import tech.kzen.lib.common.exec.logic.trace.LogicTraceHandle
-import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
@@ -40,11 +36,9 @@ import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
 import tech.kzen.lib.common.service.context.environment.GraphEnvironment
 import tech.kzen.lib.common.service.metadata.NotationMetadataReader
 import tech.kzen.lib.common.service.store.LocalGraphStore
-import tech.kzen.lib.common.service.store.normal.ObjectStableId
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import tech.kzen.lib.common.util.digest.Digest
 import tech.kzen.lib.server.exec.engine.RunEngine
-import tech.kzen.lib.server.exec.logic.trace.LogicTraceStore
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.time.Clock
@@ -54,14 +48,17 @@ import kotlin.time.Clock
  * Drives a single run on the new single-writer [RunEngine] (logic-spec greenfield core), while keeping the
  * existing [LogicController] REST contract intact so the client (status / start / run / step / pause / cancel)
  * is unchanged. The root document is translated to an engine [tech.kzen.lib.common.exec.engine.Logic] by
- * [LogicCompiler]; the engine's emitted trace events are bridged back into the existing [LogicTraceStore] so
- * the per-step value display keeps working.
+ * [LogicCompiler]. The engine IS the trace store: this controller no longer mirrors trace events anywhere;
+ * the REST trace surface is served by projecting the run's engine at query time
+ * ([tech.kzen.auto.server.exec.RunEngineLogicTrace], reachable via [retainedTraceAccess]). A settled run's
+ * engine is RETAINED (pools stopped via [RunEngine.shutdown], tree + history kept readable) for post-run
+ * review; the next [start] (or a global clear via [clearRetainedTrace]) disposes it. [status] reports a
+ * settled run as no-active-run.
  *
  * Script, Flow, Job and Report documents all compile onto the engine now (a document of any other type fails to
- * compile → clean 400). The Job port runs its Workers as concurrent confined child nodes; live worker progress
- * is bridged back to the JS Job UI via [tech.kzen.auto.common.objects.document.job.JobConventions.workerProgressPath]
- * (see [mirrorTrace]). A Report runs its
- * record pipeline on the run's root node, bridging input / output progress to its literal trace paths.
+ * compile → clean 400). The Job port runs its Workers as concurrent confined child nodes; a Report runs its
+ * record pipeline on the run's root node — each flavour's per-element / progress values reach the JS UI through
+ * the shared query-time projection, with no per-flavour code here.
  *
  * Run-lifecycle convergence: every control action that releases work (resume / step / cancel) is driven on a
  * single-thread executor that then blocks in [RunEngine.awaitQuiescent] until the run settles at its next
@@ -88,13 +85,11 @@ import kotlin.time.Clock
 class ServerLogicController(
     private val graphStore: LocalGraphStore,
     private val objectStableMapper: ObjectStableMapper,
-    private val logicTraceStore: LogicTraceStore,
     private val cachedKotlinCompiler: CachedKotlinCompiler,
     private val scriptValidationCache: ScriptValidationCache,
     private val flowMessageInspector: FlowMessageInspector,
     private val notationMetadataReader: NotationMetadataReader,
     private val jobWorkPool: JobWorkPool,
-    private val traceAddressRoutings: List<LogicTraceAddressRouting>,
     private val environment: () -> GraphEnvironment
 ):
     LogicController,
@@ -104,12 +99,6 @@ class ServerLogicController(
     companion object {
         private val logger = LoggerFactory.getLogger(ServerLogicController::class.java)
     }
-
-
-    // The per-flavour trace-address routings, indexed by their reserved marker (assembled at the composition
-    // root). mirrorTrace dispatches by marker with a generic stable-id fallback, so this class names no flavour.
-    private val traceAddressRoutingByMarker: Map<String, LogicTraceAddressRouting> =
-        traceAddressRoutings.associateBy { it.marker }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -131,17 +120,12 @@ class ServerLogicController(
         // currently-running notation.
         var baselineClosureDigest: Digest
     ) {
-        // Set once, immediately after construction (the observers reference this state).
-        lateinit var traceBridge: AutoCloseable
-        lateinit var frameBridge: AutoCloseable
-        lateinit var resetBridge: AutoCloseable
-
-        // Per-engine-node trace buffer handles, created lazily on a node's first mirrored event (see
-        // [handleForNode]) and cached for the run. Keying each node's trace by its own node id — the same id
-        // the client addresses a live frame by — is what scopes a re-entered sub-logic to a fresh buffer
-        // instead of ghosting the prior invocation's per-step values. Touched only from the trace bridge,
-        // which is serialized on [bridgeLock].
-        val nodeHandles = HashMap<NodeId, LogicTraceHandle>()
+        // The run reached a terminal outcome and its engine was shut down (pools stopped) but retained —
+        // its node tree + history stay readable for post-run trace queries until the next start() (or a
+        // global clear) disposes it. status() reports a settled state as no-active-run; the control methods
+        // treat it as not-found. An O(1) flag set once at terminal settle, so status() needn't snapshot.
+        @Volatile
+        var settled: Boolean = false
 
         // The engine has been launched (the root coroutine started). A fresh run is created but not launched;
         // the first drive (resume / step) — or a pause-at-entry — launches it.
@@ -162,11 +146,6 @@ class ServerLogicController(
 
         @Volatile
         var cancelRequested: Boolean = false
-
-        // Bridge cursor: the highest engine trace sequence already mirrored into the trace store. Guarded by
-        // [bridgeLock] so concurrent publishes (engine dispatcher threads) mirror each event exactly once.
-        val bridgeLock = Any()
-        var bridgedSequence: Long = 0
     }
 
 
@@ -218,6 +197,12 @@ class ServerLogicController(
         val state = stateOrNull
             ?: return LogicStatus(time, null)
 
+        // A settled (terminal) run is retained only for post-run trace review — report it as no active run,
+        // so the client stops driving it and storage-area eviction (which gates on active == null) runs.
+        if (state.settled) {
+            return LogicStatus(time, null)
+        }
+
         val snapshot = state.engine.snapshot()
 
         val runState =
@@ -257,8 +242,15 @@ class ServerLogicController(
         snapshotGraphDefinitionAttempt: GraphDefinitionAttempt?,
         pauseOnError: Boolean
     ): LogicRunId? {
-        if (stateOrNull != null) {
-            return null
+        val existing = stateOrNull
+        if (existing != null) {
+            if (!existing.settled) {
+                // An active run is in progress — refuse (single-run controller; multi-run is a later phase).
+                return null
+            }
+            // The prior run is retained only for post-run trace review; a fresh run supersedes it — dispose it.
+            // This is what wipes the old trace (replacing the former logicTraceStore.clearAll()).
+            disposeState(existing)
         }
 
         val graphDefinitionAttempt = graphDefinitionAttempt(snapshotGraphDefinitionAttempt)
@@ -286,30 +278,17 @@ class ServerLogicController(
         val engine = RunEngine(logic, rootStableId)
         engine.pauseOnError(pauseOnError)
 
-        // A new run starts from a clean slate: drop every prior run's retained trace (values + the append-only
-        // film-strip) so stale per-step displays don't bleed into this run. Child trace buffers are then created
-        // lazily by the bridge as each node emits (see [handleForNode]); the ROOT's is created eagerly below.
-        logicTraceStore.clearAll()
-
+        // No trace-store clear / bridge wiring / eager root registration needed: the engine IS the trace store
+        // now (served at query time by RunEngineLogicTrace), disposing the prior retained run above wipes the
+        // old trace, and the engine's root node exists from construction — so a Job root (which only HOSTS its
+        // Workers) is discoverable via mostRecent(root) the moment it starts, with no eager registration.
         val state = LogicState(
             runId, runExecutionId, engine, root,
             LinkedLogicDocuments.transitiveDigest(
                 graphDefinitionAttempt.transitiveSuccessful,
                 graphDefinitionAttempt.graphStructure,
                 root.documentPath))
-        state.traceBridge = engine.observe { mirrorTrace(state) }
-        state.frameBridge = engine.observeFrames { node -> onFrameClosed(state, node) }
-        state.resetBridge = engine.observeResets { reset -> onTraceReset(state, reset) }
         stateOrNull = state
-
-        // Register the run's ROOT trace buffer up front, so the run is discoverable by its root location via
-        // [LogicTraceStore.mostRecent] (the "run-scope entry point") the moment it starts — before any event is
-        // emitted. A Script / Flow / Report root emits per-element trace events and so self-registers on its first
-        // emit; a Job's root only HOSTS its Workers, each of which is its own node registering its OWN stable id,
-        // so the Job root would otherwise NEVER enter the trace history — leaving the JS Job UI's
-        // `fetchWorkerProgress` (mostRecent(main) -> lookupRun) with no run to resolve, hiding all live Preview /
-        // worker progress. Idempotent with the later bridge emits (same node id -> same cached handle / buffer).
-        handleForNode(state, engine.snapshot().root.id, rootStableId)
 
         return runId
     }
@@ -321,7 +300,7 @@ class ServerLogicController(
         executionId: LogicExecutionId,
         request: ExecutionRequest
     ): ExecutionResult {
-        val state = stateOrNull
+        val state = stateOrNull?.takeIf { !it.settled }
             ?: return ExecutionResult.failure(LogicConventions.notRunningError())
 
         if (state.runId != runId) {
@@ -335,7 +314,8 @@ class ServerLogicController(
 
     @Synchronized
     override fun cancel(runId: LogicRunId): LogicRunResponse {
-        val state = stateOrNull
+        // A settled (terminal-retained) run is not-found for control — it exists only for trace review.
+        val state = stateOrNull?.takeIf { !it.settled }
             ?: return LogicRunResponse.NotFound
 
         if (state.runId != runId) {
@@ -354,7 +334,7 @@ class ServerLogicController(
             executor.execute {
                 state.engine.awaitQuiescent()
                 synchronized(this@ServerLogicController) {
-                    clearState(state)
+                    settleAfterDrive(state)
                 }
             }
         }
@@ -365,7 +345,8 @@ class ServerLogicController(
 
     @Synchronized
     override fun pause(runId: LogicRunId): LogicRunResponse {
-        val state = stateOrNull
+        // A settled (terminal-retained) run is not-found for control — it exists only for trace review.
+        val state = stateOrNull?.takeIf { !it.settled }
             ?: return LogicRunResponse.NotFound
 
         if (state.runId != runId) {
@@ -418,7 +399,8 @@ class ServerLogicController(
     // climb back out on the first subsequent Step Over.
     @Synchronized
     fun startStep(runId: LogicRunId, mode: StepMode = StepMode.Into): LogicRunResponse {
-        val state = stateOrNull
+        // A settled (terminal-retained) run is not-found for control — it exists only for trace review.
+        val state = stateOrNull?.takeIf { !it.settled }
             ?: return LogicRunResponse.NotFound
 
         if (state.runId != runId) {
@@ -453,7 +435,8 @@ class ServerLogicController(
     // the next boundary the execution checks.
     @Synchronized
     fun setPauseOnError(runId: LogicRunId, value: Boolean): LogicRunResponse {
-        val state = stateOrNull
+        // A settled (terminal-retained) run is not-found for control — it exists only for trace review.
+        val state = stateOrNull?.takeIf { !it.settled }
             ?: return LogicRunResponse.NotFound
 
         if (state.runId != runId) {
@@ -470,7 +453,8 @@ class ServerLogicController(
     // like [pause] — takes effect at the next named boundary any execution reaches.
     @Synchronized
     fun setBreakpoints(runId: LogicRunId, locations: List<ObjectLocation>): LogicRunResponse {
-        val state = stateOrNull
+        // A settled (terminal-retained) run is not-found for control — it exists only for trace review.
+        val state = stateOrNull?.takeIf { !it.settled }
             ?: return LogicRunResponse.NotFound
 
         if (state.runId != runId) {
@@ -488,7 +472,8 @@ class ServerLogicController(
         runId: LogicRunId,
         snapshotGraphDefinitionAttempt: GraphDefinitionAttempt?
     ): LogicRunResponse {
-        val state = stateOrNull
+        // A settled (terminal-retained) run is not-found for control — it exists only for trace review.
+        val state = stateOrNull?.takeIf { !it.settled }
             ?: return LogicRunResponse.NotFound
 
         if (state.runId != runId) {
@@ -567,7 +552,8 @@ class ServerLogicController(
         target: ObjectLocation,
         snapshotGraphDefinitionAttempt: GraphDefinitionAttempt? = null
     ): LogicRunResponse {
-        val state = stateOrNull
+        // A settled (terminal-retained) run is not-found for control — it exists only for trace review.
+        val state = stateOrNull?.takeIf { !it.settled }
             ?: return LogicRunResponse.NotFound
 
         if (state.runId != runId) {
@@ -630,7 +616,8 @@ class ServerLogicController(
         mode: StepMode,
         snapshotGraphDefinitionAttempt: GraphDefinitionAttempt?
     ): LogicRunResponse {
-        val state = stateOrNull
+        // A settled (terminal-retained) run is not-found for control — it exists only for trace review.
+        val state = stateOrNull?.takeIf { !it.settled }
             ?: return LogicRunResponse.NotFound
 
         if (state.runId != runId) {
@@ -679,157 +666,49 @@ class ServerLogicController(
 
         val rootStatus = state.engine.snapshot().root.status
         if (rootStatus is NodeStatus.Terminal) {
-            clearState(state)
+            // Retain the settled run for post-run trace queries: stop the engine's pools (no threads held) but
+            // keep its node tree + history readable. The next start() (or clearRetainedTrace) disposes it;
+            // status() reports it as no-active-run via `settled`.
+            state.settled = true
+            state.engine.shutdown()
         }
     }
 
 
-    private fun clearState(state: LogicState) {
-        if (stateOrNull !== state) {
-            return
+    // Fully dispose a run (active or retained) and forget it. Used when a fresh run supersedes a retained one,
+    // on the global "Clear all traces", and at controller close.
+    private fun disposeState(state: LogicState) {
+        if (stateOrNull === state) {
+            stateOrNull = null
         }
-        stateOrNull = null
-        state.traceBridge.close()
-        state.frameBridge.close()
-        state.resetBridge.close()
-        state.engine.close()
+        state.engine.dispose()
     }
 
 
-    // Mirror the engine's newly-emitted trace events into the existing trace store so the client's per-step value
-    // display keeps working unchanged. Invoked from the engine's observer (off the engine lock); serialized per
-    // run on [LogicState.bridgeLock] so each event is written exactly once in sequence order.
-    //
-    // Each event is routed to ITS EMITTING NODE's own trace buffer (keyed by the node id — see [handleForNode]),
-    // not one shared run buffer. Every hosted child (a RunStep's sub-Script, a Job worker, a Flow child) is a
-    // distinct node, so its trace is isolated per invocation: the client's frame-keyed lookup resolves exactly
-    // that invocation, and a re-entered sub-logic starts from a fresh buffer instead of ghosting the prior
-    // invocation's per-step displays (the trace store clears a prior same-stable-id buffer's live values when a
-    // new execution re-opens it — the anti-ghost on re-entry).
-    //
-    // The engine attributes an emit to (node, address): the node carries the flavour's root stable id, while
-    // the per-element stable id is the address — a Script emits `Address.of(stepStableId.value)` per step, a
-    // Flow `Address.of(vertexStableId.value)` per vertex. The trace store keys per element by stable id, so
-    // the element id is reconstructed from the address segment (flavour-agnostic). A flavour that instead emits
-    // a non-per-element trace at a reserved marker segment (Script's "next to run", a Job Worker's progress, a
-    // Report's input / output progress) contributes a [LogicTraceAddressRouting]; this bridge dispatches by that
-    // marker and names no flavour itself (see CC-17).
-    private fun mirrorTrace(state: LogicState) {
-        synchronized(state.bridgeLock) {
-            val events = state.engine.history(state.bridgedSequence)
-            for (event in events) {
-                val handle = handleForNode(state, event.nodeId, event.stableId)
-                val address = event.address
-                if (address != null && address.segments.isNotEmpty()) {
-                    handle.set(tracePathOf(address, event.stableId), event.value)
-                }
-                else {
-                    handle.append(event.stableId, event.value)
-                }
-                if (event.sequence > state.bridgedSequence) {
-                    state.bridgedSequence = event.sequence
-                }
-            }
-        }
+    // Trace-query access to the current / most-recently-settled run's engine, for [RunEngineLogicTrace] — the
+    // engine IS the trace store now (served by projecting it at query time), so there is no per-node bridge.
+    // Returns the retained state whether active or settled (post-run review reads a terminal engine too); null
+    // when no run has started this process life. Read under the controller lock; the caller then reads the
+    // engine off-lock (the engine has its own lock).
+    @Synchronized
+    fun retainedTraceAccess(): RunTraceAccess? {
+        val state = stateOrNull
+            ?: return null
+        return RunTraceAccess(state.runId, state.engine)
     }
 
 
-    // The bridge's uniform address→trace-path mapping: a reserved marker segment routes per-flavour
-    // ([LogicTraceAddressRouting]); otherwise the leading segment IS the element stable id.
-    private fun tracePathOf(address: Address, stableId: ObjectStableId): LogicTracePath {
-        val segment = address.segments.first()
-        val routing = traceAddressRoutingByMarker[segment]
-        return routing?.tracePath(address, stableId)
-            ?: LogicTracePath.ofObjectStableId(ObjectStableId(segment))
-    }
-
-
-    // Per-iteration trace reset (logic-spec §7 resettable live state). The engine signals it synchronously
-    // from the resetting spine, so draining pending history FIRST (everything the superseded pass emitted has
-    // a lower sequence) and then clearing gives exact ordering: the pass's values are mirrored, then removed,
-    // and the fresh pass's emits arrive after. (i) the resetting node's own buffer drops the addressed paths;
-    // (ii) buffers of invocations hosted from the dropped call-sites — transitive, via the store-recorded
-    // execution linkage, which covers pre-migration invocations the rebuilt engine tree no longer knows —
-    // drop all values. Events (the film-strip) survive both.
-    private fun onTraceReset(state: LogicState, reset: TraceReset) {
-        synchronized(state.bridgeLock) {
-            mirrorTrace(state)
-            logicTraceStore.clearValues(
-                LogicRunExecutionId(state.runId, LogicExecutionId(reset.nodeId.value)),
-                reset.addresses.map { tracePathOf(it, reset.stableId) })
-            logicTraceStore.clearValues(state.runId, reset.callSites)
+    // Dispose the retained run entirely — the "Clear all traces" action. A no-op while a run is active (the UI
+    // disables the control then); returns whether a retained run was cleared.
+    @Synchronized
+    fun clearRetainedTrace(): Boolean {
+        val state = stateOrNull
+            ?: return false
+        if (!state.settled) {
+            return false
         }
-    }
-
-
-    // §7 retention-vs-bounding: the engine signals each frame's close exactly once, after its final events are
-    // in history. For a frame that opted OUT of retention (see [tech.kzen.lib.common.exec.engine.Node.retainTrace]
-    // / [tech.kzen.lib.common.exec.engine.Execution.host]) — a long STREAMING host's per-element child — mirror
-    // those final events, then reclaim its trace buffer, bounding the store to live frames instead of leaking one
-    // buffer per element. A retained frame (the default — a Script RunStep's sub-script, whose per-iteration
-    // screenshot strip needs every finished invocation) is never touched, so post-run review is unaffected; the
-    // run root is retained by construction. Fires on an engine dispatcher thread; serialized on [bridgeLock].
-    private fun onFrameClosed(state: LogicState, node: Node) {
-        if (node.retainTrace) {
-            return
-        }
-        synchronized(state.bridgeLock) {
-            mirrorTrace(state)
-            state.nodeHandles.remove(node.id)
-            logicTraceStore.evict(LogicRunExecutionId(state.runId, LogicExecutionId(node.id.value)))
-        }
-    }
-
-
-    // The trace buffer handle for the engine node [nodeId], created lazily on its first mirrored event and
-    // cached for the run. Every node — the root logic and each hosted child (a RunStep's sub-Script, a Job
-    // worker, a Flow child) — gets its OWN buffer, keyed by its node id: the exact id the client addresses a
-    // live frame by (run id + frame execution id). Frame-keyed lookups therefore resolve each invocation in
-    // isolation, and — because the trace store clears a prior same-stable-id buffer's live values when a new
-    // execution re-opens it — a re-entered sub-logic starts fresh instead of ghosting the prior invocation's
-    // per-step displays. The buffer's object location comes from the event's own stable id; its parent
-    // execution and hosting call-site — the execution-tree linkage [LogicTraceStore.lookupRunExecutions]
-    // exposes, so a merged view can be scoped per hosting element (the RunStep screenshot strip) — are read
-    // from the live snapshot tree.
-    private fun handleForNode(
-        state: LogicState,
-        nodeId: NodeId,
-        stableId: ObjectStableId
-    ): LogicTraceHandle {
-        return state.nodeHandles.getOrPut(nodeId) {
-            val traceExecutionId = LogicRunExecutionId(state.runId, LogicExecutionId(nodeId.value))
-            val located = locateNode(state.engine.snapshot().root, nodeId, null)
-            val callerLocation = located?.node?.callerStableId?.let { objectStableMapper.objectLocation(it) }
-            logicTraceStore.handle(
-                traceExecutionId,
-                objectStableMapper.objectLocation(stableId),
-                located?.parentId?.let { LogicExecutionId(it.value) },
-                callerLocation)
-        }
-    }
-
-
-    private class NodeLocation(
-        val node: Node,
-        val parentId: NodeId?
-    )
-
-
-    // [target] and its parent id in the live node tree ([parentId] null for the root), or null when the node
-    // is not currently in the tree — e.g. an event from a node the concurrent live-edit teardown already
-    // removed. The tree is tiny (one node per live frame) and this is walked once per node, when its handle
-    // is first created.
-    private fun locateNode(node: Node, target: NodeId, parentId: NodeId?): NodeLocation? {
-        if (node.id == target) {
-            return NodeLocation(node, parentId)
-        }
-        for (child in node.children) {
-            val nested = locateNode(child, target, node.id)
-            if (nested != null) {
-                return nested
-            }
-        }
-        return null
+        disposeState(state)
+        return true
     }
 
 
@@ -941,14 +820,7 @@ class ServerLogicController(
         }
 
         synchronized(this) {
-            val state = stateOrNull
-            if (state != null) {
-                stateOrNull = null
-                state.traceBridge.close()
-                state.frameBridge.close()
-                state.resetBridge.close()
-                state.engine.close()
-            }
+            stateOrNull?.let { disposeState(it) }
         }
     }
 }

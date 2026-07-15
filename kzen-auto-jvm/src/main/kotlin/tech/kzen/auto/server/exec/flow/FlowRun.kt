@@ -542,8 +542,8 @@ class FlowRun(
             model.epoch,
             model.error)
 
-        // The vertex's stable id is the emit address; the controller's trace bridge routes it to the per-vertex
-        // trace path (LogicTracePath.ofObjectStableId), matching LogicTraceStore's per-element keying.
+        // The vertex's stable id is the emit address; the trace query view translates it to the per-vertex
+        // trace path (LogicTracePath.ofObjectStableId) — the default stable-id path, no marker routing.
         execution.emit(
             Address.of(stableId.value),
             ExecutionValue.of(VisualVertexModel.toJsonCollection(visualVertexModel)))

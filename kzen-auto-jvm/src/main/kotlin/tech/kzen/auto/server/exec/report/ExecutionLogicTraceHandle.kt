@@ -16,9 +16,9 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableId
  * ([tech.kzen.auto.common.objects.document.report.ReportConventions.inputTracePath] /
  * [tech.kzen.auto.common.objects.document.report.ReportConventions.outputTracePath]), not per-element stable
  * ids — so each [set] is emitted under the reserved [tracePathAddressMarker] address with the literal path
- * segments trailing, and [tech.kzen.auto.server.service.impl.ServerLogicController]'s trace bridge routes it
- * straight back to that [LogicTracePath] in the [tech.kzen.lib.server.exec.logic.trace.LogicTraceStore] the JS
- * Report UI polls (symmetric with the Job worker-progress marker).
+ * segments trailing, and the trace query view ([tech.kzen.auto.server.exec.RunEngineLogicTrace], via
+ * [tech.kzen.auto.server.exec.report.ReportTraceAddressRouting]) translates it back to that [LogicTracePath]
+ * at query time for the JS Report UI (symmetric with the Job worker-progress marker).
  *
  * NB: [emit] is called from disruptor consumer threads (output trace) as well as the run coroutine (input
  * trace); the engine's emit is lock-guarded, so this is safe. The pull-style [register] hook has no engine

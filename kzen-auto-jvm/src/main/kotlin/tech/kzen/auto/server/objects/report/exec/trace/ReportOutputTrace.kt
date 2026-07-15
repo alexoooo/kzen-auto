@@ -19,8 +19,8 @@ class ReportOutputTrace(
 
     //-----------------------------------------------------------------------------------------------------------------
     init {
-        // The LogicTraceStore-backed handle republishes on query; ExecutionLogicTraceHandle's register is a
-        // no-op (push-only), so [nextOutput] also pushes below — a harmless extra set on the store-backed path.
+        // ExecutionLogicTraceHandle's register is a no-op (the engine-served trace surface is push-only, with
+        // no pull-republish hook), so [nextOutput] also pushes below — this register is harmless / vestigial.
         logicTraceHandle.register {
             publishUpdate()
         }

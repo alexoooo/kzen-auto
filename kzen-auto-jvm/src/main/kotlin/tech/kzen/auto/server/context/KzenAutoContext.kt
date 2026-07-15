@@ -51,7 +51,8 @@ import tech.kzen.lib.common.service.store.DirectGraphStore
 import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import tech.kzen.lib.platform.ClassName
-import tech.kzen.lib.server.exec.logic.trace.LogicTraceStore
+import tech.kzen.auto.server.exec.RunEngineLogicTrace
+import tech.kzen.lib.common.exec.logic.trace.LogicTrace
 import tech.kzen.lib.server.notation.ClasspathNotationMedia
 import tech.kzen.lib.server.notation.FileNotationMedia
 import tech.kzen.lib.server.notation.locate.FileNotationLocator
@@ -135,8 +136,6 @@ class KzenAutoContext(
     // between a run terminating and the user editing the notation afterward.
     val objectStableMapper = ObjectStableMapper()
 
-    val logicTraceStore = LogicTraceStore(objectStableMapper)
-
     // Injected (via graphEnvironment) into Flow dataflow vertices for message inspection / tracing, and used
     // by the engine-side Flow flavour (FlowRun) to render each vertex's traced message.
     val flowMessageInspector = FlowMessageInspector()
@@ -173,10 +172,18 @@ class KzenAutoContext(
     // serverLogicController and definitionRepository themselves, so eager wiring would be cyclic.
     // The provider is only invoked at request/run time, long after construction completes.
     val serverLogicController = ServerLogicController(
-        graphStore, objectStableMapper, logicTraceStore, cachedKotlinCompiler, scriptValidationCache,
-        flowMessageInspector, notationMetadataReader, jobWorkPool,
-        listOf(JobTraceAddressRouting, ReportTraceAddressRouting)
+        graphStore, objectStableMapper, cachedKotlinCompiler, scriptValidationCache,
+        flowMessageInspector, notationMetadataReader, jobWorkPool
     ) { graphEnvironment }
+
+    // The trace-query surface (the former LogicTraceStore): projects the controller's retained RunEngine at
+    // query time, translating each flavour's within-node emit address to its wire LogicTracePath via the same
+    // per-flavour routings. Built after the controller (it reads the controller's active/retained run).
+    val logicTrace = RunEngineLogicTrace(
+        objectStableMapper,
+        listOf(JobTraceAddressRouting, ReportTraceAddressRouting),
+        { serverLogicController.retainedTraceAccess() },
+        { serverLogicController.clearRetainedTrace() })
 
     val detachedExecutor = ModelDetachedExecutor(
         graphStore, graphCreator) { graphEnvironment }
@@ -213,7 +220,7 @@ class KzenAutoContext(
             .put(ClassName(TargetLocator::class.qualifiedName!!), targetLocator)
             .put(ClassName(NotationMetadataReader::class.qualifiedName!!), notationMetadataReader)
             .put(ClassName(LocalGraphStore::class.qualifiedName!!), graphStore)
-            .put(ClassName(LogicTraceStore::class.qualifiedName!!), logicTraceStore)
+            .put(ClassName(LogicTrace::class.qualifiedName!!), logicTrace)
             .put(ClassName(ReportWorkPool::class.qualifiedName!!), reportWorkPool)
             .put(ClassName(ReportDefinitionRepository::class.qualifiedName!!), definitionRepository)
             .put(ClassName(CalculatedColumnEval::class.qualifiedName!!), calculatedColumnEval)

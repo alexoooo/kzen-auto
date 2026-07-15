@@ -321,7 +321,7 @@ class ServerLogicControllerLoopMigrationTest {
 
 
     private fun stepTrace(runId: LogicRunId, location: ObjectLocation): StepTrace? {
-        val snapshot = context.logicTraceStore.lookupRun(runId, LogicTraceQuery(LogicTracePath.root))
+        val snapshot = context.logicTrace.lookupRun(runId, LogicTraceQuery(LogicTracePath.root))
             ?: return null
         val stableId = context.objectStableMapper.objectStableId(location)
         val entry = snapshot.values[LogicTracePath.ofObjectStableId(stableId)]

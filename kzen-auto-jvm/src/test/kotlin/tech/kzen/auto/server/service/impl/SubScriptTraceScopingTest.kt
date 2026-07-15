@@ -21,12 +21,11 @@ import kotlin.test.fail
  * inside a ForEach body, invoked once per loop item) must get a FRESH trace scope on each re-entry — the prior
  * invocation's per-step values must not ghost into the next.
  *
- * The controller's trace bridge (see [ServerLogicController.mirrorTrace]) routes every engine emit to its
- * EMITTING NODE's own trace buffer, keyed by the node id. Each host() is a distinct node, so each sub-Script
- * invocation is its own [tech.kzen.lib.server.exec.logic.trace.LogicTraceStore] execution buffer; opening the
- * next invocation's buffer clears the prior same-stable-id buffer's live values (the store's anti-ghost on
- * re-entry). Before this, the bridge wrote every node's emit into ONE shared run buffer keyed by step stable
- * id, so a re-entered sub-Script's step displays lingered from the previous invocation.
+ * Each host() is a distinct engine node, so each sub-Script invocation is its own execution, resolved in
+ * isolation by the trace query view ([tech.kzen.auto.server.exec.RunEngineLogicTrace]) keyed on node id. The
+ * anti-ghost on re-entry is the engine's own doing: the loop's per-iteration reset (dropReplay →
+ * resetEmitted) clears the superseded invocation's live values, so exactly one invocation still carries the
+ * child's step values.
  */
 class SubScriptTraceScopingTest {
     //-----------------------------------------------------------------------------------------------------------------
@@ -65,7 +64,7 @@ class SubScriptTraceScopingTest {
 
         // ForEach 1..2 hosts the sub-Script twice; each invocation is its own child node, hence its own trace
         // execution buffer (parent = the root execution), NOT flattened into one shared buffer.
-        val executions = context.logicTraceStore.lookupRunExecutions(runId)
+        val executions = context.logicTrace.lookupRunExecutions(runId)
         val childExecutions = executions.filter { it.parentExecutionId != null }
         assertEquals(
             2, childExecutions.size,
@@ -85,7 +84,7 @@ class SubScriptTraceScopingTest {
         val childBPath = LogicTracePath.ofObjectStableId(
             context.objectStableMapper.objectStableId(childBLocation))
         val invocationsCarryingChildB = childExecutions.count { info ->
-            val invocationSnapshot = context.logicTraceStore.lookup(
+            val invocationSnapshot = context.logicTrace.lookup(
                 LogicRunExecutionId(runId, info.executionId), LogicTraceQuery(LogicTracePath.root))
             invocationSnapshot?.values?.containsKey(childBPath) == true
         }

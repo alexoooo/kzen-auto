@@ -217,21 +217,21 @@ class ServerLogicControllerLoopTraceResetTest {
     /** Executions of the run launched from [callerLocation] (a RunStep) — one per child invocation. */
     private fun childExecutions(runId: LogicRunId, callerLocation: ObjectLocation): List<LogicRunExecutionId> {
         val callerStableId = context.objectStableMapper.objectStableId(callerLocation)
-        return context.logicTraceStore.lookupRunExecutions(runId)
+        return context.logicTrace.lookupRunExecutions(runId)
             .filter { it.callerStableId == callerStableId }
             .map { LogicRunExecutionId(runId, it.executionId) }
     }
 
 
     private fun valueCount(executionId: LogicRunExecutionId): Int {
-        val snapshot = context.logicTraceStore.lookup(executionId, LogicTraceQuery(LogicTracePath.root))
+        val snapshot = context.logicTrace.lookup(executionId, LogicTraceQuery(LogicTracePath.root))
             ?: return 0
         return snapshot.values.size
     }
 
 
     private fun binaryEventCount(runId: LogicRunId): Int {
-        return context.logicTraceStore.lookupRunHistory(runId, 0).size
+        return context.logicTrace.lookupRunHistory(runId, 0).size
     }
 
 
@@ -249,7 +249,7 @@ class ServerLogicControllerLoopTraceResetTest {
 
 
     private fun stepTrace(runId: LogicRunId, location: ObjectLocation): StepTrace? {
-        val snapshot = context.logicTraceStore.lookupRun(runId, LogicTraceQuery(LogicTracePath.root))
+        val snapshot = context.logicTrace.lookupRun(runId, LogicTraceQuery(LogicTracePath.root))
             ?: return null
         val stableId = context.objectStableMapper.objectStableId(location)
         val entry = snapshot.values[LogicTracePath.ofObjectStableId(stableId)]

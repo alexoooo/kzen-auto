@@ -10,18 +10,18 @@ import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
+import tech.kzen.lib.common.exec.logic.trace.LogicTrace
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceQuery
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
-import tech.kzen.lib.server.exec.logic.trace.LogicTraceStore
 
 
 @Reflect
 class LogicTraceEndpoint(
-    @Service private val logicTraceStore: LogicTraceStore
+    @Service private val logicTrace: LogicTrace
 ): DetachedAction {
     override suspend fun execute(request: ExecutionRequest): ExecutionResult {
         val action = request.getSingle(CommonRestApi.paramAction)
@@ -38,7 +38,7 @@ class LogicTraceEndpoint(
                     ?: return ExecutionResult.failure("Object path missing: '${LogicConventions.paramSubObjectPath}'")
 
                 val objectLocation = ObjectLocation(documentPath, objectPath)
-                val mostRecent = logicTraceStore.mostRecent(objectLocation)
+                val mostRecent = logicTrace.mostRecent(objectLocation)
 
                 ExecutionSuccess.ofValue(ExecutionValue.of(
                     mostRecent?.let { LogicConventions.runExecutionAsCollection(it) }
@@ -56,7 +56,7 @@ class LogicTraceEndpoint(
                     ?: return ExecutionResult.failure("Logic Trade Query missing")
 
                 val runExecutionId = LogicRunExecutionId(logicRunId, logicExecutionId)
-                val snapshot = logicTraceStore.lookup(runExecutionId, logicTraceQuery)
+                val snapshot = logicTrace.lookup(runExecutionId, logicTraceQuery)
                     ?: return ExecutionResult.failure(
                         "Logic Trace not found: $logicRunId / $logicExecutionId / $logicTraceQuery")
 
@@ -71,7 +71,7 @@ class LogicTraceEndpoint(
                 val logicTraceQuery = request.getSingle(LogicConventions.paramQuery)?.let { LogicTraceQuery.parse(it) }
                     ?: return ExecutionResult.failure("Logic Trace Query missing")
 
-                val snapshot = logicTraceStore.lookupRun(logicRunId, logicTraceQuery)
+                val snapshot = logicTrace.lookupRun(logicRunId, logicTraceQuery)
                     ?: return ExecutionResult.failure("Logic Trace not found for run: $logicRunId")
 
                 ExecutionSuccess.ofValue(ExecutionValue.of(
@@ -85,7 +85,7 @@ class LogicTraceEndpoint(
                 val sinceSequence = request.getSingle(LogicConventions.paramSinceSequence)?.toLong()
                     ?: return ExecutionResult.failure("Since-sequence missing: '${LogicConventions.paramSinceSequence}'")
 
-                val events = logicTraceStore.lookupRunHistory(logicRunId, sinceSequence)
+                val events = logicTrace.lookupRunHistory(logicRunId, sinceSequence)
 
                 ExecutionSuccess.ofValue(ExecutionValue.of(
                     events.map { it.toCollection() }))
@@ -95,7 +95,7 @@ class LogicTraceEndpoint(
                 val logicRunId = request.getSingle(CommonRestApi.paramRunId)?.let { LogicRunId(it) }
                     ?: return ExecutionResult.failure("Logic Run ID missing: '${CommonRestApi.paramRunId}'")
 
-                val executions = logicTraceStore.lookupRunExecutions(logicRunId)
+                val executions = logicTrace.lookupRunExecutions(logicRunId)
 
                 ExecutionSuccess.ofValue(ExecutionValue.of(
                     executions.map { it.toCollection() }))
@@ -104,7 +104,7 @@ class LogicTraceEndpoint(
             LogicConventions.actionTraced -> {
                 // Every document with a retained trace (run roots + sub-logic roots), as documentPath
                 // strings — the sidebar keys its "has trace" indicator by DocumentPath.
-                val documentPaths = logicTraceStore.tracedLocations()
+                val documentPaths = logicTrace.tracedLocations()
                     .map { it.documentPath.asString() }
                     .distinct()
 
@@ -121,14 +121,14 @@ class LogicTraceEndpoint(
                     ?: return ExecutionResult.failure("Object path missing: '${LogicConventions.paramSubObjectPath}'")
 
                 val objectLocation = ObjectLocation(documentPath, objectPath)
-                val cleared = logicTraceStore.clear(objectLocation)
+                val cleared = logicTrace.clear(objectLocation)
 
                 ExecutionSuccess.ofValue(ExecutionValue.of(cleared))
             }
 
             LogicConventions.actionResetAll -> {
                 // Global clear: the run controls are global, so Clear wipes every retained trace.
-                logicTraceStore.clearAll()
+                logicTrace.clearAll()
                 ExecutionSuccess.ofValue(ExecutionValue.of(true))
             }
 
