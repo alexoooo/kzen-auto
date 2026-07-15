@@ -41,6 +41,11 @@ external interface StepHeaderProps: Props {
     var attributeViewManager: AttributeViewManager.Wrapper?
     var typeMetadata: String?
     var validationError: String?
+
+    // True when this step was short-circuited (value-less) by a forward move-to jump — renders a small
+    // "Skipped" chip so the grey status bar reads clearly.
+    var skipped: Boolean?
+
     var expanded: Boolean?
     var onToggleExpanded: (() -> Unit)?
 
@@ -49,6 +54,13 @@ external interface StepHeaderProps: Props {
     // (the card owns that CSS rule — see ScriptStepDisplayDefault).
     var breakpoint: Boolean?
     var onToggleBreakpoint: (() -> Unit)?
+
+    // Move-to "Set next step here" fallback action (rendered only when the callback is present — i.e. while a
+    // settled-paused run of this document exists). canSetNextStep=false renders it disabled with the reason
+    // in a tooltip (e.g. a loop-body target). Like the breakpoint dot, it's hover-revealed by the card.
+    var onSetNextStep: (() -> Unit)?
+    var canSetNextStep: Boolean?
+    var setNextStepReason: String?
 
     var mirroredGraphStore: MirroredGraphStore
 }
@@ -72,6 +84,11 @@ class StepHeader(
         const val breakpointDotSet = "set"
         const val breakpointDotUnset = "unset"
         private val breakpointColor = Color("#c62828")
+
+        // Marker for the card's hover-reveal rule (see ScriptStepDisplayDefault), plus the action's colours.
+        const val setNextStepAttribute = "data-set-next-step"
+        private val setNextStepColor = Color("#f9a825")
+        private val setNextStepDisabledColor = Color("#9e9e9e")
 
 
         fun icon(graphStructure: GraphStructure, objectLocation: ObjectLocation): String {
@@ -206,6 +223,50 @@ class StepHeader(
     }
 
 
+    // Rendered in the right cluster, just left of the breakpoint dot. Host-gated on onSetNextStep, so it
+    // only appears while a settled-paused run of this document exists (see ScriptStepDisplayDefault).
+    private fun ChildrenBuilder.renderSetNextStepAction() {
+        val onSetNextStep = props.onSetNextStep
+            ?: return
+        val canSet = props.canSetNextStep ?: false
+        val tooltipText =
+            if (canSet) { "Set next step here" }
+            else { props.setNextStepReason ?: "Can't set the next step here" }
+
+        Tooltip {
+            title = ReactNode(tooltipText)
+
+            span {
+                asDynamic()[setNextStepAttribute] = ""
+
+                css {
+                    display = Display.flex
+                    alignItems = AlignItems.center
+                    marginRight = 0.5.em
+                    cursor = if (canSet) { Cursor.pointer } else { Cursor.default }
+                    color = if (canSet) { setNextStepColor } else { setNextStepDisabledColor }
+                    // Invisible at rest; the enclosing card's :hover reveals it (same idiom as the dot).
+                    opacity = number(0.0)
+                }
+
+                // stopPropagation: this action owns its click; don't also trip the card's click-to-expand.
+                onClick = {
+                    it.stopPropagation()
+                    if (canSet) {
+                        onSetNextStep()
+                    }
+                }
+
+                icon("material-symbols:play-arrow") {
+                    style = unsafeJso {
+                        fontSize = 1.1.em
+                    }
+                }
+            }
+        }
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private fun ChildrenBuilder.renderName() {
         div {
@@ -305,6 +366,19 @@ class StepHeader(
                 }
             }
 
+            // Skipped chip: shown when a move-to jump skipped over this step (grey status bar). Placed
+            // before the type chip so it reads first.
+            if (props.skipped == true) {
+                Chip {
+                    sx {
+                        marginRight = 0.5.em
+                    }
+                    size = Size.small
+                    label = ReactNode("Skipped")
+                    variant = ChipVariant.outlined
+                }
+            }
+
             // Type chip, but not for void (Unit) steps — a "[Unit]" badge conveys nothing.
             val typeMetadata = props.typeMetadata
             if (!typeMetadata.isNullOrEmpty() && typeMetadata != "Unit") {
@@ -317,6 +391,8 @@ class StepHeader(
                     variant = ChipVariant.outlined
                 }
             }
+
+            renderSetNextStepAction()
 
             renderBreakpointDot()
 

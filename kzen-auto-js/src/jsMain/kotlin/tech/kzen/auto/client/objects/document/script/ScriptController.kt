@@ -32,6 +32,8 @@ import tech.kzen.auto.client.objects.ribbon.RibbonController
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.global.ViewModeGlobal
+import tech.kzen.auto.client.service.logic.ClientLogicGlobal
+import tech.kzen.auto.client.objects.document.script.display.ScriptMoveToArrow
 import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
@@ -54,6 +56,7 @@ external interface ScriptControllerProps: Props {
     var stepDisplayManager: StepDisplayManager.Wrapper
     var scriptCommander: ScriptCommander
     var clientStateGlobal: ClientStateGlobal
+    var clientLogicGlobal: ClientLogicGlobal
     var mirroredGraphStore: MirroredGraphStore
     var notationParser: NotationParser
     var restClient: ClientRestApi
@@ -117,6 +120,7 @@ class ScriptController:
         private val scriptCommander: ScriptCommander,
         private val ribbonController: RibbonController.Wrapper,
         @Service private val clientStateGlobal: ClientStateGlobal,
+        @Service private val clientLogicGlobal: ClientLogicGlobal,
         @Service private val mirroredGraphStore: MirroredGraphStore,
         @Service private val notationParser: NotationParser,
         @Service private val restClient: ClientRestApi,
@@ -145,6 +149,7 @@ class ScriptController:
                         this.stepDisplayManager = this@Wrapper.stepDisplayManager
                         this.scriptCommander = this@Wrapper.scriptCommander
                         this.clientStateGlobal = this@Wrapper.clientStateGlobal
+                        this.clientLogicGlobal = this@Wrapper.clientLogicGlobal
                         this.mirroredGraphStore = this@Wrapper.mirroredGraphStore
                         this.notationParser = this@Wrapper.notationParser
                         this.restClient = this@Wrapper.restClient
@@ -357,6 +362,15 @@ class ScriptController:
             }
 
             renderMain(mainObjectLocation)
+
+            // NB: mounted LAST so default stacking paints the draggable next-to-run arrow IN FRONT of the
+            //     step cards (the dependency overlay, first child, stays behind). Absolute inset:0 sibling
+            //     over the same relative container — it spans nested branches via the shared StepRowRefRegistry
+            //     and never alters the flex-row layout the overlay's anchoring depends on.
+            ScriptMoveToArrow::class.react {
+                clientStateGlobal = props.clientStateGlobal
+                clientLogicGlobal = props.clientLogicGlobal
+            }
         }
     }
 

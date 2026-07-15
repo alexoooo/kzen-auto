@@ -70,6 +70,7 @@ fun ChildrenBuilder.branchHeaderSlab(
                 this.title = title
                 this.typeMetadata = typeMetadata
                 this.validationError = validationError
+                this.skipped = traceState == StepTrace.State.Skipped
                 this.mirroredGraphStore = mirroredGraphStore
             }
         }
