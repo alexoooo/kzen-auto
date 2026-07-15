@@ -155,6 +155,9 @@ class SidebarFolder(
             val newDocument = DocumentCreator.newDocument(archetype.location)
             props.mirroredGraphStore.apply(
                 CreateDocumentCommand(documentPath, newDocument))
+
+            // navigate to the freshly created document (apply awaited above, so the local mirror has it)
+            props.navigationGlobal.goto(documentPath)
         }
     }
 
