@@ -1,0 +1,38 @@
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.Any
+      generics: []
+      nullable: false
+
+main.steps/Number range:
+  is: NumberRangeStep
+
+main.steps/ForEach:
+  is: ForEachStep
+  items: main.steps/Number range
+
+main.steps/ForEach.steps/Formula:
+  is: FormulaStep
+  code: "Item == 4"
+
+main.steps/ForEach.steps/If:
+  is: IfStep
+  condition: main.steps/ForEach.steps/Formula
+
+main.steps/ForEach.steps/If.then/Result:
+  is: ResultStep
+  code: Item
+  then: endScript
+
+main.steps/ForEach.steps/If.else/Formula 2:
+  is: FormulaStep
+  code: Item
+
+main.steps/ForEach.item/Item:
+  is: ForEachItemBinding
+
+main.steps/Display:
+  is: DisplayValueStep
+  text: main.steps/ForEach

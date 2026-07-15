@@ -155,6 +155,16 @@ SelectClosePolicyEditor:
   class: tech.kzen.auto.client.objects.document.script.display.edit.SelectClosePolicyEditor$Wrapper
 
 
+SelectEnclosingLoopEditor:
+  is: AttributeEditor
+  class: tech.kzen.auto.client.objects.document.script.display.edit.SelectEnclosingLoopEditor$Wrapper
+
+
+SelectValuesEditor:
+  is: AttributeEditor
+  class: tech.kzen.auto.client.objects.document.script.display.edit.SelectValuesEditor$Wrapper
+
+
 TargetAttributeView:
   is: AttributeView
   class: tech.kzen.auto.client.objects.document.script.display.view.TargetAttributeView$Wrapper
@@ -163,6 +173,16 @@ TargetAttributeView:
       is: List
       of: TargetTypeDisplay
       by: Autowired
+
+
+ControlSummaryAttributeView:
+  is: AttributeView
+  class: tech.kzen.auto.client.objects.document.script.display.view.ControlSummaryAttributeView$Wrapper
+
+
+ResultThenAttributeView:
+  is: AttributeView
+  class: tech.kzen.auto.client.objects.document.script.display.view.ResultThenAttributeView$Wrapper
 
 
 # Per-target-type client fragments (dropdown label, value row, collapsed summary), autowired into
@@ -292,6 +312,12 @@ DoWhileTool:
   is: RibbonTool
   parent: ScriptGroup_LogicControl
   delegate: DoWhileStep
+
+
+ControlTool:
+  is: RibbonTool
+  parent: ScriptGroup_LogicControl
+  delegate: ControlStep
 
 
 DivisibleCheckStepTool:

@@ -152,6 +152,11 @@ ResultStep:
       summary: TextAttributeView
     then:
       is: String
+      editor: SelectValuesEditor
+      values:
+        keepRunning: "Keep Running"
+        endScript: "End Script"
+      summary: ResultThenAttributeView
     selfLocation: SelfLocation
 
 
@@ -386,9 +391,14 @@ ControlStep:
     loop:
       is: ObjectLocation
       by: Nominal
-      editor: SelectStepEditor
+      editor: SelectEnclosingLoopEditor
     action:
       is: String
+      editor: SelectValuesEditor
+      values:
+        skipIteration: "Skip Iteration"
+        finishLoop: "Finish Loop"
+      summary: ControlSummaryAttributeView
     selfLocation: SelfLocation
 
 #######################################################################################################################
