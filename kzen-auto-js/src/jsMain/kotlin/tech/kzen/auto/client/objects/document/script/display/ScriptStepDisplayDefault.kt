@@ -284,8 +284,11 @@ class ScriptStepDisplayDefault(
         // run client-side against the current notation. The plan is only computed while paused, so the
         // O(steps) walk never runs during normal editing.
         val documentPath = props.common.objectLocation.documentPath
-        val activeFrame = clientState.clientLogicState.logicStatus?.active?.frame
-        val showSetNext = clientState.clientLogicState.isHaltPaused() &&
+        val logicState = clientState.clientLogicState
+        val activeFrame = logicState.logicStatus?.active?.frame
+        // Offered while the run is SETTLED (paused at any boundary — matches the server's !running && !stepping
+        // moveTo guard), not only at a Pause step / error-park (isHaltPaused would be too strict).
+        val showSetNext = logicState.isActive() && ! logicState.isExecuting() &&
                 activeFrame?.objectLocation?.documentPath == documentPath
         var canSetNext: Boolean? = null
         var setNextReason: String? = null

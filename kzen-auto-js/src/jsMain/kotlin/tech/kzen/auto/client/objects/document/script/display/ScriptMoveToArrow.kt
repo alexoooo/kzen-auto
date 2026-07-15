@@ -211,7 +211,11 @@ class ScriptMoveToArrow(
         val rowRect = rowElement.getBoundingClientRect()
         val centerTop = rowRect.top - containerRect.top + rowRect.height / 2.0
 
-        val canDrag = clientState.clientLogicState.isHaltPaused() &&
+        // Draggable while the run is SETTLED (paused at any boundary — a manual step settle, a Pause step,
+        // or error-park) and this document is the run root — the same "!running && !stepping" gate the
+        // server's moveTo enforces. isHaltPaused() would be too strict (it excludes a plain stepped Paused).
+        val logicState = clientState.clientLogicState
+        val canDrag = logicState.isActive() && ! logicState.isExecuting() &&
                 frame?.objectLocation?.documentPath == documentPath
 
         updateArrow(centerTop, canDrag)

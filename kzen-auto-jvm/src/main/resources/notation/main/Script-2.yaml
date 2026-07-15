@@ -1,0 +1,18 @@
+main:
+  is: Script
+
+main.steps/Formula:
+  is: FormulaStep
+  code: 123
+
+main.steps/Formula 2:
+  is: FormulaStep
+  code: "Formula * 2"
+
+main.steps/Formula 3:
+  is: FormulaStep
+  code: "`Formula 2` * 100"
+
+main.steps/Formula 4:
+  is: FormulaStep
+  code: "`Formula 3` * 2"
