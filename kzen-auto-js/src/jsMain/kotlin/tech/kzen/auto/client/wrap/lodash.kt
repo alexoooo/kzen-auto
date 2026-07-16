@@ -20,6 +20,15 @@ external interface Lodash {
             functionToDebounce: () -> Unit,
             debounceMillis: Int
     ): FunctionWithDebounce
+
+    // Leading + trailing, unlike debounce (trailing only). The distinction is load-bearing wherever the
+    // input is a CONTINUOUS stream rather than bursty: a debounce fires only once the calls stop, so a
+    // steady 3/s stream would never fire it at all, whereas a throttle fires at once and then every
+    // [throttleMillis] for as long as the stream lasts.
+    fun throttle(
+            functionToThrottle: () -> Unit,
+            throttleMillis: Int
+    ): FunctionWithDebounce
 }
 
 

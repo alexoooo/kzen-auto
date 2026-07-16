@@ -93,9 +93,6 @@ class HeaderRunController (
     private var mainObjectLocation: ObjectLocation? = null
     private var latestFrame: LogicRunFrameInfo? = null
 
-    // Debounces the trace-presence query: re-check only when the document or run status actually changes.
-    private var lastTraceFetchKey: String? = null
-
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun HeaderRunControllerState.init(props: HeaderRunControllerProps) {
@@ -179,30 +176,24 @@ class HeaderRunController (
             }
         }
 
-        refreshHasTraceIfNeeded(clientLogicState)
+        refreshHasTraceIfNeeded()
     }
 
 
-    // Re-check whether ANY document holds a retained trace (Clear is global), after a run/clear bumps the
-    // status, so the Clear button enables/disables itself accordingly. Keyed on the trace version, whose
-    // epoch component covers the clear case: before and after a clear the run reads as inactive, so only the
-    // epoch distinguishes them (see ClientLogicState.traceVersion).
+    // Re-check whether ANY document holds a retained trace (Clear is global), so the Clear button enables /
+    // disables itself accordingly. The clear case is carried by the epoch: before and after a clear the run
+    // reads as inactive, so only the epoch distinguishes them (see ClientLogicState.traceVersion) — and being
+    // a structure change it bypasses the publish throttle, so the button reacts at once.
     //
-    // ProjectController asks the same question off the same key; ClientLogicGlobal.tracedDocuments memoizes
-    // per version so the two share one request.
-    private fun refreshHasTraceIfNeeded(
-        clientLogicState: ClientLogicState
-    ) {
-        val fetchKey = clientLogicState.traceVersion()
-        if (fetchKey == lastTraceFetchKey) {
-            return
-        }
-        lastTraceFetchKey = fetchKey
-
+    // Asked on every publish rather than behind a local version guard: ProjectController asks the identical
+    // question, and ClientLogicGlobal.tracedDocuments memoizes per version so the two share one request.
+    private fun refreshHasTraceIfNeeded() {
         async {
             val present = props.clientLogicGlobal.tracedDocuments().isNotEmpty()
-            setState {
-                hasTrace = present
+            if (present != state.hasTrace) {
+                setState {
+                    hasTrace = present
+                }
             }
         }
     }

@@ -84,4 +84,26 @@ data class ClientLogicState(
 
         return "e${status.epoch}|${active.id.value}|${active.sequence}|${active.state.name}"
     }
+
+
+    // traceVersion() minus the per-emit sequence: WHICH run, in WHAT state. Not a fetch key — it is how
+    // ClientLogicGlobal.publishStatus tells "the run reached a new state" (started, settled, every step
+    // boundary, a trace cleared) apart from "the run emitted another value". The former is a transition the
+    // user is waiting on and publishes at once; the latter is throttled, because values arrive ~3.4/s and
+    // nobody can read them at that rate.
+    //
+    // Deliberately does NOT include the frame: a Script's frame position changes on essentially every step,
+    // so folding it in would classify a plain run as structure-changing throughout and defeat the throttle.
+    // The cost is that intermediate frames traversed WITHIN a single step (a stepped-over RunStep descending
+    // into its child) repaint on the throttle's cadence rather than per engine emit — still animated, since a
+    // step boundary resets the throttle and its first intermediate publishes immediately.
+    fun structureVersion(): String {
+        val status = logicStatus
+            ?: return noTraceVersion
+
+        val active = status.active
+            ?: return "e${status.epoch}"
+
+        return "e${status.epoch}|${active.id.value}|${active.state.name}"
+    }
 }

@@ -38,6 +38,15 @@ class ClientLogicGlobal(
         // re-syncs if a push is ever missed, cheap enough to be irrelevant.
         private const val pushDebounceMillis = 10_000
 
+        // Ceiling on how often an arriving status may fan out to observers, for statuses that carry ONLY a
+        // new trace sequence (see publishStatus). A structure change ignores this and publishes at once.
+        //
+        // Sized by what a human can use, not by what the engine can produce: a full-speed run is a blur at
+        // any cadence, and each publish costs ~4 REST round trips downstream. Measured pre-throttle, a 48s
+        // FizzBuzz run pushed ~165 statuses (~3.4/s) and cost 433 requests; at 1s that is ~200. Stepping is
+        // unaffected — every step boundary is a state change, hence a structure change.
+        private const val statusPublishThrottleMillis = 1_000
+
         // A just-opened stream must DELIVER within this or it isn't trusted. Deliberately not keyed off
         // onopen: an intermediary that buffers the response opens the stream perfectly well and then delivers
         // nothing, which looks identical to a healthy idle stream. The server sends the current status
@@ -108,15 +117,56 @@ class ClientLogicGlobal(
     }
 
 
-    private suspend fun lookupStatus() {
-        applyStatus(restClient.logicStatus())
+    // Returns whether this status changed the run's STRUCTURE — see publishStatus, the only consumer that
+    // cares. Callers that must publish unconditionally (every control verb) ignore it.
+    private suspend fun lookupStatus(): Boolean {
+        return applyStatus(restClient.logicStatus())
     }
 
 
     // The single point where a LogicStatus — however it arrived, polled or pushed — becomes client state.
-    private fun applyStatus(logicStatus: LogicStatus) {
+    private fun applyStatus(logicStatus: LogicStatus): Boolean {
+        val previousStructureVersion = clientLogicState.structureVersion()
+
         clientLogicState = clientLogicState.copy(
             logicStatus = logicStatus)
+
+        return clientLogicState.structureVersion() != previousStructureVersion
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    // Fan-out throttle for statuses arriving from the TRANSPORT (pushed or polled — one rule, either courier).
+    // Control verbs deliberately bypass it: they are one per user action and must land immediately.
+    //
+    // Why this exists at all: the engine bumps the run's sequence on every emit, so a status arrives ~3.4/s
+    // during an active script — and each publish() fans out into ~4 REST round trips (lookup / run-history /
+    // traced / run-executions). Nobody can read 3 trace repaints a second, so paying 12 requests/s for them is
+    // pure waste. Throttling HERE rather than at each query is what makes that one decision instead of four:
+    // every downstream view is publish-driven, so they all inherit the cadence and none needs its own clock.
+    //
+    // throttle (leading + trailing), NOT debounce: a run is a continuous stream, and a trailing-only debounce
+    // would publish nothing at all until the run stopped.
+    private val publishStatusThrottle: FunctionWithDebounce = lodash.throttle({
+        publish()
+    }, statusPublishThrottleMillis)
+
+
+    private fun publishStatus(structureChanged: Boolean) {
+        // A structure change is a transition the user is WAITING on — a run started, settled, changed state
+        // (every step boundary is one of these), or a trace was cleared. Never throttled, and it resets the
+        // throttle's clock so the next value that arrives repaints at once: that is what keeps a stepped run
+        // showing its first intermediate frame instantly instead of up to a second late.
+        if (structureChanged) {
+            publishStatusThrottle.cancel()
+            publish()
+            return
+        }
+
+        // Sequence-only: new values, same shape. The trailing edge is what makes this safe to defer — the
+        // last status of a burst always publishes ~1s later even if nothing else ever arrives, so a value can
+        // never be stranded unshown by a run that goes quiet mid-flight.
+        publishStatusThrottle.apply()
     }
 
 
@@ -188,11 +238,11 @@ class ClientLogicGlobal(
             noteSseMessage()
             val data = messageEvent.data as? String
             if (data != null) {
-                applyStatus(restClient.parseLogicStatusText(data))
-                publish()
+                publishStatus(applyStatus(restClient.parseLogicStatusText(data)))
 
                 // Lets scheduleRefresh see the new state and close the stream once the run is no longer
-                // executing (the terminal push is the last thing this stream owes us).
+                // executing (the terminal push is the last thing this stream owes us). Reads clientLogicState,
+                // which applyStatus updated synchronously — so it is unaffected by the publish throttle.
                 scheduleRefresh()
             }
         }
@@ -295,7 +345,6 @@ class ClientLogicGlobal(
 
     //-----------------------------------------------------------------------------------------------------------------
     private var refreshPending: Boolean = false
-    private var previousRunning: Boolean = false
 
     // A lodash debounce bakes its interval in at construction, so the cadence cannot be retuned on an existing
     // instance — hence one instance per cadence, selected per schedule by SSE health. Both run the same body.
@@ -315,8 +364,10 @@ class ClientLogicGlobal(
             // loop is the only thing still running when push has silently stopped delivering.
             checkSseStale()
 
-            lookupStatus()
-            publish()
+            // Same throttle as the pushed path — push is a faster courier, not a second protocol. A no-op in
+            // practice (both poll cadences are already >= the throttle), but routing it here keeps the rule
+            // in one place rather than making "which transport delivered this" matter.
+            publishStatus(lookupStatus())
 
             scheduleRefresh()
         }
@@ -329,7 +380,7 @@ class ClientLogicGlobal(
 
         // The one choke point binding the push stream's lifetime to the run: every path that arms this loop
         // (init, each control verb, each tick) passes through here, so the stream can't be forgotten on a
-        // path someone adds later. Both calls are idempotent, so running this on every schedule is free.
+        // path someone adds later.
         //
         // Note "running" is isExecuting(), and a PAUSED run is NOT executing — so a parked run holds no stream
         // and no poll at all (correct: it cannot change state until a control verb, so there is nothing to
@@ -337,33 +388,32 @@ class ClientLogicGlobal(
         // not a pre-push leftover to be gated away on sseHealthy. It is the call that moves the state to
         // Stepping/Running so this gate opens the stream and arms the poll; without it neither would ever start
         // and the settle would never arrive.
-        if (running) {
-            connectEventSourceIfNeeded()
-        }
-        else {
+        if (! running) {
+            // Settled: give the connection back and drop any interval still armed. The cancel is deliberately
+            // NOT skipped when refreshPending is set — an interval in flight is precisely what needs cancelling,
+            // and gating it that way let exactly one stray poll fire after every settle. Both calls are
+            // idempotent, so the already-idle case costs nothing.
             closeEventSource()
-        }
-
-        if (refreshPending) {
+            cancelRefresh()
             return
         }
 
-        if (running) {
-            refreshPending = true
+        connectEventSourceIfNeeded()
 
-            // Relaxed net while push is proven to be delivering; the pre-push 1.5s otherwise. demoteSse
-            // re-arms, so a stream that dies mid-run drops straight back to 1.5s.
-            if (sseHealthy) {
-                pushRefreshDebounce.apply()
-            }
-            else {
-                refreshDebounce.apply()
-            }
+        // Don't stack an interval on top of one already in flight.
+        if (refreshPending) {
+            return
         }
-        else if (previousRunning) {
-            cancelRefresh()
+        refreshPending = true
+
+        // Relaxed net while push is proven to be delivering; the pre-push 1.5s otherwise. demoteSse
+        // re-arms, so a stream that dies mid-run drops straight back to 1.5s.
+        if (sseHealthy) {
+            pushRefreshDebounce.apply()
         }
-        previousRunning = running
+        else {
+            refreshDebounce.apply()
+        }
     }
 
 
@@ -821,9 +871,11 @@ class ClientLogicGlobal(
     //
     // Both transports deliver those intermediates, from opposite directions:
     //   - push healthy: the server already publishes every status change (the settle included — see
-    //     ServerLogicController.settleAfterDrive), and applyStatus publishes on arrival. So this loop only
+    //     ServerLogicController.settleAfterDrive), and publishStatus publishes on arrival. So this loop only
     //     watches locally-updated state and issues NO requests at all — and the frames it shows are the ones
-    //     the engine actually passed through, not a 50ms sampling of them.
+    //     the engine actually passed through rather than a 50ms sampling of them, subject to publishStatus's
+    //     throttle: each step's boundary and first intermediate land at once, later ones within the SAME step
+    //     at the throttle's cadence. A step boundary is a state change, so it always resets that clock.
     //   - push absent/dead: fall back to polling status here at 50ms and publishing each poll, exactly as
     //     before push existed.
     private suspend fun awaitStepSettled() {
@@ -833,10 +885,14 @@ class ClientLogicGlobal(
             waited += slowSettlePollMillis
 
             if (! sseHealthy) {
-                lookupStatus()
-                publish()
+                // Through the same throttle as the pushed path, so a dead stream changes the SAMPLING rate,
+                // not the repaint rule. Without it this publishes at 20/s — ~80 REST calls/s downstream —
+                // where push publishes ~1/s for the same run. The settle itself is a state change, so it
+                // still lands immediately.
+                publishStatus(lookupStatus())
             }
 
+            // Reads locally-applied state, not the published state, so the throttle cannot delay the settle.
             val active = clientLogicState.logicStatus?.active
             if (active == null || active.state != LogicRunState.Stepping) {
                 return
@@ -948,6 +1004,9 @@ class ClientLogicGlobal(
     // traceVersion() and neither knows the other exists — so without the memo the query goes out twice on
     // every version change. The cache holds the in-flight query, not just its result: the callers race (both
     // enter before either completes), so caching only settled answers would still let both requests leave.
+    //
+    // The memo dedupes; it does not rate-limit. Cadence is bounded upstream by the status publish throttle —
+    // both callers are publish-driven, so this is asked ~1/s during a run rather than per engine emit.
     suspend fun tracedDocuments(): Set<DocumentPath> {
         val version = clientLogicState.traceVersion()
 

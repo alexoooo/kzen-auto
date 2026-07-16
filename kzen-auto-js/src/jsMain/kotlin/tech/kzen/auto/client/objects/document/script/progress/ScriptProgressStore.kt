@@ -131,7 +131,9 @@ class ScriptProgressStore(
 
                 // The execution tree (parent + call-site per execution) scopes each RunStep's view to the
                 // executions IT spawned within the viewed frame — re-fetched in full each refresh (it is
-                // tiny, one row per execution, unlike the watermarked event history).
+                // tiny, one row per execution, unlike the watermarked event history). Refresh cadence is
+                // bounded upstream: ClientLogicGlobal throttles status publishes, so this runs ~1/s during a
+                // run rather than per engine emit.
                 val executions = when (val executionsResult = lookupRunExecutionsQuery(logicRunId)) {
                     is ClientSuccess -> executionsResult.value
                     is ClientError -> listOf()

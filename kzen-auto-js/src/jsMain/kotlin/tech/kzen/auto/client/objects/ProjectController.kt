@@ -151,9 +151,6 @@ class ProjectController(
     private var lastAutoNavigated: DocumentPath? = null
     private var lastRunRootDocument: DocumentPath? = null
 
-    // Debounces the traced-document query: re-check only when the run status actually changes.
-    private var lastTraceFetchKey: String? = null
-
 
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
@@ -399,25 +396,18 @@ class ProjectController(
             }
         }
 
-        refreshTracedDocumentsIfNeeded(clientState)
+        refreshTracedDocumentsIfNeeded()
         autoFollow(clientState, frame, nextDepths)
     }
 
 
-    // Re-query which documents hold a retained trace whenever the run's trace version changes (a run finishing
-    // or a clear bumps its epoch; a mid-run advance bumps its sequence — a RunStep can host a new document
-    // partway through), so the sidebar's "has trace" markers stay current. Value-equality guard keeps the prop
-    // reference stable otherwise. See ClientLogicState.traceVersion.
-    //
-    // HeaderRunController asks the same question off the same key; ClientLogicGlobal.tracedDocuments memoizes
-    // per version so the two share one request.
-    private fun refreshTracedDocumentsIfNeeded(clientState: ClientState) {
-        val fetchKey = clientState.clientLogicState.traceVersion()
-        if (fetchKey == lastTraceFetchKey) {
-            return
-        }
-        lastTraceFetchKey = fetchKey
-
+    // Keep the sidebar's "has trace" markers current: a run finishing or a clear bumps the epoch, and a
+    // RunStep can host a new document partway through a run. Asked on every publish rather than behind a
+    // local version guard — HeaderRunController asks the identical question, and ClientLogicGlobal already
+    // memoizes per trace version so the two share one request; a local guard here would just be a second
+    // copy of that rule. Publish cadence itself is throttled (see ClientLogicGlobal.publishStatus), so this
+    // is ~1/s during a run. Value-equality guard keeps the prop reference stable in between.
+    private fun refreshTracedDocumentsIfNeeded() {
         async {
             val traced = props.clientLogicGlobal.tracedDocuments()
             if (traced != state.tracedDocuments) {
