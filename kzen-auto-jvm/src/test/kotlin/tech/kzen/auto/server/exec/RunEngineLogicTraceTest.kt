@@ -7,6 +7,7 @@ import tech.kzen.lib.common.exec.engine.Address
 import tech.kzen.lib.common.exec.engine.Execution
 import tech.kzen.lib.common.exec.engine.Logic
 import tech.kzen.lib.common.exec.engine.LogicSignature
+import tech.kzen.lib.common.exec.engine.OutcomeTrace
 import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
@@ -233,6 +234,64 @@ class RunEngineLogicTraceTest {
             val trace = traceFor(mapper, engine)
             assertNull(trace.lookupRun(LogicRunId("other-run"), LogicTraceQuery(LogicTracePath.root)))
             assertFalse(trace.lookupRunHistory(LogicRunId("other-run"), 0L).isNotEmpty())
+        }
+        finally {
+            engine.dispose()
+        }
+    }
+
+
+    @Test
+    fun `a settled node projects its terminal outcome at the outcome path`() = runBlocking {
+        val mapper = ObjectStableMapper()
+        val rootStableId = mapper.objectStableId(rootLocation)
+        val subStableId = mapper.objectStableId(objectLocation("sub.yaml", "Sub"))
+
+        val engine = runToCompletion(mapper, RunEngine(logic { execution ->
+            execution.host(subStableId, logic { TupleValue.ofMain("child") })
+            TupleValue.ofMain("ok")
+        }, rootStableId))
+        try {
+            val trace = traceFor(mapper, engine)
+            val merged = trace.lookupRun(runId, LogicTraceQuery(LogicTracePath.root))
+            assertNotNull(merged)
+
+            // The hosted child settled Success — its outcome projects at the dedicated node-outcome path.
+            @Suppress("UNCHECKED_CAST")
+            val childOutcome = merged.values[LogicTracePath.nodeOutcome(subStableId)]?.value?.get() as? Map<String, Any?>
+            assertNotNull(childOutcome, "a settled node projects an outcome entry")
+            assertEquals(OutcomeTrace.kindSuccess, childOutcome[OutcomeTrace.kindKey])
+
+            // The root node's outcome carries the whole-run result.
+            @Suppress("UNCHECKED_CAST")
+            val rootOutcome = merged.values[LogicTracePath.nodeOutcome(rootStableId)]?.value?.get() as? Map<String, Any?>
+            assertEquals(OutcomeTrace.kindSuccess, rootOutcome?.get(OutcomeTrace.kindKey))
+        }
+        finally {
+            engine.dispose()
+        }
+    }
+
+
+    @Test
+    fun `a failed node's outcome carries kind Failed and the origin at`() = runBlocking {
+        val mapper = ObjectStableMapper()
+        val rootStableId = mapper.objectStableId(rootLocation)
+
+        val engine = runToCompletion(mapper, RunEngine(logic { execution ->
+            execution.recoverable({}) { throw RuntimeException("boom") }
+        }, rootStableId))
+        try {
+            val trace = traceFor(mapper, engine)
+            val merged = trace.lookupRun(runId, LogicTraceQuery(LogicTracePath.root))
+            assertNotNull(merged)
+
+            @Suppress("UNCHECKED_CAST")
+            val outcome = merged.values[LogicTracePath.nodeOutcome(rootStableId)]?.value?.get() as? Map<String, Any?>
+            assertNotNull(outcome)
+            assertEquals(OutcomeTrace.kindFailed, outcome[OutcomeTrace.kindKey])
+            assertEquals(rootStableId.value, outcome[OutcomeTrace.atKey],
+                "the failure origin's stable id rides the outcome for the UI to point at")
         }
         finally {
             engine.dispose()

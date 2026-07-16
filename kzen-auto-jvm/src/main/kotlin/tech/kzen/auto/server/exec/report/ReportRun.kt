@@ -329,7 +329,9 @@ class ReportRun(
                     throw e
                 }
 
-                val hasNext = reportInputPipeline.poll()
+                // The pipeline poll drives a blocking file read; offload it off the engine dispatcher so a large
+                // input doesn't hold an engine thread (and pause / cancel stay responsive between records).
+                val hasNext = execution.blocking { reportInputPipeline.poll() }
                 if (!hasNext) {
                     reachedEndOfData = true
                     break

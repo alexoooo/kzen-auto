@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger
  * Non-generic (element type erased to `Any?`) so `@Reflect` instantiates it cleanly, like [JobChannel].
  *
  * [external] marks a channel whose *client* side is the UI bridge rather than a Worker:
- * [tech.kzen.auto.server.objects.job.JobExecution] opens a client at launch and routes inbound
+ * [tech.kzen.auto.server.exec.job.JobRun] opens a client at launch and routes inbound
  * `ExecutionRequest`s to the serving Worker. The flag only rides on the instance for the bridge to read; the
  * channel itself treats external and internal duplex channels identically.
  */

@@ -16,12 +16,14 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 
 
 /**
- * Per-Worker live progress a [tech.kzen.auto.server.objects.job.JobExecution] / its Workers write to the
- * logic trace store, read for the interactive Job view. Mirrors the Flow store's mostRecent -> lookupRun
- * query pair, reading both the Worker's terminal STATUS (bare stable-id path, written by JobExecution) and
- * its live PROGRESS (the `progress` child path, written by each Worker via `JobControl.publishProgress`) from
- * the one snapshot. The progress payload is an opaque per-Worker map; this store does not interpret its keys —
- * each Worker's display parses its own out of [JobWorkerProgress.progressMap].
+ * Per-Worker live state for the interactive Job view, projected from the run's retained engine (the successor
+ * to the retired `JobExecution`). Mirrors the Flow store's mostRecent -> lookupRun query pair, reading from the
+ * one snapshot, per Worker: its live PROGRESS (the `progress` child path, written by each Worker via
+ * `JobControl.publishProgress`) and its terminal OUTCOME (the node-outcome path — see [WorkerOutcome] /
+ * [LogicTracePath.nodeOutcome], the source of the Job UI outcome chip). The progress payload is an opaque
+ * per-Worker map; this store does not interpret its keys — each Worker's display parses its own out of
+ * [JobWorkerProgress.progressMap]. (The legacy bare stable-id STATUS path is still read for back-compat but is
+ * unwritten on the current engine.)
  */
 class JobProgressStore(
     private val restClient: ClientRestApi,
@@ -50,10 +52,17 @@ class JobProgressStore(
                 ?.value
                 ?.get()
 
-            if (status == null && progressRaw == null) {
+            // The Worker node's terminal outcome (flavour-neutral projection; survives post-run via the retained
+            // engine) — the source of the outcome chip.
+            val outcomeRaw = snapshot
+                .values[LogicTracePath.nodeOutcome(stableId)]
+                ?.value
+                ?.get()
+
+            if (status == null && progressRaw == null && outcomeRaw == null) {
                 continue
             }
-            builder[workerLocation] = JobWorkerProgress.ofProgressMap(status, progressRaw)
+            builder[workerLocation] = JobWorkerProgress.ofProgressMap(status, progressRaw, outcomeRaw)
         }
         return builder
     }

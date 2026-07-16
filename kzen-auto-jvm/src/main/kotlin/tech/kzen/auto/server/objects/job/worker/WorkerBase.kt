@@ -84,14 +84,14 @@ abstract class WorkerBase(
 
     /**
      * Snapshot this Worker's run-scoped state for migration into a rebuilt instance, when a pause / edit-config
-     * / continue rebuilds the Job's graph (see [tech.kzen.auto.server.objects.job.JobExecution]). Called on the
+     * / continue rebuilds the Job's graph (via the engine's live-edit migration; see [tech.kzen.auto.server.exec.job.JobRun]). Called on the
      * OUTGOING instance while it is parked at a checkpoint (quiescent) and BEFORE the run is torn down — so the
      * snapshot may include a LIVE resource (e.g. an open file reader) that the teardown's [onClose] would
      * otherwise close: such a capture should DETACH the resource so [onClose] skips it, transferring ownership
      * to the returned state. Default: null (nothing migrates → the worker restarts from scratch with the edited
      * config — the safe default, and the only coherent one for a sink that re-truncates).
      *
-     * If the returned state holds a detached resource it should be [AutoCloseable]: [JobExecution] closes any
+     * If the returned state holds a detached resource it should be [AutoCloseable]: the engine closes any
      * captured state whose Worker was REMOVED by the edit (so a detached handle can't leak), and a Worker whose
      * config changed incompatibly should likewise close it in [loadMigrationState] instead of adopting it.
      */

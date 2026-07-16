@@ -27,7 +27,7 @@ class BrowserCloseStep(
         // Explicit close: dispose the browser ourselves and deregister it so the engine's auto-disposer won't
         // fire a second time (this is what a Manual closePolicy relies on).
         (execution.resource(WebDriverSupport.resourceKey) as? RemoteWebDriver)?.let {
-            WebDriverSupport.quitQuietly(it)
+            execution.blocking { WebDriverSupport.quitQuietly(it) }
         }
         execution.releaseResource(WebDriverSupport.resourceKey)
 

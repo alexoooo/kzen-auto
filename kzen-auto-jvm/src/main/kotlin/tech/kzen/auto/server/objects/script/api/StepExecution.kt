@@ -40,6 +40,13 @@ interface StepExecution {
     suspend fun pauseHere()
 
     /**
+     * Run a BLOCKING [block] off the engine's fixed dispatcher pool (a Selenium round-trip, a large file read)
+     * so it doesn't hold an engine thread — see [Execution.blocking][tech.kzen.lib.common.exec.engine.Execution.blocking].
+     * The block must be interrupt-responsive; engine cancel / migrate reach it by interrupting its worker thread.
+     */
+    suspend fun <R> blocking(block: () -> R): R
+
+    /**
      * Return the value cached under [key] for this run, computing it once via [factory] on first request. The run
      * coroutine owns the cache single-threadedly, so the memoized value needs no locking — used to reuse a
      * compiled-expression instance across a loop's iterations, keyed by the expression's content signature.

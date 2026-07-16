@@ -29,13 +29,13 @@ class BrowserGetStep(
         val driver = execution.resource(WebDriverSupport.resourceKey) as? RemoteWebDriver
             ?: error("Browser is not open")
 
-        driver.get(location)
+        execution.blocking { driver.get(location) }
 
         if (screenshotDelayMilliseconds > 0) {
             delay(screenshotDelayMilliseconds)
         }
 
-        val screenshotPng = driver.getScreenshotAs(OutputType.BYTES)
+        val screenshotPng = execution.blocking { driver.getScreenshotAs(OutputType.BYTES) }
         execution.traceDetail(BinaryExecutionValue(screenshotPng))
 
         return null

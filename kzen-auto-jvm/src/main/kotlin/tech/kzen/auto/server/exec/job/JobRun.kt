@@ -18,6 +18,7 @@ import tech.kzen.lib.common.exec.ExecutionResult
 import tech.kzen.lib.common.exec.engine.ClosePolicy
 import tech.kzen.lib.common.exec.engine.Execution
 import tech.kzen.lib.common.exec.engine.LogicFailure
+import tech.kzen.lib.common.exec.engine.restoredAs
 import tech.kzen.lib.common.exec.tuple.TupleValue
 import java.util.concurrent.atomic.AtomicInteger
 import tech.kzen.lib.common.model.definition.GraphDefinition
@@ -28,8 +29,8 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableId
 
 
 /**
- * One run of a [JobLogic]'s Worker graph on the new engine: the coroutine-shaped successor to
- * [tech.kzen.auto.server.objects.job.JobExecution]'s re-entrant `continueOrStart` + `WorkerSupervisor`. It
+ * One run of a [JobLogic]'s Worker graph on the new engine: the coroutine-shaped successor to the retired
+ * `JobExecution`'s re-entrant `continueOrStart` + `WorkerSupervisor`. It
  * builds the one shared instance graph (the Workers plus the Channels [tech.kzen.auto.server.objects.job.JobChannelCreator]
  * wires between them), then hosts each Worker as its OWN confined engine node ([Execution.host]) launched
  * concurrently with structured concurrency. The run completes when every Worker settles.
@@ -51,15 +52,14 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableId
  *   ([JobChannel.drainBuffered]) at the quiescent barrier BEFORE teardown (buffered + parked-mid-send, in
  *   delivery order), keyed by the channel's stable id; the rebuilt run [Execution.restored]s that map and
  *   [JobChannel.preload]s each fresh channel before any Worker launches — so the consumer sees the exact stream
- *   it would have without the edit, neither dropping nor replaying a row across the cut (mirrors the old
- *   [tech.kzen.auto.server.objects.job.JobExecution.migrate]).
+ *   it would have without the edit, neither dropping nor replaying a row across the cut — this is JobRun's
+ *   channel carry-over across a live edit.
  *
  * EXTERNAL DUPLEX BRIDGE (logic-spec §4): each `external` duplex Channel (a Worker's UI-facing `serve` port,
  * e.g. the Preview's slice query) gets a UI-bridge client opened here at launch; the Job's ROOT node registers an
  * [Execution.onRequest] router that forwards an inbound request (addressed by `channel` name) to that client's
  * serving Worker and returns its reply (see [route]). Re-opened on every (re)launch, so it survives a migrate;
- * closed at teardown so the serving Worker's serve stream ends. Mirrors the old
- * `JobExecution.route` / `externalClients`.
+ * closed at teardown so the serving Worker's serve stream ends (see [route] and `externalClients`).
  *
  * DEADLOCK DETECTION (the retired engine watchdog's replacement): a Job whose Workers all block on channels with
  * no progress — a lone sink on an orphan channel, or a cycle of Workers each waiting on the other — is failed by
@@ -67,8 +67,9 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableId
  * above is its suppression signal (a run idling on an open serve port awaits a UI request, not a deadlock). On a
  * verdict the monitor completes a deadlock signal exceptionally and a guard coroutine awaiting it throws, failing
  * the whole run (structured concurrency then cancels the channel-blocked Workers). A failing Worker instead
- * parks / fails the run through [WorkerLogic]'s per-Worker `recoverable` (pause-on-error); per-Worker terminal
- * outcome chips remain a display gap.
+ * parks / fails the run through [WorkerLogic]'s per-Worker `recoverable` (pause-on-error). Each Worker's
+ * terminal outcome (Success / Failed / Cancelled) is surfaced as an outcome chip in the Job UI, projected
+ * from the retained engine via `LogicTracePath.nodeOutcome` (a general per-node fact, no per-Worker branch).
  */
 class JobRun(
     private val execution: Execution,
@@ -118,8 +119,7 @@ class JobRun(
 
         // Restore: seed each channel with the in-flight payloads its predecessor (same stable id) was carrying at
         // the edit, BEFORE any Worker launches — so the consumer drains the carryover ahead of the live stream.
-        @Suppress("UNCHECKED_CAST")
-        val carriedChannels = execution.restored as? Map<ObjectStableId, List<Any?>>
+        val carriedChannels = execution.restoredAs<Map<ObjectStableId, List<Any?>>>()
         if (carriedChannels != null) {
             for ((stableId, channel) in streamChannels) {
                 carriedChannels[stableId]?.let { channel.preload(it) }
@@ -245,7 +245,9 @@ class JobRun(
     companion object {
         // Upper bound a UI -> Worker external round-trip blocks the controller monitor (request is @Synchronized);
         // a well-behaved serving Worker replies well within this. A blocked / paused Worker makes the request time
-        // out rather than stalling status / pause / cancel.
+        // out rather than stalling status / pause / cancel. KNOWN BOUNDED SEAM: this is a `runBlocking` on the
+        // controller thread; moving the wait off-monitor is only cheap once the controller is per-run (engine
+        // plan E6, deferred), so the timeout-capped wait stands rather than redesigning the duplex bridge.
         private const val externalRequestTimeoutMillis = 1000L
     }
 }

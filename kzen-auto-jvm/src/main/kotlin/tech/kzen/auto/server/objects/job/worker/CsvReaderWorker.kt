@@ -127,7 +127,7 @@ class CsvReaderWorker(
         }
 
         // Detach the open reader so onClose (during teardown) skips closing it — ownership transfers to the
-        // returned state, which JobExecution hands to the rebuilt instance (or closes if the Worker was removed).
+        // returned state, which the engine hands to the rebuilt instance (or closes if the Worker was removed).
         detached = true
         return ReaderState(
             csvReader, headerListing, pendingFirstRecord, count, path, delimiter, header, finished)
@@ -160,7 +160,7 @@ class CsvReaderWorker(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    // Immutable migration snapshot of the reader's run-scoped state. AutoCloseable so JobExecution can release
+    // Immutable migration snapshot of the reader's run-scoped state. AutoCloseable so the engine can release
     // the detached reader if this Worker was removed by the edit (no rebuilt instance adopts it).
     private class ReaderState(
         val reader: CsvRecordReader?,

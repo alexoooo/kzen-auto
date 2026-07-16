@@ -64,11 +64,11 @@ object JobConventions {
             .nest(AttributeSegment.ofKey(knob.value))
     }
 
-    // Marks a duplex Channel whose client side is the UI bridge rather than a Worker (see JobExecution).
+    // Marks a duplex Channel whose client side is the UI bridge rather than a Worker (see JobRun).
     val externalAttributeName = AttributeName("external")
 
     // Request-protocol param naming which `external` Channel an inbound ExecutionRequest targets (the UI ->
-    // Worker bridge addresses a Job's external duplex channels by their leaf object name). See JobExecution.
+    // Worker bridge addresses a Job's external duplex channels by their leaf object name). See JobRun.
     const val channelParameter = "channel"
 
     // The single free-form query value the built-in minimal Job UI sends to an external channel. Purely the
@@ -80,7 +80,7 @@ object JobConventions {
     // stable id back to an ObjectLocation and drops it if that fails, so a `$stable` path with an extra
     // segment (…/<worker>/progress) would be silently dropped from snapshots. A fixed-convention path is
     // retained as-is (cf. the Report's output-count trace path). Kept distinct from the bare `$stable` path
-    // where JobExecution writes the terminal status, so the two never collide.
+    // where the Worker's own stable-id (status) path lives, so the two never collide.
     private const val progressTraceSegment = "jobWorkerProgress"
 
     // The live-progress path for the Worker identified by [objectStableId]; shared by the server publish
@@ -122,7 +122,7 @@ object JobConventions {
 
 
     // Deterministic name for the external duplex channel auto-synthesized for a Worker's UI `serve` port:
-    // `ch__<workerLeaf>__serve`. JobExecution keys its external client by this leaf name (route by
+    // `ch__<workerLeaf>__serve`. JobRun keys its external client by this leaf name (route by
     // [channelParameter]); the JS client addresses the same name when it pulls a larger preview slice (see
     // JobController.queryPreviewSlice). One serve channel per Worker, so the fixed `serve` suffix is unique.
     fun autoServeChannelName(worker: ObjectPath): String {

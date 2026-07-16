@@ -28,8 +28,8 @@ Channel:
 
 # Duplex (request/reply) counterpart of Channel: client endpoints request a value and suspend until the
 # single serving endpoint replies. Same `capacity` semantics (request-stream capacity). When `external: true`,
-# the client side is not a Worker but the UI bridge: JobExecution opens a client at launch and routes inbound
-# ExecutionRequests addressed to this channel (by name) to the serving Worker (see JobExecution.route).
+# the client side is not a Worker but the UI bridge: JobRun opens a client at launch and routes inbound
+# ExecutionRequests addressed to this channel (by name) to the serving Worker (see JobRun.route).
 DuplexChannel:
   abstract: true
   class: tech.kzen.auto.server.objects.job.channel.DuplexJobChannel

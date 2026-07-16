@@ -11,6 +11,7 @@ import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeViewManager
 import tech.kzen.auto.client.objects.document.job.JobWorkerProgress
+import tech.kzen.auto.client.objects.document.job.WorkerOutcome
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.util.async
@@ -154,6 +155,10 @@ class WorkerDisplayDefault(
                     +statusText(props.common.progress)
                 }
 
+                // A settled Worker's terminal outcome chip — a general per-node fact rendered uniformly for
+                // EVERY Worker (built-in and 3rd-party) with no Worker-type branch.
+                props.common.progress?.outcome?.let { renderOutcomeChip(it) }
+
                 renderAttributeSummaries(objectMetadata)
             }
 
@@ -219,6 +224,30 @@ class WorkerDisplayDefault(
         }
 
         return if (parts.isEmpty()) "—" else parts.joinToString(" · ")
+    }
+
+
+    private fun ChildrenBuilder.renderOutcomeChip(outcome: WorkerOutcome) {
+        val (label, background) = when (outcome.kind) {
+            WorkerOutcome.Kind.Success -> "Done" to Color("#2e7d32")
+            WorkerOutcome.Kind.Failed -> "Failed" to Color("#c62828")
+            WorkerOutcome.Kind.Cancelled -> "Cancelled" to Color("#757575")
+        }
+
+        span {
+            css {
+                marginLeft = 0.5.em
+                padding = Padding(0.05.em, 0.4.em, 0.05.em, 0.4.em)
+                borderRadius = 3.px
+                backgroundColor = background
+                color = NamedColor.white
+                fontSize = 0.75.em
+                whiteSpace = WhiteSpace.nowrap
+            }
+            // A failure's message (from Outcome.Failed) as a hover tooltip; other kinds have none.
+            outcome.message?.let { title = it }
+            +label
+        }
     }
 
 

@@ -12,10 +12,15 @@ package tech.kzen.auto.client.objects.document.job
  * SummaryWorkerDisplay reads "summary"), and the default card renders only [status] plus the generic scalar
  * entries. Do NOT add a Worker-specific field here — that reintroduces the god object and breaks 3rd-party
  * extensibility.
+ *
+ * [outcome] is the exception that proves the rule: a terminal outcome is a GENERAL per-node fact (every Worker
+ * settles with one), like [status], not a Worker-type payload — so it is a typed field, rendered uniformly by
+ * the default card, with no per-Worker branching.
  */
 data class JobWorkerProgress(
     val status: String?,
-    val progressMap: Map<String, Any?>
+    val progressMap: Map<String, Any?>,
+    val outcome: WorkerOutcome? = null
 ) {
     // Generic numeric coercion of one progress key — no Worker schema named here. Shared by the displays that
     // read the conventional "count" key (over the wire an integer can arrive as Long / Int / Double / String).
@@ -31,7 +36,7 @@ data class JobWorkerProgress(
 
 
     companion object {
-        fun ofProgressMap(status: String?, raw: Any?): JobWorkerProgress {
+        fun ofProgressMap(status: String?, raw: Any?, outcomeRaw: Any? = null): JobWorkerProgress {
             val map = raw as? Map<*, *>
 
             val progressMap = LinkedHashMap<String, Any?>()
@@ -42,7 +47,7 @@ data class JobWorkerProgress(
                 }
             }
 
-            return JobWorkerProgress(status, progressMap)
+            return JobWorkerProgress(status, progressMap, WorkerOutcome.ofTraceValue(outcomeRaw))
         }
     }
 }

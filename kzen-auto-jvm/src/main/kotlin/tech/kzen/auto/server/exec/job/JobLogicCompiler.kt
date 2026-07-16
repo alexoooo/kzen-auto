@@ -15,7 +15,7 @@ import tech.kzen.lib.common.service.notation.NotationConventions
  * [tech.kzen.auto.server.exec.script.ScriptLogicCompiler] / [tech.kzen.auto.server.exec.flow.FlowLogicCompiler].
  *
  * The order-driven Channels are synthesized once here — the same [JobChannelSynthesis] augment-then-redefine the
- * old [tech.kzen.auto.server.objects.job.JobExecution] ran each tick — so the run graph has real Channel objects
+ * old `JobExecution` ran each tick — so the run graph has real Channel objects
  * with the Worker ports filled even though the saved notation keeps them blank and omits Channel objects. The
  * resulting augmented + `filterTransitive`d definition, the Worker locations (document order, read from the
  * un-augmented notation since synthesis only adds channels), and the synthesized Channel locations are what

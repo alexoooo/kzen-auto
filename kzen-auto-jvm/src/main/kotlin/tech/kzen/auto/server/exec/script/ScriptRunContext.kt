@@ -134,6 +134,11 @@ class ScriptRunContext(
     }
 
 
+    override suspend fun <R> blocking(block: () -> R): R {
+        return execution.blocking(block)
+    }
+
+
     @Suppress("UNCHECKED_CAST")
     override fun <T: Any> perRunSingleton(key: String, factory: () -> T): T {
         return perRunSingletons.getOrPut(key) { factory() } as T

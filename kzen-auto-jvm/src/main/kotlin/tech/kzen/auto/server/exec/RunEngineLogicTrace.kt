@@ -1,8 +1,11 @@
 package tech.kzen.auto.server.exec
 
+import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.engine.Address
 import tech.kzen.lib.common.exec.engine.Node
 import tech.kzen.lib.common.exec.engine.NodeId
+import tech.kzen.lib.common.exec.engine.NodeStatus
+import tech.kzen.lib.common.exec.engine.OutcomeTrace
 import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionInfo
@@ -224,6 +227,20 @@ class RunEngineLogicTrace(
                 result[path] = LogicTraceEntry(value, time, sequence)
             }
         }
+
+        // A settled node's terminal outcome, projected onto a flavour-neutral dedicated path (see
+        // LogicTracePath.nodeOutcome). Read-time synthesis from node.status — not an emit, so no address
+        // routing is involved and the path is unique per node (never collides with a live value). Survives the
+        // run via the retained engine, so the Job UI reads each Worker's outcome to render its chip after the
+        // run ends (and the root node's entry carries the whole-run outcome). Emitted for every terminal node
+        // of every flavour; flavours that don't read the outcome path are unaffected (kept unconditional to
+        // avoid a flavour branch in this generic projector).
+        val terminal = node.status as? NodeStatus.Terminal
+        if (terminal != null) {
+            val sequence = node.liveSequence.values.maxOrNull() ?: 0L
+            result[LogicTracePath.nodeOutcome(node.stableId)] =
+                LogicTraceEntry(ExecutionValue.of(OutcomeTrace.toMap(terminal.outcome)), time, sequence)
+        }
         return result
     }
 
@@ -257,9 +274,12 @@ class RunEngineLogicTrace(
 
 
     // Ported verbatim from the retired LogicTraceStore: keep a stable-id path through a rename (the client
-    // resolves it), drop it once its object is deleted. A non-stable (literal Report) path passes through.
+    // resolves it), drop it once its object is deleted. A node-outcome path is stable-id-keyed too (under its
+    // own marker), so it drops on delete alongside the emit path. A non-stable (literal Report) path passes
+    // through.
     private fun retainStoredPath(storedPath: LogicTracePath): LogicTracePath? {
         val stableId = storedPath.objectStableId()
+            ?: storedPath.outcomeStableId()
             ?: return storedPath
         return try {
             objectStableMapper.objectLocation(stableId)

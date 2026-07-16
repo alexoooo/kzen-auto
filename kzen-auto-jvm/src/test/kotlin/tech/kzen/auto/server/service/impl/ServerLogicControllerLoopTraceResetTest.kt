@@ -226,7 +226,9 @@ class ServerLogicControllerLoopTraceResetTest {
     private fun valueCount(executionId: LogicRunExecutionId): Int {
         val snapshot = context.logicTrace.lookup(executionId, LogicTraceQuery(LogicTracePath.root))
             ?: return 0
-        return snapshot.values.size
+        // Count LIVE emitted values only: a settled node always projects a terminal-outcome entry (the source
+        // of the Job outcome chip), which is not a resettable live value and must not count here.
+        return snapshot.values.keys.count { it.outcomeStableId() == null }
     }
 
 

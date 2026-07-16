@@ -69,9 +69,12 @@ class EngineJobControl(
 
 
     override suspend fun <R> runBlockingIo(block: () -> R): R {
-        // Run inline on the engine dispatcher thread: the CountingDispatcher keeps counting it (inFlight
-        // stays positive), so blocking I/O stays visible to quiescence detection.
-        return block()
+        // Offload to the engine's elastic pool via [Execution.blocking]: the fixed engine thread is freed while
+        // the I/O blocks, the CountingDispatcher keeps it counted as in-flight (quiescence stays truthful), and
+        // engine cancel / migrate interrupt it — so a Worker blocked in a large read no longer holds an engine
+        // thread nor stalls the pause / step barrier. One offload per Worker at a time (the Worker awaits it),
+        // so the Worker's single-threaded field invariant holds.
+        return execution.blocking(block)
     }
 
 

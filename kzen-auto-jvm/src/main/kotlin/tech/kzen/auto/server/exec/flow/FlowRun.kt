@@ -19,6 +19,7 @@ import tech.kzen.lib.common.exec.NullExecutionValue
 import tech.kzen.lib.common.exec.engine.Address
 import tech.kzen.lib.common.exec.engine.Execution
 import tech.kzen.lib.common.exec.engine.LogicFailure
+import tech.kzen.lib.common.exec.engine.restoredAs
 import tech.kzen.lib.common.exec.tuple.TupleComponentName
 import tech.kzen.lib.common.exec.tuple.TupleComponentValue
 import tech.kzen.lib.common.exec.tuple.TupleValue
@@ -92,7 +93,7 @@ class FlowRun(
         // Live-edit migration (logic-spec §5): adopt the predecessor run's DAG progress (read once at start) so
         // the walker continues from the carried frontier, and register the capture so a later edit carries this
         // run's progress forward. Null on a fresh run -> nothing to adopt, the DAG runs from the start.
-        (execution.restored as? FlowMigrationState)?.let { carried ->
+        execution.restoredAs<FlowMigrationState>()?.let { carried ->
             activeVertices.putAll(carried.activeVertices)
             outputAccumulator.putAll(carried.outputAccumulator)
         }

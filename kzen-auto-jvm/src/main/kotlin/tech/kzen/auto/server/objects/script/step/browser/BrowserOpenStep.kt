@@ -28,19 +28,24 @@ class BrowserOpenStep(
     override suspend fun run(execution: StepExecution): Any? {
         // "Open a new browser window (existing one will be closed)": dispose any browser still open under the key.
         (execution.resource(WebDriverSupport.resourceKey) as? RemoteWebDriver)?.let {
-            WebDriverSupport.quitQuietly(it)
+            execution.blocking { WebDriverSupport.quitQuietly(it) }
             execution.releaseResource(WebDriverSupport.resourceKey)
         }
 
-        WebDriverManager.chromedriver().setup()
+        // Driver-manager setup (download / discovery) and the Chrome process launch are long blocking calls —
+        // offload them off the engine dispatcher so a concurrent run's threads aren't starved and pause / cancel
+        // stay responsive (a cancel interrupts a hung launch).
+        val driver: RemoteWebDriver = execution.blocking {
+            WebDriverManager.chromedriver().setup()
 
-        // http://chromedriver.chromium.org/extensions - https://stackoverflow.com/a/44884633/1941359
-        val chromeOptions = ChromeOptions()
+            // http://chromedriver.chromium.org/extensions - https://stackoverflow.com/a/44884633/1941359
+            val chromeOptions = ChromeOptions()
 
-        // https://stackoverflow.com/questions/75678572/java-io-ioexception-invalid-status-code-403-text-forbidden
-        chromeOptions.addArguments("--remote-allow-origins=*")
+            // https://stackoverflow.com/questions/75678572/java-io-ioexception-invalid-status-code-403-text-forbidden
+            chromeOptions.addArguments("--remote-allow-origins=*")
 
-        val driver: RemoteWebDriver = ChromeDriver(chromeOptions)
+            ChromeDriver(chromeOptions)
+        }
 
         // Open the browser as a run-scoped resource: shared with the action steps (and any hosted child Script),
         // disposed per closePolicy when the run settles (or by an explicit Close step).
@@ -48,7 +53,7 @@ class BrowserOpenStep(
             WebDriverSupport.quitQuietly(driver)
         }
 
-        val infoText = WebDriverManager.chromedriver().browserPath.orElse(null)
+        val infoText = execution.blocking { WebDriverManager.chromedriver().browserPath.orElse(null) }
         execution.traceDetail(infoText.toString())
 
         return null

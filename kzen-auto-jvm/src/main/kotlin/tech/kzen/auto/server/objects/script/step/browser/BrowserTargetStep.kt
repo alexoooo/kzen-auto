@@ -55,7 +55,7 @@ abstract class BrowserTargetStep(
             delay((delaySeconds * 1000).roundToLong().milliseconds)
         }
 
-        val screenshotPng = driver.getScreenshotAs(OutputType.BYTES)
+        val screenshotPng = execution.blocking { driver.getScreenshotAs(OutputType.BYTES) }
         execution.traceDetail(BinaryExecutionValue(screenshotPng))
 
         return result
