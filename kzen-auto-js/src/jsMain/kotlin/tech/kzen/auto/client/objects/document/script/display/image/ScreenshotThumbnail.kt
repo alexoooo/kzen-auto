@@ -10,14 +10,14 @@ import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
-import tech.kzen.lib.common.exec.BinaryExecutionValue
+import tech.kzen.lib.common.exec.BinaryValue
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------
 external interface ScreenshotThumbnailProps: Props {
-    var screenshot: BinaryExecutionValue
+    var screenshot: BinaryValue
 
     // This frame's global trace sequence — its identity in the page screenshot sequence, so the
     // full-screen viewer opens on this exact frame and left/right walks the page from here.
@@ -28,7 +28,7 @@ external interface ScreenshotThumbnailProps: Props {
     // Hover delegation: reports the hovered screenshot (null on leave) so the host — the RunStep's
     // right-of-step thumbnail — shows it in its big preview. NB: plain (non-receiver) function type;
     // receiver function types are prohibited in external declarations.
-    var onPreviewHover: ((BinaryExecutionValue?) -> Unit)?
+    var onPreviewHover: ((BinaryValue?) -> Unit)?
 }
 
 

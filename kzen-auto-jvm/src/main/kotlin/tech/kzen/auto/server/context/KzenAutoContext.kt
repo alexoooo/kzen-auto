@@ -199,6 +199,7 @@ class KzenAutoContext(
         detachedExecutor,
         modelTaskRepository,
         serverLogicController,
+        logicTrace,
         objectStableMapper,
         fileListingAction,
         jobWorkPool,

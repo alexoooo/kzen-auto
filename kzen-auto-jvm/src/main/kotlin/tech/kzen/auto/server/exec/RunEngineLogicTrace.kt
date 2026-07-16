@@ -1,5 +1,7 @@
 package tech.kzen.auto.server.exec
 
+import tech.kzen.lib.common.exec.BinaryExecutionValue
+import tech.kzen.lib.common.exec.BinaryHandleExecutionValue
 import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.engine.Address
 import tech.kzen.lib.common.exec.engine.Node
@@ -19,6 +21,7 @@ import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceSnapshot
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.service.store.normal.ObjectStableId
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
+import tech.kzen.lib.common.util.digest.Digest
 import tech.kzen.lib.server.exec.engine.RunEngine
 import kotlin.time.Clock
 
@@ -123,7 +126,7 @@ class RunEngineLogicTrace(
             ?: return null
 
         val time = Clock.System.now()
-        return LogicTraceSnapshot(filterAndRetain(nodeEntries(node, time), logicTraceQuery))
+        return LogicTraceSnapshot(filterAndRetain(nodeEntries(node, time, access.runId), logicTraceQuery))
     }
 
 
@@ -153,7 +156,7 @@ class RunEngineLogicTrace(
         val time = Clock.System.now()
         val merged = LinkedHashMap<LogicTracePath, LogicTraceEntry>()
         for (node in latestByStableId.values) {
-            for ((path, entry) in nodeEntries(node, time)) {
+            for ((path, entry) in nodeEntries(node, time, access.runId)) {
                 val existing = merged[path]
                 if (existing == null || entry.sequence > existing.sequence) {
                     merged[path] = entry
@@ -188,8 +191,47 @@ class RunEngineLogicTrace(
                     event.stableId,
                     event.sequence,
                     time,
-                    event.value)
+                    toWireValue(event.value, access.runId))
             }
+    }
+
+
+    /**
+     * Resolve the raw bytes of a binary trace value by its content hash (`Digest.ofBytes(bytes).asString()`),
+     * for the `/logic/trace-binary` blob endpoint. Scans the union of every node's live map and the
+     * append-only history: a screenshot can be a live emit (served by [lookup] / [lookupRun]) and/or a
+     * retained log event (the film strip, which survives a loop's `clearAll` of the live paths). Returns null
+     * (→ 404) if the requested run isn't the retained one, or no retained binary hashes to [hash].
+     */
+    fun lookupBinary(logicRunId: LogicRunId, hash: String): ByteArray? {
+        val access = activeRun()
+            ?: return null
+        if (access.runId != logicRunId) {
+            return null
+        }
+
+        var match: ByteArray? = null
+        forEachNode(access.engine.snapshot().root) { node ->
+            if (match == null) {
+                for (value in node.live.values) {
+                    if (value is BinaryExecutionValue && Digest.ofBytes(value.value).asString() == hash) {
+                        match = value.value
+                        break
+                    }
+                }
+            }
+        }
+        if (match != null) {
+            return match
+        }
+
+        for (event in access.engine.history(0L)) {
+            val value = event.value
+            if (value is BinaryExecutionValue && Digest.ofBytes(value.value).asString() == hash) {
+                return value.value
+            }
+        }
+        return null
     }
 
 
@@ -216,15 +258,38 @@ class RunEngineLogicTrace(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    // Replace a large inline binary trace value with a content-addressed handle: the wire JSON carries a hash
+    // instead of ~1 MB of base64 per screenshot, and the bytes are served once, out-of-band, by the
+    // /logic/trace-binary blob endpoint (resolved by lookupBinary). General to ANY binary trace value — not
+    // screenshot-specific; the "image/png" mime is the trace-binary default (every trace binary is a screenshot
+    // today) and is informational only (the blob is served as octet-stream; the browser sniffs). Non-binary
+    // values pass through unchanged, so this is the single seam that scopes handles to the trace wire — a
+    // detached ScreenshotTaker result never passes through here and keeps its inline base64.
+    private fun toWireValue(value: ExecutionValue, runId: LogicRunId): ExecutionValue {
+        if (value !is BinaryExecutionValue) {
+            return value
+        }
+        return BinaryHandleExecutionValue(
+            runId.value,
+            Digest.ofBytes(value.value).asString(),
+            value.value.size,
+            "image/png")
+    }
+
+
     // A single node's live map, translated to wire paths with each entry's live sequence.
-    private fun nodeEntries(node: Node, time: kotlin.time.Instant): Map<LogicTracePath, LogicTraceEntry> {
+    private fun nodeEntries(
+        node: Node,
+        time: kotlin.time.Instant,
+        runId: LogicRunId
+    ): Map<LogicTracePath, LogicTraceEntry> {
         val result = LinkedHashMap<LogicTracePath, LogicTraceEntry>()
         for ((address, value) in node.live) {
             val path = tracePathOf(address, node.stableId)
             val sequence = node.liveSequence[address] ?: 0L
             val existing = result[path]
             if (existing == null || sequence > existing.sequence) {
-                result[path] = LogicTraceEntry(value, time, sequence)
+                result[path] = LogicTraceEntry(toWireValue(value, runId), time, sequence)
             }
         }
 

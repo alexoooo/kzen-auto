@@ -490,7 +490,7 @@ class ScriptStepDisplayDefault(
 
                     // No own handler: this collapsed-only block bubbles to the card's click-to-expand.
                     renderValue(trace.displayValue)
-                    if (trace.detail !is BinaryExecutionValue) {
+                    if (trace.detail !is BinaryValue) {
                         renderDetail(trace.detail)
                     }
                     renderNote(trace.note)
@@ -524,9 +524,9 @@ class ScriptStepDisplayDefault(
         }
 
         renderValue(trace.displayValue)
-        // Screenshot (BinaryExecutionValue) details are shown by the floating StepImageThumbnail
-        // to the right, so don't repeat them inline here (matches the collapsed branch's guard).
-        if (trace.detail !is BinaryExecutionValue) {
+        // Screenshot (BinaryValue) details are shown by the floating StepImageThumbnail to the
+        // right, so don't repeat them inline here (matches the collapsed branch's guard).
+        if (trace.detail !is BinaryValue) {
             renderDetail(trace.detail)
         }
         renderNote(trace.note)

@@ -77,6 +77,7 @@ object CommonRestApi {
     const val paramTaskId = "task"
     const val paramRunId = "run"
     const val paramExecutionId = "execution"
+    const val paramContentHash = "hash"
     const val paramAction = "action"
     const val paramPauseOnError = "pauseOnError"
     const val paramStepMode = "stepMode"
@@ -118,6 +119,13 @@ object CommonRestApi {
     const val logicStartAndStep = "${logicPrefix}startStep"
     const val logicSetPauseOnError = "${logicPrefix}setPauseOnError"
     const val logicSetBreakpoints = "${logicPrefix}breakpoints"
+
+    // Hash-addressed blob of a binary trace value (a screenshot): raw octet-stream bytes, not a JSON
+    // ExecutionResult, served with Cache-Control: public, immutable (a content hash never changes). The trace
+    // JSON references binaries by handle (run + hash) instead of inline base64; the browser fetches each unique
+    // image once from here. Addressed by paramRunId (the retained run) + paramContentHash. See
+    // RestHandler.logicTraceBinary / RunEngineLogicTrace.lookupBinary.
+    const val logicTraceBinary = "${logicPrefix}trace-binary"
 
     // Streaming download of a Job Explore Worker's PERSISTED result as a table.csv attachment (raw file bytes,
     // not a JSON ExecutionResult). The Worker's on-disk table is keyed on its notation identity, so this

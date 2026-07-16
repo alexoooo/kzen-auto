@@ -9,7 +9,7 @@ import tech.kzen.auto.client.objects.document.script.valid.ScriptValidationState
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.objects.document.script.model.ScriptTree
-import tech.kzen.lib.common.exec.BinaryExecutionValue
+import tech.kzen.lib.common.exec.BinaryValue
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.DocumentNotation
 import tech.kzen.lib.common.service.parse.NotationParser
@@ -102,7 +102,7 @@ data class ScriptState(
 
     // The screenshot this RunStep's right-of-step preview should show (null = the latest/representative
     // frame). Driven by hovering a detail-strip frame; see ScriptStepStore.
-    fun hoveredScreenshot(objectLocation: ObjectLocation): BinaryExecutionValue? {
+    fun hoveredScreenshot(objectLocation: ObjectLocation): BinaryValue? {
         return steps[objectLocation]?.hoveredScreenshot
     }
 

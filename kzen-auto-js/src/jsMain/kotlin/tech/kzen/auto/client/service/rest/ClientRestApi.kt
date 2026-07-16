@@ -651,6 +651,17 @@ class ClientRestApi(
     }
 
 
+    // The raw bytes of a binary trace value — for the one consumer that needs the PNG itself, not just to
+    // render it (TargetController's locate-from-a-traced-screenshot, which sends the bytes to the server for
+    // matching). Rendering builds an <img src> blob URL directly instead (StepImage.pngUrl).
+    suspend fun logicTraceBinaryBytes(runId: String, hash: String): ByteArray {
+        return getBytes(
+            CommonRestApi.logicTraceBinary,
+            CommonRestApi.paramRunId to runId,
+            CommonRestApi.paramContentHash to hash)
+    }
+
+
     // Parse a LogicStatus out of an already-parsed JSON payload. Shared by the poll (logicStatus above) and the
     // push stream, which carries the byte-identical payload — one codec, so the two paths cannot drift.
     fun parseLogicStatus(responseJson: Json): LogicStatus {

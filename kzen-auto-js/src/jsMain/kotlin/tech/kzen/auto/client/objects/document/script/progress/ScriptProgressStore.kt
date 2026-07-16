@@ -7,7 +7,7 @@ import tech.kzen.auto.client.util.ClientSuccess
 import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.client.service.logic.LogicRunFrames
 import tech.kzen.auto.common.paradigm.logic.LogicConventions
-import tech.kzen.lib.common.exec.BinaryExecutionValue
+import tech.kzen.lib.common.exec.BinaryValue
 import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.exec.ExecutionSuccess
 import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
@@ -213,7 +213,7 @@ class ScriptProgressStore(
         runStepOwnedExecutions: Map<ObjectStableId, Set<String>>,
         events: List<LogicTraceEvent>
     ): Map<ObjectStableId, LogicTraceEvent> {
-        val binaryEvents = events.filter { it.value is BinaryExecutionValue }
+        val binaryEvents = events.filter { it.value is BinaryValue }
         if (binaryEvents.isEmpty() || runStepOwnedExecutions.isEmpty()) {
             return mapOf()
         }

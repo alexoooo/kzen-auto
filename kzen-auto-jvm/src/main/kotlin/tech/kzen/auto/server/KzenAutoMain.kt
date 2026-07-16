@@ -429,6 +429,18 @@ private fun Routing.routeLogic(
         val response = restHandler.logicMoveTo(call.parameters)
         call.respondText(response)
     }
+    get(CommonRestApi.logicTraceBinary) {
+        val bytes = restHandler.logicTraceBinary(call.parameters)
+        if (bytes == null) {
+            call.respondText("Not found", status = HttpStatusCode.NotFound)
+        }
+        else {
+            // A content hash never changes, so the browser may cache the blob indefinitely. Octet-stream rides
+            // the Compression exclusion (PNG is already compressed) — see install(Compression) above.
+            call.response.header(HttpHeaders.CacheControl, "public, immutable")
+            call.respondBytes(bytes, ContentType.Application.OctetStream)
+        }
+    }
 }
 
 

@@ -19,7 +19,7 @@ import tech.kzen.auto.client.objects.document.script.model.ScriptStore
 import tech.kzen.auto.client.objects.document.script.model.ScriptStoreKey
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.*
-import tech.kzen.lib.common.exec.BinaryExecutionValue
+import tech.kzen.lib.common.exec.BinaryValue
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceEvent
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
@@ -149,7 +149,7 @@ class RunStepDisplay(
 
         // traceEvents is sorted by sequence; keep that order so groups read in execution order.
         val relevant = scriptState.progress.traceEvents
-            .filter { it.value is BinaryExecutionValue && it.executionId.value in ownedExecutions }
+            .filter { it.value is BinaryValue && it.executionId.value in ownedExecutions }
 
         val signature = selfStableId.value + "|" + ownedExecutions.size + "|" +
                 relevant.size + "|" + (relevant.lastOrNull()?.sequence ?: -1L)
@@ -295,7 +295,7 @@ class RunStepDisplay(
                     for (frame in group.frames) {
                         ScreenshotThumbnail::class.react {
                             key = Key(frame.sequence.toString())
-                            screenshot = frame.value as BinaryExecutionValue
+                            screenshot = frame.value as BinaryValue
                             sequence = frame.sequence
                             objectStableMapper = props.objectStableMapper
                             clientStateGlobal = props.clientStateGlobal

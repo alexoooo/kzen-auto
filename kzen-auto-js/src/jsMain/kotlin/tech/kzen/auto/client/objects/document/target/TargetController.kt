@@ -31,6 +31,8 @@ import tech.kzen.auto.common.objects.document.target.TargetDocument
 import tech.kzen.auto.common.objects.document.target.TargetLocateResult
 import tech.kzen.auto.common.paradigm.logic.LogicConventions
 import tech.kzen.lib.common.exec.BinaryExecutionValue
+import tech.kzen.lib.common.exec.BinaryHandleExecutionValue
+import tech.kzen.lib.common.exec.BinaryValue
 import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.exec.ExecutionSuccess
 import tech.kzen.lib.common.exec.ExecutionValue
@@ -84,7 +86,7 @@ external interface TargetControllerState: State {
     var locating: Boolean?
     var locateError: String?
 
-    var traceScreenshots: List<BinaryExecutionValue>?
+    var traceScreenshots: List<BinaryValue>?
     var traceError: String?
     var requestingTrace: Boolean?
 }
@@ -358,7 +360,7 @@ class TargetController(
 
             val latest = screenshots.lastOrNull()
             if (latest != null) {
-                applyScreenshot(latest.value)
+                applyScreenshotValue(latest)
             }
             else {
                 setState {
@@ -374,7 +376,7 @@ class TargetController(
      * Latest traced run's browser screenshots, oldest first; null (with traceError set) when
      * there is nothing to show.
      */
-    private suspend fun fetchTraceScreenshots(): List<BinaryExecutionValue>? {
+    private suspend fun fetchTraceScreenshots(): List<BinaryValue>? {
         val tracedResult = traceQuery(
             CommonRestApi.paramAction to LogicConventions.actionTraced)
             ?: return null
@@ -430,12 +432,12 @@ class TargetController(
      * A browser step's screenshot rides its step trace as the `detail` binary; other trace
      * entries (run-root index, non-browser steps) carry no screenshot.
      */
-    private fun traceScreenshot(value: ExecutionValue): BinaryExecutionValue? {
-        if (value is BinaryExecutionValue) {
+    private fun traceScreenshot(value: ExecutionValue): BinaryValue? {
+        if (value is BinaryValue) {
             return value
         }
 
-        return StepTrace.ofExecutionValueOrNull(value)?.detail as? BinaryExecutionValue
+        return StepTrace.ofExecutionValueOrNull(value)?.detail as? BinaryValue
     }
 
 
@@ -457,6 +459,21 @@ class TargetController(
                 null
             }
         }
+    }
+
+
+    // Resolve a trace screenshot's bytes, then apply. A live BinaryExecutionValue carries them inline; a
+    // content-addressed handle (the trace-wire form since TP3) carries none, so fetch the blob once from the
+    // trace-binary endpoint — locate needs the actual PNG bytes to send to the server for matching.
+    private suspend fun applyScreenshotValue(screenshot: BinaryValue) {
+        val bytes = when (screenshot) {
+            is BinaryExecutionValue ->
+                screenshot.value
+
+            is BinaryHandleExecutionValue ->
+                props.restClient.logicTraceBinaryBytes(screenshot.run, screenshot.hash)
+        }
+        applyScreenshot(bytes)
     }
 
 
@@ -549,8 +566,10 @@ class TargetController(
     }
 
 
-    private fun onTraceScreenshotSelect(screenshot: BinaryExecutionValue) {
-        applyScreenshot(screenshot.value)
+    private fun onTraceScreenshotSelect(screenshot: BinaryValue) {
+        async {
+            applyScreenshotValue(screenshot)
+        }
     }
 
 
@@ -739,7 +758,7 @@ class TargetController(
 
 
     private fun ChildrenBuilder.renderTraceStrip(
-        traceScreenshots: List<BinaryExecutionValue>
+        traceScreenshots: List<BinaryValue>
     ) {
         div {
             css {

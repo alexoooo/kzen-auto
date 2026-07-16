@@ -17,7 +17,7 @@ import tech.kzen.auto.client.objects.document.script.model.ScriptStore
 import tech.kzen.auto.client.objects.document.script.model.ScriptStoreKey
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.*
-import tech.kzen.lib.common.exec.BinaryExecutionValue
+import tech.kzen.lib.common.exec.BinaryValue
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import web.cssom.*
@@ -33,12 +33,12 @@ external interface StepImageThumbnailProps: Props {
 
 
 external interface StepImageThumbnailState: State {
-    var screenshot: BinaryExecutionValue?
+    var screenshot: BinaryValue?
 
     // For a RunStep only: the frame a hovered strip thumbnail is requesting (via ScriptState). When
     // non-null it overrides what the floating preview shows — the small thumbnail keeps showing
     // `screenshot` (the latest), only the large preview tracks the hover.
-    var previewScreenshot: BinaryExecutionValue?
+    var previewScreenshot: BinaryValue?
 
     var hovered: Boolean
     var expanded: Boolean
@@ -153,10 +153,10 @@ class StepImageThumbnail(
         // there's no entry, so fall back to the step's own latest frame from the trace snapshot.
         val runStepStableId = props.objectStableMapper.objectStableId(props.objectLocation)
         val representative = scriptState.progress.representativeFrame(runStepStableId)
-        val nextScreenshot: BinaryExecutionValue? =
-            (representative?.value as? BinaryExecutionValue)
+        val nextScreenshot: BinaryValue? =
+            (representative?.value as? BinaryValue)
                 ?: computeStepTraceInfo(scriptState, props.objectLocation, props.objectStableMapper)
-                    .trace?.detail as? BinaryExecutionValue
+                    .trace?.detail as? BinaryValue
 
         // A RunStep opens full-screen on its representative frame (which is one of its strip frames when
         // expanded); any other step on its own page entry.

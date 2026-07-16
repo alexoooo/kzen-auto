@@ -4,7 +4,7 @@ import tech.kzen.auto.client.objects.document.script.display.computeStepHeaderIn
 import tech.kzen.auto.client.objects.document.script.display.computeStepTraceInfo
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
 import tech.kzen.auto.client.service.global.ClientState
-import tech.kzen.lib.common.exec.BinaryExecutionValue
+import tech.kzen.lib.common.exec.BinaryValue
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceEvent
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
@@ -19,7 +19,7 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 data class PageScreenshotEntry(
     val key: String,
     val title: String,
-    val image: BinaryExecutionValue
+    val image: BinaryValue
 ) {
     companion object {
         // Distinct namespaces so a step key and a frame key can never collide.
@@ -66,7 +66,7 @@ fun pageScreenshots(
                     listOf(representative)
                 }
             for (frame in frames) {
-                val image = frame.value as? BinaryExecutionValue
+                val image = frame.value as? BinaryValue
                     ?: continue
                 entries.add(PageScreenshotEntry(
                     PageScreenshotEntry.frameKey(frame.sequence),
@@ -77,7 +77,7 @@ fun pageScreenshots(
         else {
             // Any other step: its own latest frame, shown as the right-of-step thumbnail.
             val image = computeStepTraceInfo(scriptState, location, objectStableMapper)
-                .trace?.detail as? BinaryExecutionValue
+                .trace?.detail as? BinaryValue
             if (image != null) {
                 entries.add(PageScreenshotEntry(
                     PageScreenshotEntry.stepKey(location),
@@ -108,7 +108,7 @@ private fun stripFrames(
 
     val byExecution = LinkedHashMap<String, MutableList<LogicTraceEvent>>()
     for (frame in scriptState.progress.traceEvents) {
-        if (frame.value !is BinaryExecutionValue || frame.executionId.value !in ownedExecutions) {
+        if (frame.value !is BinaryValue || frame.executionId.value !in ownedExecutions) {
             continue
         }
         byExecution.getOrPut(frame.executionId.value) { mutableListOf() }.add(frame)

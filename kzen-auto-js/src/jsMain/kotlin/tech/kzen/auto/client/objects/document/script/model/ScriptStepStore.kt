@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.objects.document.script.model
 
-import tech.kzen.lib.common.exec.BinaryExecutionValue
+import tech.kzen.lib.common.exec.BinaryValue
 import tech.kzen.lib.common.model.location.ObjectLocation
 
 
@@ -17,7 +17,7 @@ class ScriptStepStore(private val store: ScriptStore) {
     // hoveredScreenshot is the screenshot the RunStep's right-of-step preview shows while a detail-strip
     // frame is hovered (null on mouse-leave → revert to the latest frame). Pure synchronous toggle like
     // setExpanded; the publish drives the RunStep's sibling StepImageThumbnail via onScriptState.
-    fun setHoveredScreenshot(runStepLocation: ObjectLocation, screenshot: BinaryExecutionValue?) {
+    fun setHoveredScreenshot(runStepLocation: ObjectLocation, screenshot: BinaryValue?) {
         update(runStepLocation) { it.copy(hoveredScreenshot = screenshot) }
     }
 

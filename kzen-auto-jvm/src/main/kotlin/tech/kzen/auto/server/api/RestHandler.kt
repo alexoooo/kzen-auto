@@ -6,6 +6,7 @@ import tools.jackson.databind.json.JsonMapper
 import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.auto.common.util.data.DataLocation
+import tech.kzen.auto.server.exec.RunEngineLogicTrace
 import tech.kzen.auto.server.objects.job.service.JobWorkPool
 import tech.kzen.auto.server.objects.report.exec.output.flat.IndexedCsvTable
 import tech.kzen.auto.server.objects.report.service.FileListingAction
@@ -60,6 +61,7 @@ class RestHandler(
     private val detachedExecutor: ModelDetachedExecutor,
     private val modelTaskRepository: ModelTaskRepository,
     private val serverLogicController: ServerLogicController,
+    private val runEngineLogicTrace: RunEngineLogicTrace,
     private val objectStableMapper: ObjectStableMapper,
     private val fileListingAction: FileListingAction,
     private val jobWorkPool: JobWorkPool,
@@ -1180,6 +1182,17 @@ class RestHandler(
         }
 
         return logicRunId.value
+    }
+
+
+    // Hash-addressed screenshot blob. Returns null (→ 404) for a missing param, a non-retained run, or an
+    // unknown hash — the client thumbnail then falls back to blank, same as any cleared trace.
+    fun logicTraceBinary(parameters: Parameters): ByteArray? {
+        val runIdValue = parameters[CommonRestApi.paramRunId]
+            ?: return null
+        val hash = parameters[CommonRestApi.paramContentHash]
+            ?: return null
+        return runEngineLogicTrace.lookupBinary(LogicRunId(runIdValue), hash)
     }
 
 

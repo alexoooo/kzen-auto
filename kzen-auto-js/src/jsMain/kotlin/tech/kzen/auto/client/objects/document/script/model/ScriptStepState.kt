@@ -1,6 +1,6 @@
 package tech.kzen.auto.client.objects.document.script.model
 
-import tech.kzen.lib.common.exec.BinaryExecutionValue
+import tech.kzen.lib.common.exec.BinaryValue
 
 
 // Per-step transient UI state. Held under ScriptState.steps, keyed by ObjectLocation — the one
@@ -12,5 +12,5 @@ import tech.kzen.lib.common.exec.BinaryExecutionValue
 // RunStep's right-of-step floating preview to show (null = show the latest representative frame).
 data class ScriptStepState(
     val expanded: Boolean = false,
-    val hoveredScreenshot: BinaryExecutionValue? = null
+    val hoveredScreenshot: BinaryValue? = null
 )
