@@ -8,6 +8,7 @@ import io.ktor.server.engine.*
 import io.ktor.server.html.*
 import io.ktor.server.http.content.*
 import io.ktor.server.netty.*
+import io.ktor.server.plugins.compression.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -144,6 +145,25 @@ fun Application.ktorMain(
     // server -> client is all a run status needs, and SSE rides the ordinary HTTP path — so it inherits the
     // kzen-shell proxy's prefixing and streaming relay unchanged.
     install(SSE)
+
+    // gzip/deflate the JSON + text responses (trace/detached/notation). Base64-of-PNG screenshots in trace
+    // JSON dominate the byte volume and compress heavily; this recovers most of base64's 33% tax and shrinks
+    // the JSON envelope, helping all three progress stores (Script/Flow/Job). Pure transport encoding — no
+    // wire-format change. The kzen-shell proxy relays it end-to-end unchanged: it forwards Accept-Encoding
+    // upstream, forwards Content-Encoding back, and copies the body byte-for-byte (its CIO client installs no
+    // ContentEncoding plugin, so it never decompresses). Two exclusions:
+    //  - text/event-stream: the /logic/events SSE stream must never be buffered/compressed (would break
+    //    incremental framing/flush and defeat the push design).
+    //  - application/octet-stream: the resource route (respondBytes) serves already-compressed PNG bytes —
+    //    gzip there is CPU for ~0 gain.
+    // minimumSize keeps the tiny text/plain control-verb responses (logicStep*/logicCancel) uncompressed.
+    install(Compression) {
+        gzip()
+        deflate()
+        minimumSize(1024L)
+        excludeContentType(ContentType.Text.EventStream)
+        excludeContentType(ContentType.Application.OctetStream)
+    }
 
     routing {
         routeRequests(context)
