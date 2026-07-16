@@ -184,11 +184,16 @@ class HeaderRunController (
 
 
     // Re-check whether ANY document holds a retained trace (Clear is global), after a run/clear bumps the
-    // status, so the Clear button enables/disables itself accordingly.
+    // status, so the Clear button enables/disables itself accordingly. Keyed on the trace version, whose
+    // epoch component covers the clear case: before and after a clear the run reads as inactive, so only the
+    // epoch distinguishes them (see ClientLogicState.traceVersion).
+    //
+    // ProjectController asks the same question off the same key; ClientLogicGlobal.tracedDocuments memoizes
+    // per version so the two share one request.
     private fun refreshHasTraceIfNeeded(
         clientLogicState: ClientLogicState
     ) {
-        val fetchKey = "${clientLogicState.logicStatus?.time}"
+        val fetchKey = clientLogicState.traceVersion()
         if (fetchKey == lastTraceFetchKey) {
             return
         }

@@ -290,10 +290,11 @@ class JobController(
             return
         }
 
-        // Key on the run-status time so each logic-status poll during a run refreshes the live progress, and
-        // on the document path so opening a Job loads its last run's final progress.
-        val logicStatusTime = clientState.clientLogicState.logicStatus?.time
-        val fetchKey = "${documentPath.asString()}|$logicStatusTime"
+        // Key on the run's trace version so the live progress refreshes exactly when the run actually advanced
+        // (not on every status poll — see ClientLogicState.traceVersion), and on the document path so opening
+        // a Job loads its last run's final progress.
+        val logicTraceVersion = clientState.clientLogicState.traceVersion()
+        val fetchKey = "${documentPath.asString()}|$logicTraceVersion"
         if (fetchKey == lastFetchKey) {
             return
         }

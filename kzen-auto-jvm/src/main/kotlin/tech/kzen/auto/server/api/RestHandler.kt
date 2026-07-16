@@ -2,6 +2,7 @@ package tech.kzen.auto.server.api
 
 import io.ktor.http.*
 import kotlinx.coroutines.runBlocking
+import tools.jackson.databind.json.JsonMapper
 import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.auto.common.util.data.DataLocation
@@ -64,6 +65,12 @@ class RestHandler(
     private val jobWorkPool: JobWorkPool,
     private val managedStorageRegistry: ManagedStorageRegistry
 ) {
+    //-----------------------------------------------------------------------------------------------------------------
+    // Renders the LogicStatus collection for the SSE stream (the GET path is content-negotiated instead).
+    // Thread-safe and stateless once built, per Jackson's contract.
+    private val logicStatusMapper = JsonMapper.builder().build()
+
+
     //-----------------------------------------------------------------------------------------------------------------
     fun scan(parameters: Parameters): Map<String, Any> {
         val fresh = parameters[CommonRestApi.paramFresh] == "true"
@@ -1099,6 +1106,21 @@ class RestHandler(
     //-----------------------------------------------------------------------------------------------------------------
     fun logicStatus(): Map<String, Any> {
         return serverLogicController.status().toCollection()
+    }
+
+
+    // The same payload logicStatus() serves, pre-rendered as a JSON string for the /logic/events SSE stream —
+    // an SSE frame carries text, not a content-negotiated object. Deliberately the SAME LogicStatus codec the
+    // GET uses, so pushed and polled statuses are byte-identical and the client parses both through one path.
+    fun logicStatusJson(): String {
+        return logicStatusMapper.writeValueAsString(logicStatus())
+    }
+
+
+    // Subscribe to "the logic status may have changed". See ServerLogicController.observeStatus for the
+    // contract — in particular, the listener runs on an engine thread on the hot path and must only hand off.
+    fun observeLogicStatus(listener: () -> Unit): AutoCloseable {
+        return serverLogicController.observeStatus(listener)
     }
 
 

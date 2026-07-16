@@ -7,6 +7,7 @@ import tech.kzen.auto.client.objects.document.script.valid.ScriptValidationState
 import tech.kzen.auto.client.objects.document.script.valid.ScriptValidationStore
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
+import tech.kzen.auto.client.service.logic.ClientLogicState
 import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.common.objects.document.script.model.ScriptTree
@@ -16,7 +17,6 @@ import tech.kzen.lib.common.service.parse.NotationParser
 import tech.kzen.lib.common.service.store.MirroredGraphStore
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Instant
 
 
 class ScriptStore(
@@ -45,7 +45,7 @@ class ScriptStore(
     private var mounted = false
     private var state: ScriptState? = null
 
-    private var previousLogicTime: Instant = Instant.DISTANT_PAST
+    private var previousLogicVersion: String = ClientLogicState.noTraceVersion
     private var previousDocumentNotation: DocumentNotation = DocumentNotation.empty
 
     val progressStore = ScriptProgressStore(this)
@@ -133,23 +133,23 @@ class ScriptStore(
 
         updateIfChanged(nextState)
 
-        val logicTime: Instant = clientState.clientLogicState.logicStatus?.time ?: Instant.DISTANT_PAST
+        val logicVersion: String = clientState.clientLogicState.traceVersion()
 
         if (initial) {
             // Seed the change-detection baselines so the first subsequent onClientState doesn't
             // re-fire a refresh that this initial load already performed.
-            previousLogicTime = logicTime
+            previousLogicVersion = logicVersion
             previousDocumentNotation = documentNotation
 
             refreshProgressAsync()
             refreshValidationAsync()
         }
         else {
-            val logicTimeChanged = previousLogicTime != logicTime
+            val logicVersionChanged = previousLogicVersion != logicVersion
             val documentNotationChanged = previousDocumentNotation != documentNotation
 
-            if (logicTimeChanged) {
-                previousLogicTime = logicTime
+            if (logicVersionChanged) {
+                previousLogicVersion = logicVersion
             }
             if (documentNotationChanged) {
                 previousDocumentNotation = documentNotation
@@ -157,8 +157,8 @@ class ScriptStore(
 
             // The trace snapshot is keyed by ObjectStableId and translated locally via the client
             // mapper, so it survives document edits (rename / shift / insert) without a re-fetch —
-            // only a new run (logic time change) warrants pulling fresh progress.
-            if (logicTimeChanged) {
+            // only the run actually advancing (trace version change) warrants pulling fresh progress.
+            if (logicVersionChanged) {
                 refreshProgressAsync()
             }
 

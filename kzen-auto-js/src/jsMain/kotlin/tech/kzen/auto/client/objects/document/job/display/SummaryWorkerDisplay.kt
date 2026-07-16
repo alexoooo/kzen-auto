@@ -130,7 +130,8 @@ class SummaryWorkerDisplay(
             return
         }
 
-        val fetchKey = clientState.clientLogicState.logicStatus?.time.toString()
+        // Pull a fresh summary exactly when the run advanced — see ClientLogicState.traceVersion.
+        val fetchKey = clientState.clientLogicState.traceVersion()
         if (fetchKey == lastSummaryFetchKey) {
             return
         }

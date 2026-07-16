@@ -130,7 +130,8 @@ class PreviewWorkerDisplay(
             return
         }
 
-        val fetchKey = clientState.clientLogicState.logicStatus?.time.toString()
+        // Pull a fresh slice exactly when the run advanced — see ClientLogicState.traceVersion.
+        val fetchKey = clientState.clientLogicState.traceVersion()
         if (fetchKey == lastSliceFetchKey) {
             return
         }

@@ -640,12 +640,30 @@ class ClientRestApi(
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun logicStatus(): LogicStatus {
-        val responseJson = getOrPutJson(CommonRestApi.logicStatus)
+        return parseLogicStatus(getOrPutJson(CommonRestApi.logicStatus))
+    }
 
+
+    // The URL of the run-status push stream (CommonRestApi.logicEvents), for an EventSource. Built off the same
+    // relative baseUrl every REST call uses, so it inherits the kzen-shell proxy prefix for free.
+    fun logicEventsUrl(): String {
+        return "$baseUrl${CommonRestApi.logicEvents}"
+    }
+
+
+    // Parse a LogicStatus out of an already-parsed JSON payload. Shared by the poll (logicStatus above) and the
+    // push stream, which carries the byte-identical payload — one codec, so the two paths cannot drift.
+    fun parseLogicStatus(responseJson: Json): LogicStatus {
         @Suppress("UNCHECKED_CAST")
         val responseCollection = ClientJsonUtils.toMap(responseJson) as Map<String, Any>
 
         return LogicStatus.ofCollection(responseCollection)
+    }
+
+
+    // As [parseLogicStatus], from the raw JSON text an SSE frame delivers.
+    fun parseLogicStatusText(responseText: String): LogicStatus {
+        return parseLogicStatus(JSON.parse(responseText))
     }
 
 

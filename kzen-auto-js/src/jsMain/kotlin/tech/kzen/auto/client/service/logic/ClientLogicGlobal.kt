@@ -1,6 +1,9 @@
 package tech.kzen.auto.client.service.logic
 
+import kotlinx.browser.document
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.delay
+import org.w3c.dom.EventSource
 import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.FunctionWithDebounce
@@ -12,6 +15,8 @@ import tech.kzen.lib.common.exec.ExecutionSuccess
 import tech.kzen.lib.common.exec.engine.StepMode
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunResponse
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunState
+import tech.kzen.lib.common.exec.logic.run.model.LogicStatus
+import kotlin.js.Date
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
@@ -24,7 +29,24 @@ class ClientLogicGlobal(
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
+        // Status-poll cadence while the push stream is NOT proven to be delivering. Unchanged from the
+        // pre-push behaviour on purpose: it is the floor this transport degrades to, so a broken or buffered
+        // stream can never leave the UI slower than it was before push existed.
         private const val debounceMillis = 1_500
+
+        // Status-poll cadence while the push stream IS proven healthy. Not zero: a relaxed safety net that
+        // re-syncs if a push is ever missed, cheap enough to be irrelevant.
+        private const val pushDebounceMillis = 10_000
+
+        // A just-opened stream must DELIVER within this or it isn't trusted. Deliberately not keyed off
+        // onopen: an intermediary that buffers the response opens the stream perfectly well and then delivers
+        // nothing, which looks identical to a healthy idle stream. The server sends the current status
+        // immediately on connect precisely so this probe has something to wait for.
+        private const val sseProbeMillis = 3_000
+
+        // Nothing at all (not even a heartbeat) for this long ⇒ the stream is dead-but-open; drop back to
+        // polling and reconnect. 3x the server's 15s heartbeat, so it tolerates two lost beats.
+        private const val sseStaleMillis = 45_000
 
         // "Slow motion" auto-step pacing: the visible dwell between auto-issued steps, and the cadence /
         // cap used to wait for each step to settle back to Paused before issuing the next.
@@ -74,6 +96,12 @@ class ClientLogicGlobal(
 
         publish()
 
+        // Push updates only while this tab is in front (see connectEventSourceIfNeeded); react to it
+        // changing for the life of the page.
+        document.addEventListener("visibilitychange", {
+            onVisibilityChanged()
+        })
+
         if (running) {
             scheduleRefresh()
         }
@@ -81,30 +109,240 @@ class ClientLogicGlobal(
 
 
     private suspend fun lookupStatus() {
-        val logicStatus = restClient.logicStatus()
+        applyStatus(restClient.logicStatus())
+    }
 
+
+    // The single point where a LogicStatus — however it arrived, polled or pushed — becomes client state.
+    private fun applyStatus(logicStatus: LogicStatus) {
         clientLogicState = clientLogicState.copy(
             logicStatus = logicStatus)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    // Push transport. The EventSource carries the SAME LogicStatus payload the poll fetches, so a pushed status
+    // is applied through the identical path — push is a faster courier, not a second protocol. The poll loop
+    // stays armed as an adaptive fallback (see scheduleRefresh), so every failure mode of this stream degrades
+    // to the pre-push behaviour instead of freezing the UI.
+    private var eventSource: EventSource? = null
+
+    // Delivery-PROVEN, never connection-proven: set only by a message actually arriving, because a buffering
+    // intermediary opens the stream fine and delivers nothing. Drives the poll cadence and lets the
+    // slow-motion settle wait skip its network polling.
+    private var sseHealthy: Boolean = false
+    private var lastSseMessageMillis: Double = 0.0
+
+    // Latched when a stream OPENS but delivers nothing within the probe window — the signature of a buffering
+    // intermediary. Push is then given up on for this page's life and we stay on the 1.5s poll. The latch is
+    // required for termination: the probe's own teardown re-arms the refresh loop, which reconnects, which
+    // fails the probe again — a permanent 3s reconnect cycle against exactly the intermediary the probe
+    // exists to detect. It is the right shape because a buffering proxy is a static property of the
+    // deployment, not a transient fault, and a false positive costs only "pre-push behaviour until reload".
+    private var sseUnavailable: Boolean = false
+
+    // Whether the CURRENT connection reached open. This is what separates the two silent failures: opened but
+    // mute ⇒ buffering ⇒ latch; never opened ⇒ the server/network is down ⇒ do NOT latch and do not close —
+    // EventSource retries by itself, so a backend that comes back is picked up automatically (we sit demoted
+    // on the 1.5s poll meanwhile, and a delivered message re-promotes).
+    private var sseOpened: Boolean = false
+
+
+    // Page Visibility isn't in the Kotlin DOM externals, hence the dynamic read. Tested against "hidden"
+    // rather than for "visible" so that anything unexpected (an absent API, "prerender") counts as visible:
+    // the failure mode of a wrong TRUE is one extra connection, of a wrong FALSE is a UI that never updates.
+    private fun isDocumentVisible(): Boolean {
+        return document.asDynamic().visibilityState != "hidden"
+    }
+
+
+    private fun connectEventSourceIfNeeded() {
+        if (eventSource != null || sseUnavailable) {
+            return
+        }
+
+        // Only the visible tab holds a stream open. This is the mitigation for the browser's ~6-connections
+        // -per-origin HTTP/1.1 cap, which is shared across EVERY tab of this origin (in the packaged product
+        // that is the shell: the launcher and every project). A background tab has nothing to animate, and
+        // re-syncs on becoming visible, so the realistic worst case is one connection per window.
+        if (! isDocumentVisible()) {
+            return
+        }
+
+        // Nothing to watch: no run is executing. Matches scheduleRefresh's gate.
+        if (! clientLogicState.isExecuting()) {
+            return
+        }
+
+        val source = EventSource(restClient.logicEventsUrl())
+        sseOpened = false
+
+        // Deliberately does NOT mark the stream healthy — that is the whole point of the probe. A buffering
+        // intermediary opens the connection perfectly and then delivers nothing, so "open" proves only that
+        // something accepted the request. Only an arriving message proves delivery.
+        source.onopen = {
+            sseOpened = true
+        }
+
+        source.onmessage = { messageEvent ->
+            noteSseMessage()
+            val data = messageEvent.data as? String
+            if (data != null) {
+                applyStatus(restClient.parseLogicStatusText(data))
+                publish()
+
+                // Lets scheduleRefresh see the new state and close the stream once the run is no longer
+                // executing (the terminal push is the last thing this stream owes us).
+                scheduleRefresh()
+            }
+        }
+
+        // Heartbeat. Only feeds the staleness watchdog — it carries no status, and being a NAMED event it
+        // never reaches onmessage. (A bare SSE comment would keep the proxy socket alive but fire no event at
+        // all, leaving the watchdog unable to tell a live idle stream from a dead one.)
+        source.addEventListener("ping", {
+            noteSseMessage()
+        })
+
+        source.onerror = {
+            // Fired on drop/failure. EventSource reconnects by itself, so don't tear it down — just stop
+            // trusting it, which drops the poll back to 1.5s at once. If it recovers, a delivered message
+            // re-promotes it.
+            sseOpened = false
+            demoteSse()
+        }
+
+        eventSource = source
+        lastSseMessageMillis = Date.now()
+
+        // Probe. Fires only on the opened-but-mute case (see sseOpened): that is a buffering intermediary, and
+        // no amount of reconnecting will fix it, so latch push off and stay on the 1.5s poll. A stream that
+        // never opened is left alone to retry itself. The identity check keeps a stale probe from tearing down
+        // a stream that was already replaced.
+        async {
+            delay(sseProbeMillis.toLong())
+            if (eventSource === source && ! sseHealthy && sseOpened) {
+                sseUnavailable = true
+                closeEventSource()
+                rearmRefresh()
+            }
+        }
+    }
+
+
+    private fun noteSseMessage() {
+        lastSseMessageMillis = Date.now()
+        if (! sseHealthy) {
+            // Promote: push is proven to deliver, so the poll drops to its relaxed net.
+            sseHealthy = true
+            rearmRefresh()
+        }
+    }
+
+
+    private fun demoteSse() {
+        if (! sseHealthy) {
+            return
+        }
+        // Back to the pre-push cadence, immediately — never leave the UI slower than it used to be.
+        sseHealthy = false
+        rearmRefresh()
+    }
+
+
+    // Tear the stream down WITHOUT touching the poll cadence. Split from demoteSse deliberately: cadence
+    // re-arming routes through scheduleRefresh, which itself manages the stream — so a close that re-armed
+    // would re-enter itself. Callers pick the cadence they want afterwards.
+    private fun closeEventSource() {
+        eventSource?.close()
+        eventSource = null
+        sseHealthy = false
+        sseOpened = false
+    }
+
+
+    // A dead-but-open socket delivers no error and no heartbeat — only elapsed silence reveals it. Checked
+    // from the poll tick, the one loop still running when push has silently stopped delivering.
+    private fun checkSseStale() {
+        if (eventSource == null) {
+            return
+        }
+
+        if (Date.now() - lastSseMessageMillis > sseStaleMillis) {
+            closeEventSource()
+            rearmRefresh()
+        }
+    }
+
+
+    private fun onVisibilityChanged() {
+        if (isDocumentVisible()) {
+            // Re-sync FIRST — this tab held no stream while hidden, so its status is stale by construction.
+            // scheduleRefresh then re-opens the stream if a run is still executing.
+            async {
+                lookupStatus()
+                publish()
+                rearmRefresh()
+            }
+        }
+        else {
+            // Hidden: give the connection back (the ~6-per-origin cap is shared across all tabs). No re-arm —
+            // a background tab has nothing to animate, and it re-syncs on becoming visible.
+            closeEventSource()
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     private var refreshPending: Boolean = false
     private var previousRunning: Boolean = false
+
+    // A lodash debounce bakes its interval in at construction, so the cadence cannot be retuned on an existing
+    // instance — hence one instance per cadence, selected per schedule by SSE health. Both run the same body.
     private val refreshDebounce: FunctionWithDebounce = lodash.debounce({
+        onRefreshTick()
+    }, debounceMillis)
+
+    private val pushRefreshDebounce: FunctionWithDebounce = lodash.debounce({
+        onRefreshTick()
+    }, pushDebounceMillis)
+
+
+    private fun onRefreshTick() {
         refreshPending = false
         async {
+            // Also the watchdog's tick: a dead-but-open stream produces no event to hang this off, and this
+            // loop is the only thing still running when push has silently stopped delivering.
+            checkSseStale()
+
             lookupStatus()
             publish()
 
             scheduleRefresh()
         }
-    }, debounceMillis)
+    }
 
 
     private fun scheduleRefresh() {
         val running = clientLogicState.isExecuting()
 //        println("#@%$ scheduleRefresh - $running")
+
+        // The one choke point binding the push stream's lifetime to the run: every path that arms this loop
+        // (init, each control verb, each tick) passes through here, so the stream can't be forgotten on a
+        // path someone adds later. Both calls are idempotent, so running this on every schedule is free.
+        //
+        // Note "running" is isExecuting(), and a PAUSED run is NOT executing — so a parked run holds no stream
+        // and no poll at all (correct: it cannot change state until a control verb, so there is nothing to
+        // carry). The consequence catches the eye wrong: each control verb's own lookupStatus() is LOAD-BEARING,
+        // not a pre-push leftover to be gated away on sseHealthy. It is the call that moves the state to
+        // Stepping/Running so this gate opens the stream and arms the poll; without it neither would ever start
+        // and the settle would never arrive.
+        if (running) {
+            connectEventSourceIfNeeded()
+        }
+        else {
+            closeEventSource()
+        }
 
         if (refreshPending) {
             return
@@ -112,7 +350,15 @@ class ClientLogicGlobal(
 
         if (running) {
             refreshPending = true
-            refreshDebounce.apply()
+
+            // Relaxed net while push is proven to be delivering; the pre-push 1.5s otherwise. demoteSse
+            // re-arms, so a stream that dies mid-run drops straight back to 1.5s.
+            if (sseHealthy) {
+                pushRefreshDebounce.apply()
+            }
+            else {
+                refreshDebounce.apply()
+            }
         }
         else if (previousRunning) {
             cancelRefresh()
@@ -121,8 +367,17 @@ class ClientLogicGlobal(
     }
 
 
+    // Switch cadence NOW rather than at the end of the interval already in flight (which, coming off the
+    // 10s net, could otherwise leave a dead stream unnoticed for 10s).
+    private fun rearmRefresh() {
+        cancelRefresh()
+        scheduleRefresh()
+    }
+
+
     private fun cancelRefresh() {
         refreshDebounce.cancel()
+        pushRefreshDebounce.cancel()
         refreshPending = false
     }
 
@@ -556,23 +811,31 @@ class ClientLogicGlobal(
     }
 
 
-    // Poll status until the in-flight step has settled back to Paused (no longer Stepping) or the run
-    // finished (active == null), bounded by a defensive cap.
+    // Wait until the in-flight step has settled back to Paused (no longer Stepping) or the run finished
+    // (active == null), bounded by a defensive cap.
     //
-    // Publish each poll so observers (the sidebar run-highlight + depth badge, the frame tree) see the
-    // intermediate frames a single step traverses while it's mid-flight — e.g. a stepped-over RunStep
-    // child lit up in the sidebar while it runs (its Wait). Without this the loop only published at
-    // settle points (back on the current frame), so slow-motion looked frozen even though each step
-    // transiently descended; manual Step Over surfaces those same frames via the background
-    // scheduleRefresh poll, which lookupStatus()+publish()es while the run is active.
+    // Observers (the sidebar run-highlight + depth badge, the frame tree) must see the intermediate frames a
+    // single step traverses while it's mid-flight — e.g. a stepped-over RunStep child lit up in the sidebar
+    // while it runs (its Wait). Without that, slow motion looks frozen even though each step transiently
+    // descended.
+    //
+    // Both transports deliver those intermediates, from opposite directions:
+    //   - push healthy: the server already publishes every status change (the settle included — see
+    //     ServerLogicController.settleAfterDrive), and applyStatus publishes on arrival. So this loop only
+    //     watches locally-updated state and issues NO requests at all — and the frames it shows are the ones
+    //     the engine actually passed through, not a 50ms sampling of them.
+    //   - push absent/dead: fall back to polling status here at 50ms and publishing each poll, exactly as
+    //     before push existed.
     private suspend fun awaitStepSettled() {
         var waited = 0
         while (waited < slowSettleMaxMillis) {
             delay(slowSettlePollMillis.toLong())
             waited += slowSettlePollMillis
 
-            lookupStatus()
-            publish()
+            if (! sseHealthy) {
+                lookupStatus()
+                publish()
+            }
 
             val active = clientLogicState.logicStatus?.active
             if (active == null || active.state != LogicRunState.Stepping) {
@@ -644,8 +907,10 @@ class ClientLogicGlobal(
 
 
     // Clear the retained logic trace for this document via the generic LogicTraceEndpoint reset, then
-    // re-poll status and publish: the fresh LogicStatus.time bumps every Logic document's progress
-    // fetch key (ScriptStore / FlowController), so they repaint to the now-empty trace.
+    // re-poll status and publish: the clear bumps the controller's epoch, which changes every Logic
+    // document's progress fetch key (ClientLogicState.traceVersion), so they repaint to the now-empty
+    // trace. The epoch is what carries this — status reports no active run both before and after a
+    // clear, so nothing else in the response differs.
     fun clearTraceAsync(mainLocation: ObjectLocation) {
         if (clientLogicState.isActive()) {
             return
@@ -670,9 +935,51 @@ class ClientLogicGlobal(
     }
 
 
+    // Memo for tracedDocuments, keyed by the trace version the answer was fetched against.
+    private var tracedDocumentsVersion: String? = null
+    private var tracedDocumentsQuery: CompletableDeferred<Set<DocumentPath>>? = null
+
+
     // Every document that currently holds a retained logic trace (run roots + RunStep sub-logic roots).
-    // Drives the sidebar's "has trace" indicator. Empty on failure.
+    // Drives the sidebar's "has trace" indicator (ProjectController) and the Clear button's enablement
+    // (HeaderRunController). Empty on failure.
+    //
+    // Memoized per trace version because those two callers ask this identical question off the SAME
+    // traceVersion() and neither knows the other exists — so without the memo the query goes out twice on
+    // every version change. The cache holds the in-flight query, not just its result: the callers race (both
+    // enter before either completes), so caching only settled answers would still let both requests leave.
     suspend fun tracedDocuments(): Set<DocumentPath> {
+        val version = clientLogicState.traceVersion()
+
+        val inFlight = tracedDocumentsQuery
+        if (inFlight != null && tracedDocumentsVersion == version) {
+            return inFlight.await()
+        }
+
+        // Published before the first suspension point below — safe because JS is single-threaded, so a second
+        // caller cannot enter until this one suspends, by which point it sees the query to join.
+        val query = CompletableDeferred<Set<DocumentPath>>()
+        tracedDocumentsVersion = version
+        tracedDocumentsQuery = query
+
+        val fetched =
+            try {
+                lookupTracedDocuments()
+            }
+            catch (e: Throwable) {
+                // Never strand a joined caller awaiting this query, and never cache a failure as an answer.
+                tracedDocumentsVersion = null
+                tracedDocumentsQuery = null
+                query.complete(emptySet())
+                throw e
+            }
+
+        query.complete(fetched)
+        return fetched
+    }
+
+
+    private suspend fun lookupTracedDocuments(): Set<DocumentPath> {
         val result = restClient.performDetached(
             LogicConventions.logicTraceEndpointLocation,
             CommonRestApi.paramAction to LogicConventions.actionTraced
@@ -696,7 +1003,7 @@ class ClientLogicGlobal(
 
 
     // Clear ALL retained traces (the run controls are global). Mirrors clearTraceAsync but resets every
-    // document; the fresh LogicStatus.time then makes every Logic document's progress repaint to empty.
+    // document; the epoch bump then makes every Logic document's progress repaint to empty.
     fun clearAllTracesAsync() {
         if (clientLogicState.isActive()) {
             return

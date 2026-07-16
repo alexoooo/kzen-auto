@@ -1,6 +1,10 @@
 main:
   is: Script
 
+main.steps/Wait:
+  is: WaitStep
+  milliseconds: 60000
+
 main.steps/Formula:
   is: FormulaStep
   code: 1235

@@ -39,9 +39,9 @@ import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import tech.kzen.lib.common.util.digest.Digest
 import tech.kzen.lib.server.exec.engine.RunEngine
+import java.util.concurrent.CopyOnWriteArraySet
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import kotlin.time.Clock
 
 
 /**
@@ -146,11 +146,73 @@ class ServerLogicController(
 
         @Volatile
         var cancelRequested: Boolean = false
+
+        // This run's single subscription to its engine's change signal, re-broadcast to the controller's
+        // statusObservers. Closed when the state is disposed: RunEngine.shutdown()/dispose() do NOT clear the
+        // engine's observer list, so an unclosed subscription would outlive its run.
+        var engineSubscription: AutoCloseable? = null
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     private var stateOrNull: LogicState? = null
+
+    // Version of everything a trace/progress consumer projects that the run's own trace sequence CANNOT express:
+    // a run started, a run settled terminal, a retained trace was cleared. Bumped under the controller lock;
+    // surfaced as LogicStatus.epoch, and deliberately bumps even while there is no active run — that is what lets
+    // a client notice a post-run "clear traces" (before and after, status() reports active == null, so an
+    // active-run-derived version alone would be identical across the clear and no view would ever repaint to
+    // empty). Replaces the retired LogicStatus.time wall clock, which conveyed this by being fresh on EVERY call
+    // — and therefore forced every consumer to re-fetch its full trace snapshot on every poll.
+    private var epoch: Long = 0
+
+    // Consumers of "the run status may have changed" — the push transport (/logic/events) is the only one.
+    // Payload-free, mirroring the engine's own Run.observe contract: a listener is told THAT something changed
+    // and pulls status() itself.
+    //
+    // Deliberately controller-scoped rather than one engine subscription per consumer: the engine a consumer
+    // would subscribe to is replaced on each start() and disposed on clear, and the engine never clears its
+    // observer list on shutdown()/dispose() — so per-consumer engine subscriptions would both miss the run they
+    // care about and accumulate. The controller holds exactly one subscription per run (LogicState
+    // .engineSubscription) and fans out from here; it also owns the epoch transitions no engine can see.
+    //
+    // CONTRACT (load-bearing): a listener is invoked on an engine dispatcher thread, on the emit/log/park hot
+    // path, and sometimes while this controller's monitor is held. It must do nothing but hand off to its own
+    // scope (e.g. trySend into a CONFLATED channel) — never call status(), never serialize, never block.
+    private val statusObservers = CopyOnWriteArraySet<() -> Unit>()
+
+    fun observeStatus(listener: () -> Unit): AutoCloseable {
+        statusObservers.add(listener)
+        return AutoCloseable { statusObservers.remove(listener) }
+    }
+
+    private fun notifyStatusObservers() {
+        for (observer in statusObservers) {
+            try {
+                observer()
+            }
+            catch (e: Throwable) {
+                // An observer must never break the engine's hot path.
+                logger.warn("Status observer error", e)
+            }
+        }
+    }
+
+    private fun bumpEpoch() {
+        epoch += 1
+        notifyStatusObservers()
+    }
+
+    // Every accepted control verb announces itself: a verb typically flips a run-state flag (running / stepping /
+    // pauseRequested / cancelRequested) that status() projects but the ENGINE cannot see, so the engine's own
+    // change signal would not cover it. Applied uniformly to every Submitted return — including the few verbs
+    // that change nothing status() reports (setPauseOnError / setBreakpoints) — because over-announcing is free:
+    // the push transport re-sends only when the serialized status actually differs from what it last sent, so a
+    // redundant signal collapses to nothing. A uniform rule can't rot the way a per-verb audit would.
+    private fun submitted(): LogicRunResponse {
+        notifyStatusObservers()
+        return LogicRunResponse.Submitted
+    }
 
     // A notation edit MAY have landed since [pendingMigration] last reconciled — the cheap first stage of
     // live-edit detection (fed by the graphStore observer callbacks below; registered at the composition root).
@@ -192,15 +254,13 @@ class ServerLogicController(
     //-----------------------------------------------------------------------------------------------------------------
     @Synchronized
     override fun status(): LogicStatus {
-        val time = Clock.System.now()
-
         val state = stateOrNull
-            ?: return LogicStatus(time, null)
+            ?: return LogicStatus(epoch, null)
 
         // A settled (terminal) run is retained only for post-run trace review — report it as no active run,
         // so the client stops driving it and storage-area eviction (which gates on active == null) runs.
         if (state.settled) {
-            return LogicStatus(time, null)
+            return LogicStatus(epoch, null)
         }
 
         val snapshot = state.engine.snapshot()
@@ -223,7 +283,10 @@ class ServerLogicController(
                 }
             }
 
-        return LogicStatus(time, LogicRunInfo(state.runId, nodeToFrame(snapshot.root), runState))
+        // snapshot.sequence is the run's monotonic trace high-water: a client holding it has, by construction,
+        // nothing newer to fetch — so it doubles as the run's cache version (see LogicRunInfo.sequence).
+        return LogicStatus(
+            epoch, LogicRunInfo(state.runId, nodeToFrame(snapshot.root), runState, snapshot.sequence))
     }
 
 
@@ -290,6 +353,15 @@ class ServerLogicController(
                 root.documentPath))
         stateOrNull = state
 
+        // The controller's single subscription to this run's engine — re-broadcast to statusObservers, so a
+        // consumer (the push transport) subscribes once to the controller and keeps working across runs.
+        // The listener runs on an engine dispatcher thread on the hot path: it must stay this cheap.
+        state.engineSubscription = engine.observe { notifyStatusObservers() }
+
+        // A new run replaces whatever the client was projecting (including a just-disposed retained trace):
+        // its runId differs, but epoch also covers the case where a consumer keys on more than the run.
+        bumpEpoch()
+
         return runId
     }
 
@@ -339,7 +411,7 @@ class ServerLogicController(
             }
         }
 
-        return LogicRunResponse.Submitted
+        return submitted()
     }
 
 
@@ -381,7 +453,7 @@ class ServerLogicController(
             // else: already settled at a pause — nothing to do.
         }
 
-        return LogicRunResponse.Submitted
+        return submitted()
     }
 
 
@@ -427,7 +499,7 @@ class ServerLogicController(
             }
         }
 
-        return LogicRunResponse.Submitted
+        return submitted()
     }
 
 
@@ -444,7 +516,7 @@ class ServerLogicController(
         }
 
         state.engine.pauseOnError(value)
-        return LogicRunResponse.Submitted
+        return submitted()
     }
 
 
@@ -463,7 +535,7 @@ class ServerLogicController(
 
         state.engine.setBreakpoints(
             locations.map { objectStableMapper.objectStableId(it) }.toSet())
-        return LogicRunResponse.Submitted
+        return submitted()
     }
 
 
@@ -505,7 +577,7 @@ class ServerLogicController(
             }
         }
 
-        return LogicRunResponse.Submitted
+        return submitted()
     }
 
 
@@ -569,7 +641,7 @@ class ServerLogicController(
         // No-op guard: already parked at the target — a rebuild is not free and is lossy (the coalescing note).
         val rootNode = state.engine.snapshot().root
         if (rootNode.status is NodeStatus.Suspended && rootNode.position == targetId) {
-            return LogicRunResponse.Submitted
+            return submitted()
         }
 
         // A jump ALWAYS recompiles from the current notation (decision 10), updating the closure baseline like
@@ -607,7 +679,7 @@ class ServerLogicController(
             }
         }
 
-        return LogicRunResponse.Submitted
+        return submitted()
     }
 
 
@@ -648,7 +720,7 @@ class ServerLogicController(
             }
         }
 
-        return LogicRunResponse.Submitted
+        return submitted()
     }
 
 
@@ -664,6 +736,14 @@ class ServerLogicController(
         state.stepping = false
         state.pauseRequested = false
 
+        // The settle is invisible to the engine's own change signal, so it MUST be announced here: the engine
+        // published its park BEFORE this runs (we only get here once awaitQuiescent returned), and at that
+        // moment `stepping` was still set — so that publish reported Stepping, not Paused. Without this notify
+        // the Stepping -> Paused transition — precisely what an interactive client and the slow-motion loop
+        // wait on — would never be pushed, and the UI would sit on "Stepping" until the fallback poll.
+        // Announced for every settle, not just the terminal one below (which also bumps the epoch).
+        notifyStatusObservers()
+
         val rootStatus = state.engine.snapshot().root.status
         if (rootStatus is NodeStatus.Terminal) {
             // Retain the settled run for post-run trace queries: stop the engine's pools (no threads held) but
@@ -671,6 +751,10 @@ class ServerLogicController(
             // status() reports it as no-active-run via `settled`.
             state.settled = true
             state.engine.shutdown()
+
+            // status() now reports no-active-run, so the run's own sequence disappears from the wire — the epoch
+            // is what tells a client the terminal transition happened and its final trace is ready to pull.
+            bumpEpoch()
         }
     }
 
@@ -681,6 +765,12 @@ class ServerLogicController(
         if (stateOrNull === state) {
             stateOrNull = null
         }
+
+        // Drop our engine subscription BEFORE disposing: neither shutdown() nor dispose() clears the engine's
+        // observer list, so an unclosed listener would outlive the run it was created for.
+        state.engineSubscription?.close()
+        state.engineSubscription = null
+
         state.engine.dispose()
     }
 
@@ -708,6 +798,12 @@ class ServerLogicController(
             return false
         }
         disposeState(state)
+
+        // The load-bearing epoch bump: status() reported active == null before this clear and reports
+        // active == null after it, so WITHOUT this the wire response is byte-identical across the clear and no
+        // trace view would ever repaint to empty (this is precisely what the retired `time` wall clock used to
+        // convey by accident, by being fresh per call).
+        bumpEpoch()
         return true
     }
 

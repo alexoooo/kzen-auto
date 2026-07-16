@@ -101,6 +101,11 @@ object CommonRestApi {
     // managed execution graph
     private const val logicPrefix = "/logic/"
     const val logicStatus = "${logicPrefix}status"
+
+    // Server-Sent Events stream of LogicStatus pushes — the same payload logicStatus returns, delivered as the
+    // run advances instead of on a client timer. The ONLY streaming endpoint in kzen-auto; the client keeps
+    // polling logicStatus as an adaptive fallback (see ClientLogicGlobal).
+    const val logicEvents = "${logicPrefix}events"
     const val logicStartAndRun = "${logicPrefix}startRun"
     const val logicRequest = "${logicPrefix}request"
     const val logicCancel = "${logicPrefix}cancel"

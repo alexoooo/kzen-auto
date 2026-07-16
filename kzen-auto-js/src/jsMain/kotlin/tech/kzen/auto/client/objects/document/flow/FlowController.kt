@@ -187,10 +187,11 @@ class FlowController(
             return
         }
 
-        // Key on the run status time so each logic-status poll during a run refreshes the live model,
-        // and on the document path so opening a flow loads its last run's final state.
-        val logicStatusTime = clientState.clientLogicState.logicStatus?.time
-        val fetchKey = "${documentPath.asString()}|$logicStatusTime"
+        // Key on the run's trace version so the live model refreshes exactly when the run actually advanced
+        // (not on every status poll — see ClientLogicState.traceVersion), and on the document path so opening
+        // a flow loads its last run's final state.
+        val logicTraceVersion = clientState.clientLogicState.traceVersion()
+        val fetchKey = "${documentPath.asString()}|$logicTraceVersion"
         if (fetchKey == lastFetchKey) {
             return
         }

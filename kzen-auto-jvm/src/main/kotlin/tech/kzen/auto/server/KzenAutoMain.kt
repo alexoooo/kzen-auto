@@ -12,6 +12,11 @@ import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.ktor.server.sse.*
+import io.ktor.sse.*
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeoutOrNull
 import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.api.staticResourceDir
 import tech.kzen.auto.common.api.staticResourcePath
@@ -135,6 +140,11 @@ fun Application.ktorMain(
         jackson()
     }
 
+    // Server-Sent Events, for the /logic/events run-status push stream (see routeLogic). One-directional
+    // server -> client is all a run status needs, and SSE rides the ordinary HTTP path — so it inherits the
+    // kzen-shell proxy's prefixing and streaming relay unchanged.
+    install(SSE)
+
     routing {
         routeRequests(context)
     }
@@ -232,9 +242,77 @@ private fun Routing.routeObjectStable(
 }
 
 
+// How often an otherwise-idle /logic/events stream emits a keep-alive. Must stay comfortably BELOW the
+// kzen-shell proxy's socket (inter-byte) timeout of 60s, or the proxy tears down an idle stream mid-life;
+// 15s leaves 4x margin, tolerating three consecutive lost heartbeats. Also the client's liveness signal:
+// its watchdog demotes to polling if nothing (heartbeat included) arrives for 45s.
+private const val logicEventsHeartbeatMillis = 15_000L
+
+// Floor on the interval between two pushes on one stream. The engine signals on every emit / log / park, so a
+// hot run would otherwise serialize a status per event; at 100ms a stream costs at most ~10 status builds/s —
+// still 15x faster than the 1.5s poll it replaces, and far under the 750ms slow-motion dwell. Signals arriving
+// during the wait are not lost: the channel is CONFLATED, so the latest is retained and delivered next.
+private const val logicEventsMinPushIntervalMillis = 100L
+
+
 private fun Routing.routeLogic(
     restHandler: RestHandler
 ) {
+    // Push half of the run-status transport: the same payload logicStatus serves, sent as the run advances.
+    // The client (ClientLogicGlobal) treats a pushed status identically to a polled one and keeps polling as an
+    // adaptive fallback, so this endpoint failing — or being buffered by an intermediary — degrades to the
+    // pre-push behaviour rather than freezing the UI.
+    sse(CommonRestApi.logicEvents) {
+        // CONFLATED: the engine's signal is payload-free and coalescing-safe, so an unread signal need only
+        // record THAT something changed. Bounds memory under a hot run and lets the listener never block.
+        val signals = Channel<Unit>(Channel.CONFLATED)
+
+        // Cheap by contract: this runs on an engine dispatcher thread on the emit/log/park hot path, and
+        // sometimes under the controller's monitor. trySend on a CONFLATED channel never suspends and never
+        // re-enters the controller, so it can neither stall execution nor deadlock.
+        val subscription = restHandler.observeLogicStatus { signals.trySend(Unit) }
+
+        try {
+            // Send the current status immediately: it syncs a just-connected client, and doubles as the
+            // client's delivery probe (a buffering intermediary opens the stream fine but delivers nothing,
+            // so the client trusts only an ARRIVED message as proof the channel works).
+            var lastSent = restHandler.logicStatusJson()
+            send(ServerSentEvent(data = lastSent))
+
+            while (true) {
+                val signalled = withTimeoutOrNull(logicEventsHeartbeatMillis) { signals.receive() }
+
+                if (signalled == null) {
+                    // Idle. A named event, not a bare comment: a comment would keep the proxy socket alive but
+                    // fire no EventSource event, leaving the client's watchdog blind to a dead-but-open socket.
+                    // "ping" is invisible to onmessage, so it can't be mistaken for a status.
+                    send(ServerSentEvent(event = "ping", data = ""))
+                    continue
+                }
+
+                // Build the payload BEFORE suspending in send(): logicStatusJson() takes the controller's
+                // monitor, and the lock must never be held across a suspension point.
+                val next = restHandler.logicStatusJson()
+
+                // Signals are announced liberally (every accepted control verb, every engine change), and
+                // several of them project to an identical status. Re-sending an identical payload would just
+                // make the client re-derive the same version, so drop it here — which is what makes
+                // over-announcing on the server side free.
+                if (next != lastSent) {
+                    lastSent = next
+                    send(ServerSentEvent(data = next))
+                }
+
+                delay(logicEventsMinPushIntervalMillis)
+            }
+        }
+        finally {
+            // Mandatory: RunEngine.shutdown()/dispose() do not clear observer lists, and a browser tab may
+            // close at any time — an unclosed subscription leaks for the life of the process.
+            subscription.close()
+        }
+    }
+
     get(CommonRestApi.logicStatus) {
         val response = restHandler.logicStatus()
         call.respond(response)

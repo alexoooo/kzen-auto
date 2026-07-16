@@ -10,6 +10,7 @@ import tech.kzen.auto.client.objects.document.report.preview.model.ReportPreview
 import tech.kzen.auto.client.objects.document.report.run.model.ReportRunStore
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
+import tech.kzen.auto.client.service.logic.ClientLogicState
 import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.FunctionWithDebounce
@@ -18,7 +19,6 @@ import tech.kzen.lib.common.model.definition.ObjectDefinition
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.service.store.MirroredGraphStore
 import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Instant
 
 
 class ReportStore(
@@ -45,7 +45,7 @@ class ReportStore(
     private var mounted = false
     private var state: ReportState? = null
 
-    private var previousLogicTime: Instant = Instant.DISTANT_PAST
+    private var previousLogicVersion: String = ClientLogicState.noTraceVersion
 
     val input = ReportInputStore(this)
     val formula = ReportFormulaStore(this)
@@ -117,14 +117,19 @@ class ReportStore(
             initAsync()
         }
         else {
-//            println("Time: $previousLogicTime | Active: ${clientState.clientLogicState.isActive()}")
+//            println("Version: $previousLogicVersion | Active: ${clientState.clientLogicState.isActive()}")
 
-            val logicTime: Instant = clientState.clientLogicState.logicStatus?.time ?: Instant.DISTANT_PAST
-            if (previousLogicTime != logicTime ||
-                previousLogicTime != Instant.DISTANT_PAST && !clientState.clientLogicState.isActive()
+            // Second disjunct translated as-is from the retired LogicStatus.time formulation, where the
+            // sentinel was Instant.DISTANT_PAST: noTraceVersion means "no status seen yet", exactly as
+            // DISTANT_PAST did (both hold iff logicStatus == null). Its effect — re-scheduling on every
+            // publish once a status has been seen and the run is inactive — is pre-existing; preserved
+            // deliberately rather than "fixed" here.
+            val logicVersion: String = clientState.clientLogicState.traceVersion()
+            if (previousLogicVersion != logicVersion ||
+                previousLogicVersion != ClientLogicState.noTraceVersion && !clientState.clientLogicState.isActive()
             ) {
-//                println("Scheduling $logicTime")
-                previousLogicTime = logicTime
+//                println("Scheduling $logicVersion")
+                previousLogicVersion = logicVersion
                 scheduleRefresh()
             }
         }

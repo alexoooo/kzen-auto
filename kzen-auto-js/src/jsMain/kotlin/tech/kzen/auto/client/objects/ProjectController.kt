@@ -404,11 +404,15 @@ class ProjectController(
     }
 
 
-    // Re-query which documents hold a retained trace whenever the run status changes (a fresh
-    // LogicStatus.time after a run finishes / a clear), so the sidebar's "has trace" markers stay current
-    // once a run is no longer executing. Value-equality guard keeps the prop reference stable otherwise.
+    // Re-query which documents hold a retained trace whenever the run's trace version changes (a run finishing
+    // or a clear bumps its epoch; a mid-run advance bumps its sequence — a RunStep can host a new document
+    // partway through), so the sidebar's "has trace" markers stay current. Value-equality guard keeps the prop
+    // reference stable otherwise. See ClientLogicState.traceVersion.
+    //
+    // HeaderRunController asks the same question off the same key; ClientLogicGlobal.tracedDocuments memoizes
+    // per version so the two share one request.
     private fun refreshTracedDocumentsIfNeeded(clientState: ClientState) {
-        val fetchKey = "${clientState.clientLogicState.logicStatus?.time}"
+        val fetchKey = clientState.clientLogicState.traceVersion()
         if (fetchKey == lastTraceFetchKey) {
             return
         }
