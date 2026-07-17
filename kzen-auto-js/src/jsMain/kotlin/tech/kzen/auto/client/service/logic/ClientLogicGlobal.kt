@@ -60,7 +60,13 @@ class ClientLogicGlobal(
         // "Slow motion" auto-step pacing: the visible dwell between auto-issued steps, and the cadence /
         // cap used to wait for each step to settle back to Paused before issuing the next.
         private const val slowPacingMillis = 750
-        private const val slowSettlePollMillis = 50
+
+        // How often awaitStepSettled re-checks for settle: BOTH the push-healthy local-state re-check
+        // granularity AND the poll floor when push is absent. 200ms (not the old 50ms, a pre-push
+        // leftover): well under the 750ms dwell so settle detection stays imperceptible, while a no-push
+        // deployment polls status at ~5/s instead of ~20/s. When push is healthy this loop issues no
+        // requests at all (see awaitStepSettled), so this only bounds detection latency there.
+        private const val slowSettlePollMillis = 200
         private const val slowSettleMaxMillis = 30_000
     }
 
@@ -795,6 +801,10 @@ class ClientLogicGlobal(
                 }
                 delay(10.milliseconds)
                 lookupStatus()
+                // Open the push stream for the bootstrap step, exactly as each manual control verb does
+                // (state is now Stepping, so scheduleRefresh's gate opens it). awaitStepSettled then rides
+                // push instead of polling once the stream proves healthy. See runSlowLoop.
+                scheduleRefresh()
                 awaitStepSettled()
                 publish()
             }
@@ -850,6 +860,13 @@ class ClientLogicGlobal(
                 break
             }
 
+            // Move local state to Stepping so scheduleRefresh's isExecuting() gate opens the push stream
+            // for this step (load-bearing, exactly as stepAsync/stepOverAsync do — see scheduleRefresh's
+            // note at the !running gate). awaitStepSettled then rides push when the stream is healthy
+            // instead of polling status; the stream closes again on settle for the dwell, reopens next step.
+            lookupStatus()
+            scheduleRefresh()
+
             awaitStepSettled()
             publish()
         }
@@ -873,11 +890,13 @@ class ClientLogicGlobal(
     //   - push healthy: the server already publishes every status change (the settle included — see
     //     ServerLogicController.settleAfterDrive), and publishStatus publishes on arrival. So this loop only
     //     watches locally-updated state and issues NO requests at all — and the frames it shows are the ones
-    //     the engine actually passed through rather than a 50ms sampling of them, subject to publishStatus's
-    //     throttle: each step's boundary and first intermediate land at once, later ones within the SAME step
-    //     at the throttle's cadence. A step boundary is a state change, so it always resets that clock.
-    //   - push absent/dead: fall back to polling status here at 50ms and publishing each poll, exactly as
-    //     before push existed.
+    //     the engine actually passed through rather than a slowSettlePollMillis sampling of them, subject to
+    //     publishStatus's throttle: each step's boundary and first intermediate land at once, later ones
+    //     within the SAME step at the throttle's cadence. A step boundary is a state change, so it always
+    //     resets that clock. (slowRunAsync / runSlowLoop arm the stream per step, so this branch is the
+    //     norm whenever push is available.)
+    //   - push absent/dead: fall back to polling status here at slowSettlePollMillis and publishing each
+    //     poll, as before push existed.
     private suspend fun awaitStepSettled() {
         var waited = 0
         while (waited < slowSettleMaxMillis) {
@@ -886,9 +905,9 @@ class ClientLogicGlobal(
 
             if (! sseHealthy) {
                 // Through the same throttle as the pushed path, so a dead stream changes the SAMPLING rate,
-                // not the repaint rule. Without it this publishes at 20/s — ~80 REST calls/s downstream —
-                // where push publishes ~1/s for the same run. The settle itself is a state change, so it
-                // still lands immediately.
+                // not the repaint rule. Without it this publishes at the poll rate (~5/s at
+                // slowSettlePollMillis, ~20 REST calls/s downstream) where push publishes ~1/s for the same
+                // run. The settle itself is a state change, so it still lands immediately.
                 publishStatus(lookupStatus())
             }
 
