@@ -10,6 +10,7 @@ const val kzenLibVersion = "0.30.0-SNAPSHOT"
 
 
 const val ktorVersion = "3.5.1"
+const val kotlinxSerializationVersion = "1.9.0"
 const val annotationsApiVersion = "3.0.0"
 const val logbackVersion = "1.5.37"
 const val jacksonModuleKotlin = "3.2.0"

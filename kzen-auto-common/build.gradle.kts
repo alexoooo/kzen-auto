@@ -3,6 +3,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     kotlin("multiplatform")
+    kotlin("plugin.serialization")
     id("com.google.devtools.ksp")
     `maven-publish`
 }
@@ -42,6 +43,11 @@ kotlin {
         commonMain.dependencies {
             api("tech.kzen.lib:kzen-lib-common:$kzenLibVersion")
             api("org.jetbrains.kotlinx:kotlinx-datetime:$kotlinxDatetimeVersion")
+
+            // api (not implementation) so JS consumers — which decode the DTOs — get the
+            // serialization runtime transitively. Foundation for SER3's kzen-auto DTO family;
+            // no serializer is written in this module during SER2.
+            api("org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinxSerializationVersion")
         }
 
         commonTest.dependencies {

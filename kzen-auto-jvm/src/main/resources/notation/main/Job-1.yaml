@@ -6,9 +6,6 @@ main:
 main.workers/Formula Source:
   is: FormulaSourceWorker
   code: 1..100
-  channels:
-    output:
-      batchSize: 2
 
 main.workers/Run:
   is: RunWorker
