@@ -281,8 +281,7 @@ private fun Routing.routeObjectStable(
     restHandler: RestHandler
 ) {
     get(CommonRestApi.objectStableMapperSnapshot) {
-        val response = restHandler.objectStableMapperSnapshot()
-        call.respond(response)
+        call.respondJson(restHandler.objectStableMapperSnapshot())
     }
 }
 
@@ -321,7 +320,7 @@ private fun Routing.routeLogic(
             // Send the current status immediately: it syncs a just-connected client, and doubles as the
             // client's delivery probe (a buffering intermediary opens the stream fine but delivers nothing,
             // so the client trusts only an ARRIVED message as proof the channel works).
-            var lastSent = restHandler.logicStatusJson()
+            var lastSent = serverJson.encodeToString(restHandler.logicStatus())
             send(ServerSentEvent(data = lastSent))
 
             while (true) {
@@ -335,9 +334,10 @@ private fun Routing.routeLogic(
                     continue
                 }
 
-                // Build the payload BEFORE suspending in send(): logicStatusJson() takes the controller's
-                // monitor, and the lock must never be held across a suspension point.
-                val next = restHandler.logicStatusJson()
+                // Build the payload BEFORE suspending in send(): logicStatus() takes the controller's
+                // monitor, and the lock must never be held across a suspension point (encoding runs after
+                // status() has returned, so the monitor is already released here).
+                val next = serverJson.encodeToString(restHandler.logicStatus())
 
                 // Signals are announced liberally (every accepted control verb, every engine change), and
                 // several of them project to an identical status. Re-sending an identical payload would just
@@ -359,8 +359,7 @@ private fun Routing.routeLogic(
     }
 
     get(CommonRestApi.logicStatus) {
-        val response = restHandler.logicStatus()
-        call.respond(response)
+        call.respondJson(restHandler.logicStatus())
     }
     get(CommonRestApi.logicStartAndRun) {
         val response = restHandler.logicStart(call.parameters, false)
@@ -473,8 +472,7 @@ private fun Routing.routeTask(
     restHandler: RestHandler
 ) {
     get(CommonRestApi.taskSubmit) {
-        val response = restHandler.taskSubmit(call.parameters)
-        call.respond(response)
+        call.respondJson(restHandler.taskSubmit(call.parameters))
     }
     get(CommonRestApi.taskQuery) {
         val response = restHandler.taskQuery(call.parameters)
@@ -484,7 +482,7 @@ private fun Routing.routeTask(
                 status = HttpStatusCode.NotFound)
         }
         else {
-            call.respond(response)
+            call.respondJson(response)
         }
     }
     get(CommonRestApi.taskCancel) {
@@ -495,12 +493,11 @@ private fun Routing.routeTask(
                 status = HttpStatusCode.NotFound)
         }
         else {
-            call.respond(response)
+            call.respondJson(response)
         }
     }
     get(CommonRestApi.taskLookup) {
-        val response = restHandler.taskLookup(call.parameters)
-        call.respond(response)
+        call.respondJson(restHandler.taskLookup(call.parameters))
     }
 }
 

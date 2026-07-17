@@ -20,6 +20,10 @@ Five Gradle subprojects:
 
 `kzen-auto-jvm/src/main/resources/notation/main/` (and any `notation/main/` a run writes into) holds the **user's own working documents and run artifacts** — Scripts, Reports, screenshots — frequently `git add`ed but not yet committed. **Never delete, move, or overwrite files there (or anywhere) that aren't part of your task, even when uncommitted, untracked, or gitignored.** Scope deletions to paths you created this session or to `build/` output; if a file seems in the way, surface it and ask. See the umbrella [`AGENTS.md`](../AGENTS.md) "File safety" rule.
 
+## Git hygiene
+
+**Stage every new file you create as soon as it's written** — `git add <explicit path>`, **stage only, never commit** unless the user asks. New source/test/notation/doc files otherwise linger as untracked `??` entries that are easy to overlook (edited tracked files already show in the diff, so they need no action). Note that changes here often span **two repos** (kzen-auto + the sibling kzen-lib it consumes from mavenLocal), so `git status` and stage in each. Never `git add -A` / `git add .` / `git add <dir>` — a blanket add sweeps up the user's unrelated WIP and untracked working documents (see *File safety*). Full rule: umbrella [`../kzen/AGENTS.md`](../kzen/AGENTS.md) "Stage new files you create".
+
 ## Entry points
 
 | Class | Module | Purpose |

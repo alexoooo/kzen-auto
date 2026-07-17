@@ -584,63 +584,51 @@ class ClientRestApi(
         objectLocation: ObjectLocation,
         vararg parameters: Pair<String, String>
     ): TaskModel {
-        val responseJson = getOrPutJson(
+        return clientJson.decodeFromString(getOrPut(
             CommonRestApi.taskSubmit,
             CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
             CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
-            *parameters)
-
-        val responseCollection = ClientJsonUtils.toMap(responseJson)
-
-        return TaskModel.fromJsonCollection(responseCollection)
+            *parameters))
     }
 
 
     suspend fun taskQuery(
         taskId: TaskId
     ): TaskModel? {
-        val responseJson = getOrPutJsonOrNull(
+        return getOrPutOrNull(
             CommonRestApi.taskQuery,
             CommonRestApi.paramTaskId to taskId.identifier)
-            ?: return null
-
-        val responseCollection = ClientJsonUtils.toMap(responseJson)
-
-        return TaskModel.fromJsonCollection(responseCollection)
+            ?.let { clientJson.decodeFromString(it) }
     }
 
 
     suspend fun taskCancel(
         taskId: TaskId
     ): TaskModel? {
-        val responseJson = getOrPutJsonOrNull(
+        return getOrPutOrNull(
             CommonRestApi.taskCancel,
             CommonRestApi.paramTaskId to taskId.identifier)
-            ?: return null
-
-        val responseCollection = ClientJsonUtils.toMap(responseJson)
-
-        return TaskModel.fromJsonCollection(responseCollection)
+            ?.let { clientJson.decodeFromString(it) }
     }
 
 
     suspend fun taskLookup(
         objectLocation: ObjectLocation
     ): Set<TaskId> {
-        val responseJson = getOrPut(
+        val response = getOrPut(
             CommonRestApi.taskLookup,
             CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
             CommonRestApi.paramObjectPath to objectLocation.objectPath.asString())
 
-        val responseCollection = ClientJsonUtils.toList(JSON.parse(responseJson))
-
-        return responseCollection.map { TaskId(it as String) }.toSet()
+        return clientJson.decodeFromString<List<String>>(response)
+            .map { TaskId(it) }
+            .toSet()
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun logicStatus(): LogicStatus {
-        return parseLogicStatus(getOrPutJson(CommonRestApi.logicStatus))
+        return parseLogicStatusText(getOrPut(CommonRestApi.logicStatus))
     }
 
 
@@ -662,19 +650,10 @@ class ClientRestApi(
     }
 
 
-    // Parse a LogicStatus out of an already-parsed JSON payload. Shared by the poll (logicStatus above) and the
-    // push stream, which carries the byte-identical payload — one codec, so the two paths cannot drift.
-    fun parseLogicStatus(responseJson: Json): LogicStatus {
-        @Suppress("UNCHECKED_CAST")
-        val responseCollection = ClientJsonUtils.toMap(responseJson) as Map<String, Any>
-
-        return LogicStatus.ofCollection(responseCollection)
-    }
-
-
-    // As [parseLogicStatus], from the raw JSON text an SSE frame delivers.
+    // Decode a LogicStatus from raw JSON text (SER4 kotlinx codec). Shared by the poll (logicStatus above) and
+    // the SSE push stream, which carries the byte-identical payload — one codec, so the two paths cannot drift.
     fun parseLogicStatusText(responseText: String): LogicStatus {
-        return parseLogicStatus(JSON.parse(responseText))
+        return clientJson.decodeFromString(responseText)
     }
 
 
@@ -891,10 +870,10 @@ class ClientRestApi(
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun objectStableMapperSnapshot(): Map<ObjectStableId, ObjectLocation> {
-        val responseJson = getOrPutJson(CommonRestApi.objectStableMapperSnapshot)
-        val responseMap = ClientJsonUtils.toMap(responseJson)
+        val responseMap = clientJson.decodeFromString<Map<String, String>>(
+            getOrPut(CommonRestApi.objectStableMapperSnapshot))
         return responseMap.entries.associate { (idString, locationString) ->
-            ObjectStableId(idString) to ObjectLocation.parse(locationString as String)
+            ObjectStableId(idString) to ObjectLocation.parse(locationString)
         }
     }
 
@@ -939,10 +918,12 @@ class ClientRestApi(
     }
 
 
-    private suspend fun getOrPutJsonOrNull(
+    // As [getOrPut], but null instead of throwing on a 404 or empty body — for a kotlinx-decoded nullable
+    // response (taskQuery / taskCancel).
+    private suspend fun getOrPutOrNull(
             commandPath: String,
             vararg parameters: Pair<String, String>
-    ): Json? {
+    ): String? {
         val response = try {
             getOrPut(commandPath, *parameters)
         }
@@ -954,7 +935,7 @@ class ClientRestApi(
         }
         return when {
             response.isEmpty() -> null
-            else -> JSON.parse(response)
+            else -> response
         }
     }
 

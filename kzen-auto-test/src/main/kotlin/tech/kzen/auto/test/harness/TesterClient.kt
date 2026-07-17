@@ -2,12 +2,12 @@ package tech.kzen.auto.test.harness
 
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
-import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
-import io.ktor.serialization.jackson.*
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.objects.document.script.model.StepTrace
 import tech.kzen.auto.common.paradigm.logic.LogicConventions
@@ -15,6 +15,8 @@ import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.exec.ExecutionResult
 import tech.kzen.lib.common.exec.ExecutionSuccess
 import tech.kzen.lib.common.exec.TextExecutionValue
+import tech.kzen.lib.common.exec.logic.run.model.LogicRunState
+import tech.kzen.lib.common.exec.logic.run.model.LogicStatus
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceQuery
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceSnapshot
@@ -22,9 +24,6 @@ import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.service.store.normal.ObjectStableId
-import tools.jackson.databind.ObjectMapper
-import tools.jackson.databind.json.JsonMapper
-import tools.jackson.module.kotlin.kotlinModule
 
 
 /**
@@ -33,23 +32,24 @@ import tools.jackson.module.kotlin.kotlinModule
  * Endpoints used:
  *  - GET /logic/startRun?path={documentPath}&object={objectPath}[&pauseOnError=true]
  *      → runId text or HTTP 400
- *  - GET /logic/status                                            → JSON {time, active}
+ *  - GET /logic/status                                            → JSON {epoch, structureVersion, active}
  *
- * `active == null` (serialized as the string "null" in the response) means the run completed.
- * With `pauseOnError=true`, a step failure parks the run instead of ending it, so
- * `active.state == "Paused"` means the run hit a step error — nothing else pauses runs in
+ * `active == null` (a real JSON null since SER4, no longer the "null" string sentinel) means the run
+ * completed. With `pauseOnError=true`, a step failure parks the run instead of ending it, so
+ * `active.state == Paused` means the run hit a step error — nothing else pauses runs in
  * this harness (no pause commands are ever sent).
  */
 class TesterClient(testerPort: Int):
     AutoCloseable
 {
     private val baseUrl = "http://127.0.0.1:$testerPort"
-    private val mapper: ObjectMapper = JsonMapper.builder().addModule(kotlinModule()).build()
+
+    // SER4: kotlinx decode against the shared @Serializable DTOs (replaces the hand-built Jackson mapper).
+    // ignoreUnknownKeys tolerates additive fields. Every call reads bodyAsText() and decodes here, so the
+    // ktor client installs no ContentNegotiation.
+    private val json = Json { ignoreUnknownKeys = true }
 
     private val http = HttpClient(CIO) {
-        install(ContentNegotiation) {
-            jackson()
-        }
         expectSuccess = false
     }
 
@@ -83,7 +83,7 @@ class TesterClient(testerPort: Int):
      * on a step error (active.state becomes "Paused" under pauseOnError) — checking every
      * [pollIntervalMs]. Returns the final status payload for the caller to inspect.
      */
-    fun awaitSettled(timeoutMs: Long = 120_000, pollIntervalMs: Long = 250): Map<String, Any?> {
+    fun awaitSettled(timeoutMs: Long = 120_000, pollIntervalMs: Long = 250): LogicStatus {
         val deadline = System.currentTimeMillis() + timeoutMs
         while (System.currentTimeMillis() < deadline) {
             val status = status()
@@ -172,14 +172,13 @@ class TesterClient(testerPort: Int):
     }
 
 
-    fun status(): Map<String, Any?> = runBlocking {
+    fun status(): LogicStatus = runBlocking {
         val response = http.get("$baseUrl/logic/status")
         val body = response.bodyAsText()
         check(response.status == HttpStatusCode.OK) {
             "status failed (${response.status}): $body"
         }
-        @Suppress("UNCHECKED_CAST")
-        mapper.readValue(body, Map::class.java) as Map<String, Any?>
+        json.decodeFromString<LogicStatus>(body)
     }
 
 
@@ -244,21 +243,18 @@ class TesterClient(testerPort: Int):
         check(response.status == HttpStatusCode.OK) {
             "detached failed (${response.status}): $body"
         }
-        @Suppress("UNCHECKED_CAST")
-        val collection = mapper.readValue(body, Map::class.java) as Map<String, Any?>
-        ExecutionResult.fromJsonCollection(collection)
+        json.decodeFromString<ExecutionResult>(body)
     }
 
 
-    private fun isCompleted(status: Map<String, Any?>): Boolean {
-        // Server serializes a missing active run as the JSON string "null" (see LogicStatus).
-        val active = status["active"]
-        return active == null || active == "null"
+    private fun isCompleted(status: LogicStatus): Boolean {
+        // No active run ⇒ the run completed (SER4: a real JSON null, not the old "null" string sentinel).
+        return status.active == null
     }
 
 
-    private fun isPaused(status: Map<String, Any?>): Boolean {
-        return (status["active"] as? Map<*, *>)?.get("state") == "Paused"
+    private fun isPaused(status: LogicStatus): Boolean {
+        return status.active?.state == LogicRunState.Paused
     }
 
 

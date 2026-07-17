@@ -2,7 +2,6 @@ package tech.kzen.auto.server.api
 
 import io.ktor.http.*
 import kotlinx.coroutines.runBlocking
-import tools.jackson.databind.json.JsonMapper
 import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.auto.common.util.data.DataLocation
@@ -25,6 +24,7 @@ import tech.kzen.lib.common.exec.engine.StepMode
 import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunResponse
+import tech.kzen.lib.common.exec.logic.run.model.LogicStatus
 import tech.kzen.lib.common.exec.task.model.TaskId
 import tech.kzen.lib.common.exec.task.model.TaskModel
 import tech.kzen.lib.common.model.attribute.AttributeName
@@ -68,12 +68,6 @@ class RestHandler(
     private val jobWorkPool: JobWorkPool,
     private val managedStorageRegistry: ManagedStorageRegistry
 ) {
-    //-----------------------------------------------------------------------------------------------------------------
-    // Renders the LogicStatus collection for the SSE stream (the GET path is content-negotiated instead).
-    // Thread-safe and stateless once built, per Jackson's contract.
-    private val logicStatusMapper = JsonMapper.builder().build()
-
-
     //-----------------------------------------------------------------------------------------------------------------
     fun scan(parameters: Parameters): Map<String, Any> {
         val fresh = parameters[CommonRestApi.paramFresh] == "true"
@@ -1032,7 +1026,7 @@ class RestHandler(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun taskSubmit(parameters: Parameters): Map<String, Any?> {
+    fun taskSubmit(parameters: Parameters): TaskModel {
         val documentPath: DocumentPath = parameters.getParam(
             CommonRestApi.paramDocumentPath, DocumentPath::parse)
 
@@ -1058,33 +1052,27 @@ class RestHandler(
                 detachedRequest)
         }
 
-        return execution.toJsonCollection()
+        return execution
     }
 
 
-    fun taskQuery(parameters: Parameters): Map<String, Any?>? {
+    fun taskQuery(parameters: Parameters): TaskModel? {
         val taskId: TaskId = parameters
             .getParam(CommonRestApi.paramTaskId) { TaskId(it) }
 
-        val model: TaskModel = runBlocking {
+        return runBlocking {
             modelTaskRepository.query(taskId)
         }
-            ?: return null
-
-        return model.toJsonCollection()
     }
 
 
-    fun taskCancel(parameters: Parameters): Map<String, Any?>? {
+    fun taskCancel(parameters: Parameters): TaskModel? {
         val taskId: TaskId = parameters
             .getParam(CommonRestApi.paramTaskId) { TaskId(it) }
 
-        val model: TaskModel = runBlocking {
+        return runBlocking {
             modelTaskRepository.cancel(taskId)
         }
-            ?: return null
-
-        return model.toJsonCollection()
     }
 
 
@@ -1106,16 +1094,12 @@ class RestHandler(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun logicStatus(): Map<String, Any> {
-        return serverLogicController.status().toCollection()
-    }
-
-
-    // The same payload logicStatus() serves, pre-rendered as a JSON string for the /logic/events SSE stream —
-    // an SSE frame carries text, not a content-negotiated object. Deliberately the SAME LogicStatus codec the
-    // GET uses, so pushed and polled statuses are byte-identical and the client parses both through one path.
-    fun logicStatusJson(): String {
-        return logicStatusMapper.writeValueAsString(logicStatus())
+    // Typed LogicStatus for both transports: GET /logic/status serializes it via respondJson, and the
+    // /logic/events SSE route encodes it with the same serverJson (byte-identical, so pushed and polled
+    // statuses parse through one client path). status() is @Synchronized — build the object here, then
+    // encode OUTSIDE the monitor (the SSE route does exactly that).
+    fun logicStatus(): LogicStatus {
+        return serverLogicController.status()
     }
 
 
