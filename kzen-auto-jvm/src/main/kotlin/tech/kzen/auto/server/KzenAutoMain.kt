@@ -139,7 +139,14 @@ fun Application.ktorMain(
     context: KzenAutoContext
 ) {
     install(ContentNegotiation) {
-        jackson()
+        // streamBody = false makes the Jackson converter return a fully-buffered TextContent
+        // (ByteArrayContent) instead of a streaming OutputStreamContent (WriteChannelContent).
+        // Compression gzips a ByteArrayContent in place; a WriteChannelContent forces it to buffer the
+        // whole body first AND logs a per-response WARN ("Compressing a WriteChannelContent response ...
+        // defeats the purpose of streaming"). These JSON bodies are finite documents, never true streams,
+        // so buffering is correct and the warning was noise. (The /logic/events SSE stream does NOT use
+        // ContentNegotiation, and Flow responses still stream even under streamBody = false.)
+        jackson(streamBody = false)
     }
 
     // Server-Sent Events, for the /logic/events run-status push stream (see routeLogic). One-directional
