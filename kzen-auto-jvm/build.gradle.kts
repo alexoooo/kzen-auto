@@ -8,6 +8,11 @@ import java.time.temporal.ChronoUnit
 
 plugins {
     kotlin("jvm")
+    // SER3: resolves the @Serializable common DTOs' generated serializers at compile time for
+    // serverJson.encodeToString(dto) (see KzenAutoMain.respondJson). Without it the call falls back to
+    // runtime lookup and fails at runtime rather than compile time. The kotlinx-serialization-json runtime
+    // arrives transitively via kzen-auto-common's api(...) — no dependency line needed here.
+    kotlin("plugin.serialization")
     id("com.google.devtools.ksp")
     `maven-publish`
 }

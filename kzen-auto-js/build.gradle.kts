@@ -4,6 +4,11 @@ import org.jetbrains.kotlin.gradle.targets.js.yarn.yarn
 
 plugins {
     kotlin("multiplatform")
+    // SER3: resolves the @Serializable common DTOs' generated serializers at compile time for
+    // clientJson.decodeFromString<T>() (see client/util/ajaxUtil.kt). Without it the call falls back to
+    // runtime lookup and fails at runtime rather than compile time. The kotlinx-serialization-json runtime
+    // arrives transitively via kzen-auto-common's api(...) — no dependency line needed here.
+    kotlin("plugin.serialization")
     id("com.google.devtools.ksp")
     `maven-publish`
 }

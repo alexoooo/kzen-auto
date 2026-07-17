@@ -6,6 +6,7 @@ import tools.jackson.databind.json.JsonMapper
 import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.auto.common.util.data.DataLocation
+import tech.kzen.auto.common.util.data.DataLocationInfo
 import tech.kzen.auto.server.exec.RunEngineLogicTrace
 import tech.kzen.auto.server.objects.job.service.JobWorkPool
 import tech.kzen.auto.server.objects.report.exec.output.flat.IndexedCsvTable
@@ -973,7 +974,7 @@ class RestHandler(
     // children (files + subdirectories) of `directory` matching `filter` via the reused FileListingAction, each
     // as its DataLocationInfo collection. The Job MultiFileInputEditor browses input files with it. A file
     // `directory` yields just that file; a missing / non-directory path yields an empty list (FileListingAction).
-    fun fileListing(parameters: Parameters): List<Map<String, String>> {
+    fun fileListing(parameters: Parameters): List<DataLocationInfo> {
         val directory: String = parameters.getParam(CommonRestApi.paramDirectory) { it }
         val filter: String = parameters.getParamOrNull(CommonRestApi.paramFilter) { it } ?: ""
 
@@ -981,12 +982,12 @@ class RestHandler(
             fileListingAction.scanInfo(DataLocation.of(directory), filter)
         }
 
-        return listing.map { it.toCollection() }
+        return listing
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun storageSummary(): List<Map<String, String>> {
+    fun storageSummary(): List<StorageAreaInfo> {
         return managedStorageRegistry.areas().map { area ->
             val bundles = area.bundles()
             StorageAreaInfo(
@@ -997,12 +998,12 @@ class RestHandler(
                 bundles.size,
                 area.deletable,
                 area.budgetBytes
-            ).toCollection()
+            )
         }
     }
 
 
-    fun storageBundleList(parameters: Parameters): List<Map<String, String>> {
+    fun storageBundleList(parameters: Parameters): List<StorageBundleInfo> {
         val areaId: String = parameters.getParam(CommonRestApi.paramStorageArea) { it }
         val area = managedStorageRegistry.find(areaId)
             ?: error("Unknown storage area: $areaId")
@@ -1012,7 +1013,6 @@ class RestHandler(
             .sortedByDescending { it.sizeBytes }
             .map {
                 StorageBundleInfo(it.key, it.displayName, it.sizeBytes, it.lastModifiedMillis, it.active)
-                    .toCollection()
             }
     }
 

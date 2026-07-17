@@ -1,5 +1,6 @@
 package tech.kzen.auto.client.util
 
+import kotlinx.serialization.json.Json
 import org.khronos.webgl.ArrayBuffer
 import org.khronos.webgl.Uint8Array
 import org.khronos.webgl.get
@@ -10,6 +11,17 @@ import org.w3c.xhr.XMLHttpRequestResponseType
 import tech.kzen.auto.platform.encodeURIComponent
 import kotlin.coroutines.*
 import kotlin.js.Promise
+
+
+// SER3: shared JSON codec for decoding REST responses into the @Serializable common DTOs. Mirrors
+// kzen-launcher-js's clientJson. `ignoreUnknownKeys` so a field the server adds later doesn't break the client.
+//
+// Deliberately lives here rather than in ClientRestApi: that file imports kotlin.js.Json (the JS host object) as
+// the declared return type of its getOrPutJson/postJson helpers, so importing kotlinx.serialization.json.Json
+// there would collide. ClientRestApi already star-imports this package, so it picks clientJson up for free.
+val clientJson = Json {
+    ignoreUnknownKeys = true
+}
 
 
 class HttpStatusException(val status: Int) : RuntimeException("HTTP error: $status")

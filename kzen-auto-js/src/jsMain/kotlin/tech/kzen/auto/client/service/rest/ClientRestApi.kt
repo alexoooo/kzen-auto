@@ -858,43 +858,23 @@ class ClientRestApi(
         directory: String,
         filter: String
     ): List<DataLocationInfo> {
-        val responseText = getOrPut(
+        return clientJson.decodeFromString(getOrPut(
             CommonRestApi.fileListing,
             CommonRestApi.paramDirectory to directory,
-            CommonRestApi.paramFilter to filter)
-
-        val responseList = ClientJsonUtils.toList(JSON.parse(responseText))
-
-        return responseList.map {
-            @Suppress("UNCHECKED_CAST")
-            DataLocationInfo.ofCollection(it as Map<String, String>)
-        }
+            CommonRestApi.paramFilter to filter))
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun storageSummary(): List<StorageAreaInfo> {
-        val responseText = getOrPut(CommonRestApi.storageSummary)
-        val responseList = ClientJsonUtils.toList(JSON.parse(responseText))
-
-        return responseList.map {
-            @Suppress("UNCHECKED_CAST")
-            StorageAreaInfo.ofCollection(it as Map<String, String>)
-        }
+        return clientJson.decodeFromString(getOrPut(CommonRestApi.storageSummary))
     }
 
 
     suspend fun storageBundleList(areaId: String): List<StorageBundleInfo> {
-        val responseText = getOrPut(
+        return clientJson.decodeFromString(getOrPut(
             CommonRestApi.storageBundleList,
-            CommonRestApi.paramStorageArea to areaId)
-
-        val responseList = ClientJsonUtils.toList(JSON.parse(responseText))
-
-        return responseList.map {
-            @Suppress("UNCHECKED_CAST")
-            StorageBundleInfo.ofCollection(it as Map<String, String>)
-        }
+            CommonRestApi.paramStorageArea to areaId))
     }
 
 

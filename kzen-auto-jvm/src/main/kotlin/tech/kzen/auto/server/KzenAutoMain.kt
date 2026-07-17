@@ -18,6 +18,7 @@ import io.ktor.sse.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.serialization.json.Json
 import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.api.staticResourceDir
 import tech.kzen.auto.common.api.staticResourcePath
@@ -206,18 +207,36 @@ private fun Routing.routeRequests(
 }
 
 
+// SER3 transitional. install(ContentNegotiation) { jackson() } (see ktorMain) still owns application/json for the
+// un-migrated handlers, and Ktor can't cleanly host two application/json serializers at once — so the
+// kotlinx-migrated handlers respond with pre-encoded text. SER5 flips ContentNegotiation to json(serverJson) and
+// this collapses back into a plain call.respond(dto).
+//
+// serverJson is deliberately the STOCK config: encodeDefaults=false + explicitNulls=true means a nullable property
+// WITH a `= null` default is omitted from the wire (StorageAreaInfo.budget, matching the legacy codec) while one
+// WITHOUT a default encodes as an explicit JSON null — which is exactly what SER4's LogicStatus.active
+// sentinel-kill needs. Do not set explicitNulls=false here.
+//
+// Compression is unaffected: install(Compression) excludes only EventStream and OctetStream, and respondText sets
+// the same application/json content type jackson() did, so these bodies stay gzip/deflate-eligible as before.
+private val serverJson = Json
+
+private suspend inline fun <reified T> ApplicationCall.respondJson(dto: T) {
+    respondText(serverJson.encodeToString(dto), ContentType.Application.Json)
+}
+
+
 private fun Routing.routeStorage(
     restHandler: RestHandler
 ) {
     get(CommonRestApi.storageSummary) {
-        val response = restHandler.storageSummary()
-        call.respond(response)
+        call.respondJson(restHandler.storageSummary())
     }
     get(CommonRestApi.storageBundleList) {
-        val response = restHandler.storageBundleList(call.parameters)
-        call.respond(response)
+        call.respondJson(restHandler.storageBundleList(call.parameters))
     }
     get(CommonRestApi.storageBundleDelete) {
+        // NB: text/plain error-message-or-empty, not JSON — deliberately un-migrated
         val response = restHandler.storageBundleDelete(call.parameters)
         call.respond(response)
     }
@@ -228,8 +247,7 @@ private fun Routing.routeFileListing(
     restHandler: RestHandler
 ) {
     get(CommonRestApi.fileListing) {
-        val response = restHandler.fileListing(call.parameters)
-        call.respond(response)
+        call.respondJson(restHandler.fileListing(call.parameters))
     }
 }
 
