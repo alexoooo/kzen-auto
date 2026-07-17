@@ -1024,10 +1024,12 @@ class ClientLogicGlobal(
     // every version change. The cache holds the in-flight query, not just its result: the callers race (both
     // enter before either completes), so caching only settled answers would still let both requests leave.
     //
-    // The memo dedupes; it does not rate-limit. Cadence is bounded upstream by the status publish throttle —
-    // both callers are publish-driven, so this is asked ~1/s during a run rather than per engine emit.
+    // The memo dedupes; it does not rate-limit. Keyed on structureVersion (NOT traceVersion): the traced-
+    // document set changes only when a document first appears in the run — a structural event — so this
+    // re-fetches ~15-17x/run instead of once per publish (~46x, riding traceVersion's per-emit sequence).
+    // Both callers are publish-driven; the memo collapses their two asks per publish into one.
     suspend fun tracedDocuments(): Set<DocumentPath> {
-        val version = clientLogicState.traceVersion()
+        val version = clientLogicState.structureVersion()
 
         val inFlight = tracedDocumentsQuery
         if (inFlight != null && tracedDocumentsVersion == version) {

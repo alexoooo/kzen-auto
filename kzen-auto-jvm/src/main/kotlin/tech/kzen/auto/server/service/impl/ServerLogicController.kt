@@ -166,6 +166,31 @@ class ServerLogicController(
     // — and therefore forced every consumer to re-fetch its full trace snapshot on every poll.
     private var epoch: Long = 0
 
+    // Surfaced as LogicStatus.structureVersion: a monotone counter that moves only on a genuine EXECUTION-TREE
+    // change — an execution created/destroyed, a run-state transition, or a run lifecycle/clear event — but
+    // NOT on a plain trace emit (which advances only the run's sequence). It is what lets a structure-keyed
+    // consumer (the traced-document set, the execution tree) re-fetch ~15-17x/run instead of once per publish.
+    //
+    // Computed LAZILY in status() (under this controller's monitor, off the engine hot path) by comparing a
+    // cheap signature against the last: epoch is folded in (so all three bumpEpoch transitions ride into it),
+    // runState catches state transitions, and the unfiltered node-id set catches execution create/destroy.
+    // Deliberately no reactive bump sites of its own — every structural mutation already fires
+    // notifyStatusObservers(), which pulls a status() that observes the change; conflation of the push channel
+    // can only COLLAPSE bumps, which is safe because the structure-keyed queries are full snapshots, not deltas.
+    private var structureVersion: Long = 0
+    private var lastStructureSignature: StructureSignature? = null
+
+    // The value status() diffs to decide whether structureVersion moved. nodeIds is the UNFILTERED set of
+    // execution-node ids under snapshot.root (mirrors RunEngineLogicTrace's execution walk, NOT the terminal-
+    // pruned nodeToFrame): a child hosted and run to completion inside one Step-Over stays in the execution
+    // tree though it leaves the live frame, so a frame-derived set would let the client's execution tree go
+    // stale. Node ids are monotone (n0, n1, ...) and never revisited, so equal signatures ⇒ identical trees.
+    private data class StructureSignature(
+        val epoch: Long,
+        val runId: LogicRunId?,
+        val runState: LogicRunState?,
+        val nodeIds: List<String>?)
+
     // Consumers of "the run status may have changed" — the push transport (/logic/events) is the only one.
     // Payload-free, mirroring the engine's own Run.observe contract: a listener is told THAT something changed
     // and pulls status() itself.
@@ -255,12 +280,12 @@ class ServerLogicController(
     @Synchronized
     override fun status(): LogicStatus {
         val state = stateOrNull
-            ?: return LogicStatus(epoch, null)
+            ?: return LogicStatus(epoch, refreshStructureVersion(StructureSignature(epoch, null, null, null)), null)
 
         // A settled (terminal) run is retained only for post-run trace review — report it as no active run,
         // so the client stops driving it and storage-area eviction (which gates on active == null) runs.
         if (state.settled) {
-            return LogicStatus(epoch, null)
+            return LogicStatus(epoch, refreshStructureVersion(StructureSignature(epoch, null, null, null)), null)
         }
 
         val snapshot = state.engine.snapshot()
@@ -283,10 +308,37 @@ class ServerLogicController(
                 }
             }
 
+        val structureVersion = refreshStructureVersion(
+            StructureSignature(epoch, state.runId, runState, collectNodeIds(snapshot.root)))
+
         // snapshot.sequence is the run's monotonic trace high-water: a client holding it has, by construction,
         // nothing newer to fetch — so it doubles as the run's cache version (see LogicRunInfo.sequence).
         return LogicStatus(
-            epoch, LogicRunInfo(state.runId, nodeToFrame(snapshot.root), runState, snapshot.sequence))
+            epoch,
+            structureVersion,
+            LogicRunInfo(state.runId, nodeToFrame(snapshot.root), runState, snapshot.sequence))
+    }
+
+    // Bumps structureVersion iff the run's structure moved since the last status() (see the field doc). Called
+    // only from status(), so it inherits the @Synchronized monitor — no double-count across concurrent callers.
+    private fun refreshStructureVersion(signature: StructureSignature): Long {
+        if (signature != lastStructureSignature) {
+            structureVersion += 1
+            lastStructureSignature = signature
+        }
+        return structureVersion
+    }
+
+    // Pre-order walk collecting EVERY node's id — including terminal children (unlike nodeToFrame) — so the
+    // signature tracks the same execution set RunEngineLogicTrace.lookupRunExecutions projects to the client.
+    private fun collectNodeIds(root: Node): List<String> {
+        val result = mutableListOf<String>()
+        fun visit(node: Node) {
+            result.add(node.id.value)
+            node.children.forEach { visit(it) }
+        }
+        visit(root)
+        return result
     }
 
 

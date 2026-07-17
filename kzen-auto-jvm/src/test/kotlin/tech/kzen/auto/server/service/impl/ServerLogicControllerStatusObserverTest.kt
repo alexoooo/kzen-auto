@@ -133,17 +133,34 @@ class ServerLogicControllerStatusObserverTest {
         assertTrue(
             started.epoch > initial.epoch,
             "starting a run must advance the epoch")
+        assertTrue(
+            started.structureVersion > initial.structureVersion,
+            "starting a run must advance the structure version")
         assertEquals(runId, assertNotNull(started.active).id)
 
         controller.continueOrStart(runId, snapshot)
         awaitSettled(controller)
 
         // The run actually did work, so its trace high-water must have advanced past the start. This is the
-        // value every client keys its trace re-fetch on: no advance would mean no refresh.
-        val settled = assertNotNull(controller.status().active)
+        // value every client keys its per-emit trace re-fetch on: no advance would mean no refresh.
+        val settled = controller.status()
         assertTrue(
-            settled.sequence > assertNotNull(started.active).sequence,
+            assertNotNull(settled.active).sequence > assertNotNull(started.active).sequence,
             "a run that executed must advance its trace sequence")
+
+        // The run built out its (nested) execution tree and reached a new run-state, so the structure version
+        // must have advanced too — the exact signal that keeps traced / lookupRunExecutions re-fetching.
+        assertTrue(
+            settled.structureVersion > started.structureVersion,
+            "a run that executed must advance its structure version")
+
+        // ...but a structure version, unlike the retired wall clock, must NOT move on its own: two back-to-back
+        // reads of an unchanged (settled) run are identical. This stability is what stops the per-poll re-fetch
+        // storm — a structure-keyed consumer holding this value has, by construction, nothing new to fetch.
+        val reread = controller.status()
+        assertEquals(
+            settled.structureVersion, reread.structureVersion,
+            "structure version must not advance without an actual structural change")
     }
 
 

@@ -32,6 +32,13 @@ class ScriptProgressStore(
     private var historyRunId: LogicRunId? = null
     private val historyEvents = mutableListOf<LogicTraceEvent>()
 
+    // The execution tree, re-fetched only when the run's STRUCTURE changes (an execution created/destroyed),
+    // not per publish: its answer is structural, so gating it on structureVersion drops it from ~46 to ~15-17
+    // fetches/run. The cached set is reused between structural changes (runStep ownership/representatives
+    // recompute cheaply from it plus the fresh events); reset on a new run alongside the history.
+    private var lastExecutionsStructureVersion: String? = null
+    private var lastExecutions: List<LogicRunExecutionInfo> = listOf()
+
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun refresh() {
@@ -121,6 +128,8 @@ class ScriptProgressStore(
                 if (historyRunId != logicRunId) {
                     historyRunId = logicRunId
                     historyEvents.clear()
+                    lastExecutions = listOf()
+                    lastExecutionsStructureVersion = null
                 }
                 val sinceSequence = historyEvents.maxOfOrNull { it.sequence } ?: 0L
                 val historyResult = lookupRunHistoryQuery(logicRunId, sinceSequence)
@@ -130,14 +139,27 @@ class ScriptProgressStore(
                 val events = historyEvents.sortedBy { it.sequence }
 
                 // The execution tree (parent + call-site per execution) scopes each RunStep's view to the
-                // executions IT spawned within the viewed frame — re-fetched in full each refresh (it is
-                // tiny, one row per execution, unlike the watermarked event history). Refresh cadence is
-                // bounded upstream: ClientLogicGlobal throttles status publishes, so this runs ~1/s during a
-                // run rather than per engine emit.
-                val executions = when (val executionsResult = lookupRunExecutionsQuery(logicRunId)) {
-                    is ClientSuccess -> executionsResult.value
-                    is ClientError -> listOf()
+                // executions IT spawned within the viewed frame. Its answer is structural, so re-fetch only on
+                // a structureVersion change (an execution created/destroyed) and reuse the cache otherwise —
+                // dropping it from once-per-publish to ~15-17/run. runStep ownership/representatives below
+                // recompute cheaply from the cached set plus the fresh events.
+                val structureVersion = scriptStore.clientStateGlobal.current()
+                    ?.clientLogicState?.structureVersion()
+                if (structureVersion == null || structureVersion != lastExecutionsStructureVersion) {
+                    when (val executionsResult = lookupRunExecutionsQuery(logicRunId)) {
+                        is ClientSuccess -> {
+                            lastExecutions = executionsResult.value
+                            lastExecutionsStructureVersion = structureVersion
+                        }
+                        is ClientError -> {
+                            // Don't cache a failure as the answer; leave the version unset so the next refresh
+                            // retries rather than reusing an empty set until the structure changes again.
+                            lastExecutions = listOf()
+                            lastExecutionsStructureVersion = null
+                        }
+                    }
                 }
+                val executions = lastExecutions
                 val runStepOwnedExecutions = computeRunStepOwnedExecutions(
                     logicRunExecutionId.logicExecutionId, executions)
                 val runStepRepresentative = computeRunStepRepresentative(runStepOwnedExecutions, events)
@@ -386,5 +408,7 @@ class ScriptProgressStore(
     private fun resetHistory() {
         historyRunId = null
         historyEvents.clear()
+        lastExecutions = listOf()
+        lastExecutionsStructureVersion = null
     }
 }
