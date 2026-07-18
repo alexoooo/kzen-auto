@@ -2,7 +2,7 @@ package tech.kzen.auto.server
 
 import com.google.common.io.ByteStreams
 import io.ktor.http.*
-import io.ktor.serialization.jackson.*
+import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.html.*
@@ -30,6 +30,7 @@ import tech.kzen.auto.server.context.KzenAutoConfig
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.lib.common.util.ImmutableByteArray
 import kotlin.system.exitProcess
+import kotlin.time.Duration.Companion.milliseconds
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -138,15 +139,12 @@ fun kzenAutoMain(context: KzenAutoContext) {
 fun Application.ktorMain(
     context: KzenAutoContext
 ) {
+    // SER5: kotlinx.serialization is the single structured-wire JSON codec (Jackson removed). This install
+    // is here so a future call.respond(dto) over a @Serializable type resolves the kotlinx serializer; the
+    // migrated handlers currently respond through respondJson (pre-encoded respondText — see its note below),
+    // so the converter is not on the hot path today. serverJson is the stock Json config (see respondJson).
     install(ContentNegotiation) {
-        // streamBody = false makes the Jackson converter return a fully-buffered TextContent
-        // (ByteArrayContent) instead of a streaming OutputStreamContent (WriteChannelContent).
-        // Compression gzips a ByteArrayContent in place; a WriteChannelContent forces it to buffer the
-        // whole body first AND logs a per-response WARN ("Compressing a WriteChannelContent response ...
-        // defeats the purpose of streaming"). These JSON bodies are finite documents, never true streams,
-        // so buffering is correct and the warning was noise. (The /logic/events SSE stream does NOT use
-        // ContentNegotiation, and Flow responses still stream even under streamBody = false.)
-        jackson(streamBody = false)
+        json(serverJson)
     }
 
     // Server-Sent Events, for the /logic/events run-status push stream (see routeLogic). One-directional
@@ -214,18 +212,18 @@ private fun Routing.routeRequests(
 }
 
 
-// SER3 transitional. install(ContentNegotiation) { jackson() } (see ktorMain) still owns application/json for the
-// un-migrated handlers, and Ktor can't cleanly host two application/json serializers at once — so the
-// kotlinx-migrated handlers respond with pre-encoded text. SER5 flips ContentNegotiation to json(serverJson) and
-// this collapses back into a plain call.respond(dto).
+// Every structured JSON response goes through respondJson, which pre-encodes with kotlinx and hands the bytes
+// to respondText. This is RETAINED (not transitional) on purpose: respondText yields a fully-buffered
+// TextContent, which install(Compression) can gzip in place. Routing json(serverJson) through
+// call.respond(dto) instead would let the converter emit a streaming WriteChannelContent — the exact case
+// that forces Compression to buffer the whole body AND logs a per-response WARN ("Compressing a
+// WriteChannelContent response ... defeats the purpose of streaming"). These JSON bodies are finite
+// documents, so buffered encoding is the correct, warning-free path.
 //
 // serverJson is deliberately the STOCK config: encodeDefaults=false + explicitNulls=true means a nullable property
 // WITH a `= null` default is omitted from the wire (StorageAreaInfo.budget, matching the legacy codec) while one
 // WITHOUT a default encodes as an explicit JSON null — which is exactly what SER4's LogicStatus.active
 // sentinel-kill needs. Do not set explicitNulls=false here.
-//
-// Compression is unaffected: install(Compression) excludes only EventStream and OctetStream, and respondText sets
-// the same application/json content type jackson() did, so these bodies stay gzip/deflate-eligible as before.
 private val serverJson = Json
 
 private suspend inline fun <reified T> ApplicationCall.respondJson(dto: T) {
@@ -324,7 +322,7 @@ private fun Routing.routeLogic(
             send(ServerSentEvent(data = lastSent))
 
             while (true) {
-                val signalled = withTimeoutOrNull(logicEventsHeartbeatMillis) { signals.receive() }
+                val signalled = withTimeoutOrNull(logicEventsHeartbeatMillis.milliseconds) { signals.receive() }
 
                 if (signalled == null) {
                     // Idle. A named event, not a bare comment: a comment would keep the proxy socket alive but
@@ -348,7 +346,7 @@ private fun Routing.routeLogic(
                     send(ServerSentEvent(data = next))
                 }
 
-                delay(logicEventsMinPushIntervalMillis)
+                delay(logicEventsMinPushIntervalMillis.milliseconds)
             }
         }
         finally {
@@ -409,8 +407,7 @@ private fun Routing.routeLogic(
         }
     }
     get(CommonRestApi.logicRequest) {
-        val response = restHandler.logicRequest(call.parameters)
-        call.respond(response)
+        call.respondJson(restHandler.logicRequest(call.parameters))
     }
     get(CommonRestApi.logicCancel) {
         val response = restHandler.logicCancel(call.parameters)
@@ -506,8 +503,7 @@ private fun Routing.routeNotationQuery(
     restHandler: RestHandler
 ) {
     get(CommonRestApi.scan) {
-        val response = restHandler.scan(call.parameters)
-        call.respond(response)
+        call.respondJson(restHandler.scan(call.parameters))
     }
     get(CommonRestApi.notationPrefix + "{notationPath...}") {
         val notationPath = call.parameters.getAll("notationPath")?.joinToString("/") ?: ""
@@ -515,13 +511,11 @@ private fun Routing.routeNotationQuery(
         call.respondText(response)
     }
     get(CommonRestApi.notationBatch) {
-        val response = restHandler.notationBatch(call.parameters)
-        call.respond(response)
+        call.respondJson(restHandler.notationBatch(call.parameters))
     }
     put(CommonRestApi.notationBatch) {
         val parameters = call.receiveParameters()
-        val response = restHandler.notationBatch(parameters)
-        call.respond(response)
+        call.respondJson(restHandler.notationBatch(parameters))
     }
     get(CommonRestApi.resource) {
         val response = restHandler.resourceRead(call.parameters)
@@ -704,14 +698,12 @@ private fun Routing.routeDetached(
     restHandler: RestHandler
 ) {
     get(CommonRestApi.actionDetached) {
-        val response = restHandler.actionDetached(call.parameters, null)
-        call.respond(response)
+        call.respondJson(restHandler.actionDetached(call.parameters, null))
     }
     post(CommonRestApi.actionDetached) {
         val bytes = call.receiveNullable<ByteArray>()
         val wrappedBytes = bytes?.let { ImmutableByteArray.wrap(it) }
-        val response = restHandler.actionDetached(call.parameters, wrappedBytes)
-        call.respond(response)
+        call.respondJson(restHandler.actionDetached(call.parameters, wrappedBytes))
     }
     put(CommonRestApi.actionDetached) {
         if (call.request.isMultipart()) {
@@ -722,8 +714,7 @@ private fun Routing.routeDetached(
         }
 
         val formParameters = call.receiveParameters()
-        val response = restHandler.actionDetached(formParameters, null)
-        call.respond(response)
+        call.respondJson(restHandler.actionDetached(formParameters, null))
     }
     get(CommonRestApi.actionDetachedDownload) {
         val bytes = call.receiveNullable<ByteArray>()

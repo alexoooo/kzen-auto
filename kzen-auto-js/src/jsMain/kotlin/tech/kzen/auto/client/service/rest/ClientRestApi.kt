@@ -3,10 +3,10 @@ package tech.kzen.auto.client.service.rest
 import tech.kzen.auto.client.util.*
 import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.util.data.DataLocationInfo
+import tech.kzen.auto.common.util.scan.NotationScanDocument
 import tech.kzen.auto.common.util.storage.StorageAreaInfo
 import tech.kzen.auto.common.util.storage.StorageBundleInfo
 import tech.kzen.auto.platform.encodeURIComponent
-import tech.kzen.lib.client.ClientJsonUtils
 import tech.kzen.lib.common.exec.ExecutionResult
 import tech.kzen.lib.common.exec.engine.StepMode
 import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
@@ -36,7 +36,6 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableId
 import tech.kzen.lib.common.util.ImmutableByteArray
 import tech.kzen.lib.common.util.digest.Digest
 import tech.kzen.lib.platform.collect.toPersistentMap
-import kotlin.js.Json
 
 
 class ClientRestApi(
@@ -50,29 +49,18 @@ class ClientRestApi(
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun scanNotation(): NotationScan {
-        val scanText = getOrPut(
+        val scanMap = clientJson.decodeFromString<Map<String, NotationScanDocument>>(getOrPut(
             CommonRestApi.scan,
-            CommonRestApi.paramFresh to true.toString())
-
-        val scanJson = JSON.parse<Json>(scanText)
-        val scanMap = ClientJsonUtils.toMap(scanJson)
+            CommonRestApi.paramFresh to true.toString()))
 
         val builder = mutableMapOf<DocumentPath, DocumentScan>()
 
         for ((key, value) in scanMap) {
-            @Suppress("UNCHECKED_CAST")
-            val valueMap = value as Map<String, Any>
-
-            val documentDigest = valueMap["documentDigest"] as String
-
-            @Suppress("UNCHECKED_CAST")
-            val resources = valueMap["resources"] as? Map<String, String>
-
             builder[DocumentPath.parse(key)] = DocumentScan(
-                Digest.parse(documentDigest),
-                resources?.let {
+                Digest.parse(value.documentDigest),
+                value.resources?.let { resources ->
                     ResourceListing(
-                        it.map {e ->
+                        resources.map { e ->
                             ResourcePath.parse(e.key) to Digest.parse(e.value)
                         }.toMap().toPersistentMap()
                     )
@@ -97,11 +85,11 @@ class ClientRestApi(
             .map { CommonRestApi.paramDocumentPath to it.asRelativeFile() }
             .toTypedArray()
 
-        val responseJson = getOrPutJson(CommonRestApi.notationBatch, *pathParams)
-        val responseMap = ClientJsonUtils.toMap(responseJson)
+        val responseMap = clientJson.decodeFromString<Map<String, String>>(
+            getOrPut(CommonRestApi.notationBatch, *pathParams))
 
         return responseMap.entries.associate { (key, value) ->
-            DocumentPath.parse(key) to (value as String)
+            DocumentPath.parse(key) to value
         }
     }
 
@@ -523,15 +511,11 @@ class ClientRestApi(
         objectLocation: ObjectLocation,
         vararg parameters: Pair<String, String>
     ): ExecutionResult {
-        val responseJson = getOrPutJson(
+        return clientJson.decodeFromString(getOrPut(
             CommonRestApi.actionDetached,
             CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
             CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
-            *parameters)
-
-        val responseCollection = ClientJsonUtils.toMap(responseJson)
-
-        return ExecutionResult.fromJsonCollection(responseCollection)
+            *parameters))
     }
 
 
@@ -540,16 +524,12 @@ class ClientRestApi(
         body: ByteArray,
         vararg parameters: Pair<String, String>
     ): ExecutionResult {
-        val responseJson = postJson(
+        return clientJson.decodeFromString(post(
             CommonRestApi.actionDetached,
             body,
             CommonRestApi.paramDocumentPath to objectLocation.documentPath.asString(),
             CommonRestApi.paramObjectPath to objectLocation.objectPath.asString(),
-            *parameters)
-
-        val responseCollection = ClientJsonUtils.toMap(responseJson)
-
-        return ExecutionResult.fromJsonCollection(responseCollection)
+            *parameters))
     }
 
 
@@ -702,15 +682,11 @@ class ClientRestApi(
         executionId: LogicExecutionId,
         vararg parameters: Pair<String, String>
     ): ExecutionResult {
-        val responseJson = getOrPutJson(
+        return clientJson.decodeFromString(getOrPut(
             CommonRestApi.logicRequest,
             CommonRestApi.paramRunId to runId.value,
             CommonRestApi.paramExecutionId to executionId.value,
-            *parameters)
-
-        val responseCollection = ClientJsonUtils.toMap(responseJson)
-
-        return ExecutionResult.fromJsonCollection(responseCollection)
+            *parameters))
     }
 
 
@@ -896,25 +872,6 @@ class ClientRestApi(
     ): Digest {
         val response = post(commandPath, body, *parameters)
         return Digest.parse(response)
-    }
-
-
-    private suspend fun postJson(
-            commandPath: String,
-            body: ByteArray,
-            vararg parameters: Pair<String, String>
-    ): Json {
-        val response = post(commandPath, body, *parameters)
-        return JSON.parse(response)
-    }
-
-
-    private suspend fun getOrPutJson(
-            commandPath: String,
-            vararg parameters: Pair<String, String>
-    ): Json {
-        val response = getOrPut(commandPath, *parameters)
-        return JSON.parse(response)
     }
 
 

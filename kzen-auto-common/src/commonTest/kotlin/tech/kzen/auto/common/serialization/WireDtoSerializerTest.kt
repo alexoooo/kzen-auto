@@ -8,6 +8,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.common.util.data.DataLocationInfo
+import tech.kzen.auto.common.util.scan.NotationScanDocument
 import tech.kzen.auto.common.util.storage.StorageAreaInfo
 import tech.kzen.auto.common.util.storage.StorageBundleInfo
 import kotlin.test.Test
@@ -185,5 +186,40 @@ class WireDtoSerializerTest {
             Json.decodeFromString<DataLocationInfo>(
                 """{"path":"/home/ao","name":"bad/","size":1,"modified":"2026-07-17T12:34:56Z","dir":false}""")
         }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    @Test
+    fun notationScanDocumentRoundTrip() {
+        roundTrip(NotationScanDocument("digest-abc"))
+        roundTrip(NotationScanDocument("digest-abc", mapOf("res/a.png" to "d1", "res/b.png" to "d2")))
+        // The endpoint returns a Map keyed by relative-file path — round-trip the container too.
+        roundTrip(mapOf(
+            "main/foo.yaml" to NotationScanDocument("d-foo"),
+            "main/bar.yaml" to NotationScanDocument("d-bar", mapOf("bar.png" to "d-png"))))
+    }
+
+
+    @Test
+    fun notationScanDocumentOmitsNullResources() {
+        // LOAD-BEARING (mirrors storageAreaInfoOmitsNullBudget): `resources: Map? = null` holding null is skipped
+        // under stock Json (encodeDefaults=false), so a resource-less document is just {"documentDigest":...}. The
+        // legacy Jackson map emitted "resources": null; the client reads absent and explicit-null identically.
+        assertEquals(
+            buildJsonObject { put("documentDigest", "digest-abc") },
+            Json.encodeToJsonElement(NotationScanDocument("digest-abc")))
+    }
+
+
+    @Test
+    fun notationScanDocumentIncludesResources() {
+        val expected = buildJsonObject {
+            put("documentDigest", "digest-abc")
+            put("resources", buildJsonObject { put("res/a.png", "d1") })
+        }
+        assertEquals(
+            expected,
+            Json.encodeToJsonElement(NotationScanDocument("digest-abc", mapOf("res/a.png" to "d1"))))
     }
 }

@@ -1,0 +1,15 @@
+{
+  "prefix": "test-symbols",
+  "icons": {
+    "home": {"body": "<path d=\"home\"/>"},
+    "star": {"body": "<path d=\"star\"/>"},
+    "texture": {"body": "<path d=\"texture\"/>"}
+  },
+  "aliases": {
+    "house": {"parent": "home"},
+    "house-alt": {"parent": "house"},
+    "dangling": {"parent": "missing-parent"}
+  },
+  "width": 24,
+  "height": 24
+}

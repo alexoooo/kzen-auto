@@ -11,6 +11,7 @@ import tech.kzen.auto.server.objects.job.service.JobWorkPool
 import tech.kzen.auto.server.objects.report.exec.output.flat.IndexedCsvTable
 import tech.kzen.auto.server.objects.report.service.FileListingAction
 import tech.kzen.auto.server.paradigm.detached.ExecutionDownloadResult
+import tech.kzen.auto.common.util.scan.NotationScanDocument
 import tech.kzen.auto.common.util.storage.StorageAreaInfo
 import tech.kzen.auto.common.util.storage.StorageBundleInfo
 import tech.kzen.auto.server.service.exec.ModelDetachedExecutor
@@ -69,13 +70,13 @@ class RestHandler(
     private val managedStorageRegistry: ManagedStorageRegistry
 ) {
     //-----------------------------------------------------------------------------------------------------------------
-    fun scan(parameters: Parameters): Map<String, Any> {
+    fun scan(parameters: Parameters): Map<String, NotationScanDocument> {
         val fresh = parameters[CommonRestApi.paramFresh] == "true"
         return scan(fresh)
     }
 
 
-    fun scan(fresh: Boolean): Map<String, Any> {
+    fun scan(fresh: Boolean): Map<String, NotationScanDocument> {
         if (fresh) {
             notationMedia.invalidate()
         }
@@ -84,12 +85,12 @@ class RestHandler(
             notationMedia.scan()
         }
 
-        val asMap = mutableMapOf<String, Any>()
+        val asMap = mutableMapOf<String, NotationScanDocument>()
 
         for (e in documentTree.documents.map) {
-            asMap[e.key.asRelativeFile()] = mapOf(
-                "documentDigest" to e.value.documentDigest.asString(),
-                "resources" to e.value.resources?.digests?.map {
+            asMap[e.key.asRelativeFile()] = NotationScanDocument(
+                documentDigest = e.value.documentDigest.asString(),
+                resources = e.value.resources?.digests?.map {
                     it.key.asString() to it.value.asString()
                 }?.toMap()
             )
@@ -900,7 +901,7 @@ class RestHandler(
     fun actionDetached(
         parameters: Parameters,
         body: ImmutableByteArray?
-    ): Map<String, Any?> {
+    ): ExecutionResult {
         val documentPath: DocumentPath = parameters.getParam(
             CommonRestApi.paramDocumentPath, DocumentPath::parse)
 
@@ -927,7 +928,7 @@ class RestHandler(
                 objectLocation, detachedRequest)
         }
 
-        return execution.toJsonCollection()
+        return execution
     }
 
 
@@ -1180,7 +1181,7 @@ class RestHandler(
     }
 
 
-    fun logicRequest(parameters: Parameters): Map<String, Any?> {
+    fun logicRequest(parameters: Parameters): ExecutionResult {
         val runId: LogicRunId = parameters.getParam(CommonRestApi.paramRunId) {
             value -> LogicRunId(value)
         }
@@ -1207,7 +1208,7 @@ class RestHandler(
                 request)
         }
 
-        return result.toJsonCollection()
+        return result
     }
 
 

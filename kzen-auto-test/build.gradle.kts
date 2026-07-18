@@ -29,13 +29,14 @@ dependencies {
 
     ksp("tech.kzen.lib:kzen-lib-reflect-ksp:$kzenLibVersion")
 
-    implementation("tools.jackson.module:jackson-module-kotlin:$jacksonModuleKotlin")
     implementation("ch.qos.logback:logback-classic:$logbackVersion")
 
+    // TesterClient decodes REST bodies with a hand-built kotlinx Json (no Ktor ContentNegotiation), so it
+    // needs only the raw HTTP client. kotlinx-serialization-json arrives transitively via kzen-auto-common's
+    // api(...) export. (SER5 removed jackson-module-kotlin, ktor-client-content-negotiation, and
+    // ktor-serialization-jackson — kzen-auto-test is Jackson-free.)
     implementation("io.ktor:ktor-client-core:$ktorVersion")
     implementation("io.ktor:ktor-client-cio:$ktorVersion")
-    implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
-    implementation("io.ktor:ktor-serialization-jackson:$ktorVersion")
 
     testImplementation("org.junit.jupiter:junit-jupiter:$junitJupiterVersion")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")

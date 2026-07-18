@@ -1,8 +1,6 @@
 package tech.kzen.auto.server.api
 
-import tools.jackson.databind.JsonNode
-import tools.jackson.databind.json.JsonMapper
-import tools.jackson.databind.node.ObjectNode
+import kotlinx.serialization.json.*
 
 
 /**
@@ -20,76 +18,76 @@ object IconCollectionHandler {
     // than a blank box, while still being reported under not_found for diagnostics.
     private const val fallbackIconName = "texture"
 
-    private val mapper = JsonMapper.builder().build()
+    // SER5: kotlinx JsonObject tree (was a Jackson tools.jackson JsonNode) — kzen-auto-jvm is Jackson-free.
+    // Each set's whole collection is parsed once, lazily, and the tree is cached for the process lifetime.
+    private val collections: MutableMap<String, JsonObject?> = HashMap()
 
-    // Only material-symbols is hosted today; keyed by set name so adding a collection is a one-line change.
-    private val collections: MutableMap<String, JsonNode?> = HashMap()
-
-    private fun collection(set: String): JsonNode? =
+    private fun collection(set: String): JsonObject? =
         collections.getOrPut(set) {
             IconCollectionHandler::class.java
                 .getResourceAsStream("$resourcePathPrefix$set.json")
-                ?.use { mapper.readTree(it) }
+                ?.use { Json.parseToJsonElement(it.readBytes().decodeToString()).jsonObject }
         }
 
     fun query(set: String, names: List<String>): String {
         val collection = collection(set)
-            ?: return mapper.writeValueAsString(
-                mapper.createObjectNode().apply {
-                    put("prefix", set)
-                    set("icons", mapper.createObjectNode())
-                    set("not_found", mapper.createArrayNode().apply { names.forEach { add(it) } })
-                })
+            ?: return buildJsonObject {
+                put("prefix", set)
+                put("icons", JsonObject(emptyMap()))
+                put("not_found", JsonArray(names.map { JsonPrimitive(it) }))
+            }.toString()
 
-        val icons = collection.get("icons") as ObjectNode
-        val aliases = collection.get("aliases") as? ObjectNode
+        val icons = collection.getValue("icons").jsonObject
+        val aliases = collection["aliases"]?.jsonObject
 
-        val resultIcons = mapper.createObjectNode()
-        val resultAliases = mapper.createObjectNode()
-        val notFound = mapper.createArrayNode()
+        // kotlinx JsonObject/JsonArray are immutable, so accumulate into mutable containers across the loop
+        // and freeze them into the response at the end (the Jackson version mutated ObjectNode/ArrayNode in place).
+        val resultIcons = mutableMapOf<String, JsonElement>()
+        val resultAliases = mutableMapOf<String, JsonElement>()
+        val notFound = mutableListOf<JsonElement>()
 
         for (name in names) {
             when {
-                icons.has(name) ->
-                    resultIcons.set(name, icons.get(name))
+                name in icons ->
+                    resultIcons[name] = icons.getValue(name)
 
-                aliases != null && aliases.has(name) -> {
+                aliases != null && name in aliases -> {
                     // Carry every alias hop plus the concrete parent icon so the client resolves it.
                     var cursor = name
-                    while (aliases.has(cursor)) {
-                        resultAliases.set(cursor, aliases.get(cursor))
-                        cursor = aliases.get(cursor).get("parent")?.asString() ?: break
+                    while (cursor in aliases) {
+                        val aliasNode = aliases.getValue(cursor).jsonObject
+                        resultAliases[cursor] = aliasNode
+                        cursor = aliasNode["parent"]?.jsonPrimitive?.content ?: break
                     }
-                    if (icons.has(cursor)) {
-                        resultIcons.set(cursor, icons.get(cursor))
+                    if (cursor in icons) {
+                        resultIcons[cursor] = icons.getValue(cursor)
                     }
                     else {
                         addFallback(resultIcons, name, icons)
-                        notFound.add(name)
+                        notFound.add(JsonPrimitive(name))
                     }
                 }
 
                 else -> {
                     addFallback(resultIcons, name, icons)
-                    notFound.add(name)
+                    notFound.add(JsonPrimitive(name))
                 }
             }
         }
 
-        val response = mapper.createObjectNode()
-        response.put("prefix", collection.get("prefix").asString())
-        response.set("icons", resultIcons)
-        response.set("aliases", resultAliases)
-        collection.get("width")?.let { response.set("width", it) }
-        collection.get("height")?.let { response.set("height", it) }
-        response.set("not_found", notFound)
+        val response = buildJsonObject {
+            put("prefix", collection.getValue("prefix").jsonPrimitive.content)
+            put("icons", JsonObject(resultIcons))
+            put("aliases", JsonObject(resultAliases))
+            collection["width"]?.let { put("width", it) }
+            collection["height"]?.let { put("height", it) }
+            put("not_found", JsonArray(notFound))
+        }
 
-        return mapper.writeValueAsString(response)
+        return response.toString()
     }
 
-    private fun addFallback(resultIcons: ObjectNode, name: String, icons: ObjectNode) {
-        if (icons.has(fallbackIconName)) {
-            resultIcons.set(name, icons.get(fallbackIconName))
-        }
+    private fun addFallback(resultIcons: MutableMap<String, JsonElement>, name: String, icons: JsonObject) {
+        icons[fallbackIconName]?.let { resultIcons[name] = it }
     }
 }

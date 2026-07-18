@@ -49,7 +49,6 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-scripting-compiler-embeddable:$kotlinVersion")
 
     api("ch.qos.logback:logback-classic:$logbackVersion")
-    implementation("tools.jackson.module:jackson-module-kotlin:$jacksonModuleKotlin")
     api("org.seleniumhq.selenium:selenium-java:$seleniumVersion")
     implementation("io.github.bonigarcia:webdrivermanager:$webdrivermanagerVersion")
     implementation("org.apache.commons:commons-compress:$commonsCompressVersion")
@@ -69,8 +68,7 @@ dependencies {
     implementation("io.ktor:ktor-server-content-negotiation:$ktorVersion")
     implementation("io.ktor:ktor-server-sse:$ktorVersion")
     implementation("io.ktor:ktor-server-compression:$ktorVersion")
-//    implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
-    implementation("io.ktor:ktor-serialization-jackson:$ktorVersion")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
     implementation("org.jetbrains.kotlinx:kotlinx-html-jvm:$kotlinxHtmlVersion")
 
     testImplementation(kotlin("test"))
