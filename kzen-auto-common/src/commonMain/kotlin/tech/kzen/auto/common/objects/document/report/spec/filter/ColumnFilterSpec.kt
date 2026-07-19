@@ -1,12 +1,12 @@
 package tech.kzen.auto.common.objects.document.report.spec.filter
 
 import tech.kzen.lib.common.model.attribute.AttributeSegment
-import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
-import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
+import tech.kzen.lib.common.model.structure.notation.codec.NotationCodec
+import tech.kzen.lib.common.model.structure.notation.codec.NotationCodecs
+import tech.kzen.lib.common.model.structure.notation.codec.field
 import tech.kzen.lib.common.util.digest.Digest
 import tech.kzen.lib.common.util.digest.Digestible
-import tech.kzen.lib.platform.collect.persistentMapOf
 
 
 data class ColumnFilterSpec(
@@ -19,30 +19,35 @@ data class ColumnFilterSpec(
     companion object {
         val empty = ColumnFilterSpec(ColumnFilterType.RequireAny, setOf())
 
-        val typeAttributeSegment = AttributeSegment.ofKey("type")
-        val valuesAttributeSegment = AttributeSegment.ofKey("values")
+        private val typeKey = "type"
+        private val valuesKey = "values"
 
-        val emptyNotation = MapAttributeNotation(persistentMapOf(
-            typeAttributeSegment to ScalarAttributeNotation(ColumnFilterType.RequireAny.name),
-            valuesAttributeSegment to ListAttributeNotation.empty))
+        val typeAttributeSegment = AttributeSegment.ofKey(typeKey)
+        val valuesAttributeSegment = AttributeSegment.ofKey(valuesKey)
+
+        private val typeCodec = NotationCodecs.enum<ColumnFilterType>()
+        private val valuesCodec = NotationCodecs.set(NotationCodecs.scalar)
+
+        // A column criteria is a `{type, values}` record. This codec is the single source of truth for that
+        // key layout — the read side ([ofNotation], also used by the JS ValueSetFilterEditor) and the write
+        // side ([emptyNotation], and FilterSpec's per-field command builders) both derive from it.
+        val codec: NotationCodec<ColumnFilterSpec> = NotationCodecs.record(
+            decode = {
+                ColumnFilterSpec(
+                    it.field(typeKey, typeCodec),
+                    it.field(valuesKey, valuesCodec))
+            },
+            encode = {
+                listOf(
+                    typeKey to typeCodec.unparse(it.type),
+                    valuesKey to valuesCodec.unparse(it.values))
+            })
+
+        val emptyNotation: MapAttributeNotation = codec.unparse(empty) as MapAttributeNotation
 
 
         fun ofNotation(attributeNotation: MapAttributeNotation): ColumnFilterSpec {
-            val typeAttribute =
-                attributeNotation[typeAttributeSegment] as ScalarAttributeNotation
-
-            val type = ColumnFilterType.valueOf(typeAttribute.value)
-
-            val valuesAttribute =
-                attributeNotation[valuesAttributeSegment] as ListAttributeNotation
-
-            val values = valuesAttribute
-                .values
-                .map { it as ScalarAttributeNotation }
-                .map { it.value }
-                .toSet()
-
-            return ColumnFilterSpec(type, values)
+            return codec.parse(attributeNotation)
         }
     }
 

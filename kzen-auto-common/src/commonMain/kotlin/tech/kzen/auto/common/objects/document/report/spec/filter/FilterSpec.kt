@@ -2,20 +2,17 @@ package tech.kzen.auto.common.objects.document.report.spec.filter
 
 import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
-import tech.kzen.lib.common.api.AttributeDefiner
-import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.attribute.AttributeSegment
-import tech.kzen.lib.common.model.definition.AttributeDefinitionAttempt
-import tech.kzen.lib.common.model.definition.GraphDefinition
-import tech.kzen.lib.common.model.definition.ValueAttributeDefinition
-import tech.kzen.lib.common.model.instance.GraphInstance
 import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.PositionRelation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
+import tech.kzen.lib.common.model.structure.notation.codec.NotationCodec
+import tech.kzen.lib.common.model.structure.notation.codec.NotationCodecs
+import tech.kzen.lib.common.model.structure.notation.codec.xmap
 import tech.kzen.lib.common.model.structure.notation.cqrs.*
+import tech.kzen.lib.common.objects.general.CodecAttributeDefiner
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.util.digest.Digest
 import tech.kzen.lib.common.util.digest.Digestible
@@ -27,19 +24,16 @@ data class FilterSpec(
 ): Digestible {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        // Parse a `filter` map notation (column-key -> {type, values}) into a FilterSpec. The map's insertion
-        // order is preserved. Shared by the server-side [Definer] and the JS ValueSetFilterEditor, which reads
-        // the committed spec straight from notation (the same role SortSpec.ofNotation plays for its editor).
+        // A `filter` notation is a column-key -> {type, values} map; insertion order is preserved. This codec
+        // is the single source of truth for that layout — the read side ([ofNotation], also used by the JS
+        // ValueSetFilterEditor and the server-side [Definer]) and the write side both derive from it.
+        val codec: NotationCodec<FilterSpec> =
+            NotationCodecs.map({ HeaderLabel.ofString(it) }, { it.asString() }, ColumnFilterSpec.codec)
+                .xmap({ FilterSpec(it) }, { it.columns })
+
+
         fun ofNotation(attributeNotation: MapAttributeNotation): FilterSpec {
-            val definitionMap = mutableMapOf<HeaderLabel, ColumnFilterSpec>()
-
-            for ((columnName, columnNotation) in attributeNotation.map) {
-                val columnCriteriaNotation = columnNotation as MapAttributeNotation
-                val columnCriteria = ColumnFilterSpec.ofNotation(columnCriteriaNotation)
-                definitionMap[HeaderLabel.ofString(columnName.asKey())] = columnCriteria
-            }
-
-            return FilterSpec(definitionMap)
+            return codec.parse(attributeNotation)
         }
 
 
@@ -121,30 +115,10 @@ data class FilterSpec(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    // Reads the `filter` attribute verbatim (inheritanceMerge = false, matching the prior firstAttribute read —
+    // insertion order is significant for the column list).
     @Reflect
-    object Definer: AttributeDefiner {
-        override fun define(
-            objectLocation: ObjectLocation,
-            attributeName: AttributeName,
-            graphStructure: GraphStructure,
-            partialGraphDefinition: GraphDefinition,
-            partialGraphInstance: GraphInstance
-        ): AttributeDefinitionAttempt {
-            check(attributeName == ReportConventions.filterAttributeName) {
-                "Unexpected attribute name: $attributeName"
-            }
-
-            val attributeNotation = graphStructure
-                .graphNotation
-                .firstAttribute(objectLocation, ReportConventions.filterAttributeName) as? MapAttributeNotation
-                ?: return AttributeDefinitionAttempt.failure(
-                    "'${ReportConventions.filterAttributeName}' attribute notation not found:" +
-                            " $objectLocation - $attributeName")
-
-            return AttributeDefinitionAttempt.success(
-                    ValueAttributeDefinition(ofNotation(attributeNotation)))
-        }
-    }
+    object Definer: CodecAttributeDefiner<FilterSpec>(codec, inheritanceMerge = false)
 
 
     //-----------------------------------------------------------------------------------------------------------------

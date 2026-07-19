@@ -5,8 +5,10 @@ package tech.kzen.auto.common.objects.document.report.spec.analysis.pivot
 import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
 import tech.kzen.lib.common.exec.RequestParams
-import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
+import tech.kzen.lib.common.model.structure.notation.codec.NotationCodec
+import tech.kzen.lib.common.model.structure.notation.codec.NotationCodecs
+import tech.kzen.lib.common.model.structure.notation.codec.xmap
 import tech.kzen.lib.common.util.digest.Digest
 import tech.kzen.lib.common.util.digest.Digestible
 
@@ -21,6 +23,12 @@ data class PivotValueTableSpec(
         val empty = PivotValueTableSpec(mapOf())
 
         private const val requestValueTypeDelimiter = "/"
+
+        // A column-key -> value-type-list map. The RequestParams codecs ([ofRequest] / [asRequest]) are a
+        // separate wire format for the preview endpoint and are intentionally left hand-written.
+        val codec: NotationCodec<PivotValueTableSpec> =
+            NotationCodecs.map({ HeaderLabel.ofString(it) }, { it.asString() }, PivotValueColumnSpec.codec)
+                .xmap({ PivotValueTableSpec(it) }, { it.columns })
 
 
         fun ofRequest(requestParams: RequestParams): PivotValueTableSpec {
@@ -48,15 +56,7 @@ data class PivotValueTableSpec(
 
 
         fun ofNotation(notation: MapAttributeNotation): PivotValueTableSpec {
-            val values = mutableMapOf<HeaderLabel, PivotValueColumnSpec>()
-
-            for (e in notation.map) {
-                val pivotValueNotation = e.value as ListAttributeNotation
-                val pivotValue = PivotValueColumnSpec.ofNotation(pivotValueNotation)
-                values[HeaderLabel.ofString(e.key.asKey())] = pivotValue
-            }
-
-            return PivotValueTableSpec(values)
+            return codec.parse(notation)
         }
     }
 

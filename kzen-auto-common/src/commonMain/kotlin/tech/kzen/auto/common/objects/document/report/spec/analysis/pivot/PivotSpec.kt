@@ -3,21 +3,20 @@ package tech.kzen.auto.common.objects.document.report.spec.analysis.pivot
 import tech.kzen.auto.common.objects.document.report.ReportConventions
 import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
-import tech.kzen.lib.common.api.AttributeDefiner
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.attribute.AttributeSegment
-import tech.kzen.lib.common.model.definition.AttributeDefinitionAttempt
-import tech.kzen.lib.common.model.definition.GraphDefinition
-import tech.kzen.lib.common.model.definition.ValueAttributeDefinition
-import tech.kzen.lib.common.model.instance.GraphInstance
 import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.PositionRelation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
+import tech.kzen.lib.common.model.structure.notation.codec.NotationCodec
+import tech.kzen.lib.common.model.structure.notation.codec.NotationCodecs
+import tech.kzen.lib.common.model.structure.notation.codec.field
+import tech.kzen.lib.common.model.structure.notation.codec.xmap
 import tech.kzen.lib.common.model.structure.notation.cqrs.*
+import tech.kzen.lib.common.objects.general.CodecAttributeDefiner
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.util.digest.Digest
 import tech.kzen.lib.common.util.digest.Digestible
@@ -38,8 +37,31 @@ data class PivotSpec(
         // the Report document instead nests it under `analysis.pivot` (defined by AnalysisSpec.Definer).
         val pivotAttributeName = AttributeName("pivot")
 
-        private val rowsKey = AttributeSegment.ofKey("rows")
-        private val valuesKey = AttributeSegment.ofKey("values")
+        private val rowsKeyName = "rows"
+        private val valuesKeyName = "values"
+
+        private val rowsKey = AttributeSegment.ofKey(rowsKeyName)
+        private val valuesKey = AttributeSegment.ofKey(valuesKeyName)
+
+        // A pivot spec is a `{rows, values}` record: `rows` is a de-duplicated list of group-by columns
+        // (a HeaderListing), `values` a column -> aggregate-types map. This codec is the single source of
+        // truth for that layout; the read side ([ofNotation], reached by both AnalysisSpec.Definer for the
+        // Report host and PivotSpecEditor for the Job host) derives from it, as does [Definer].
+        private val rowsCodec: NotationCodec<HeaderListing> =
+            NotationCodecs.list(NotationCodecs.scalarMapped({ HeaderLabel.ofString(it) }, { it.asString() }))
+                .xmap({ HeaderListing(it.distinct()) }, { it.values })
+
+        val codec: NotationCodec<PivotSpec> = NotationCodecs.record(
+            decode = {
+                PivotSpec(
+                    it.field(rowsKeyName, rowsCodec),
+                    it.field(valuesKeyName, PivotValueTableSpec.codec))
+            },
+            encode = {
+                listOf(
+                    rowsKeyName to rowsCodec.unparse(it.rows),
+                    valuesKeyName to PivotValueTableSpec.codec.unparse(it.values))
+            })
 
         // The pivot spec's base attribute path differs by host document: the Report document nests it under
         // `analysis.pivot` (the default here), while the Job PivotWorker carries it as a top-level `pivot`
@@ -49,22 +71,7 @@ data class PivotSpec(
 
 
         fun ofNotation(attributeNotation: MapAttributeNotation): PivotSpec {
-            val rowsNotation = attributeNotation[rowsKey] as? ListAttributeNotation
-                ?: throw IllegalArgumentException("'$rowsKey' attribute notation not found")
-
-            val rows = rowsNotation
-                .values
-                .map { HeaderLabel.ofString(it.asString()!!) }
-                .toSet()
-
-            val valuesNotation = attributeNotation[valuesKey] as? MapAttributeNotation
-                ?: throw IllegalArgumentException("'$valuesKey' attribute notation not found")
-
-            val values = PivotValueTableSpec.ofNotation(valuesNotation)
-
-            return PivotSpec(
-                HeaderListing(rows.toList()),
-                values)
+            return codec.parse(attributeNotation)
         }
 
 
@@ -179,30 +186,10 @@ data class PivotSpec(
     //-----------------------------------------------------------------------------------------------------------------
     // Defines a standalone `pivot` attribute (a map with `rows` + `values` sub-attributes) directly into a
     // PivotSpec, so the Job PivotWorker can carry its pivot config without the surrounding AnalysisSpec (type /
-    // flat) the Report document uses. Mirrors FilterSpec.Definer; the actual parse is the shared [ofNotation].
+    // flat) the Report document uses. Reads merged across the inheritance chain (inheritanceMerge = true,
+    // matching the prior mergeAttribute read, so the archetype's default rows/values fold in).
     @Reflect
-    object Definer: AttributeDefiner {
-        override fun define(
-            objectLocation: ObjectLocation,
-            attributeName: AttributeName,
-            graphStructure: GraphStructure,
-            partialGraphDefinition: GraphDefinition,
-            partialGraphInstance: GraphInstance
-        ): AttributeDefinitionAttempt {
-            check(attributeName == pivotAttributeName) {
-                "Unexpected attribute name: $attributeName"
-            }
-
-            val attributeNotation = graphStructure
-                .graphNotation
-                .mergeAttribute(objectLocation, pivotAttributeName) as? MapAttributeNotation
-                ?: return AttributeDefinitionAttempt.failure(
-                    "'$pivotAttributeName' attribute notation not found: $objectLocation - $attributeName")
-
-            return AttributeDefinitionAttempt.success(
-                ValueAttributeDefinition(ofNotation(attributeNotation)))
-        }
-    }
+    object Definer: CodecAttributeDefiner<PivotSpec>(codec, inheritanceMerge = true)
 
 
     //-----------------------------------------------------------------------------------------------------------------
