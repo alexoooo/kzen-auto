@@ -90,7 +90,7 @@ class ServerLogicController(
     private val flowMessageInspector: FlowMessageInspector,
     private val notationMetadataReader: NotationMetadataReader,
     private val jobWorkPool: JobWorkPool,
-    private val environment: () -> GraphEnvironment
+    private val environment: GraphEnvironment
 ):
     LogicController,
     LocalGraphStore.Observer
@@ -907,7 +907,7 @@ class ServerLogicController(
             attempt.graphStructure.graphNotation,
             attempt.transitiveSuccessful,
             LogicCompilerServices(
-                environment(), objectStableMapper, cachedKotlinCompiler, scriptValidationCache,
+                environment, objectStableMapper, cachedKotlinCompiler, scriptValidationCache,
                 flowMessageInspector, notationMetadataReader, jobWorkPool, runExecutionId))
     }
 

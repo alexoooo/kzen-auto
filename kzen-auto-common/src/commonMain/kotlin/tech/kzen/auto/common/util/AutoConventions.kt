@@ -37,6 +37,11 @@ object AutoConventions {
     val directoryAttributePath = AttributePath.ofName(AttributeName("directory"))
     val groupAttributePath = AttributePath.ofName(AttributeName("group"))
 
+    // Declared "false" on an archetype to opt its instances out of server-side instance reuse
+    // (see GraphInstanceCache) - the escape hatch for an action that can't honour the
+    // statelessness contract of DetachedAction / DetachedDownloadAction / ManagedTask.
+    val instanceCachingAttributePath = AttributePath.ofName(AttributeName("instanceCaching"))
+
 
     @Suppress("ConstPropertyName")
     private const val anonymousPrefix = "__ANON__"

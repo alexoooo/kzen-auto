@@ -1,0 +1,44 @@
+# Fixture for GraphInstanceCacheTest: two detached-action archetypes over the same AdhocDetached class,
+# one cached (the default) and one opting out with `instanceCaching: "false"` declared on the ARCHETYPE —
+# so the read exercises GraphNotation.firstAttribute's inheritance-chain walk rather than a direct hit.
+# The shared `named` collaborator is a strong reference, making it a closure member whose edits must
+# invalidate the cached instance.
+
+CacheNamedType:
+  abstract: true
+  class: tech.kzen.auto.server.objects.custom.test.AdhocNamed
+
+
+CacheNamed:
+  is: CacheNamedType
+  class: tech.kzen.auto.server.objects.custom.test.AdhocNamedImpl
+  name: "cache-test"
+  meta:
+    name: String
+
+
+CachedActionArchetype:
+  abstract: true
+  class: tech.kzen.auto.server.objects.custom.test.AdhocDetached
+  meta:
+    named:
+      is: CacheNamedType
+
+
+CachedAction:
+  is: CachedActionArchetype
+  named: CacheNamed
+
+
+FreshActionArchetype:
+  abstract: true
+  class: tech.kzen.auto.server.objects.custom.test.AdhocDetached
+  instanceCaching: "false"
+  meta:
+    named:
+      is: CacheNamedType
+
+
+FreshAction:
+  is: FreshActionArchetype
+  named: CacheNamed

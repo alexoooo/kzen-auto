@@ -21,6 +21,7 @@ import tech.kzen.auto.server.objects.report.service.ReportWorkPool
 import tech.kzen.auto.server.objects.script.ScriptValidationCache
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.auto.server.service.compile.ScriptKotlinCompiler
+import tech.kzen.auto.server.service.exec.GraphInstanceCache
 import tech.kzen.auto.server.service.exec.ModelDetachedExecutor
 import tech.kzen.auto.server.service.exec.ModelTaskRepository
 import tech.kzen.auto.server.service.impl.ServerLogicController
@@ -128,9 +129,6 @@ class KzenAutoContext(
         graphDefiner,
         notationReducer)
 
-    val modelTaskRepository = ModelTaskRepository(
-        graphStore, graphCreator) { graphEnvironment }
-
     // Process-global stable-id ↔ location mapping. Observes graphStore from boot so
     // identity survives renames across the entire server lifetime — including the gap
     // between a run terminating and the user editing the notation afterward.
@@ -167,14 +165,38 @@ class KzenAutoContext(
     val columnListingAction = ColumnListingAction(filterIndex)
 
 
-    // The run/detached/task/dataflow createGraph callers receive the GraphEnvironment as a
-    // deferred provider `{ graphEnvironment }`: graphEnvironment (lazy, declared below) registers
-    // serverLogicController and definitionRepository themselves, so eager wiring would be cyclic.
-    // The provider is only invoked at request/run time, long after construction completes.
+    //-----------------------------------------------------------------------------------------------------------------
+    // Runtime services exposed to @Service constructor parameters of graph-instantiated objects,
+    // keyed by the type each consumer declares. The two members constructed below this point
+    // (logicTrace, serverLogicController) are registered as memoized providers, resolved on first
+    // use at request/run time - long after construction completes. Nothing may resolve the
+    // environment during construction (an eager createGraph here would see them still null).
+    val graphEnvironment: GraphEnvironment = GraphEnvironment.builder()
+        .put(ClassName(KzenAutoConfig::class.qualifiedName!!), config)
+        .put(ClassName(GraphCreator::class.qualifiedName!!), graphCreator)
+        .put(ClassName(ObjectStableMapper::class.qualifiedName!!), objectStableMapper)
+        .put(ClassName(CachedKotlinCompiler::class.qualifiedName!!), cachedKotlinCompiler)
+        .put(ClassName(ScriptValidationCache::class.qualifiedName!!), scriptValidationCache)
+        .put(ClassName(NotationMedia::class.qualifiedName!!), notationMedia)
+        .put(ClassName(TargetLocator::class.qualifiedName!!), targetLocator)
+        .put(ClassName(NotationMetadataReader::class.qualifiedName!!), notationMetadataReader)
+        .put(ClassName(LocalGraphStore::class.qualifiedName!!), graphStore)
+        .put(ClassName(ReportWorkPool::class.qualifiedName!!), reportWorkPool)
+        .put(ClassName(ReportDefinitionRepository::class.qualifiedName!!), definitionRepository)
+        .put(ClassName(CalculatedColumnEval::class.qualifiedName!!), calculatedColumnEval)
+        .put(ClassName(FlowMessageInspector::class.qualifiedName!!), flowMessageInspector)
+        .put(ClassName(FileListingAction::class.qualifiedName!!), fileListingAction)
+        .put(ClassName(ColumnListingAction::class.qualifiedName!!), columnListingAction)
+        .put(ClassName(LogicTrace::class.qualifiedName!!)) { logicTrace }
+        .put(ClassName(ServerLogicController::class.qualifiedName!!)) { serverLogicController }
+        .build()
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     val serverLogicController = ServerLogicController(
         graphStore, objectStableMapper, cachedKotlinCompiler, scriptValidationCache,
-        flowMessageInspector, notationMetadataReader, jobWorkPool
-    ) { graphEnvironment }
+        flowMessageInspector, notationMetadataReader, jobWorkPool,
+        graphEnvironment)
 
     // The trace-query surface (the former LogicTraceStore): projects the controller's retained RunEngine at
     // query time, translating each flavour's within-node emit address to its wire LogicTracePath via the same
@@ -185,8 +207,14 @@ class KzenAutoContext(
         { serverLogicController.retainedTraceAccess() },
         { serverLogicController.clearRetainedTrace() })
 
+    // Scoped, digest-keyed instance reuse for detached actions and tasks.
+    val graphInstanceCache = GraphInstanceCache(graphCreator, graphEnvironment)
+
     val detachedExecutor = ModelDetachedExecutor(
-        graphStore, graphCreator) { graphEnvironment }
+        graphStore, graphInstanceCache)
+
+    val modelTaskRepository = ModelTaskRepository(
+        graphStore, graphInstanceCache)
 
     // Areas are registered (and the code-cache evictor attached) in init(), where the
     // active-run checks can capture serverLogicController without construction-order cycles.
@@ -204,33 +232,6 @@ class KzenAutoContext(
         fileListingAction,
         jobWorkPool,
         managedStorageRegistry)
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    // Runtime services exposed to @Service constructor parameters of graph-instantiated objects,
-    // keyed by the type each consumer declares. Lazy so the cyclic members (serverLogicController,
-    // definitionRepository) are already built when it is first accessed at request/run time.
-    val graphEnvironment: GraphEnvironment by lazy {
-        GraphEnvironment.builder()
-            .put(ClassName(KzenAutoConfig::class.qualifiedName!!), config)
-            .put(ClassName(GraphCreator::class.qualifiedName!!), graphCreator)
-            .put(ClassName(ObjectStableMapper::class.qualifiedName!!), objectStableMapper)
-            .put(ClassName(CachedKotlinCompiler::class.qualifiedName!!), cachedKotlinCompiler)
-            .put(ClassName(ScriptValidationCache::class.qualifiedName!!), scriptValidationCache)
-            .put(ClassName(NotationMedia::class.qualifiedName!!), notationMedia)
-            .put(ClassName(TargetLocator::class.qualifiedName!!), targetLocator)
-            .put(ClassName(NotationMetadataReader::class.qualifiedName!!), notationMetadataReader)
-            .put(ClassName(LocalGraphStore::class.qualifiedName!!), graphStore)
-            .put(ClassName(LogicTrace::class.qualifiedName!!), logicTrace)
-            .put(ClassName(ReportWorkPool::class.qualifiedName!!), reportWorkPool)
-            .put(ClassName(ReportDefinitionRepository::class.qualifiedName!!), definitionRepository)
-            .put(ClassName(CalculatedColumnEval::class.qualifiedName!!), calculatedColumnEval)
-            .put(ClassName(FlowMessageInspector::class.qualifiedName!!), flowMessageInspector)
-            .put(ClassName(FileListingAction::class.qualifiedName!!), fileListingAction)
-            .put(ClassName(ColumnListingAction::class.qualifiedName!!), columnListingAction)
-            .put(ClassName(ServerLogicController::class.qualifiedName!!), serverLogicController)
-            .build()
-    }
 
 
     //-----------------------------------------------------------------------------------------------------------------

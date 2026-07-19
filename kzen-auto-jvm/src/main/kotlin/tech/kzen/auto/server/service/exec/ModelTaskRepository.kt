@@ -19,8 +19,6 @@ import tech.kzen.lib.common.model.structure.notation.cqrs.DeletedDocumentEvent
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
 import tech.kzen.lib.common.model.structure.notation.cqrs.RenamedDocumentRefactorEvent
-import tech.kzen.lib.common.service.context.GraphCreator
-import tech.kzen.lib.common.service.context.environment.GraphEnvironment
 import tech.kzen.lib.common.service.store.LocalGraphStore
 import java.time.Instant
 import java.util.*
@@ -31,8 +29,7 @@ import java.util.concurrent.atomic.AtomicReference
 
 class ModelTaskRepository(
     private val graphStore: LocalGraphStore,
-    private val graphCreator: GraphCreator,
-    private val environment: () -> GraphEnvironment
+    private val graphInstanceCache: GraphInstanceCache
 ):
     TaskRepository,
     LocalGraphStore.Observer
@@ -126,16 +123,15 @@ class ModelTaskRepository(
 
     //-----------------------------------------------------------------------------------------------------------------
     override suspend fun submit(taskLocation: ObjectLocation, request: ExecutionRequest): TaskModel {
-        val graphDefinition = graphStore
+        val serverDefinition = graphStore
             .graphDefinition()
             .transitiveSuccessful
             .filterDefinitions(AutoConventions.serverAllowed)
 
         // TODO: add GraphInstanceAttempt for error reporting
-        val graphInstance =
-            graphCreator.createGraph(graphDefinition, environment())
-
-        val instance = graphInstance.objectInstances[taskLocation]?.reference
+        val instance = graphInstanceCache
+            .objectInstance(serverDefinition, taskLocation)
+            ?.reference
             ?: throw IllegalArgumentException("Not found: $taskLocation")
 
         val task = instance as ManagedTask
