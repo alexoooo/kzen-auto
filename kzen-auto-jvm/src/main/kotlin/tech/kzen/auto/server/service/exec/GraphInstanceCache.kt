@@ -3,6 +3,7 @@ package tech.kzen.auto.server.service.exec
 import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.definition.GraphDefinition
+import tech.kzen.lib.common.model.instance.ObjectCreationFailure
 import tech.kzen.lib.common.model.instance.ObjectInstance
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
@@ -53,16 +54,26 @@ class GraphInstanceCache(
 
     //-----------------------------------------------------------------------------------------------------------------
     /**
-     * Null when [objectLocation] has no (successful, policy-allowed) definition in [definition].
+     * Null when [objectLocation] has no (successful, policy-allowed) definition in [definition], or when its
+     *  creation failed - see [tryObjectInstance] for which of the two, and why.
      */
-    @Synchronized
     fun objectInstance(
         definition: GraphDefinition,
         objectLocation: ObjectLocation
     ): ObjectInstance? {
+        return (tryObjectInstance(definition, objectLocation) as? ObjectInstanceAttempt.Created)
+            ?.objectInstance
+    }
+
+
+    @Synchronized
+    fun tryObjectInstance(
+        definition: GraphDefinition,
+        objectLocation: ObjectLocation
+    ): ObjectInstanceAttempt {
         if (objectLocation !in definition.objectDefinitions) {
             // NB: guard before transitiveDigest / filterTransitive, which require a present seed
-            return null
+            return ObjectInstanceAttempt.Undefined
         }
 
         if (cachingOptedOut(definition, objectLocation)) {
@@ -76,29 +87,39 @@ class GraphInstanceCache(
         // access-ordered get, so a hit is also an LRU touch
         val cached = entries[objectLocation]
         if (cached != null && cached.digest == digest) {
-            return cached.objectInstance
+            return ObjectInstanceAttempt.Created(cached.objectInstance)
         }
 
-        val created = create(definition, objectLocation)
-            ?: return null
+        val attempt = create(definition, objectLocation)
 
-        entries[objectLocation] = Entry(digest, created)
-        return created
+        // failures are rare and recompute cheaply - only successful instances are worth a cache entry
+        if (attempt is ObjectInstanceAttempt.Created) {
+            entries[objectLocation] = Entry(digest, attempt.objectInstance)
+        }
+
+        return attempt
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun create(definition: GraphDefinition, objectLocation: ObjectLocation): ObjectInstance? {
+    private fun create(definition: GraphDefinition, objectLocation: ObjectLocation): ObjectInstanceAttempt {
         val scoped = definition.filterTransitive(objectLocation)
 
         val startNanos = System.nanoTime()
-        val graphInstance = graphCreator.createGraph(scoped, environment)
+        val instanceAttempt = graphCreator.tryCreateGraph(scoped, environment)
 
         logger.debug("built {} - {} of {} definitions in {}us",
             objectLocation, scoped.objectDefinitions.map.size, definition.objectDefinitions.map.size,
             (System.nanoTime() - startNanos) / 1_000)
 
-        return graphInstance[objectLocation]
+        val objectInstance = instanceAttempt.objectInstances[objectLocation]
+        if (objectInstance != null) {
+            return ObjectInstanceAttempt.Created(objectInstance)
+        }
+
+        return ObjectInstanceAttempt.Failed(
+            instanceAttempt.failures[objectLocation]
+                ?: ObjectCreationFailure("Not created"))
     }
 
 

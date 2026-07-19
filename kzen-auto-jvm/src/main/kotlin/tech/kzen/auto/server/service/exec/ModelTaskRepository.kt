@@ -123,16 +123,17 @@ class ModelTaskRepository(
 
     //-----------------------------------------------------------------------------------------------------------------
     override suspend fun submit(taskLocation: ObjectLocation, request: ExecutionRequest): TaskModel {
-        val serverDefinition = graphStore
-            .graphDefinition()
+        val definitionAttempt = graphStore.graphDefinition()
+
+        val serverDefinition = definitionAttempt
             .transitiveSuccessful
             .filterDefinitions(AutoConventions.serverAllowed)
 
-        // TODO: add GraphInstanceAttempt for error reporting
-        val instance = graphInstanceCache
-            .objectInstance(serverDefinition, taskLocation)
-            ?.reference
-            ?: throw IllegalArgumentException("Not found: $taskLocation")
+        val instanceAttempt = graphInstanceCache.tryObjectInstance(serverDefinition, taskLocation)
+
+        val instance = (instanceAttempt as? ObjectInstanceAttempt.Created)?.objectInstance?.reference
+            ?: throw IllegalArgumentException(
+                ExecutionGraphErrors.describe(taskLocation, definitionAttempt, instanceAttempt))
 
         val task = instance as ManagedTask
 

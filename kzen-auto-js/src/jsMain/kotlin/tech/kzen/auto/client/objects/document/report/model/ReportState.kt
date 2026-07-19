@@ -19,6 +19,8 @@ import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisSpec
 import tech.kzen.auto.common.objects.document.report.spec.filter.FilterSpec
 import tech.kzen.auto.common.objects.document.report.spec.input.InputSpec
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputSpec
+import tech.kzen.lib.common.model.attribute.AttributeName
+import tech.kzen.lib.common.model.definition.AttributeDefinition
 import tech.kzen.lib.common.model.definition.ObjectDefinition
 import tech.kzen.lib.common.model.definition.ValueAttributeDefinition
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -63,20 +65,30 @@ data class ReportState(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    // Belt-and-braces: ReportStore only builds a state over a fully defined `main`, so a missing spec attribute is
+    // unreachable - if it ever happens, say which attribute rather than throwing an anonymous NPE.
+    private fun attributeDefinition(attributeName: AttributeName): AttributeDefinition {
+        return mainDefinition.attributeDefinitions[attributeName]
+            ?: throw IllegalStateException(
+                "Report attribute '${attributeName.value}' is not defined for $mainLocation " +
+                "- fix the document notation")
+    }
+
+
     fun inputSpec(): InputSpec {
-        val definition = mainDefinition.attributeDefinitions[ReportConventions.inputAttributeName]!!
+        val definition = attributeDefinition(ReportConventions.inputAttributeName)
         return (definition as ValueAttributeDefinition).value as InputSpec
     }
 
 
     fun formulaSpec(): FormulaSpec {
-        val definition = mainDefinition.attributeDefinitions[ReportConventions.formulaAttributeName]!!
+        val definition = attributeDefinition(ReportConventions.formulaAttributeName)
         return (definition as ValueAttributeDefinition).value as FormulaSpec
     }
 
 
     fun filterSpec(): FilterSpec {
-        val definition = mainDefinition.attributeDefinitions[ReportConventions.filterAttributeName]!!
+        val definition = attributeDefinition(ReportConventions.filterAttributeName)
         return (definition as ValueAttributeDefinition).value as FilterSpec
     }
 
@@ -90,25 +102,25 @@ data class ReportState(
 
 
     fun previewAllSpec(): PreviewSpec {
-        val definition = mainDefinition.attributeDefinitions[ReportConventions.previewFilteredAttributeName]!!
+        val definition = attributeDefinition(ReportConventions.previewFilteredAttributeName)
         return (definition as ValueAttributeDefinition).value as PreviewSpec
     }
 
 
     fun previewFilteredSpec(): PreviewSpec {
-        val definition = mainDefinition.attributeDefinitions[ReportConventions.previewFilteredAttributeName]!!
+        val definition = attributeDefinition(ReportConventions.previewFilteredAttributeName)
         return (definition as ValueAttributeDefinition).value as PreviewSpec
     }
 
 
     fun analysisSpec(): AnalysisSpec {
-        val definition = mainDefinition.attributeDefinitions[ReportConventions.analysisAttributeName]!!
+        val definition = attributeDefinition(ReportConventions.analysisAttributeName)
         return (definition as ValueAttributeDefinition).value as AnalysisSpec
     }
 
 
     fun outputSpec(): OutputSpec {
-        val definition = mainDefinition.attributeDefinitions[ReportConventions.outputAttributeName]!!
+        val definition = attributeDefinition(ReportConventions.outputAttributeName)
         return (definition as ValueAttributeDefinition).value as OutputSpec
     }
 

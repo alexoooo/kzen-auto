@@ -10,6 +10,7 @@ import tech.kzen.auto.server.paradigm.detached.ExecutionDownloadResult
 import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionResult
+import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.service.store.LocalGraphStore
 
@@ -25,26 +26,47 @@ class ModelDetachedExecutor(
     }
 
 
-    // The action is instantiated from its own transitive definition closure (of the serverAllowed
-    // subset - the policy filter comes first) and reused across calls while its notation is unchanged.
-    private suspend fun actionInstance(actionLocation: ObjectLocation): Any? {
-        val serverDefinition = graphStore
-            .graphDefinition()
-            .transitiveSuccessful
-            .filterDefinitions(AutoConventions.serverAllowed)
+    //-----------------------------------------------------------------------------------------------------------------
+    private data class ActionLookup(
+        val definitionAttempt: GraphDefinitionAttempt,
+        val instanceAttempt: ObjectInstanceAttempt
+    ) {
+        fun reference(): Any? {
+            return (instanceAttempt as? ObjectInstanceAttempt.Created)?.objectInstance?.reference
+        }
 
-        return graphInstanceCache
-            .objectInstance(serverDefinition, actionLocation)
-            ?.reference
+
+        fun errorMessage(actionLocation: ObjectLocation): String {
+            return ExecutionGraphErrors.describe(actionLocation, definitionAttempt, instanceAttempt)
+        }
     }
 
 
+    // The action is instantiated from its own transitive definition closure (of the serverAllowed
+    // subset - the policy filter comes first) and reused across calls while its notation is unchanged.
+    // The definition attempt rides along so a miss can name its origin instead of a bare "Not found".
+    private suspend fun actionLookup(actionLocation: ObjectLocation): ActionLookup {
+        val definitionAttempt = graphStore.graphDefinition()
+
+        val serverDefinition = definitionAttempt
+            .transitiveSuccessful
+            .filterDefinitions(AutoConventions.serverAllowed)
+
+        return ActionLookup(
+            definitionAttempt,
+            graphInstanceCache.tryObjectInstance(serverDefinition, actionLocation))
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     override suspend fun execute(
         actionLocation: ObjectLocation,
         request: ExecutionRequest
     ): ExecutionResult {
-        val instance = actionInstance(actionLocation)
-            ?: return ExecutionFailure("Not found: $actionLocation")
+        val lookup = actionLookup(actionLocation)
+
+        val instance = lookup.reference()
+            ?: return ExecutionFailure(lookup.errorMessage(actionLocation))
 
         val action = instance as? DetachedAction
             ?: return ExecutionFailure("Not DetachedAction: $actionLocation - $instance")
@@ -63,8 +85,10 @@ class ModelDetachedExecutor(
         actionLocation: ObjectLocation,
         request: ExecutionRequest
     ): ExecutionDownloadResult {
-        val instance = actionInstance(actionLocation)
-            ?: error("Not found: $actionLocation")
+        val lookup = actionLookup(actionLocation)
+
+        val instance = lookup.reference()
+            ?: error(lookup.errorMessage(actionLocation))
 
         val action = instance as? DetachedDownloadAction
             ?: error("Not DetachedDownloadAction: $actionLocation - $instance")

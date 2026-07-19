@@ -12,6 +12,7 @@ import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.logic.ClientLogicState
 import tech.kzen.auto.client.service.rest.ClientRestApi
+import tech.kzen.auto.client.util.DefinitionErrors
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.FunctionWithDebounce
 import tech.kzen.auto.client.wrap.lodash
@@ -46,6 +47,9 @@ class ReportStore(
     private var state: ReportState? = null
 
     private var previousLogicVersion: String = ClientLogicState.noTraceVersion
+
+    // true while the report's `main` has no definition, so the recovery pass knows the notationError is ours
+    private var definitionBlocked = false
 
     val input = ReportInputStore(this)
     val formula = ReportFormulaStore(this)
@@ -87,6 +91,14 @@ class ReportStore(
             ?: return
 
         val reportMainDefinition = mainDefinition(clientState, reportMainLocation)
+        if (reportMainDefinition == null) {
+            onDefinitionBlocked(clientState, reportMainLocation)
+            return
+        }
+
+        // only the guard's own error may be wiped here - a sub-store's command-apply error is not ours to clear
+        val recoveredFromDefinitionBlock = definitionBlocked
+        definitionBlocked = false
 
         val previousState = state
         val nextState = when {
@@ -95,6 +107,13 @@ class ReportStore(
                     reportMainLocation,
                     reportMainDefinition,
                     clientState.clientLogicState)
+
+            recoveredFromDefinitionBlock ->
+                previousState.copy(
+                    mainDefinition = reportMainDefinition,
+                    clientLogicState = clientState.clientLogicState,
+                    notationError = null
+                )
 
             else ->
                 previousState.copy(
@@ -136,10 +155,34 @@ class ReportStore(
     }
 
 
-    private fun mainDefinition(clientState: ClientState, mainLocation: ObjectLocation): ObjectDefinition {
+    private fun mainDefinition(clientState: ClientState, mainLocation: ObjectLocation): ObjectDefinition? {
         return clientState
             .graphDefinitionAttempt
-            .objectDefinitions[mainLocation]!!
+            .objectDefinitions[mainLocation]
+    }
+
+
+    // The document is a report in notation but its `main` failed to define. Never throw here: ClientStateGlobal's
+    // fan-out turns any observer throw into a modal alert (and the initial replay isn't even wrapped). Surface the
+    // origin instead - StageController's panel names object and attribute above the body, and a report that was
+    // already open freezes with the reason pinned to it.
+    private fun onDefinitionBlocked(clientState: ClientState, mainLocation: ObjectLocation) {
+        definitionBlocked = true
+
+        val previousState = state
+            ?: return
+
+        if (previousState.mainLocation != mainLocation) {
+            return
+        }
+
+        val blocker = DefinitionErrors.runBlocker(clientState.graphDefinitionAttempt, mainLocation)
+        val nextState = previousState.withNotationError(blocker ?: "Report failed to define")
+
+        if (state != nextState) {
+            state = nextState
+            observer?.onReportState(nextState)
+        }
     }
 
 
