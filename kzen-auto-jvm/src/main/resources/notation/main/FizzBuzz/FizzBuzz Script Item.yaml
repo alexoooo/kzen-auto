@@ -20,7 +20,7 @@ main.steps/Divisible By 3:
 
 main.steps/Divisible By 5:
   is: FormulaStep
-  code: "number % 6 == 0"
+  code: "number % 5 == 0"
 
 main.steps/div 3:
   is: IfStep
