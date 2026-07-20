@@ -12,6 +12,7 @@ import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.metadata.GraphMetadata
 import tech.kzen.lib.common.model.structure.notation.DocumentNotation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
+import tech.kzen.lib.common.reflect.GlobalMirror
 import tech.kzen.lib.common.service.context.GraphDefiner
 import tech.kzen.lib.common.service.media.LiteralNotationMedia
 import tech.kzen.lib.common.service.media.NotationMedia
@@ -23,6 +24,7 @@ import tech.kzen.lib.platform.collect.toPersistentMap
 import tech.kzen.lib.server.notation.ClasspathNotationMedia
 import tech.kzen.lib.server.notation.FileNotationMedia
 import tech.kzen.lib.server.notation.locate.GradleLocator
+import tech.kzen.lib.server.reflect.ReflectiveClassMirror
 
 
 object AutoTestUtils {
@@ -31,6 +33,10 @@ object AutoTestUtils {
         KzenLibCommonModule.register()
         KzenAutoCommonModule.register()
         KzenAutoJvmModule.register()
+
+        // Test fixtures reach the graph through this bootstrap as well as through KzenAutoContext,
+        // so the fallback has to be registered on both paths
+        GlobalMirror.register(ReflectiveClassMirror.global)
     }
 
 

@@ -37,6 +37,7 @@ import tech.kzen.auto.server.service.storage.StorageLruEvictor
 import tech.kzen.auto.server.service.target.TargetLocator
 import tech.kzen.auto.server.util.WorkUtils
 import tech.kzen.lib.common.codegen.KzenLibCommonModule
+import tech.kzen.lib.common.reflect.GlobalMirror
 import tech.kzen.lib.common.service.context.GraphCreator
 import tech.kzen.lib.common.service.context.GraphDefiner
 import tech.kzen.lib.common.service.context.environment.GraphEnvironment
@@ -58,6 +59,7 @@ import tech.kzen.lib.server.notation.ClasspathNotationMedia
 import tech.kzen.lib.server.notation.FileNotationMedia
 import tech.kzen.lib.server.notation.locate.FileNotationLocator
 import tech.kzen.lib.server.notation.locate.GradleLocator
+import tech.kzen.lib.server.reflect.ReflectiveClassMirror
 import java.lang.AutoCloseable
 import java.nio.file.Paths
 
@@ -73,6 +75,10 @@ class KzenAutoContext(
             KzenLibCommonModule.register()
             KzenAutoCommonModule.register()
             KzenAutoJvmModule.register()
+
+            // JVM net for @Reflect classes with no generated registration, e.g. non-KSP plugins;
+            // generated registrations always win, and every fallback hit is logged
+            GlobalMirror.register(ReflectiveClassMirror.global)
         }
 
 
