@@ -16,6 +16,7 @@ import tech.kzen.auto.common.util.storage.StorageAreaInfo
 import tech.kzen.auto.common.util.storage.StorageBundleInfo
 import tech.kzen.auto.server.service.exec.ModelDetachedExecutor
 import tech.kzen.auto.server.service.exec.ModelTaskRepository
+import tech.kzen.auto.server.service.impl.LogicStartAttempt
 import tech.kzen.auto.server.service.impl.ServerLogicController
 import tech.kzen.auto.server.service.storage.ManagedStorageRegistry
 import tech.kzen.lib.common.exec.ExecutionRequest
@@ -1111,7 +1112,7 @@ class RestHandler(
     }
 
 
-    fun logicStart(parameters: Parameters, paused: Boolean): String? {
+    fun logicStart(parameters: Parameters, paused: Boolean): LogicStartAttempt {
         val documentPath: DocumentPath = parameters.getParam(
             CommonRestApi.paramDocumentPath, DocumentPath::parse)
 
@@ -1138,10 +1139,13 @@ class RestHandler(
             graphStore.graphDefinition()
         }
 
-        val logicRunId = runBlocking {
-            serverLogicController.start(objectLocation, graphDefinitionAttempt, pauseOnError)
+        val startAttempt = runBlocking {
+            serverLogicController.startAttempt(objectLocation, graphDefinitionAttempt, pauseOnError)
         }
-            ?: return null
+        if (startAttempt !is LogicStartAttempt.Started) {
+            return startAttempt
+        }
+        val logicRunId = startAttempt.runId
 
         // Start-time breakpoints ride the start request and are set before the drive below launches the
         // engine — race-free (a follow-up PUT after startRun could miss the earliest steps).
@@ -1163,10 +1167,10 @@ class RestHandler(
         }
 
         if (response != LogicRunResponse.Submitted) {
-            return null
+            return LogicStartAttempt.Failed("The run was not submitted: $response")
         }
 
-        return logicRunId.value
+        return startAttempt
     }
 
 

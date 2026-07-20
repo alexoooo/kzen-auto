@@ -60,7 +60,7 @@ class ServerLogicControllerPauseOnErrorTest {
     @Test
     fun failingStepEndsRunWhenPauseOnErrorDisabled() {
         val controller = context.serverLogicController
-        val runId = controller.start(mainLocation, snapshot, false)
+        val runId = controller.startAttempt(mainLocation, snapshot, false).runIdOrNull
             ?: fail("Unable to start run")
 
         controller.continueOrStart(runId, snapshot)
@@ -75,7 +75,7 @@ class ServerLogicControllerPauseOnErrorTest {
     @Test
     fun failingStepPausesAtErrorPausedWhenPauseOnErrorEnabled() {
         val controller = context.serverLogicController
-        val runId = controller.start(mainLocation, snapshot, true)
+        val runId = controller.startAttempt(mainLocation, snapshot, true).runIdOrNull
             ?: fail("Unable to start run")
 
         controller.continueOrStart(runId, snapshot)
@@ -90,7 +90,7 @@ class ServerLogicControllerPauseOnErrorTest {
     @Test
     fun fixingErrorPausedStepAndResumingCompletesViaMigrate() {
         val controller = context.serverLogicController
-        val runId = controller.start(mainLocation, snapshot, true)
+        val runId = controller.startAttempt(mainLocation, snapshot, true).runIdOrNull
             ?: fail("Unable to start run")
 
         controller.continueOrStart(runId, snapshot)

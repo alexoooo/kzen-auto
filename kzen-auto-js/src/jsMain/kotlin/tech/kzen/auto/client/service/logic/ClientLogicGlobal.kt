@@ -5,6 +5,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.delay
 import org.w3c.dom.EventSource
 import tech.kzen.auto.client.service.rest.ClientRestApi
+import tech.kzen.auto.client.util.HttpStatusException
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.FunctionWithDebounce
 import tech.kzen.auto.client.wrap.lodash
@@ -13,6 +14,7 @@ import tech.kzen.auto.common.paradigm.logic.LogicConventions
 import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.exec.ExecutionSuccess
 import tech.kzen.lib.common.exec.engine.StepMode
+import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunResponse
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunState
 import tech.kzen.lib.common.exec.logic.run.model.LogicStatus
@@ -68,6 +70,11 @@ class ClientLogicGlobal(
         // requests at all (see awaitStepSettled), so this only bounds detection latency there.
         private const val slowSettlePollMillis = 200
         private const val slowSettleMaxMillis = 30_000
+
+        // Shared by the two ways to start a run (plain / slow-motion) and the two trace clears (this document /
+        // all documents), so a failure reads the same wherever it was triggered from.
+        private const val startLabel = "Unable to start"
+        private const val clearTraceLabel = "Unable to clear the trace"
     }
 
 
@@ -460,7 +467,8 @@ class ClientLogicGlobal(
 
         async {
             delay(1)
-            val logicRunId =
+
+            val error = startFailure(mainLocation) {
                 if (paused) {
                     restClient.logicStartAndStep(
                         mainLocation, pauseOnError, stepMode, currentBreakpointLocations())
@@ -469,15 +477,13 @@ class ClientLogicGlobal(
                     restClient.logicStartAndRun(
                         mainLocation, pauseOnError, currentBreakpointLocations())
                 }
+            }
 
             clientLogicState = clientLogicState.copy(
-                pending = ClientLogicState.Pending.None)
+                pending = ClientLogicState.Pending.None,
+                controlError = error)
 
-            if (logicRunId == null) {
-                clientLogicState = clientLogicState.copy(
-                    controlError = "Unable to start")
-            }
-            else {
+            if (error == null) {
                 delay(10)
                 lookupStatus()
                 scheduleRefresh()
@@ -488,68 +494,102 @@ class ClientLogicGlobal(
     }
 
 
-    //-----------------------------------------------------------------------------------------------------------------
-    fun pauseAsync() {
+    // Every control verb acting on the active run shares this shape: publish the pending state, issue the
+    // request, then settle `pending` back and surface any failure as a [ControlError].
+    //
+    // The catch is load-bearing: the REST call throws on a non-2xx (carrying the server's reason), and an
+    // uncaught throw inside [async] is a rejected promise nobody observes — the failure vanishes and the
+    // controls stay stuck mid-action.
+    private fun controlAsync(
+        label: String,
+        pending: ClientLogicState.Pending,
+        rejectedLabel: String = label,
+        request: suspend (LogicRunId) -> LogicRunResponse
+    ) {
         cancelSlowLoop()
         val logicRunId = clientLogicState.logicStatus?.active?.id
             ?: return
 
         clientLogicState = clientLogicState.copy(
-            pending = ClientLogicState.Pending.Pause,
+            pending = pending,
             controlError = null)
         publish()
 
         async {
             delay(1)
-            val response = restClient.logicPause(logicRunId)
+
+            val error =
+                try {
+                    when (val response = request(logicRunId)) {
+                        LogicRunResponse.Submitted -> null
+
+                        // The server understood and refused (an invalid target), which has its own wording.
+                        LogicRunResponse.Rejected -> controlError(rejectedLabel, null)
+
+                        else -> controlError(label, response.name)
+                    }
+                }
+                catch (t: Throwable) {
+                    controlError(label, failureDetail(t))
+                }
 
             clientLogicState = clientLogicState.copy(
-                pending = ClientLogicState.Pending.None)
+                pending = ClientLogicState.Pending.None,
+                controlError = error)
 
-            if (response != LogicRunResponse.Submitted) {
-                clientLogicState = clientLogicState.copy(
-                    controlError = "Unable to stop")
-            }
-            else {
+            if (error == null) {
                 delay(10)
                 lookupStatus()
                 scheduleRefresh()
             }
 
             publish()
+        }
+    }
+
+
+    // Both ways to start a run (plain / slow-motion) classify their outcome here: the failure to show, or null
+    // on success. Scoped to the document being started rather than to the run, which doesn't exist yet.
+    private suspend fun startFailure(
+        mainLocation: ObjectLocation,
+        request: suspend () -> LogicRunId?
+    ): ControlError? {
+        return try {
+            when (request()) {
+                null -> ControlError(startLabel, null, mainLocation.documentPath)
+                else -> null
+            }
+        }
+        catch (t: Throwable) {
+            ControlError(startLabel, failureDetail(t), mainLocation.documentPath)
+        }
+    }
+
+
+    // Scoped to the running document, so an error doesn't follow the user to an unrelated one.
+    private fun controlError(label: String, detail: String?): ControlError {
+        return ControlError(
+            label, detail, clientLogicState.logicStatus?.active?.frame?.objectLocation?.documentPath)
+    }
+
+
+    private fun failureDetail(failure: Throwable): String? {
+        return (failure as? HttpStatusException)?.detail ?: failure.message
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    fun pauseAsync() {
+        controlAsync("Unable to pause", ClientLogicState.Pending.Pause) {
+            restClient.logicPause(it)
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     fun continueRunAsync() {
-        cancelSlowLoop()
-        val logicRunId = clientLogicState.logicStatus?.active?.id
-            ?: return
-
-        clientLogicState = clientLogicState.copy(
-            pending = ClientLogicState.Pending.Pause,
-            controlError = null)
-        publish()
-
-        async {
-            delay(1)
-            val response = restClient.logicContinueRun(logicRunId)
-
-            clientLogicState = clientLogicState.copy(
-                pending = ClientLogicState.Pending.None)
-
-            if (response != LogicRunResponse.Submitted) {
-                clientLogicState = clientLogicState.copy(
-                    controlError = "Unable to stop")
-            }
-            else {
-                delay(10)
-                lookupStatus()
-                scheduleRefresh()
-            }
-
-            publish()
+        controlAsync("Unable to continue", ClientLogicState.Pending.Pause) {
+            restClient.logicContinueRun(it)
         }
     }
 
@@ -613,33 +653,8 @@ class ClientLogicGlobal(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun stepAsync() {
-        cancelSlowLoop()
-        val logicRunId = clientLogicState.logicStatus?.active?.id
-            ?: return
-
-        clientLogicState = clientLogicState.copy(
-            pending = ClientLogicState.Pending.Step,
-            controlError = null)
-        publish()
-
-        async {
-            delay(1)
-            val response = restClient.logicStep(logicRunId)
-
-            clientLogicState = clientLogicState.copy(
-                pending = ClientLogicState.Pending.None)
-
-            if (response != LogicRunResponse.Submitted) {
-                clientLogicState = clientLogicState.copy(
-                    controlError = "Unable to step")
-            }
-            else {
-                delay(10)
-                lookupStatus()
-                scheduleRefresh()
-            }
-
-            publish()
+        controlAsync("Unable to step", ClientLogicState.Pending.Step) {
+            restClient.logicStep(it)
         }
     }
 
@@ -648,33 +663,8 @@ class ClientLogicGlobal(
     // Step Over: like Step, but the server runs any sub-document (RunStep child) entered on this tick to
     // completion instead of descending into it, pausing at the next step of the current frame.
     fun stepOverAsync() {
-        cancelSlowLoop()
-        val logicRunId = clientLogicState.logicStatus?.active?.id
-            ?: return
-
-        clientLogicState = clientLogicState.copy(
-            pending = ClientLogicState.Pending.Step,
-            controlError = null)
-        publish()
-
-        async {
-            delay(1)
-            val response = restClient.logicStepOver(logicRunId)
-
-            clientLogicState = clientLogicState.copy(
-                pending = ClientLogicState.Pending.None)
-
-            if (response != LogicRunResponse.Submitted) {
-                clientLogicState = clientLogicState.copy(
-                    controlError = "Unable to step over")
-            }
-            else {
-                delay(10)
-                lookupStatus()
-                scheduleRefresh()
-            }
-
-            publish()
+        controlAsync("Unable to step over", ClientLogicState.Pending.Step) {
+            restClient.logicStepOver(it)
         }
     }
 
@@ -683,33 +673,8 @@ class ClientLogicGlobal(
     // Step Out: run the deepest currently-paused frame (the current document) to completion, then pause
     // at the caller's next step — or, if at the run root, run to the end.
     fun stepOutAsync() {
-        cancelSlowLoop()
-        val logicRunId = clientLogicState.logicStatus?.active?.id
-            ?: return
-
-        clientLogicState = clientLogicState.copy(
-            pending = ClientLogicState.Pending.Step,
-            controlError = null)
-        publish()
-
-        async {
-            delay(1)
-            val response = restClient.logicStepOut(logicRunId)
-
-            clientLogicState = clientLogicState.copy(
-                pending = ClientLogicState.Pending.None)
-
-            if (response != LogicRunResponse.Submitted) {
-                clientLogicState = clientLogicState.copy(
-                    controlError = "Unable to step out")
-            }
-            else {
-                delay(10)
-                lookupStatus()
-                scheduleRefresh()
-            }
-
-            publish()
+        controlAsync("Unable to step out", ClientLogicState.Pending.Step) {
+            restClient.logicStepOut(it)
         }
     }
 
@@ -720,35 +685,10 @@ class ClientLogicGlobal(
     // (the draggable next-to-run arrow / "Set next step here" action — phase 3), not read from status. A Rejected
     // response (unsupported / structurally-invalid target) is surfaced distinctly from other control failures.
     fun moveToAsync(target: ObjectLocation) {
-        cancelSlowLoop()
-        val logicRunId = clientLogicState.logicStatus?.active?.id
-            ?: return
-
-        clientLogicState = clientLogicState.copy(
-            pending = ClientLogicState.Pending.Step,
-            controlError = null)
-        publish()
-
-        async {
-            delay(1)
-            val response = restClient.logicMoveTo(logicRunId, target)
-
-            clientLogicState = clientLogicState.copy(
-                pending = ClientLogicState.Pending.None)
-
-            if (response != LogicRunResponse.Submitted) {
-                clientLogicState = clientLogicState.copy(
-                    controlError =
-                        if (response == LogicRunResponse.Rejected) "Can't move to this step"
-                        else "Unable to move")
-            }
-            else {
-                delay(10)
-                lookupStatus()
-                scheduleRefresh()
-            }
-
-            publish()
+        controlAsync(
+            "Unable to move", ClientLogicState.Pending.Step, "Can't move to this step"
+        ) {
+            restClient.logicMoveTo(it, target)
         }
     }
 
@@ -788,14 +728,17 @@ class ClientLogicGlobal(
                 // mode the bootstrap step is itself a Step Over, so the run never descends into a sub-Logic on
                 // the first tick (without this it would descend on the bootstrap and only climb out on the first
                 // subsequent Step Over — see ServerLogicController.startStep).
-                val logicRunId = restClient.logicStartAndStep(
-                    mainLocation, pauseOnError,
-                    if (stepOver) StepMode.Over else StepMode.Into,
-                    currentBreakpointLocations())
-                if (logicRunId == null) {
+                val error = startFailure(mainLocation) {
+                    restClient.logicStartAndStep(
+                        mainLocation, pauseOnError,
+                        if (stepOver) StepMode.Over else StepMode.Into,
+                        currentBreakpointLocations())
+                }
+
+                if (error != null) {
                     clientLogicState = clientLogicState.copy(
                         slowLooping = false,
-                        controlError = "Unable to start")
+                        controlError = error)
                     publish()
                     return@async
                 }
@@ -929,33 +872,8 @@ class ClientLogicGlobal(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun stopAsync() {
-        cancelSlowLoop()
-        val logicRunId = clientLogicState.logicStatus?.active?.id
-            ?: return
-
-        clientLogicState = clientLogicState.copy(
-            pending = ClientLogicState.Pending.Cancel,
-            controlError = null)
-        publish()
-
-        async {
-            delay(1)
-            val response = restClient.logicCancel(logicRunId)
-
-            clientLogicState = clientLogicState.copy(
-                pending = ClientLogicState.Pending.None)
-
-            if (response != LogicRunResponse.Submitted) {
-                clientLogicState = clientLogicState.copy(
-                    controlError = "Unable to stop")
-            }
-            else {
-                delay(10)
-                lookupStatus()
-                scheduleRefresh()
-            }
-
-            publish()
+        controlAsync("Unable to stop", ClientLogicState.Pending.Cancel) {
+            restClient.logicCancel(it)
         }
     }
 
@@ -1001,7 +919,8 @@ class ClientLogicGlobal(
 
             if (result is ExecutionFailure) {
                 clientLogicState = clientLogicState.copy(
-                    controlError = result.errorMessage)
+                    controlError = ControlError(
+                        clearTraceLabel, result.errorMessage, mainLocation.documentPath))
             }
 
             lookupStatus()
@@ -1097,7 +1016,7 @@ class ClientLogicGlobal(
 
             if (result is ExecutionFailure) {
                 clientLogicState = clientLogicState.copy(
-                    controlError = result.errorMessage)
+                    controlError = ControlError(clearTraceLabel, result.errorMessage, null))
             }
 
             lookupStatus()

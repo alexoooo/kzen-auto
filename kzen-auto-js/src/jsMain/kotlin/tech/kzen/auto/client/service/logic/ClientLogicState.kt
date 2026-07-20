@@ -8,7 +8,7 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableId
 data class ClientLogicState(
     val logicStatus: LogicStatus? = null,
     val pending: Pending = Pending.Initialize,
-    val controlError: String? = null,
+    val controlError: ControlError? = null,
 
     // Breakpoint elements, keyed by the CLIENT-side stable id (rename-tracked by ObjectStableMapper, so a
     // dot follows its renamed step). One flat set across documents: rendering is a membership test, and the

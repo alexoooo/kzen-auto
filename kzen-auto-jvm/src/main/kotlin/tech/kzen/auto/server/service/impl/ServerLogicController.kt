@@ -347,21 +347,21 @@ class ServerLogicController(
         root: ObjectLocation,
         snapshotGraphDefinitionAttempt: GraphDefinitionAttempt?
     ): LogicRunId? {
-        return start(root, snapshotGraphDefinitionAttempt, false)
+        return startAttempt(root, snapshotGraphDefinitionAttempt, false).runIdOrNull
     }
 
 
     @Synchronized
-    fun start(
+    fun startAttempt(
         root: ObjectLocation,
         snapshotGraphDefinitionAttempt: GraphDefinitionAttempt?,
         pauseOnError: Boolean
-    ): LogicRunId? {
+    ): LogicStartAttempt {
         val existing = stateOrNull
         if (existing != null) {
             if (!existing.settled) {
                 // An active run is in progress — refuse (single-run controller; multi-run is a later phase).
-                return null
+                return LogicStartAttempt.Failed("A run is already in progress")
             }
             // The prior run is retained only for post-run trace review; a fresh run supersedes it — dispose it.
             // This is what wipes the old trace (replacing the former logicTraceStore.clearAll()).
@@ -380,11 +380,12 @@ class ServerLogicController(
                 compileLogic(root, graphDefinitionAttempt, runExecutionId)
             }
             catch (e: Throwable) {
-                // Not a supported flavour, or the definition is incomplete. Fail gracefully (null → clean 400)
-                // instead of letting it escape as a 500. A NotImplementedError (Error, not Exception) is the
-                // unported-flavour signal, so catch Throwable.
+                // Not a supported flavour, or the definition is incomplete. Fail gracefully (clean 400 naming
+                // the reason) instead of letting it escape as a 500. A NotImplementedError (Error, not
+                // Exception) is the unported-flavour signal, so catch Throwable.
                 logger.warn("Unable to compile logic: {}", root, e)
-                return null
+                return LogicStartAttempt.Failed(
+                    "Unable to compile ${root.asString()}: ${e.message ?: e::class.simpleName}")
             }
 
         val runId = runExecutionId.logicRunId
@@ -414,7 +415,7 @@ class ServerLogicController(
         // its runId differs, but epoch also covers the case where a consumer keys on more than the run.
         bumpEpoch()
 
-        return runId
+        return LogicStartAttempt.Started(runId)
     }
 
 

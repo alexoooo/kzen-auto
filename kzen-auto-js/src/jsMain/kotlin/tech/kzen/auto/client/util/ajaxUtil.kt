@@ -24,7 +24,17 @@ val clientJson = Json {
 }
 
 
-class HttpStatusException(val status: Int) : RuntimeException("HTTP error: $status")
+// [detail] is the response body, which the server uses to say WHY a request was refused (e.g. the reason a
+// logic run couldn't start). Null when the response has no text body.
+class HttpStatusException(
+    val status: Int,
+    val detail: String?
+): RuntimeException("HTTP error: $status" + (detail?.let { " - $it" } ?: ""))
+
+
+private fun XMLHttpRequest.statusException(): HttpStatusException {
+    return HttpStatusException(status.toInt(), (response as? String)?.ifBlank { null })
+}
 
 
 suspend fun httpGet(url: String): String = suspendCoroutine { c ->
@@ -35,7 +45,7 @@ suspend fun httpGet(url: String): String = suspendCoroutine { c ->
                 c.resume(xhr.response as String)
             }
             else {
-                c.resumeWithException(HttpStatusException(xhr.status.toInt()))
+                c.resumeWithException(xhr.statusException())
             }
         }
         null
@@ -54,7 +64,7 @@ suspend fun httpPutForm(url: String, vararg parameters: Pair<String, String>): S
                 c.resume(xhr.response as String)
             }
             else {
-                c.resumeWithException(HttpStatusException(xhr.status.toInt()))
+                c.resumeWithException(xhr.statusException())
             }
         }
         null
@@ -84,7 +94,7 @@ suspend fun httpGetBytes(url: String): ByteArray = suspendCoroutine { c ->
                 c.resume(responseBytes)
             }
             else {
-                c.resumeWithException(HttpStatusException(xhr.status.toInt()))
+                c.resumeWithException(xhr.statusException())
             }
         }
         null
@@ -103,7 +113,7 @@ suspend fun httpPostBytes(url: String, body: ByteArray): String = suspendCorouti
                 c.resume(xhr.response as String)
             }
             else {
-                c.resumeWithException(HttpStatusException(xhr.status.toInt()))
+                c.resumeWithException(xhr.statusException())
             }
         }
         null
@@ -121,7 +131,7 @@ suspend fun httpDelete(url: String): String = suspendCoroutine { c ->
                 c.resume(xhr.response as String)
             }
             else {
-                c.resumeWithException(HttpStatusException(xhr.status.toInt()))
+                c.resumeWithException(xhr.statusException())
             }
         }
         null

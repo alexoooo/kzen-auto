@@ -182,7 +182,7 @@ class ScriptMoveToTest {
     private fun startPaused(documentPath: DocumentPath, pauseOnError: Boolean = false): LogicRunId {
         val controller = context.serverLogicController
         val main = ObjectLocation(documentPath, ObjectPath.parse("main"))
-        val runId = controller.start(main, snapshot, pauseOnError)
+        val runId = controller.startAttempt(main, snapshot, pauseOnError).runIdOrNull
             ?: fail("Unable to start run")
         // Pause-at-entry: the run was created but never set running, so pause() lands paused immediately.
         controller.pause(runId)

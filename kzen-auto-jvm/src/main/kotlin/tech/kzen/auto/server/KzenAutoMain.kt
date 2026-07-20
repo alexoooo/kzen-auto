@@ -28,6 +28,7 @@ import tech.kzen.auto.server.backend.indexPage
 import tech.kzen.auto.server.context.BuildInfo
 import tech.kzen.auto.server.context.KzenAutoConfig
 import tech.kzen.auto.server.context.KzenAutoContext
+import tech.kzen.auto.server.service.impl.LogicStartAttempt
 import tech.kzen.lib.common.util.ImmutableByteArray
 import kotlin.system.exitProcess
 import kotlin.time.Duration.Companion.milliseconds
@@ -297,6 +298,19 @@ private const val logicEventsHeartbeatMillis = 15_000L
 private const val logicEventsMinPushIntervalMillis = 100L
 
 
+// A refused start answers 400 with the controller's reason as the body — the client shows it verbatim, so a
+// compile failure is diagnosable at the browser instead of only in the server log.
+private suspend fun ApplicationCall.respondLogicStart(attempt: LogicStartAttempt) {
+    when (attempt) {
+        is LogicStartAttempt.Started ->
+            respondText(attempt.runId.value)
+
+        is LogicStartAttempt.Failed ->
+            respondText(attempt.reason, status = HttpStatusCode.BadRequest)
+    }
+}
+
+
 private fun Routing.routeLogic(
     restHandler: RestHandler
 ) {
@@ -360,51 +374,23 @@ private fun Routing.routeLogic(
         call.respondJson(restHandler.logicStatus())
     }
     get(CommonRestApi.logicStartAndRun) {
-        val response = restHandler.logicStart(call.parameters, false)
-        if (response == null) {
-            call.respondText(
-                "Unable to start logic run",
-                status = HttpStatusCode.BadRequest)
-        }
-        else {
-            call.respondText(response)
-        }
+        call.respondLogicStart(
+            restHandler.logicStart(call.parameters, false))
     }
     // PUT twin: the client falls back to a form body when a long breakpoint list overflows the GET URL limit.
     put(CommonRestApi.logicStartAndRun) {
         val parameters = call.receiveParameters()
-        val response = restHandler.logicStart(parameters, false)
-        if (response == null) {
-            call.respondText(
-                "Unable to start logic run",
-                status = HttpStatusCode.BadRequest)
-        }
-        else {
-            call.respondText(response)
-        }
+        call.respondLogicStart(
+            restHandler.logicStart(parameters, false))
     }
     get(CommonRestApi.logicStartAndStep) {
-        val response = restHandler.logicStart(call.parameters, true)
-        if (response == null) {
-            call.respondText(
-                "Unable to start logic run",
-                status = HttpStatusCode.BadRequest)
-        }
-        else {
-            call.respondText(response)
-        }
+        call.respondLogicStart(
+            restHandler.logicStart(call.parameters, true))
     }
     put(CommonRestApi.logicStartAndStep) {
         val parameters = call.receiveParameters()
-        val response = restHandler.logicStart(parameters, true)
-        if (response == null) {
-            call.respondText(
-                "Unable to start logic run",
-                status = HttpStatusCode.BadRequest)
-        }
-        else {
-            call.respondText(response)
-        }
+        call.respondLogicStart(
+            restHandler.logicStart(parameters, true))
     }
     get(CommonRestApi.logicRequest) {
         call.respondJson(restHandler.logicRequest(call.parameters))

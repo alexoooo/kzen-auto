@@ -9,6 +9,9 @@ import react.createContext
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.service.global.NavigationGlobal
+import tech.kzen.auto.client.service.logic.ClientLogicGlobal
+import tech.kzen.auto.client.service.logic.ClientLogicState
+import tech.kzen.auto.client.service.logic.ControlError
 import tech.kzen.auto.client.util.DefinitionErrors
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
@@ -40,6 +43,7 @@ external interface StageControllerProps: Props {
     var documentControllers: List<DocumentController>
     var mirroredGraphStore: MirroredGraphStore
     var navigationGlobal: NavigationGlobal
+    var clientLogicGlobal: ClientLogicGlobal
 }
 
 
@@ -51,6 +55,10 @@ external interface StageControllerState: State {
     // Definition failures grouped by the document they belong to; the open document's entry (if any) is shown
     // as an in-context error panel above its body. Recomputed on every graph-store update.
     var definitionErrorsByDocument: Map<DocumentPath, List<DefinitionErrors.Line>>
+
+    // The run control (start / step / stop / …) the server last refused, shown above the document it was
+    // aimed at. Cleared by the next control action.
+    var controlError: ControlError?
 }
 
 
@@ -60,7 +68,8 @@ class StageController(
 ):
     RPureComponent<StageControllerProps, StageControllerState>(props),
     LocalGraphStore.Observer,
-    NavigationGlobal.Observer
+    NavigationGlobal.Observer,
+    ClientLogicGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     data class CoordinateContext(
@@ -83,13 +92,15 @@ class StageController(
     class Wrapper(
         private val documentControllers: List<DocumentController>,
         @Service private val mirroredGraphStore: MirroredGraphStore,
-        @Service private val navigationGlobal: NavigationGlobal
+        @Service private val navigationGlobal: NavigationGlobal,
+        @Service private val clientLogicGlobal: ClientLogicGlobal
     ): ReactWrapper<Props> {
         override fun ChildrenBuilder.child(block: Props.() -> Unit) {
             StageController::class.react {
                 documentControllers = this@Wrapper.documentControllers
                 mirroredGraphStore = this@Wrapper.mirroredGraphStore
                 navigationGlobal = this@Wrapper.navigationGlobal
+                clientLogicGlobal = this@Wrapper.clientLogicGlobal
                 block()
             }
         }
@@ -102,6 +113,7 @@ class StageController(
         documentPath = null
         transition = false
         definitionErrorsByDocument = emptyMap()
+        controlError = null
     }
 
 
@@ -128,6 +140,8 @@ class StageController(
 
 
     override fun componentDidMount() {
+        props.clientLogicGlobal.observe(this)
+
         async {
             props.mirroredGraphStore.observe(this)
             props.navigationGlobal.observe(this)
@@ -138,6 +152,7 @@ class StageController(
     override fun componentWillUnmount() {
         props.mirroredGraphStore.unobserve(this)
         props.navigationGlobal.unobserve(this)
+        props.clientLogicGlobal.unobserve(this)
     }
 
 
@@ -163,6 +178,20 @@ class StageController(
         setState {
             structure = graphDefinitionAttempt.graphStructure
             definitionErrorsByDocument = nextDefinitionErrors
+        }
+    }
+
+
+    // Only the control error is kept: the logic state is published on every status tick, so storing more (or
+    // setting state unconditionally) would churn this component — and the document body under it — per poll.
+    override fun onLogic(clientLogicState: ClientLogicState) {
+        val nextControlError = clientLogicState.controlError
+        if (nextControlError == state.controlError) {
+            return
+        }
+
+        setState {
+            controlError = nextControlError
         }
     }
 
@@ -196,6 +225,7 @@ class StageController(
         }
 
         renderDefinitionErrors()
+        renderControlError()
 
         val archetypeName = documentArchetypeName()
 
@@ -208,8 +238,8 @@ class StageController(
     }
 
 
-    // In-context error when the open document's object failed to define. Rendered ABOVE the body (not instead of
-    // it) — the editor still loads from notation, so the user can fix the offending attribute in place.
+    // In-context error panel rendered ABOVE the document body (not instead of it) — the editor still loads from
+    // notation, so the user can fix the cause in place. A null [heading] collapses it to nothing.
     //
     // NB: this container `div` is ALWAYS emitted (left empty when there's no error) so the document body
     //     rendered after it keeps a STABLE child index. As a *conditional* sibling it would index-shift the
@@ -219,12 +249,9 @@ class StageController(
     //     state (step expansion, scroll position, in-progress editor buffers) every time the document's error
     //     state toggles — e.g. the first time a RunStep's `instructions` is selected and its definition error
     //     clears. Keeping the slot present (empty `div` ⇒ zero footprint) holds the body in place across toggles.
-    private fun ChildrenBuilder.renderDefinitionErrors() {
-        val documentPath = state.documentPath
-        val lines = documentPath?.let { state.definitionErrorsByDocument[it] }
-
+    private fun ChildrenBuilder.errorPanel(heading: String?, detail: ChildrenBuilder.() -> Unit) {
         div {
-            if (lines.isNullOrEmpty()) {
+            if (heading == null) {
                 return@div
             }
 
@@ -242,9 +269,23 @@ class StageController(
                 css {
                     fontWeight = FontWeight.bold
                 }
-                +"This document has a notation error and can't run until it's fixed"
+                +heading
             }
 
+            detail()
+        }
+    }
+
+
+    // The open document's objects that failed to define.
+    private fun ChildrenBuilder.renderDefinitionErrors() {
+        val documentPath = state.documentPath
+        val lines = documentPath?.let { state.definitionErrorsByDocument[it] }.orEmpty()
+
+        errorPanel(
+            "This document has a notation error and can't run until it's fixed"
+                .takeIf { lines.isNotEmpty() }
+        ) {
             for (line in lines) {
                 div {
                     key = Key(line.location.asString())
@@ -253,6 +294,26 @@ class StageController(
                     }
                     +"${line.location.asString()} — ${line.detail}"
                 }
+            }
+        }
+    }
+
+
+    // The run control the server last refused. Scoped to the document it was aimed at (an unscoped error —
+    // one raised with no active run — shows anywhere rather than nowhere).
+    private fun ChildrenBuilder.renderControlError() {
+        val controlError = state.controlError
+            ?.takeIf { it.documentPath == null || it.documentPath == state.documentPath }
+
+        errorPanel(controlError?.label) {
+            val detail = controlError?.detail
+                ?: return@errorPanel
+
+            div {
+                css {
+                    marginTop = 0.25.em
+                }
+                +detail
             }
         }
     }
