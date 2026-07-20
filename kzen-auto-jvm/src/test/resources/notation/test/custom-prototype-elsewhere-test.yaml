@@ -1,0 +1,9 @@
+# A second Custom document, used by CustomViewModelBuilderTest to prove that a prototype declared OUTSIDE the
+# edited document still reaches the "+ Add" picker. `Candidate` is flipped to `is: Prototype` by the test.
+
+main:
+  is: CustomDocument
+
+Candidate:
+  abstract: true
+  class: tech.kzen.auto.server.objects.custom.test.AdhocNamed

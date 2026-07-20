@@ -16,7 +16,6 @@ import tech.kzen.auto.client.objects.document.custom.model.CustomState
 import tech.kzen.auto.client.objects.document.custom.model.CustomStore
 import tech.kzen.auto.client.objects.document.custom.model.CustomStoreKey
 import tech.kzen.auto.client.objects.document.custom.view.CustomView
-import tech.kzen.auto.client.objects.document.custom.view.CustomViewModel
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.service.rest.ClientRestTaskRepository
@@ -44,7 +43,6 @@ external interface CustomControllerProps: Props {
 
 external interface CustomControllerState: State {
     var customState: CustomState?
-    var customViewModel: CustomViewModel?
 }
 
 
@@ -120,13 +118,11 @@ class CustomController(
         props.restClient,
         props.clientRestTaskRepository
     )
-    private val viewModelBuilder = CustomViewModel.Builder()
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun CustomControllerState.init(props: CustomControllerProps) {
         customState = null
-        customViewModel = null
     }
 
 
@@ -144,13 +140,8 @@ class CustomController(
 
 
     override fun onCustomState(customState: CustomState) {
-        val graphStructure = props.clientStateGlobal.current()?.graphStructure()
-        val nextViewModel = graphStructure?.let {
-            viewModelBuilder.update(customState.documentPath, customState.serverNotation, it)
-        }
         setState {
             this.customState = customState
-            this.customViewModel = nextViewModel
         }
     }
 
@@ -180,10 +171,8 @@ class CustomController(
                 DocumentViewMode.View ->
                     CustomView::class.react {
                         this.customState = customState
-                        this.customViewModel = state.customViewModel
                         this.viewStore = store.view
                         this.attributeEditorManager = props.attributeEditorManager
-                        this.clientStateGlobal = props.clientStateGlobal
                         this.mirroredGraphStore = props.mirroredGraphStore
                     }
             }

@@ -18,6 +18,7 @@ import tech.kzen.auto.client.objects.document.custom.view.CustomViewStore
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.common.objects.document.custom.CustomConventions
+import tech.kzen.auto.common.objects.document.custom.model.CustomObjectInfo
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.ObjectMetadata
 import tech.kzen.lib.common.service.store.MirroredGraphStore
@@ -69,6 +70,15 @@ class CustomObject(
         val created = CustomObjectTaskRunner(props.viewStore.clientRestTaskRepository)
         taskRunner = created
         return created
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun componentWillUnmount() {
+        // Otherwise the runner's 1 s poll outlives the card (navigating away leaves an orphan request loop).
+        // NB: the runner is kept, not discarded — React reuses this instance across a remount (StrictMode
+        // remounts every component once in development), and the next run re-arms the poll.
+        taskRunner?.stopPolling()
     }
 
 
@@ -177,8 +187,6 @@ class CustomObject(
                             this.runner = detached
                         }
                     }
-
-                    +"[foo bbb]"
 
                     if (task != null) {
                         CustomObjectTaskBody::class.react {

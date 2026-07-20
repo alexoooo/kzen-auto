@@ -1,0 +1,39 @@
+# Self-contained Custom-document fixture for CustomViewModelBuilderTest. Deliberately independent of the bundled
+# main/Custom.yaml (which the test harness excludes from its notation scan anyway), so curating that starter
+# document can never break these pins.
+
+main:
+  is: CustomDocument
+  exports:
+    - "main.objects/Greeting"
+
+ViewModelPrototype:
+  is: Prototype
+  abstract: true
+  class: tech.kzen.auto.server.objects.custom.test.AdhocDetached
+  meta:
+    tags:
+      - detached
+      - logic
+    named:
+      is: ViewModelNamed
+      editor: SelectObjectEditor
+
+ViewModelNamed:
+  abstract: true
+  class: tech.kzen.auto.server.objects.custom.test.AdhocNamed
+
+ViewModelNamedImpl:
+  is: ViewModelNamed
+  class: tech.kzen.auto.server.objects.custom.test.AdhocNamedImpl
+  name: "fixture"
+  meta:
+    name: String
+
+main.objects/Greeting:
+  is: ViewModelPrototype
+  named: ViewModelNamedImpl
+
+main.objects/Other:
+  is: ViewModelPrototype
+  named: ViewModelNamedImpl

@@ -1,6 +1,6 @@
-package tech.kzen.auto.client.objects.document.custom.view
+package tech.kzen.auto.common.objects.document.custom.model
 
-import tech.kzen.auto.client.objects.document.custom.view.obj.CustomObjectInfo
+import tech.kzen.auto.common.objects.document.custom.CustomConventions
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
@@ -9,12 +9,15 @@ import tech.kzen.lib.common.model.structure.notation.DocumentObjectNotation
 import tech.kzen.lib.common.service.notation.NotationConventions
 
 
-// Per-object projected slice consumed by CustomView. The Builder reuses each Entry by ObjectLocation
-// when its info is data-class-equal to the previous projection, so the per-object props delivered to
-// CustomObject stay reference-stable across notation events that don't touch that object — RPureComponent
-// shallow SCU then bails for unchanged siblings when one CustomObject is edited.
+// Projected slice consumed by CustomView: the per-object entries plus the graph-wide prototype list backing the
+// "+ Add" picker. The Builder reuses each Entry by ObjectLocation when its info is data-class-equal to the previous
+// projection, so the per-object props delivered to CustomObject stay reference-stable across notation events that
+// don't touch that object — RPureComponent shallow SCU then bails for unchanged siblings when one CustomObject is
+// edited. Likewise the whole model instance is reused when nothing changed, so the store's updateIfChanged
+// suppresses no-op publishes; do NOT "simplify" the Builder into always returning a fresh instance.
 data class CustomViewModel(
-    val orderedEntries: List<Entry>
+    val orderedEntries: List<Entry>,
+    val prototypes: List<ObjectLocation>
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     data class Entry(
@@ -58,7 +61,11 @@ data class CustomViewModel(
                 }
             }
 
-            val next = CustomViewModel(nextEntries)
+            // Graph-wide (not document-scoped): a prototype added in another document must show up here, which is
+            // why the Builder runs per notation event rather than per this document's own state change.
+            val prototypes = CustomConventions.listPrototypes(graphStructure.graphNotation)
+
+            val next = CustomViewModel(nextEntries, prototypes)
             val prev = current
             return if (prev != null && prev == next) {
                 prev

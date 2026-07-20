@@ -1,5 +1,7 @@
 package tech.kzen.auto.server.objects.registry
 
+import com.github.benmanes.caffeine.cache.Cache
+import com.github.benmanes.caffeine.cache.Caffeine
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.objects.document.registry.ObjectRegistryConventions
 import tech.kzen.auto.common.objects.document.registry.model.ObjectRegistryReflection
@@ -11,6 +13,7 @@ import tech.kzen.lib.common.exec.ExecutionResult
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.util.ExceptionUtils
+import tech.kzen.lib.common.util.digest.Digest
 import tech.kzen.lib.platform.ClassName
 
 
@@ -23,7 +26,23 @@ class ObjectRegistryDocument(
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
+        // A scan is a pure function of (registry class lists × process classpath), and the classpath is
+        // process-static — so a small memo keyed by the registry-content digest is sound. Without it, every
+        // validation-cache miss re-runs Class.forName over every registered class (and re-constructs a
+        // ClassNotFoundException for every stale entry).
+        private val scanCache: Cache<Digest, ObjectRegistryScan> = Caffeine
+            .newBuilder()
+            .maximumSize(10)
+            .build()
+
+
         fun scan(graphNotation: GraphNotation): ObjectRegistryScan {
+            val key = ObjectRegistryConventions.scanDigest(graphNotation)
+            return scanCache.get(key) { computeScan(graphNotation) }
+        }
+
+
+        private fun computeScan(graphNotation: GraphNotation): ObjectRegistryScan {
             val classNames = graphNotation
                 .documents
                 .map

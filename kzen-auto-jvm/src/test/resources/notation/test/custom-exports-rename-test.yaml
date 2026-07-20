@@ -1,0 +1,34 @@
+# Self-contained rename fixture for CustomExportsRenameTest — deliberately does NOT reference main/Custom.yaml
+# objects, so curating that starter document can never break the pin.
+
+main:
+  is: CustomDocument
+  exports:
+    - "main.objects/Exported"
+
+FixtureNamed:
+  abstract: true
+  class: tech.kzen.auto.server.objects.custom.test.AdhocNamed
+
+FixtureNamedImpl:
+  is: FixtureNamed
+  class: tech.kzen.auto.server.objects.custom.test.AdhocNamedImpl
+  name: "fixture"
+  meta:
+    name: String
+
+FixturePrototype:
+  is: Prototype
+  abstract: true
+  class: tech.kzen.auto.server.objects.custom.test.AdhocDetached
+  meta:
+    tags:
+      - detached
+      - logic
+    named:
+      is: FixtureNamed
+      editor: SelectObjectEditor
+
+main.objects/Exported:
+  is: FixturePrototype
+  named: FixtureNamedImpl

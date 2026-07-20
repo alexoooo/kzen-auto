@@ -71,19 +71,8 @@ class ScriptValidationCache {
                 addDigestible(LinkedLogicDocuments.transitiveDigest(
                     graphDefinition, graphDefinition.graphStructure, documentPath))
 
-                val documents = graphDefinition.graphStructure.graphNotation.documents.map
-                for ((registryPath, documentNotation) in documents.entries.sortedBy { it.key.asString() }) {
-                    if (! ObjectRegistryConventions.isObjectRegistry(documentNotation)) {
-                        continue
-                    }
-                    addDigestible(registryPath)
-                    val classNames = ObjectRegistryConventions.classesSpec(documentNotation)
-                        ?.classNames
-                        ?: continue
-                    for (className in classNames.map { it.asString() }.sorted()) {
-                        addUtf8(className)
-                    }
-                }
+                addDigestible(ObjectRegistryConventions.scanDigest(
+                    graphDefinition.graphStructure.graphNotation))
             }
         }
         catch (_: Exception) {

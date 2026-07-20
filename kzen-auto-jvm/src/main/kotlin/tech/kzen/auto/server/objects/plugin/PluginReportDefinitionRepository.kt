@@ -41,15 +41,25 @@ class PluginReportDefinitionRepository(
     private var cachedStructureDigest: Digest = Digest.missing
 
 
+    // Test seam: counts full refreshes (i.e. misses of the structure-digest fast path).
+    internal var refreshCount: Int = 0
+        private set
+
+
     //-----------------------------------------------------------------------------------------------------------------
+    // NB: all five entry points below are @Synchronized and hold the monitor across this runBlocking on request
+    //     threads — pre-existing and correct, but potentially slow under contention. Reworking the lock granularity
+    //     interacts with both cache levels, so it belongs to the plugin phase rather than this hygiene pass.
     private fun refreshCacheIfRequired() {
         val graphStructure = runBlocking {
             graphStore.graphStructure()
         }
 
-        if (cachedStructureDigest == graphStructure.digest()) {
+        val structureDigest = graphStructure.digest()
+        if (cachedStructureDigest == structureDigest) {
             return
         }
+        refreshCount++
 
         val pluginObjectLocations = graphStructure
             .graphNotation
@@ -71,6 +81,7 @@ class PluginReportDefinitionRepository(
         }
 
         if (metadataByDefinerCache.keys == pluginObjectLocations) {
+            cachedStructureDigest = structureDigest
             return
         }
 
@@ -124,6 +135,13 @@ class PluginReportDefinitionRepository(
 
             metadataByDefinerCache[pluginObjectLocation] = DefinerMetadataCache(
                 objectNotations[pluginObjectLocation]!!.digest(), metadata)
+        }
+
+        if (metadataByDefinerCache.keys == pluginObjectLocations) {
+            // Deliberately assign only when every plugin made it into the definer cache: a plugin whose jar is
+            // absent (jarClassLoader() null) or whose definition failed must keep retrying on later calls, since
+            // that is the only path by which a jar appearing on disk WITHOUT a notation change gets picked up.
+            cachedStructureDigest = structureDigest
         }
 
         metadataByCoordinateCache.clear()
@@ -211,7 +229,7 @@ class PluginReportDefinitionRepository(
         refreshCacheIfRequired()
 
         val pluginObjectLocation = metadataByCoordinateCache[coordinate]?.pluginObjectLocation
-            ?: throw IllegalArgumentException("Name found: $coordinate")
+            ?: throw IllegalArgumentException("Not found: $coordinate")
 
         val graphDefinitionAttempt = runBlocking {
             graphStore.graphDefinition()

@@ -7,6 +7,7 @@ import tech.kzen.auto.client.objects.document.common.raw.unparseDocumentForRawEd
 import tech.kzen.auto.client.objects.document.custom.view.CustomViewState
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.common.objects.document.custom.CustomConventions
+import tech.kzen.auto.common.objects.document.custom.model.CustomViewModel
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.structure.notation.DocumentObjectNotation
 import tech.kzen.lib.common.service.parse.NotationParser
@@ -18,7 +19,10 @@ data class CustomState(
     val viewMode: DocumentViewMode,
     val raw: DocumentRawState,
     val view: CustomViewState,
-    val editorModified: Boolean
+    val editorModified: Boolean,
+    // Derived from the notation by CustomStore per ClientStateGlobal publish (not per render — the prototype list
+    // is a full-graph scan). Null until the first publish carrying a graph structure.
+    val viewModel: CustomViewModel? = null
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -83,6 +87,17 @@ data class CustomState(
         }
         else {
             copy(view = updated)
+        }
+    }
+
+
+    fun withViewModel(viewModel: CustomViewModel?): CustomState {
+        // Reference comparison on purpose: the Builder hands back the previous instance when nothing changed.
+        return if (viewModel === this.viewModel) {
+            this
+        }
+        else {
+            copy(viewModel = viewModel)
         }
     }
 

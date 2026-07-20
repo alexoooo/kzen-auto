@@ -8,20 +8,16 @@ import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorMa
 import tech.kzen.auto.client.objects.document.common.dragdrop.dropMarkerFor
 import tech.kzen.auto.client.objects.document.custom.model.CustomState
 import tech.kzen.auto.client.objects.document.custom.view.obj.CustomObject
-import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.react
-import tech.kzen.auto.common.objects.document.custom.CustomConventions
 import tech.kzen.lib.common.service.store.MirroredGraphStore
 
 
 //---------------------------------------------------------------------------------------------------------------------
 external interface CustomViewProps: Props {
     var customState: CustomState
-    var customViewModel: CustomViewModel?
     var viewStore: CustomViewStore
     var attributeEditorManager: AttributeEditorManager.Wrapper
-    var clientStateGlobal: ClientStateGlobal
     var mirroredGraphStore: MirroredGraphStore
 }
 
@@ -38,7 +34,7 @@ class CustomView(
 {
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
-        val customViewModel = props.customViewModel
+        val customViewModel = props.customState.viewModel
             ?: return
 
         val viewState = props.customState.view
@@ -58,13 +54,10 @@ class CustomView(
             }
         }
 
-        val graphStructure = props.clientStateGlobal.current()?.graphStructure()
-            ?: return
-
         CustomCreate::class.react {
             this.customState = props.customState
             this.viewStore = props.viewStore
-            this.prototypes = CustomConventions.listPrototypes(graphStructure.graphNotation)
+            this.prototypes = customViewModel.prototypes
         }
     }
 }

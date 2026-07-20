@@ -247,8 +247,8 @@ Each subdirectory under `kzen-auto-js/src/jsMain/kotlin/tech/kzen/auto/client/ob
 | `flow/` | Flow | Node-and-edge DAG, run via the Logic paradigm (Run/Step/Pause); each node is a `FlowVertex`. `FlowController` + `FlowProgressStore` plus the shared vertex/edge rendering (`CellController`, `EdgeController`, `VertexController`) all live here (the legacy `GraphController` was retired) |
 | `script/` | Script | Step-by-step procedural execution; trace view |
 | `data/` | Data schema | Field definitions / format |
-| `plugin/` | Plugin registry | Upload / register plugin JARs |
-| `registry/` | Object registry | Browse / add custom objects from the library |
+| `plugin/` | Plugin registry | Register plugin JARs (by server filesystem path) |
+| `registry/` | Object registry | A JVM class-name whitelist: the document registers host-classpath class names, and nothing more. `ObjectRegistryDocument.scan` resolves them (`Class.forName`, unresolvable names dropped) into the type-visibility set `FormulaStep` type inference reads when typing Script expressions |
 | `target/` | Target | Element targeting: screenshot-crop visual matching today; selectors / expressions planned |
 | `custom/` | CustomDocument | Hybrid editor: structured UI for prototype-driven object creation + raw-YAML escape hatch |
 | `common/` | *(not a document type)* | Shared attribute editors used by every controller above |
@@ -287,7 +287,13 @@ plan phase 7).
 
 ### `CustomDocument` — structured UI + raw-YAML escape hatch
 
-`CustomDocument` has two editing modes, toggled in the header (`DocumentViewMode.View | .Raw`, persisted via `CustomGlobal`). **View mode** (`CustomView` + `CustomCreate`) is a structured UI for prototype-driven object creation: `CustomConventions.listPrototypes(graphNotation)` discovers every object marked `is: Prototype` anywhere in the graph and exposes them in the `+ Add` dropdown. UI-created objects nest under `main.objects/<Name>` (`CustomConventions.objectsAttributePath`); the `main.logic` list is a separate selection of which objects participate in execution, toggleable per-object in the view. **Raw mode** (`DocumentRaw`) is a plain-text YAML editor — `<textarea>` with a synced line-number gutter (`YamlEditor` under `objects/document/common/edit/`), Ctrl/Cmd+S to Save — and enforces no nesting convention; any structure that parses is accepted. Comments and key order are **not** preserved across the parse → deparse round trip.
+`CustomDocument` has two editing modes, toggled in the header (`DocumentViewMode.View | .Raw`). The mode lives on `CustomState` in the single per-document `CustomStore`, which the header and body slots share through the `DocumentBridge` under `CustomStoreKey` (the former `CustomGlobal` is retired). **View mode** (`CustomView` + `CustomCreate`) is a structured UI for prototype-driven object creation: `CustomConventions.listPrototypes(graphNotation)` discovers every object marked `is: Prototype` anywhere in the graph and exposes them in the `+ Add` dropdown. UI-created objects nest under `main.objects/<Name>` (`CustomConventions.objectsAttributePath`), and their attributes are edited in place through `AttributeEditorManager`.
+
+Two notation constructs drive the per-object affordances. The `exports` list on `main` (`{is: List, of: ObjectLocation, by: Nominal}`, `common-document.yaml`) selects which objects are visible to *other* documents — toggled per-object in the view (a glow on the card), and consumed cross-document by `SelectLogicEditor` (`CustomConventions.customDocumentExportedLogic`) and `SelectObjectEditor` (`customDocumentExports`). Separately, each prototype's `meta: tags:` (`detached` / `task` / `logic`) decides which run affordance a card offers. There is no `main.logic` list.
+
+Both the per-object projection and the prototype list are computed by `CustomViewModel.Builder` (in kzen-auto-common, so it is unit-testable) — run by `CustomStore` once per notation event rather than per render, since the prototype scan is graph-wide and a prototype added in another document must still reach the picker. The Builder returns the *previous* instance when nothing changed, which is what keeps the extra runs publish-free and lets `RPureComponent` bail for untouched cards.
+
+**Raw mode** (`DocumentRaw`) is a plain-text YAML editor — `<textarea>` with a synced line-number gutter (`YamlEditor` under `objects/document/common/edit/`), Ctrl/Cmd+S to Save — and enforces no nesting convention; any structure that parses is accepted. Comments and key order are **not** preserved across the parse → deparse round trip.
 
 Both modes share the save flow: the client parses the full document via `YamlNotationParser.parseDocumentObjects` and dispatches `SetDocumentObjectsCommand` (the only bulk-replace command in the notation CQRS — see [`../../kzen-lib/docs/architecture.md`](../../kzen-lib/docs/architecture.md)) through the same `MirroredGraphStore` pipeline as every other command. No archetype or schema enforcement on save — power-tool semantics; broken references surface at the definition layer on next reload.
 
@@ -300,7 +306,7 @@ Subpackage: `kzen-auto-plugin/src/main/kotlin/tech/kzen/auto/plugin/`. **This is
 The plugin model is JAR-based, reflection-loaded:
 
 1. A plugin JAR contains classes that subclass `ReportDefiner<Output>` (no-arg constructor required).
-2. User uploads the JAR via the plugin document UI.
+2. User enters the JAR's **server filesystem path** in the Plugin document (`jarPath` attribute). There is no browser upload — JAR-as-document-resource is an open decision, not a shipped feature.
 3. Server-side `PluginDocument` (a `DetachedAction`) loads the JAR via a `URLClassLoader`, scans for `ReportDefiner` subclasses, instantiates each reflectively, registers them with `PluginReportDefinitionRepository`.
 4. Plugin-defined reports become available like built-in ones.
 

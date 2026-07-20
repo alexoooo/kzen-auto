@@ -1,58 +1,55 @@
-AdhocDetached:
-  is: Prototype
-  abstract: true
-  class: tech.kzen.auto.server.objects.custom.test.AdhocDetached
-  meta:
-    tags:
-      - detached
-    named:
-      is: AdhocNamed
-      editor: SelectObjectEditor
-
-AdhocNamed:
-  abstract: true
-  class: tech.kzen.auto.server.objects.custom.test.AdhocNamed
+# Bundled starter for the Custom document type: ad-hoc objects assembled from prototypes.
+# Each prototype below is an abstract template offered by the "+ Add" picker; the
+# main.objects/* entries are ready-to-run examples. See docs/architecture.md § 6.
 
 main:
   is: CustomDocument
 
-AdhocTask:
+# Runs once when triggered and returns a greeting built from its `named` reference.
+HelloAction:
+  is: Prototype
+  abstract: true
+  class: tech.kzen.auto.server.objects.custom.test.AdhocDetached
+  description: "Runs once and returns a greeting (detached execution)"
+  meta:
+    description: String
+    tags:
+      - detached
+    named:
+      is: Greeter
+      editor: SelectObjectEditor
+
+# Long-running background task: reports progress every second for a minute, stoppable.
+CountingTask:
   is: Prototype
   abstract: true
   class: tech.kzen.auto.server.objects.custom.test.AdhocTask
+  description: "Background task that reports progress every second (task execution)"
   meta:
+    description: String
     tags:
       - task
     named:
-      is: AdhocNamed
+      is: Greeter
       editor: SelectObjectEditor
 
-main.objects/AdhocDetached1:
-  is: AdhocDetached
-  named: AdhocNamedImpl
+# Marker for objects that can supply a name to the runners above.
+Greeter:
+  abstract: true
+  class: tech.kzen.auto.server.objects.custom.test.AdhocNamed
 
-main.objects/AdhocTask1:
-  is: AdhocTask
-  named: AdhocNamedImpl
-
-AdhocNamed2:
-  is: AdhocNamed
+# A concrete name provider the examples reference.
+DefaultGreeter:
+  is: Greeter
   class: tech.kzen.auto.server.objects.custom.test.AdhocNamedImpl
-  name: foooxxxxxx
+  name: "world"
   meta:
     name: String
 
-AdhocNamedImpl:
-  is: AdhocNamed
-  class: tech.kzen.auto.server.objects.custom.test.AdhocNamedImpl
-  name: xxxxs
-  meta:
-    name: String
+main.objects/Hello:
+  is: HelloAction
+  named: DefaultGreeter
 
-main.objects/AdhocDetached:
-  is: AdhocDetached
-  named: AdhocNamedImpl
-
-main.objects/AdhocTask:
-  is: AdhocTask
-  named: AdhocNamed2
+main.objects/Counter:
+  is: CountingTask
+  named: DefaultGreeter

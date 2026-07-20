@@ -1,0 +1,10 @@
+# Cross-document consumer of the exported object, in the shape SelectLogicEditor actually writes: a RunStep whose
+# `instructions` ({is: ObjectLocation, by: Nominal}) holds the full object location as a scalar. Concrete on
+# purpose — reference analysis walks object DEFINITIONS, so an abstract holder would be invisible to a rename.
+
+main:
+  is: Script
+
+main.steps/CallExported:
+  is: RunStep
+  instructions: "test/custom-exports-rename-test.yaml#main.objects/Exported"

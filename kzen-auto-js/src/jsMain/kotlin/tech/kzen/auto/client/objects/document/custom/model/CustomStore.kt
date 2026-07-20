@@ -7,6 +7,7 @@ import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.service.rest.ClientRestTaskRepository
 import tech.kzen.auto.client.util.async
+import tech.kzen.auto.common.objects.document.custom.model.CustomViewModel
 import tech.kzen.lib.common.service.parse.NotationParser
 import tech.kzen.lib.common.service.store.MirroredGraphStore
 
@@ -28,6 +29,11 @@ class CustomStore(
     private val observers = mutableSetOf<Observer>()
     private var mounted = false
     private var state: CustomState? = null
+
+    // Lives here rather than in CustomController so it runs on every ClientStateGlobal publish: a prototype added
+    // in ANOTHER document changes the graph structure without changing this document's notation, and the "+ Add"
+    // picker would otherwise go stale.
+    private val viewModelBuilder = CustomViewModel.Builder()
 
     val raw = DocumentRawStore(this)
     val view = CustomViewStore(this)
@@ -96,7 +102,10 @@ class CustomStore(
                 previous.withServerNotation(serverNotation, notationParser)
         }
 
-        updateIfChanged(nextState)
+        val viewModel = viewModelBuilder.update(
+            documentPath, serverNotation, clientState.graphStructure())
+
+        updateIfChanged(nextState.withViewModel(viewModel))
     }
 
 

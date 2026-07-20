@@ -33,6 +33,7 @@ class CustomObjectTaskRunner(
 ) {
     private val taskPollIntervalMillis = 1_000.milliseconds
     private val observers = mutableSetOf<() -> Unit>()
+    private var pollingStopped = false
 
     var submitting: Boolean = false
         private set
@@ -56,6 +57,7 @@ class CustomObjectTaskRunner(
             return
         }
         submitting = true
+        pollingStopped = false
         notifyObservers()
         async {
             val request = ExecutionRequest(RequestParams.empty, null)
@@ -65,6 +67,20 @@ class CustomObjectTaskRunner(
             notifyObservers()
             pollLoop()
         }
+    }
+
+
+    /**
+     * Stops the in-flight poll, so the 1 s loop doesn't outlive the card that owns it (see the unmount hook in
+     * CustomObject). Deliberately NOT a one-way kill switch: React may unmount and remount the SAME component
+     * instance — StrictMode does exactly that on every mount in development — and that instance keeps this
+     * runner, so a later [run] must re-arm the poll. Making it permanent left the card stuck on "Running…" with
+     * no progress and no requests at all.
+     *
+     * The server-side task is deliberately NOT cancelled — it is fire-and-forget by design; only the poll stops.
+     */
+    fun stopPolling() {
+        pollingStopped = true
     }
 
 
@@ -84,8 +100,11 @@ class CustomObjectTaskRunner(
 
 
     private suspend fun pollLoop() {
-        while (isActiveState(taskModel?.state)) {
+        while (!pollingStopped && isActiveState(taskModel?.state)) {
             delay(taskPollIntervalMillis)
+            if (pollingStopped) {
+                break
+            }
             val current = taskModel ?: break
             if (!isActiveState(current.state)) {
                 break
