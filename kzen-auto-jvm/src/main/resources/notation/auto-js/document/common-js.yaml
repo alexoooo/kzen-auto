@@ -53,28 +53,3 @@ ReferenceLinkAttributeView:
   is: AttributeView
   class: tech.kzen.auto.client.objects.document.common.attribute.ReferenceLinkAttributeView$Wrapper
 
-
-################################################################
-
-
-AttributeEditorManagerOld:
-  class: tech.kzen.auto.client.objects.document.flow.edit.AttributeEditorManagerOld$Wrapper
-  meta:
-    attributeEditors:
-      is: List
-      of: AttributeEditorOld
-      by: Autowired
-
-AttributeEditorOld:
-  abstract: true
-  class: tech.kzen.auto.client.objects.document.flow.edit.AttributeEditorOld
-  meta:
-    objectLocation:
-      is: ObjectLocation
-      by: Self
-
-DefaultAttributeEditorOld:
-  is: AttributeEditorOld
-  class: tech.kzen.auto.client.objects.document.flow.edit.DefaultAttributeEditorOld$Wrapper
-
-

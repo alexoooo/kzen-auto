@@ -10,7 +10,7 @@ import react.dom.html.ReactHTML.h2
 import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
-import tech.kzen.auto.client.objects.document.flow.edit.AttributePathValueEditorOld
+import tech.kzen.auto.client.objects.document.common.edit.TextAttributeEditor
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.rest.ClientRestApi
@@ -23,7 +23,6 @@ import tech.kzen.auto.common.objects.document.plugin.model.ReportDefinerDetail
 import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.exec.ExecutionSuccess
 import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.service.store.MirroredGraphStore
@@ -209,14 +208,21 @@ class PluginController(
 
 
     private fun ChildrenBuilder.renderPathEditor(mainObjectLocation: ObjectLocation, clientState: ClientState) {
-        AttributePathValueEditorOld::class.react {
-            labelOverride = "Plugin Jar File Path"
+        val jarPathAttributePath = PluginConventions.jarPathAttributeName.asAttributePath()
 
-            this.clientState = clientState
+        val jarPath = clientState
+            .graphStructure()
+            .graphNotation
+            .firstAttribute(mainObjectLocation, jarPathAttributePath)
+            ?.asString()
+            ?: ""
+
+        TextAttributeEditor::class.react {
             objectLocation = mainObjectLocation
-            attributePath = PluginConventions.jarPathAttributeName.asAttributePath()
+            attributePath = jarPathAttributePath
 
-            valueType = TypeMetadata.long
+            value = jarPath
+            labelOverride = "Plugin Jar File Path"
 
             mirroredGraphStore = props.mirroredGraphStore
 
