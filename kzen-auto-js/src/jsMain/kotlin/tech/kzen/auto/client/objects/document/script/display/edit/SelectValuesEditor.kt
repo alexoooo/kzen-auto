@@ -36,7 +36,7 @@ external interface SelectValuesEditorState: State {
 //---------------------------------------------------------------------------------------------------------------------
 // Generic notation-driven enum select: renders a labelled dropdown whose options come from the attribute's
 // `meta.<attr>.values` map (key = stored value, entry = display label) — so any String attribute with a fixed
-// value set reuses this editor declaratively, with no per-enum Kotlin (cf. the bespoke SelectClosePolicyEditor).
+// value set reuses this editor declaratively, with no per-enum Kotlin (replaced the bespoke close-policy editor).
 @Suppress("unused")
 class SelectValuesEditor(
     props: AttributeEditorProps
@@ -121,7 +121,7 @@ class SelectValuesEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     // Write only on a genuine user change — no componentDidUpdate write, so the mount-time hydration is never
-    // echoed back to the notation as a no-op command (same discipline as SelectClosePolicyEditor).
+    // echoed back to the notation as a no-op command (same discipline the bespoke close-policy editor established).
     private fun onValueChange(newValue: String) {
         if (state.value == newValue) {
             return

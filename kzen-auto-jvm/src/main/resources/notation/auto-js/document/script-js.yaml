@@ -150,11 +150,6 @@ TargetSpecEditor:
       by: Autowired
 
 
-SelectClosePolicyEditor:
-  is: AttributeEditor
-  class: tech.kzen.auto.client.objects.document.script.display.edit.SelectClosePolicyEditor$Wrapper
-
-
 SelectEnclosingLoopEditor:
   is: AttributeEditor
   class: tech.kzen.auto.client.objects.document.script.display.edit.SelectEnclosingLoopEditor$Wrapper

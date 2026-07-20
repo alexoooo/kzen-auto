@@ -15,7 +15,7 @@ import tech.kzen.lib.common.exec.logic.ResourceClosePolicy
  * [ResourceClosePolicy] when the run settles (Auto/Manual/KeepOnFailure), on both success and failure.
  *
  * [closePolicy] is a plain String parsed here rather than the `ScopedResource` mix-in the production Browser
- * steps use: the mix-in's `SelectClosePolicyEditor` binding drags a JS-only `AttributeEditorManager` reference
+ * steps use: the mix-in's `SelectValuesEditor` binding drags a JS-only `AttributeEditorManager` reference
  * into this inline test archetype that fails to resolve in the JVM-only test graph. The `openResource` call
  * still receives the real [ResourceClosePolicy] enum, so the disposal wiring under test is identical.
  */

@@ -69,7 +69,7 @@ external interface JobChannelNumberFieldState: State {
 // with the effective default as a greyed placeholder while inheriting, and shows a solid value once overridden.
 // Clearing an overridden nested field reverts it to inheriting (removes the override). A top-level field
 // (`main.batchSize`, the Job-wide default) has no lower-precedence default to revert to and no attribute-removal
-// command, so it always shows a value. Like SelectClosePolicyEditor it writes ONLY on a real user change, so
+// command, so it always shows a value. Like SelectValuesEditor it writes ONLY on a real user change, so
 // mount-time hydration is never echoed back as a no-op command.
 class JobChannelNumberField(
     props: JobChannelNumberFieldProps

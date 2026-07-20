@@ -9,14 +9,23 @@ ScriptValidator:
 
 # Run-scoped resource disposal policy (kzen-lib enum). Parsed once at definition time by the definer, so
 # an opening step's `closePolicy` constructor param receives the enum directly; rendered as a labelled
-# dropdown by the editor. Bound here at the type level so any `is: ResourceClosePolicy` attribute inherits both.
+# dropdown by SelectValuesEditor from the `values:` map below (keys are the enum's wire values).
+# Bound here at the type level so any `is: ResourceClosePolicy` attribute inherits both.
 ResourceClosePolicy:
   abstract: true
   class: tech.kzen.lib.common.exec.logic.ResourceClosePolicy
   meta:
     ref:
       by: ResourceClosePolicyDefiner
-      editor: SelectClosePolicyEditor
+      editor: SelectValuesEditor
+      values:
+        auto: "Auto — close when the run finishes (success, failure, or cancel)"
+        manual: "Manual — keep open; only an explicit close step disposes it"
+        keepOnFailure: "Keep on failure — close on success/cancel, keep on a failed run to inspect"
+        parent: "Parent — close when the calling Script (one level up) finishes"
+        parentKeepOnFailure: "Parent, keep on failure — close when the caller finishes, keep if it failed"
+        run: "Run — close when the whole run finishes"
+        runKeepOnFailure: "Run, keep on failure — close at run end, keep if the run failed"
 
 ResourceClosePolicyDefiner:
   class: tech.kzen.auto.common.objects.document.script.ResourceClosePolicyDefiner
