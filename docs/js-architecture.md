@@ -217,6 +217,14 @@ object ClientContext {
 }
 ```
 
+It also builds the `graphEnvironment` that fills `@Service` constructor parameters of graph-instantiated
+objects. Because `KClass.qualifiedName` is unavailable in Kotlin/JS, its keys are **hand-written
+`ClassName("…")` literals** that must match the FQNs KSP records for each declared `@Service` parameter
+type. The last step of `initAsync()` is `ServiceEnvironmentValidation.validate(graphEnvironment)` (shared
+with the JVM composition root): a typo or a package rename on either side fails the boot with the missing
+type and its declaring classes rendered into `#root`, rather than surfacing later as a `Missing service`
+deep inside a graph-creation call.
+
 Notable globals under `service/global/`:
 
 | Singleton | Role |

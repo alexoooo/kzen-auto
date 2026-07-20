@@ -3,6 +3,7 @@ package tech.kzen.auto.server.context
 import kotlinx.coroutines.runBlocking
 import tech.kzen.auto.common.codegen.KzenAutoCommonModule
 import tech.kzen.auto.common.paradigm.flow.service.format.FlowMessageInspector
+import tech.kzen.auto.common.service.ServiceEnvironmentValidation
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.auto.server.api.RestHandler
 import tech.kzen.auto.server.codegen.KzenAutoJvmModule
@@ -256,6 +257,10 @@ class KzenAutoContext(
         }
 
         initManagedStorage()
+
+        // Fail fast (with names) on any @Service parameter type the environment doesn't provide, rather than
+        // at graph-creation time. Runs after every module register() call (they happen in the companion init).
+        ServiceEnvironmentValidation.validate(graphEnvironment)
     }
 
 

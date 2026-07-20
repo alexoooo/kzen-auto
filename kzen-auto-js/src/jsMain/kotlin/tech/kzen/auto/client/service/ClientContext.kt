@@ -15,6 +15,7 @@ import tech.kzen.auto.client.service.rest.ClientRestNotationMedia
 import tech.kzen.auto.client.service.rest.ClientRestTaskRepository
 import tech.kzen.auto.client.wrap.iconify.IconLoader
 import tech.kzen.auto.common.codegen.KzenAutoCommonModule
+import tech.kzen.auto.common.service.ServiceEnvironmentValidation
 import tech.kzen.lib.common.codegen.KzenLibCommonModule
 import tech.kzen.lib.common.service.context.GraphCreator
 import tech.kzen.lib.common.service.context.GraphDefiner
@@ -140,5 +141,9 @@ class ClientContext private constructor() {
 
         clientStateGlobal.postConstruct(
                 navigationGlobal, directGraphStore, clientLogicGlobal)
+
+        // Fail fast (with names) on any @Service parameter type the literals above don't cover, rather than
+        // at graph-creation time. Runs after every module register() call (they happen in the companion init).
+        ServiceEnvironmentValidation.validate(graphEnvironment)
     }
 }
