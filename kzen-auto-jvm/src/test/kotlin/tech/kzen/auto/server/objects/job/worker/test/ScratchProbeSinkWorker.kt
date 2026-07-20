@@ -4,6 +4,7 @@ import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.server.objects.job.worker.SinkWorker
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.reflect.Reflect
 
 
 /**
@@ -12,8 +13,10 @@ import tech.kzen.lib.common.model.location.ObjectLocation
  * without consuming it meaningfully. Its dir must be DISTINCT from its upstream [ScratchProbeSourceWorker]'s (a
  * different Worker stable id) yet a sibling under the same run dir — the isolation the test asserts.
  *
- * Registered via [ScratchWorkerTestModule] (no `@Reflect` / KSP in the test source set).
+ * `@Reflect` with no KSP pass over the test source set: the graph instantiates it through the JVM reflective
+ * mirror rather than a generated registration.
  */
+@Reflect
 class ScratchProbeSinkWorker(
     input: ChannelInput<Any?>,
     selfLocation: ObjectLocation

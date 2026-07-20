@@ -4,6 +4,7 @@ import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.server.objects.job.worker.SinkWorker
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.reflect.Reflect
 import java.util.concurrent.CopyOnWriteArrayList
 
 
@@ -13,9 +14,12 @@ import java.util.concurrent.CopyOnWriteArrayList
  * that the child Logic ran once per element and produced the expected transformed value.
  *
  * [recorded] is static and thread-safe ([CopyOnWriteArrayList]) so it survives across the concurrent Worker
- * coroutines and a live-edit rebuild; [reset] it before each test. Registered via [RunWorkerTestModule] (no
- * `@Reflect` / KSP in the test source set).
+ * coroutines and a live-edit rebuild; [reset] it before each test.
+ *
+ * `@Reflect` with no KSP pass over the test source set: the graph instantiates it through the JVM reflective
+ * mirror rather than a generated registration.
  */
+@Reflect
 class RecordingSinkWorker(
     input: ChannelInput<Any?>,
     selfLocation: ObjectLocation

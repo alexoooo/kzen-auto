@@ -4,7 +4,6 @@ import kotlinx.coroutines.runBlocking
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.exec.LogicCompilerServices
 import tech.kzen.auto.server.exec.flow.test.CountingSinkVertex
-import tech.kzen.auto.server.exec.flow.test.FlowVertexTestModule
 import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.lib.common.exec.engine.Outcome
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
@@ -57,7 +56,6 @@ class FlowMigrationTest {
     //-----------------------------------------------------------------------------------------------------------------
     @Test
     fun editingMidDagResumesFromCarriedProgressProcessingEachValueOnce() {
-        FlowVertexTestModule.register()
         CountingSinkVertex.reset()
         context = KzenAutoContext.forTest()
 

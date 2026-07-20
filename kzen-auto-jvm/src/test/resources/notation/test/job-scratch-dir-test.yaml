@@ -1,7 +1,8 @@
 # Test fixture for JobScratchDirTest: a source and a sink Worker each obtain their own scratch directory via
 # JobControl.scratchDir(). The two Workers (distinct stable ids) must get ISOLATED dirs that are siblings under
 # one run dir, and the whole run tree must be swept when the run settles. The worker archetypes are test-only
-# (registered via ScratchWorkerTestModule; the production analogues live in notation/auto-jvm/job/job-worker.yaml).
+# (test-source classes served by the JVM reflective mirror; the production analogues live in
+# notation/auto-jvm/job/job-worker.yaml).
 
 
 #######################################################################################################################

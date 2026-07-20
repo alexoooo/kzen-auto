@@ -3,7 +3,8 @@
 # fills the buffer and parks mid-send, the exact "buffered + parked-mid-send" state JobExecution.migrate must
 # carry across a pause / edit / continue without dropping or replaying a row. The external duplex `signal`
 # channel (unserved) is present only to suspend deadlock detection while the gated state is quiescent, so the
-# test can pause precisely at it. The worker archetypes are test-only (registered via GatedWorkerTestModule).
+# test can pause precisely at it. The worker archetypes are test-only (test-source classes served by the JVM
+# reflective mirror).
 
 
 #######################################################################################################################

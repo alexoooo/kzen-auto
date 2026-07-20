@@ -6,7 +6,6 @@ import tech.kzen.auto.server.exec.LogicCompilerServices
 import tech.kzen.auto.server.exec.script.test.FlakyStep
 import tech.kzen.auto.server.exec.script.test.ScriptStepTestModule
 import tech.kzen.auto.server.objects.job.worker.test.RecordingSinkWorker
-import tech.kzen.auto.server.objects.job.worker.test.RunWorkerTestModule
 import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.lib.common.exec.engine.Node
 import tech.kzen.lib.common.exec.engine.NodeStatus
@@ -33,7 +32,8 @@ import kotlin.test.assertTrue
  *
  * The Worker graph is order-synthesized (source.output -> run.input, run.output -> sink.input); the RunWorker
  * and FormulaSource archetypes are production, the RecordingSink and the child's FlakyStep are test-only classes
- * registered by hand ([RunWorkerTestModule] / [ScriptStepTestModule]). Jobs are nondeterministic, so assertions
+ * (the sink served by the JVM reflective mirror, the step registered by hand via [ScriptStepTestModule]). Jobs
+ * are nondeterministic, so assertions
  * are on the drained output / terminal outcome, never interleaving order.
  */
 class JobRunWorkerTest {
@@ -160,7 +160,6 @@ class JobRunWorkerTest {
     private fun newEngine(path: String): RunEngine {
         RecordingSinkWorker.reset()
         FlakyStep.reset()
-        RunWorkerTestModule.register()
         ScriptStepTestModule.register()
 
         context = KzenAutoContext.forTest()

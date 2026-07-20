@@ -7,7 +7,6 @@ import tech.kzen.auto.common.objects.document.target.TargetMatchPolicy
 import tech.kzen.auto.server.service.target.test.CssSelectorTarget
 import tech.kzen.auto.server.service.target.test.CssSelectorTargetLocator
 import tech.kzen.auto.server.service.target.test.TargetSpecHolder
-import tech.kzen.auto.server.service.target.test.TargetTestModule
 import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -34,8 +33,6 @@ class TargetExtensibilityTest {
     //-----------------------------------------------------------------------------------------------------------------
     @Test
     fun thirdPartyTargetTypeDefinesCreatesAndLocates() {
-        TargetTestModule.register()
-
         val graphNotation = AutoTestUtils.readNotation()
         val graphDefinition = AutoTestUtils.graphDefinitionAttempt(graphNotation).transitiveSuccessful
 

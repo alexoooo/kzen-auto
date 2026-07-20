@@ -5,6 +5,7 @@ import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.server.objects.job.worker.Emitter
 import tech.kzen.auto.server.objects.job.worker.SourceWorker
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.reflect.Reflect
 
 
 /**
@@ -13,8 +14,10 @@ import tech.kzen.lib.common.model.location.ObjectLocation
  * downstream sink runs too. Paired with [ScratchProbeSinkWorker], this puts two distinct Workers in one run so
  * the test can assert their scratch dirs are isolated and both swept when the run settles.
  *
- * Registered via [ScratchWorkerTestModule] (no `@Reflect` / KSP in the test source set).
+ * `@Reflect` with no KSP pass over the test source set: the graph instantiates it through the JVM reflective
+ * mirror rather than a generated registration.
  */
+@Reflect
 class ScratchProbeSourceWorker(
     output: ChannelOutput<Any?>,
     selfLocation: ObjectLocation

@@ -4,7 +4,6 @@ import kotlinx.coroutines.runBlocking
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.exec.LogicCompilerServices
 import tech.kzen.auto.server.objects.job.worker.test.ScratchProbeLog
-import tech.kzen.auto.server.objects.job.worker.test.ScratchWorkerTestModule
 import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.lib.common.exec.engine.Outcome
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
@@ -88,8 +87,6 @@ class JobScratchDirTest {
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun newEngine(): RunEngine {
-        ScratchWorkerTestModule.register()
-
         context = KzenAutoContext.forTest()
 
         val graphNotation = AutoTestUtils.readNotation()

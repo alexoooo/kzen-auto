@@ -6,17 +6,17 @@ import tech.kzen.lib.common.reflect.ReflectionRegistry
 
 
 /**
- * Hand-written reflection registration for the test-only Script steps ([ShoutStep], [OpenResourceTestStep],
- * [FailStep], [FlakyStep], [AssertDisposedStep], [ReadResourceStep], [CountingStep], [BinaryDetailStep]) —
- * the test-source equivalent of the
- * KSP-generated `KzenAutoJvmModule`. The test source set has no
- * KSP pass (the build declares only the main `ksp(...)` dependency), so these classes carry no `@Reflect`
- * annotation and are registered manually instead, mirroring exactly what the processor would emit: constructor
- * argument names + a factory that maps resolved args onto the constructor.
+ * The pinned proof that [ModuleReflection] is a trivially hand-implementable contract — what a third party
+ * ships when it registers its own classes without the KSP processor, mirroring exactly what the processor
+ * emits: constructor argument names + a factory that maps resolved args onto the constructor. It is the only
+ * hand-written module left; every other test fixture is `@Reflect`-annotated and served by the JVM reflective
+ * mirror, and the contrast between the two paths is itself the coverage.
  *
- * That these third-party steps run end-to-end after only this registration — with no change to
- * [tech.kzen.auto.server.exec.script.ScriptLogicCompiler] or any kzen dispatch — is the extensibility guarantee
- * [tech.kzen.auto.server.exec.script.ScriptExtensibilityTest] asserts. Idempotently [register]ed into
+ * Registers the test-only Script steps ([ShoutStep], [OpenResourceTestStep], [FailStep], [FlakyStep],
+ * [AssertDisposedStep], [ReadResourceStep], [CountingStep], [BinaryDetailStep]), which therefore carry no
+ * `@Reflect` annotation. That these third-party steps run end-to-end after only this registration — with no
+ * change to [tech.kzen.auto.server.exec.script.ScriptLogicCompiler] or any kzen dispatch — is the extensibility
+ * guarantee [tech.kzen.auto.server.exec.script.ScriptExtensibilityTest] asserts. Idempotently [register]ed into
  * [ReflectionRegistry.global] by that test before it builds its graph.
  */
 object ScriptStepTestModule: ModuleReflection {

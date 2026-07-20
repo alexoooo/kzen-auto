@@ -345,6 +345,14 @@ reflectionRegistry.put(
 1. Write the class in `commonMain`/`jvmMain`/`jsMain` as appropriate, with `@Reflect` on it.
 2. `./gradlew build` (or just let your next compile pick it up) — KSP regenerates the matching `Module` automatically.
 
+### JVM reflective fallback
+
+Generated registrations are the primary path; on the JVM they are backed by kzen-lib's `ReflectiveClassMirror` (kotlin-reflect based), appended to the `GlobalMirror` delegate chain after the module `register()` calls in `KzenAutoContext.init` and in `AutoTestUtils`. `ReflectionRegistry.global` is consulted first and always wins, so the mirror only ever sees genuine misses; it serves `@Reflect`-annotated classes exclusively, and logs `Serving <class> by JVM reflection` for each one it resolves.
+
+Its consumer today is **test fixtures**: the KSP module class name is module-global, so a test-source pass would emit a colliding `KzenAutoJvmModule` that shadows the main one — `kzen-auto-jvm` therefore disables `kspTestKotlin`, and `@Reflect` fixtures under `src/test` resolve through the mirror instead of a hand-written `ModuleReflection`. The mirror is constructed per `ClassLoader`, which is what will let a plugin JAR contribute `@Reflect` classes without a KSP pass of its own.
+
+The log line is the parity signal — JS has no runtime reflection, so anything the client also instantiates must have a *generated* registration, and a production class showing up in that log means codegen is missing for it.
+
 ## Critical files
 
 If you're new to kzen-auto, read these in order — they anchor the patterns above:

@@ -5,7 +5,6 @@ import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.exec.LogicCompilerServices
 import tech.kzen.auto.server.objects.job.worker.test.GatedCountingSinkWorker
 import tech.kzen.auto.server.objects.job.worker.test.GatedSourceWorker
-import tech.kzen.auto.server.objects.job.worker.test.GatedWorkerTestModule
 import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.lib.common.exec.engine.Address
 import tech.kzen.lib.common.exec.engine.Outcome
@@ -127,7 +126,6 @@ class JobMigrationTest {
         // PLUS one the source is parked mid-send on. The migrate must carry ALL of them into the rebuilt graph
         // (JobChannel.drainBuffered / preload), the source must resume from its position (not re-send), and the
         // rebuilt ungated sink drains carryover then the remainder — so the total received equals the source total.
-        GatedWorkerTestModule.register()
         GatedSourceWorker.reset()
         GatedCountingSinkWorker.reset()
         context = KzenAutoContext.forTest()

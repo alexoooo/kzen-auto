@@ -9,8 +9,7 @@ import tech.kzen.lib.common.model.definition.AttributeDefinition
 import tech.kzen.lib.common.model.definition.ValueAttributeDefinition
 import tech.kzen.lib.common.model.instance.GraphInstance
 import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.lib.common.reflect.ModuleReflection
-import tech.kzen.lib.common.reflect.ReflectionRegistry
+import tech.kzen.lib.common.reflect.Reflect
 import java.lang.reflect.Proxy
 
 
@@ -30,6 +29,7 @@ data class CssSelectorTarget(
 
 
 //---------------------------------------------------------------------------------------------------------------------
+@Reflect
 class CssSelectorTargetSpecType: TargetSpecType() {
     override val typeName = "CssSelector"
 
@@ -75,28 +75,7 @@ object CssSelectorTargetLocator: TargetTypeLocator {
 //---------------------------------------------------------------------------------------------------------------------
 /** A minimal graph object with a `target:` attribute, so the definer/creator dispatch runs
  *  through the real notation machinery without needing a browser step's services. */
+@Reflect
 class TargetSpecHolder(
     val target: TargetSpec
 )
-
-
-//---------------------------------------------------------------------------------------------------------------------
-/** Hand-written reflection registration (the test source set has no KSP pass) — the test-source
- *  equivalent of the module registration a third-party would ship; see ScriptStepTestModule. */
-object TargetTestModule: ModuleReflection {
-    override fun register(reflectionRegistry: ReflectionRegistry) {
-        reflectionRegistry.put(
-            "tech.kzen.auto.server.service.target.test.CssSelectorTargetSpecType",
-            listOf()
-        ) { _ ->
-            CssSelectorTargetSpecType()
-        }
-
-        reflectionRegistry.put(
-            "tech.kzen.auto.server.service.target.test.TargetSpecHolder",
-            listOf("target")
-        ) { args ->
-            TargetSpecHolder(args[0] as TargetSpec)
-        }
-    }
-}

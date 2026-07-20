@@ -3,6 +3,7 @@ package tech.kzen.auto.server.exec.flow.test
 import tech.kzen.auto.common.paradigm.flow.api.FlowVertex
 import tech.kzen.auto.common.paradigm.flow.api.input.RequiredInput
 import tech.kzen.lib.common.exec.ExecutionValue
+import tech.kzen.lib.common.reflect.Reflect
 import java.util.concurrent.atomic.AtomicInteger
 
 
@@ -20,8 +21,10 @@ import java.util.concurrent.atomic.AtomicInteger
  * [note] is an otherwise-inert editable attribute: the migration test edits it to trip a realistic rebuild
  * without perturbing the source's position (mirroring the Job carryover test editing the sink's `note`).
  *
- * Registered for the graph via [FlowVertexTestModule] (no `@Reflect` / KSP in the test source set).
+ * `@Reflect` with no KSP pass over the test source set: the graph instantiates it through the JVM reflective
+ * mirror rather than a generated registration.
  */
+@Reflect
 class CountingSinkVertex(
     private val input: RequiredInput<Any>,
     private val note: String

@@ -3,7 +3,7 @@
 # AutowiredAttributeDefiner locates each object's archetype from a global host, so a duplicate declaration
 # across scenario files would resolve ambiguously and fail the whole-graph build. The production Worker
 # archetypes (FormulaSourceWorker, RunWorker) live in notation/auto-jvm/job/job-worker.yaml. Backed by a
-# test-source class registered by hand via RunWorkerTestModule (no @Reflect / KSP in the test source set).
+# test-source class served by the JVM reflective mirror (the test source set has no KSP pass).
 
 
 # Records every element it receives into a static list, so a test can assert what the RunWorker emitted

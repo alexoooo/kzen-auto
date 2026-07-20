@@ -207,6 +207,15 @@ ksp {
 }
 
 
+// The module class name above is module-global, so a test-source pass emits a SECOND object under that same
+// FQN — and test output precedes the main classes on the test runtime classpath, so it shadows the real one
+// and silently drops every production registration (the graph then falls through to the JVM reflective
+// mirror). Test fixtures are `@Reflect`-annotated and served by that mirror instead.
+tasks.matching { it.name == "kspTestKotlin" }.configureEach {
+    enabled = false
+}
+
+
 val dependenciesDir = "dependencies"
 tasks.register<Copy>("copyDependencies") {
     from(configurations.runtimeClasspath)

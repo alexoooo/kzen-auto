@@ -3,7 +3,7 @@
 # DAG partway, editing the sink's (no-op) `note`, then resuming must CARRY the per-vertex progress (the source's
 # stream position and the sink's accumulator) so every value is processed exactly once across the cut — a clean
 # restart would re-emit and re-process the already-consumed prefix, overshooting the count. The sink archetype
-# is test-only (registered via FlowVertexTestModule); IntRangeSource is the production vertex.
+# is test-only (a test-source class served by the JVM reflective mirror); IntRangeSource is the production vertex.
 
 
 #######################################################################################################################

@@ -5,6 +5,7 @@ import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.server.objects.job.worker.Emitter
 import tech.kzen.auto.server.objects.job.worker.SourceWorker
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.reflect.Reflect
 import java.util.concurrent.atomic.AtomicInteger
 
 
@@ -25,8 +26,10 @@ import java.util.concurrent.atomic.AtomicInteger
  *   (N buffered, the (N+1)-th parked mid-send) and no more — a STABLE, observable state the test waits for to
  *   pause precisely on "buffer full + one send parked", with no wall-clock race.
  *
- * Registered for the graph via [GatedWorkerTestModule] (no `@Reflect` / KSP in the test source set).
+ * `@Reflect` with no KSP pass over the test source set: the graph instantiates it through the JVM reflective
+ * mirror rather than a generated registration.
  */
+@Reflect
 class GatedSourceWorker(
     output: ChannelOutput<Any?>,
     private val total: Int,
