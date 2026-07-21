@@ -9,6 +9,7 @@ import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.select.SelectOption
+import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.client.wrap.select.muiAutocompleteField
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -36,12 +37,30 @@ external interface SelectAttributeEditorProps: Props {
 }
 
 
+external interface SelectAttributeEditorState: State {
+    // Non-null once a write failed, turning the field red; the message itself is carried by the global banner.
+    var errorMessage: String?
+}
+
+
 //---------------------------------------------------------------------------------------------------------------------
 class SelectAttributeEditor(
     props: SelectAttributeEditorProps
 ):
-    RPureComponent<SelectAttributeEditorProps, State>(props)
+    RPureComponent<SelectAttributeEditorProps, SelectAttributeEditorState>(props)
 {
+    //-----------------------------------------------------------------------------------------------------------------
+    // The selection always carries its own value, so there is no pending buffer to read: schedule/flush are never
+    // called and only the explicit-value commitNow is used.
+    private val committer = AttributeCommitter(
+        graphStore = { props.mirroredGraphStore },
+        objectLocation = { props.objectLocation },
+        attributePath = { props.attributePath },
+        pendingNotation = { null },
+        onCommitted = { props.onChange?.invoke((it as ScalarAttributeNotation).value) },
+        onError = { message -> setState { errorMessage = message } })
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private fun submitEditAsync(newValue: String) {
         if (props.value == newValue) {
@@ -49,21 +68,8 @@ class SelectAttributeEditor(
         }
 
         async {
-            submitEdit(newValue)
+            committer.commitNow(ScalarAttributeNotation(newValue))
         }
-    }
-
-
-    private suspend fun submitEdit(newValue: String) {
-        val attributeNotation = ScalarAttributeNotation(newValue)
-
-        val command = CommonEditUtils.editCommand(
-            props.objectLocation, props.attributePath, attributeNotation)
-
-        // TODO: handle error
-        props.mirroredGraphStore.apply(command)
-
-        props.onChange?.invoke(attributeNotation.value)
     }
 
 
@@ -98,6 +104,7 @@ class SelectAttributeEditor(
                 selectedOption = selectedOption,
                 onSelect = { submitEditAsync(it.value) },
                 disabled = props.disabled,
+                error = props.invalid || state.errorMessage != null,
                 disableClearable = true)
         }
     }

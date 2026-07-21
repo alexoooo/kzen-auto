@@ -13,6 +13,7 @@ import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
 import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorProps
+import tech.kzen.auto.client.objects.document.common.edit.AttributeCommitter
 import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
 import tech.kzen.auto.client.objects.document.script.model.ScriptStore
@@ -53,6 +54,9 @@ external interface KotlinExpressionEditorState: State {
 
     // True while THIS editor owns the shared pick session (button toggled on / popover open / cards highlighted).
     var picking: Boolean
+
+    // Non-null once a write failed, turning the field red; the message itself is carried by the global banner.
+    var errorMessage: String?
 }
 
 
@@ -101,11 +105,16 @@ class KotlinExpressionEditor(
     // The multiline textarea, so insertion can splice at the caret (and restore focus + caret afterwards).
     private val inputRef = createRef<HTMLTextAreaElement>()
 
-    private var submitDebounce: FunctionWithDebounce = lodash.debounce({
-        async {
-            onSubmitEdit()
-        }
-    }, 1_000)
+    private val committer = AttributeCommitter(
+        graphStore = { props.mirroredGraphStore },
+        objectLocation = { props.objectLocation },
+        attributePath = { AttributePath.ofName(props.attributeName) },
+        pendingNotation = {
+            state.value
+                ?.takeIf { it != state.serverValue }
+                ?.let { ScalarAttributeNotation(it) }
+        },
+        onError = { message -> setState { errorMessage = message } })
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -119,6 +128,7 @@ class KotlinExpressionEditor(
         serverValue = null
         stepReferences = null
         picking = false
+        errorMessage = null
     }
 
 
@@ -141,7 +151,7 @@ class KotlinExpressionEditor(
         props.clientStateGlobal.unobserve(this)
 
         // Flush (not cancel) so a pending debounced edit is committed rather than lost.
-        submitDebounce.flush()
+        committer.flush()
     }
 
 
@@ -257,27 +267,7 @@ class KotlinExpressionEditor(
         setState {
             value = newValue
         }
-        submitDebounce.apply()
-    }
-
-
-    private suspend fun onSubmitEdit() {
-        val current = state.value
-            ?: return
-        if (current == state.serverValue) {
-            return
-        }
-        submitValue(current)
-    }
-
-
-    private suspend fun submitValue(newValue: String) {
-        val command = CommonEditUtils.editCommand(
-            props.objectLocation,
-            AttributePath.ofName(props.attributeName),
-            ScalarAttributeNotation(newValue))
-
-        props.mirroredGraphStore.apply(command)
+        committer.schedule()
     }
 
 
@@ -316,10 +306,12 @@ class KotlinExpressionEditor(
             value = newValue
         }
 
-        // Insertion is a discrete commit — write immediately rather than waiting out the keystroke debounce.
-        submitDebounce.cancel()
+        // Insertion is a discrete commit — write immediately rather than waiting out the keystroke debounce. The
+        // value is passed explicitly: the setState above may not be readable yet, and the buffer-vs-server no-op
+        // guard must not suppress this write.
+        committer.cancel()
         async {
-            submitValue(newValue)
+            committer.commitNow(ScalarAttributeNotation(newValue))
         }
 
         // Restore focus + caret after React commits the new value (the textarea lost focus to the popover or
@@ -393,7 +385,9 @@ class KotlinExpressionEditor(
 
             // Commit any pending debounced edit the instant focus leaves the field, so a subsequent separate
             // command (e.g. renaming the step) is applied after this write rather than racing a stale one.
-            onBlur = { submitDebounce.flush() }
+            onBlur = { committer.flush() }
+
+            error = state.errorMessage != null
         }
     }
 }

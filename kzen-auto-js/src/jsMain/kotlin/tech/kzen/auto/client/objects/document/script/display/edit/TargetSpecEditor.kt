@@ -7,6 +7,7 @@ import react.State
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorProps
+import tech.kzen.auto.client.objects.document.common.edit.AttributeCommitter
 import tech.kzen.auto.client.objects.document.script.display.target.TargetTypeDisplay
 import tech.kzen.auto.client.objects.document.script.display.target.TargetValueEditorContext
 import tech.kzen.auto.client.service.global.ClientState
@@ -17,6 +18,7 @@ import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.client.wrap.select.SelectOption
 import tech.kzen.auto.client.wrap.select.muiAutocompleteField
 import tech.kzen.auto.common.objects.document.target.TargetSpecDefiner
+import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -27,7 +29,6 @@ import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
 import tech.kzen.lib.common.model.structure.notation.cqrs.RenamedDocumentRefactorEvent
-import tech.kzen.lib.common.model.structure.notation.cqrs.UpsertAttributeCommand
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.service.store.LocalGraphStore
@@ -97,15 +98,13 @@ class TargetSpecEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    companion object {
-        private const val submitDebounceMillis = 1000
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    private var submitDebounce: FunctionWithDebounce = lodash.debounce({
-        editAttributeCommandAsync()
-    }, submitDebounceMillis)
+    // The value row belongs to the per-type fragment, so this host has no field of its own to turn red — a failed
+    // write surfaces through the global banner only.
+    private val committer = AttributeCommitter(
+        graphStore = { props.mirroredGraphStore },
+        objectLocation = { props.objectLocation },
+        attributePath = { AttributePath.ofName(props.attributeName) },
+        pendingNotation = { pendingNotation() })
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -164,7 +163,7 @@ class TargetSpecEditor(
             // Types with a value would fail the document definition (blocking the run ribbon) if
             // {type} upserted alone — hold the write until the value edit carries both segments.
             if (typeDisplay(state.typeName)?.hasValue == false) {
-                editAttributeCommandAsync()
+                commitNowAsync()
             }
         }
         else if (state.value != prevState.value) {
@@ -177,10 +176,10 @@ class TargetSpecEditor(
                 setState {
                     immediateWrite = false
                 }
-                editAttributeCommandAsync()
+                commitNowAsync()
             }
             else {
-                submitDebounce.apply()
+                committer.schedule()
             }
         }
     }
@@ -197,7 +196,7 @@ class TargetSpecEditor(
     override fun componentWillUnmount() {
         props.mirroredGraphStore.unobserve(this)
         props.clientStateGlobal.unobserve(this)
-        submitDebounce.flush()
+        committer.flush()
     }
 
 
@@ -239,16 +238,18 @@ class TargetSpecEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun editAttributeCommandAsync() {
+    // Safe to read the pending value at commit time: both callers run from componentDidUpdate, so the state
+    // change that triggered the write is already committed.
+    private fun commitNowAsync() {
         async {
-            editAttributeCommand()
+            committer.commitNow()
         }
     }
 
 
-    private suspend fun editAttributeCommand() {
+    private fun pendingNotation(): AttributeNotation? {
         val typeName = state.typeName
-            ?: return
+            ?: return null
 
         val attributeMap = mutableMapOf<AttributeSegment, AttributeNotation>()
 
@@ -274,19 +275,14 @@ class TargetSpecEditor(
             }
         }
 
-        val attributeNotation = MapAttributeNotation(attributeMap.toPersistentMap())
-
-        props.mirroredGraphStore.apply(UpsertAttributeCommand(
-                props.objectLocation,
-                props.attributeName,
-                attributeNotation))
+        return MapAttributeNotation(attributeMap.toPersistentMap())
     }
 
 
     private fun onTypeChange(newTypeName: String) {
         // A pending debounced text write would fire after the value fields are cleared, emitting
         // a value-less target map; the pre-switch text (if any) was already committed by onBlur.
-        submitDebounce.cancel()
+        committer.cancel()
 
         setState {
             typeName = newTypeName
@@ -324,7 +320,7 @@ class TargetSpecEditor(
             navigationGlobal = props.navigationGlobal,
             onValueChange = ::onValueChange,
             onValueEdit = ::onValueEdit,
-            onEditCommit = { submitDebounce.flush() })
+            onEditCommit = { committer.flush() })
 
         with(display) {
             renderValueEditor(context)

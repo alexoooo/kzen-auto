@@ -7,12 +7,11 @@ import react.Props
 import react.ReactNode
 import react.State
 import react.dom.onChange
+import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
+import tech.kzen.auto.client.objects.document.common.edit.DebouncedSubmitter
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
-import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.FunctionWithDebounce
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.lodash
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -58,6 +57,9 @@ external interface JobChannelNumberFieldState: State {
     // The object's OWN (not inheritance-resolved) notation at the path: non-null = an explicit override,
     // null = inheriting. Gates value updates so mid-edit typing is never clobbered by an unrelated re-render.
     var ownNotation: AttributeNotation?
+
+    // Non-null once a write failed, turning the field red; the message itself is carried by the global banner.
+    var errorMessage: String?
 }
 
 
@@ -92,16 +94,12 @@ class JobChannelNumberField(
 
     override fun componentWillUnmount() {
         props.clientStateGlobal.unobserve(this)
-        submitDebounce.flush()
+        submitter.flush()
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private var submitDebounce: FunctionWithDebounce = lodash.debounce({
-        async {
-            submitEdit()
-        }
-    }, 1000)
+    private val submitter = DebouncedSubmitter { submitEdit() }
 
 
     // Blank means "inherit the effective default" only for a nested per-channel knob (`channels.<port>.<knob>`,
@@ -152,7 +150,7 @@ class JobChannelNumberField(
         setState {
             value = newValue
         }
-        submitDebounce.apply()
+        submitter.schedule()
     }
 
 
@@ -166,7 +164,7 @@ class JobChannelNumberField(
             // Cleared → revert to the inherited default by removing the override. Only a nested leaf has a
             // removal command (and a lower-precedence default to fall back to); a top-level default stays.
             if (currentOverride != null && inheritable()) {
-                props.mirroredGraphStore.apply(RemoveInAttributeCommand(
+                applyCommand(RemoveInAttributeCommand(
                     props.objectLocation, props.attributePath, true))
             }
             return
@@ -179,7 +177,16 @@ class JobChannelNumberField(
             return
         }
 
-        props.mirroredGraphStore.apply(writeCommand(ScalarAttributeNotation(canonical)))
+        applyCommand(writeCommand(ScalarAttributeNotation(canonical)))
+    }
+
+
+    // Only a genuinely applied command updates the error state; the parse / no-change bails above leave it alone.
+    private suspend fun applyCommand(command: NotationCommand) {
+        val errorMessage = CommonEditUtils.applyCommand(props.mirroredGraphStore, command)
+        setState {
+            this.errorMessage = errorMessage
+        }
     }
 
 
@@ -233,7 +240,9 @@ class JobChannelNumberField(
             }
 
             // Commit any pending debounced edit the instant focus leaves the field (mirrors AttributePathValueEditor).
-            onBlur = { submitDebounce.flush() }
+            onBlur = { submitter.flush() }
+
+            error = state.errorMessage != null
         }
     }
 }

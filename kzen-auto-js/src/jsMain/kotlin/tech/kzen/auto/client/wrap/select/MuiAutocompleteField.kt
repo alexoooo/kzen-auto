@@ -61,6 +61,7 @@ fun ChildrenBuilder.muiAutocompleteField(
     openOnFocus: Boolean = false,
     disabled: Boolean = false,
     disablePortal: Boolean = false,
+    error: Boolean = false,
     forceOpen: Boolean = false,
     opaqueBackground: Boolean = false,
     onOpen: (() -> Unit)? = null,
@@ -128,6 +129,7 @@ fun ChildrenBuilder.muiAutocompleteField(
                 objectAssign(this, params)
                 this.label = ReactNode(label)
                 this.size = Size.small
+                this.error = error
                 if (autoFocus) {
                     this.autoFocus = true
                 }

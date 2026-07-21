@@ -9,6 +9,7 @@ import react.Props
 import react.State
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
@@ -35,12 +36,30 @@ external interface BooleanAttributeEditorProps: Props {
 }
 
 
+external interface BooleanAttributeEditorState: State {
+    // Non-null once a write failed, turning the label red; the message itself is carried by the global banner.
+    var errorMessage: String?
+}
+
+
 //---------------------------------------------------------------------------------------------------------------------
 class BooleanAttributeEditor(
     props: BooleanAttributeEditorProps
 ):
-    RPureComponent<BooleanAttributeEditorProps, State>(props)
+    RPureComponent<BooleanAttributeEditorProps, BooleanAttributeEditorState>(props)
 {
+    //-----------------------------------------------------------------------------------------------------------------
+    // The toggle always carries its own value, so there is no pending buffer to read: schedule/flush are never
+    // called and only the explicit-value commitNow is used.
+    private val committer = AttributeCommitter(
+        graphStore = { props.mirroredGraphStore },
+        objectLocation = { props.objectLocation },
+        attributePath = { props.attributePath },
+        pendingNotation = { null },
+        onCommitted = { props.onChange?.invoke((it as ScalarAttributeNotation).value.toBoolean()) },
+        onError = { message -> setState { errorMessage = message } })
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private fun submitEditAsync(newValue: Boolean) {
         if (props.value == newValue) {
@@ -48,21 +67,8 @@ class BooleanAttributeEditor(
         }
 
         async {
-            submitEdit(newValue)
+            committer.commitNow(ScalarAttributeNotation(newValue.toString()))
         }
-    }
-
-
-    private suspend fun submitEdit(newValue: Boolean) {
-        val attributeNotation = ScalarAttributeNotation(newValue.toString())
-
-        val command = CommonEditUtils.editCommand(
-            props.objectLocation, props.attributePath, attributeNotation)
-
-        // TODO: handle error
-        props.mirroredGraphStore.apply(command)
-
-        props.onChange?.invoke(newValue)
     }
 
 
@@ -82,6 +88,8 @@ class BooleanAttributeEditor(
             sx {
                 fontSize = 0.8.em
             }
+
+            error = state.errorMessage != null
 
             +formattedLabel()
 

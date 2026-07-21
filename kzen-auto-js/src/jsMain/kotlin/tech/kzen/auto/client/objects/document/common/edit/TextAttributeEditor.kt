@@ -8,7 +8,6 @@ import react.Props
 import react.ReactNode
 import react.State
 import react.dom.onChange
-import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.lib.common.model.attribute.AttributePath
@@ -43,6 +42,9 @@ external interface TextAttributeEditorProps: Props {
 
 external interface TextAttributeEditorState: State {
     var value: String
+
+    // Non-null once a write failed, turning the field red; the message itself is carried by the global banner.
+    var errorMessage: String?
 }
 
 
@@ -61,11 +63,13 @@ class TextAttributeEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private var submitDebounce: FunctionWithDebounce = lodash.debounce({
-        async {
-            submitEdit()
-        }
-    }, 1000)
+    private val committer = AttributeCommitter(
+        graphStore = { props.mirroredGraphStore },
+        objectLocation = { props.objectLocation },
+        attributePath = { props.attributePath },
+        pendingNotation = { ScalarAttributeNotation(state.value) },
+        onCommitted = { props.onChange?.invoke((it as ScalarAttributeNotation).value) },
+        onError = { message -> setState { errorMessage = message } })
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -107,7 +111,7 @@ class TextAttributeEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentWillUnmount() {
-        submitDebounce.flush()
+        committer.flush()
     }
 
 
@@ -117,20 +121,7 @@ class TextAttributeEditor(
             value = newValue
         }
 
-        submitDebounce.apply()
-    }
-
-
-    private suspend fun submitEdit() {
-        val attributeNotation = ScalarAttributeNotation(state.value)
-
-        val command = CommonEditUtils.editCommand(
-            props.objectLocation, props.attributePath, attributeNotation)
-
-        // TODO: handle error
-        props.mirroredGraphStore.apply(command)
-
-        props.onChange?.invoke(attributeNotation.value)
+        committer.schedule()
     }
 
 
@@ -172,14 +163,14 @@ class TextAttributeEditor(
 
             // Commit the pending debounced edit on focus loss, so a following separate command is
             // sequenced after this write rather than racing it (see AttributePathValueEditor).
-            onBlur = { submitDebounce.flush() }
+            onBlur = { committer.flush() }
 
 //                if (valueType == Type.Number) {
 //                    type = InputType.number.name
 //                }
 
             disabled = props.disabled
-            error = props.invalid
+            error = props.invalid || state.errorMessage != null
 
             if (props.InputProps != null) {
                 inputSlotProps = props.InputProps!!

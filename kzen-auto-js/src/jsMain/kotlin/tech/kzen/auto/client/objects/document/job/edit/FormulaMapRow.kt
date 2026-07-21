@@ -15,12 +15,10 @@ import react.dom.html.ReactHTML.tbody
 import react.dom.html.ReactHTML.td
 import react.dom.html.ReactHTML.tr
 import react.dom.onChange
-import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.FunctionWithDebounce
+import tech.kzen.auto.client.objects.document.common.edit.DebouncedSubmitter
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.inputLabelSlotProps
-import tech.kzen.auto.client.wrap.lodash
 import tech.kzen.auto.client.wrap.setState
 import web.cssom.VerticalAlign
 import web.cssom.em
@@ -53,11 +51,7 @@ class FormulaMapRow(
     RPureComponent<FormulaMapRowProps, FormulaMapRowState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    private var submitDebounce: FunctionWithDebounce = lodash.debounce({
-        async {
-            onSubmitEdit()
-        }
-    }, 1_000)
+    private val submitter = DebouncedSubmitter { onSubmitEdit() }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -79,13 +73,13 @@ class FormulaMapRow(
         setState {
             value = newValue
         }
-        submitDebounce.apply()
+        submitter.schedule()
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentWillUnmount() {
-        submitDebounce.flush()
+        submitter.flush()
     }
 
 
@@ -128,7 +122,7 @@ class FormulaMapRow(
 
                             // Commit the pending debounced edit on focus loss, so a following separate command
                             // is sequenced after this write rather than racing it.
-                            onBlur = { submitDebounce.flush() }
+                            onBlur = { submitter.flush() }
 
                             inputLabelSlotProps = unsafeJso {
                                 shrink = true

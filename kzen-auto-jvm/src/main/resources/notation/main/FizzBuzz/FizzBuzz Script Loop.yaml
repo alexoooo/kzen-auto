@@ -4,7 +4,7 @@ main:
 
 main.steps/Number range:
   is: NumberRangeStep
-  to: 110
+  to: 100
 
 main.steps/Range:
   is: FormulaStep
