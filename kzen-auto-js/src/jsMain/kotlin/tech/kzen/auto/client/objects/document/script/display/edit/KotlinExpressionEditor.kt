@@ -26,10 +26,10 @@ import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.objects.document.script.model.ScriptTree
 import tech.kzen.auto.common.util.ExpressionUtils
-import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
+import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
@@ -76,12 +76,6 @@ class KotlinExpressionEditor(
     ScriptStore.Observer,
     ScriptStepReferenceStore.Observer
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    companion object {
-        private val conditionAttributeName = AttributeName("condition")
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
@@ -202,11 +196,20 @@ class KotlinExpressionEditor(
         val scriptTree = scriptState.scriptTree
         val targetPath = props.objectLocation.objectPath
 
+        // Read at use time off the synchronous current state, so there is no observer-ordering hazard. Null only
+        // before any ClientState exists (unreachable once a ScriptState has been published, but guarded): the
+        // editor then falls back to the default scope and self-corrects on the next publish.
+        val graphNotation = props.clientStateGlobal.current()?.graphStructure()?.graphNotation
+
         val candidatePaths =
-            if (props.attributeName == conditionAttributeName) {
-                // DoWhile condition references the loop's body steps (children under `steps`) plus in-scope
-                // bindings — NOT predecessors. Mirrors server DoWhileStep.conditionScopeTypes.
-                bodyStepPaths(scriptTree, targetPath) + scriptTree.inScopeBindingPaths(targetPath)
+            if (graphNotation != null &&
+                    ScriptConventions.isBodyScopedExpression(
+                        graphNotation, props.objectLocation, props.attributeName)
+            ) {
+                // A `scope: body` expression (DoWhileStep.condition) references the declaring step's own body
+                // steps plus in-scope bindings — NOT predecessors. Mirrors DoWhileStep.conditionScopeTypes.
+                bodyStepPaths(graphNotation, scriptTree, targetPath) +
+                        scriptTree.inScopeBindingPaths(targetPath)
             }
             else {
                 // FormulaStep.code references prior steps plus in-scope bindings (parameters / loop items).
@@ -236,14 +239,23 @@ class KotlinExpressionEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    // The direct body steps of the DoWhile node at `target` (children under the `steps` branch). The DoWhile
-    // node is found by scanning the tree for the matching objectPath.
-    private fun bodyStepPaths(scriptTree: ScriptTree, target: ObjectPath): List<ObjectPath> {
+    // The direct body steps of the node at `target`: its children under each DISCOVERED branch attribute
+    // (metadata `is: List, of: ScriptStep`), in tree order — so an N-branch loop scopes over all of its bodies.
+    // The node is found by scanning the tree for the matching objectPath.
+    private fun bodyStepPaths(
+        graphNotation: GraphNotation,
+        scriptTree: ScriptTree,
+        target: ObjectPath
+    ): List<ObjectPath> {
         val node = findNode(scriptTree, target)
             ?: return listOf()
-        return node.children[ScriptConventions.stepsAttributeName]
-            ?.map { it.objectPath }
-            ?: listOf()
+
+        val branchNames = ScriptConventions.stepBranchAttributeNames(
+            graphNotation, props.objectLocation.documentPath.toObjectLocation(target))
+
+        return branchNames.flatMap { branchName ->
+            node.children[branchName]?.map { it.objectPath } ?: listOf()
+        }
     }
 
 

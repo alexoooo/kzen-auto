@@ -21,10 +21,10 @@ import tech.kzen.lib.common.model.location.ObjectLocation
  *    edges. The ROOT step list is the exception and the reason this pays: `ScriptLogic.run` DISCARDS
  *    `runSteps(rootStepLocations)`'s value (the result comes from a `ResultStep` — there is no last-step
  *    fallback), so a trailing top-level loop is genuinely unread.
- * 2. **A completeness check.** The analysis enumerates branches by a hardcoded attribute-name list
- *    (`branchAttributeNames`), so a step type branching under any other name is invisible to it and its edges
- *    silently vanish. For the client's overlay that costs a missing arrow; here it would silently elide a value
- *    that IS read — wrong results, not a cosmetic gap.
+ * 2. **A completeness check.** The analysis discovers branches from attribute metadata (`is: List, of: ScriptStep`),
+ *    so a step type whose branch metadata is missing or undeclared — a raw-YAML power edit, a plugin authoring
+ *    mistake — is invisible to it and its edges silently vanish. For the client's overlay that costs a missing
+ *    arrow; here it would silently elide a value that IS read — wrong results, not a cosmetic gap.
  *
  * Both are resolved by walking [ScriptStep.nestedStepLists] — the same authoritative, per-type, no-`when`
  * enumeration the spine itself uses (`ScriptRunContext.nestedStableIds`). Any step it reaches that the analysis

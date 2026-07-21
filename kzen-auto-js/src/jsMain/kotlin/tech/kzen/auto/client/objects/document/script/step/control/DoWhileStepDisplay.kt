@@ -15,7 +15,6 @@ import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.objects.document.script.model.StepTrace
-import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
@@ -34,8 +33,6 @@ class DoWhileStepDisplay(
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        private val conditionAttributeName = AttributeName("condition")
-
         // Hairline matching the branch-stage seam, used to separate the white While footer from the
         // gray Do stage above it.
         private val bodySeamColor = Color("rgba(0, 0, 0, 0.12)")
@@ -198,7 +195,7 @@ class DoWhileStepDisplay(
 
                 props.attributeEditorManager.child(this) {
                     this.objectLocation = props.common.objectLocation
-                    this.attributeName = conditionAttributeName
+                    this.attributeName = ScriptConventions.conditionAttributeName
                 }
             }
         }

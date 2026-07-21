@@ -376,6 +376,10 @@ DoWhileStep:
       multiline: true
       editor: KotlinExpressionEditor
       summary: TextAttributeView
+      # The condition's in-scope references are this loop's own body steps, not its predecessors (read by the
+      # client KotlinExpressionEditor via ScriptConventions.isBodyScopedExpression; the server counterpart is
+      # DoWhileStep.conditionScopeTypes itself). Inert for definition, like `rerun` below.
+      scope: body
     steps:
       is: List
       of: ScriptStep

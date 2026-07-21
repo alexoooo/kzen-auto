@@ -1,0 +1,49 @@
+# A branching step type kzen-auto's shared code has never heard of: two branch attributes discovered purely from
+# their `is: List, of: ScriptStep` metadata, proving a future SwitchStep needs no edit to dependency analysis,
+# value-reference elision, nesting/jump analysis, drag-drop or insertion.
+#
+# The archetype is declared in this document rather than in script-step-test-archetypes.yaml because only this
+# document instantiates it (that file's one-declaration rule guards against AMBIGUOUS cross-file `is:` targets,
+# which a single-document archetype cannot create). There is no backing class: the analyses under test are
+# notation-level, so the Switch instance failing to define is tolerated — walkBranch reads notation only.
+
+TestSwitchStep:
+  abstract: true
+  is: ScriptStep
+  icon: "material-symbols:alt-route"
+  title: "Switch (test)"
+  meta:
+    caseA:
+      is: List
+      of: ScriptStep
+      by: NestedList
+    caseB:
+      is: List
+      of: ScriptStep
+      by: NestedList
+
+
+main:
+  is: Script
+
+main.steps/Switch:
+  is: TestSwitchStep
+
+main.steps/Switch.caseA/ProduceA:
+  is: FormulaStep
+  code: 1
+
+# References ProduceA across a sibling branch of the same container — a cross-branch edge that only exists if
+# both `caseA` and `caseB` were discovered.
+main.steps/Switch.caseB/UseA:
+  is: FormulaStep
+  code: ProduceA + 1
+
+# A production loop alongside, so `steps` discovery through the DoWhileStep archetype stays covered.
+main.steps/Loop:
+  is: DoWhileStep
+  condition: "false"
+
+main.steps/Loop.steps/Body:
+  is: FormulaStep
+  code: 2

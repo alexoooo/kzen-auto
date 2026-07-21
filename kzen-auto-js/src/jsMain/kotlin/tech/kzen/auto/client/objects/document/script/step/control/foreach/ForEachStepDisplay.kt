@@ -17,7 +17,6 @@ import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.ListExecutionValue
 import tech.kzen.lib.common.exec.NullExecutionValue
 import tech.kzen.lib.common.exec.ScalarExecutionValue
-import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
@@ -40,12 +39,6 @@ class ForEachStepDisplay(
 ):
     ScriptStepDisplayBase<BranchStepDisplayProps, ForEachStepDisplayState>(props)
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    companion object {
-        private val itemsAttributeName = AttributeName("items")
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
@@ -119,7 +112,7 @@ class ForEachStepDisplay(
         ) {
             props.attributeEditorManager.child(this) {
                 this.objectLocation = props.common.objectLocation
-                this.attributeName = itemsAttributeName
+                this.attributeName = ScriptConventions.itemsAttributeName
             }
 
             renderCurrentItem()

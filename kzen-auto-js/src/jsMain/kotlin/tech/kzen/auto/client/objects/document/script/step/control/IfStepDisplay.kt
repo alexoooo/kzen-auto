@@ -9,6 +9,7 @@ import tech.kzen.auto.client.objects.document.script.display.*
 import tech.kzen.auto.client.objects.document.script.display.branch.*
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.*
+import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.location.AttributeLocation
@@ -29,12 +30,12 @@ class IfStepDisplay(
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        private val conditionAttributeName = AttributeName("condition")
-
-        val thenAttributeName = AttributeName("then")
+        // IfStep's own branch names, deliberately NOT in ScriptConventions: shared code discovers branches from
+        // attribute metadata (`is: List, of: ScriptStep`), so nothing outside this display needs to know them.
+        private val thenAttributeName = AttributeName("then")
         private val thenAttributePath = AttributePath.ofName(thenAttributeName)
 
-        val elseAttributeName = AttributeName("else")
+        private val elseAttributeName = AttributeName("else")
         private val elseAttributePath = AttributePath.ofName(elseAttributeName)
     }
 
@@ -82,7 +83,7 @@ class IfStepDisplay(
         ) {
             props.attributeEditorManager.child(this) {
                 this.objectLocation = props.common.objectLocation
-                this.attributeName = conditionAttributeName
+                this.attributeName = ScriptConventions.conditionAttributeName
             }
         }
 

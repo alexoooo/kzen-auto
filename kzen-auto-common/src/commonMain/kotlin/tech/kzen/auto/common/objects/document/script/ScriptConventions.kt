@@ -1,13 +1,17 @@
 package tech.kzen.auto.common.objects.document.script
 
 import tech.kzen.lib.common.model.attribute.AttributeName
+import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributePath
+import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.structure.notation.DocumentNotation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
+import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
 import tech.kzen.lib.common.service.notation.NotationConventions
+import tech.kzen.lib.platform.collect.persistentListOf
 
 
 object ScriptConventions {
@@ -43,6 +47,89 @@ object ScriptConventions {
 
     val instructionsAttributeName = AttributeName("instructions")
     val instructionsAttributePath = AttributePath.ofName(instructionsAttributeName)
+
+    // The branching condition of a control step, shared by IfStep (a step reference) and DoWhileStep (a Kotlin
+    // expression) — the name is common, the declared type and editor are each step's own.
+    val conditionAttributeName = AttributeName("condition")
+
+
+    // The kzen-base `List` type object (kzen-lib notation/base/kzen-base.yaml), which attribute metadata names
+    // to declare list-ness (`is: List`). kzen-lib has no Kotlin-side constant for it.
+    private const val listTypeName = "List"
+
+    // Attribute-metadata key marking an expression attribute whose in-scope references are the declaring step's
+    // own BODY steps (children of its branch attributes) rather than its predecessors — DoWhileStep.condition
+    // declares `scope: body`. Read by the client KotlinExpressionEditor; the server-side counterpart is the step
+    // class's own scope computation (DoWhileStep.conditionScopeTypes). Inert for definition, like `rerun`.
+    private const val scopeKey = "scope"
+    private const val scopeBodyValue = "body"
+
+
+    /**
+     * The branch attributes of [objectLocation]'s type: the attributes whose merged metadata (through the `is:`
+     * inheritance chain) declares `is: List, of: ScriptStep` — exactly how IfStep's then/else, ForEachStep's and
+     * DoWhileStep's steps, and the root Script's steps are declared. Notation-driven, so a branching step type
+     * shared code has never heard of (a SwitchStep with N branches, a third-party plugin step) is discovered
+     * without editing anything here.
+     *
+     * `of:` is matched by exact name, not by inheritance, and that is load-bearing: binding branches are `of:` a
+     * ScriptStep SUBTYPE (the Script's `parameters` is `of: ParameterBinding`, itself `is: ScriptStep`), so they
+     * are correctly excluded — they hold named values, not executed body steps. A qualified reference
+     * (`…#ScriptStep`) would likewise not match; no first-party or sample-plugin notation writes one.
+     */
+    fun stepBranchAttributeNames(
+        graphNotation: GraphNotation,
+        objectLocation: ObjectLocation
+    ): List<AttributeName> {
+        if (objectLocation !in graphNotation.coalesce) {
+            // NB: stale location (step deleted or renamed) — the inheritance chain walk would throw
+            return listOf()
+        }
+
+        val metaNotation = graphNotation.mergeAttribute(
+            objectLocation, NotationConventions.metaAttributeName) as? MapAttributeNotation
+            ?: return listOf()
+
+        return metaNotation.map.mapNotNull { (attributeSegment, attributeMeta) ->
+            val attributeMetaMap = attributeMeta as? MapAttributeNotation
+                ?: return@mapNotNull null
+
+            val declaresList = attributeMetaMap.map[NotationConventions.isAttributeSegment]
+                ?.asString() == listTypeName
+
+            val declaresStepElements = attributeMetaMap.map[NotationConventions.ofAttributeSegment]
+                ?.asString() == stepObjectName.value
+
+            when {
+                declaresList && declaresStepElements -> AttributeName(attributeSegment.asKey())
+                else -> null
+            }
+        }
+    }
+
+
+    /**
+     * Whether [attributeName] on [objectLocation]'s type is marked `scope: body` in its attribute metadata — read
+     * through the `is:` inheritance chain, mirroring ScriptNestingAnalysis.isReRunAttribute, so a concrete step
+     * instance inherits the marker from its archetype.
+     */
+    fun isBodyScopedExpression(
+        graphNotation: GraphNotation,
+        objectLocation: ObjectLocation,
+        attributeName: AttributeName
+    ): Boolean {
+        if (objectLocation !in graphNotation.coalesce) {
+            return false
+        }
+
+        val scopePath = AttributePath(
+            NotationConventions.metaAttributeName,
+            AttributeNesting(persistentListOf(
+                AttributeSegment.ofKey(attributeName.value),
+                AttributeSegment.ofKey(scopeKey))))
+
+        return graphNotation.firstAttribute(objectLocation, scopePath)?.asString() == scopeBodyValue
+    }
 
 
     // The steps of a branch in document order: the objects nested directly under attributeLocation's

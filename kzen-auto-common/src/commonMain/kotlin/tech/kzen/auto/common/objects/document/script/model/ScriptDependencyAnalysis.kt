@@ -3,7 +3,6 @@ package tech.kzen.auto.common.objects.document.script.model
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.util.ExpressionUtils
 import tech.kzen.auto.common.util.KotlinExpressionAnalyzer
-import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.definition.*
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -26,16 +25,6 @@ data class ScriptDependencyAnalysis(
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         val EMPTY = ScriptDependencyAnalysis(emptyMap(), emptySet())
-
-
-        // NB: the IfStep "then" / "else" branch names are owned by IfStep, but the analyzer needs
-        //     to recurse through every branch type the script supports, including nested IfSteps.
-        //     The list is duplicated from each step's controller name; revisit if a new branching
-        //     step is introduced (e.g. SwitchStep with N branches).
-        private val branchAttributeNames = listOf(
-            ScriptConventions.stepsAttributeName,
-            AttributeName("then"),
-            AttributeName("else"))
 
 
         /**
@@ -151,8 +140,7 @@ data class ScriptDependencyAnalysis(
             graphDefinition: GraphDefinition,
             branchOfStep: MutableMap<ObjectLocation, AttributeLocation>
         ) {
-            // Steps are the objects nested under this branch attribute, in document order — probing a branch
-            // a step doesn't have (e.g. Run.steps) just yields an empty list.
+            // Steps are the objects nested under this branch attribute, in document order.
             val graphNotation = graphDefinition.graphStructure.graphNotation
             val steps = ScriptConventions.orderedDirectChildLocations(
                 graphNotation, branchAttributeLocation)
@@ -161,7 +149,10 @@ data class ScriptDependencyAnalysis(
                 branchOfStep[step] = branchAttributeLocation
             }
             for (step in steps) {
-                for (nestedName in branchAttributeNames) {
+                // Recursion is metadata-driven: a step's branches are whichever attributes its type declares as
+                // `is: List, of: ScriptStep`, so a branching step this code has never heard of (a SwitchStep with
+                // N branches) is walked with no edit here — this used to be a hardcoded [steps, then, else] list.
+                for (nestedName in ScriptConventions.stepBranchAttributeNames(graphNotation, step)) {
                     val nestedAttrLocation = AttributeLocation(step, AttributePath.ofName(nestedName))
                     walkBranch(nestedAttrLocation, graphDefinition, branchOfStep)
                 }
