@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.service.impl
 
 import org.junit.Test
+import tech.kzen.auto.common.paradigm.logic.LogicCallGraph
 import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -17,14 +18,17 @@ import kotlin.test.assertNotEquals
 
 
 /**
- * Unit coverage for [LinkedLogicDocuments]'s notation-driven discovery: a RunStep's weak `instructions` link
- * pulls the callee document into the set; intra-document `is: ObjectLocation` references (step references,
- * selfLocation) contribute nothing; and mutual hosting terminates via the visited-set cycle guard.
+ * Coverage for the live-edit migration signal, and for [LogicCallGraph] discovery against the REAL step
+ * archetypes (the traversal semantics themselves are covered by fixture in `LogicCallGraphTest`, which lives
+ * in kzen-auto-common alongside the code — what only kzen-auto-jvm can pin is that `RunStep.instructions` as
+ * actually declared in `auto-jvm/script/script-jvm.yaml` produces the edge).
  */
 class LinkedLogicDocumentsTest {
     //-----------------------------------------------------------------------------------------------------------------
     private val runParent = DocumentPath.parse("test/script-engine-run-test.yaml")
     private val runChild = DocumentPath.parse("test/script-engine-child-test.yaml")
+    private val flowRunHost = DocumentPath.parse("test/flow-run-test.yaml")
+    private val jobRunHost = DocumentPath.parse("test/job-run-host-test.yaml")
     private val ifDocument = DocumentPath.parse("test/script-engine-if-test.yaml")
     private val cycleA = DocumentPath.parse("test/script-linked-cycle-a-test.yaml")
     private val cycleB = DocumentPath.parse("test/script-linked-cycle-b-test.yaml")
@@ -37,10 +41,21 @@ class LinkedLogicDocumentsTest {
 
     //-----------------------------------------------------------------------------------------------------------------
     @Test
-    fun runStepInstructionsLinkPullsCalleeDocumentIntoSet() {
+    fun runStepInstructionsLinkIsDiscovered() {
         assertEquals(
-            setOf(runParent, runChild),
-            LinkedLogicDocuments.linkedDocumentPaths(graphStructure, runParent))
+            setOf(runChild),
+            LogicCallGraph.transitiveCallees(graphStructure, runParent))
+    }
+
+
+    @Test
+    fun everyParadigmsHostingArchetypeYieldsTheSameEdge() {
+        // The one child Script is hosted from all three paradigms - Script RunStep, Flow RunLogic, Job
+        // RunWorker - and each is found without naming a step type: the edge comes from the `is: ObjectLocation`
+        // metadata their `instructions` attributes share.
+        assertEquals(
+            setOf(runParent, flowRunHost, jobRunHost),
+            LogicCallGraph.transitiveCallers(graphStructure, runChild))
     }
 
 
@@ -48,27 +63,27 @@ class LinkedLogicDocumentsTest {
     fun intraDocumentObjectLocationReferencesContributeNothing() {
         // IfStep.condition / step references are `is: ObjectLocation` but target the SAME document
         assertEquals(
-            setOf(ifDocument),
-            LinkedLogicDocuments.linkedDocumentPaths(graphStructure, ifDocument))
+            emptySet<DocumentPath>(),
+            LogicCallGraph.transitiveCallees(graphStructure, ifDocument))
     }
 
 
     @Test
-    fun leafDocumentIsJustItself() {
+    fun leafDocumentCallsNothing() {
         assertEquals(
-            setOf(runChild),
-            LinkedLogicDocuments.linkedDocumentPaths(graphStructure, runChild))
+            emptySet<DocumentPath>(),
+            LogicCallGraph.transitiveCallees(graphStructure, runChild))
     }
 
 
     @Test
     fun mutualHostingCycleTerminates() {
         assertEquals(
-            setOf(cycleA, cycleB),
-            LinkedLogicDocuments.linkedDocumentPaths(graphStructure, cycleA))
-        assertEquals(
             setOf(cycleB, cycleA),
-            LinkedLogicDocuments.linkedDocumentPaths(graphStructure, cycleB))
+            LogicCallGraph.transitiveCallees(graphStructure, cycleA))
+        assertEquals(
+            setOf(cycleA, cycleB),
+            LogicCallGraph.transitiveCallees(graphStructure, cycleB))
     }
 
 

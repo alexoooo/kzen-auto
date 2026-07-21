@@ -21,12 +21,14 @@ import tech.kzen.auto.client.objects.document.script.display.StepDisplayManager
 import tech.kzen.auto.client.objects.document.script.display.computeStepTraceInfo
 import tech.kzen.auto.client.objects.document.script.display.dependency.ScriptDependencyOverlay
 import tech.kzen.auto.client.objects.document.script.display.dependency.ScriptStepDragStore
+import tech.kzen.auto.client.objects.document.script.display.dependency.StepRowRefRegistry
 import tech.kzen.auto.client.objects.document.script.display.edit.ScriptStepReferenceStore
 import tech.kzen.auto.client.objects.document.script.model.ScriptDragStoreKey
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
 import tech.kzen.auto.client.objects.document.script.model.ScriptStepReferenceStoreKey
 import tech.kzen.auto.client.objects.document.script.model.ScriptStore
 import tech.kzen.auto.client.objects.document.script.model.ScriptStoreKey
+import tech.kzen.auto.client.objects.document.script.model.StepRowRefRegistryKey
 import tech.kzen.auto.client.objects.document.script.step.control.MultiStepDisplay
 import tech.kzen.auto.client.objects.ribbon.RibbonController
 import tech.kzen.auto.client.service.global.ClientState
@@ -184,6 +186,10 @@ class ScriptController:
     // active KotlinExpressionEditor and every ScriptBranchDisplay coordinate the popover + canvas highlight.
     private val stepReferenceStore = ScriptStepReferenceStore()
 
+    // Shared step-row rect registry for the dependency overlay, the move-to arrow and drag insertion;
+    // provided into the per-document bridge so step rows and parameter rows register into one map.
+    private val stepRowRefRegistry = StepRowRefRegistry()
+
 
     //-----------------------------------------------------------------------------------------------------------------
     init {
@@ -329,6 +335,7 @@ class ScriptController:
         bridge?.provide(ScriptStoreKey, store)
         bridge?.provide(ScriptDragStoreKey, dragStore)
         bridge?.provide(ScriptStepReferenceStoreKey, stepReferenceStore)
+        bridge?.provide(StepRowRefRegistryKey, stepRowRefRegistry)
 
         div {
             css {
@@ -365,7 +372,8 @@ class ScriptController:
 
             // NB: mounted LAST so default stacking paints the draggable next-to-run arrow IN FRONT of the
             //     step cards (the dependency overlay, first child, stays behind). Absolute inset:0 sibling
-            //     over the same relative container — it spans nested branches via the shared StepRowRefRegistry
+            //     over the same relative container — it spans nested branches via the bridge-provided
+            //     StepRowRefRegistry
             //     and never alters the flex-row layout the overlay's anchoring depends on.
             ScriptMoveToArrow::class.react {
                 clientStateGlobal = props.clientStateGlobal

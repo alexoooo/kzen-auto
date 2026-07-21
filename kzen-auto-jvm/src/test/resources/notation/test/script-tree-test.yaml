@@ -12,7 +12,7 @@ main.steps/ForEach:
   items: main.steps/Formula
 
 main.steps/ForEach.steps/Item:
-  is: ForEachItemStep
+  is: BooleanLiteralStep
 
 main.steps/ForEach.steps/Is divisible by:
   is: DivisibleCheckStep

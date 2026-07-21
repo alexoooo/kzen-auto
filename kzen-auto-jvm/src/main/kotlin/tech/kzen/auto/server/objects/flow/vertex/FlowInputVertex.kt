@@ -8,9 +8,9 @@ import tech.kzen.lib.common.reflect.Reflect
 
 /**
  * A Flow input parameter, modelled as a source vertex (no predecessors). Its emitted message is the
- * value of the run argument named [parameter] — analogous to the Script paradigm's
- * [tech.kzen.auto.server.objects.script.step.value.ArgumentStep], but as a graph vertex. Downstream
- * vertices wire to it via the [output] channel.
+ * value of the run argument named [parameter] — analogous to a Script parameter
+ * ([ParameterBinding][tech.kzen.auto.server.objects.script.binding.ParameterBinding]), but as a graph
+ * vertex. Downstream vertices wire to it via the [output] channel.
  *
  * The argument value is injected by [FlowRun][tech.kzen.auto.server.exec.flow.FlowRun] from the run's
  * [tech.kzen.lib.common.exec.tuple.TupleValue] arguments (a [process] call cannot reach them), so

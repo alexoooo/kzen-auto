@@ -8,6 +8,7 @@ import react.State
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.objects.document.script.model.scriptDependencyAnalysis
+import tech.kzen.auto.client.objects.document.script.model.stepRowRefRegistry
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
@@ -63,7 +64,8 @@ class ScriptDependencyOverlay(
 
     //-----------------------------------------------------------------------------------------------------------------
     init {
-        // Reaches ScriptStore's memoized dependency analysis (see scriptDependencyAnalysis).
+        // Reaches ScriptStore's memoized dependency analysis (see scriptDependencyAnalysis) and the shared
+        // step-row rect registry (see stepRowRefRegistry).
         installContextType(DocumentBridgeContext)
     }
 
@@ -77,7 +79,7 @@ class ScriptDependencyOverlay(
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
         props.clientStateGlobal.observe(this)
-        unsubscribeRegistry = StepRowRefRegistry.observe { scheduleRemeasure() }
+        unsubscribeRegistry = stepRowRefRegistry()?.observe { scheduleRemeasure() }
         attachResizeObserver()
     }
 
@@ -158,6 +160,9 @@ class ScriptDependencyOverlay(
             return
         }
 
+        val registry = stepRowRefRegistry()
+            ?: return
+
         val containerRect = container.getBoundingClientRect()
         val halfLane = stepDependencyLaneWidthPx.toDouble() / 2.0
         val halfTrunk = stepDependencyTrunkLineWidthPx.toDouble() / 2.0
@@ -165,9 +170,9 @@ class ScriptDependencyOverlay(
 
         val newSegments = mutableListOf<OverlaySegment>()
         for (edge in edges) {
-            val sourceElement = StepRowRefRegistry.get(edge.source)
+            val sourceElement = registry.get(edge.source)
                 ?: continue
-            val targetElement = StepRowRefRegistry.get(edge.target)
+            val targetElement = registry.get(edge.target)
                 ?: continue
 
             val sourceRect = sourceElement.getBoundingClientRect()

@@ -16,6 +16,7 @@ import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.location.ObjectReference
 import tech.kzen.lib.common.model.location.ObjectReferenceHost
+import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.metadata.GraphMetadata
 import tech.kzen.lib.common.model.structure.notation.*
 import tech.kzen.lib.common.model.structure.notation.cqrs.*
@@ -265,6 +266,9 @@ class SelectObjectEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     override suspend fun onNotationEvent(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
+        // A rename of the SELECTED object / document is adopted (the refactor already rewrote the notation, so
+        // this never writes) and then falls through to the refresh: every option is keyed by its location, so
+        // the list has to be rebuilt against the new one or the field would match nothing and render blank.
         when (event) {
             is RenamedDocumentRefactorEvent -> {
                 val selectedLocation = selectedLocation()
@@ -275,22 +279,20 @@ class SelectObjectEditor(
                         .copy(documentPath = event.createdWithNewName.destination)
                         .asString())
                 }
-                else {
-                    refresh()
-                }
             }
 
             is RenamedObjectRefactorEvent -> {
                 if (event.renamedObject.objectLocation.asString() == state.selected) {
                     setSelected(event.renamedObject.newObjectLocation().asString())
                 }
-                else {
-                    refresh()
-                }
             }
 
-            else -> refresh()
+            else -> {}
         }
+
+        // NB: the event's own structure, not clientStateGlobal.current() - it IS the post-command notation,
+        // whereas another observer's cached copy may not have caught up with this very rename yet.
+        refresh(graphDefinition.graphStructure)
     }
 
 
@@ -299,8 +301,7 @@ class SelectObjectEditor(
     }
 
 
-    private fun refresh() {
-        val graphStructure = props.clientStateGlobal.current()!!.graphStructure()
+    private fun refresh(graphStructure: GraphStructure) {
         val graphNotation = graphStructure.graphNotation
         val graphMetadata = graphStructure.graphMetadata
 

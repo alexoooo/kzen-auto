@@ -85,21 +85,6 @@ ParameterBinding:
       by: ParameterDefaultDefiner
 
 
-# Deprecated: superseded by ParameterBinding (rowless typed parameters). Retained until existing scripts
-# that still contain ArgumentStep instances are migrated to parameter bindings.
-ArgumentStep:
-  abstract: true
-  is: ScriptStep
-  class: tech.kzen.auto.server.objects.script.step.value.ArgumentStep
-  icon: "material-symbols:arrow-forward"
-  title: "Argument"
-  parameter: "main"
-  meta:
-    parameter:
-      is: String
-      summary: TextAttributeView
-
-
 BooleanLiteralStep:
   abstract: true
   is: ScriptStep
@@ -349,16 +334,6 @@ ForEachItemBinding:
   title: "Item"
   meta:
     selfLocation: SelfLocation
-
-# Deprecated: superseded by ForEachItemBinding (rowless typed loop item). Retained until existing loops
-# that still contain a ForEachItemStep body row are migrated to the item binding.
-ForEachItemStep:
-  abstract: true
-  is: ScriptStep
-  class: tech.kzen.auto.server.objects.script.step.control.foreach.ForEachItemStep
-  icon: "material-symbols:share"
-  title: "Item"
-  meta:
 
 
 DoWhileStep:

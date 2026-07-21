@@ -16,13 +16,13 @@ import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.select.SelectOption
 import tech.kzen.auto.common.objects.document.custom.CustomConventions
+import tech.kzen.auto.common.paradigm.logic.LogicCallGraph
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.location.ObjectReference
 import tech.kzen.lib.common.model.location.ObjectReferenceHost
-import tech.kzen.lib.common.model.structure.metadata.GraphMetadata
-import tech.kzen.lib.common.model.structure.notation.GraphNotation
+import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
 import tech.kzen.lib.common.model.structure.notation.cqrs.RenamedDocumentRefactorEvent
@@ -74,13 +74,12 @@ class SelectLogicEditor(
     override fun SelectReferenceEditorState.init(props: SelectLogicEditorProps) {
         val graphStructure = props.clientStateGlobal.current()!!.graphStructure()
         val graphNotation = graphStructure.graphNotation
-        val graphMetadata = graphStructure.graphMetadata
 
         val attributeNotation = graphNotation.firstAttribute(props.objectLocation, props.attributeName)
 
         val objectReferenceHost = ObjectReferenceHost.ofLocation(props.objectLocation)
 
-        selected =
+        val selectedKey =
             if (attributeNotation is ScalarAttributeNotation && attributeNotation.value.isNotEmpty()) {
                 val reference = ObjectReference.parse(attributeNotation.value)
                 graphNotation.coalesce.locateOptional(reference, objectReferenceHost)?.asString()
@@ -89,16 +88,17 @@ class SelectLogicEditor(
                 null
             }
 
-        options = selectOptions(graphNotation, graphMetadata)
+        selected = selectedKey
+        options = selectOptions(graphStructure, selectedKey)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun selectOptions(
-        graphNotation: GraphNotation,
-        graphMetadata: GraphMetadata
+        graphStructure: GraphStructure,
+        selectedKey: String?
     ): Array<SelectOption> {
-        return options(graphNotation, graphMetadata)
+        return options(graphStructure, selectedKey)
             .map { location ->
                 val option: SelectOption = unsafeJso {
                     value = location.asString()
@@ -110,12 +110,22 @@ class SelectLogicEditor(
     }
 
 
-    private fun options(graphNotation: GraphNotation, graphMetadata: GraphMetadata): List<ObjectLocation> {
+    private fun options(
+        graphStructure: GraphStructure,
+        selectedKey: String?
+    ): List<ObjectLocation> {
+        val graphNotation = graphStructure.graphNotation
+        val graphMetadata = graphStructure.graphMetadata
+
+        // The editor document's transitive CALLERS are dropped from the suggestions: selecting one would close
+        // a call cycle `D -> X -> ... -> D`. SUGGESTION FILTER ONLY - recursion is legal at runtime, matching
+        // how self was already suppressed as a suggestion but never rejected; raw YAML remains the escape hatch.
+        val callers = LogicCallGraph.transitiveCallers(graphStructure, props.objectLocation.documentPath)
+
         val candidates = mutableListOf<ObjectLocation>()
 
         for ((path, notation) in graphNotation.documents.map) {
-            if (path == props.objectLocation.documentPath) {
-                // TODO: avoid suggesting DAG violation?
+            if (path == props.objectLocation.documentPath || path in callers) {
                 continue
             }
 
@@ -131,6 +141,17 @@ class SelectLogicEditor(
             }
         }
 
+        // An already-set recursive selection is excluded above but must still RENDER — the field matches its
+        // value against the option list, so dropping the option would blank a value the user deliberately set
+        // (or wrote in raw YAML). A selection whose document no longer exists stays blank, as before.
+        val selectedLocation = selectedKey?.let { ObjectLocation.parse(it) }
+        if (selectedLocation != null &&
+                selectedLocation !in candidates &&
+                selectedLocation.documentPath in graphNotation.documents.map
+        ) {
+            candidates.add(0, selectedLocation)
+        }
+
         return candidates
     }
 
@@ -139,18 +160,28 @@ class SelectLogicEditor(
     override suspend fun onNotationEvent(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
         val selectedLocation = state.selected?.let { ObjectLocation.parse(it) }
 
-        if (event is RenamedDocumentRefactorEvent &&
-                selectedLocation != null &&
-                event.removedUnderOldName.documentPath == selectedLocation.documentPath
-        ) {
-            setSelected(selectedLocation
-                .copy(documentPath = event.createdWithNewName.destination)
-                .asString())
-            return
-        }
+        // A rename of the SELECTED document is adopted (the refactor already rewrote the notation, so this
+        // never writes) and then falls through: every option is keyed by document path, so the list has to be
+        // rebuilt against the new one or the field would match nothing and render blank. The adopted key is
+        // carried in a local because setSelected goes through setState - reading state.selected back below
+        // would still see the old path.
+        val selectedKey =
+            if (event is RenamedDocumentRefactorEvent &&
+                    selectedLocation != null &&
+                    event.removedUnderOldName.documentPath == selectedLocation.documentPath
+            ) {
+                selectedLocation
+                    .copy(documentPath = event.createdWithNewName.destination)
+                    .asString()
+                    .also { setSelected(it) }
+            }
+            else {
+                state.selected
+            }
 
-        val graphStructure = props.clientStateGlobal.current()!!.graphStructure()
-        setOptions(selectOptions(graphStructure.graphNotation, graphStructure.graphMetadata))
+        // NB: the event's own structure, not clientStateGlobal.current() - it IS the post-command notation,
+        // whereas another observer's cached copy may not have caught up with this very rename yet.
+        setOptions(selectOptions(graphDefinition.graphStructure, selectedKey))
     }
 
 

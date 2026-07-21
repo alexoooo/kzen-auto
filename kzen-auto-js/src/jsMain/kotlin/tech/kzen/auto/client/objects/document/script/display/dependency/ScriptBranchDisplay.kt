@@ -24,6 +24,7 @@ import tech.kzen.auto.client.objects.document.script.display.image.StepImageThum
 import tech.kzen.auto.client.objects.document.script.model.ScriptDragStoreKey
 import tech.kzen.auto.client.objects.document.script.model.ScriptStepReferenceStoreKey
 import tech.kzen.auto.client.objects.document.script.model.scriptDependencyAnalysis
+import tech.kzen.auto.client.objects.document.script.model.stepRowRefRegistry
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.global.InsertionGlobal
@@ -471,9 +472,12 @@ class ScriptBranchDisplay(
         clientY: Double,
         stepLocations: List<ObjectLocation>
     ): Int {
+        val registry = stepRowRefRegistry()
+            ?: return 0
+
         var index = 0
         for (stepLocation in stepLocations) {
-            val element = StepRowRefRegistry.get(stepLocation)
+            val element = registry.get(stepLocation)
                 ?: continue
             val rect = element.getBoundingClientRect()
             if (clientY < rect.top + rect.height / 2) {
@@ -632,7 +636,7 @@ class ScriptBranchDisplay(
                 }
             }
 
-        scriptGutterRow(stepLocation, gutter, body, trailing)
+        scriptGutterRow(stepLocation, stepRowRefRegistry(), gutter, body, trailing)
     }
 
 

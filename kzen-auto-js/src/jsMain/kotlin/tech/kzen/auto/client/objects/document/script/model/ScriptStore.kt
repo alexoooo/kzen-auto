@@ -201,9 +201,11 @@ class ScriptStore(
     }
 
 
-    // Non-throwing snapshot read (mirrors ClientStateGlobal.current()), for consumers that may
-    // render before the store is initialized or during teardown.
-    // TODO: is this actually necessary, or just hypothetical benefit (YAGNI)?
+    // Non-throwing snapshot read (mirrors ClientStateGlobal.current() and CustomStore.stateOrNull), for
+    // consumers reading OUTSIDE the observer flow, where the throwing state() would be unsafe: the reader can
+    // run before the store is initialized or after willUnmount() nulls it. Concretely
+    // StepImageFullscreen.scriptState(), reached from render() and from navigate() — the latter off a
+    // window-keydown listener, so outside React's lifecycle guarantees entirely.
     fun stateOrNull(): ScriptState? {
         return state
     }

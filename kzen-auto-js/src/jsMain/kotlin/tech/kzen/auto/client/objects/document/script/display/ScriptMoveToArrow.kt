@@ -8,8 +8,8 @@ import react.State
 import react.dom.events.PointerEvent
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
-import tech.kzen.auto.client.objects.document.script.display.dependency.StepRowRefRegistry
 import tech.kzen.auto.client.objects.document.script.model.scriptDependencyAnalysis
+import tech.kzen.auto.client.objects.document.script.model.stepRowRefRegistry
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.logic.ClientLogicGlobal
@@ -105,7 +105,8 @@ class ScriptMoveToArrow(
 
     //-----------------------------------------------------------------------------------------------------------------
     init {
-        // Reaches ScriptStore's memoized dependency analysis (see scriptDependencyAnalysis).
+        // Reaches ScriptStore's memoized dependency analysis (see scriptDependencyAnalysis) and the shared
+        // step-row rect registry (see stepRowRefRegistry).
         installContextType(DocumentBridgeContext)
     }
 
@@ -126,7 +127,7 @@ class ScriptMoveToArrow(
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
         props.clientStateGlobal.observe(this)
-        unsubscribeRegistry = StepRowRefRegistry.observe { scheduleRemeasure() }
+        unsubscribeRegistry = stepRowRefRegistry()?.observe { scheduleRemeasure() }
         attachResizeObserver()
     }
 
@@ -213,7 +214,7 @@ class ScriptMoveToArrow(
         val nextToRun = LogicRunFrames.frameForDocument(frame, documentPath)?.position
             ?: return hideArrow()
 
-        val rowElement = StepRowRefRegistry.get(nextToRun)
+        val rowElement = stepRowRefRegistry()?.get(nextToRun)
             ?: return hideArrow()  // row not registered yet — the registry observer re-fires when it mounts
 
         val containerRect = container.getBoundingClientRect()
@@ -262,6 +263,8 @@ class ScriptMoveToArrow(
         val frame = clientState.clientLogicState.logicStatus?.active?.frame
         val nextToRun = LogicRunFrames.frameForDocument(frame, documentPath)?.position
             ?: return
+        val registry = stepRowRefRegistry()
+            ?: return
 
         val notation = clientState.graphStructure().graphNotation
         val tree = ScriptTree.read(documentPath, clientState.graphDefinitionAttempt.successful())
@@ -272,7 +275,7 @@ class ScriptMoveToArrow(
 
         val hitRows = ordered
             .map { ObjectLocation(documentPath, it) }
-            .filter { StepRowRefRegistry.get(it) != null }
+            .filter { registry.get(it) != null }
 
         val validTargets = hitRows
             .filter { ScriptJumpAnalysis.isValidTarget(notation, documentPath, tree, it.objectPath) }
@@ -326,7 +329,7 @@ class ScriptMoveToArrow(
             return
         }
 
-        val rowElement = StepRowRefRegistry.get(candidateLocation)
+        val rowElement = stepRowRefRegistry()?.get(candidateLocation)
         if (rowElement == null) {
             clearCandidate()
             return
@@ -402,10 +405,13 @@ class ScriptMoveToArrow(
     // vertical center is closest. Adapted from ScriptBranchDisplay.computeInsertionFromCursor (nearest-row,
     // not insertion-index).
     private fun nearestStepRow(clientY: Double): ObjectLocation? {
+        val registry = stepRowRefRegistry()
+            ?: return null
+
         var best: ObjectLocation? = null
         var bestDistance = Double.MAX_VALUE
         for (location in dragHitRows) {
-            val element = StepRowRefRegistry.get(location)
+            val element = registry.get(location)
                 ?: continue
             val rect = element.getBoundingClientRect()
             if (clientY >= rect.top && clientY <= rect.bottom) {

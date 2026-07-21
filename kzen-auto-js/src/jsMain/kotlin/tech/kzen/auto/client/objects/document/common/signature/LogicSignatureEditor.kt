@@ -24,6 +24,7 @@ import tech.kzen.auto.client.objects.document.script.display.dependency.StepDepe
 import tech.kzen.auto.client.objects.document.script.display.dependency.scriptGutterRow
 import tech.kzen.auto.client.objects.document.script.display.dependency.stepDependencyGutterCellForStep
 import tech.kzen.auto.client.objects.document.script.model.scriptDependencyAnalysis
+import tech.kzen.auto.client.objects.document.script.model.stepRowRefRegistry
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.util.ClientInputUtils
@@ -145,7 +146,8 @@ class LogicSignatureEditor:
 
     //-----------------------------------------------------------------------------------------------------------------
     init {
-        // Reaches ScriptStore's memoized dependency analysis (see scriptDependencyAnalysis).
+        // Reaches ScriptStore's memoized dependency analysis (see scriptDependencyAnalysis) and the shared
+        // step-row rect registry (see stepRowRefRegistry) that aligns parameter rows with step rows.
         installContextType(DocumentBridgeContext)
     }
 
@@ -457,9 +459,11 @@ class LogicSignatureEditor:
             renderControls()
 
             val edges = state.parameterEdges
+            val registry = stepRowRefRegistry()
             for ((index, parameter) in parameters.withIndex()) {
                 scriptGutterRow(
                     rowLocation = parameter.location,
+                    registry = registry,
                     gutter = { stepDependencyGutterCellForStep(index, edges) },
                     body = { renderParameterBody(parameter, index) })
             }

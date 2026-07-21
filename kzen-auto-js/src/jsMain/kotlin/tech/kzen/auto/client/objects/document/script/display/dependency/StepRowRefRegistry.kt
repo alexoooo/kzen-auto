@@ -4,12 +4,14 @@ import tech.kzen.lib.common.model.location.ObjectLocation
 import web.html.HTMLElement
 
 
-// NB: singleton registry of step-row body DOM elements keyed by ObjectLocation.
-//     ScriptBranchDisplay attaches/clears refs from each step row's body div via a callback ref;
-//     ScriptDependencyOverlay reads element rects to position cross-branch polylines.
-//     A process-global singleton — only one Script document is open at a time, and unmounting all step
-//     rows naturally clears the map.
-object StepRowRefRegistry {
+// NB: registry of step-row DOM elements keyed by ObjectLocation. scriptGutterRow attaches/clears refs from
+//     each row's outer div via a callback ref; ScriptDependencyOverlay, ScriptMoveToArrow and
+//     ScriptBranchDisplay's drag-insertion read element rects from it.
+//     One instance per mounted ScriptController (like ScriptStepDragStore), provided into the per-document
+//     DocumentBridge under StepRowRefRegistryKey. The SAME instance is re-provided into the fresh bridge on a
+//     same-archetype document switch — the controller isn't remounted then, so its children's mount-time
+//     observe() subscriptions stay valid. React ref cleanup keeps the map tight as rows unmount.
+class StepRowRefRegistry {
     private val rowElements = mutableMapOf<ObjectLocation, HTMLElement>()
     private val listeners = mutableListOf<() -> Unit>()
 

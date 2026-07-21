@@ -106,12 +106,11 @@ class StepDisplayManager(
     }
 
 
-    //------------------------------------------------------------------ -----------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
         val display = state.scriptStepDisplayWrapper
             ?: return
 
-//        +"[scriptStepDisplayWrapper - ${scriptStepDisplayWrapper?.name()}] - ${props.common}"
         display.child(this) {
             common = props.common
         }

@@ -217,12 +217,6 @@ ScriptGroup_InputOutput:
   archetype: Script
 
 
-ArgumentStepTool:
-  is: RibbonTool
-  parent: ScriptGroup_InputOutput
-  delegate: ArgumentStep
-
-
 BooleanLiteralStepTool:
   is: RibbonTool
   parent: ScriptGroup_InputOutput

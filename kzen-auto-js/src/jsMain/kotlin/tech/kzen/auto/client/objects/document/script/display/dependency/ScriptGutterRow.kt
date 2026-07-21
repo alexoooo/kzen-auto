@@ -12,11 +12,14 @@ import web.cssom.*
 // Shared row layout for the script's dependency column, used by both the step list (ScriptBranchDisplay)
 // and the parameter list (LogicSignatureEditor). A flex row whose leftmost cells are the dependency `gutter`
 // (phantom + in-branch lanes) and whose body is offset by a fixed drag-handle strip. The OUTER row element
-// is registered in StepRowRefRegistry (when rowLocation != null) so ScriptDependencyOverlay can anchor
-// cross-branch polylines at row.left + laneWidth/2 — the single contract that keeps a step row and a
-// parameter row vertically aligned in the same column. Steps pass a trailing thumbnail; parameters pass none.
+// is registered in the caller's StepRowRefRegistry (when both it and rowLocation are non-null) so
+// ScriptDependencyOverlay can anchor cross-branch polylines at row.left + laneWidth/2 — the single contract
+// that keeps a step row and a parameter row vertically aligned in the same column. Steps pass a trailing
+// thumbnail; parameters pass none. The registry arrives as a parameter because this is a plain function, with
+// no contextType slot of its own to reach the DocumentBridge through.
 fun ChildrenBuilder.scriptGutterRow(
     rowLocation: ObjectLocation?,
+    registry: StepRowRefRegistry?,
     gutter: ChildrenBuilder.() -> Unit,
     body: ChildrenBuilder.() -> Unit,
     trailing: (ChildrenBuilder.() -> Unit)? = null
@@ -27,12 +30,14 @@ fun ChildrenBuilder.scriptGutterRow(
             alignItems = AlignItems.stretch
         }
 
-        if (rowLocation != null) {
+        if (rowLocation != null && registry != null) {
             // NB: ref attaches to the OUTER row (gutter + body) so the overlay computes the polyline endpoint
             //     at row.left + laneWidth/2 — the phantom column's x. React 19 invokes Cleanup on detach.
+            //     The cleanup closure captures the registry instance, which is correct across a bridge swap:
+            //     the instance is controller-scoped, so it outlives the bridge that carried it here.
             ref = refCallback { element ->
-                StepRowRefRegistry.register(rowLocation, element)
-                val cleanup: () -> Unit = { StepRowRefRegistry.unregister(rowLocation, element) }
+                registry.register(rowLocation, element)
+                val cleanup: () -> Unit = { registry.unregister(rowLocation, element) }
                 cleanup
             }
         }
