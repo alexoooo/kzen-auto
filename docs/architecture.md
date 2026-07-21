@@ -239,7 +239,7 @@ ReportInputFramer ─▶ decode ─▶ filter ─▶ pivot ─▶ output
 
 > For the JS-client patterns that back each UI (Controller / Store / State / Observer; document folder convention; the custom `RComponent` wrapper), see [`js-architecture.md`](js-architecture.md).
 
-Each subdirectory under `kzen-auto-js/src/jsMain/kotlin/tech/kzen/auto/client/objects/document/` corresponds to a document type with its own `*Controller`, mapping to a kzen-lib document with a particular `ObjectNotation` shape — the UI is a specialized editor for that shape. The exception is `common/`, which is not a document type but a library of shared editors (`TextAttributeEditor`, `BooleanAttributeEditor`, `SelectAttributeEditor`, `AttributePathValueEditor`, `MultiTextAttributeEditor`, `DefaultAttributeEditor`, `LogicSignatureEditor`) reused across every document type.
+Each subdirectory under `kzen-auto-js/src/jsMain/kotlin/tech/kzen/auto/client/objects/document/` corresponds to a document type with its own `*Controller`, mapping to a kzen-lib document with a particular `ObjectNotation` shape — the UI is a specialized editor for that shape. The exception is `common/`, which is not a document type but a library of shared editors (`TextAttributeEditor`, `BooleanAttributeEditor`, `SelectAttributeEditor`, `MultiTextAttributeEditor`, `DefaultAttributeEditor`, `LogicSignatureEditor`) reused across every document type.
 
 | Subdir | Document type | What it edits |
 |--------|---------------|---------------|

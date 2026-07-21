@@ -4,8 +4,10 @@ import react.ChildrenBuilder
 import react.State
 import react.dom.html.ReactHTML
 import react.dom.html.ReactHTML.div
-import tech.kzen.auto.client.objects.document.common.AttributePathValueEditor
+import tech.kzen.auto.client.objects.document.common.edit.BooleanAttributeEditor
 import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
+import tech.kzen.auto.client.objects.document.common.edit.MultiTextAttributeEditor
+import tech.kzen.auto.client.objects.document.common.edit.TextAttributeEditor
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
@@ -17,22 +19,18 @@ import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.structure.metadata.AttributeMetadata
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.model.structure.notation.AttributeNotation
+import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
+import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.service.store.MirroredGraphStore
+import tech.kzen.lib.platform.ClassNames
 import tech.kzen.lib.platform.ClassNames.topLevel
 
 
 //---------------------------------------------------------------------------------------------------------------------
-external interface AutoAttributeEditorProps: AttributeEditorProps {
-    var labelOverride: String?
-    var disabled: Boolean
-    var onChange: ((AttributeNotation) -> Unit)?
-    var invalid: Boolean
-}
-
-external interface AutoAttributeEditorState: State {
+external interface DefaultAttributeEditorState: State {
     var attributeMetadata: AttributeMetadata?
     var attributeNotation: AttributeNotation?
 }
@@ -40,9 +38,9 @@ external interface AutoAttributeEditorState: State {
 
 //---------------------------------------------------------------------------------------------------------------------
 class DefaultAttributeEditor(
-    props: AutoAttributeEditorProps
+    props: AttributeEditorProps
 ):
-    RPureComponent<AutoAttributeEditorProps, AutoAttributeEditorState>(props),
+    RPureComponent<AttributeEditorProps, DefaultAttributeEditorState>(props),
     ClientStateGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -75,14 +73,10 @@ class DefaultAttributeEditor(
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
         props.clientStateGlobal.observe(this)
-//        async {
-//            ClientContext.executionRepository.observe(this)
-//        }
     }
 
 
     override fun componentWillUnmount() {
-//        ClientContext.executionRepository.unobserve(this)
         props.clientStateGlobal.unobserve(this)
     }
 
@@ -117,22 +111,26 @@ class DefaultAttributeEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun componentDidUpdate(
-        prevProps: AutoAttributeEditorProps,
-        prevState: AutoAttributeEditorState,
-        snapshot: Any
-    ) {
-        if (props.objectLocation != prevProps.objectLocation) {
-            state.init(props)
+    private fun extractValues(attributeNotation: AttributeNotation): Pair<String?, List<String>?> {
+        return when (attributeNotation) {
+            is ScalarAttributeNotation -> {
+                val scalarValue = attributeNotation.value
+                scalarValue to null
+            }
+
+            is ListAttributeNotation -> {
+                if (attributeNotation.values.all { it.asString() != null }) {
+                    val stringValues = attributeNotation.values.map { it.asString()!! }
+
+                    null to stringValues
+                }
+                else {
+                    null to null
+                }
+            }
+
+            is MapAttributeNotation -> TODO()
         }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    private fun formattedLabel(): String {
-        return CommonEditUtils.formattedLabel(
-            AttributePath.ofName(props.attributeName),
-            props.labelOverride)
     }
 
 
@@ -154,8 +152,8 @@ class DefaultAttributeEditor(
                 // don't render
             }
 
-            AttributePathValueEditor.isValue(type) -> {
-                renderValueEditor(type, attributeMetadata.attributeMetadataNotation)
+            CommonEditUtils.isValueType(type) -> {
+                renderValueEditor(type, attributeNotation, attributeMetadata.attributeMetadataNotation)
             }
 
             else -> {
@@ -174,31 +172,68 @@ class DefaultAttributeEditor(
 
 
     private fun ChildrenBuilder.renderValueEditor(
-        type: TypeMetadata,
+        valueType: TypeMetadata,
+        attributeNotation: AttributeNotation?,
         attributeMetadataNotation: MapAttributeNotation
     ) {
-        val multiline = attributeMetadataNotation.get(multilineKey)?.asBoolean() ?: false
+        val (scalarValue, listValues) =
+            attributeNotation?.let { extractValues(it) }
+                ?: (null to null)
 
-        AttributePathValueEditor::class.react {
-            labelOverride = formattedLabel()
-            disabled = props.disabled
-            invalid = props.invalid
+        val className = valueType.className
+        val path = AttributePath.ofName(props.attributeName)
 
-            objectLocation = props.objectLocation
-            attributePath = AttributePath.ofName(props.attributeName)
+        when {
+            className == ClassNames.kotlinString ||
+            className == ClassNames.kotlinInt ||
+            className == ClassNames.kotlinLong ||
+            className == ClassNames.kotlinDouble -> {
+                val multiline = attributeMetadataNotation.get(multilineKey)?.asBoolean() ?: false
 
-            valueType = type
+                TextAttributeEditor::class.react {
+                    objectLocation = props.objectLocation
+                    attributePath = path
 
-            onChange = {
-                props.onChange?.invoke(it)
+                    value = scalarValue ?: ""
+
+                    // NB: deliberately not Type.Number for Int/Long/Double - that formats with thousands
+                    //  separators, which this editor never did
+                    type =
+                        if (multiline) {
+                            TextAttributeEditor.Type.MultilineText
+                        }
+                        else {
+                            TextAttributeEditor.Type.PlainText
+                        }
+
+                    mirroredGraphStore = props.mirroredGraphStore
+                }
             }
 
-            if (multiline) {
-                multilineOverride = true
+            className == ClassNames.kotlinBoolean -> {
+                BooleanAttributeEditor::class.react {
+                    objectLocation = props.objectLocation
+                    attributePath = path
+
+                    value = scalarValue == "true"
+
+                    mirroredGraphStore = props.mirroredGraphStore
+                }
             }
 
-            clientStateGlobal = props.clientStateGlobal
-            mirroredGraphStore = props.mirroredGraphStore
+            else -> {
+                check(className == ClassNames.kotlinList || className == ClassNames.kotlinSet)
+
+                MultiTextAttributeEditor::class.react {
+                    objectLocation = props.objectLocation
+                    attributePath = path
+
+                    value = listValues ?: listOf()
+                    unique = className == ClassNames.kotlinSet
+
+                    mirroredGraphStore = props.mirroredGraphStore
+                }
+            }
         }
     }
 }

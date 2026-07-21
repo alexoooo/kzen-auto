@@ -2,6 +2,7 @@ package tech.kzen.auto.client.objects.document.common.edit
 
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.model.structure.notation.AttributeNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.StructuralNotationCommand
@@ -9,9 +10,32 @@ import tech.kzen.lib.common.model.structure.notation.cqrs.UpdateInAttributeComma
 import tech.kzen.lib.common.model.structure.notation.cqrs.UpsertAttributeCommand
 import tech.kzen.lib.common.service.store.MirroredGraphError
 import tech.kzen.lib.common.service.store.MirroredGraphStore
+import tech.kzen.lib.platform.ClassNames
 
 
 object CommonEditUtils {
+    // True when the type can be edited by the shared leaf editors: a primitive, or a list/set of primitives.
+    fun isValueType(typeMetadata: TypeMetadata): Boolean {
+        val className = typeMetadata.className
+        if (ClassNames.isPrimitive(className)) {
+            return true
+        }
+
+        val isContainer =
+            className == ClassNames.kotlinList ||
+            className == ClassNames.kotlinSet
+
+        if (!isContainer) {
+            return false
+        }
+
+        val containerGeneric = typeMetadata.generics.getOrNull(0)
+            ?: return false
+
+        return ClassNames.isPrimitive(containerGeneric.className)
+    }
+
+
     fun editCommand(
         objectLocation: ObjectLocation,
         attributePath: AttributePath,

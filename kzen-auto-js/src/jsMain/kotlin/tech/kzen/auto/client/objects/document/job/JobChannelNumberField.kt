@@ -64,9 +64,9 @@ external interface JobChannelNumberFieldState: State {
 
 
 //---------------------------------------------------------------------------------------------------------------------
-// A small labelled numeric field for a Job channel's `batchSize` / `capacity`. Mirrors AttributePathValueEditor's
-// observe-and-debounce shape (self-hydrates from notation, gates value updates on the observed value so typing is
-// never clobbered, flushes pending edits on unmount), but distinguishes an explicit OVERRIDE from an inherited
+// A small labelled numeric field for a Job channel's `batchSize` / `capacity`. Takes the usual observe-and-debounce
+// shape (self-hydrates from notation, gates value updates on the observed value so typing is never clobbered,
+// flushes pending edits on unmount), but distinguishes an explicit OVERRIDE from an inherited
 // default: it reads the object's OWN value (not inheritance-resolved), so a nested per-channel field renders BLANK
 // with the effective default as a greyed placeholder while inheriting, and shows a solid value once overridden.
 // Clearing an overridden nested field reverts it to inheriting (removes the override). A top-level field
@@ -239,7 +239,7 @@ class JobChannelNumberField(
                 onValueChange(target.value)
             }
 
-            // Commit any pending debounced edit the instant focus leaves the field (mirrors AttributePathValueEditor).
+            // Commit any pending debounced edit the instant focus leaves the field (DebouncedSubmitter's invariant).
             onBlur = { submitter.flush() }
 
             error = state.errorMessage != null

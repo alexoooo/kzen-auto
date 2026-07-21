@@ -106,7 +106,7 @@ abstract class TargetTypeDisplay(
                 }
 
                 // Commit the pending debounced edit on focus loss, so a following separate command is
-                // sequenced after this write rather than racing it (see AttributePathValueEditor).
+                // sequenced after this write rather than racing it (see DebouncedSubmitter's invariant).
                 onBlur = { context.onEditCommit() }
             }
         }
