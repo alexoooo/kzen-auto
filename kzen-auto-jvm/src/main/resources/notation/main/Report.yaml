@@ -2,23 +2,23 @@ main:
   is: Report
   input:
     browser:
-      directory: "C:/Users/ostro/IdeaProjects/kzen-auto"
+      directory: C:/Users/ostro/IdeaProjects/kzen-auto
       filter: ""
     selection:
       dataType: tech.kzen.auto.plugin.model.record.FlatFileRecord
       groupBy: ""
       locations:
-        - location: "C:/Users/ostro/IdeaProjects/kzen-auto/build.gradle.kts"
+        - location: C:/Users/ostro/IdeaProjects/kzen-auto/build.gradle.kts
           coordinate: Text
   output:
-    type: Export
+    type: Explore
     explore:
       start: 1
       count: 10
     export:
       format: csv
       compression: none
-      path: "../work/output/${report}_${group}_${time}.${extension}"
+      path: ../work/output/${report}_${group}_${time}.${extension}
     work: report
   analysis:
     type: FlatData

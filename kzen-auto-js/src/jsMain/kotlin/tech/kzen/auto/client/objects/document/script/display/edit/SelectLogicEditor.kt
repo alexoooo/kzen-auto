@@ -5,23 +5,18 @@ import js.objects.unsafeJso
 import mui.material.IconButton
 import mui.system.sx
 import react.ChildrenBuilder
-import react.State
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorProps
-import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
+import tech.kzen.auto.client.objects.document.common.edit.select.SelectReferenceEditorBase
+import tech.kzen.auto.client.objects.document.common.edit.select.SelectReferenceEditorState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.global.NavigationGlobal
-import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.RComponent
 import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.select.SelectOption
-import tech.kzen.auto.client.wrap.select.muiAutocompleteField
-import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.custom.CustomConventions
 import tech.kzen.auto.common.util.AutoConventions
-import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.location.ObjectReference
@@ -29,14 +24,11 @@ import tech.kzen.lib.common.model.location.ObjectReferenceHost
 import tech.kzen.lib.common.model.structure.metadata.GraphMetadata
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
-import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
 import tech.kzen.lib.common.model.structure.notation.cqrs.RenamedDocumentRefactorEvent
-import tech.kzen.lib.common.model.structure.notation.cqrs.UpsertAttributeCommand
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.service.notation.NotationConventions
-import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.common.service.store.MirroredGraphStore
 import web.cssom.*
 
@@ -47,22 +39,14 @@ external interface SelectLogicEditorProps: AttributeEditorProps {
 }
 
 
-external interface SelectLogicEditorState: State {
-    var value: ObjectLocation?
-    var renaming: Boolean
-
-    var options: List<ObjectLocation>?
-}
-
-
 //---------------------------------------------------------------------------------------------------------------------
-// TODO: convert to RPureComponent
+// Picks the Logic document (Script / Flow / Job main, or a Custom document's exported logic) that a RunStep or
+// Flow vertex delegates to. Cross-document by construction, so the full location IS the wire form.
 @Suppress("unused")
 class SelectLogicEditor(
     props: SelectLogicEditorProps
 ):
-    RComponent<SelectLogicEditorProps, SelectLogicEditorState>(props),
-    LocalGraphStore.Observer
+    SelectReferenceEditorBase<SelectLogicEditorProps, SelectReferenceEditorState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
@@ -86,7 +70,8 @@ class SelectLogicEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun SelectLogicEditorState.init(props: SelectLogicEditorProps) {
+    // Hydrates synchronously, so the field is populated on first paint rather than after a mount round-trip.
+    override fun SelectReferenceEditorState.init(props: SelectLogicEditorProps) {
         val graphStructure = props.clientStateGlobal.current()!!.graphStructure()
         val graphNotation = graphStructure.graphNotation
         val graphMetadata = graphStructure.graphMetadata
@@ -95,18 +80,33 @@ class SelectLogicEditor(
 
         val objectReferenceHost = ObjectReferenceHost.ofLocation(props.objectLocation)
 
-        value =
+        selected =
             if (attributeNotation is ScalarAttributeNotation && attributeNotation.value.isNotEmpty()) {
                 val reference = ObjectReference.parse(attributeNotation.value)
-                val objectLocation = graphNotation.coalesce.locateOptional(reference, objectReferenceHost)
-                objectLocation
+                graphNotation.coalesce.locateOptional(reference, objectReferenceHost)?.asString()
             }
             else {
                 null
             }
 
-        renaming = false
-        options = options(graphNotation, graphMetadata)
+        options = selectOptions(graphNotation, graphMetadata)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun selectOptions(
+        graphNotation: GraphNotation,
+        graphMetadata: GraphMetadata
+    ): Array<SelectOption> {
+        return options(graphNotation, graphMetadata)
+            .map { location ->
+                val option: SelectOption = unsafeJso {
+                    value = location.asString()
+                    label = location.documentPath.name.value
+                }
+                option
+            }
+            .toTypedArray()
     }
 
 
@@ -136,128 +136,43 @@ class SelectLogicEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun componentDidUpdate(
-        prevProps: SelectLogicEditorProps,
-        prevState: SelectLogicEditorState,
-        snapshot: Any
-    ) {
-        if (state.value != prevState.value) {
-            if (state.renaming) {
-                setState {
-                    renaming = false
-                }
-            }
-            else {
-                editAttributeCommandAsync()
-            }
+    override suspend fun onNotationEvent(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
+        val selectedLocation = state.selected?.let { ObjectLocation.parse(it) }
+
+        if (event is RenamedDocumentRefactorEvent &&
+                selectedLocation != null &&
+                event.removedUnderOldName.documentPath == selectedLocation.documentPath
+        ) {
+            setSelected(selectedLocation
+                .copy(documentPath = event.createdWithNewName.destination)
+                .asString())
+            return
         }
-    }
 
-
-    override fun componentDidMount() {
-        async {
-            props.mirroredGraphStore.observe(this)
-        }
-    }
-
-
-    override fun componentWillUnmount() {
-        props.mirroredGraphStore.unobserve(this)
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun onCommandSuccess(
-        event: NotationEvent, graphDefinition: GraphDefinitionAttempt, attachment: LocalGraphStore.Attachment
-    ) {
-        when (event) {
-            is RenamedDocumentRefactorEvent -> {
-                if (event.removedUnderOldName.documentPath == state.value?.documentPath) {
-                    val newLocation =
-                        state.value!!.copy(documentPath = event.createdWithNewName.destination)
-
-                    setState {
-                        value = newLocation
-                        renaming = true
-                    }
-                }
-                else {
-                    updateOptions()
-                }
-            }
-
-            else -> {
-                updateOptions()
-            }
-        }
-    }
-
-
-    override suspend fun onCommandFailure(
-        command: NotationCommand, cause: Throwable, attachment: LocalGraphStore.Attachment
-    ) {}
-
-
-    override suspend fun onStoreRefresh(graphDefinitionAttempt: GraphDefinitionAttempt) {}
-
-
-    private fun updateOptions() {
         val graphStructure = props.clientStateGlobal.current()!!.graphStructure()
-        val graphNotation = graphStructure.graphNotation
-        val graphMetadata = graphStructure.graphMetadata
-        setState {
-            options = options(graphNotation, graphMetadata)
-        }
+        setOptions(selectOptions(graphStructure.graphNotation, graphStructure.graphMetadata))
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun onValueChange(value: ObjectLocation?) {
-        setState {
-            this.value = value
-        }
+    override fun wireValue(optionKey: String): String {
+        return optionKey
     }
 
 
     private fun onNavigateToSelected() {
-        val value = state.value
+        val selected = state.selected
             ?: return
-        props.navigationGlobal.goto(value.documentPath)
-    }
-
-
-    private fun editAttributeCommandAsync() {
-        async {
-            editAttributeCommand()
-        }
-    }
-
-
-    private suspend fun editAttributeCommand() {
-        val value = state.value
-                ?: return
-
-        props.mirroredGraphStore.apply(UpsertAttributeCommand(
-                props.objectLocation,
-                props.attributeName,
-                ScalarAttributeNotation(value.asString())))
+        props.navigationGlobal.goto(ObjectLocation.parse(selected).documentPath)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    // Overrides the base render because the launch button shares a flex row with the field, and the row owns the
+    // sizing that keeps the button from overflowing.
     override fun ChildrenBuilder.render() {
         val options = state.options
             ?: return
-
-        val selectOptions = options
-            .map {
-                val option: SelectOption = unsafeJso {
-                    value = it.asString()
-                    label = it.documentPath.name.value
-                }
-                option
-            }
-            .toTypedArray()
 
         div {
             css {
@@ -272,12 +187,7 @@ class SelectLogicEditor(
                     minWidth = 0.px
                 }
 
-                muiAutocompleteField(
-                    label = formattedLabel(),
-                    options = selectOptions,
-                    selectedOption = selectOptions.find { it.value == state.value?.asString() },
-                    onSelect = { onValueChange(ObjectLocation.parse(it.value)) },
-                    disableClearable = true)
+                selectField(options)
             }
 
             IconButton {
@@ -285,7 +195,7 @@ class SelectLogicEditor(
                     marginLeft = 0.25.em
                 }
                 title = "Open the selected script"
-                disabled = state.value == null
+                disabled = state.selected == null
 
                 onClick = {
                     onNavigateToSelected()
@@ -298,10 +208,5 @@ class SelectLogicEditor(
                 }
             }
         }
-    }
-
-
-    private fun formattedLabel(): String {
-        return CommonEditUtils.formattedLabel(AttributePath.ofName(props.attributeName))
     }
 }

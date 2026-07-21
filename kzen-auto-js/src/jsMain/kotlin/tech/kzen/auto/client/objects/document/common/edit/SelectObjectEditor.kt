@@ -2,15 +2,13 @@ package tech.kzen.auto.client.objects.document.common.edit
 
 import js.objects.unsafeJso
 import react.ChildrenBuilder
-import react.State
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorProps
+import tech.kzen.auto.client.objects.document.common.edit.select.SelectReferenceEditorBase
+import tech.kzen.auto.client.objects.document.common.edit.select.SelectReferenceEditorState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
-import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.RComponent
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.select.SelectOption
-import tech.kzen.auto.client.wrap.select.muiAutocompleteField
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.custom.CustomConventions
 import tech.kzen.lib.common.model.attribute.AttributePath
@@ -24,27 +22,24 @@ import tech.kzen.lib.common.model.structure.notation.cqrs.*
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.service.notation.NotationConventions
-import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.common.service.store.MirroredGraphStore
 
 
 //---------------------------------------------------------------------------------------------------------------------
-external interface SelectObjectEditorState: State {
-    var value: ObjectLocation?
-    var renaming: Boolean
-
-    var constraint: ObjectLocation?
-    var options: List<ObjectLocation>?
+external interface SelectObjectEditorState: SelectReferenceEditorState {
+    // Tri-state on purpose: null = not resolved yet, so an unset slot never reads as "constraint is missing".
+    var constraintMissing: Boolean?
 }
 
 
 //---------------------------------------------------------------------------------------------------------------------
+// Picks any object satisfying the attribute's `is:` type constraint, from this document plus other documents'
+// exports. Same-document picks are written as a bare name; cross-document picks keep the full reference.
 @Suppress("unused")
 class SelectObjectEditor(
     props: AttributeEditorProps
 ):
-    RComponent<AttributeEditorProps, SelectObjectEditorState>(props),
-    LocalGraphStore.Observer
+    SelectReferenceEditorBase<AttributeEditorProps, SelectObjectEditorState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -72,6 +67,7 @@ class SelectObjectEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    // Hydrates synchronously, so the field is populated on first paint rather than after a mount round-trip.
     override fun SelectObjectEditorState.init(props: AttributeEditorProps) {
         val graphStructure = props.clientStateGlobal.current()!!.graphStructure()
         val graphNotation = graphStructure.graphNotation
@@ -82,20 +78,18 @@ class SelectObjectEditor(
         val attributeNotation = graphNotation.firstAttribute(
             props.objectLocation, AttributePath.ofName(props.attributeName))
 
-        value =
+        selected =
             if (attributeNotation is ScalarAttributeNotation && attributeNotation.value.isNotEmpty()) {
                 val reference = ObjectReference.parse(attributeNotation.value)
-                graphNotation.coalesce.locateOptional(reference, objectReferenceHost)
+                graphNotation.coalesce.locateOptional(reference, objectReferenceHost)?.asString()
             }
             else {
                 null
             }
 
-        renaming = false
-
         val resolvedConstraint = constraintLocation(graphNotation, graphMetadata)
-        constraint = resolvedConstraint
-        options = resolvedConstraint?.let { options(graphNotation, it) }
+        constraintMissing = resolvedConstraint == null
+        options = resolvedConstraint?.let { selectOptions(graphNotation, it) }
     }
 
 
@@ -116,6 +110,19 @@ class SelectObjectEditor(
         val reference = ObjectReference.parse(isValue)
         return graphNotation.coalesce.locateOptional(
             reference, ObjectReferenceHost.ofLocation(props.objectLocation))
+    }
+
+
+    private fun selectOptions(graphNotation: GraphNotation, constraint: ObjectLocation): Array<SelectOption> {
+        return options(graphNotation, constraint)
+            .map { location ->
+                val option: SelectOption = unsafeJso {
+                    value = location.asString()
+                    label = optionLabel(location)
+                }
+                option
+            }
+            .toTypedArray()
     }
 
 
@@ -257,49 +264,16 @@ class SelectObjectEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun componentDidUpdate(
-        prevProps: AttributeEditorProps,
-        prevState: SelectObjectEditorState,
-        snapshot: Any
-    ) {
-        if (state.value != prevState.value) {
-            if (state.renaming) {
-                setState {
-                    renaming = false
-                }
-            }
-            else {
-                editAttributeCommandAsync()
-            }
-        }
-    }
-
-
-    override fun componentDidMount() {
-        async {
-            props.mirroredGraphStore.observe(this)
-        }
-    }
-
-
-    override fun componentWillUnmount() {
-        props.mirroredGraphStore.unobserve(this)
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun onCommandSuccess(
-        event: NotationEvent, graphDefinition: GraphDefinitionAttempt, attachment: LocalGraphStore.Attachment
-    ) {
+    override suspend fun onNotationEvent(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
         when (event) {
             is RenamedDocumentRefactorEvent -> {
-                if (event.removedUnderOldName.documentPath == state.value?.documentPath) {
-                    val newLocation = state.value!!
+                val selectedLocation = selectedLocation()
+                if (selectedLocation != null &&
+                        event.removedUnderOldName.documentPath == selectedLocation.documentPath
+                ) {
+                    setSelected(selectedLocation
                         .copy(documentPath = event.createdWithNewName.destination)
-                    setState {
-                        value = newLocation
-                        renaming = true
-                    }
+                        .asString())
                 }
                 else {
                     refresh()
@@ -307,11 +281,8 @@ class SelectObjectEditor(
             }
 
             is RenamedObjectRefactorEvent -> {
-                if (event.renamedObject.objectLocation == state.value) {
-                    setState {
-                        value = event.renamedObject.newObjectLocation()
-                        renaming = true
-                    }
+                if (event.renamedObject.objectLocation.asString() == state.selected) {
+                    setSelected(event.renamedObject.newObjectLocation().asString())
                 }
                 else {
                     refresh()
@@ -323,12 +294,9 @@ class SelectObjectEditor(
     }
 
 
-    override suspend fun onCommandFailure(
-        command: NotationCommand, cause: Throwable, attachment: LocalGraphStore.Attachment
-    ) {}
-
-
-    override suspend fun onStoreRefresh(graphDefinitionAttempt: GraphDefinitionAttempt) {}
+    private fun selectedLocation(): ObjectLocation? {
+        return state.selected?.let { ObjectLocation.parse(it) }
+    }
 
 
     private fun refresh() {
@@ -337,79 +305,33 @@ class SelectObjectEditor(
         val graphMetadata = graphStructure.graphMetadata
 
         val resolvedConstraint = constraintLocation(graphNotation, graphMetadata)
-        val nextOptions = resolvedConstraint?.let { options(graphNotation, it) }
 
-        if (state.constraint != resolvedConstraint || state.options != nextOptions) {
+        val constraintMissing = resolvedConstraint == null
+        if (state.constraintMissing != constraintMissing) {
             setState {
-                constraint = resolvedConstraint
-                options = nextOptions
+                this.constraintMissing = constraintMissing
             }
+        }
+
+        if (resolvedConstraint != null) {
+            setOptions(selectOptions(graphNotation, resolvedConstraint))
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun onValueChange(value: ObjectLocation?) {
-        setState {
-            this.value = value
-        }
-    }
-
-
-    private fun editAttributeCommandAsync() {
-        async {
-            editAttributeCommand()
-        }
-    }
-
-
-    private suspend fun editAttributeCommand() {
-        val value = state.value
-            ?: return
+    override fun wireValue(optionKey: String): String {
+        val location = ObjectLocation.parse(optionKey)
 
         val reference =
-            if (value.documentPath == props.objectLocation.documentPath) {
-                value.toReference().crop(retainPath = false)
+            if (location.documentPath == props.objectLocation.documentPath) {
+                location.toReference().crop(retainPath = false)
             }
             else {
-                value.toReference()
+                location.toReference()
             }
 
-        props.mirroredGraphStore.apply(UpsertAttributeCommand(
-            props.objectLocation,
-            props.attributeName,
-            ScalarAttributeNotation(reference.asString())))
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun ChildrenBuilder.render() {
-        if (state.constraint == null) {
-            +"[SelectObjectEditor: missing `is:` type constraint in attribute metadata]"
-            return
-        }
-
-        val options = state.options
-            ?: return
-
-        val selectOptions: Array<SelectOption> = options
-            .map { location ->
-                val option: SelectOption = unsafeJso {
-                    this.value = location.asString()
-                    this.label = optionLabel(location)
-                }
-                option
-            }
-            .toTypedArray()
-
-        val selectedValue = selectOptions.find { it.value == state.value?.asString() }
-
-        muiAutocompleteField(
-            label = formattedLabel(),
-            options = selectOptions,
-            selectedOption = selectedValue,
-            onSelect = { onValueChange(ObjectLocation.parse(it.value)) },
-            disableClearable = true)
+        return reference.asString()
     }
 
 
@@ -423,7 +345,17 @@ class SelectObjectEditor(
     }
 
 
-    private fun formattedLabel(): String {
-        return CommonEditUtils.formattedLabel(AttributePath.ofName(props.attributeName))
+    //-----------------------------------------------------------------------------------------------------------------
+    // Overrides the base render because the missing-constraint case REPLACES the field rather than decorating it.
+    override fun ChildrenBuilder.render() {
+        if (state.constraintMissing == true) {
+            +"[SelectObjectEditor: missing `is:` type constraint in attribute metadata]"
+            return
+        }
+
+        val options = state.options
+            ?: return
+
+        selectField(options)
     }
 }

@@ -2,48 +2,32 @@ package tech.kzen.auto.client.objects.document.script.display.edit
 
 import js.objects.unsafeJso
 import react.ChildrenBuilder
-import react.State
 import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
 import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorProps
-import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
+import tech.kzen.auto.client.objects.document.common.edit.select.SelectReferenceEditorBase
+import tech.kzen.auto.client.objects.document.common.edit.select.SelectReferenceEditorState
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
 import tech.kzen.auto.client.objects.document.script.model.ScriptStore
 import tech.kzen.auto.client.objects.document.script.model.ScriptStoreKey
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
-import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.client.wrap.select.SelectOption
-import tech.kzen.auto.client.wrap.select.muiAutocompleteField
 import tech.kzen.auto.common.objects.document.script.model.ScriptNestingAnalysis
 import tech.kzen.auto.common.objects.document.script.model.ScriptTree
-import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.location.ObjectReference
 import tech.kzen.lib.common.model.location.ObjectReferenceHost
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
-import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
 import tech.kzen.lib.common.model.structure.notation.cqrs.RenamedObjectRefactorEvent
-import tech.kzen.lib.common.model.structure.notation.cqrs.UpsertAttributeCommand
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
-import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.common.service.store.MirroredGraphStore
-
-
-//---------------------------------------------------------------------------------------------------------------------
-external interface SelectEnclosingLoopEditorState: State {
-    var value: ObjectLocation?
-    var renaming: Boolean
-
-    var initialized: Boolean
-    var candidates: List<ObjectLocation>?
-}
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -55,8 +39,7 @@ external interface SelectEnclosingLoopEditorState: State {
 class SelectEnclosingLoopEditor(
     props: AttributeEditorProps
 ):
-    RPureComponent<AttributeEditorProps, SelectEnclosingLoopEditorState>(props),
-    LocalGraphStore.Observer,
+    SelectReferenceEditorBase<AttributeEditorProps, SelectReferenceEditorState>(props),
     ClientStateGlobal.Observer,
     ScriptStore.Observer
 {
@@ -86,21 +69,12 @@ class SelectEnclosingLoopEditor(
     private var latestGraphNotation: GraphNotation? = null
     private var latestScriptTree: ScriptTree? = null
 
-    // Plain-field mirror of the resolved loop value + initialized flag, so the pre-fill guard reads the
-    // freshly-resolved emptiness rather than the not-yet-applied `state` (setState is async, so `state.value`
-    // is stale within the callback that scheduled it).
-    private var latestResolvedValue: ObjectLocation? = null
-    private var latestInitialized = false
+    // Plain-field mirror of the resolved selection + a hydrated flag, so the pre-fill guard reads the freshly
+    // resolved emptiness rather than the not-yet-applied `state` (setState is async, so `state.selected` is
+    // stale within the callback that scheduled it).
+    private var latestSelectedKey: String? = null
+    private var latestHydrated = false
     private var defaultApplied = false
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun SelectEnclosingLoopEditorState.init(props: AttributeEditorProps) {
-        value = null
-        renaming = false
-        initialized = false
-        candidates = null
-    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -110,40 +84,19 @@ class SelectEnclosingLoopEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun componentDidUpdate(
-        prevProps: AttributeEditorProps,
-        prevState: SelectEnclosingLoopEditorState,
-        snapshot: Any
-    ) {
-        if (state.value != prevState.value) {
-            if (state.renaming) {
-                setState {
-                    renaming = false
-                }
-            }
-            else if (prevState.initialized) {
-                editAttributeCommandAsync()
-            }
-        }
-    }
-
-
-    override fun componentDidMount() {
+    override fun onMount() {
         props.clientStateGlobal.observe(this)
         contextValue<DocumentBridge?>()?.lookup(ScriptStoreKey)?.observe(this)
-        async {
-            props.mirroredGraphStore.observe(this)
-        }
     }
 
 
-    override fun componentWillUnmount() {
-        props.mirroredGraphStore.unobserve(this)
+    override fun onUnmount() {
         contextValue<DocumentBridge?>()?.lookup(ScriptStoreKey)?.unobserve(this)
         props.clientStateGlobal.unobserve(this)
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     override fun onClientState(clientState: ClientState) {
         val graphNotation = clientState.graphStructure().graphNotation
 
@@ -168,13 +121,10 @@ class SelectEnclosingLoopEditor(
                     graphNotation.coalesce.locateOptional(reference, objectReferenceHost)
                 }
 
-        latestResolvedValue = value
-        latestInitialized = true
+        latestSelectedKey = value?.asString()
+        latestHydrated = true
 
-        setState {
-            this.value = value
-            initialized = true
-        }
+        setSelected(latestSelectedKey)
 
         recomputeCandidates()
     }
@@ -203,108 +153,43 @@ class SelectEnclosingLoopEditor(
             scriptTree,
             props.objectLocation.objectPath)
 
-        if (state.candidates != candidates) {
-            setState {
-                this.candidates = candidates
-            }
-        }
-
-        // Pre-fill the innermost enclosing loop when this control step's target is still unset — makes a
-        // freshly inserted ControlStep valid without manual selection. Runs once (a single default write via
-        // the componentDidUpdate path, not a per-render echo). Guarded on the plain-field mirror, not `state`.
-        if (! defaultApplied && latestInitialized && latestResolvedValue == null && candidates.isNotEmpty()) {
-            defaultApplied = true
-            latestResolvedValue = candidates.first()
-            setState {
-                this.value = candidates.first()
-            }
-        }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun onCommandSuccess(
-        event: NotationEvent, graphDefinition: GraphDefinitionAttempt, attachment: LocalGraphStore.Attachment
-    ) {
-        when (event) {
-            is RenamedObjectRefactorEvent -> {
-                if (event.renamedObject.objectLocation == state.value) {
-                    setState {
-                        value = event.renamedObject.newObjectLocation()
-                        renaming = true
-                    }
-                }
-            }
-
-            else -> {}
-        }
-    }
-
-
-    override suspend fun onCommandFailure(
-        command: NotationCommand, cause: Throwable, attachment: LocalGraphStore.Attachment
-    ) {}
-
-
-    override suspend fun onStoreRefresh(graphDefinitionAttempt: GraphDefinitionAttempt) {}
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    private fun onValueChange(value: ObjectLocation?) {
-        setState {
-            this.value = value
-        }
-    }
-
-
-    private fun editAttributeCommandAsync() {
-        async {
-            editAttributeCommand()
-        }
-    }
-
-
-    private suspend fun editAttributeCommand() {
-        val value = state.value
-                ?: return
-
-        val localReference = value.toReference()
-                .crop(retainPath = false)
-
-        props.mirroredGraphStore.apply(UpsertAttributeCommand(
-                props.objectLocation,
-                props.attributeName,
-                ScalarAttributeNotation(localReference.asString())))
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun ChildrenBuilder.render() {
-        val candidates = state.candidates
-            ?: return
-
-        val selectOptions: Array<SelectOption> = candidates
+        setOptions(candidates
             .map { location ->
                 val option: SelectOption = unsafeJso {
-                    this.value = location.asString()
-                    this.label = location.objectPath.name.value
+                    value = location.asString()
+                    label = location.objectPath.name.value
                 }
                 option
             }
-            .toTypedArray()
+            .toTypedArray())
 
-        val selectedValue = selectOptions.find { it.value == state.value?.asString() }
-
-        muiAutocompleteField(
-            label = formattedLabel(),
-            options = selectOptions,
-            selectedOption = selectedValue,
-            onSelect = { onValueChange(ObjectLocation.parse(it.value)) },
-            disableClearable = true)
+        // Pre-fill the innermost enclosing loop when this control step's target is still unset — makes a
+        // freshly inserted ControlStep valid without manual selection. Runs once, as a single deliberate write
+        // through the base's one commit path. Guarded on the plain-field mirrors, not `state`.
+        if (! defaultApplied && latestHydrated && latestSelectedKey == null && candidates.isNotEmpty()) {
+            defaultApplied = true
+            latestSelectedKey = candidates.first().asString()
+            selectAndCommit(latestSelectedKey!!)
+        }
     }
 
 
-    private fun formattedLabel(): String {
-        return CommonEditUtils.formattedLabel(AttributePath.ofName(props.attributeName))
+    //-----------------------------------------------------------------------------------------------------------------
+    override suspend fun onNotationEvent(event: NotationEvent, graphDefinition: GraphDefinitionAttempt) {
+        if (event is RenamedObjectRefactorEvent &&
+                event.renamedObject.objectLocation.asString() == state.selected
+        ) {
+            latestSelectedKey = event.renamedObject.newObjectLocation().asString()
+            setSelected(latestSelectedKey)
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    override fun wireValue(optionKey: String): String {
+        return ObjectLocation.parse(optionKey)
+            .toReference()
+            .crop(retainPath = false)
+            .asString()
     }
 }

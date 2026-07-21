@@ -8,7 +8,7 @@ main.steps/Number range:
 
 main.steps/Range:
   is: FormulaStep
-  code: 1..100
+  code: 1..200
 
 main.steps/Loop:
   is: ForEachStep
