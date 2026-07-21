@@ -1,6 +1,5 @@
 package tech.kzen.auto.server.exec.flow
 
-import tech.kzen.auto.common.paradigm.flow.service.format.FlowMessageInspector
 import tech.kzen.lib.common.exec.engine.Execution
 import tech.kzen.lib.common.exec.engine.Logic
 import tech.kzen.lib.common.exec.engine.LogicSignature
@@ -15,9 +14,9 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 /**
  * A Flow document as a [Logic]: walk its dataflow DAG to completion on the new engine and return the result
  * harvested from the output vertices. Holds only the immutable compiled structure ([childLogics] for the
- * RunLogicVertex callees, the [logicSignature], and the services the per-vertex mechanics need); the mutable
+ * logic-host callees, the [logicSignature], and the services the per-vertex mechanics need); the mutable
  * per-run state lives in a fresh [FlowRun] created per [run] call, so one [FlowLogic] can be hosted more than
- * once (a [RunLogicVertex][tech.kzen.auto.server.objects.flow.vertex.RunLogicVertex] pointing at a Flow).
+ * once (a [FlowLogicHost][tech.kzen.auto.common.paradigm.flow.api.FlowLogicHost] vertex pointing at a Flow).
  *
  * The Flow analogue of [tech.kzen.auto.server.exec.script.ScriptLogic] — but where a Script is a sequential
  * spine, a Flow is a vertex DAG, so [FlowRun] (not a tree of step objects) drives the per-vertex stepping.
@@ -28,7 +27,6 @@ class FlowLogic(
     private val childLogics: Map<ObjectStableId, FlowChildLogic>,
     private val logicSignature: LogicSignature,
     private val objectStableMapper: ObjectStableMapper,
-    private val flowMessageInspector: FlowMessageInspector,
     private val graphEnvironment: GraphEnvironment
 ): Logic {
     override fun signature(): LogicSignature {
@@ -43,7 +41,6 @@ class FlowLogic(
             graphDefinition,
             childLogics,
             objectStableMapper,
-            flowMessageInspector,
             graphEnvironment
         ).run()
     }

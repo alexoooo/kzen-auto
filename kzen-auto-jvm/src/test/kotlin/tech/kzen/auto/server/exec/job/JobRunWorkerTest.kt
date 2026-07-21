@@ -179,7 +179,6 @@ class JobRunWorkerTest {
                 context.objectStableMapper,
                 context.cachedKotlinCompiler,
                 context.scriptValidationCache,
-                context.flowMessageInspector,
                 context.notationMetadataReader,
                 context.jobWorkPool,
                 LogicRunExecutionId.random()))

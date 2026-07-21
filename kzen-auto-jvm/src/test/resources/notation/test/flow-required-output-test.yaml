@@ -1,0 +1,44 @@
+# A vertex that declares a RequiredOutput and emits nothing must fail its execution rather than pass an
+# empty message downstream.
+
+SilentRequiredVertex:
+  abstract: true
+  is: FlowVertex
+  icon: "material-symbols:block"
+  title: "Silent Required (test)"
+  class: tech.kzen.auto.server.exec.flow.test.SilentRequiredVertex
+  meta:
+    input:
+      is: RequiredInput
+      by: FlowWiring
+    output:
+      is: RequiredOutput
+      by: FlowWiring
+
+
+#######################################################################################################################
+
+main:
+  is: Flow
+  vertices:
+  - FreqInput
+  - FreqSilent
+  - FreqOutput
+  edges: []
+
+FreqInput:
+  is: FlowInput
+  parameter: "x"
+  row: 0
+  column: 0
+
+FreqSilent:
+  is: SilentRequiredVertex
+  row: 1
+  column: 0
+
+FreqOutput:
+  is: FlowOutput
+  result: "out"
+  row: 2
+  column: 0

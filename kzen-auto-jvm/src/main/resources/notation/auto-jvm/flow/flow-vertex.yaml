@@ -175,15 +175,54 @@ RunLogic:
   class: tech.kzen.auto.server.objects.flow.vertex.RunLogicVertex
   icon: "material-symbols:play-arrow"
   title: "Run"
-  description: "Invoke another Logic (e.g. a Script), passing the input as its first parameter and emitting its result"
+  description: "Invoke another Logic (e.g. a Script), passing the input as its first parameter and emitting its result; 'arguments' binds literal text to further parameters by name"
   instructions: ""
+  arguments: {}
   meta:
     instructions:
       is: ObjectLocation
       by: Nominal
       editor: SelectLogicEditor
       summary: ReferenceLinkAttributeView
+    arguments:
+      is: Map
+      of:
+        - String
+        - String
+      editor: RunLogicArgumentsEditor
     input:
+      is: RequiredInput
+      by: FlowWiring
+    output:
+      is: RequiredOutput
+      by: FlowWiring
+
+
+RunLogic2:
+  abstract: true
+  is: FlowVertex
+  class: tech.kzen.auto.server.objects.flow.vertex.RunLogicVertex2
+  icon: "material-symbols:play-arrow"
+  title: "Run (2 inputs)"
+  description: "Invoke another Logic, passing the two inputs as its first two parameters and emitting its result; 'arguments' binds literal text to further parameters by name"
+  instructions: ""
+  arguments: {}
+  meta:
+    instructions:
+      is: ObjectLocation
+      by: Nominal
+      editor: SelectLogicEditor
+      summary: ReferenceLinkAttributeView
+    arguments:
+      is: Map
+      of:
+        - String
+        - String
+      editor: RunLogicArgumentsEditor
+    first:
+      is: RequiredInput
+      by: FlowWiring
+    second:
       is: RequiredInput
       by: FlowWiring
     output:

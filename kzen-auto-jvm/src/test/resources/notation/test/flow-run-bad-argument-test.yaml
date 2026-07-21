@@ -1,0 +1,28 @@
+# An `arguments` key naming no parameter of the callee must be refused at compile, not silently dropped.
+main:
+  is: Flow
+  vertices:
+  - FbadInput
+  - FbadCall
+  - FbadOutput
+  edges: []
+
+FbadInput:
+  is: FlowInput
+  parameter: "x"
+  row: 0
+  column: 0
+
+FbadCall:
+  is: RunLogic
+  instructions: "test/script-two-param-child-test.yaml#main"
+  arguments:
+    bogus: "1"
+  row: 1
+  column: 0
+
+FbadOutput:
+  is: FlowOutput
+  result: "out"
+  row: 2
+  column: 0

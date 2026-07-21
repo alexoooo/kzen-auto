@@ -6,8 +6,19 @@ import tech.kzen.auto.common.paradigm.flow.api.output.RequiredOutput
 import tech.kzen.auto.common.paradigm.flow.api.output.StreamOutput
 
 
-// TODO: enforce optional/required/stream/batch contracts
-class MutableFlowOutput<T>:
+/**
+ * The one channel behind all four declared output types. [kind] is the type the vertex declared, which is what
+ * makes the "at most one item" half of the contract checkable here; [label] names the channel in the failure
+ * message, since the channel itself has no location. The runner clears the buffer before each execution, so a
+ * guard here reads per-execution.
+ *
+ * The other half — a [RequiredOutput] that emitted nothing — is checked by the runner after `process` returns,
+ * because only the runner knows which vertices reach `process` at all.
+ */
+class MutableFlowOutput<T>(
+    val kind: FlowOutputKind,
+    private val label: String
+):
     OptionalOutput<T>,
     RequiredOutput<T>,
     BatchOutput<T>,
@@ -18,6 +29,7 @@ class MutableFlowOutput<T>:
 
 
     override fun set(payload: T) {
+        checkNotAlreadySet()
         buffer.add(payload)
         streamHasNext = false
     }
@@ -29,8 +41,21 @@ class MutableFlowOutput<T>:
 
 
     override fun set(payload: T, hasNext: Boolean) {
+        checkNotAlreadySet()
         buffer.add(payload)
         this.streamHasNext = hasNext
+    }
+
+
+    private fun checkNotAlreadySet() {
+        if (kind == FlowOutputKind.Batch) {
+            return
+        }
+
+        check(buffer.isEmpty()) {
+            "Output '$label' was already set: a $kind output emits at most one item per execution, " +
+                    "use BatchOutput for multiple"
+        }
     }
 
 

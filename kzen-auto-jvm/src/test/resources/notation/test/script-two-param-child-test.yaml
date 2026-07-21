@@ -1,0 +1,30 @@
+# Two-parameter callee for the Flow logic-host binding tests: `number` takes a wired input (or the first of
+# two), `label` is the one an `arguments` literal binds by name — declared String because a literal arrives
+# verbatim, with no coercion to a declared parameter type.
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.String
+      generics: []
+      nullable: false
+
+main.parameters/number:
+  is: ParameterBinding
+  type:
+    class: kotlin.Any
+    generics: []
+    nullable: false
+  default: 0
+
+main.parameters/label:
+  is: ParameterBinding
+  type:
+    class: kotlin.String
+    generics: []
+    nullable: false
+  default: ""
+
+main.steps/Concatenate:
+  is: ResultStep
+  code: '"" + number + label'

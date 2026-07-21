@@ -1,5 +1,6 @@
 package tech.kzen.auto.common.objects.document.flow
 
+import tech.kzen.auto.common.paradigm.flow.model.channel.FlowOutputKind
 import tech.kzen.auto.common.paradigm.flow.model.channel.MutableFlowOutput
 import tech.kzen.auto.common.paradigm.flow.model.channel.MutableOptionalInput
 import tech.kzen.auto.common.paradigm.flow.model.channel.MutableRequiredInput
@@ -124,6 +125,8 @@ class FlowWiring: AttributeDefiner {
                 ?.className
                 ?: ClassNames.kotlinAny
 
+        val channelLabel = "${attributeName.value} of $objectLocation"
+
         val value: Any? = when (attributeClass) {
             optionalInputClass ->
                 MutableOptionalInput<Any>()
@@ -133,16 +136,16 @@ class FlowWiring: AttributeDefiner {
 
 
             optionalOutputClass ->
-                MutableFlowOutput<Any>()
+                MutableFlowOutput<Any>(FlowOutputKind.Optional, channelLabel)
 
             requiredOutputClass ->
-                MutableFlowOutput<Any>()
+                MutableFlowOutput<Any>(FlowOutputKind.Required, channelLabel)
 
             batchOutputClass ->
-                MutableFlowOutput<Any>()
+                MutableFlowOutput<Any>(FlowOutputKind.Batch, channelLabel)
 
             streamOutputClass ->
-                MutableFlowOutput<Any>()
+                MutableFlowOutput<Any>(FlowOutputKind.Stream, channelLabel)
 
 
             else ->

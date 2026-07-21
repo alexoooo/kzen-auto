@@ -39,6 +39,20 @@ interface FlowVertex<State> {
 
 
     /**
+     * Non-functional structured view of an emitted message — [inspectState]'s counterpart for the message
+     * channel, hosted here because the emitting vertex is what knows its message types.
+     *
+     * Null (the default) leaves the rendering to the runner: [ExecutionValue.ofArbitrary] for basics and
+     * collections of them, otherwise a truncated `toString`. Called under the same trace throttling as
+     * [inspectState], so it must be cheap and must not mutate. A thrown exception is swallowed and falls back
+     * to the truncated form — a trace must never fail a run the vertex itself survived.
+     */
+    fun inspectMessage(message: Any): ExecutionValue? {
+        return null
+    }
+
+
+    /**
      * Make use of injected RequiredInput (and OptionalInput), plus any direct object references.
      *
      * Can also use injected RequiredOutput (or OptionalOutput).

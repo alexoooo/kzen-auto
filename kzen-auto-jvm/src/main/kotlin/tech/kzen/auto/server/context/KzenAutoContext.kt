@@ -2,7 +2,6 @@ package tech.kzen.auto.server.context
 
 import kotlinx.coroutines.runBlocking
 import tech.kzen.auto.common.codegen.KzenAutoCommonModule
-import tech.kzen.auto.common.paradigm.flow.service.format.FlowMessageInspector
 import tech.kzen.auto.common.service.ServiceEnvironmentValidation
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.auto.server.api.RestHandler
@@ -141,10 +140,6 @@ class KzenAutoContext(
     // between a run terminating and the user editing the notation afterward.
     val objectStableMapper = ObjectStableMapper()
 
-    // Injected (via graphEnvironment) into Flow dataflow vertices for message inspection / tracing, and used
-    // by the engine-side Flow flavour (FlowRun) to render each vertex's traced message.
-    val flowMessageInspector = FlowMessageInspector()
-
     val workUtils = WorkUtils.sibling
     val reportWorkPool = ReportWorkPool(workUtils)
     val jobWorkPool = JobWorkPool(workUtils)
@@ -191,7 +186,6 @@ class KzenAutoContext(
         .put(ClassName(ReportWorkPool::class.qualifiedName!!), reportWorkPool)
         .put(ClassName(ReportDefinitionRepository::class.qualifiedName!!), definitionRepository)
         .put(ClassName(CalculatedColumnEval::class.qualifiedName!!), calculatedColumnEval)
-        .put(ClassName(FlowMessageInspector::class.qualifiedName!!), flowMessageInspector)
         .put(ClassName(FileListingAction::class.qualifiedName!!), fileListingAction)
         .put(ClassName(ColumnListingAction::class.qualifiedName!!), columnListingAction)
         .put(ClassName(LogicTrace::class.qualifiedName!!)) { logicTrace }
@@ -202,8 +196,7 @@ class KzenAutoContext(
     //-----------------------------------------------------------------------------------------------------------------
     val serverLogicController = ServerLogicController(
         graphStore, objectStableMapper, cachedKotlinCompiler, scriptValidationCache,
-        flowMessageInspector, notationMetadataReader, jobWorkPool,
-        graphEnvironment)
+        notationMetadataReader, jobWorkPool, graphEnvironment)
 
     // The trace-query surface (the former LogicTraceStore): projects the controller's retained RunEngine at
     // query time, translating each flavour's within-node emit address to its wire LogicTracePath via the same

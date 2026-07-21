@@ -2,7 +2,6 @@ package tech.kzen.auto.server.service.impl
 
 import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
-import tech.kzen.auto.common.paradigm.flow.service.format.FlowMessageInspector
 import tech.kzen.auto.common.paradigm.logic.LogicConventions
 import tech.kzen.auto.server.exec.LogicCompiler
 import tech.kzen.auto.server.exec.LogicCompilerServices
@@ -87,7 +86,6 @@ class ServerLogicController(
     private val objectStableMapper: ObjectStableMapper,
     private val cachedKotlinCompiler: CachedKotlinCompiler,
     private val scriptValidationCache: ScriptValidationCache,
-    private val flowMessageInspector: FlowMessageInspector,
     private val notationMetadataReader: NotationMetadataReader,
     private val jobWorkPool: JobWorkPool,
     private val environment: GraphEnvironment
@@ -909,7 +907,7 @@ class ServerLogicController(
             attempt.transitiveSuccessful,
             LogicCompilerServices(
                 environment, objectStableMapper, cachedKotlinCompiler, scriptValidationCache,
-                flowMessageInspector, notationMetadataReader, jobWorkPool, runExecutionId))
+                notationMetadataReader, jobWorkPool, runExecutionId))
     }
 
 

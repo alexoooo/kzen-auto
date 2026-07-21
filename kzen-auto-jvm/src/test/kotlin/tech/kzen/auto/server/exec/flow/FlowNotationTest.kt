@@ -150,6 +150,36 @@ class FlowNotationTest {
 
 
     @Test
+    fun runLogic2BindsTwoWiredInputsToFirstTwoParameters() {
+        // The host's wired inputs bind the callee's leading parameters in declared-input order, so the
+        // second column's message reaches the second parameter rather than being dropped.
+        val outcome = runFlow(
+            "test/flow-run-two-param-test.yaml",
+            TupleValue(listOf(
+                TupleComponentValue(TupleComponentName("x"), 6),
+                TupleComponentValue(TupleComponentName("y"), "!"))))
+        assertEquals("6!", assertIs<Outcome.Success>(outcome).value.find(TupleComponentName("out")))
+    }
+
+
+    @Test
+    fun runLogicArgumentsLiteralBindsNamedParameter() {
+        // The single wired input takes `number` by position; the `arguments` literal takes `label` by name.
+        val outcome = runFlow("test/flow-run-arguments-test.yaml", argument("x", 6))
+        assertEquals("6!", assertIs<Outcome.Success>(outcome).value.find(TupleComponentName("out")))
+    }
+
+
+    @Test
+    fun unknownArgumentNameRefusesToCompile() {
+        val failure = assertFailsWith<LogicFailure> {
+            engineFor("test/flow-run-bad-argument-test.yaml")
+        }
+        assertTrue(failure.message!!.contains("does not match a parameter"))
+    }
+
+
+    @Test
     fun arbitraryDomainObjectMessageDoesNotKillRun() {
         // Tracing is non-fatal: a non-basic message (a data class ExecutionValue.ofArbitrary can't render)
         // is rendered via toString instead of failing the run, even though inspection runs outside
@@ -252,7 +282,6 @@ class FlowNotationTest {
                 context.objectStableMapper,
                 context.cachedKotlinCompiler,
                 context.scriptValidationCache,
-                context.flowMessageInspector,
                 context.notationMetadataReader,
                 context.jobWorkPool,
                 LogicRunExecutionId.random()))

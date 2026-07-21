@@ -93,6 +93,12 @@ FlowRunLogicTool:
   delegate: RunLogic
 
 
+FlowRunLogic2Tool:
+  is: RibbonTool
+  parent: FlowInsertGroup
+  delegate: RunLogic2
+
+
 ###########################################################
 
 
@@ -172,3 +178,11 @@ FlowRightToLeftAndBottomPipeTool:
   is: RibbonTool
   parent: FlowPipeGroup
   delegate: RightToLeftAndBottomPipe
+
+
+#######################################################################################################################
+
+
+RunLogicArgumentsEditor:
+  is: AttributeEditor
+  class: tech.kzen.auto.client.objects.document.flow.edit.RunLogicArgumentsEditor$Wrapper

@@ -1,6 +1,5 @@
 package tech.kzen.auto.server.exec
 
-import tech.kzen.auto.common.paradigm.flow.service.format.FlowMessageInspector
 import tech.kzen.auto.server.objects.job.service.JobWorkPool
 import tech.kzen.auto.server.objects.script.ScriptValidationCache
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
@@ -19,7 +18,7 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
  *
  * [scriptValidationCache] makes repeated Script validation free when the relevant notation is unchanged
  * (shared with the editor's detached validation path, so run compiles and editor requests reuse entries).
- * [flowMessageInspector] is Flow's per-vertex message renderer; [notationMetadataReader] backs Job's
+ * [notationMetadataReader] backs Job's
  * [tech.kzen.auto.common.objects.document.job.JobChannelSynthesis] (order-driven channel augmentation).
  * [jobWorkPool] owns the per-run scratch directories a Job's file-backed Workers (Pivot / Explore) resolve via
  * [tech.kzen.auto.common.paradigm.job.control.JobControl.scratchDir].
@@ -33,7 +32,6 @@ class LogicCompilerServices(
     val objectStableMapper: ObjectStableMapper,
     val cachedKotlinCompiler: CachedKotlinCompiler,
     val scriptValidationCache: ScriptValidationCache,
-    val flowMessageInspector: FlowMessageInspector,
     val notationMetadataReader: NotationMetadataReader,
     val jobWorkPool: JobWorkPool,
     val runExecutionId: LogicRunExecutionId

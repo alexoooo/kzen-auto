@@ -1,7 +1,11 @@
 package tech.kzen.auto.server.exec.flow
 
+import tech.kzen.auto.common.paradigm.flow.api.FlowLogicHost
+import tech.kzen.auto.common.paradigm.flow.api.FlowRunInput
+import tech.kzen.auto.common.paradigm.flow.api.FlowRunOutput
 import tech.kzen.auto.common.paradigm.flow.api.FlowVertex
 import tech.kzen.auto.common.paradigm.flow.api.StreamFlowVertex
+import tech.kzen.auto.common.paradigm.flow.model.channel.FlowOutputKind
 import tech.kzen.auto.common.paradigm.flow.model.channel.MutableFlowOutput
 import tech.kzen.auto.common.paradigm.flow.model.channel.MutableInput
 import tech.kzen.auto.common.paradigm.flow.model.exec.ActiveVertexModel
@@ -9,11 +13,8 @@ import tech.kzen.auto.common.paradigm.flow.model.exec.VisualFlowModel
 import tech.kzen.auto.common.paradigm.flow.model.exec.VisualVertexModel
 import tech.kzen.auto.common.paradigm.flow.model.structure.FlowDag
 import tech.kzen.auto.common.paradigm.flow.model.structure.FlowMatrix
-import tech.kzen.auto.common.paradigm.flow.service.format.FlowMessageInspector
 import tech.kzen.auto.common.paradigm.flow.util.FlowUtils
-import tech.kzen.auto.server.objects.flow.vertex.FlowInputVertex
-import tech.kzen.auto.server.objects.flow.vertex.FlowOutputVertex
-import tech.kzen.auto.server.objects.flow.vertex.RunLogicVertex
+import tech.kzen.auto.common.util.TraceDisplay
 import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.NullExecutionValue
 import tech.kzen.lib.common.exec.engine.Address
@@ -39,7 +40,12 @@ import tech.kzen.lib.platform.collect.toPersistentMap
 /**
  * One run of a [FlowLogic]'s dataflow DAG on the engine. Position lives on this coroutine's stack, so a vertex
  * is a step boundary ([Execution.checkpoint] before running it) and the engine drives pause / step / cancel
- * centrally; a [RunLogicVertex] is hosted via [Execution.host], its suspension held on the host call's frame.
+ * centrally; a [FlowLogicHost] vertex's callee is hosted via [Execution.host], its suspension held on the host
+ * call's frame.
+ *
+ * Vertices are dispatched by the capability interfaces they implement ([FlowLogicHost], [FlowRunInput],
+ * [FlowRunOutput]), never by concrete class, so a third-party vertex can seed from run arguments, host a child
+ * Logic, or contribute to the result tuple without any edit here.
  *
  * Per vertex: inputs are populated from upstream messages, batch/stream output is drained across iterations, a
  * loop iteration is cleared to re-run downstream, and a [VisualVertexModel] is emitted with [Execution.emit] at
@@ -61,7 +67,6 @@ class FlowRun(
     private val graphDefinition: GraphDefinition,
     private val childLogics: Map<ObjectStableId, FlowChildLogic>,
     private val objectStableMapper: ObjectStableMapper,
-    private val flowMessageInspector: FlowMessageInspector,
     private val graphEnvironment: GraphEnvironment
 ) {
     //-----------------------------------------------------------------------------------------------------------------
@@ -157,9 +162,9 @@ class FlowRun(
 
             val reference = instance.reference
 
-            // RunLogicVertex invokes another Logic as a confined child node (steppable via the engine tree):
-            // Step Into descends into it; Step Over / Step Out / Run run it to completion.
-            if (reference is RunLogicVertex) {
+            // A logic-host vertex invokes another Logic as a confined child node (steppable via the engine
+            // tree): Step Into descends into it; Step Over / Step Out / Run run it to completion.
+            if (reference is FlowLogicHost) {
                 runChildVertex(next, nextStableId, instance, matrix)
                 traceVertex(nextStableId, instance, running = false, force = pausedOrStepping)
                 continue
@@ -177,7 +182,7 @@ class FlowRun(
 
             traceVertex(nextStableId, instance, running = false, force = pausedOrStepping)
 
-            if (reference is FlowOutputVertex) {
+            if (reference is FlowRunOutput) {
                 outputAccumulator[reference.tupleComponentName] = activeVertices[nextStableId]?.message
             }
         }
@@ -186,10 +191,11 @@ class FlowRun(
 
     //-----------------------------------------------------------------------------------------------------------------
     /**
-     * Run a [RunLogicVertex]'s pre-compiled callee as a confined child node ([Execution.host]) — the Flow
-     * analogue of [RunStep][tech.kzen.auto.server.objects.script.step.control.RunStep]. The single upstream input is
-     * passed as the callee's first declared parameter; on success the callee's main result becomes the
-     * vertex's message (which downstream vertices wire to).
+     * Run a [FlowLogicHost] vertex's pre-compiled callee as a confined child node ([Execution.host]) — the Flow
+     * analogue of [RunStep][tech.kzen.auto.server.objects.script.step.control.RunStep]. The callee's parameters
+     * are bound per [FlowLogicHost]'s rule (wired inputs positionally, then the `arguments` literals by name,
+     * conflicts having been refused at compile); on success the callee's main result becomes the vertex's
+     * message (which downstream vertices wire to).
      */
     private suspend fun runChildVertex(
         vertexLocation: ObjectLocation,
@@ -199,16 +205,10 @@ class FlowRun(
     ) {
         val activeVertexModel = activeVertices[stableId]!!
         val childLogic = childLogics[stableId]
-            ?: throw LogicFailure("RunLogicVertex child not compiled: $vertexLocation")
+            ?: throw LogicFailure("Logic-host vertex child not compiled: $vertexLocation")
 
-        val argumentMessage = singleInputMessage(vertexLocation, matrix)
-        val inputs =
-            if (childLogic.firstParameterName != null) {
-                TupleValue(listOf(TupleComponentValue(childLogic.firstParameterName, argumentMessage)))
-            }
-            else {
-                TupleValue.empty
-            }
+        val inputs = bindChildInputs(
+            instance.reference as FlowLogicHost, childLogic, vertexLocation, matrix)
 
         // Pause-on-error for a hosted child vertex: same recoverable contract as a regular vertex — render the
         // failure, then park Error (fix + resume re-hosts) or propagate. A child cancel always propagates.
@@ -224,8 +224,41 @@ class FlowRun(
     }
 
 
-    // The single upstream input message for a vertex (its sole wired input). Null when nothing is wired / no
-    // message has arrived yet.
+    private fun bindChildInputs(
+        host: FlowLogicHost,
+        childLogic: FlowChildLogic,
+        vertexLocation: ObjectLocation,
+        matrix: FlowMatrix
+    ): TupleValue {
+        val parameterNames = childLogic.parameterNames
+
+        val positional = wiredInputMessages(vertexLocation, matrix)
+            .take(parameterNames.size)
+            .mapIndexed { index, message -> TupleComponentValue(parameterNames[index], message) }
+
+        val literals = host.arguments.map { (name, literal) ->
+            TupleComponentValue(TupleComponentName(name), literal)
+        }
+
+        return TupleValue(positional + literals)
+    }
+
+
+    // Each wired input's upstream message, in the vertex's declared input order — an input with no upstream is
+    // skipped rather than contributing a null, so positional binding counts only what is actually connected.
+    private fun wiredInputMessages(vertexLocation: ObjectLocation, matrix: FlowMatrix): List<Any?> {
+        val vertexDescriptor = matrix.verticesByLocation[vertexLocation]
+            ?: return listOf()
+
+        return vertexDescriptor
+            .inputNames
+            .mapNotNull { matrix.traceVertexBackFrom(vertexDescriptor, it) }
+            .map { activeVertices[stableId(it.objectLocation)]?.message }
+    }
+
+
+    // The single upstream input message for a sink vertex (its sole wired input); logic hosts bind via
+    // wiredInputMessages instead. Null when nothing is wired / no message has arrived yet.
     private fun singleInputMessage(vertexLocation: ObjectLocation, matrix: FlowMatrix): Any? {
         val vertexDescriptor = matrix.verticesByLocation[vertexLocation]
             ?: return null
@@ -256,7 +289,7 @@ class FlowRun(
         val reference = instance.reference
 
         // Input vertices have no upstream; their message is the named run argument.
-        if (reference is FlowInputVertex) {
+        if (reference is FlowRunInput) {
             activeVertexModel.message = execution.inputs.find(reference.tupleComponentName)
             activeVertexModel.epoch++
             return
@@ -264,7 +297,7 @@ class FlowRun(
 
         // Output (sink) vertices have no output channel: capture the single upstream input as this vertex's
         // message, which the run loop then harvests into the result tuple.
-        if (reference is FlowOutputVertex) {
+        if (reference is FlowRunOutput) {
             activeVertexModel.message = singleInputMessage(vertexLocation, matrix)
             activeVertexModel.epoch++
             return
@@ -296,6 +329,14 @@ class FlowRun(
         val output = instance
             .constructorAttributes[FlowUtils.mainOutputAttributeName] as? MutableFlowOutput<*>
         if (output != null) {
+            // The other half of the RequiredOutput contract (the channel enforces "at most one"). Only the
+            // generic process path reaches here, so a capability vertex whose declared output channel is
+            // decorative — it returns before process — is exempt, as its channel is never written.
+            check(output.kind != FlowOutputKind.Required || !output.bufferIsEmpty()) {
+                "Required output of $vertexLocation was not set: a RequiredOutput emits exactly once " +
+                        "per execution"
+            }
+
             if (output.bufferHasMultiple()) {
                 output.consumeAndClear {
                     if (activeVertexModel.message == null) {
@@ -522,16 +563,19 @@ class FlowRun(
                 (instance.reference as FlowVertex<Any>).inspectState(state)
             }
             catch (e: Exception) {
-                FlowMessageInspector.truncatedToString(state)
+                truncatedToString(state)
             }
         }
 
         val messageValue = model.message?.let { message ->
             try {
-                flowMessageInspector.inspectMessage(message)
+                @Suppress("UNCHECKED_CAST")
+                (instance.reference as FlowVertex<Any?>).inspectMessage(message)
+                    ?: ExecutionValue.ofArbitrary(message)
+                    ?: truncatedToString(message)
             }
             catch (e: Exception) {
-                FlowMessageInspector.truncatedToString(message)
+                truncatedToString(message)
             }
         }
 
@@ -548,6 +592,12 @@ class FlowRun(
         execution.emit(
             Address.of(stableId.value),
             ExecutionValue.of(VisualVertexModel.toJsonCollection(visualVertexModel)))
+    }
+
+
+    private fun truncatedToString(value: Any): ExecutionValue {
+        return ExecutionValue.of(
+            TraceDisplay.truncatedToString(value, TraceDisplay.maxFlowTraceChars))
     }
 
 

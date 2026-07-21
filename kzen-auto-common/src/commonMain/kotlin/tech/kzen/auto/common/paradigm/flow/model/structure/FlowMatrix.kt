@@ -19,7 +19,6 @@ import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.platform.collect.persistentListOf
 
 
-// TODO: optimize via mutable builder
 data class FlowMatrix(
         val rows: List<List<CellDescriptor>>
 ) {

@@ -77,8 +77,8 @@ object ScriptLogicCompiler {
             .map { parameter(it, graphNotation, services) }
 
         // The signature's inputs are the declared parameters (in order); a caller binding by signature — e.g. a
-        // Flow RunLogicVertex passing its single upstream message to the callee's first parameter — resolves the
-        // right name. Types stay `any` (the binding is by name).
+        // Flow logic-host vertex binding its wired inputs to the leading parameters — resolves the right name.
+        // Types stay `any` (the binding is by name).
         val inputSignature = TupleDefinition(
             parameters.map { TupleComponentDefinition(it.name, LogicType.any) })
 

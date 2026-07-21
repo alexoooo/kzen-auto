@@ -1,0 +1,34 @@
+# RunLogic2's two wired inputs bind the callee's first two parameters positionally: `first` sits above column
+# 0 (`number`), `second` above column 1 (`label`) — one grid column per declared input.
+main:
+  is: Flow
+  vertices:
+  - Frun2First
+  - Frun2Second
+  - Frun2Call
+  - Frun2Output
+  edges: []
+
+Frun2First:
+  is: FlowInput
+  parameter: "x"
+  row: 0
+  column: 0
+
+Frun2Second:
+  is: FlowInput
+  parameter: "y"
+  row: 0
+  column: 1
+
+Frun2Call:
+  is: RunLogic2
+  instructions: "test/script-two-param-child-test.yaml#main"
+  row: 1
+  column: 0
+
+Frun2Output:
+  is: FlowOutput
+  result: "out"
+  row: 2
+  column: 0

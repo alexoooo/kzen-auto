@@ -1,0 +1,84 @@
+# The vertex-SPI acceptance fixture (FlowCapabilityTest): a source, a logic host and a sink, all three defined
+# entirely in the test source set and implementing only the capability interfaces — no product archetype, no
+# entry in any registry, no branch in FlowRun / FlowLogicCompiler. The run seeds `aliased-x`, hosts the child
+# Script (`number * 2`), and harvests `aliased-out`; each of those names comes from the interface's own
+# tupleComponentName, so nothing but the capability could have supplied it.
+
+
+#######################################################################################################################
+# Test-only vertex archetypes (the production analogues live in notation/auto-jvm/flow/flow-vertex.yaml).
+
+AliasInputVertex:
+  abstract: true
+  is: FlowVertex
+  icon: "material-symbols:input"
+  title: "Alias Input (test)"
+  class: tech.kzen.auto.server.exec.flow.test.AliasInputVertex
+  alias: ""
+  meta:
+    alias: String
+    output:
+      is: RequiredOutput
+      by: FlowWiring
+
+
+DelegateHostVertex:
+  abstract: true
+  is: FlowVertex
+  icon: "material-symbols:play-arrow"
+  title: "Delegate Host (test)"
+  class: tech.kzen.auto.server.exec.flow.test.DelegateHostVertex
+  instructions: ""
+  meta:
+    instructions:
+      is: ObjectLocation
+      by: Nominal
+    input:
+      is: RequiredInput
+      by: FlowWiring
+    output:
+      is: RequiredOutput
+      by: FlowWiring
+
+
+AliasOutputVertex:
+  abstract: true
+  is: FlowVertex
+  icon: "material-symbols:output"
+  title: "Alias Output (test)"
+  class: tech.kzen.auto.server.exec.flow.test.AliasOutputVertex
+  alias: ""
+  meta:
+    input:
+      is: RequiredInput
+      by: FlowWiring
+    alias: String
+
+
+#######################################################################################################################
+
+main:
+  is: Flow
+  vertices:
+  - FcapInput
+  - FcapHost
+  - FcapOutput
+  edges: []
+
+FcapInput:
+  is: AliasInputVertex
+  alias: "x"
+  row: 0
+  column: 0
+
+FcapHost:
+  is: DelegateHostVertex
+  instructions: "test/script-capability-child-test.yaml#main"
+  row: 1
+  column: 0
+
+FcapOutput:
+  is: AliasOutputVertex
+  alias: "out"
+  row: 2
+  column: 0

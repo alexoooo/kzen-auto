@@ -1,0 +1,44 @@
+# A non-batch output set twice within one execution must fail at the second set, where the channel still
+# knows which one it is — rather than silently keeping one of the two items.
+
+DoubleEmitVertex:
+  abstract: true
+  is: FlowVertex
+  icon: "material-symbols:block"
+  title: "Double Emit (test)"
+  class: tech.kzen.auto.server.exec.flow.test.DoubleEmitVertex
+  meta:
+    input:
+      is: RequiredInput
+      by: FlowWiring
+    output:
+      is: OptionalOutput
+      by: FlowWiring
+
+
+#######################################################################################################################
+
+main:
+  is: Flow
+  vertices:
+  - FdupInput
+  - FdupEmit
+  - FdupOutput
+  edges: []
+
+FdupInput:
+  is: FlowInput
+  parameter: "x"
+  row: 0
+  column: 0
+
+FdupEmit:
+  is: DoubleEmitVertex
+  row: 1
+  column: 0
+
+FdupOutput:
+  is: FlowOutput
+  result: "out"
+  row: 2
+  column: 0
