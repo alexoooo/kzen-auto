@@ -82,8 +82,7 @@ object KzenAutoCodeReferenceRewriter: CodeReferenceRewriter {
 
         fun renamedInScopeOf(objectPath: ObjectPath): Boolean =
             inScopeCache.getOrPut(objectPath) {
-                val scope = scriptTree.predecessors(objectPath) + scriptTree.inScopeBindingPaths(objectPath)
-                renamedObjectPath in scope
+                renamedObjectPath in scriptTree.inScopeReferencePaths(objectPath)
             }
 
         val commands = mutableListOf<UpdateInAttributeCommand>()

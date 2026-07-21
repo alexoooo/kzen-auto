@@ -98,20 +98,19 @@ reason a component must always re-render:**
    call — e.g. `computeStepTraceInfo` returns a fresh `StepTrace` whose fields come from a stable map, so
    it is value-equal (`==`) but **not** `===`. A fresh reference in state defeats `RPureComponent`'s
    `===` shallow-equal, so the guard must skip the `setState` entirely when the slice is value-equal (a
-   `===`/reference guard would never bail). The step-body displays (`ScriptStepDisplayDefault`,
-   `IfStepDisplay`, `ForEachStepDisplay`) — which subscribe directly to the broadcast `ScriptStore` —
-   show the pattern:
+   `===`/reference guard would never bail). `ScriptBranchDisplay.onClientState` shows the pattern:
    ```kotlin
-   // ScriptStepDisplayDefault.onScriptState — value-compare (==), not ===
-   if (state.expanded == expanded &&
-       state.isNextToRun == traceInfo.isNextToRun &&
-       state.stepTrace == traceInfo.trace &&            // fresh StepTrace ref each call → must be ==
-       state.stepValidation == stepValidation
-   ) {
+   // Both values are freshly allocated each fire → must be ==, not ===
+   if (state.stepLocations == stepLocations && state.dependencyEdges == dependencyEdges) {
        return
    }
    setState { /* … */ }
    ```
+   Where a family of components consumes the *same* slice, hold the guard in a shared base rather than
+   copying it: `ScriptStepDisplayBase` (`script/display/`) owns both store subscriptions and the guarded
+   derivation for every step-body display (leaf card, If / ForEach / DoWhile), which therefore cannot skip
+   it. A subclass with an extra slice guards only its own fields in `onClientStateExtra` /
+   `onScriptStateExtra`; React batches the two partial `setState` calls into one render.
 
 4. **Keep props passed to a pure child referentially stable** (cache the value object; reuse one
    handle instead of `Foo.Handle().also { … }` per render) so the child's `===` prop check can bail —
@@ -158,8 +157,10 @@ plus the cached executions list), the store seeds at the viewed document's resol
 assigns each direct child execution — and its transitive subtree — to the RunStep named by the child's
 call-site, publishing `runStepOwnedExecutions` (stable-id → owned `executionId`s) plus each step's
 representative (its latest owned binary event, folded forward from each refresh's newly appended
-events rather than rescanned). `RunStepDisplay` filters `traceEvents` to its owned
-executions and groups them by `executionId`; each frame is a `ScreenshotThumbnail` (its own
+events rather than rescanned). `ScriptProgressState.screenshotFramesByExecution` turns that into a
+RunStep's strip — its owned binary events, grouped by `executionId` in first-appearance order — and is
+the single definition of strip order, shared by `RunStepDisplay` (which labels the groups) and
+`pageScreenshots` (which flattens them for the full-screen walk). Each frame is a `ScreenshotThumbnail` (its own
 `ScreenshotFullscreen`), distinct from the location-keyed `StepImageThumbnail` / `StepImageFullscreen`
 used for a single step's current frame on the main canvas.
 

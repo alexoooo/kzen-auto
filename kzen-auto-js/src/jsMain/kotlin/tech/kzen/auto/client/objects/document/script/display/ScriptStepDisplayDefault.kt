@@ -2,18 +2,13 @@ package tech.kzen.auto.client.objects.document.script.display
 
 import emotion.react.css
 import react.ChildrenBuilder
-import react.State
 import react.dom.html.ReactHTML.div
-import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
-import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeViewManager
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeWrapperLookup
 import tech.kzen.auto.client.objects.document.flow.EdgeController
 import tech.kzen.auto.client.objects.document.script.ScriptController
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
-import tech.kzen.auto.client.objects.document.script.model.ScriptStore
-import tech.kzen.auto.client.objects.document.script.model.ScriptStoreKey
 import tech.kzen.auto.client.objects.document.script.step.header.StepHeader
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
@@ -22,7 +17,6 @@ import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.script.model.ScriptJumpAnalysis
 import tech.kzen.auto.common.objects.document.script.model.ScriptTree
 import tech.kzen.auto.common.objects.document.script.model.StepTrace
-import tech.kzen.auto.common.objects.document.script.model.StepValidation
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.exec.*
 import tech.kzen.lib.common.model.attribute.AttributeName
@@ -36,13 +30,10 @@ import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------
-external interface ScriptStepDisplayDefaultProps: ScriptStepDisplayProps {
+external interface ScriptStepDisplayDefaultProps: ScriptStepDisplayBaseProps {
     var attributeEditorManager: AttributeEditorManager.Wrapper
     var attributeViewManager: AttributeViewManager.Wrapper
-    var clientStateGlobal: ClientStateGlobal
     var clientLogicGlobal: ClientLogicGlobal
-    var objectStableMapper: ObjectStableMapper
-    var mirroredGraphStore: MirroredGraphStore
 
     // Optional extra content rendered at the bottom of the expanded body (inside the click-guarded
     // body region). Null for ordinary steps; RunStepDisplay uses it for the sub-script screenshot
@@ -52,15 +43,8 @@ external interface ScriptStepDisplayDefaultProps: ScriptStepDisplayProps {
 }
 
 
-external interface ScriptStepDisplayDefaultState: State {
-    var stepTrace: StepTrace?
-    var isNextToRun: Boolean?
+external interface ScriptStepDisplayDefaultState: ScriptStepDisplayBaseState {
     var objectMetadata: ObjectMetadata?
-    var stepValidation: StepValidation?
-
-    var icon: String?
-    var description: String?
-    var title: String?
     var summaryAttributeNames: List<AttributeName>?
 
     var expanded: Boolean
@@ -80,9 +64,7 @@ external interface ScriptStepDisplayDefaultState: State {
 class ScriptStepDisplayDefault(
     props: ScriptStepDisplayDefaultProps
 ):
-    RPureComponent<ScriptStepDisplayDefaultProps, ScriptStepDisplayDefaultState>(props),
-    ClientStateGlobal.Observer,
-    ScriptStore.Observer
+    ScriptStepDisplayBase<ScriptStepDisplayDefaultProps, ScriptStepDisplayDefaultState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -195,26 +177,10 @@ class ScriptStepDisplayDefault(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    init {
-        installContextType(DocumentBridgeContext)
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun componentDidMount() {
-        props.clientStateGlobal.observe(this)
-        contextValue<DocumentBridge?>()?.lookup(ScriptStoreKey)?.observe(this)
-    }
-
-
-    override fun componentWillUnmount() {
-        val scriptStore = contextValue<DocumentBridge?>()?.lookup(ScriptStoreKey)
-        // Unobserve first so clearing expansion below doesn't publish onScriptState back into this
-        // unmounting component; the still-mounted sibling preview collapses and the deleted step's
-        // map entry is pruned.
-        scriptStore?.unobserve(this)
-        props.clientStateGlobal.unobserve(this)
-
+    // NB: runs after the base has unobserved both stores, so clearing expansion below doesn't publish
+    // onScriptState back into this unmounting component; the still-mounted sibling preview collapses and the
+    // deleted step's map entry is pruned.
+    override fun onStepUnmount() {
         // Only prune the expansion entry when this step was genuinely DELETED (no longer in the
         // notation). A plain REMOUNT also unmounts us — e.g. selecting a RunStep's sub-script clears a
         // definition error and rebuilds the branch subtree — but the step still exists, so clearing
@@ -226,47 +192,26 @@ class ScriptStepDisplayDefault(
             ?.let { props.common.objectLocation in it }
             ?: false
         if (!stillExists) {
-            scriptStore?.stepStore?.setExpanded(props.common.objectLocation, false)
+            scriptStore()?.stepStore?.setExpanded(props.common.objectLocation, false)
         }
     }
 
 
-    override fun onScriptState(scriptState: ScriptState) {
-        val traceInfo = computeStepTraceInfo(
-            scriptState, props.common.objectLocation, props.objectStableMapper)
-
-        val stepValidation = scriptState
-            .validationState
-            .scriptValidation
-            ?.stepValidations
-            ?.get(props.common.objectLocation.objectPath)
-
+    override fun onScriptStateExtra(scriptState: ScriptState) {
         val expanded = scriptState.isStepExpanded(props.common.objectLocation)
-
-        // NB: value compare (==) — computeStepTraceInfo rebuilds a fresh StepTrace each call (its fields come
-        //     from the stable trace map, so it's value-equal but not ===). Skip setState on publishes that
-        //     don't change THIS step, so a sibling step's expand/collapse doesn't re-render every step body.
-        if (state.expanded == expanded &&
-            state.isNextToRun == traceInfo.isNextToRun &&
-            state.stepTrace == traceInfo.trace &&
-            state.stepValidation == stepValidation
-        ) {
+        if (state.expanded == expanded) {
             return
         }
 
         setState {
-            this.isNextToRun = traceInfo.isNextToRun
-            this.stepTrace = traceInfo.trace
-            this.stepValidation = stepValidation
             this.expanded = expanded
         }
     }
 
 
-    override fun onClientState(clientState: ClientState) {
-        val headerInfo = computeStepHeaderInfo(clientState, props.common.objectLocation)
-            ?: return
-
+    // NB: the base only calls this once the step's metadata is present (computeStepHeaderInfo returned
+    // non-null), which is what makes the objectMetadata lookup below safe to force.
+    override fun onClientStateExtra(clientState: ClientState) {
         val graphStructure = clientState.graphStructure()
         val objectMetadata = graphStructure
             .graphMetadata
@@ -307,9 +252,6 @@ class ScriptStepDisplayDefault(
         //     structural). Skip setState on no-op clientState publishes so the RPureComponent conversion
         //     isn't defeated by a fresh-list reference on every broadcast.
         if (state.objectMetadata == objectMetadata &&
-            state.icon == headerInfo.icon &&
-            state.description == headerInfo.description &&
-            state.title == headerInfo.title &&
             state.summaryAttributeNames == summaryAttributeNames &&
             state.hasBreakpoint == hasBreakpoint &&
             state.showSetNext == showSetNext &&
@@ -321,10 +263,6 @@ class ScriptStepDisplayDefault(
 
         setState {
             this.objectMetadata = objectMetadata
-
-            this.icon = headerInfo.icon
-            this.description = headerInfo.description
-            this.title = headerInfo.title
             this.summaryAttributeNames = summaryAttributeNames
             this.hasBreakpoint = hasBreakpoint
             this.showSetNext = showSetNext
@@ -359,7 +297,7 @@ class ScriptStepDisplayDefault(
         // Single source of truth: write expansion to ScriptState via the sub-store. Both this step
         // body and its sibling StepImageThumbnail (no prop path between them) re-render from the
         // resulting onScriptState publish, so there's no local setState here.
-        contextValue<DocumentBridge?>()?.lookup(ScriptStoreKey)?.stepStore?.setExpanded(props.common.objectLocation, !state.expanded)
+        scriptStore()?.stepStore?.setExpanded(props.common.objectLocation, !state.expanded)
     }
 
 

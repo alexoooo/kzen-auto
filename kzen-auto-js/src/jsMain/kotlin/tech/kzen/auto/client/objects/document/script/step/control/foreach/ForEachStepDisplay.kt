@@ -2,23 +2,17 @@ package tech.kzen.auto.client.objects.document.script.step.control.foreach
 
 import emotion.react.css
 import react.ChildrenBuilder
-import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
-import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
-import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
 import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
 import tech.kzen.auto.client.objects.document.script.display.*
 import tech.kzen.auto.client.objects.document.script.display.branch.*
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
-import tech.kzen.auto.client.objects.document.script.model.ScriptStore
-import tech.kzen.auto.client.objects.document.script.model.ScriptStoreKey
-import tech.kzen.auto.client.service.global.ClientState
+import tech.kzen.auto.client.objects.document.script.step.control.BranchStepDisplayProps
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
-import tech.kzen.auto.common.objects.document.script.model.StepTrace
 import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.ListExecutionValue
 import tech.kzen.lib.common.exec.NullExecutionValue
@@ -34,38 +28,17 @@ import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------
-external interface ForEachStepDisplayProps: ScriptStepDisplayProps {
-    var attributeEditorManager: AttributeEditorManager.Wrapper
-    var stepDisplayManager: StepDisplayManager.Wrapper
-    var scriptCommander: ScriptCommander
-
-    var clientStateGlobal: ClientStateGlobal
-    var objectStableMapper: ObjectStableMapper
-    var mirroredGraphStore: MirroredGraphStore
-}
-
-
-external interface ForEachStepDisplayState: State {
-    var stepTrace: StepTrace?
-    var isNextToRun: Boolean?
-    var typeMetadata: String?
+external interface ForEachStepDisplayState: ScriptStepDisplayBaseState {
     var itemTypeMetadata: String?
-    var validationError: String?
-
-    var icon: String?
-    var description: String?
-    var title: String?
 }
 
 
 //---------------------------------------------------------------------------------------------------------------------
 @Suppress("unused")
 class ForEachStepDisplay(
-    props: ForEachStepDisplayProps
+    props: BranchStepDisplayProps
 ):
-    RPureComponent<ForEachStepDisplayProps, ForEachStepDisplayState>(props),
-    ClientStateGlobal.Observer,
-    ScriptStore.Observer
+    ScriptStepDisplayBase<BranchStepDisplayProps, ForEachStepDisplayState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -102,64 +75,15 @@ class ForEachStepDisplay(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    init {
-        installContextType(DocumentBridgeContext)
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun componentDidMount() {
-        props.clientStateGlobal.observe(this)
-        contextValue<DocumentBridge?>()?.lookup(ScriptStoreKey)?.observe(this)
-    }
-
-
-    override fun componentWillUnmount() {
-        contextValue<DocumentBridge?>()?.lookup(ScriptStoreKey)?.unobserve(this)
-        props.clientStateGlobal.unobserve(this)
-    }
-
-
-    override fun onClientState(clientState: ClientState) {
-        val info = computeStepHeaderInfo(clientState, props.common.objectLocation)
-            ?: return
-
-        // NB: skip setState on no-op publishes so a sibling step's change doesn't re-render this body
-        //     (and so the RPureComponent conversion isn't defeated by an unconditional setState).
-        if (state.icon == info.icon &&
-            state.description == info.description &&
-            state.title == info.title
-        ) {
-            return
-        }
-
-        setState {
-            this.icon = info.icon
-            this.description = info.description
-            this.title = info.title
-        }
-    }
-
-
-    override fun onScriptState(scriptState: ScriptState) {
-        val info = computeStepTraceInfo(
-            scriptState, props.common.objectLocation, props.objectStableMapper)
-
-        val stepValidation = scriptState
-            .validationState
-            .scriptValidation
-            ?.stepValidations
-            ?.get(props.common.objectLocation.objectPath)
-        val typeMetadata = stepValidation?.typeMetadata?.toSimple()
-        val validationError = stepValidation?.errorMessage
-
-        // The loop item binding (ForEachItemBinding) lives in this ForEach's `item` branch; its type is
-        // the items-collection element type. Surfaced beside the "Item" branch label (see renderSteps).
+    // The loop item binding (ForEachItemBinding) lives in this ForEach's `item` branch; its type is the
+    // items-collection element type. Surfaced beside the "Item" branch label (see renderSteps).
+    override fun onScriptStateExtra(scriptState: ScriptState) {
         val itemObjectPath = scriptState
             .documentNotation
             .directNestedObjectPaths(
                 props.common.objectLocation.objectPath, ScriptConventions.itemAttributeName)
             .firstOrNull()
+
         val itemTypeMetadata = itemObjectPath?.let {
             scriptState
                 .validationState
@@ -170,24 +94,12 @@ class ForEachStepDisplay(
                 ?.toSimple()
         }
 
-        // NB: value compare (==) — computeStepTraceInfo rebuilds a fresh StepTrace each call (value-equal,
-        //     not ===). Skip setState when THIS step is unchanged so a sibling's expand/collapse or trace
-        //     update doesn't re-render every step body.
-        if (state.stepTrace == info.trace &&
-            state.isNextToRun == info.isNextToRun &&
-            state.typeMetadata == typeMetadata &&
-            state.itemTypeMetadata == itemTypeMetadata &&
-            state.validationError == validationError
-        ) {
+        if (state.itemTypeMetadata == itemTypeMetadata) {
             return
         }
 
         setState {
-            this.stepTrace = info.trace
-            this.isNextToRun = info.isNextToRun
-            this.typeMetadata = typeMetadata
             this.itemTypeMetadata = itemTypeMetadata
-            this.validationError = validationError
         }
     }
 
@@ -202,8 +114,8 @@ class ForEachStepDisplay(
             trace = state.stepTrace,
             isNextToRun = state.isNextToRun ?: false,
             mirroredGraphStore = props.mirroredGraphStore,
-            typeMetadata = state.typeMetadata,
-            validationError = state.validationError
+            typeMetadata = state.stepValidation?.typeMetadata?.toSimple(),
+            validationError = state.stepValidation?.errorMessage
         ) {
             props.attributeEditorManager.child(this) {
                 this.objectLocation = props.common.objectLocation

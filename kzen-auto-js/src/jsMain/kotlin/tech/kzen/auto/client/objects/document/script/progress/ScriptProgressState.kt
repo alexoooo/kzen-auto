@@ -1,5 +1,6 @@
 package tech.kzen.auto.client.objects.document.script.progress
 
+import tech.kzen.lib.common.exec.BinaryValue
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceEvent
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceSnapshot
@@ -51,5 +52,27 @@ data class ScriptProgressState(
 
     fun ownedExecutions(runStepStableId: ObjectStableId): Set<String> {
         return runStepOwnedExecutions[runStepStableId] ?: setOf()
+    }
+
+
+    // The screenshot frames this RunStep owns, grouped by sub-script execution in first-appearance order
+    // (one group = one sub-script invocation = one buffer). [traceEvents] is sorted by sequence, so each
+    // group is in execution order. The single definition of the strip's order: RunStepDisplay labels these
+    // groups for the film strip, and pageScreenshots flattens them for the full-screen viewer's walk, so
+    // the two can't drift when nested executions interleave by sequence.
+    fun screenshotFramesByExecution(runStepStableId: ObjectStableId): List<List<LogicTraceEvent>> {
+        val owned = ownedExecutions(runStepStableId)
+        if (owned.isEmpty()) {
+            return listOf()
+        }
+
+        val byExecution = LinkedHashMap<String, MutableList<LogicTraceEvent>>()
+        for (frame in traceEvents) {
+            if (frame.value !is BinaryValue || frame.executionId.value !in owned) {
+                continue
+            }
+            byExecution.getOrPut(frame.executionId.value) { mutableListOf() }.add(frame)
+        }
+        return byExecution.values.toList()
     }
 }

@@ -210,8 +210,8 @@ class KotlinExpressionEditor(
             }
             else {
                 // FormulaStep.code references prior steps plus in-scope bindings (parameters / loop items).
-                // Mirrors server FormulaStep.processorTypes.
-                scriptTree.predecessors(targetPath) + scriptTree.inScopeBindingPaths(targetPath)
+                // Mirrors server FormulaStep.processorTypes (same ScriptTree.inScopeReferencePaths).
+                scriptTree.inScopeReferencePaths(targetPath)
             }
 
         val references = candidatePaths.map { props.objectLocation.documentPath.toObjectLocation(it) }

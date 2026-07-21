@@ -118,6 +118,16 @@ data class ScriptTree(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    // Everything the step at `target` may reference: the prior steps of each enclosing block plus the in-scope
+    // value bindings (Script parameters / enclosing ForEach items). One name for the candidate set shared by the
+    // reference selects, the expression editor, the rename rewriter and the server's expression scoping — so
+    // client and server can't drift apart on what "in scope" means.
+    fun inScopeReferencePaths(target: ObjectPath): List<ObjectPath> {
+        return predecessors(target) + inScopeBindingPaths(target)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     fun predecessors(target: ObjectPath): List<ObjectPath> {
         val buffer = ArrayDeque<ObjectPath>()
         predecessors(target, buffer)

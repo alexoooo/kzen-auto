@@ -2,10 +2,7 @@ package tech.kzen.auto.client.objects.document.script.step.control
 
 import emotion.react.css
 import react.ChildrenBuilder
-import react.State
 import react.dom.html.ReactHTML.div
-import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
-import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
 import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
 import tech.kzen.auto.client.objects.document.script.display.*
@@ -13,11 +10,7 @@ import tech.kzen.auto.client.objects.document.script.display.branch.branchStageL
 import tech.kzen.auto.client.objects.document.script.display.branch.branchStageSeam
 import tech.kzen.auto.client.objects.document.script.display.branch.branchStageTopShadow
 import tech.kzen.auto.client.objects.document.script.display.branch.scriptBranchContainer
-import tech.kzen.auto.client.objects.document.script.model.ScriptState
-import tech.kzen.auto.client.objects.document.script.model.ScriptStore
-import tech.kzen.auto.client.objects.document.script.model.ScriptStoreKey
 import tech.kzen.auto.client.objects.document.script.step.header.StepHeader
-import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
@@ -33,37 +26,11 @@ import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------
-external interface DoWhileStepDisplayProps: ScriptStepDisplayProps {
-    var attributeEditorManager: AttributeEditorManager.Wrapper
-    var stepDisplayManager: StepDisplayManager.Wrapper
-    var scriptCommander: ScriptCommander
-
-    var clientStateGlobal: ClientStateGlobal
-    var objectStableMapper: ObjectStableMapper
-    var mirroredGraphStore: MirroredGraphStore
-}
-
-
-external interface DoWhileStepDisplayState: State {
-    var stepTrace: StepTrace?
-    var isNextToRun: Boolean?
-    var typeMetadata: String?
-    var validationError: String?
-
-    var icon: String?
-    var description: String?
-    var title: String?
-}
-
-
-//---------------------------------------------------------------------------------------------------------------------
 @Suppress("unused")
 class DoWhileStepDisplay(
-    props: DoWhileStepDisplayProps
+    props: BranchStepDisplayProps
 ):
-    RPureComponent<DoWhileStepDisplayProps, DoWhileStepDisplayState>(props),
-    ClientStateGlobal.Observer,
-    ScriptStore.Observer
+    ScriptStepDisplayBase<BranchStepDisplayProps, ScriptStepDisplayBaseState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -108,78 +75,6 @@ class DoWhileStepDisplay(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    init {
-        installContextType(DocumentBridgeContext)
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun componentDidMount() {
-        props.clientStateGlobal.observe(this)
-        contextValue<DocumentBridge?>()?.lookup(ScriptStoreKey)?.observe(this)
-    }
-
-
-    override fun componentWillUnmount() {
-        contextValue<DocumentBridge?>()?.lookup(ScriptStoreKey)?.unobserve(this)
-        props.clientStateGlobal.unobserve(this)
-    }
-
-
-    override fun onClientState(clientState: ClientState) {
-        val info = computeStepHeaderInfo(clientState, props.common.objectLocation)
-            ?: return
-
-        // NB: skip setState on no-op publishes so a sibling step's change doesn't re-render this body
-        //     (and so the RPureComponent conversion isn't defeated by an unconditional setState).
-        if (state.icon == info.icon &&
-            state.description == info.description &&
-            state.title == info.title
-        ) {
-            return
-        }
-
-        setState {
-            this.icon = info.icon
-            this.description = info.description
-            this.title = info.title
-        }
-    }
-
-
-    override fun onScriptState(scriptState: ScriptState) {
-        val info = computeStepTraceInfo(
-            scriptState, props.common.objectLocation, props.objectStableMapper)
-
-        val stepValidation = scriptState
-            .validationState
-            .scriptValidation
-            ?.stepValidations
-            ?.get(props.common.objectLocation.objectPath)
-        val typeMetadata = stepValidation?.typeMetadata?.toSimple()
-        val validationError = stepValidation?.errorMessage
-
-        // NB: value compare (==) — computeStepTraceInfo rebuilds a fresh StepTrace each call (value-equal,
-        //     not ===). Skip setState when THIS step is unchanged so a sibling's expand/collapse or trace
-        //     update doesn't re-render every step body.
-        if (state.stepTrace == info.trace &&
-            state.isNextToRun == info.isNextToRun &&
-            state.typeMetadata == typeMetadata &&
-            state.validationError == validationError
-        ) {
-            return
-        }
-
-        setState {
-            this.stepTrace = info.trace
-            this.isNextToRun = info.isNextToRun
-            this.typeMetadata = typeMetadata
-            this.validationError = validationError
-        }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
         // Run status reads as a 4px coloured line down the LEFT of the whole body (the leaf step card's
         // pattern), not a header tint — so the header stays neutral and the accent spans header → Do →
@@ -187,7 +82,7 @@ class DoWhileStepDisplay(
         val trace = state.stepTrace
         val traceState = trace?.state ?: StepTrace.State.Idle
         val accent = ScriptStepDisplayDefault.statusBorderColor(
-            traceState, trace?.error, state.isNextToRun ?: false, state.validationError)
+            traceState, trace?.error, state.isNextToRun ?: false, state.stepValidation?.errorMessage)
 
         // Three flush sections, ordered to match the do-while (run the body, THEN test the condition):
         //   header (neutral white) → "Do" body steps (recessed gray stage) → full-width "While" footer.
@@ -222,8 +117,8 @@ class DoWhileStepDisplay(
                     this.icon = state.icon ?: ""
                     this.description = state.description ?: ""
                     this.title = state.title ?: ""
-                    this.typeMetadata = state.typeMetadata
-                    this.validationError = state.validationError
+                    this.typeMetadata = state.stepValidation?.typeMetadata?.toSimple()
+                    this.validationError = state.stepValidation?.errorMessage
                     this.mirroredGraphStore = props.mirroredGraphStore
                 }
             }

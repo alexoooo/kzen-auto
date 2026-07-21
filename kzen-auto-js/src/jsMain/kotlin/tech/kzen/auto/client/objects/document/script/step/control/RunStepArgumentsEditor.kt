@@ -256,7 +256,7 @@ class RunStepArgumentsEditor(
         val scriptTree = scriptState.scriptTree
         val targetPath = props.objectLocation.objectPath
 
-        val candidatePaths = scriptTree.predecessors(targetPath) + scriptTree.inScopeBindingPaths(targetPath)
+        val candidatePaths = scriptTree.inScopeReferencePaths(targetPath)
         val predecessors = candidatePaths
             .map { props.objectLocation.documentPath.toObjectLocation(it) }
             .toPersistentList()

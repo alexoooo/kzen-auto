@@ -27,9 +27,7 @@ object StepExpressionSupport {
         scriptTree: ScriptTree,
         scriptValidation: ScriptValidation
     ): Map<ObjectPath, TypeMetadata?> {
-        val predecessors = scriptTree.predecessors(selfLocation.objectPath)
-        val bindings = scriptTree.inScopeBindingPaths(selfLocation.objectPath)
-        return typesOf(predecessors + bindings, scriptValidation)
+        return typesOf(scriptTree.inScopeReferencePaths(selfLocation.objectPath), scriptValidation)
     }
 
 

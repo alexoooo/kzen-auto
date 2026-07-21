@@ -108,7 +108,7 @@ class SelectStepEditor(
 
         // Prior body steps plus the in-scope value bindings (parameters / loop items) — any of which this
         // input can reference, since a binding is an addressable, typed value just like a step output.
-        val candidatePaths = scriptTree.predecessors(targetPath) + scriptTree.inScopeBindingPaths(targetPath)
+        val candidatePaths = scriptTree.inScopeReferencePaths(targetPath)
 
         setOptions(candidatePaths
             .map { objectPath ->

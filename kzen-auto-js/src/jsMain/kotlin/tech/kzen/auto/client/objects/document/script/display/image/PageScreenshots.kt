@@ -60,7 +60,12 @@ fun pageScreenshots(
         if (representative != null) {
             val frames =
                 if (scriptState.isStepExpanded(location)) {
-                    stripFrames(scriptState, objectStableMapper, location)
+                    // The open RunStep's whole detail strip, in the order it renders — the same grouping
+                    // RunStepDisplay labels, flattened, so navigation matches the visible strip even when
+                    // nested sub-script executions interleave by sequence.
+                    scriptState.progress
+                        .screenshotFramesByExecution(objectStableMapper.objectStableId(location))
+                        .flatten()
                 }
                 else {
                     listOf(representative)
@@ -94,30 +99,6 @@ fun pageScreenshots(
 
 
 //---------------------------------------------------------------------------------------------------------------------
-// A RunStep's detail-strip frames in the order the strip renders them: subtree screenshot events grouped
-// by sub-script execution (first-appearance order), each group in execution (sequence) order. Mirrors
-// RunStepDisplay.buildGroups so navigation order matches the visible strip even when nested sub-script
-// executions interleave by sequence.
-private fun stripFrames(
-    scriptState: ScriptState,
-    objectStableMapper: ObjectStableMapper,
-    runStepLocation: ObjectLocation
-): List<LogicTraceEvent> {
-    val ownedExecutions = scriptState.progress.ownedExecutions(
-        objectStableMapper.objectStableId(runStepLocation))
-
-    val byExecution = LinkedHashMap<String, MutableList<LogicTraceEvent>>()
-    for (frame in scriptState.progress.traceEvents) {
-        if (frame.value !is BinaryValue || frame.executionId.value !in ownedExecutions) {
-            continue
-        }
-        byExecution.getOrPut(frame.executionId.value) { mutableListOf() }.add(frame)
-    }
-    return byExecution.values.flatten()
-}
-
-
-//---------------------------------------------------------------------------------------------------------------------
 private fun stepTitle(clientState: ClientState, location: ObjectLocation): String {
     val title = computeStepHeaderInfo(clientState, location)?.title ?: ""
     return "${location.documentPath.name.value} > $title"
@@ -136,6 +117,5 @@ private fun frameTitle(
         catch (_: IllegalArgumentException) {
             return "?"
         }
-    val title = computeStepHeaderInfo(clientState, location)?.title ?: ""
-    return "${location.documentPath.name.value} > $title"
+    return stepTitle(clientState, location)
 }

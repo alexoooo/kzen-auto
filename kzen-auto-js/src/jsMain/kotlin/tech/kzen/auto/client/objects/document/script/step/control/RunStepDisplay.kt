@@ -140,24 +140,23 @@ class RunStepDisplay(
             return
         }
 
-        // The executions this RunStep's invocation spawned (within the viewed run frame) — its own
-        // sub-script invocation plus everything nested under it — so a sibling RunStep that invokes the
-        // same sub-script document doesn't bleed its frames in. Derived from the run's execution tree
-        // (ScriptProgressStore), keyed by this step's stable id.
+        // The frames this RunStep's invocation spawned (within the viewed run frame) — its own sub-script
+        // invocation plus everything nested under it — so a sibling RunStep that invokes the same sub-script
+        // document doesn't bleed its frames in. Grouping (and its order) is owned by ScriptProgressState,
+        // shared with the full-screen viewer's page walk.
         val selfStableId = props.objectStableMapper.objectStableId(props.common.objectLocation)
-        val ownedExecutions = scriptState.progress.ownedExecutions(selfStableId)
+        val groupFrames = scriptState.progress.screenshotFramesByExecution(selfStableId)
 
-        // traceEvents is sorted by sequence; keep that order so groups read in execution order.
-        val relevant = scriptState.progress.traceEvents
-            .filter { it.value is BinaryValue && it.executionId.value in ownedExecutions }
-
-        val signature = selfStableId.value + "|" + ownedExecutions.size + "|" +
-                relevant.size + "|" + (relevant.lastOrNull()?.sequence ?: -1L)
+        // Cheap change signature: each group's last frame is its own max sequence (traceEvents is sorted),
+        // so the max over groups is the newest frame even when nested executions interleave.
+        val frameCount = groupFrames.sumOf { it.size }
+        val maxSequence = groupFrames.maxOfOrNull { it.last().sequence } ?: -1L
+        val signature = selfStableId.value + "|" + groupFrames.size + "|" + frameCount + "|" + maxSequence
         if (signature == state.signature) {
             return
         }
 
-        val groups = buildGroups(relevant)
+        val groups = labelGroups(groupFrames)
 
         setState {
             this.groups = groups
@@ -166,16 +165,9 @@ class RunStepDisplay(
     }
 
 
-    // Group consecutive frames by execution (one sub-script invocation = one buffer = one group),
-    // preserving execution order. Loop iterations whose body is a RunStep are separate invocations, so
-    // a repeated sub-script root gets an ordinal (e.g. "Build Item #2") to distinguish them.
-    private fun buildGroups(frames: List<LogicTraceEvent>): List<ScreenshotGroup> {
-        val byExecution = LinkedHashMap<String, MutableList<LogicTraceEvent>>()
-        for (frame in frames) {
-            byExecution.getOrPut(frame.executionId.value) { mutableListOf() }.add(frame)
-        }
-
-        val groupFramesList = byExecution.values.toList()
+    // Label each execution's group for the strip. Loop iterations whose body is a RunStep are separate
+    // invocations, so a repeated sub-script root gets an ordinal (e.g. "Build Item #2") to distinguish them.
+    private fun labelGroups(groupFramesList: List<List<LogicTraceEvent>>): List<ScreenshotGroup> {
         val rootTotals = groupFramesList
             .groupingBy { it.first().rootStableId }
             .eachCount()
