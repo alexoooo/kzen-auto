@@ -57,13 +57,14 @@ class MultiTextAttributeEditor(
     RPureComponent<MultiTextAttributeEditorProps, MultiTextAttributeEditorState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
+    // NB: `this.props` - see the shadowing note in TextAttributeEditor.
     private val committer = AttributeCommitter(
-        graphStore = { props.mirroredGraphStore },
-        objectLocation = { props.objectLocation },
-        attributePath = { props.attributePath },
+        graphStore = { this.props.mirroredGraphStore },
+        objectLocation = { this.props.objectLocation },
+        attributePath = { this.props.attributePath },
         pendingNotation = {
             val adjustedValues =
-                if (props.unique) {
+                if (this.props.unique) {
                     state.value.toSet().toList()
                 }
                 else {
@@ -76,7 +77,7 @@ class MultiTextAttributeEditor(
         },
         // Read back out of the committed notation rather than off state, which may have moved on during the apply.
         onCommitted = { notation ->
-            props.onChange?.invoke((notation as ListAttributeNotation).values.map { it.asString()!! })
+            this.props.onChange?.invoke((notation as ListAttributeNotation).values.map { it.asString()!! })
         },
         onError = { message -> setState { errorMessage = message } })
 

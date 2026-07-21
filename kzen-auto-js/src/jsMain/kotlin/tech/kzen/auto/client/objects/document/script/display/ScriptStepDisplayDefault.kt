@@ -8,6 +8,7 @@ import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
 import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeViewManager
+import tech.kzen.auto.client.objects.document.common.attribute.AttributeWrapperLookup
 import tech.kzen.auto.client.objects.document.flow.EdgeController
 import tech.kzen.auto.client.objects.document.script.ScriptController
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
@@ -336,13 +337,10 @@ class ScriptStepDisplayDefault(
     private fun findSummaryAttributes(objectMetadata: ObjectMetadata): List<AttributeName> {
         val result = mutableListOf<AttributeName>()
         for ((attributeName, attributeMetadata) in objectMetadata.attributes.map) {
-            val summaryView = attributeMetadata
-                .attributeMetadataNotation
-                .get(AttributeViewManager.summaryAttributePath.toNesting())
-                ?.asString()
-                ?: continue
+            val hasSummaryView = AttributeWrapperLookup.wrapperName(
+                attributeMetadata, AttributeWrapperLookup.summaryAttributePath) != null
 
-            if (summaryView.isNotEmpty()) {
+            if (hasSummaryView) {
                 result.add(attributeName)
             }
         }

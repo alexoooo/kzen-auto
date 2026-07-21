@@ -8,9 +8,7 @@ import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
-import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.obj.ObjectName
-import tech.kzen.lib.common.model.structure.metadata.AttributeMetadata
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
 
@@ -34,12 +32,6 @@ class AttributeViewManager(
     RPureComponent<AttributeViewManagerProps, AttributeViewManagerState>(props),
     ClientStateGlobal.Observer
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    companion object {
-        val summaryAttributePath = AttributePath.parse("summary")
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
@@ -74,21 +66,12 @@ class AttributeViewManager(
             return
         }
 
-        val attributeMetadata: AttributeMetadata? = clientState
-            .graphStructure()
-            .graphMetadata
-            .get(props.objectLocation)
-            ?.attributes
-            ?.get(props.attributeName)
-
-        val viewAttributeNotation = attributeMetadata
-            ?.attributeMetadataNotation
-            ?.get(summaryAttributePath.toNesting())
-
-        val viewWrapperName = viewAttributeNotation
-            ?.asString()
-            ?.let { ObjectName(it) }
-            ?: return
+        val viewWrapperName = AttributeWrapperLookup.wrapperName(
+            clientState.graphStructure(),
+            props.objectLocation,
+            props.attributeName,
+            AttributeWrapperLookup.summaryAttributePath
+        ) ?: return
 
         val attributeView =
             props.attributeViews.find { it.name() == viewWrapperName }

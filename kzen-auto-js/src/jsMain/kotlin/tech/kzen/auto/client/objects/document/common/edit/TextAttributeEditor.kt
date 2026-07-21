@@ -63,12 +63,17 @@ class TextAttributeEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    // NB: `this.props`, not bare `props` - in a property initializer the primary-constructor parameter shadows the
+    // inherited member, so a bare reference would pin the FIRST render's props object for the component's whole
+    // life, defeating AttributeCommitter's "every argument is read at commit time" contract. An editor outlives a
+    // rename of its host (the manager re-renders it in place with a new objectLocation), and a commit must target
+    // the current one. Same shape in every AttributeCommitter adopter.
     private val committer = AttributeCommitter(
-        graphStore = { props.mirroredGraphStore },
-        objectLocation = { props.objectLocation },
-        attributePath = { props.attributePath },
+        graphStore = { this.props.mirroredGraphStore },
+        objectLocation = { this.props.objectLocation },
+        attributePath = { this.props.attributePath },
         pendingNotation = { ScalarAttributeNotation(state.value) },
-        onCommitted = { props.onChange?.invoke((it as ScalarAttributeNotation).value) },
+        onCommitted = { this.props.onChange?.invoke((it as ScalarAttributeNotation).value) },
         onError = { message -> setState { errorMessage = message } })
 
 

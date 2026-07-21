@@ -100,10 +100,11 @@ class TargetSpecEditor(
     //-----------------------------------------------------------------------------------------------------------------
     // The value row belongs to the per-type fragment, so this host has no field of its own to turn red — a failed
     // write surfaces through the global banner only.
+    // NB: `this.props` - see the shadowing note in TextAttributeEditor.
     private val committer = AttributeCommitter(
-        graphStore = { props.mirroredGraphStore },
-        objectLocation = { props.objectLocation },
-        attributePath = { AttributePath.ofName(props.attributeName) },
+        graphStore = { this.props.mirroredGraphStore },
+        objectLocation = { this.props.objectLocation },
+        attributePath = { AttributePath.ofName(this.props.attributeName) },
         pendingNotation = { pendingNotation() })
 
 

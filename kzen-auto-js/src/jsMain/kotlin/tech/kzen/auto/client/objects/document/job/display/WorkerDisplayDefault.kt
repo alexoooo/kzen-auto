@@ -10,6 +10,7 @@ import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeViewManager
+import tech.kzen.auto.client.objects.document.common.attribute.AttributeWrapperLookup
 import tech.kzen.auto.client.objects.document.job.JobWorkerProgress
 import tech.kzen.auto.client.objects.document.job.WorkerOutcome
 import tech.kzen.auto.client.service.global.ClientState
@@ -257,12 +258,8 @@ class WorkerDisplayDefault(
     // attribute that declares a summary view gets it for free. Mirrors the Script step header's summary row.
     private fun ChildrenBuilder.renderAttributeSummaries(objectMetadata: ObjectMetadata) {
         for ((attributeName, attributeMetadata) in objectMetadata.attributes.map) {
-            val hasSummaryView = attributeMetadata
-                .attributeMetadataNotation
-                .get(AttributeViewManager.summaryAttributePath.toNesting())
-                ?.asString()
-                ?.isNotEmpty()
-                ?: false
+            val hasSummaryView = AttributeWrapperLookup.wrapperName(
+                attributeMetadata, AttributeWrapperLookup.summaryAttributePath) != null
             if (! hasSummaryView) {
                 continue
             }

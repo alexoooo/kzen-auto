@@ -105,10 +105,11 @@ class KotlinExpressionEditor(
     // The multiline textarea, so insertion can splice at the caret (and restore focus + caret afterwards).
     private val inputRef = createRef<HTMLTextAreaElement>()
 
+    // NB: `this.props` - see the shadowing note in TextAttributeEditor.
     private val committer = AttributeCommitter(
-        graphStore = { props.mirroredGraphStore },
-        objectLocation = { props.objectLocation },
-        attributePath = { AttributePath.ofName(props.attributeName) },
+        graphStore = { this.props.mirroredGraphStore },
+        objectLocation = { this.props.objectLocation },
+        attributePath = { AttributePath.ofName(this.props.attributeName) },
         pendingNotation = {
             state.value
                 ?.takeIf { it != state.serverValue }

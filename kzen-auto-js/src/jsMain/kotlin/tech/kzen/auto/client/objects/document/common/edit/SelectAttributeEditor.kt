@@ -52,12 +52,13 @@ class SelectAttributeEditor(
     //-----------------------------------------------------------------------------------------------------------------
     // The selection always carries its own value, so there is no pending buffer to read: schedule/flush are never
     // called and only the explicit-value commitNow is used.
+    // NB: `this.props` - see the shadowing note in TextAttributeEditor.
     private val committer = AttributeCommitter(
-        graphStore = { props.mirroredGraphStore },
-        objectLocation = { props.objectLocation },
-        attributePath = { props.attributePath },
+        graphStore = { this.props.mirroredGraphStore },
+        objectLocation = { this.props.objectLocation },
+        attributePath = { this.props.attributePath },
         pendingNotation = { null },
-        onCommitted = { props.onChange?.invoke((it as ScalarAttributeNotation).value) },
+        onCommitted = { this.props.onChange?.invoke((it as ScalarAttributeNotation).value) },
         onError = { message -> setState { errorMessage = message } })
 
 
