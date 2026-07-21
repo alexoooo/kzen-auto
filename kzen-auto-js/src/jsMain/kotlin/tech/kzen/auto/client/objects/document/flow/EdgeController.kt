@@ -22,12 +22,10 @@ import tech.kzen.auto.common.paradigm.flow.model.structure.cell.CellCoordinate
 import tech.kzen.auto.common.paradigm.flow.model.structure.cell.EdgeDescriptor
 import tech.kzen.auto.common.paradigm.flow.model.structure.cell.EdgeDirection
 import tech.kzen.auto.common.paradigm.flow.model.structure.cell.VertexDescriptor
-import tech.kzen.auto.common.paradigm.flow.util.FlowUtils
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.cqrs.RemoveInAttributeCommand
 import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.common.service.store.MirroredGraphStore
@@ -42,10 +40,13 @@ external interface EdgeControllerProps: Props {
 
     var documentPath: DocumentPath
     var attributeNesting: AttributeNesting
-    var graphStructure: GraphStructure
     var visualFlowModel: VisualFlowModel
     var flowMatrix: FlowMatrix
     var flowDag: FlowDag
+
+    // Routing, derived once per render by FlowController and threaded through — never re-derived per cell.
+    var nextToRun: ObjectLocation?
+    var runningVertex: ObjectLocation?
 }
 
 
@@ -109,12 +110,11 @@ class EdgeController(
     }
 
 
+    // A running vertex takes precedence over the pure routing pick, which is what tints the pipes feeding the
+    // vertex being executed rather than the one queued behind it.
     private fun nextToRun(): ObjectLocation? {
-        return props.visualFlowModel.running()
-                ?: FlowUtils.next(
-                        props.documentPath,
-                        props.graphStructure,
-                        props.visualFlowModel)
+        return props.runningVertex
+                ?: props.nextToRun
     }
 
 

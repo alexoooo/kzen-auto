@@ -2,6 +2,7 @@ package tech.kzen.auto.common.paradigm.flow
 
 import tech.kzen.auto.common.paradigm.flow.FlowStructureTestBuilder.awaitingNext
 import tech.kzen.auto.common.paradigm.flow.FlowStructureTestBuilder.edge
+import tech.kzen.auto.common.paradigm.flow.FlowStructureTestBuilder.errored
 import tech.kzen.auto.common.paradigm.flow.FlowStructureTestBuilder.exhausted
 import tech.kzen.auto.common.paradigm.flow.FlowStructureTestBuilder.matrixOf
 import tech.kzen.auto.common.paradigm.flow.FlowStructureTestBuilder.produced
@@ -220,5 +221,38 @@ class FlowUtilsNextTest {
                 streaming to awaitingNext()))
 
         assertEquals(streaming.objectLocation, nextVertex)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    @Test
+    fun erroredVertexNotSelectedWithinLayer() {
+        // Two ready no-input sources in one layer, one of them parked on an error: the healthy sibling is
+        // selected (nextInLayer's phase check now sees Error, which is neither Pending nor Remaining).
+        val left = vertex("left", 0, 0)
+        val right = vertex("right", 0, 1)
+        val matrix = matrixOf(left, right)
+
+        val nextVertex = next(matrix, visualOf(
+                left to errored(),
+                right to VisualVertexModel.empty))
+
+        assertEquals(right.objectLocation, nextVertex)
+    }
+
+
+    @Test
+    fun erroredSingleVertexLayerNotSelected() {
+        // The successorSelectedAfterSourceProduces topology with an errored sink: the single-vertex-layer
+        // shortcut's Error guard stops the parked vertex from displaying as next-to-run.
+        val source = vertex("source", 0, 0)
+        val sink = vertex("sink", 2, 0, "input")
+        val matrix = matrixOf(source, edge(EdgeOrientation.TopToBottom, 1, 0), sink)
+
+        val nextVertex = next(matrix, visualOf(
+                source to produced(),
+                sink to errored()))
+
+        assertNull(nextVertex)
     }
 }

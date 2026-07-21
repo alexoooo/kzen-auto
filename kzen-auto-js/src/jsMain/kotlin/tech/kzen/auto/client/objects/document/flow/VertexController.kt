@@ -12,7 +12,6 @@ import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
 import tech.kzen.auto.client.objects.document.flow.edge.BottomEgress
 import tech.kzen.auto.client.objects.document.flow.edge.TopIngress
-import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ExecutionIntentGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
@@ -34,6 +33,7 @@ import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.location.ObjectReference
+import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.cqrs.RemoveObjectInAttributeCommand
 import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.common.service.store.MirroredGraphStore
@@ -53,10 +53,15 @@ external interface VertexControllerProps: Props {
     var documentPath: DocumentPath
     var attributeNesting: AttributeNesting
 
-    var clientState: ClientState
+    var graphStructure: GraphStructure
     var visualFlowModel: VisualFlowModel
     var flowMatrix: FlowMatrix
     var flowDag: FlowDag
+
+    // Routing, derived once per render by FlowController and threaded through — never re-derived per cell.
+    // Deliberately the PURE routing pick with no running() fallback (EdgeController takes that one): a running
+    // vertex renders from its own phase, so preferring it here would highlight it twice and drop the true next.
+    var nextToRun: ObjectLocation?
 }
 
 
@@ -78,7 +83,15 @@ class VertexController(
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        private const val defaultIcon = "SettingsInputComponent"
+        private const val defaultIcon = "material-symbols:settings-input-component"
+
+        // Light error tint for the card: the black-text attribute editors stay legible on it, while the error
+        // strip carries the saturated red.
+        private val errorCardColor = Color("#ffcdd2")
+
+        private const val maxInlineMessageChars = 20
+        private const val maxInlineErrorChars = 200
+        private const val maxTooltipChars = 1000
 
         val headerHeight = 55.px
 
@@ -86,6 +99,11 @@ class VertexController(
         private val menuIconOffset = 12.px
 
         private const val menuDanglingTimeout = 300
+
+
+        private fun truncate(text: String, maxLength: Int): String {
+            return if (text.length <= maxLength) text else text.take(maxLength) + "…"
+        }
     }
 
 
@@ -278,15 +296,12 @@ class VertexController(
     private fun ChildrenBuilder.renderVertex() {
         val cellDescriptor = props.cellDescriptor
         val inputAttributes = FlowWiring.findInputs(
-            cellDescriptor.objectLocation, props.clientState.graphStructure())
+            cellDescriptor.objectLocation, props.graphStructure)
 
         val isRunning = props.visualFlowModel.isRunning()
         val visualVertexModel = visualVertexModel()
         val phase = visualVertexModel?.phase()
-        val nextToRun = FlowUtils.next(
-                props.documentPath,
-                props.clientState.graphStructure(),
-                props.visualFlowModel)
+        val nextToRun = props.nextToRun
 
         val isNextToRun = props.cellDescriptor.objectLocation == nextToRun
 
@@ -298,6 +313,11 @@ class VertexController(
         val cardColor = when {
             phase == VisualVertexPhase.Running ->
                 NamedColor.gold
+
+            // Error outranks next-to-run highlighting: keep the precedence explicit here regardless of whether
+            // routing still selects the errored vertex in any given layer shape.
+            phase == VisualVertexPhase.Error ->
+                errorCardColor
 
             isNextToRun ->
                 EdgeController.goldLight50
@@ -318,8 +338,9 @@ class VertexController(
                 VisualVertexPhase.Remaining ->
                     NamedColor.white
 
+                // Unreachable (hoisted above isNextToRun), but nullable-enum exhaustiveness still requires it.
                 VisualVertexPhase.Error ->
-                    NamedColor.red
+                    errorCardColor
 
                 null ->
                     // No visual model yet (never run, or downstream cleared on a new clock cycle):
@@ -328,7 +349,7 @@ class VertexController(
             }
         }
 
-        val objectMetadata = props.clientState.graphStructure().graphMetadata.get(props.cellDescriptor.objectLocation)!!
+        val objectMetadata = props.graphStructure.graphMetadata.get(props.cellDescriptor.objectLocation)!!
         val hasInput = inputAttributes.isNotEmpty()
         val hasOutput = objectMetadata.attributes.map.containsKey(FlowUtils.mainOutputAttributeName)
 
@@ -479,8 +500,35 @@ class VertexController(
             }
 
             renderHeader(phase)
+
+            // Gated on the error itself rather than on phase == Error, so the strip persists through the brief
+            // window where the vertex is running again but the success trace hasn't arrived yet.
+            visualVertexModel()?.error?.let { renderError(it) }
+
             renderAttributes()
             renderState()
+        }
+    }
+
+
+    private fun ChildrenBuilder.renderError(error: String) {
+        div {
+            css {
+                backgroundColor = NamedColor.firebrick
+                color = NamedColor.white
+
+                borderRadius = 2.px
+                margin = Margin(0.em, 0.5.em, 0.5.em, 0.5.em)
+                padding = Padding(0.25.em, 0.5.em, 0.25.em, 0.5.em)
+
+                whiteSpace = WhiteSpace.nowrap
+                overflow = Overflow.hidden
+                textOverflow = TextOverflow.ellipsis
+            }
+
+            title = truncate(error, maxTooltipChars)
+
+            +truncate(error, maxInlineErrorChars)
         }
     }
 
@@ -489,13 +537,13 @@ class VertexController(
         val vertexLocation = props.cellDescriptor.objectLocation
 
         val objectMetadata = props
-            .clientState.graphStructure().graphMetadata.objectMetadata[vertexLocation]!!
+            .graphStructure.graphMetadata.objectMetadata[vertexLocation]!!
 
         val editableAttributes = objectMetadata.attributes.map.keys.filterNot {
             AutoConventions.isManaged(it) ||
                     it == CellCoordinate.rowAttributeName ||
                     it == CellCoordinate.columnAttributeName ||
-                    props.clientState.graphStructure().graphNotation.firstAttribute(
+                    props.graphStructure.graphNotation.firstAttribute(
                         vertexLocation, AttributePath.ofName(it)
                     ) == null
         }
@@ -548,13 +596,13 @@ class VertexController(
     private fun ChildrenBuilder.renderHeader(
             phase: VisualVertexPhase?
     ) {
-        val title = props.clientState.graphStructure().graphNotation
+        val title = props.graphStructure.graphNotation
             .firstAttribute(
                 props.cellDescriptor.objectLocation,
                 AutoConventions.titleAttributePath
             )?.asString()
 
-        val description = props.clientState.graphStructure().graphNotation
+        val description = props.graphStructure.graphNotation
             .firstAttribute(
                 props.cellDescriptor.objectLocation,
                 AutoConventions.descriptionAttributePath
@@ -669,7 +717,7 @@ class VertexController(
             description: String?,
             phase: VisualVertexPhase?
     ) {
-        val icon = props.clientState.graphStructure().graphNotation
+        val icon = props.graphStructure.graphNotation
             .firstAttribute(props.cellDescriptor.objectLocation, AutoConventions.iconAttributePath)
             ?.asString()
             ?: defaultIcon
@@ -770,6 +818,9 @@ class VertexController(
                 }
             }
 
+            // NB: this div has width = 0 and overflows rightward by design, so the text is char-truncated
+            // rather than CSS-ellipsised (there is no box to ellipsise into) — the tooltip carries the rest.
+            val messageText = "${vertexMessage.get()}"
             div {
                 css {
                     position = Position.absolute
@@ -781,9 +832,9 @@ class VertexController(
                     left = CellController.cardWidth.div(2).plus(2.em)
                 }
 
-                title = "Message content"
+                title = truncate(messageText, maxTooltipChars)
 
-                +"${vertexMessage.get()}"
+                +truncate(messageText, maxInlineMessageChars)
             }
         }
     }
@@ -813,13 +864,13 @@ class VertexController(
                         title
                     }
                     else {
-                        val objectNotation = props.clientState.graphStructure()
+                        val objectNotation = props.graphStructure
                             .graphNotation.coalesce[props.cellDescriptor.objectLocation]!!
 
                         val parentReference = ObjectReference.parse(
                                 objectNotation.get(NotationConventions.isAttributePath)?.asString()!!)
 
-                        val parentLocation = props.clientState.graphStructure()
+                        val parentLocation = props.graphStructure
                             .graphNotation.coalesce.locate(parentReference)
 
                         parentLocation.objectPath.name.value
@@ -875,6 +926,10 @@ class VertexController(
         val vertexState = visualVertexModel()?.state
                 ?: return
 
+        // Bounded to a single line: a successful inspectState can return arbitrarily large text (FL2 bounded
+        // only the toString fallback), which would otherwise stretch the card down the page.
+        val stateText = truncate("${vertexState.get()}", maxTooltipChars)
+
         div {
             css {
                 padding = Padding(0.em, 0.5.em, 0.5.em, 0.5.em)
@@ -884,9 +939,15 @@ class VertexController(
                 css {
                     backgroundColor = Color("rgba(0, 0, 0, 0.04)")
                     padding = Padding(0.5.em, 0.5.em, 0.5.em, 0.5.em)
+
+                    whiteSpace = WhiteSpace.nowrap
+                    overflow = Overflow.hidden
+                    textOverflow = TextOverflow.ellipsis
                 }
 
-                +"${vertexState.get()}"
+                title = stateText
+
+                +stateText
             }
         }
     }

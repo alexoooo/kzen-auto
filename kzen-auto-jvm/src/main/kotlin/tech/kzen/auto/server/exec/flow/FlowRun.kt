@@ -166,7 +166,8 @@ class FlowRun(
             // tree): Step Into descends into it; Step Over / Step Out / Run run it to completion.
             if (reference is FlowLogicHost) {
                 runChildVertex(next, nextStableId, instance, matrix)
-                traceVertex(nextStableId, instance, running = false, force = pausedOrStepping)
+                val clearedChildError = clearStaleError(nextStableId)
+                traceVertex(nextStableId, instance, running = false, force = pausedOrStepping || clearedChildError)
                 continue
             }
 
@@ -180,7 +181,8 @@ class FlowRun(
                 runOneVertex(next, nextStableId, instance, matrix)
             }
 
-            traceVertex(nextStableId, instance, running = false, force = pausedOrStepping)
+            val clearedError = clearStaleError(nextStableId)
+            traceVertex(nextStableId, instance, running = false, force = pausedOrStepping || clearedError)
 
             if (reference is FlowRunOutput) {
                 outputAccumulator[reference.tupleComponentName] = activeVertices[nextStableId]?.message
@@ -474,6 +476,25 @@ class FlowRun(
     }
 
 
+    /**
+     * A vertex's [Execution.recoverable] block returned normally, so any error still set on it is stale — from a
+     * pause-on-error park that was fixed + resumed, or carried in across a live-edit migration. Clearing it is
+     * what makes the client's red card subside exactly when the vertex succeeds again; the return value says
+     * whether that happened, so the follow-up trace can be forced past the free-running throttle.
+     */
+    private fun clearStaleError(stableId: ObjectStableId): Boolean {
+        val model = activeVertices[stableId]
+            ?: return false
+
+        if (model.error == null) {
+            return false
+        }
+
+        model.error = null
+        return true
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private fun seedIfAbsent(stableId: ObjectStableId, instance: ObjectInstance) {
         if (stableId in activeVertices) {
@@ -510,7 +531,9 @@ class FlowRun(
 
     /**
      * Routing snapshot for [FlowUtils.next]. It reads only message-presence, hasNext, epoch and running —
-     * never the inspected message/state. Absent vertices route as [VisualVertexModel.empty] (pending, epoch 0).
+     * never the inspected message/state, and never the error (which would make the vertex route as
+     * [tech.kzen.auto.common.paradigm.flow.model.exec.VisualVertexPhase.Error], the client-only phase).
+     * Absent vertices route as [VisualVertexModel.empty] (pending, epoch 0).
      */
     private fun snapshotVisual(matrix: FlowMatrix): VisualFlowModel {
         val builder = mutableMapOf<ObjectLocation, VisualVertexModel>()
@@ -527,7 +550,11 @@ class FlowRun(
                         if (model.message != null) NullExecutionValue else null,
                         model.hasNext(),
                         model.epoch,
-                        model.error)
+                        // Deliberately NOT model.error: routing must never see the Error phase — an errored
+                        // vertex stays selectable, and the recoverable re-run is the fix path. Otherwise a
+                        // carried-in error (live-edit migration during an error park) would make a multi-vertex
+                        // layer skip it forever and the flow would stall instead of re-running it.
+                        null)
                 }
         }
         return VisualFlowModel(builder.toPersistentMap())

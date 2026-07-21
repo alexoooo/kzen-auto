@@ -102,4 +102,10 @@ object FlowStructureTestBuilder {
     fun exhausted(epoch: Int = 1): VisualVertexModel {
         return VisualVertexModel(false, null, null, false, epoch, null)
     }
+
+
+    /** Failed: parked under pause-on-error, or settled failed. */
+    fun errored(epoch: Int = 0): VisualVertexModel {
+        return VisualVertexModel(false, null, null, false, epoch, "test failure")
+    }
 }

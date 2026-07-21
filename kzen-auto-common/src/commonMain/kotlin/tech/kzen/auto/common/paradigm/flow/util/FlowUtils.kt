@@ -7,9 +7,7 @@ import tech.kzen.auto.common.paradigm.flow.model.structure.FlowDag
 import tech.kzen.auto.common.paradigm.flow.model.structure.FlowMatrix
 import tech.kzen.auto.common.paradigm.flow.model.structure.cell.VertexDescriptor
 import tech.kzen.lib.common.model.attribute.AttributeName
-import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.lib.common.model.structure.GraphStructure
 
 
 object FlowUtils {
@@ -18,19 +16,9 @@ object FlowUtils {
     val mainOutputAttributeName = AttributeName("output")
 
 
-    fun next(
-            host: DocumentPath,
-            graphStructure: GraphStructure,
-            visualFlowModel: VisualFlowModel
-    ): ObjectLocation? {
-        val vertexMatrix = FlowMatrix.ofDocument(host, graphStructure)
-
-        val flowDag = FlowDag.of(vertexMatrix)
-
-        return next(vertexMatrix, flowDag, visualFlowModel)
-    }
-
-
+    // NB: deliberately no (documentPath, graphStructure, visualFlowModel) convenience overload — it rebuilt
+    // FlowMatrix + FlowDag from notation on every call, which the grid used to pay per cell per render.
+    // Routing is derived once per render (FlowController.nonEmptyDag) and threaded down as props.
     fun next(
             flowMatrix: FlowMatrix,
             flowDag: FlowDag,
@@ -165,7 +153,13 @@ object FlowUtils {
             return null
         }
         else if (layer.size == 1) {
-            return layer.first()
+            // Error-only guard: an errored (parked) vertex must not display as next-to-run. Deliberately no
+            // inputsReady / other-phase gating here — a mid-stream vertex re-executes without fresh inputs
+            // (see inProgressSingleVertexLayerSelectedWithoutInputCheck). Server routing never sees the Error
+            // phase (FlowRun.snapshotVisual passes error = null), so this is client-only.
+            val only = layer.first()
+            val onlyPhase = (visualFlowModel.vertices[only] ?: VisualVertexModel.empty).phase()
+            return if (onlyPhase == VisualVertexPhase.Error) null else only
         }
 
         var minEpoch = Int.MAX_VALUE

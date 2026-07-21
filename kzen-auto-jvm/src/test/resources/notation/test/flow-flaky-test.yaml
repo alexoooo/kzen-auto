@@ -1,0 +1,51 @@
+# Transient-failure Flow fixture (FlowNotationTest.errorClearsOnResumeAfterTransientFailure): the input's value
+# passes through a test-only vertex that throws on its FIRST execution and succeeds thereafter. With
+# pause-on-error on, the run parks Suspended(Error) with the error traced; a plain resume re-runs the recoverable
+# block, which must clear the stale error (FlowRun.clearStaleError) and complete the flow.
+
+
+#######################################################################################################################
+# Test-only vertex archetype (the production analogues live in notation/auto-jvm/flow/flow-vertex.yaml).
+
+FlakyProcessorVertex:
+  abstract: true
+  is: FlowVertex
+  icon: "material-symbols:error"
+  title: "Flaky Processor (test)"
+  class: tech.kzen.auto.server.exec.flow.test.FlakyProcessorVertex
+  meta:
+    input:
+      is: RequiredInput
+      by: FlowWiring
+    output:
+      is: OptionalOutput
+      by: FlowWiring
+
+
+#######################################################################################################################
+# The concrete Flow: input -> flaky pass-through -> output (vertical adjacency in column 0 is the edge).
+
+main:
+  is: Flow
+  vertices:
+  - FflkInput
+  - FflkFlaky
+  - FflkOutput
+  edges: []
+
+FflkInput:
+  is: FlowInput
+  parameter: "x"
+  row: 0
+  column: 0
+
+FflkFlaky:
+  is: FlakyProcessorVertex
+  row: 1
+  column: 0
+
+FflkOutput:
+  is: FlowOutput
+  result: "out"
+  row: 2
+  column: 0

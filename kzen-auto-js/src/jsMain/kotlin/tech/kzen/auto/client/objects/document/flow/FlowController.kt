@@ -24,6 +24,7 @@ import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.global.ExecutionIntentGlobal
 import tech.kzen.auto.client.service.global.InsertionGlobal
+import tech.kzen.auto.client.service.logic.LogicRunFrames
 import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
@@ -38,11 +39,14 @@ import tech.kzen.auto.common.paradigm.flow.model.structure.cell.CellCoordinate
 import tech.kzen.auto.common.paradigm.flow.model.structure.cell.CellDescriptor
 import tech.kzen.auto.common.paradigm.flow.model.structure.cell.EdgeDescriptor
 import tech.kzen.auto.common.paradigm.flow.model.structure.cell.VertexDescriptor
+import tech.kzen.auto.common.paradigm.flow.util.FlowUtils
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributeSegment
+import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.*
 import tech.kzen.lib.common.model.structure.notation.cqrs.InsertListItemInAttributeCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.InsertObjectInListAttributeCommand
@@ -68,8 +72,13 @@ external interface FlowControllerProps: Props {
 }
 
 
+// The consumed subset of ClientState, never the whole thing (docs/js-architecture.md §2): ClientStateGlobal
+// replaces graphDefinitionAttempt only on notation events and navigationRoute only on navigation, so both
+// references survive the ~1/s logic-status publishes of any active run — and RPureComponent's shallow-equal
+// bails on them instead of repainting the whole grid.
 external interface FlowControllerState: State {
-    var clientState: ClientState?
+    var graphStructure: GraphStructure?
+    var documentPath: DocumentPath?
     var creating: Boolean
 
     var visualFlowModel: VisualFlowModel?
@@ -169,7 +178,8 @@ class FlowController(
     //-----------------------------------------------------------------------------------------------------------------
     override fun onClientState(clientState: ClientState) {
         setState {
-            this.clientState = clientState
+            graphStructure = clientState.graphStructure()
+            documentPath = clientState.navigationRoute.documentPath
         }
 
         refreshVisualModelIfNeeded(clientState)
@@ -187,11 +197,32 @@ class FlowController(
             return
         }
 
-        // Key on the run's trace version so the live model refreshes exactly when the run actually advanced
-        // (not on every status poll — see ClientLogicState.traceVersion), and on the document path so opening
-        // a flow loads its last run's final state.
-        val logicTraceVersion = clientState.clientLogicState.traceVersion()
-        val fetchKey = "${documentPath.asString()}|$logicTraceVersion"
+        val clientLogicState = clientState.clientLogicState
+        val activeRun = clientLogicState.logicStatus?.active
+        val involved = LogicRunFrames.frameForDocument(activeRun?.frame, documentPath) != null
+
+        // Three-mode fetch key. traceVersion() alone is already version-gated (an idle or paused run stops
+        // refetching entirely), but it is global to the single active run — so an UNRELATED run's per-emit
+        // advance would otherwise re-key every visible Flow tab ~1/s and re-fetch its settled snapshot for
+        // that whole run. The involvement gate is what scopes it to this document.
+        val fetchKey = when {
+            // This document is live in the run (its own, or hosted as a child): per-emit refresh —
+            // traceVersion() moves exactly when a new trace value can exist.
+            involved ->
+                "${documentPath.asString()}|involved|${clientLogicState.traceVersion()}"
+
+            // Some OTHER document's run is active: exactly one refetch at that run's start (starting a run
+            // clears the prior retained trace, so this repaints — likely to empty), then nothing until the run
+            // settles or this document joins the frame tree (at which point the mode switches to `involved`).
+            activeRun != null ->
+                "${documentPath.asString()}|other|${activeRun.id.value}"
+
+            // No active run: structureVersion moves on run settle and on "Clear all traces" (even with no run),
+            // so post-run final state and clear-to-empty both repaint.
+            else ->
+                "${documentPath.asString()}|idle|${clientLogicState.structureVersion()}"
+        }
+
         if (fetchKey == lastFetchKey) {
             return
         }
@@ -201,10 +232,15 @@ class FlowController(
         val mainLocation = ObjectLocation(documentPath, NotationConventions.mainObjectPath)
         val vertexLocations = matrix.verticesByLocation.keys.toList()
 
-        val activeRun = clientState.clientLogicState.logicStatus?.active
-
         async {
             val visualFlowModel = flowProgressStore.fetchVisualModel(mainLocation, vertexLocations, activeRun)
+
+            // Each fetch allocates a fresh VisualFlowModel, so an unchanged snapshot would still re-render the
+            // whole grid without this value-equal guard (it's a data class — `==` is cheap and meaningful).
+            if (visualFlowModel == state.visualFlowModel) {
+                return@async
+            }
+
             setState {
                 this.visualFlowModel = visualFlowModel
             }
@@ -229,10 +265,10 @@ class FlowController(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun documentNotation(): DocumentNotation? {
-        val graphStructure = state.clientState?.graphStructure()
+        val graphStructure = state.graphStructure
             ?: return null
 
-        val documentPath = state.clientState?.navigationRoute?.documentPath
+        val documentPath = state.documentPath
             ?: return null
 
         return graphStructure
@@ -252,11 +288,11 @@ class FlowController(
         val archetypeLocation = bridge()?.channel(InsertionKey)?.getAndClearSelection()
             ?: return
 
-        val graphNotation = state.clientState!!.graphStructure().graphNotation
+        val graphNotation = state.graphStructure!!.graphNotation
         val archetypeNotation = graphNotation.coalesce[archetypeLocation]!!
 
         val containingObjectLocation = ObjectLocation(
-            state.clientState?.navigationRoute?.documentPath!!, NotationConventions.mainObjectPath)
+            state.documentPath!!, NotationConventions.mainObjectPath)
 
         val isPipe = FlowConventions.isPipeArchetype(graphNotation, archetypeLocation)
 
@@ -318,7 +354,7 @@ class FlowController(
         val verticesNotation = FlowMatrix.verticesNotation(documentNotation)
         val edgesNotation = FlowMatrix.edgesNotation(documentNotation)
         val flowMatrix = FlowMatrix.cellDescriptorLayers(
-            state.clientState!!.graphStructure(), verticesNotation, edgesNotation)
+            state.graphStructure!!, verticesNotation, edgesNotation)
 
         renderStructureFindings(flowMatrix)
 
@@ -350,7 +386,6 @@ class FlowController(
                     ?: VisualFlowModel.empty
 
                 nonEmptyDag(
-                    state.clientState!!,
                     visualFlowModel,
                     flowMatrix)
             }
@@ -365,8 +400,8 @@ class FlowController(
     //     rendered after it keeps a stable child index across finding toggles — mirrors
     //     StageController.renderDefinitionErrors (see the remount rationale there).
     private fun ChildrenBuilder.renderStructureFindings(flowMatrix: FlowMatrix) {
-        val documentPath = state.clientState?.navigationRoute?.documentPath
-        val graphNotation = state.clientState?.graphStructure()?.graphNotation
+        val documentPath = state.documentPath
+        val graphNotation = state.graphStructure?.graphNotation
 
         val findings =
             if (documentPath == null || graphNotation == null) {
@@ -415,11 +450,16 @@ class FlowController(
 
 
     private fun ChildrenBuilder.nonEmptyDag(
-        clientState: ClientState,
         visualFlowModel: VisualFlowModel,
         flowMatrix: FlowMatrix
     ) {
+        val graphStructure = state.graphStructure!!
         val flowDag = FlowDag.of(flowMatrix)
+
+        // Routing derived ONCE per render and threaded down as props — never recomputed per cell (each per-cell
+        // FlowUtils.next used to rebuild FlowMatrix + FlowDag from notation: O(V²)-scale work per grid paint).
+        val nextToRun = FlowUtils.next(flowMatrix, flowDag, visualFlowModel)
+        val runningVertex = visualFlowModel.running()
 
         var colspanRemaining = 0
         table {
@@ -452,7 +492,7 @@ class FlowController(
                                     key = Key(cellDescriptor.key())
 
                                     if (cellDescriptor is VertexDescriptor) {
-                                        val cellMetadata = clientState.graphStructure()
+                                        val cellMetadata = graphStructure
                                             .graphMetadata.objectMetadata[cellDescriptor.objectLocation]!!
 
                                         val inputAttributes: List<AttributeName> = cellMetadata
@@ -472,10 +512,12 @@ class FlowController(
                                     }
 
                                     cell(cellDescriptor,
-                                        clientState,
+                                        graphStructure,
                                         visualFlowModel,
                                         flowMatrix,
-                                        flowDag)
+                                        flowDag,
+                                        nextToRun,
+                                        runningVertex)
                                 }
                             }
                         }
@@ -534,10 +576,12 @@ class FlowController(
 
     private fun ChildrenBuilder.cell(
         cellDescriptor: CellDescriptor,
-        clientState: ClientState,
+        graphStructure: GraphStructure,
         visualFlowModel: VisualFlowModel,
         flowMatrix: FlowMatrix,
-        flowDag: FlowDag
+        flowDag: FlowDag,
+        nextToRun: ObjectLocation?,
+        runningVertex: ObjectLocation?
     ) {
         CellController::class.react {
             this.attributeController = props.attributeController
@@ -549,12 +593,14 @@ class FlowController(
             attributeNesting = AttributeNesting(persistentListOf(
                 AttributeSegment.ofIndex(cellDescriptor.indexInContainer)))
 
-            documentPath = clientState.navigationRoute.documentPath!!
+            documentPath = state.documentPath!!
 
-            this.clientState = clientState
+            this.graphStructure = graphStructure
             this.visualFlowModel = visualFlowModel
             this.flowMatrix = flowMatrix
             this.flowDag = flowDag
+            this.nextToRun = nextToRun
+            this.runningVertex = runningVertex
         }
     }
 }

@@ -4,11 +4,9 @@ import react.ChildrenBuilder
 import react.Props
 import react.State
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
-import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ExecutionIntentGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.react
-import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.paradigm.flow.model.exec.VisualFlowModel
 import tech.kzen.auto.common.paradigm.flow.model.structure.FlowDag
 import tech.kzen.auto.common.paradigm.flow.model.structure.FlowMatrix
@@ -18,6 +16,7 @@ import tech.kzen.auto.common.paradigm.flow.model.structure.cell.VertexDescriptor
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.service.store.MirroredGraphStore
 import web.cssom.em
 import web.cssom.plus
@@ -34,28 +33,25 @@ external interface CellControllerProps: Props {
 
     var documentPath: DocumentPath
     var attributeNesting: AttributeNesting
-    var clientState: ClientState
+    var graphStructure: GraphStructure
     var visualFlowModel: VisualFlowModel
     var flowMatrix: FlowMatrix
     var flowDag: FlowDag
-}
 
-
-external interface CellControllerState: State {
-    var hoverCard: Boolean
-    var hoverMenu: Boolean
-    var intentToRun: Boolean
-
-    var optionsOpen: Boolean
+    // Routing, derived once per render by FlowController and threaded through — never re-derived per cell.
+    var nextToRun: ObjectLocation?
+    var runningVertex: ObjectLocation?
 }
 
 
 //---------------------------------------------------------------------------------------------------------------------
+// Stateless pass-through: picks the vertex or edge renderer for its cell. NB: no ExecutionIntentGlobal
+// subscription here — VertexController has its own, genuinely-used one; this one's intentToRun was read by
+// nothing, so every intent publish re-rendered every cell for nothing.
 class CellController(
         props: CellControllerProps
 ):
-        RPureComponent<CellControllerProps, CellControllerState>(props),
-        ExecutionIntentGlobal.Observer
+        RPureComponent<CellControllerProps, State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -69,51 +65,9 @@ class CellController(
 
 
 
-    private fun CellControllerProps.vertexLocation() =
-            (cellDescriptor as? VertexDescriptor)?.objectLocation
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun CellControllerState.init(props: CellControllerProps) {
-        hoverCard = false
-        hoverMenu = false
-        intentToRun = false
-
-        optionsOpen = false
-
-//        visualVertexModel = props.visualFlowModel.vertices[props.objectLocation]
-//                ?: VisualVertexModel.empty
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun componentDidMount() {
-        props.executionIntentGlobal.observe(this)
-    }
-
-
-    override fun componentWillUnmount() {
-        props.executionIntentGlobal.unobserve(this)
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun onExecutionIntent(actionLocation: ObjectLocation?) {
-        setState {
-            intentToRun = actionLocation == props.vertexLocation()
-        }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    private fun isVertex(): Boolean {
-        return props.vertexLocation() != null
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
-        if (isVertex()) {
+        if (props.cellDescriptor is VertexDescriptor) {
             VertexController::class.react {
                 attributeController = props.attributeController
                 executionIntentGlobal = props.executionIntentGlobal
@@ -123,10 +77,11 @@ class CellController(
 
                 documentPath = props.documentPath
                 attributeNesting = props.attributeNesting
-                clientState = props.clientState
+                graphStructure = props.graphStructure
                 visualFlowModel = props.visualFlowModel
                 flowMatrix = props.flowMatrix
                 flowDag = props.flowDag
+                nextToRun = props.nextToRun
             }
         }
         else {
@@ -137,10 +92,11 @@ class CellController(
 
                 documentPath = props.documentPath
                 attributeNesting = props.attributeNesting
-                graphStructure = props.clientState.graphStructure()
                 visualFlowModel = props.visualFlowModel
                 flowMatrix = props.flowMatrix
                 flowDag = props.flowDag
+                nextToRun = props.nextToRun
+                runningVertex = props.runningVertex
             }
         }
     }

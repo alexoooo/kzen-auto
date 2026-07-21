@@ -4,6 +4,7 @@ import kotlinx.coroutines.runBlocking
 import tech.kzen.auto.common.paradigm.flow.model.exec.VisualVertexModel
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.exec.LogicCompilerServices
+import tech.kzen.auto.server.exec.flow.test.FlakyProcessorVertex
 import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.lib.common.exec.engine.Address
 import tech.kzen.lib.common.exec.engine.LogicFailure
@@ -24,6 +25,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 
@@ -92,6 +94,43 @@ class FlowNotationTest {
 
             val status = engine.snapshot().root.status
             assertEquals(PauseReason.Error, assertIs<NodeStatus.Suspended>(status).reason)
+
+            // The client-visible trace carries the error — this is what turns the vertex's card red.
+            val traced = assertNotNull(tracedVertex(engine, "test/flow-error-test.yaml", "FerrDivide"))
+            assertNotNull(traced.error)
+        }
+        finally {
+            engine.close()
+        }
+    }
+
+
+    @Test
+    fun errorClearsOnResumeAfterTransientFailure() {
+        // A vertex that fails once then succeeds: pause-on-error parks it with the error traced, and a plain
+        // resume re-runs the recoverable block. Success must clear the error (FlowRun.clearStaleError) —
+        // nothing else ever does, so without it the card would stay red for the rest of the run.
+        FlakyProcessorVertex.reset()
+        val engine = engineFor("test/flow-flaky-test.yaml", argument("x", 5))
+        try {
+            engine.pauseOnError(true)
+            engine.resume()
+            engine.awaitQuiescent()
+
+            assertEquals(
+                PauseReason.Error,
+                assertIs<NodeStatus.Suspended>(engine.snapshot().root.status).reason)
+            assertNotNull(
+                assertNotNull(tracedVertex(engine, "test/flow-flaky-test.yaml", "FflkFlaky")).error)
+
+            val outcome = runBlocking {
+                engine.resume()
+                engine.await()
+            }
+
+            assertEquals(5, assertIs<Outcome.Success>(outcome).value.find(TupleComponentName("out")))
+            assertNull(
+                assertNotNull(tracedVertex(engine, "test/flow-flaky-test.yaml", "FflkFlaky")).error)
         }
         finally {
             engine.close()

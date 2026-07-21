@@ -89,10 +89,12 @@ data class VisualVertexModel(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun phase(): VisualVertexPhase {
-        // TODO: add support for Error
         return when {
             running ->
                 VisualVertexPhase.Running
+
+            error != null ->
+                VisualVertexPhase.Error
 
             epoch == 0 ->
                 VisualVertexPhase.Pending
