@@ -23,6 +23,7 @@ import tech.kzen.auto.client.objects.document.script.display.edit.ScriptStepRefe
 import tech.kzen.auto.client.objects.document.script.display.image.StepImageThumbnail
 import tech.kzen.auto.client.objects.document.script.model.ScriptDragStoreKey
 import tech.kzen.auto.client.objects.document.script.model.ScriptStepReferenceStoreKey
+import tech.kzen.auto.client.objects.document.script.model.scriptDependencyAnalysis
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.global.InsertionGlobal
@@ -30,7 +31,6 @@ import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
-import tech.kzen.auto.common.objects.document.script.model.ScriptDependencyAnalysis
 import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
@@ -267,10 +267,14 @@ class ScriptBranchDisplay(
                 StepDependencyEdges.EMPTY
             }
             else {
-                val analysis = ScriptDependencyAnalysis.analyze(
-                    clientState.graphDefinitionAttempt.successful(), documentPath)
-                StepDependencyEdges.compute(steps, analysis)
+                StepDependencyEdges.compute(steps, scriptDependencyAnalysis(clientState, documentPath))
             }
+        }
+
+        // Both values are freshly allocated each fire, so this must be structural (==) equality — a
+        // reference guard would never bail. Without it every progress tick re-renders every branch.
+        if (state.stepLocations == stepLocations && state.dependencyEdges == dependencyEdges) {
+            return
         }
 
         setState {

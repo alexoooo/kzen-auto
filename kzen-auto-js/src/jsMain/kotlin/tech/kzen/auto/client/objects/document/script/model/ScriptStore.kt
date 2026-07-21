@@ -10,7 +10,10 @@ import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.logic.ClientLogicState
 import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.util.async
+import tech.kzen.auto.common.objects.document.script.model.ScriptDependencyAnalysis
 import tech.kzen.auto.common.objects.document.script.model.ScriptTree
+import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
+import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.DocumentNotation
 import tech.kzen.lib.common.service.parse.NotationParser
@@ -208,6 +211,41 @@ class ScriptStore(
 
     fun mainLocation(): ObjectLocation {
         return state().mainLocation
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    // Single-entry memo for ScriptDependencyAnalysis.analyze, shared by every consumer in this document's
+    // subtree (branch gutters, dependency overlay, signature editor, move-to arrow) — the analysis re-lexes
+    // every value scalar in the document, and used to run once per consumer per publish.
+    // Self-keyed on the GraphDefinitionAttempt REFERENCE (replaced only on notation events — logic-status
+    // publishes reuse it, so the run hot path always hits) plus the documentPath (ScriptController isn't
+    // remounted on a same-archetype document switch, so one store instance can serve successive documents).
+    // NB: never key on successful() — it allocates a fresh GraphDefinition per call.
+    private var dependencyAnalysisKeyAttempt: GraphDefinitionAttempt? = null
+    private var dependencyAnalysisKeyPath: DocumentPath? = null
+    private var dependencyAnalysisCached: ScriptDependencyAnalysis? = null
+
+
+    fun dependencyAnalysis(
+        graphDefinitionAttempt: GraphDefinitionAttempt,
+        documentPath: DocumentPath
+    ): ScriptDependencyAnalysis {
+        val cached = dependencyAnalysisCached
+        if (cached != null &&
+                graphDefinitionAttempt === dependencyAnalysisKeyAttempt &&
+                documentPath == dependencyAnalysisKeyPath
+        ) {
+            return cached
+        }
+
+        val computed = ScriptDependencyAnalysis.analyze(
+            graphDefinitionAttempt.successful(), documentPath)
+
+        dependencyAnalysisKeyAttempt = graphDefinitionAttempt
+        dependencyAnalysisKeyPath = documentPath
+        dependencyAnalysisCached = computed
+        return computed
     }
 
 

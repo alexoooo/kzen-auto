@@ -6,13 +6,15 @@ import react.Key
 import react.Props
 import react.State
 import react.dom.html.ReactHTML.div
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
+import tech.kzen.auto.client.objects.document.script.model.scriptDependencyAnalysis
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.createRef
+import tech.kzen.auto.client.wrap.installContextType
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
-import tech.kzen.auto.common.objects.document.script.model.ScriptDependencyAnalysis
 import tech.kzen.auto.common.objects.document.script.model.ScriptStepDependency
 import web.animations.requestAnimationFrame
 import web.cssom.None
@@ -57,6 +59,13 @@ class ScriptDependencyOverlay(
     private var observedElement: HTMLDivElement? = null
     private var latestClientState: ClientState? = null
     private var rafScheduled: Boolean = false
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    init {
+        // Reaches ScriptStore's memoized dependency analysis (see scriptDependencyAnalysis).
+        installContextType(DocumentBridgeContext)
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -221,9 +230,7 @@ class ScriptDependencyOverlay(
             return emptyList()
         }
 
-        return ScriptDependencyAnalysis
-            .analyze(clientState.graphDefinitionAttempt.successful(), documentPath)
-            .crossBranchEdges()
+        return scriptDependencyAnalysis(clientState, documentPath).crossBranchEdges()
     }
 
 

@@ -16,23 +16,25 @@ import react.dom.events.DragEvent
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
 import react.dom.onChange
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.objects.document.common.dragdrop.dragHandle
 import tech.kzen.auto.client.objects.document.common.dragdrop.dropIndicator
 import tech.kzen.auto.client.objects.document.common.dragdrop.dropMarkerFor
 import tech.kzen.auto.client.objects.document.script.display.dependency.StepDependencyEdges
 import tech.kzen.auto.client.objects.document.script.display.dependency.scriptGutterRow
 import tech.kzen.auto.client.objects.document.script.display.dependency.stepDependencyGutterCellForStep
+import tech.kzen.auto.client.objects.document.script.model.scriptDependencyAnalysis
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.util.ClientInputUtils
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.iconify.icon
+import tech.kzen.auto.client.wrap.installContextType
 import tech.kzen.auto.client.wrap.select.SelectOption
 import tech.kzen.auto.client.wrap.select.muiAutocompleteField
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
-import tech.kzen.auto.common.objects.document.script.model.ScriptDependencyAnalysis
 import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.ListExecutionValue
 import tech.kzen.lib.common.exec.NullExecutionValue
@@ -142,6 +144,13 @@ class LogicSignatureEditor:
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    init {
+        // Reaches ScriptStore's memoized dependency analysis (see scriptDependencyAnalysis).
+        installContextType(DocumentBridgeContext)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     override fun LogicSignatureEditorState.init(props: LogicSignatureEditorProps) {
         parameters = null
         parameterEdges = StepDependencyEdges.EMPTY
@@ -205,8 +214,7 @@ class LogicSignatureEditor:
                 StepDependencyEdges.EMPTY
             }
             else {
-                val analysis = ScriptDependencyAnalysis.analyze(
-                    clientState.graphDefinitionAttempt.successful(), props.objectLocation.documentPath)
+                val analysis = scriptDependencyAnalysis(clientState, props.objectLocation.documentPath)
                 StepDependencyEdges.compute(parameterLocations, analysis)
             }
 

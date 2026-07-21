@@ -7,7 +7,9 @@ import react.Props
 import react.State
 import react.dom.events.PointerEvent
 import react.dom.html.ReactHTML.div
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.objects.document.script.display.dependency.StepRowRefRegistry
+import tech.kzen.auto.client.objects.document.script.model.scriptDependencyAnalysis
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.logic.ClientLogicGlobal
@@ -15,9 +17,9 @@ import tech.kzen.auto.client.service.logic.LogicRunFrames
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.createRef
 import tech.kzen.auto.client.wrap.iconify.icon
+import tech.kzen.auto.client.wrap.installContextType
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
-import tech.kzen.auto.common.objects.document.script.model.ScriptDependencyAnalysis
 import tech.kzen.auto.common.objects.document.script.model.ScriptJumpAnalysis
 import tech.kzen.auto.common.objects.document.script.model.ScriptTree
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -99,6 +101,13 @@ class ScriptMoveToArrow(
     private var dragHitRows: List<ObjectLocation> = listOf()
     private var dragValidTargets: Set<ObjectLocation> = setOf()
     private var dragWarnTargets: Set<ObjectLocation> = setOf()
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    init {
+        // Reaches ScriptStore's memoized dependency analysis (see scriptDependencyAnalysis).
+        installContextType(DocumentBridgeContext)
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -274,9 +283,7 @@ class ScriptMoveToArrow(
         // (so it's skipped) that also sits after the current position (a genuine forward skip, not an
         // already-run earlier step), and the consumer is at/after the target (drop set → re-runs). Purely
         // advisory (never disables); the real backstop is the runtime "No value produced" error-park.
-        val edges = ScriptDependencyAnalysis
-            .analyze(clientState.graphDefinitionAttempt.successful(), documentPath)
-            .edges
+        val edges = scriptDependencyAnalysis(clientState, documentPath).edges
         val warnTargets = validTargets
             .filter { target ->
                 val plan = ScriptJumpAnalysis.plan(notation, documentPath, tree, target.objectPath)

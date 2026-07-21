@@ -28,9 +28,15 @@ class ScriptProgressStore(
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     // Accumulated history for the current run, held here (not read back from state) so each refresh
-    // only fetches events newer than the watermark. Reset when the run id changes or on clear().
+    // only fetches events newer than the watermark. Append-only and ascending by sequence (see
+    // appendHistory), so the watermark is the last element. Reset when the run id changes or on clear().
     private var historyRunId: LogicRunId? = null
     private val historyEvents = mutableListOf<LogicTraceEvent>()
+
+    // Immutable snapshot of historyEvents for publishing — rebuilt only when the accumulation actually
+    // changed, so the published reference stays stable across no-news refreshes (letting ScriptStore's
+    // updateIfChanged bail) and the mutable accumulator is never exposed to state.
+    private var publishedEvents: List<LogicTraceEvent> = listOf()
 
     // The execution tree, re-fetched only when the run's STRUCTURE changes (an execution created/destroyed),
     // not per publish: its answer is structural, so gating it on structureVersion drops it from ~46 to ~15-17
@@ -38,6 +44,21 @@ class ScriptProgressStore(
     // recompute cheaply from it plus the fresh events); reset on a new run alongside the history.
     private var lastExecutionsStructureVersion: String? = null
     private var lastExecutions: List<LogicRunExecutionInfo> = listOf()
+
+    // RunStep ownership memo: recomputed only when the viewed execution or the (structureVersion-cached)
+    // executions list identity changes, and kept value-stable so a same-content refetch preserves the
+    // published references.
+    private var ownershipViewedExecutionId: LogicExecutionId? = null
+    private var ownershipExecutions: List<LogicRunExecutionInfo>? = null
+    private var ownershipByStep: Map<ObjectStableId, Set<String>> = mapOf()
+
+    // Reverse index of ownershipByStep (the owned sets are disjoint — the execution tree is a tree, and
+    // same-caller subtrees merge into one set), so a new event resolves its owning RunStep in O(1).
+    private var stepByExecutionId: Map<String, ObjectStableId> = mapOf()
+
+    // Latest screenshot-bearing event per RunStep, folded forward from each refresh's appended tail rather
+    // than rescanned over the whole accumulated timeline.
+    private var representativeByStep: Map<ObjectStableId, LogicTraceEvent> = mapOf()
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -59,7 +80,7 @@ class ScriptProgressStore(
             }
 
         if (logicRunExecutionId == null) {
-            resetHistory()
+            resetRunAccumulators(null)
             scriptStore.update { state -> state
                 .withProgressSuccess {
                     it.copy(
@@ -126,17 +147,17 @@ class ScriptProgressStore(
                 // Incremental history: a new run resets the accumulation; otherwise pull only events
                 // past the current watermark and append. The retained timeline survives loop clears.
                 if (historyRunId != logicRunId) {
-                    historyRunId = logicRunId
-                    historyEvents.clear()
-                    lastExecutions = listOf()
-                    lastExecutionsStructureVersion = null
+                    resetRunAccumulators(logicRunId)
                 }
-                val sinceSequence = historyEvents.maxOfOrNull { it.sequence } ?: 0L
+                val sinceSequence = historyEvents.lastOrNull()?.sequence ?: 0L
                 val historyResult = lookupRunHistoryQuery(logicRunId, sinceSequence)
-                if (historyResult is ClientSuccess) {
-                    historyEvents.addAll(historyResult.value)
-                }
-                val events = historyEvents.sortedBy { it.sequence }
+                val historyAppend =
+                    if (historyResult is ClientSuccess) {
+                        appendHistory(historyResult.value)
+                    }
+                    else {
+                        HistoryAppend(listOf(), false)
+                    }
 
                 // The execution tree (parent + call-site per execution) scopes each RunStep's view to the
                 // executions IT spawned within the viewed frame. Its answer is structural, so re-fetch only on
@@ -159,10 +180,17 @@ class ScriptProgressStore(
                         }
                     }
                 }
-                val executions = lastExecutions
-                val runStepOwnedExecutions = computeRunStepOwnedExecutions(
-                    logicRunExecutionId.logicExecutionId, executions)
-                val runStepRepresentative = computeRunStepRepresentative(runStepOwnedExecutions, events)
+                // Ownership first, then representatives: a changed ownership map (or a repaired timeline,
+                // whose appended tail is no longer the tail) needs a full pass over the accumulated events,
+                // otherwise only this refresh's new events are folded in.
+                val ownershipChanged = refreshOwnership(
+                    logicRunExecutionId.logicExecutionId, lastExecutions)
+                if (ownershipChanged || historyAppend.repaired) {
+                    rebuildRepresentatives()
+                }
+                else {
+                    foldRepresentatives(historyAppend.newEvents)
+                }
 
                 scriptStore.update { state -> state
                     .withProgressSuccess {
@@ -170,15 +198,97 @@ class ScriptProgressStore(
                             logicRunExecutionId = logicRunExecutionId,
                             logicTraceSnapshot = snapshot,
                             nextToRun = activeFrame?.position,
-                            traceEvents = events,
-                            runStepRepresentative = runStepRepresentative,
-                            runStepOwnedExecutions = runStepOwnedExecutions,
+                            traceEvents = publishedEvents,
+                            runStepRepresentative = representativeByStep,
+                            runStepOwnedExecutions = ownershipByStep,
                             loaded = true
                         )
                     }
                 }
             }
         }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private class HistoryAppend(
+        val newEvents: List<LogicTraceEvent>,
+        val repaired: Boolean
+    )
+
+
+    // Append only genuinely-new events, preserving the ascending-by-sequence invariant. Events at or below
+    // the watermark are dropped: the server serves strictly > sinceSequence (RunEngineLogicTrace, over an
+    // append-only single-writer list), so a re-delivery can only come from a concurrent in-flight refresh
+    // that read an older watermark — dropping keeps the film strip duplicate-free. A within-batch order
+    // violation would break the server's contract: warn and repair once (rather than throw inside the
+    // refresh coroutine), signalling the caller to rebuild derived state.
+    private fun appendHistory(batch: List<LogicTraceEvent>): HistoryAppend {
+        if (batch.isEmpty()) {
+            return HistoryAppend(listOf(), false)
+        }
+
+        var watermark = historyEvents.lastOrNull()?.sequence ?: 0L
+        var previousInBatch = Long.MIN_VALUE
+        var orderViolation = false
+        val appended = mutableListOf<LogicTraceEvent>()
+
+        for (event in batch) {
+            if (event.sequence <= previousInBatch) {
+                orderViolation = true
+            }
+            previousInBatch = event.sequence
+
+            if (event.sequence <= watermark) {
+                continue
+            }
+
+            historyEvents.add(event)
+            appended.add(event)
+            watermark = event.sequence
+        }
+
+        if (orderViolation) {
+            console.warn("ScriptProgressStore: non-monotonic history batch, repairing")
+            historyEvents.sortBy { it.sequence }
+        }
+
+        if (appended.isNotEmpty() || orderViolation) {
+            publishedEvents = historyEvents.toList()
+        }
+
+        return HistoryAppend(appended, orderViolation)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    // Recompute the RunStep ownership (and its reverse index) only when its inputs actually changed,
+    // returning true when the derived map's CONTENT changed — i.e. when the representatives need a full
+    // rebuild against the new scoping. A same-content refetch keeps the existing references.
+    private fun refreshOwnership(
+        viewedExecutionId: LogicExecutionId,
+        executions: List<LogicRunExecutionInfo>
+    ): Boolean {
+        if (viewedExecutionId == ownershipViewedExecutionId && executions === ownershipExecutions) {
+            return false
+        }
+        ownershipViewedExecutionId = viewedExecutionId
+        ownershipExecutions = executions
+
+        val computed = computeRunStepOwnedExecutions(viewedExecutionId, executions)
+        if (computed == ownershipByStep) {
+            return false
+        }
+        ownershipByStep = computed
+
+        stepByExecutionId = buildMap {
+            for ((runStepStableId, owned) in computed) {
+                for (executionId in owned) {
+                    put(executionId, runStepStableId)
+                }
+            }
+        }
+        return true
     }
 
 
@@ -231,25 +341,43 @@ class ScriptProgressStore(
 
     // For each RunStep, the latest screenshot-bearing event among the executions it owns — the
     // right-of-step thumbnail (and full-screen viewer entry), surviving a rename mid-run.
-    private fun computeRunStepRepresentative(
-        runStepOwnedExecutions: Map<ObjectStableId, Set<String>>,
-        events: List<LogicTraceEvent>
-    ): Map<ObjectStableId, LogicTraceEvent> {
-        val binaryEvents = events.filter { it.value is BinaryValue }
-        if (binaryEvents.isEmpty() || runStepOwnedExecutions.isEmpty()) {
-            return mapOf()
+    // Full pass over the accumulated timeline; runs only when the ownership scoping changed (or the
+    // timeline was repaired). Ascending order means last write wins, i.e. the same selection the former
+    // per-RunStep maxByOrNull made.
+    private fun rebuildRepresentatives() {
+        val out = mutableMapOf<ObjectStableId, LogicTraceEvent>()
+        for (event in historyEvents) {
+            if (event.value !is BinaryValue) {
+                continue
+            }
+            val runStepStableId = stepByExecutionId[event.executionId.value]
+                ?: continue
+            out[runStepStableId] = event
+        }
+        representativeByStep = out
+    }
+
+
+    // Per-refresh path: fold in only this refresh's appended tail, copy-on-write so the published map
+    // keeps its reference when no screenshot landed.
+    private fun foldRepresentatives(newEvents: List<LogicTraceEvent>) {
+        var updates: MutableMap<ObjectStableId, LogicTraceEvent>? = null
+
+        for (event in newEvents) {
+            if (event.value !is BinaryValue) {
+                continue
+            }
+            val runStepStableId = stepByExecutionId[event.executionId.value]
+                ?: continue
+
+            val target = updates
+                ?: mutableMapOf<ObjectStableId, LogicTraceEvent>().also { updates = it }
+            target[runStepStableId] = event
         }
 
-        val out = mutableMapOf<ObjectStableId, LogicTraceEvent>()
-        for ((runStepStableId, owned) in runStepOwnedExecutions) {
-            val representative = binaryEvents
-                .filter { it.executionId.value in owned }
-                .maxByOrNull { it.sequence }
-            if (representative != null) {
-                out[runStepStableId] = representative
-            }
-        }
-        return out
+        val changed = updates
+            ?: return
+        representativeByStep = representativeByStep + changed
     }
 
 
@@ -405,10 +533,23 @@ class ScriptProgressStore(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun resetHistory() {
-        historyRunId = null
+    // Drop everything accumulated for the previous run: the timeline watermark, the cached execution tree,
+    // and the ownership/representative memos derived from both. Called with the new run's id when the run
+    // changes, and with null when there is no run at all (a JVM restart drops runs entirely).
+    // NB: deliberately NOT called on a live-edit migration — the engine preserves history, sequence and
+    // runId across it, so the trace (and hence the watermark) is continuous.
+    private fun resetRunAccumulators(newRunId: LogicRunId?) {
+        historyRunId = newRunId
         historyEvents.clear()
+        publishedEvents = listOf()
+
         lastExecutions = listOf()
         lastExecutionsStructureVersion = null
+
+        ownershipViewedExecutionId = null
+        ownershipExecutions = null
+        ownershipByStep = mapOf()
+        stepByExecutionId = mapOf()
+        representativeByStep = mapOf()
     }
 }

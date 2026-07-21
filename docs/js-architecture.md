@@ -139,7 +139,7 @@ deleted* (the parent hasn't yet handed it the new location). Two consequences:
   unchanged). `RunStepArgumentsEditor` and `RunStepDisplay` both do this. Symptom when missed:
   `Observer error in ScriptStore: Missing: …` on rename/delete. This is also why per-RunStep
   representative-screenshot resolution lives in `ScriptProgressStore` (which derives each RunStep's
-  owned executions from the run's execution tree each refresh and keys results by stable id), not in
+  owned executions from the run's execution tree and keys results by stable id), not in
   the thumbnail's observer keyed off a possibly-stale `props.objectLocation`.
 
 ### RunStep screenshot detail = the trace timeline, not per-step latest
@@ -153,10 +153,12 @@ loop's `clearAll` deletes per-path frames each iteration, so only the history re
 new run) and publishes the accumulated `traceEvents`. Scoping a RunStep's strip to *only the
 executions that step launched* (not every execution of the same sub-script document — two RunSteps can
 invoke the same sub-script) uses the run's **execution tree** (`lookupRunExecutions`: per-execution
-parent + call-site): each refresh, the store seeds at the viewed document's resolved execution and
+parent + call-site): on structural change (memoized — the derivation is keyed on the viewed execution
+plus the cached executions list), the store seeds at the viewed document's resolved execution and
 assigns each direct child execution — and its transitive subtree — to the RunStep named by the child's
 call-site, publishing `runStepOwnedExecutions` (stable-id → owned `executionId`s) plus each step's
-representative (its latest owned binary event). `RunStepDisplay` filters `traceEvents` to its owned
+representative (its latest owned binary event, folded forward from each refresh's newly appended
+events rather than rescanned). `RunStepDisplay` filters `traceEvents` to its owned
 executions and groups them by `executionId`; each frame is a `ScreenshotThumbnail` (its own
 `ScreenshotFullscreen`), distinct from the location-keyed `StepImageThumbnail` / `StepImageFullscreen`
 used for a single step's current frame on the main canvas.
