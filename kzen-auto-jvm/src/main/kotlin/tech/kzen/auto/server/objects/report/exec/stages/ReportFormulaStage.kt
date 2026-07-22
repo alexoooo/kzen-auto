@@ -8,11 +8,12 @@ import tech.kzen.auto.server.objects.report.exec.calc.CalculatedColumnEval
 import tech.kzen.auto.server.objects.report.exec.calc.ColumnValue
 import tech.kzen.auto.server.objects.report.exec.calc.ConstantCalculatedColumn
 import tech.kzen.auto.server.objects.report.exec.event.ReportOutputEvent
+import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.platform.ClassName
 
 
 class ReportFormulaStage(
-    private val modelType: ClassName,
+    modelType: ClassName,
     private val formulaSpec: FormulaSpec,
     private val classLoader: ClassLoader,
     private val calculatedColumnEval: CalculatedColumnEval
@@ -20,8 +21,11 @@ class ReportFormulaStage(
     ReportPipelineStage<ReportOutputEvent<*>>("formula")
 {
     //-----------------------------------------------------------------------------------------------------------------
+    // The Report data model is a plain non-null class reference (no generics / nullability to carry).
+    private val modelType = TypeMetadata.of(modelType)
+
     private val formulaCount = formulaSpec.formulas.size
-    private val formulas = Array<CalculatedColumn<Any>>(formulaCount) { ConstantCalculatedColumn.empty() }
+    private val formulas = Array<CalculatedColumn<Any?>>(formulaCount) { ConstantCalculatedColumn.empty() }
     private val formulaValues = Array(formulaCount) { "" }
 
     private var previousHeader: HeaderListing? = null

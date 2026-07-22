@@ -1,19 +1,31 @@
-# Parameterized Job fixture (J2 JobSignatureTest + JobSignatureMigrationTest): a typed `items` parameter
-# declaration (nullable Any: a bare run's expression evaluates to null, emitted as a single element) sourced by a
-# FormulaSourceWorker whose expression IS the parameter — an Iterable argument streams element-by-element, any
-# other value emits once — and a ResultSinkWorker collects and yields the collection as the `main` output
-# component (blank `result` -> main). Both Worker channel ports are BLANK -> JobChannelSynthesis derives one
-# channel from Worker document order (source.output -> collect.input). batchSize 1 makes one element roughly one
-# step for the stepping / migration tests. Shared as the hosted callee by the Script / nested fixtures.
+# Parameterized STREAMING Job fixture (J2 JobSignatureTest + JobSignatureMigrationTest): a typed `items`
+# parameter declaration (nullable List — an Iterable TYPE, so under phase 3's strict-static dispatch the
+# FormulaSourceWorker whose expression IS the parameter always streams: a bound List streams element-by-element,
+# a bare run's null is an empty stream, and a mistyped non-List binding fails the typed accessor's cast — a run
+# failure, never a wrong-shaped stream) into a ResultSinkWorker that keeps the LAST element (default `keep`) and
+# yields the declared `main` output component (blank `result` -> main; the nullable declared type makes an empty
+# stream a null result rather than a run failure). The scalar single-emission lane lives in
+# job-signature-scalar-child-test.yaml (scalar-typed declaration). Both Worker channel ports are BLANK ->
+# JobChannelSynthesis derives one channel from Worker document order (source.output -> collect.input).
+# batchSize 1 makes one element roughly one step for the stepping / migration tests. Shared as the hosted
+# callee by the Script fixture.
 main:
   is: Job
   batchSize: 1
+  results:
+    main:
+      class: kotlin.Any
+      generics: []
+      nullable: true
 
 main.parameters/items:
   is: ParameterBinding
   type:
-    class: kotlin.Any
-    generics: []
+    class: kotlin.collections.List
+    generics:
+      - class: kotlin.Any
+        generics: []
+        nullable: true
     nullable: true
 
 main.workers/source:

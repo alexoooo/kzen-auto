@@ -15,7 +15,7 @@ import tech.kzen.lib.common.model.structure.notation.GraphNotation
  * paradigm, beside Script and Flow), run on the new engine. Thin and immutable — the structure is compiled once
  * by [JobLogicCompiler]; each [run] call makes a fresh [JobRun] holding that call's per-run instance graph, so
  * one [JobLogic] can be hosted more than once (e.g. a Job nested in a Script). The signature is derived by
- * [JobLogicCompiler] from the document's `parameters` declarations and ResultSink Workers (see
+ * [JobLogicCompiler] from the document's `parameters` declarations and its declared `results` signature map (see
  * [tech.kzen.auto.common.objects.document.job.JobSignatureCapability]), so a Job can be hosted with arguments and
  * its result consumed like any other Logic.
  *
@@ -24,6 +24,7 @@ import tech.kzen.lib.common.model.structure.notation.GraphNotation
  * (its child is a different document, outside this Job's [filteredDefinition]).
  */
 class JobLogic(
+    private val jobLocation: ObjectLocation,
     private val filteredDefinition: GraphDefinition,
     private val workerLocations: List<ObjectLocation>,
     private val channelLocations: List<ObjectLocation>,
@@ -41,10 +42,12 @@ class JobLogic(
     override suspend fun run(execution: Execution): TupleValue {
         return JobRun(
             execution,
+            jobLocation,
             filteredDefinition,
             workerLocations,
             channelLocations,
             jobParameters,
+            logicSignature.outputs,
             graphNotation,
             graphDefinition,
             services

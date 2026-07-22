@@ -71,10 +71,12 @@ MultiFileReaderWorker:
 
 # Generates a stream from a single Kotlin expression — THE parameterized source: the Job's declared parameters
 # are in `code`'s scope, bare by name and typed (`number`, `(1..number)`, `listOf("a", "b")`), compiled by the
-# genuine CalculatedColumnEval / Kotlin compiler (same engine as Filter / Formula). An Iterable result is
-# streamed element-by-element (resuming from its position across a live edit), any other value (including an
-# unbound-parameter null) is emitted as a single element; a blank `code` produces an empty stream. The output
-# is untyped (the expression's type is arbitrary), so the port carries no `of:` and any consumer is compatible.
+# genuine CalculatedColumnEval / Kotlin compiler (same engine as Filter / Formula). Dispatch is STATIC, from
+# the expression's INFERRED type (the same inference the worker card displays): an Iterable-typed expression
+# is streamed element-by-element (resuming from its position across a live edit; a null value under a nullable
+# Iterable type is an empty stream), any other type — including an untyped Any — is emitted as a single
+# element; a blank `code` produces an empty stream. The output port carries no `of:` — the inferred payload
+# type flows through the static walk instead, so any consumer is wire-compatible and still sees the type.
 FormulaSourceWorker:
   abstract: true
   is: Worker
@@ -95,10 +97,11 @@ FormulaSourceWorker:
       by: Self
 
 
-# Keeps each record for which the Kotlin boolean expression `where` (columns referenced by name, e.g.
-# `City eq "Lviv"` or `temp.number > 30`; the Job's declared parameters also in scope, bare and typed, e.g.
-# `value.number > threshold`) is truthy, compiled by the genuine CalculatedColumnEval engine.
-# An empty `where` keeps every record.
+# Keeps each message for which the Kotlin boolean expression `where` is truthy, compiled by the genuine
+# CalculatedColumnEval engine with the full scope: the lane's inferred payload type as the RECEIVER (a typed
+# payload's members are bare, e.g. `age > 30`, shadowing same-named columns; `payload` is the explicit alias),
+# columns referenced by name (`City eq "Lviv"`, `temp.number > 30`), and the Job's declared parameters bare
+# and typed (`value.number > threshold`). An empty `where` keeps every message.
 FilterWorker:
   abstract: true
   is: Worker
@@ -153,8 +156,13 @@ ValueSetFilterWorker:
 
 
 # Appends one calculated column per `formula` entry (arbitrary Kotlin expression over the record's columns,
-# with the Job's declared parameters also in scope, bare and typed), reusing the genuine CalculatedColumnEval
-# engine. `formula` is a column-name -> Kotlin map (FormulaSpec).
+# with the lane's inferred payload type as the RECEIVER — members bare, `payload` alias — and the Job's
+# declared parameters also in scope, bare and typed), reusing the genuine CalculatedColumnEval engine.
+# `formula` is a column-name -> Kotlin map (FormulaSpec). The separate `payload` expression TRANSFORMS the
+# message's payload (its raw value replaces it; empty = pass-through): same scope, but its columns are the
+# flat part as received (no auto-flatten), so it can promote flat columns into a typed payload
+# (`payload: Amount.number`) or map a typed stream (`payload: payload * 10`). Both lanes evaluate against
+# the INCOMING message — formulas cannot see the new payload, nor each other's outputs.
 FormulaWorker:
   abstract: true
   is: Worker
@@ -163,6 +171,7 @@ FormulaWorker:
   input: ""
   output: ""
   formula: {}
+  payload: ""
   meta:
     input:
       is: ChannelInput
@@ -175,6 +184,9 @@ FormulaWorker:
     formula:
       is: FormulaSpec
       editor: FormulaMapEditor
+    payload:
+      is: String
+      multiline: true
     selfLocation:
       is: ObjectLocation
       by: Self
@@ -395,11 +407,11 @@ ExploreWorker:
       by: Self
 
 
-# Collects every incoming element and, at end-of-stream, yields the collection as the Job's named output component
-# (`result:`, blank = main) — the single element itself when exactly one arrived, matching the hosts'
-# single-positional convention, so a per-element RunWorker round trip is scalar-in / scalar-out. The Job-side
-# analogue of Flow's FlowOutput vertex. The accumulated collection carries across a live edit (Sort's-buffer
-# precedent) and the yield is re-applied on the rebuilt run. `result` (name) + its meta are inherited from the
+# Keeps a single element of the stream (`keep`: first / last) and, at end-of-stream, yields it as the Job's
+# named output component (`result:`, blank = main), typed by the Job document's declared `results` signature
+# (Script parity). An empty stream is a run failure unless the declared type is nullable (then the result is
+# null). The Job-side analogue of Script's Result step. The kept element carries across a live edit and the
+# yield is re-applied on the rebuilt run. `result` (name) + `keep` + their meta are inherited from the
 # ResultSink marker; `input` sits here (gotcha 2: palette insert resolves every attribute blank-not-missing).
 ResultSinkWorker:
   abstract: true

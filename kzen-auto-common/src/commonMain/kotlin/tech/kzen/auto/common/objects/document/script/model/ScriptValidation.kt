@@ -1,5 +1,6 @@
 package tech.kzen.auto.common.objects.document.script.model
 
+import tech.kzen.auto.common.objects.document.logic.StepValidation
 import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.MapExecutionValue
 import tech.kzen.lib.common.model.obj.ObjectPath

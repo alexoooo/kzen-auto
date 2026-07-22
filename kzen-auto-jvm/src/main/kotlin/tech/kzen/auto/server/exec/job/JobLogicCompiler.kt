@@ -29,10 +29,10 @@ import tech.kzen.lib.common.service.notation.NotationConventions
  * migrate ([tech.kzen.lib.server.exec.engine.RunEngine.migrate]) carries each channel's in-flight payloads across
  * the rebuild by stable id (see [JobRun]). The Logic signature is derived via
  * [tech.kzen.auto.common.objects.document.job.JobSignatureCapability] (inputs from the `parameters` branch of
- * typed ParameterBinding declarations, in document order; results by the ResultSink markers' input ports) — the
- * same notation-only derivation the client editors read, so the two sides cannot drift; [JobRun] seeds the
- * parameters (arguments falling back to declared defaults, see [JobParameters]) and harvests the results at run
- * time.
+ * typed ParameterBinding declarations, in document order; outputs from the document's declared `results`
+ * signature map, Script parity) — the same notation-only derivation the client editors read, so the two sides
+ * cannot drift; [JobRun] seeds the parameters (arguments falling back to declared defaults, see [JobParameters])
+ * and harvests the results at run time.
  */
 object JobLogicCompiler {
     fun compile(
@@ -54,9 +54,9 @@ object JobLogicCompiler {
             .directNestedObjectPaths(NotationConventions.mainObjectPath, JobConventions.workersAttributeName)
             .map { ObjectLocation(documentPath, it) }
 
-        // Derived from the SAVED notation + metadata (the pre-synthesis structure, matching what the client sees):
-        // inputs from the `parameters` declarations, outputs from the ResultSink markers — not the synthesized
-        // channels.
+        // Derived from the SAVED notation (the pre-synthesis structure, matching what the client sees):
+        // inputs from the `parameters` declarations, outputs from the declared `results` signature map — not
+        // the synthesized channels.
         val logicSignature = JobSignatureCapability.signature(graphDefinition.graphStructure, jobLocation)
 
         // Per-parameter typed defaults (the `default` scalar coerced by the declared `type`), the fallback
@@ -70,6 +70,7 @@ object JobLogicCompiler {
             }
 
         return JobLogic(
+            jobLocation,
             filteredDefinition,
             workerLocations,
             synthesis.channelLocations,

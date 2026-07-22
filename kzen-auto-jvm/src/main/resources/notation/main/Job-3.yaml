@@ -1,5 +1,10 @@
 main:
   is: Job
+  results:
+    main:
+      class: kotlin.String
+      generics: []
+      nullable: false
 
 main.workers/Formula Source:
   is: FormulaSourceWorker
@@ -7,6 +12,14 @@ main.workers/Formula Source:
 
 main.workers/Formula:
   is: FormulaWorker
+  payload: |-
+      if (this % 3 == 0 && this% 5 == 0) "fizzbuzz"
+      else if (this % 3 == 0) "fizz"
+      else if (this % 5 == 0) "buzz"
+      else this.toString()
+
+main.workers/Result:
+  is: ResultSinkWorker
 
 main.parameters/number:
   is: ParameterBinding

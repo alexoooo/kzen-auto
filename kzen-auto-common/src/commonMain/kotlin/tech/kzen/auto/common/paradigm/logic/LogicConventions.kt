@@ -49,6 +49,12 @@ object LogicConventions {
     val parametersAttributeName = AttributeName("parameters")
     val parametersAttributePath = AttributePath.ofName(parametersAttributeName)
 
+    // The declared result signature: a `results` map (component name -> TypeMetadata) parsed by
+    // ResultSignatureDefiner into the output TupleDefinition — plain data on the main object, shared by
+    // every Logic flavour that declares one (Script and Job); empty/absent => void.
+    val resultsAttributeName = AttributeName("results")
+    val resultsAttributePath = AttributePath.ofName(resultsAttributeName)
+
 
     //-----------------------------------------------------------------------------------------------------------------
     fun runExecutionFromCollection(collection: Map<String, String>): LogicRunExecutionId {

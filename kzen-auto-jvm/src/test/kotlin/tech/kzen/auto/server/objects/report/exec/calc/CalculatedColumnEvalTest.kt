@@ -13,7 +13,6 @@ import tech.kzen.lib.common.exec.tuple.TupleComponentName
 import tech.kzen.lib.common.exec.tuple.TupleDefinition
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.platform.ClassName
-import tech.kzen.lib.platform.ClassNames
 import java.nio.file.Path
 import kotlin.test.assertEquals
 
@@ -435,10 +434,47 @@ class CalculatedColumnEvalTest {
             "c",
             "a + 1",
             HeaderListing.ofUnique(listOf("a", "b")),
-            ClassNames.kotlinAny,
+            TypeMetadata.any,
             ClassLoaderUtils.dynamicParentClassLoader(),
             intParameter("a"))
         assertEquals("Parameter 'a' collides with a column name - rename one of them", error)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    @Test
+    fun payloadReceiverMembersBareWithAlias() {
+        // A typed model (payload) is the expression's implicit receiver — its members are bare — and the
+        // explicit `payload` alias always names the whole value.
+        val workUtils = WorkUtils(Path.of("../work/${CalculatedColumnEvalTest::class.simpleName}"))
+        val column = calculatedColumnEval(workUtils).create(
+            "c",
+            "uppercase() + payload",
+            HeaderListing.ofUnique(listOf("a", "b")),
+            TypeMetadata.string,
+            ClassLoaderUtils.dynamicParentClassLoader())
+
+        val raw = column.evaluateRaw(
+            "x", FlatFileRecord.of("", ""), HeaderListing.ofUnique(listOf("a", "b")))
+        assertEquals("Xx", raw)
+    }
+
+
+    @Test
+    fun payloadMemberShadowsSameNamedColumn() {
+        // Kotlin's innermost-receiver rule, pinned: with a String payload receiver, bare `length` resolves
+        // to the RECEIVER's member (1 for "x"), not the same-named column ("99").
+        val workUtils = WorkUtils(Path.of("../work/${CalculatedColumnEvalTest::class.simpleName}"))
+        val header = HeaderListing.ofUnique(listOf("length"))
+        val column = calculatedColumnEval(workUtils).create(
+            "c",
+            "length",
+            header,
+            TypeMetadata.string,
+            ClassLoaderUtils.dynamicParentClassLoader())
+
+        val raw = column.evaluateRaw("x", FlatFileRecord.of("99"), header)
+        assertEquals(1, raw)
     }
 
 
@@ -464,7 +500,7 @@ class CalculatedColumnEvalTest {
     }
 
 
-    private fun create(formula: String, parameters: TupleDefinition): CalculatedColumn<Any> {
+    private fun create(formula: String, parameters: TupleDefinition): CalculatedColumn<Any?> {
         val workUtils = WorkUtils(Path.of("../work/${CalculatedColumnEvalTest::class.simpleName}"))
         val calculatedColumnEval = calculatedColumnEval(workUtils)
 
@@ -472,7 +508,7 @@ class CalculatedColumnEvalTest {
             "c",
             formula,
             HeaderListing.ofUnique(listOf("a", "b")),
-            ClassNames.kotlinAny,
+            TypeMetadata.any,
             ClassLoaderUtils.dynamicParentClassLoader(),
             parameters)
     }

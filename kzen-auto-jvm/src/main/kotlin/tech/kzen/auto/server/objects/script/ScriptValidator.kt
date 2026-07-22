@@ -1,11 +1,11 @@
 package tech.kzen.auto.server.objects.script
 
 import tech.kzen.auto.common.api.CommonRestApi
-import tech.kzen.auto.common.objects.document.script.ResultSignatureDefiner
+import tech.kzen.auto.common.objects.document.logic.ResultSignatureDefiner
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.objects.document.script.model.ScriptTree
 import tech.kzen.auto.common.objects.document.script.model.ScriptValidation
-import tech.kzen.auto.common.objects.document.script.model.StepValidation
+import tech.kzen.auto.common.objects.document.logic.StepValidation
 import tech.kzen.auto.common.paradigm.detached.DetachedAction
 import tech.kzen.auto.server.objects.registry.ObjectRegistryDocument
 import tech.kzen.auto.server.objects.script.api.ScriptStep

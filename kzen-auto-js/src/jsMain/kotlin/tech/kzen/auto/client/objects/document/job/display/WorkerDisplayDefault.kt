@@ -1,10 +1,16 @@
 package tech.kzen.auto.client.objects.document.job.display
 
 import emotion.react.css
+import js.objects.unsafeJso
+import mui.material.Chip
+import mui.material.ChipVariant
 import mui.material.IconButton
 import mui.material.Size
+import mui.material.Tooltip
+import mui.system.sx
 import react.ChildrenBuilder
 import react.Key
+import react.ReactNode
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
@@ -21,6 +27,8 @@ import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.job.JobChannelPorts
+import tech.kzen.auto.common.objects.document.job.JobConventions
+import tech.kzen.auto.common.objects.document.logic.StepValidation
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -160,6 +168,11 @@ class WorkerDisplayDefault(
                 // EVERY Worker (built-in and 3rd-party) with no Worker-type branch.
                 props.common.progress?.outcome?.let { renderOutcomeChip(it) }
 
+                // The static payload-type walk's per-Worker facts (JobValidator via JobController): the
+                // validation-error icon and the inferred output payload type chip — general per-node facts,
+                // no Worker-type branch (the StepHeader right-cluster precedent).
+                props.common.validation?.let { renderValidation(it) }
+
                 renderAttributeSummaries(objectMetadata)
             }
 
@@ -228,6 +241,47 @@ class WorkerDisplayDefault(
     }
 
 
+    private fun ChildrenBuilder.renderValidation(validation: StepValidation) {
+        // Expression validation error: a distinct red-orange icon (different from the darker run-failure red
+        // of the outcome chip) with the message in a tooltip — visible at a glance on the card header.
+        val errorMessage = validation.errorMessage
+        if (errorMessage != null) {
+            Tooltip {
+                title = ReactNode(errorMessage)
+
+                span {
+                    css {
+                        display = Display.flex
+                        alignItems = AlignItems.center
+                        marginLeft = 0.5.em
+                    }
+
+                    icon("material-symbols:error") {
+                        style = unsafeJso {
+                            color = Color("#d84315")
+                            fontSize = 1.25.em
+                        }
+                    }
+                }
+            }
+        }
+
+        // Inferred output payload type chip, but not for Unit — a "[Unit]" badge conveys nothing (a lane
+        // with no payload has null typeMetadata and shows nothing at all).
+        val typeSimple = validation.typeMetadata?.toSimple()
+        if (typeSimple != null && typeSimple != "Unit") {
+            Chip {
+                sx {
+                    marginLeft = 0.5.em
+                }
+                size = Size.small
+                label = ReactNode(typeSimple)
+                variant = ChipVariant.outlined
+            }
+        }
+    }
+
+
     private fun ChildrenBuilder.renderOutcomeChip(outcome: WorkerOutcome) {
         val (label, background) = when (outcome.kind) {
             WorkerOutcome.Kind.Success -> "Done" to Color("#2e7d32")
@@ -285,9 +339,13 @@ class WorkerDisplayDefault(
         for ((attributeName, attributeMetadata) in objectMetadata.attributes.map) {
             // Per-output channel config lives in a free-form `channels` map, which infers to no metadata and so
             // never appears in this meta-attribute loop — no explicit exclusion needed. Channel-endpoint ports
-            // are order-managed (the gold pipes between cards), not per-Worker editors.
+            // are order-managed (the gold pipes between cards), not per-Worker editors. A ResultSink's `result`
+            // (its output-component NAME, blank = main) is signature-managed: its type is declared at the
+            // document level (the stage's Result control), so no free-text editor on the card — hand-edit
+            // notation for a multi-result Job until the document editor wires named results.
             if (AutoConventions.isManaged(attributeName) ||
-                    JobChannelPorts.isChannelPort(attributeMetadata.type)) {
+                    JobChannelPorts.isChannelPort(attributeMetadata.type) ||
+                    attributeName == JobConventions.resultAttributeName) {
                 continue
             }
 

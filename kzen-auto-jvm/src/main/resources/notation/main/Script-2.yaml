@@ -1,16 +1,23 @@
 main:
   is: Script
 
-main.steps/Number:
-  is: NumberLiteralStep
-  value: 13
+main.steps/Formula:
+  is: FormulaStep
+  code: 1..100
 
-main.steps/Run:
+main.steps/ForEach:
+  is: ForEachStep
+  items: main.steps/Formula
+
+main.steps/ForEach.item/Item:
+  is: ForEachItemBinding
+
+main.steps/ForEach.steps/Run:
   is: RunStep
   instructions: main/Job-3.yaml#main
   arguments:
-    number: main.steps/Number
+    number: main.steps/ForEach.item/Item
 
 main.steps/Display:
   is: DisplayValueStep
-  text: main.steps/Run
+  text: main.steps/ForEach

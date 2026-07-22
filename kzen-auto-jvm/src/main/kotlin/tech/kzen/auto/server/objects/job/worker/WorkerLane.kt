@@ -1,0 +1,83 @@
+package tech.kzen.auto.server.objects.job.worker
+
+import tech.kzen.auto.common.objects.document.registry.model.ObjectRegistryScan
+import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
+import tech.kzen.lib.common.exec.tuple.TupleDefinition
+import tech.kzen.lib.common.model.structure.GraphStructure
+import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
+import tech.kzen.lib.platform.ClassName
+import tech.kzen.lib.platform.ClassNames
+
+
+/**
+ * The statically known shape of one Job channel lane — what the payload-type walk
+ * ([tech.kzen.auto.server.objects.job.JobValidator]) folds along the wiring, one Worker at a time
+ * ([WorkerBase.payloadFlow]):
+ *
+ * - [payloadType] — the inferred payload type of the [JobMessage]s flowing on this lane; null = no static
+ *   payload (a flat/CSV lane, or an untyped source). Downstream expression compiles use it as the receiver
+ *   (null → nullable `Any`), and it is what the editor's worker cards display.
+ * - [flatColumns] — the flat part's columns, where statically derivable: null = UNKNOWN (a CSV lane's
+ *   header only exists at run time — static expression validation is skipped there, its errors surfacing at
+ *   run time as before); empty = statically NO flat part (a pure-payload lane). Known columns let the walk
+ *   compile-check expressions with the exact scope the runtime will use.
+ */
+class WorkerLane(
+    val payloadType: TypeMetadata?,
+    val flatColumns: HeaderListing?
+) {
+    companion object {
+        /** The lane before any Worker has typed it: no payload type, columns unknown. */
+        val unknown = WorkerLane(null, null)
+
+        private val mapClassName = ClassName("kotlin.collections.Map")
+    }
+
+
+    /**
+     * The flat columns a [JobMessage.flatView] consumer of this lane statically sees: known columns as-is;
+     * a pure-payload lane auto-flattens — the shared `value` column for a concrete non-Map payload type,
+     * but a `Map` payload (keyed columns from its runtime keys) or an untyped one is unknown. Null =
+     * unknown (static expression validation is skipped).
+     */
+    fun consumerFlatColumns(): HeaderListing? {
+        val columns = flatColumns
+            ?: return null
+        if (columns.values.isNotEmpty()) {
+            return columns
+        }
+
+        val payloadClassName = payloadType?.className
+            ?: return null
+        if (payloadClassName == ClassNames.kotlinAny || payloadClassName == mapClassName) {
+            return null
+        }
+        return JobMessage.valueHeader
+    }
+}
+
+
+/**
+ * One Worker's contribution to the payload-type walk: the OUTPUT [lane] it produces from its input lane,
+ * plus an optional validation [errorMessage] (an expression compile error, surfaced on the Worker's card —
+ * never a run-time crash).
+ */
+class WorkerLaneAttempt(
+    val lane: WorkerLane,
+    val errorMessage: String?
+)
+
+
+/**
+ * What a [WorkerBase.payloadFlow] override needs beyond its own injected services: the Job's declared
+ * [parameters] (every expression's typed parameter scope), the [objectRegistryScan] gating which inferred
+ * classifiers stay concrete (vs approximating to Any — see
+ * [tech.kzen.auto.server.objects.logic.ExpressionReturnTypeInference]), the saved [graphStructure] (a
+ * nested-Logic Worker reads its callee's signature from it), and the [classLoader] probe compiles run under.
+ */
+class WorkerLaneContext(
+    val parameters: TupleDefinition,
+    val objectRegistryScan: ObjectRegistryScan,
+    val graphStructure: GraphStructure,
+    val classLoader: ClassLoader
+)

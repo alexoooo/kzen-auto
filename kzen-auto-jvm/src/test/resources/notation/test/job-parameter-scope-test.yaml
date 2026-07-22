@@ -1,10 +1,15 @@
 # Declared parameters in Worker-expression scope (element-model phase 2): `threshold` (Int, default 2) gates a
 # FilterWorker's `where` over the auto-flattened `value` column of a Double payload stream. Run BARE the filter
-# reads the declared default (2 -> keeps 30.0 and 2.5); run with a bound `threshold` argument the argument wins
-# (3 -> keeps only 30.0, unwrapped to a scalar by the sink's single-element convention). All ports BLANK ->
+# reads the declared default (2 -> keeps 30.0 and 2.5, the sink keeping the LAST: 2.5); run with a bound
+# `threshold` argument the argument wins (3 -> keeps only 30.0). All ports BLANK ->
 # JobChannelSynthesis derives the channels from Worker document order.
 main:
   is: Job
+  results:
+    main:
+      class: kotlin.Double
+      generics: []
+      nullable: false
 
 main.parameters/threshold:
   is: ParameterBinding

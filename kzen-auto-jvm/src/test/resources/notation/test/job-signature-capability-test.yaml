@@ -1,11 +1,25 @@
 # Derivation net for JobSignatureCapability: INPUTS come from the `parameters` branch of typed ParameterBinding
 # declarations — an untyped one (the archetype default types it Any), a String-typed one, and a generic
-# List<Int> (proves TypeMetadata parsing incl. generics) — in document order; OUTPUTS come from the ResultSink
-# marker Workers — a blank result (-> `main`), a named result (`summary`), and a 3rd-party ResultSink SUBTYPE
-# with a typed `of: String` input port (proves type derivation + inheritance-chain classification, CC-17). A
-# plain non-signature Worker classifies false. Never run: only its notation + metadata are read.
+# List<Int> (proves TypeMetadata parsing incl. generics) — in document order; OUTPUTS come from the document's
+# declared `results` signature map (Script parity) — `main` plus two named components, in declaration order,
+# independent of the sink Workers. The ResultSink Workers below yield INTO those components; a 3rd-party
+# ResultSink SUBTYPE proves inheritance-chain classification (CC-17), and a plain non-signature Worker
+# classifies false. Never run: only its notation + metadata are read.
 main:
   is: Job
+  results:
+    main:
+      class: kotlin.Any
+      generics: []
+      nullable: true
+    summary:
+      class: kotlin.Int
+      generics: []
+      nullable: false
+    typed:
+      class: kotlin.String
+      generics: []
+      nullable: false
 
 main.parameters/items:
   is: ParameterBinding
@@ -40,7 +54,8 @@ main.workers/namedResult:
   is: ResultSinkWorker
   result: "summary"
 
-# 3rd-party ResultSink subtype -> classifies via the inheritance chain; its `of: String` types the component.
+# 3rd-party ResultSink subtype -> classifies via the inheritance chain (its component type comes from the
+# declared `results` map above, like any sink's).
 main.workers/subtypeResult:
   is: TypedResultSink
   result: "typed"
@@ -48,8 +63,8 @@ main.workers/subtypeResult:
 
 #######################################################################################################################
 # Test-only archetype (unique name, declared once, so there's no whole-graph reference ambiguity): a user-defined
-# ResultSink subtype reusing the production class, with a typed input port. Must classify as a ResultSink and
-# type its component String purely via the inheritance chain + metadata, with no edit to JobSignatureCapability.
+# ResultSink subtype reusing the production class, with a typed input port. Must classify as a ResultSink purely
+# via the inheritance chain, with no edit to JobSignatureCapability.
 TypedResultSink:
   abstract: true
   is: ResultSink

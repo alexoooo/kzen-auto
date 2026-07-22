@@ -1,0 +1,12 @@
+# Strict result-declaration fixture (JobValidatorTest): the Job declares NO `results` signature, so its
+# ResultSink's component (blank `result` -> main) is undeclared — a validation error on the sink's card
+# (Script parity: a Result step with no declared signature), while the well-formed source stays error-free.
+main:
+  is: Job
+
+main.workers/source:
+  is: FormulaSourceWorker
+  code: "(1..3)"
+
+main.workers/collect:
+  is: ResultSinkWorker

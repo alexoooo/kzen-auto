@@ -17,6 +17,7 @@ import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.objects.document.bridge.InsertionKey
 import tech.kzen.auto.client.objects.document.common.dragdrop.dropZoneRegion
 import tech.kzen.auto.client.objects.document.common.signature.LogicSignatureEditor
+import tech.kzen.auto.client.objects.document.common.signature.ResultSignatureEditor
 import tech.kzen.auto.client.objects.document.job.display.WorkerDisplayManager
 import tech.kzen.auto.client.objects.document.job.display.WorkerDisplayPropsCommon
 import tech.kzen.auto.client.objects.ribbon.RibbonController
@@ -33,6 +34,7 @@ import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.job.JobChannelDerivation
 import tech.kzen.auto.common.objects.document.job.JobConventions
+import tech.kzen.auto.common.objects.document.job.model.JobValidation
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -72,6 +74,11 @@ external interface JobControllerState: State {
     // each run-status change. Null until the first fetch. Threaded to each card via WorkerDisplayPropsCommon; a
     // preview card layers its own on-demand larger slice on top (see PreviewWorkerDisplay).
     var workerProgress: Map<ObjectLocation, JobWorkerProgress>?
+
+    // Per-Worker server-side validation (the static payload-type walk: inferred payload types + expression
+    // compile errors), fetched from the JobValidator detached action on notation change. Null until the first
+    // fetch. Threaded to each card via WorkerDisplayPropsCommon (type chip + error icon).
+    var workerValidations: JobValidation?
 
     // Workers in document order — the stage list. Value-gated in onClientState so the instances stay
     // ===-stable across drag / progress re-renders, letting each JobObjectSlot bail out.
@@ -212,10 +219,22 @@ class JobController(
     private var lastFetchKey: String? = null
 
 
+    private val jobValidationStore by lazy {
+        JobValidationStore(props.restClient)
+    }
+
+    // Refetch validation only when this Job's own notation actually changed (the ScriptStore
+    // documentNotationChanged split — progress polls and unrelated client-state publishes reuse the instance,
+    // so a reference compare suffices). Same accepted limitation as Script: a callee / registry edit
+    // refreshes on the next own-document change.
+    private var lastValidationNotation: DocumentNotation? = null
+
+
     //-----------------------------------------------------------------------------------------------------------------
     override fun JobControllerState.init(props: JobControllerProps) {
         clientState = null
         workerProgress = null
+        workerValidations = null
         workerLocations = null
         connectionsByUpstream = null
         creating = false
@@ -246,6 +265,7 @@ class JobController(
 
         updateStageModel(clientState)
         refreshProgressIfNeeded(clientState)
+        refreshValidationIfNeeded(clientState)
     }
 
 
@@ -312,6 +332,35 @@ class JobController(
             if (progress != state.workerProgress) {
                 setState {
                     workerProgress = progress
+                }
+            }
+        }
+    }
+
+
+    private fun refreshValidationIfNeeded(clientState: ClientState) {
+        val documentPath = clientState.navigationRoute.documentPath
+            ?: return
+
+        val documentNotation = clientState.graphStructure().graphNotation.documents[documentPath]
+            ?: return
+
+        if (! JobConventions.isJob(documentNotation)) {
+            return
+        }
+
+        if (documentNotation === lastValidationNotation) {
+            return
+        }
+        lastValidationNotation = documentNotation
+
+        async {
+            val validation = jobValidationStore.fetch(documentPath)
+            // Value-equality gate (data class + map): skip setState when nothing changed. A failed fetch
+            // (null) leaves the previous validation standing rather than flashing the chips away.
+            if (validation != null && validation != state.workerValidations) {
+                setState {
+                    workerValidations = validation
                 }
             }
         }
@@ -580,9 +629,17 @@ class JobController(
                 mirroredGraphStore = props.mirroredGraphStore
             }
 
+            // The declared result signature (Script parity): the SAME editor Script uses, over the `results`
+            // map on `main` — the type each ResultSink Worker's yielded component is declared as.
+            ResultSignatureEditor::class.react {
+                objectLocation = main
+                clientStateGlobal = props.clientStateGlobal
+                mirroredGraphStore = props.mirroredGraphStore
+            }
+
             // Job-wide channel defaults (batchSize / capacity) applied to every auto-synthesized channel — floated
-            // at the top-right, stacked beneath the Parameters control (the ResultSignatureEditor stacking
-            // convention); rendered before the empty/populated split so it shows in both.
+            // at the top-right, stacked beneath the Parameters and Result controls (the ResultSignatureEditor
+            // stacking convention); rendered before the empty/populated split so it shows in both.
             JobChannelDefaults::class.react {
                 mainLocation = main
                 clientStateGlobal = props.clientStateGlobal
@@ -628,6 +685,7 @@ class JobController(
             this.indexInParent = index
 
             this.progress = state.workerProgress?.get(workerLocation)
+            this.validation = state.workerValidations?.workerValidations?.get(workerLocation.objectPath)
             this.active = active
 
             this.workerDisplayManager = props.workerDisplayManager

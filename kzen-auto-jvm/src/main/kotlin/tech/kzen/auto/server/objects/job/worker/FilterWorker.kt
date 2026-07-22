@@ -8,21 +8,21 @@ import tech.kzen.auto.server.objects.report.exec.calc.CalculatedColumn
 import tech.kzen.auto.server.objects.report.exec.calc.CalculatedColumnEval
 import tech.kzen.auto.server.util.ClassLoaderUtils
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
-import tech.kzen.lib.platform.ClassNames
 
 
 /**
  * The filter stage as a Job Worker — the dataflow's predicate stage. Rather than a hardcoded column/value
- * comparison, [where] is an arbitrary Kotlin BOOLEAN EXPRESSION evaluated against each message's flat part,
- * with the columns referenced by name (`City eq "Lviv"`, `temp.number > 30`, …). It is compiled by the
- * genuine [CalculatedColumnEval] engine — the SAME engine [FormulaWorker] uses, injected as a `@Service`
- * — so the expression is type-checked against the flat part's schema ([HeaderListing]). The Job's declared
- * parameters are also in scope, bare by name and typed (`value > threshold`), their run-constant values read
- * via [JobControl.parameter]. A payload-lane message auto-flattens ([JobMessage.flatView]: a scalar filters
- * via the `value` column), so the predicate works over any stream; expressions over the typed payload itself
- * are the element-model plan's phase 3.
+ * comparison, [where] is an arbitrary Kotlin BOOLEAN EXPRESSION evaluated against each message with the full
+ * expression scope: the lane's INFERRED PAYLOAD TYPE as the receiver (a typed payload's members are bare —
+ * `age > 30` — with the `payload` alias as the escape hatch; the type comes from [JobControl.payloadType],
+ * the same static walk the editor displays), the flat part's columns bare by name (`City eq "Lviv"`,
+ * `temp.number > 30`, …), and the Job's declared parameters bare and typed (`value > threshold`, values read
+ * via [JobControl.parameter]). It is compiled by the genuine [CalculatedColumnEval] engine — the SAME engine
+ * [FormulaWorker] uses, injected as a `@Service`. A payload-lane message auto-flattens
+ * ([JobMessage.flatView]: a scalar filters via the `value` column), so the predicate works over any stream.
  *
  * The predicate is compiled lazily and recompiled only when the incoming header changes; a message is kept
  * when the compiled expression's result is truthy ([tech.kzen.auto.server.objects.report.exec.calc.ColumnValue.truthy]
@@ -50,7 +50,7 @@ class FilterWorker(
 
     // Compiled lazily; recompiled only when the incoming header changes (HeaderListing value-compare).
     private var compiledForHeader: HeaderListing? = null
-    private var compiled: CalculatedColumn<Any>? = null
+    private var compiled: CalculatedColumn<Any?>? = null
 
     private var seen = 0L
     private var kept = 0L
@@ -68,24 +68,48 @@ class FilterWorker(
         val flat = element.flatView()
         val header = flat.header
         if (header != compiledForHeader) {
-            // The Job's declared parameters join the expression scope, bare by name and typed; their values are
-            // run-constant, injected once per compiled instance (never baked into the generated source).
+            // The full expression scope: the lane's inferred payload type as receiver, the columns bare, and
+            // the Job's declared parameters bare and typed — parameter values are run-constant, injected once
+            // per compiled instance (never baked into the generated source). Receiver and parameter types are
+            // run-constant too, so the header is the only recompile trigger.
             val parameters = control.parameters()
+            val receiverType = control.payloadType() ?: TypeMetadata.anyNullable
             compiled = control.runBlockingIo {
                 calculatedColumnEval.create(
-                    "filter", where, header, ClassNames.kotlinAny, classLoader, parameters)
+                    "filter", where, header, receiverType, classLoader, parameters)
             }
             compiled!!.setParameters(parameters.components.map { control.parameter(it.name.value) })
             compiledForHeader = header
         }
 
-        if (compiled!!.evaluate(Unit, flat.record, header).truthy) {
+        if (compiled!!.evaluate(element.payload, flat.record, header).truthy) {
             kept += 1
             emit.send(element)
         }
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
+    // A filter forwards the received message untouched (identity lane); its contribution to the walk is
+    // static validation of [where], where the effective column view is known (the same scope the runtime
+    // compile will use — including the auto-flatten `value` column of a concrete payload lane).
+    override fun payloadFlow(input: WorkerLane, context: WorkerLaneContext): WorkerLaneAttempt {
+        if (passThrough) {
+            return WorkerLaneAttempt(input, null)
+        }
+
+        val columns = input.consumerFlatColumns()
+            ?: return WorkerLaneAttempt(input, null)
+
+        val error = calculatedColumnEval.validate(
+            "filter", where, columns,
+            input.payloadType ?: TypeMetadata.anyNullable, context.classLoader, context.parameters)
+
+        return WorkerLaneAttempt(input, error)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     override fun progress(snapshot: Any?): Map<String, Any?> =
         mapOf("seen" to seen, "kept" to kept)
 }

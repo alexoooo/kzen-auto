@@ -1,0 +1,19 @@
+# Broken-expression fixture (JobValidatorTest): the FormulaSource's `code` does not compile, so the static
+# payload-type walk reports it as that Worker's VALIDATION error (surfaced on its card) rather than crashing —
+# and the downstream sink stays error-free with an unknown lane. The sink is required so channel synthesis
+# wires the source's port (a lone source would be pruned as a blank required reference, which is not-broken by
+# convention and would get no entry at all).
+main:
+  is: Job
+  results:
+    main:
+      class: kotlin.Any
+      generics: []
+      nullable: true
+
+main.workers/source:
+  is: FormulaSourceWorker
+  code: "nonexistent identifier ("
+
+main.workers/collect:
+  is: ResultSinkWorker

@@ -58,10 +58,10 @@ class JobChannelDefaults(
         div {
             css {
                 // Floated top-right, anchored to JobController's (relative) stage — scrolls with content,
-                // stacked directly beneath the Parameters control (the ResultSignatureEditor stacking
-                // convention). A narrow, compact 3-row column (label, batch size, capacity).
+                // stacked directly beneath the Parameters and Result controls (the ResultSignatureEditor
+                // stacking convention). A narrow, compact 3-row column (label, batch size, capacity).
                 position = Position.absolute
-                top = 2.75.em
+                top = 5.5.em
                 right = 0.5.em
                 zIndex = integer(2)
                 display = Display.flex

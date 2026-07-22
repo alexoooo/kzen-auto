@@ -113,7 +113,7 @@ Script:
 
 
 ResultSignatureDefiner:
-  class: tech.kzen.auto.common.objects.document.script.ResultSignatureDefiner
+  class: tech.kzen.auto.common.objects.document.logic.ResultSignatureDefiner
 
 
 ScriptStep:
@@ -172,6 +172,7 @@ Job:
   # constructor arg for them (like Channel's `elementType`).
   batchSize: 1024
   capacity: 0
+  results: {}
   meta:
     batchSize: Int
     capacity: Int
@@ -189,6 +190,12 @@ Job:
       is: List
       of: ParameterBinding
       by: NestedList
+    # The result signature (Script parity, same shape): a map (component name -> TypeMetadata) parsed
+    # into the output TupleDefinition — the Job's output signature (JobSignatureCapability), which each
+    # ResultSink Worker yields into by component name. Empty/absent => void.
+    results:
+      is: Object
+      by: ResultSignatureDefiner
     selfLocation:
       is: ObjectLocation
       by: Self

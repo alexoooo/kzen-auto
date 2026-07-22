@@ -1,9 +1,16 @@
 package tech.kzen.auto.server.objects.job.worker
 
+import tech.kzen.auto.common.objects.document.job.JobConventions
+import tech.kzen.auto.common.objects.document.job.JobSignatureCapability
+import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
+import tech.kzen.auto.common.objects.document.logic.ResultSignatureDefiner
+import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
+import tech.kzen.lib.common.exec.tuple.TupleComponentName
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.reflect.Reflect
 
 
@@ -48,4 +55,42 @@ class RunWorker(
 
     override fun progress(snapshot: Any?): Map<String, Any?> =
         mapOf("ran" to ran)
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    // The nested-Logic host emits its child's main result as a fresh payload, so the output lane's type is
+    // the callee's declared main result type (the RunStep precedent): a Script callee declares it in its
+    // `results` signature, a Job callee derives it via JobSignatureCapability; any other flavour (or a void
+    // callee) approximates to nullable Any. No flat part on the output lane (the child result is a payload).
+    override fun payloadFlow(input: WorkerLane, context: WorkerLaneContext): WorkerLaneAttempt {
+        val graphNotation = context.graphStructure.graphNotation
+        val instructionsDocument = graphNotation.documents[instructions.documentPath]
+
+        val childMainType: TypeMetadata =
+            when {
+                instructionsDocument == null ->
+                    TypeMetadata.anyNullable
+
+                ScriptConventions.isScript(instructionsDocument) ->
+                    ResultSignatureDefiner
+                        .parse(graphNotation.firstAttribute(
+                            instructions, ScriptConventions.resultsAttributePath))
+                        .find(TupleComponentName.main)
+                        ?.metadata
+                        ?: TypeMetadata.anyNullable
+
+                JobConventions.isJob(instructionsDocument) ->
+                    JobSignatureCapability
+                        .signature(context.graphStructure, instructions)
+                        .outputs
+                        .find(TupleComponentName.main)
+                        ?.metadata
+                        ?: TypeMetadata.anyNullable
+
+                else ->
+                    TypeMetadata.anyNullable
+            }
+
+        return WorkerLaneAttempt(WorkerLane(childMainType, HeaderListing.empty), null)
+    }
 }

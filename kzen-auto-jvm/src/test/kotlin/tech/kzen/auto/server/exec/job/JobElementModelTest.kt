@@ -34,6 +34,9 @@ import kotlin.test.assertIs
  * - **Map auto-flatten**: Map payloads flatten to keyed columns for the CsvWriter.
  * - **Parameter scope** (phase 2): a declared typed parameter gates a Filter `where` bare by name — the
  *   declared default when the run binds nothing, the bound argument when it does.
+ * - **Typed payload chain** (phase 3): a FormulaWorker `payload:` expression transforms each payload with the
+ *   lane's inferred type as the bare receiver, and a FilterWorker `where` reads the typed `payload` alias —
+ *   the static payload-type walk threading receivers through the whole chain.
  */
 class JobElementModelTest {
     //-----------------------------------------------------------------------------------------------------------------
@@ -75,7 +78,8 @@ class JobElementModelTest {
 
     @Test
     fun declaredParameterGatesFilterViaDefault() {
-        // Run BARE: the Filter's `value.number > threshold` reads the DECLARED default (2), keeping 30.0 and 2.5.
+        // Run BARE: the Filter's `value.number > threshold` reads the DECLARED default (2), keeping 30.0 and
+        // 2.5 — the sink keeps the LAST survivor (default `keep`).
         val engine = newEngine("test/job-parameter-scope-test.yaml")
         val outcome =
             try {
@@ -89,14 +93,14 @@ class JobElementModelTest {
             }
 
         val success = assertIs<Outcome.Success>(outcome, "outcome: $outcome")
-        assertEquals(listOf(30.0, 2.5), success.value.mainComponentValue())
+        assertEquals(2.5, success.value.mainComponentValue())
     }
 
 
     @Test
     fun boundArgumentOverridesDeclaredDefault() {
-        // The bound `threshold` argument (3) wins over the declared default (2): only 30.0 passes, and the
-        // sink's single-element convention unwraps it to a scalar.
+        // The bound `threshold` argument (3) wins over the declared default (2): only 30.0 passes, which the
+        // sink keeps as the result.
         val engine = newEngine(
             "test/job-parameter-scope-test.yaml",
             TupleValue(listOf(TupleComponentValue(TupleComponentName("threshold"), 3))))
@@ -113,6 +117,28 @@ class JobElementModelTest {
 
         val success = assertIs<Outcome.Success>(outcome, "outcome: $outcome")
         assertEquals(30.0, success.value.mainComponentValue())
+    }
+
+
+    @Test
+    fun payloadExpressionTransformsTypedStream() {
+        // Phase 3: FormulaSource (1..3) streams Int payloads; the Formula's `payload: payload * 10` maps each
+        // (bare Int arithmetic — the receiver is the lane's inferred type); the Filter's `where: payload > 15`
+        // reads the typed payload; the sink keeps the last surviving transformed payload.
+        val engine = newEngine("test/job-payload-formula-test.yaml")
+        val outcome =
+            try {
+                runBlocking {
+                    engine.resume()
+                    engine.await()
+                }
+            }
+            finally {
+                engine.close()
+            }
+
+        val success = assertIs<Outcome.Success>(outcome, "outcome: $outcome")
+        assertEquals(30, success.value.mainComponentValue())
     }
 
 
@@ -186,6 +212,7 @@ class JobElementModelTest {
                 context.objectStableMapper,
                 context.cachedKotlinCompiler,
                 context.scriptValidationCache,
+                context.jobValidationCache,
                 context.notationMetadataReader,
                 context.jobWorkPool,
                 LogicRunExecutionId.random()))

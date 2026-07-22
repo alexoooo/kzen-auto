@@ -22,7 +22,7 @@ import kotlin.script.experimental.jvmhost.CompiledScriptJarsCache
 
 
 // `open` so the generated script facade class (which the scripting compiler emits as a subclass of this
-// template) is loadable: reflecting a generated expression's inferred type (StepReturnTypeInference) resolves
+// template) is loadable: reflecting a generated expression's inferred type (ExpressionReturnTypeInference) resolves
 // that facade, which a final base class would reject with IncompatibleClassChangeError.
 @KotlinScript
 open class ScriptKotlinCompiler: KotlinCompiler {

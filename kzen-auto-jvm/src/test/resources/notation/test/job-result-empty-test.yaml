@@ -1,0 +1,19 @@
+# Empty-stream strictness fixture (JobSignatureTest): the source's Iterable-typed expression (1..0) streams
+# NOTHING, and the declared `main` result is NON-nullable — so the ResultSink fails the run at end-of-stream
+# (declare the result nullable to allow an empty stream; the nullable half of the contract is pinned on
+# job-signature-child-test.yaml's bare run). Ports BLANK -> JobChannelSynthesis derives the channel from
+# Worker document order.
+main:
+  is: Job
+  results:
+    main:
+      class: kotlin.Int
+      generics: []
+      nullable: false
+
+main.workers/source:
+  is: FormulaSourceWorker
+  code: "(1..0)"
+
+main.workers/collect:
+  is: ResultSinkWorker

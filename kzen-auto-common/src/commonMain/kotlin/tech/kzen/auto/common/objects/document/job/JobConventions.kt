@@ -21,6 +21,11 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableId
  * TYPE (ChannelInput / ChannelOutput), so there is no fixed `in` / `out` naming convention to encode here.
  */
 object JobConventions {
+    // The server-side validation pass (payload-type walk) the editor queries as a detached action —
+    // the ScriptConventions.scriptValidatorLocation analogue.
+    val jobValidatorLocation = ObjectLocation.parse(
+        "auto-jvm/job/job-jvm.yaml#JobValidator")
+
     val objectName = ObjectName("Job")
     val channelObjectName = ObjectName("Channel")
     val duplexChannelObjectName = ObjectName("DuplexChannel")
@@ -31,14 +36,15 @@ object JobConventions {
     val summaryServerObjectName = ObjectName("SummaryServer")
 
     // Signature marker archetype (common-job.yaml, the SummaryServer pattern): a Worker whose inheritance chain
-    // reaches ResultSink contributes one output component to the Job's signature. JobSignatureCapability
-    // classifies by chain membership, so subtypes are recognized (CC-17). The INPUT side has no marker — it
-    // derives from the `parameters` branch of typed ParameterBinding declarations (LogicConventions).
+    // reaches ResultSink yields one of the Job's declared output components. JobSignatureCapability classifies
+    // by chain membership, so subtypes are recognized (CC-17). The signature itself is declared on the document:
+    // outputs from the `results` map, inputs from the `parameters` branch of typed ParameterBinding
+    // declarations (LogicConventions).
     val resultSinkObjectName = ObjectName("ResultSink")
 
-    // The marker-declared name attribute: a ResultSink's `result` names its output component (blank = main).
+    // The marker-declared name attribute: a ResultSink's `result` names the declared output component it
+    // yields into (blank = main). Signature-managed — hidden from the Worker card's editors.
     val resultAttributeName = AttributeName("result")
-    val resultAttributePath = AttributePath.ofName(resultAttributeName)
 
     val workersAttributeName = AttributeName("workers")
     val workersAttributePath = AttributePath.ofName(workersAttributeName)

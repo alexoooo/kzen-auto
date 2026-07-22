@@ -3,24 +3,35 @@ package tech.kzen.auto.server.objects.report.exec.calc
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.common.util.ExpressionUtils
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
+import tech.kzen.auto.server.objects.logic.ExpressionReturnTypeInference
 import tech.kzen.auto.server.objects.report.exec.input.model.header.RecordHeaderIndex
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.auto.server.service.compile.KotlinCode
 import tech.kzen.lib.common.exec.tuple.TupleDefinition
-import tech.kzen.lib.platform.ClassName
+import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.platform.ClassNames.asTopLevelImport
-import tech.kzen.lib.platform.ClassNames.topLevel
+import kotlin.reflect.KType
 
 
 /**
- * Compiles a user Kotlin expression over a flat record's columns (referenced by name) into a [CalculatedColumn]
- * — the single expression engine shared by the Report formula stage and the Job Workers (Filter / Formula /
- * FormulaSource). Beyond the column accessors, the generated class optionally exposes a typed PARAMETER scope
- * ([parameters], a Job's declared inputs): each declaration becomes a bare typed accessor reading the
- * run-constant values injected via [CalculatedColumn.setParameters] — the values are deliberately not baked
- * into the generated source, so the compile cache keys on (expression, columns, parameter types) only. A
- * parameter whose (escaped) name collides with a column is rejected with a descriptive error before any
- * compile, since both would generate the same class property.
+ * Compiles a user Kotlin expression into a [CalculatedColumn] — the single expression engine shared by the
+ * Report formula stage and the Job Workers (Filter / Formula / FormulaSource), with three scopes:
+ *
+ * - **The model (payload) as receiver**: the expression evaluates with [modelType] as its implicit receiver
+ *   (Report's data model; a Job lane's typed payload), so the model's members are bare — and, by Kotlin's
+ *   innermost-receiver rule, SHADOW same-named columns. The receiver is also bound to an explicit `payload`
+ *   alias (the escape hatch, and the only handle on a nullable / untyped model, whose members are not bare).
+ * - **Columns bare** ([columnNames]): each column becomes a [ColumnValue] accessor by its escaped name.
+ * - **Parameters bare** ([parameters], a Job's declared inputs): each declaration becomes a bare typed
+ *   accessor reading the run-constant values injected via [CalculatedColumn.setParameters] — the values are
+ *   deliberately not baked into the generated source, so the compile cache keys on
+ *   (expression, columns, model type, parameter types) only. A parameter whose (escaped) name collides with
+ *   a column is rejected with a descriptive error before any compile, since both would generate the same
+ *   class property.
+ *
+ * The user's expression is generated as the lambda-valued probe property the
+ * [ExpressionReturnTypeInference] contract reflects, so ONE compile serves validation (the inferred value
+ * type — [inferredReturnKType]), the Job payload-type walk, and execution.
  */
 class CalculatedColumnEval(
     private val cachedKotlinCompiler: CachedKotlinCompiler
@@ -30,7 +41,7 @@ class CalculatedColumnEval(
         calculatedColumnName: String,
         calculatedColumnFormula: String,
         columnNames: HeaderListing,
-        modelType: ClassName,
+        modelType: TypeMetadata,
         classLoader: ClassLoader,
         parameters: TupleDefinition = TupleDefinition.empty
     ): String? {
@@ -62,10 +73,10 @@ class CalculatedColumnEval(
         calculatedColumnName: String,
         calculatedColumnFormula: String,
         columnNames: HeaderListing,
-        modelType: ClassName,
+        modelType: TypeMetadata,
         classLoader: ClassLoader,
         parameters: TupleDefinition = TupleDefinition.empty
-    ): CalculatedColumn<Any> {
+    ): CalculatedColumn<Any?> {
         if (calculatedColumnFormula.isEmpty()) {
             return ConstantCalculatedColumn.empty()
         }
@@ -88,9 +99,24 @@ class CalculatedColumnEval(
         }
 
         @Suppress("UNCHECKED_CAST")
-        val classCast = clazz as Class<CalculatedColumn<Any>>
+        val classCast = clazz as Class<CalculatedColumn<Any?>>
 
         return classCast.getDeclaredConstructor().newInstance()
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    /**
+     * The raw [KType] the compiler inferred for a [create]d column's expression (the probe contract —
+     * [ExpressionReturnTypeInference]), so consumers (the payload-type walk, FormulaSourceWorker's static
+     * stream-vs-single dispatch) never touch generated-class internals. Only meaningful for a generated
+     * column — an empty-formula [ConstantCalculatedColumn] has no expression, hence null.
+     */
+    fun inferredReturnKType(column: CalculatedColumn<*>): KType? {
+        if (column is ConstantCalculatedColumn<*>) {
+            return null
+        }
+        return ExpressionReturnTypeInference.inferReturnKType(column::class.java)
     }
 
 
@@ -121,7 +147,7 @@ class CalculatedColumnEval(
         calculatedColumnName: String,
         calculatedColumnFormula: String,
         columnNames: HeaderListing,
-        modelType: ClassName,
+        modelType: TypeMetadata,
         parameters: TupleDefinition
     ): KotlinCode {
         val sanitizedName = sanitizeClassName(calculatedColumnName)
@@ -134,10 +160,19 @@ class CalculatedColumnEval(
         val columnAccessors = generateColumnAccessors(columnNames)
         val parameterAccessors = generateParameterAccessors(parameters)
 
+        val modelSimple = modelType.toSimple()
+
+        // The probe holds the user's expression as a lambda so its value type is inferred (the
+        // ExpressionReturnTypeInference contract; a lambda rather than a function declaration so a
+        // `Nothing`-typed expression compiles under K2). The parameter doubles as the `payload` alias, and
+        // `with` makes a (non-nullable) model's members bare — the innermost implicit receiver, shadowing
+        // same-named column accessors.
+        val probeName = ExpressionReturnTypeInference.probePropertyName
+
         val code = """
 $imports
 
-class $mainClassName: ${ CalculatedColumn::class.java.simpleName }<${modelType.topLevel()}> {
+class $mainClassName: ${ CalculatedColumn::class.java.simpleName }<$modelSimple> {
     companion object {
         private val columnNames: HeaderListing = HeaderListing.ofCollection(listOf($columnNameStringList))
         private val recordHeaderIndex = ${ RecordHeaderIndex::class.java.simpleName }(columnNames)
@@ -162,7 +197,7 @@ $parameterAccessors
     }
 
     override fun evaluate(
-        model: ${ modelType.topLevel() },
+        model: $modelSimple,
         flatFileRecord: ${ FlatFileRecord::class.java.simpleName },
         headerListing: ${ HeaderListing::class.java.simpleName }
     ): ColumnValue {
@@ -172,19 +207,21 @@ $parameterAccessors
 
 
     override fun evaluateRaw(
-        model: ${ modelType.topLevel() },
+        model: $modelSimple,
         flatFileRecord: ${ FlatFileRecord::class.java.simpleName },
         headerListing: ${ HeaderListing::class.java.simpleName }
     ): Any? {
         record = flatFileRecord
         indices = recordHeaderIndex.indices(headerListing)
-        return model.evaluate()
+        return $probeName(model)
     }
 
 
-    private fun ${ modelType.topLevel() }.evaluate(): Any? {
-        return run {
+    private val $probeName = { payload: $modelSimple ->
+        with(payload) {
+            run {
 $calculatedColumnFormula
+            }
         }
     }
 }
@@ -195,7 +232,7 @@ $calculatedColumnFormula
     }
 
 
-    private fun generateImports(modelType: ClassName, parameters: TupleDefinition): String {
+    private fun generateImports(modelType: TypeMetadata, parameters: TupleDefinition): String {
         val operatorImports = ColumnValueConversions.operators.map {
             ColumnValueConversions::class.java.name + ".$it"
         }
@@ -205,14 +242,17 @@ $calculatedColumnFormula
             .flatMap { it.type.metadata.classNames() }
             .map { it.asTopLevelImport() }
 
+        val modelImports = modelType
+            .classNames()
+            .map { it.asTopLevelImport() }
+
         val classImports = setOf(
             CalculatedColumn::class.java.name,
             ColumnValue::class.java.name,
             HeaderListing::class.java.name,
             RecordHeaderIndex::class.java.name,
-            FlatFileRecord::class.java.name,
-            modelType.asTopLevelImport()
-        ) + parameterImports
+            FlatFileRecord::class.java.name
+        ) + modelImports + parameterImports
 
         val allImports: Set<String> = classImports + operatorImports
 

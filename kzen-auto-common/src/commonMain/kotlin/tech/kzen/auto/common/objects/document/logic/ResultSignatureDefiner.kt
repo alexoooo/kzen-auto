@@ -1,6 +1,4 @@
-package tech.kzen.auto.common.objects.document.script
-
-import tech.kzen.auto.common.objects.document.logic.TypeMetadataDefiner
+package tech.kzen.auto.common.objects.document.logic
 
 import tech.kzen.lib.common.api.AttributeDefiner
 import tech.kzen.lib.common.exec.logic.model.LogicType
@@ -20,13 +18,15 @@ import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
 import tech.kzen.lib.common.reflect.Reflect
 
 
-// Parses the Script `results` notation into the output TupleDefinition (the Script's result signature).
-// The notation shape is a map keyed by tuple-component name -> a TypeMetadata map (the same shape
-// TypeMetadataDefiner reads), e.g. { main: { class: kotlin.String, generics: [], nullable: false } }.
-// Only `main` is wired today, but the map shape leaves room for additional named results with no schema
-// change. Lenient: an absent / non-map / empty `results`, or an unparseable entry, yields the empty
-// TupleDefinition (a void Script) rather than failing the whole definition. Single source of truth for
-// `results`, shared by ScriptDocument's constructor (via meta.by), ScriptValidator, and ScriptExecution.
+// Parses a Logic document's `results` notation into the output TupleDefinition (its declared result
+// signature) — flavour-neutral, shared by Script and Job (the ParameterBinding precedent). The notation
+// shape is a map keyed by tuple-component name -> a TypeMetadata map (the same shape TypeMetadataDefiner
+// reads), e.g. { main: { class: kotlin.String, generics: [], nullable: false } }. Only `main` is wired
+// today, but the map shape leaves room for additional named results with no schema change. Lenient: an
+// absent / non-map / empty `results`, or an unparseable entry, yields the empty TupleDefinition (a void
+// Logic) rather than failing the whole definition. Single source of truth for `results`, shared by
+// ScriptDocument's constructor (via meta.by), ScriptValidator, ScriptExecution, and
+// JobSignatureCapability's output derivation.
 @Reflect
 class ResultSignatureDefiner: AttributeDefiner {
     companion object {

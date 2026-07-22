@@ -49,6 +49,7 @@ import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
@@ -341,7 +342,7 @@ class ReportDocument(
                         formula.key,
                         formula.value,
                         flatHeaderListing,
-                        dataType,
+                        TypeMetadata.of(dataType),
                         it.classLoader)
                 }
                 .filterValues { error -> error != null }

@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.exec.script
 
 import tech.kzen.auto.common.objects.document.logic.ParameterDefaultDefiner
-import tech.kzen.auto.common.objects.document.script.ResultSignatureDefiner
+import tech.kzen.auto.common.objects.document.logic.ResultSignatureDefiner
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.objects.document.script.model.ScriptTree
 import tech.kzen.auto.server.exec.LogicCompilerServices

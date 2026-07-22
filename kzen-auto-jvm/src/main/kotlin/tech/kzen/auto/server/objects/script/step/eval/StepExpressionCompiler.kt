@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.objects.script.step.eval
 
 import tech.kzen.auto.common.util.ExpressionUtils
+import tech.kzen.auto.server.objects.logic.ExpressionReturnTypeInference
 import tech.kzen.auto.server.service.compile.KotlinCode
 import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
@@ -19,12 +20,12 @@ import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 object StepExpressionCompiler {
     // The inference-mode member holding the user's expression as a lambda: the property's type is left to the
     // compiler to infer (`() -> T`), so [FormulaStep] recovers the expression's value type by reflecting the
-    // property type's single argument (see StepReturnTypeInference). A lambda-valued property rather than an
-    // expression-body function because K2 refuses a declaration whose own inferred type is `Nothing`
-    // (IMPLICIT_NOTHING_RETURN_TYPE, a hard error regardless of visibility) — `() -> Nothing` is not `Nothing`,
-    // so an expression like `error(...)` compiles and fails at run time as the user intends. Kept in sync with
-    // the reflection lookup by name.
-    const val probePropertyName = "probe"
+    // property type's last argument (see ExpressionReturnTypeInference, which owns the property-name
+    // contract). A lambda-valued property rather than an expression-body function because K2 refuses a
+    // declaration whose own inferred type is `Nothing` (IMPLICIT_NOTHING_RETURN_TYPE, a hard error regardless
+    // of visibility) — `() -> Nothing` is not `Nothing`, so an expression like `error(...)` compiles and
+    // fails at run time as the user intends.
+    private const val probePropertyName = ExpressionReturnTypeInference.probePropertyName
 
 
     // The forced-return form: `evaluate` returns exactly [returnType], so a value that does not conform is a

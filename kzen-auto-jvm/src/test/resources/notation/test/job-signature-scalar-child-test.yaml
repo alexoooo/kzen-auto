@@ -1,0 +1,29 @@
+# Parameterized SCALAR Job fixture (JobSignatureTest scalar lane + the RunWorker-per-element nested test): a
+# typed `item` parameter declaration (nullable Any — NOT an Iterable type, so under phase 3's strict-static
+# dispatch the FormulaSourceWorker whose expression IS the parameter always emits exactly one element, the
+# bound value or a bare run's null) into a ResultSinkWorker that keeps it as the declared nullable `main`
+# result — the scalar-in / scalar-out round trip a per-element RunWorker host relies on. The streaming lane
+# lives in job-signature-child-test.yaml (List-typed declaration). Ports BLANK -> JobChannelSynthesis derives
+# the channel from Worker document order.
+main:
+  is: Job
+  batchSize: 1
+  results:
+    main:
+      class: kotlin.Any
+      generics: []
+      nullable: true
+
+main.parameters/item:
+  is: ParameterBinding
+  type:
+    class: kotlin.Any
+    generics: []
+    nullable: true
+
+main.workers/source:
+  is: FormulaSourceWorker
+  code: item
+
+main.workers/collect:
+  is: ResultSinkWorker

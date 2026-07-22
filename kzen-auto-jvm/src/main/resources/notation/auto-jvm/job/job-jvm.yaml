@@ -4,6 +4,13 @@
 # Concrete Workers (is: Worker) live alongside in this folder once they exist (M1 step 4 onward).
 
 
+# Detached action computing a Job document's validation (the ScriptValidator analogue): the static
+# payload-type walk over the order-driven wiring — per-Worker inferred payload types plus expression compile
+# errors — consumed by the Job editor's worker cards (JobValidationStore).
+JobValidator:
+  class: tech.kzen.auto.server.objects.job.JobValidator
+
+
 # A first-class, named, buffered conduit shared by the Workers that reference it. Workers emit / consume single
 # ELEMENTS; the channel transparently groups them into batches of `batchSize` elements for transfer (the batch
 # granularity — also the checkpoint / step unit: one step ≈ one batch). `capacity` is the channel capacity in

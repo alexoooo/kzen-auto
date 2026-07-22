@@ -3,6 +3,7 @@ package tech.kzen.auto.common.paradigm.job.control
 import tech.kzen.lib.common.exec.tuple.TupleDefinition
 import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 
 
 /**
@@ -78,6 +79,28 @@ interface JobControl {
      * Default empty: an environment without argument binding.
      */
     fun parameters(): TupleDefinition = TupleDefinition.empty
+
+
+    /**
+     * The declared results of this Job — its typed output signature, derived from the document's `results`
+     * signature map (see [tech.kzen.auto.common.objects.document.job.JobSignatureCapability]). A ResultSink
+     * Worker reads its own component's declared type from this (e.g. nullability decides whether an empty
+     * stream is a failure or a null result) — generic, so a third-party sink gets the same contract with no
+     * framework change. Default empty: an environment without result harvesting.
+     */
+    fun results(): TupleDefinition = TupleDefinition.empty
+
+
+    /**
+     * The statically inferred payload type of this Worker's INPUT lane (each Worker gets its own control —
+     * see EngineJobControl), derived by the server's payload-type walk over the wiring (the same
+     * per-notation-version inference the editor's worker cards display, so runtime and display cannot
+     * drift). Null when the lane carries no static payload type (a flat/CSV lane, or an untyped source) —
+     * an expression-compiling Worker then falls back to a nullable `Any` receiver. Generic, so a
+     * third-party Worker builds the same typed expression scope with no framework change. Default null:
+     * an environment without inference.
+     */
+    fun payloadType(): TypeMetadata? = null
 
 
     /**

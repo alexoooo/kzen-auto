@@ -5,7 +5,7 @@ import org.junit.Test
 import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.objects.document.script.model.ScriptValidation
-import tech.kzen.auto.common.objects.document.script.model.StepValidation
+import tech.kzen.auto.common.objects.document.logic.StepValidation
 import tech.kzen.auto.common.paradigm.detached.DetachedAction
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.util.AutoTestUtils

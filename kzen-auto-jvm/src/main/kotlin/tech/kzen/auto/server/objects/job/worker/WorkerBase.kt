@@ -103,6 +103,24 @@ abstract class WorkerBase(
 
 
     /**
+     * This Worker's contribution to the static payload-type walk
+     * ([tech.kzen.auto.server.objects.job.JobValidator]): map the statically known [input] lane to the
+     * output lane this Worker produces, optionally reporting a validation error (an expression compile
+     * failure — surfaced on the Worker's card, never a run-time crash). Called at validation / compile time
+     * on an instantiated but NOT running Worker, so an override must only read config and compile — no IO,
+     * no channel use.
+     *
+     * Default: identity — correct for every transform that forwards elements without changing the payload
+     * (Filter, Sort, Summary, Pivot, Preview, ValueSet) and for a sink (whose "output" is its input, which
+     * is what its card displays). A source's input is [WorkerLane.unknown], so identity is also right for a
+     * reader whose output shape only exists at run time (CSV lanes); a source that DOES know its output
+     * statically (an expression source, a nested-Logic host) overrides.
+     */
+    internal open fun payloadFlow(input: WorkerLane, context: WorkerLaneContext): WorkerLaneAttempt =
+        WorkerLaneAttempt(input, null)
+
+
+    /**
      * Immutable view of the Worker's current state, captured after each unit of work. Used for BOTH the
      * throttled [progress] push and the [onQuery] pull, so the two never diverge. Default none.
      */

@@ -20,7 +20,7 @@ import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.select.SelectOption
 import tech.kzen.auto.client.wrap.select.muiAutocompleteField
 import tech.kzen.auto.client.wrap.setState
-import tech.kzen.auto.common.objects.document.script.ScriptConventions
+import tech.kzen.auto.common.paradigm.logic.LogicConventions
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
@@ -55,10 +55,10 @@ external interface ResultSignatureEditorState: State {
 
 //---------------------------------------------------------------------------------------------------------------------
 /**
- * Edits a Script's result signature: the `main` component of the `results` map (component name -> a
- * TypeMetadata map). Unlike a parameter, the result is NOT a live object — it is plain data on the main
- * Script object — so this is a single optional type picker (no rows, no rename, no reorder). Floated at the
- * top-right of the script area, stacked beneath the Parameters control. Absent/empty => void Script;
+ * Edits a Logic document's result signature (Script and Job): the `main` component of the `results` map
+ * (component name -> a TypeMetadata map). Unlike a parameter, the result is NOT a live object — it is plain
+ * data on the main object — so this is a single optional type picker (no rows, no rename, no reorder).
+ * Floated at the top-right of the stage, stacked beneath the Parameters control. Absent/empty => void;
  * only the `main` result is wired today (the map shape leaves room for more named results).
  */
 class ResultSignatureEditor:
@@ -103,7 +103,7 @@ class ResultSignatureEditor:
         }
 
         val resultsNotation = graphNotation.firstAttribute(
-            props.objectLocation, ScriptConventions.resultsAttributePath) as? MapAttributeNotation
+            props.objectLocation, LogicConventions.resultsAttributePath) as? MapAttributeNotation
         val typeNotation = resultsNotation?.get(mainResultKey) as? MapAttributeNotation
 
         val newClassName = typeNotation?.get(classKey)?.asString()
@@ -144,7 +144,7 @@ class ResultSignatureEditor:
         async {
             props.mirroredGraphStore.apply(UpsertAttributeCommand(
                 props.objectLocation,
-                ScriptConventions.resultsAttributeName,
+                LogicConventions.resultsAttributeName,
                 MapAttributeNotation.empty))
         }
     }
@@ -164,7 +164,7 @@ class ResultSignatureEditor:
         async {
             props.mirroredGraphStore.apply(UpsertAttributeCommand(
                 props.objectLocation,
-                ScriptConventions.resultsAttributeName,
+                LogicConventions.resultsAttributeName,
                 resultsNotation))
         }
     }

@@ -3,6 +3,11 @@
 # cross-check passes and the channel defines cleanly. Counterpart to job-channel-type-mismatch-test.yaml.
 main:
   is: Job
+  results:
+    main:
+      class: kotlin.Int
+      generics: []
+      nullable: false
 
 main.channels/numbers:
   is: Channel

@@ -44,8 +44,9 @@ object ScriptConventions {
     // The Script's result signature: a `results` map (component name -> TypeMetadata) parsed by
     // ResultSignatureDefiner into the output TupleDefinition. Not a live step object (unlike parameters) —
     // it is plain data on the main Script object declaring what the Script returns; empty/absent => void.
-    val resultsAttributeName = AttributeName("results")
-    val resultsAttributePath = AttributePath.ofName(resultsAttributeName)
+    // `results` is the flavour-neutral branch shared with Job, so the constant lives in LogicConventions.
+    val resultsAttributeName = LogicConventions.resultsAttributeName
+    val resultsAttributePath = LogicConventions.resultsAttributePath
 
     val instructionsAttributeName = AttributeName("instructions")
     val instructionsAttributePath = AttributePath.ofName(instructionsAttributeName)

@@ -7,8 +7,10 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
+import tech.kzen.auto.common.objects.document.job.JobChannelDerivation
 import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.auto.common.paradigm.job.api.ChannelClient
+import tech.kzen.auto.server.objects.job.JobValidator
 import tech.kzen.auto.common.paradigm.job.api.Worker
 import tech.kzen.auto.server.exec.LogicCompilerServices
 import tech.kzen.auto.server.objects.job.channel.DuplexJobChannel
@@ -19,6 +21,7 @@ import tech.kzen.lib.common.exec.engine.ClosePolicy
 import tech.kzen.lib.common.exec.engine.Execution
 import tech.kzen.lib.common.exec.engine.LogicFailure
 import tech.kzen.lib.common.exec.engine.restoredAs
+import tech.kzen.lib.common.exec.tuple.TupleDefinition
 import tech.kzen.lib.common.exec.tuple.TupleValue
 import java.util.concurrent.atomic.AtomicInteger
 import tech.kzen.lib.common.model.definition.GraphDefinition
@@ -43,6 +46,11 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableId
  * Discovery of the signature is the compiler's job
  * ([tech.kzen.auto.common.objects.document.job.JobSignatureCapability]); here the seeding / harvest is generic —
  * no Worker-type knowledge (the extension rule).
+ *
+ * PAYLOAD TYPES (element-model phase 3): after instantiation this run computes the static payload-type walk
+ * ([tech.kzen.auto.server.objects.job.JobValidator.validate], cache-shared with the editor's detached
+ * validation) and threads each Worker's inferred INPUT payload type into its [EngineJobControl] — so an
+ * expression-compiling Worker's receiver scope matches what the editor's cards display.
  *
  * KEY COLLAPSE: each Worker checks pause / step / cancel at its own [Execution.checkpoint] (via [EngineJobControl]),
  * and the engine's `CountingDispatcher` brings the Workers to a quiescent wavefront — so the old supervisor poll
@@ -82,10 +90,12 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableId
  */
 class JobRun(
     private val execution: Execution,
+    private val jobLocation: ObjectLocation,
     private val filteredDefinition: GraphDefinition,
     private val workerLocations: List<ObjectLocation>,
     private val channelLocations: List<ObjectLocation>,
     private val jobParameters: JobParameters,
+    private val jobResults: TupleDefinition,
     private val graphNotation: GraphNotation,
     private val graphDefinition: GraphDefinition,
     private val services: LogicCompilerServices
@@ -172,6 +182,21 @@ class JobRun(
             location to worker
         }
 
+        // The static payload-type walk (shared with the editor's detached JobValidator through the cache — a
+        // hit reuses the editor's entry, a miss computes on THIS run's instances): each Worker's inferred
+        // INPUT payload type is threaded into its control, so runtime expression compiles use the same
+        // receiver the walk (and the editor's cards) derived.
+        val jobValidation = services.jobValidationCache.jobValidation(
+            jobLocation.documentPath, graphDefinition
+        ) {
+            JobValidator.validate(
+                jobLocation.documentPath, graphDefinition.graphStructure, graphInstance)
+        }
+        val upstreamByDownstream = JobChannelDerivation
+            .derive(graphDefinition.graphStructure, jobLocation.documentPath)
+            .connections
+            .associate { it.downstreamWorker.objectPath to it.upstreamWorker.objectPath }
+
         // Channel-aware deadlock detection: fail the run if every non-terminal Worker becomes blocked on a channel
         // with no way to progress. [activeWorkers] is the live non-terminal count (each Worker decrements it as it
         // settles); the monitor polls the stream channels' blocked-endpoint counts against it and, on a sustained
@@ -206,6 +231,10 @@ class JobRun(
                         // Persistent, notation-keyed output dir (survives run-settle): a persisting sink (Explore)
                         // clears + rewrites it so its result stays browsable / downloadable after the run ends.
                         val workerOutputDir = jobWorkPool.workerOutputDir(location)
+                        // The Worker's inferred INPUT payload type: its inferred upstream's output type per
+                        // the walk (null = untyped/flat — the expression receiver falls back to nullable Any).
+                        val inputPayloadType = upstreamByDownstream[location.objectPath]
+                            ?.let { jobValidation.workerValidations[it]?.typeMetadata }
                         async {
                             try {
                                 execution.host(
@@ -213,7 +242,8 @@ class JobRun(
                                     WorkerLogic(
                                         worker, childLogicHost, objectStableMapper,
                                         workerScratchDir, workerOutputDir,
-                                        execution.inputs, jobParameters, resultCollector))
+                                        execution.inputs, jobParameters, jobResults,
+                                        inputPayloadType, resultCollector))
                             }
                             finally {
                                 activeWorkers.decrementAndGet()

@@ -1,6 +1,6 @@
 package tech.kzen.auto.server.objects.script.step.control
 
-import tech.kzen.auto.common.objects.document.script.ResultSignatureDefiner
+import tech.kzen.auto.common.objects.document.logic.ResultSignatureDefiner
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.server.objects.script.api.ScriptStep
 import tech.kzen.auto.server.objects.script.api.ScriptStepDefinition

@@ -46,7 +46,8 @@ import tech.kzen.lib.platform.ClassNames
  * run-time failure. (Element-level safety no longer rests on this check at all: the framework dispatch in
  * [tech.kzen.auto.server.objects.job.worker.TransformWorker] / `SinkWorker` receives the uniform
  * `JobMessage`, failing descriptively on a raw element.) Payload-type FLOW — inferring undeclared types
- * through the graph — is the element-model plan's phase 3.
+ * through the graph — is the separate static walk (the server-side JobValidator: inferred types thread into
+ * each Worker's expression receiver and display on its card); this definer stays the DECLARED-type check.
  *
  * Reads only notation + metadata (DECLARED types), never resolved instances, so two sibling Workers need no
  * mutual definition ordering. Duplex DuplexChannels (request/reply — two element types) are not type-checked

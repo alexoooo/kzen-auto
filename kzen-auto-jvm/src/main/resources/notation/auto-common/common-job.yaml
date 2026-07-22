@@ -73,17 +73,26 @@ SummaryServer:
 
 #######################################################################################################################
 # Job signature marker (semantic Worker refinement, the SummaryServer pattern): a Worker whose inheritance
-# chain reaches ResultSink contributes one output component to the Job's signature (`result:` names it, blank =
-# main; its input port's `of:` types it). JobSignatureCapability classifies by chain membership (CC-17), so a
-# third-party sink is recognized with no code change. The name attribute lives HERE so any subtype inherits the
-# declaration contract; the marker refines Worker (which has an `is:` chain), so it self-defines through the
-# normal chain. The INPUT side of the signature has no marker — it derives from the Job document's `parameters`
-# branch of typed ParameterBinding declarations (see common-document.yaml).
+# chain reaches ResultSink yields one of the Job's declared output components (`result:` names it, blank =
+# main; the component's TYPE is declared in the Job document's `results` signature map — Script parity).
+# JobSignatureCapability classifies by chain membership (CC-17), so a third-party sink is recognized with no
+# code change. `keep` selects which single element of the streaming lane becomes the result (first / last);
+# an empty stream is a run failure unless the declared type is nullable. The attributes live HERE so any
+# subtype inherits the declaration contract; the marker refines Worker (which has an `is:` chain), so it
+# self-defines through the normal chain. The INPUT side of the signature has no marker — it derives from the
+# Job document's `parameters` branch of typed ParameterBinding declarations (see common-document.yaml).
 
 
 ResultSink:
   abstract: true
   is: Worker
   result: ""
+  keep: "last"
   meta:
     result: String
+    keep:
+      is: String
+      editor: SelectValuesEditor
+      values:
+        first: "First"
+        last: "Last"

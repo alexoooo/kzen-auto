@@ -124,6 +124,7 @@ class ScriptNotationTest {
                 context.objectStableMapper,
                 context.cachedKotlinCompiler,
                 context.scriptValidationCache,
+                context.jobValidationCache,
                 context.notationMetadataReader,
                 context.jobWorkPool,
                 LogicRunExecutionId.random()))

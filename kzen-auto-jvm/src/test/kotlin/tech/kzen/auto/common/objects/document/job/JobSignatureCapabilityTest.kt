@@ -13,14 +13,14 @@ import kotlin.test.assertTrue
 
 /**
  * [JobSignatureCapability] derives a Job's Logic signature — inputs from the `parameters` branch of typed
- * ParameterBinding declarations, outputs from the ResultSink marker Workers — the single source shared by
- * [tech.kzen.auto.server.exec.job.JobLogicCompiler] (server) and the callee-parameter editors (client). Loads a
- * real notation graph and asserts: [JobSignatureCapability.isResultSink] classifies by inheritance chain (a
- * user-defined ResultSink SUBTYPE is recognized with no code change, CC-17); [JobSignatureCapability.signature]
- * yields the parameter / result names in document order, types each parameter from its declaration (untyped ->
- * Any, generics preserved), maps a blank result to `main`, keeps a named result, types a result port from its
- * `of:` (else Any); and a non-Job document yields the empty signature. Reads only notation + metadata — nothing
- * is instantiated.
+ * ParameterBinding declarations, outputs from the document's declared `results` signature map (Script parity) —
+ * the single source shared by [tech.kzen.auto.server.exec.job.JobLogicCompiler] (server) and the
+ * callee-parameter editors (client). Loads a real notation graph and asserts:
+ * [JobSignatureCapability.isResultSink] classifies by inheritance chain (a user-defined ResultSink SUBTYPE is
+ * recognized with no code change, CC-17); [JobSignatureCapability.signature] yields the parameter names in
+ * document order, types each parameter from its declaration (untyped -> Any, generics preserved), yields the
+ * declared result components in declaration order with their declared types; and a non-Job document yields the
+ * empty signature. Reads only notation — nothing is instantiated.
  */
 class JobSignatureCapabilityTest {
     companion object {
@@ -69,9 +69,9 @@ class JobSignatureCapabilityTest {
 
 
     @Test
-    fun outputComponentsMapBlankToMainAndKeepNamed() {
+    fun outputComponentsComeFromDeclaredResultsInOrder() {
         val signature = JobSignatureCapability.signature(graphStructure, jobMainLocation)
-        // result(blank -> main), namedResult(summary), subtypeResult(typed) -> in document order.
+        // The declared `results` map's components, in declaration order — independent of the sink Workers.
         assertEquals(listOf("main", "summary", "typed"), signature.outputs.components.map { it.name.value })
     }
 
@@ -105,7 +105,7 @@ class JobSignatureCapabilityTest {
 
 
     @Test
-    fun typedResultPortYieldsItsElementType() {
+    fun declaredResultTypeCarriesIntoSignature() {
         val signature = JobSignatureCapability.signature(graphStructure, jobMainLocation)
         val typed = signature.outputs.components.first { it.name.value == "typed" }
         assertEquals("kotlin.String", typed.type.metadata.className.asString())

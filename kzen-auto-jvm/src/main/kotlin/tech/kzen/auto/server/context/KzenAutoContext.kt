@@ -8,6 +8,7 @@ import tech.kzen.auto.server.api.RestHandler
 import tech.kzen.auto.server.codegen.KzenAutoJvmModule
 import tech.kzen.auto.server.exec.job.JobTraceAddressRouting
 import tech.kzen.auto.server.exec.report.ReportTraceAddressRouting
+import tech.kzen.auto.server.objects.job.JobValidationCache
 import tech.kzen.auto.server.objects.job.service.JobWorkPool
 import tech.kzen.auto.server.objects.plugin.PluginReportDefinitionRepository
 import tech.kzen.auto.server.objects.report.exec.calc.CalculatedColumnEval
@@ -148,6 +149,7 @@ class KzenAutoContext(
     val cachedKotlinCompiler = CachedKotlinCompiler(kotlinCompiler, workUtils)
     val calculatedColumnEval = CalculatedColumnEval(cachedKotlinCompiler)
     val scriptValidationCache = ScriptValidationCache()
+    val jobValidationCache = JobValidationCache()
 
 
     private val basicDefinitionRepository = HostReportDefinitionRepository(listOf(
@@ -179,6 +181,7 @@ class KzenAutoContext(
         .put(ClassName(ObjectStableMapper::class.qualifiedName!!), objectStableMapper)
         .put(ClassName(CachedKotlinCompiler::class.qualifiedName!!), cachedKotlinCompiler)
         .put(ClassName(ScriptValidationCache::class.qualifiedName!!), scriptValidationCache)
+        .put(ClassName(JobValidationCache::class.qualifiedName!!), jobValidationCache)
         .put(ClassName(NotationMedia::class.qualifiedName!!), notationMedia)
         .put(ClassName(TargetLocator::class.qualifiedName!!), targetLocator)
         .put(ClassName(NotationMetadataReader::class.qualifiedName!!), notationMetadataReader)
@@ -196,7 +199,7 @@ class KzenAutoContext(
     //-----------------------------------------------------------------------------------------------------------------
     val serverLogicController = ServerLogicController(
         graphStore, objectStableMapper, cachedKotlinCompiler, scriptValidationCache,
-        notationMetadataReader, jobWorkPool, graphEnvironment)
+        jobValidationCache, notationMetadataReader, jobWorkPool, graphEnvironment)
 
     // The trace-query surface (the former LogicTraceStore): projects the controller's retained RunEngine at
     // query time, translating each flavour's within-node emit address to its wire LogicTracePath via the same

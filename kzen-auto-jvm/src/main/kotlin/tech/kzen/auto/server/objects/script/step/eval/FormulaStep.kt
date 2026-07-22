@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.objects.script.step.eval
 
+import tech.kzen.auto.server.objects.logic.ExpressionReturnTypeInference
 import tech.kzen.auto.server.objects.script.api.ScriptStep
 import tech.kzen.auto.server.objects.script.api.ScriptStepDefinition
 import tech.kzen.auto.server.objects.script.api.StepExecution
@@ -17,7 +18,8 @@ import tech.kzen.lib.common.reflect.Service
 /**
  * A body step holding a Kotlin expression whose value type is inferred by the compiler. The generated
  * inference class ([StepExpressionSupport.generateInferenceCode]) is compiled once and serves both validation
- * — its inferred return type, read reflectively by [StepReturnTypeInference] — and execution — its `evaluate`.
+ * — its inferred return type, read reflectively by [ExpressionReturnTypeInference] — and execution — its
+ * `evaluate`.
  *
  * The step owns its own compilation, with no central compiler pre-baking it, which is what makes Script steps
  * third-party-extensible (cf. the Job FormulaSourceWorker).
@@ -69,7 +71,7 @@ class FormulaStep(
                 TupleDefinition.ofMain(LogicType(TypeMetadata.anyNullable)),
                 "Unable to load: $generatedCode")
 
-        val typeMetadata = StepReturnTypeInference.inferReturnType(
+        val typeMetadata = ExpressionReturnTypeInference.inferReturnType(
             clazz, scriptDefinitionContext.objectRegistryScan)
 
         return ScriptStepDefinition(

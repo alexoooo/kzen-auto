@@ -13,7 +13,7 @@ import tech.kzen.auto.client.wrap.contextValue
 import tech.kzen.auto.client.wrap.installContextType
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.script.model.StepTrace
-import tech.kzen.auto.common.objects.document.script.model.StepValidation
+import tech.kzen.auto.common.objects.document.logic.StepValidation
 import tech.kzen.lib.common.service.store.MirroredGraphStore
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 

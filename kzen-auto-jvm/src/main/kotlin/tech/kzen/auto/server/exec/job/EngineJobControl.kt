@@ -9,6 +9,7 @@ import tech.kzen.lib.common.exec.tuple.TupleComponentValue
 import tech.kzen.lib.common.exec.tuple.TupleDefinition
 import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import java.nio.file.Files
 import java.nio.file.Path
@@ -45,6 +46,8 @@ class EngineJobControl(
     private val workerOutputDir: Path,
     private val jobInputs: TupleValue,
     private val jobParameters: JobParameters,
+    private val jobResults: TupleDefinition,
+    private val inputPayloadType: TypeMetadata?,
     private val resultCollector: JobResultCollector
 ): JobControl {
     //-----------------------------------------------------------------------------------------------------------------
@@ -126,6 +129,20 @@ class EngineJobControl(
     // exposes by name (compiled by JobLogicCompiler, run-constant).
     override fun parameters(): TupleDefinition {
         return jobParameters.declarations
+    }
+
+
+    // The Job's declared results (its typed output signature, from the document's `results` map) — a ResultSink
+    // reads its component's declared type off it (nullability decides the empty-stream rule).
+    override fun results(): TupleDefinition {
+        return jobResults
+    }
+
+
+    // This Worker's inferred INPUT payload type, threaded from the static payload-type walk by JobRun (null =
+    // untyped/flat lane) — the receiver scope for runtime expression compiles, matching the editor's display.
+    override fun payloadType(): TypeMetadata? {
+        return inputPayloadType
     }
 
 

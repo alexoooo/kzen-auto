@@ -15,19 +15,21 @@ import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
-import tech.kzen.lib.platform.ClassName
+import tech.kzen.lib.platform.ClassNames
 import kotlin.test.assertEquals
 
 
 /**
  * Unit test for [FormulaSourceWorker] in isolation: drives the Worker's full [FormulaSourceWorker.run]
- * lifecycle (compile the Kotlin expression -> evaluate -> dispatch on the value: an Iterable streams
- * element-by-element, anything else emits once) against a capturing [ChannelOutput] and a no-op [JobControl],
- * using the real [CalculatedColumnEval] engine from a test context. Also covers the declared-parameter scope
- * (bare typed accessor, value via [JobControl.parameter]) and the live-edit stream cursor (a same-code resume
- * skips the delivered prefix; an edited expression restarts). The archetype wiring (JobChannelCreator handing
- * the Worker a real channel view) is already covered by the engine-level Job tests; this isolates the Worker's
- * own compile-and-dispatch logic.
+ * lifecycle (compile the Kotlin expression -> evaluate -> STRICT-STATIC dispatch on the INFERRED type: an
+ * Iterable-typed expression streams element-by-element — a null value under a nullable Iterable type, or a
+ * mistyped binding, is an empty stream — anything else, including untyped `Any`, emits once) against a
+ * capturing [ChannelOutput] and a no-op [JobControl], using the real [CalculatedColumnEval] engine from a
+ * test context. Also covers the declared-parameter scope (bare typed accessor, value via
+ * [JobControl.parameter]) and the live-edit stream cursor (a same-code resume skips the delivered prefix; an
+ * edited expression restarts). The archetype wiring (JobChannelCreator handing the Worker a real channel
+ * view) is already covered by the engine-level Job tests; this isolates the Worker's own compile-and-dispatch
+ * logic.
  */
 class FormulaSourceWorkerTest {
     //-----------------------------------------------------------------------------------------------------------------
@@ -86,15 +88,37 @@ class FormulaSourceWorkerTest {
     @Test
     fun declaredParameterIsInScopeBareAndTyped() = runBlocking {
         // `number` is a bare Int accessor (declared type), so arithmetic needs no cast.
-        val emitted = runSource("(1..number).toList()", parameterControl("number", 3))
+        val emitted = runSource(
+            "(1..number).toList()", parameterControl("number", TypeMetadata.int, 3))
         assertEquals(listOf(1, 2, 3), emitted)
     }
 
 
     @Test
     fun scalarParameterReferenceEmitsSingleElement() = runBlocking {
-        val emitted = runSource("number", parameterControl("number", 7))
+        val emitted = runSource("number", parameterControl("number", TypeMetadata.int, 7))
         assertEquals(listOf(7), emitted)
+    }
+
+
+    @Test
+    fun untypedParameterBoundToListSingleEmitsTheList() = runBlocking {
+        // Strict-static dispatch: `items` declared (nullable) Any is NOT an Iterable TYPE, so the whole bound
+        // List is ONE payload element — the inferred type alone decides, never the runtime value.
+        val emitted = runSource(
+            "items", parameterControl("items", TypeMetadata.anyNullable, listOf(1, 2)))
+        assertEquals(listOf<Any?>(listOf(1, 2)), emitted)
+    }
+
+
+    @Test
+    fun nullValueUnderNullableIterableTypeEmitsNothing() = runBlocking {
+        // Strict-static dispatch: a List-typed expression IS the stream lane, so a null value has nothing to
+        // iterate — an empty stream, not a null element.
+        val listType = TypeMetadata(
+            ClassNames.kotlinList, listOf(TypeMetadata.anyNullable), true)
+        val emitted = runSource("items", parameterControl("items", listType, null))
+        assertEquals(listOf(), emitted)
     }
 
 
@@ -168,14 +192,14 @@ class FormulaSourceWorkerTest {
     }
 
 
-    // A control exposing one declared parameter [name] of the value's type (Int in these tests) bound to [value].
-    private fun parameterControl(name: String, value: Int): JobControl {
+    // A control exposing one declared parameter [name] of the given [type] bound to [value].
+    private fun parameterControl(name: String, type: TypeMetadata, value: Any?): JobControl {
         return object: JobControl by NoOpJobControl {
             override fun parameters(): TupleDefinition {
                 return TupleDefinition(listOf(
                     TupleComponentDefinition(
                         TupleComponentName(name),
-                        LogicType(TypeMetadata(ClassName("kotlin.Int"), listOf(), false)))))
+                        LogicType(type))))
             }
 
             override fun parameter(name: String): Any? = value

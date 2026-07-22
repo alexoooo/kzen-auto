@@ -28,11 +28,12 @@ import kotlin.test.assertTrue
 
 /**
  * Live-edit migration coverage for the Job SIGNATURE (J2, logic-spec §5): pause a parameterized Job mid-stream,
- * edit config, resume — and the harvested result must still be COMPLETE and in order. It is the whole load-bearing
- * proof of the FormulaSource stream cursor + the ResultSink carry-without-clear: a source restart duplicates the
- * prefix (overshoot), a dropped in-flight element falls short, an accumulation loss drops the prefix, and exact
- * list order pins the channel's FIFO carry. Modeled line-for-line on
- * [JobMigrationTest.migrationResumesReaderAndCarriesPreviewStateLosslessly].
+ * edit config, resume — and the harvested result must still be COMPLETE. It is the whole load-bearing proof of
+ * the FormulaSource stream cursor + the ResultSink carry-without-clear: the sink's final seen-count must be
+ * EXACTLY the stream size (a source restart duplicates the prefix — overshoot; a dropped in-flight element or a
+ * lost accumulation falls short), and the kept-last result must be the stream's final element. Modeled
+ * line-for-line on [JobMigrationTest.migrationResumesReaderAndCarriesPreviewStateLosslessly] (which pins the
+ * channel's FIFO order carry on an order-observable lane).
  */
 class JobSignatureMigrationTest {
     //-----------------------------------------------------------------------------------------------------------------
@@ -88,9 +89,12 @@ class JobSignatureMigrationTest {
 
             val success = assertIs<Outcome.Success>(outcome)
             assertEquals(
-                (0 until total).toList(), success.value.mainComponentValue(),
-                "every element delivered exactly once, in order: a source restart would duplicate the prefix, a " +
-                    "dropped in-flight element would fall short, an accumulation loss would drop the prefix")
+                total - 1, success.value.mainComponentValue(),
+                "the kept-last result is the stream's final element")
+            assertEquals(
+                total.toLong(), collectedCount(engine),
+                "every element seen exactly once: a source restart would duplicate the prefix (overshoot), a " +
+                    "dropped in-flight element or a lost carried count would fall short")
         }
         finally {
             engine.close()
@@ -110,6 +114,7 @@ class JobSignatureMigrationTest {
                 context.objectStableMapper,
                 context.cachedKotlinCompiler,
                 context.scriptValidationCache,
+                context.jobValidationCache,
                 context.notationMetadataReader,
                 context.jobWorkPool,
                 LogicRunExecutionId.random()))

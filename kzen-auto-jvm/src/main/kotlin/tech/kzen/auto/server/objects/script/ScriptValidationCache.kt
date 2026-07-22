@@ -2,9 +2,8 @@ package tech.kzen.auto.server.objects.script
 
 import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
-import tech.kzen.auto.common.objects.document.registry.ObjectRegistryConventions
 import tech.kzen.auto.common.objects.document.script.model.ScriptValidation
-import tech.kzen.auto.server.service.impl.LinkedLogicDocuments
+import tech.kzen.auto.server.objects.logic.LogicValidationDigest
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.util.digest.Digest
@@ -17,14 +16,9 @@ import tech.kzen.lib.common.util.digest.Digest
  * path ([tech.kzen.auto.server.exec.script.ScriptLogicCompiler.compile], including hosted-child and live-edit
  * migration recompiles) — which share entries because both key on the same full (unfiltered) definition.
  *
- * The key is a content digest over everything validation reads:
- * the root document's transitive closure PLUS each linked logic document's closure
- * ([LinkedLogicDocuments.transitiveDigest] — a RunStep's return type comes from its weakly-linked callee's
- * `results` signature, invisible to a plain per-document closure digest), PLUS every object-registry
- * document's declared class list ([ScriptValidator.validate] scans them globally for the Formula
- * type-visibility filter; classpath availability of a declared class is process-static, so the notation-level
- * class list suffices). Same contract as the live-edit migration signal: a third-party step whose
- * `definition()` read some UNRELATED document would see stale validation until its own closure changes.
+ * The key is [LogicValidationDigest.documentClosureKey] (shared with the Job validation cache — see its doc
+ * for what the digest covers and why). Same contract as the live-edit migration signal: a third-party step
+ * whose `definition()` read some UNRELATED document would see stale validation until its own closure changes.
  *
  * Keyed by digest (not document path) so a paused run's compile-time snapshot and the editor's current
  * version coexist; bounded LRU, entries for stale versions simply age out. A mid-edit broken graph can make
@@ -53,30 +47,11 @@ class ScriptValidationCache {
         graphDefinition: GraphDefinition,
         compute: () -> ScriptValidation
     ): ScriptValidation {
-        val key = digestKey(documentPath, graphDefinition)
+        val key = LogicValidationDigest.documentClosureKey(documentPath, graphDefinition)
             ?: return compute()
 
         return cache.get(key) {
             ScriptValidation(compute().stepValidations.toMap())
-        }
-    }
-
-
-    private fun digestKey(
-        documentPath: DocumentPath,
-        graphDefinition: GraphDefinition
-    ): Digest? {
-        return try {
-            Digest.build {
-                addDigestible(LinkedLogicDocuments.transitiveDigest(
-                    graphDefinition, graphDefinition.graphStructure, documentPath))
-
-                addDigestible(ObjectRegistryConventions.scanDigest(
-                    graphDefinition.graphStructure.graphNotation))
-            }
-        }
-        catch (_: Exception) {
-            null
         }
     }
 }

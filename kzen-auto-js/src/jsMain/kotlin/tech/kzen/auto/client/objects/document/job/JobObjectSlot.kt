@@ -10,6 +10,7 @@ import tech.kzen.auto.client.objects.document.job.display.WorkerDisplayManager
 import tech.kzen.auto.client.objects.document.job.display.WorkerDisplayPropsCommon
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.refCallback
+import tech.kzen.auto.common.objects.document.logic.StepValidation
 import tech.kzen.lib.common.model.location.ObjectLocation
 import web.cssom.*
 import web.html.HTMLDivElement
@@ -23,6 +24,11 @@ external interface JobObjectSlotProps: Props {
     // This Worker's live progress teaser (status / counts / sample). Kept value-stable upstream so a non-dragged
     // slot bails out during a drag (see JobController). Threaded on to the card via WorkerDisplayPropsCommon.
     var progress: JobWorkerProgress?
+
+    // This Worker's server-side validation slice (inferred payload type + expression error), fetched by
+    // JobController on notation change. Threaded on to the card via WorkerDisplayPropsCommon.
+    var validation: StepValidation?
+
     var active: Boolean
 
     // Resolves + mounts this Worker's own declared card component (`display:` marker) — the slot never knows the
@@ -65,6 +71,7 @@ class JobObjectSlot(
         if (existing != null &&
             existing.objectLocation === props.objectLocation &&
             existing.progress == props.progress &&
+            existing.validation == props.validation &&
             existing.active == props.active
         ) {
             return existing
@@ -72,6 +79,7 @@ class JobObjectSlot(
         val fresh = WorkerDisplayPropsCommon(
             props.objectLocation,
             props.progress,
+            props.validation,
             props.active)
         cachedCommon = fresh
         return fresh
