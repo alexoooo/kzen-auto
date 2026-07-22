@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.objects.job.worker
 
+import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.auto.common.objects.document.logic.ResultSignatureDefiner
 import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
@@ -27,7 +28,8 @@ import tech.kzen.lib.common.service.notation.NotationConventions
  * rule. What lets a `RunStep` / Flow `Run` vertex / Job `RunWorker` consume a Job's result; the default `main`
  * component matters: the hosts' harvest (`RunWorker.onElement`, `RunStep.run`) reads `mainComponentValue()`, so
  * a single sink with default config satisfies it with zero configuration. A Job may carry several ResultSinks,
- * each yielding its own declared named component.
+ * each yielding its own declared named component. [progress] also pushes the kept value's display text so the
+ * card's ResultWorkerDisplay shows it in a value box (live for [last], settled on the forced final publish).
  *
  * LIVE-EDIT MIGRATION: the kept element (and the seen-count) is carried across a live edit ([SortWorker]'s-buffer
  * precedent) — REQUIRED for correctness, since an unchanged upstream resumes rather than replays, so a sink that
@@ -54,8 +56,23 @@ class ResultSinkWorker(
         const val first = "first"
         const val last = "last"
 
+        // Upper bound on the pushed value's display text — every progress emit is retained in the engine's
+        // unbounded history, so a Worker's published payload must stay O(bounded) (the WorkerBase teaser rule).
+        // A larger result is elided with "…"; the box shows the head, which is what a card preview needs.
+        private const val maxDisplayValueLength = 10_000
+
         private fun noResultDeclared(component: String): String =
             "No result type declared in the Job signature for '$component'"
+
+        private fun displayText(value: Any?): String {
+            val text = value.toString()
+            return if (text.length > maxDisplayValueLength) {
+                text.substring(0, maxDisplayValueLength) + "…"
+            }
+            else {
+                text
+            }
+        }
     }
 
 
@@ -136,8 +153,19 @@ class ResultSinkWorker(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun progress(snapshot: Any?): Map<String, Any?> =
-        mapOf("collected" to collected)
+    // The kept count plus the kept value's display text (for ResultWorkerDisplay's value box). The value is
+    // published as a single-element List so the generic default-card status line skips it (only the per-type
+    // display renders it — see JobConventions.progressResultValueKey); the forced final publish (WorkerBase.run,
+    // after onComplete) carries the settled value, and for keep=last the throttled pushes show the running
+    // latest live. An empty stream (kept == null) publishes no value key — the box then renders nothing.
+    override fun progress(snapshot: Any?): Map<String, Any?> {
+        val progress = LinkedHashMap<String, Any?>()
+        progress["collected"] = collected
+        kept?.boundaryValue()?.let { value ->
+            progress[JobConventions.progressResultValueKey] = listOf(displayText(value))
+        }
+        return progress
+    }
 
 
     override fun captureMigrationState(): Any =

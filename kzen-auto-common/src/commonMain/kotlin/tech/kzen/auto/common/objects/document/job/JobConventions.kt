@@ -121,6 +121,11 @@ object JobConventions {
     const val progressRowsKey = "rows"
     const val progressSummaryKey = "summary"
 
+    // The kept Result value's display text, pushed by ResultSinkWorker for ResultWorkerDisplay's value box.
+    // A single-element List (not a bare scalar) so the generic default-card status line skips it — only the
+    // per-type display renders it (the progressRowsKey / progressSummaryKey precedent).
+    const val progressResultValueKey = "resultValue"
+
     // Max rows a non-forced (periodic) progress push may carry: push is a teaser, pull is the payload — every
     // emit is retained in engine history, so periodic pushes must be O(bounded).
     const val progressTeaserRowCount = 10

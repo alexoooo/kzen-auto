@@ -63,6 +63,13 @@ SummaryWorkerDisplay:
   attributeViewManager: AttributeViewManager
 
 
+ResultWorkerDisplay:
+  is: WorkerDisplay
+  class: tech.kzen.auto.client.objects.document.job.display.ResultWorkerDisplay$Wrapper
+  attributeEditorManager: AttributeEditorManager
+  attributeViewManager: AttributeViewManager
+
+
 # Channel-reference picker: lists the Job document's Channel objects in a dropdown and writes the chosen
 # reference into the Worker's ChannelInput / ChannelOutput / ChannelServer / ChannelClient attribute.
 # Selected per attribute via `editor: SelectChannelEditor` in the Worker archetype metadata.

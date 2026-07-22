@@ -417,6 +417,7 @@ ResultSinkWorker:
   abstract: true
   is: ResultSink
   title: "Result"
+  display: ResultWorkerDisplay
   class: tech.kzen.auto.server.objects.job.worker.ResultSinkWorker
   input: ""
   meta:
