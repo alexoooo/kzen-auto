@@ -1,22 +1,16 @@
 main:
   is: Script
 
-main.steps/Formula:
-  is: FormulaStep
-  code: 1235
+main.steps/Number:
+  is: NumberLiteralStep
+  value: 13
 
-main.steps/Formula 2:
-  is: FormulaStep
-  code: "Formula * 2"
+main.steps/Run:
+  is: RunStep
+  instructions: main/Job-3.yaml#main
+  arguments:
+    number: main.steps/Number
 
-main.steps/Formula 3:
-  is: FormulaStep
-  code: "`Formula 2` * 100"
-
-main.steps/Formula 3x:
-  is: FormulaStep
-  code: "`Formula 2` * 100"
-
-main.steps/Formula 4:
-  is: FormulaStep
-  code: "`Formula 3` * 2"
+main.steps/Display:
+  is: DisplayValueStep
+  text: main.steps/Run
