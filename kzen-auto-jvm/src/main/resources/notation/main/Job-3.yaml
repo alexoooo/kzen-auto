@@ -1,2 +1,17 @@
 main:
   is: Job
+
+main.workers/Formula Source:
+  is: FormulaSourceWorker
+  code: listOf(number)
+
+main.workers/Formula:
+  is: FormulaWorker
+
+main.parameters/number:
+  is: ParameterBinding
+  type:
+    class: kotlin.Int
+    generics: []
+    nullable: false
+  default: 15

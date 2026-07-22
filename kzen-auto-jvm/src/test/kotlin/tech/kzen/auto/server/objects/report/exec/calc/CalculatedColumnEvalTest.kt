@@ -7,6 +7,12 @@ import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.auto.server.service.compile.ScriptKotlinCompiler
 import tech.kzen.auto.server.util.ClassLoaderUtils
 import tech.kzen.auto.server.util.WorkUtils
+import tech.kzen.lib.common.exec.logic.model.LogicType
+import tech.kzen.lib.common.exec.tuple.TupleComponentDefinition
+import tech.kzen.lib.common.exec.tuple.TupleComponentName
+import tech.kzen.lib.common.exec.tuple.TupleDefinition
+import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
+import tech.kzen.lib.platform.ClassName
 import tech.kzen.lib.platform.ClassNames
 import java.nio.file.Path
 import kotlin.test.assertEquals
@@ -404,29 +410,79 @@ class CalculatedColumnEvalTest {
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    @Test
+    fun parameterInScopeBareAndTyped() {
+        // The declared parameter is a bare typed (Int) accessor, so arithmetic with a column needs no cast.
+        testEval("6", "a * factor", "3", parameters = intParameter("factor"), parameterValues = listOf(2))
+    }
+
+
+    @Test
+    fun rawEvaluationPreservesTypedValue() {
+        // The payload lane: evaluateRaw returns the expression's value as-is, no ColumnValue coercion.
+        val calculatedColumn = create("(1..factor).toList()", intParameter("factor"))
+        calculatedColumn.setParameters(listOf(3))
+        val raw = calculatedColumn.evaluateRaw(
+            Unit, FlatFileRecord.of("", ""), HeaderListing.ofUnique(listOf("a", "b")))
+        assertEquals(listOf(1, 2, 3), raw)
+    }
+
+
+    @Test
+    fun parameterColumnCollisionIsDescriptiveError() {
+        val workUtils = WorkUtils(Path.of("../work/${CalculatedColumnEvalTest::class.simpleName}"))
+        val error = calculatedColumnEval(workUtils).validate(
+            "c",
+            "a + 1",
+            HeaderListing.ofUnique(listOf("a", "b")),
+            ClassNames.kotlinAny,
+            ClassLoaderUtils.dynamicParentClassLoader(),
+            intParameter("a"))
+        assertEquals("Parameter 'a' collides with a column name - rename one of them", error)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     private fun testEval(
         expected: String,
         formula: String,
         aValue: String = "",
-        bValue: String = ""
+        bValue: String = "",
+        parameters: TupleDefinition = TupleDefinition.empty,
+        parameterValues: List<Any?> = listOf()
     ) {
-        val workUtils = WorkUtils(Path.of("../work/${CalculatedColumnEvalTest::class.simpleName}"))
-        val calculatedColumnEval = calculatedColumnEval(workUtils)
+        val calculatedColumn = create(formula, parameters)
+        calculatedColumn.setParameters(parameterValues)
 
         val columnNames = listOf("a", "b")
-        val calculatedColumn = calculatedColumnEval.create(
-            "c",
-            formula,
-            HeaderListing.ofUnique(columnNames),
-            ClassNames.kotlinAny,
-            ClassLoaderUtils.dynamicParentClassLoader())
-
         val value = calculatedColumn.evaluate(
             Unit,
             FlatFileRecord.of(aValue, bValue),
             HeaderListing.ofUnique(columnNames))
 
         assertEquals(expected, value.text)
+    }
+
+
+    private fun create(formula: String, parameters: TupleDefinition): CalculatedColumn<Any> {
+        val workUtils = WorkUtils(Path.of("../work/${CalculatedColumnEvalTest::class.simpleName}"))
+        val calculatedColumnEval = calculatedColumnEval(workUtils)
+
+        return calculatedColumnEval.create(
+            "c",
+            formula,
+            HeaderListing.ofUnique(listOf("a", "b")),
+            ClassNames.kotlinAny,
+            ClassLoaderUtils.dynamicParentClassLoader(),
+            parameters)
+    }
+
+
+    private fun intParameter(name: String): TupleDefinition {
+        return TupleDefinition(listOf(
+            TupleComponentDefinition(
+                TupleComponentName(name),
+                LogicType(TypeMetadata(ClassName("kotlin.Int"), listOf(), false)))))
     }
 
 

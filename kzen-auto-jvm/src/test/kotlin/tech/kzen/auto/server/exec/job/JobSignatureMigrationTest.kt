@@ -29,7 +29,7 @@ import kotlin.test.assertTrue
 /**
  * Live-edit migration coverage for the Job SIGNATURE (J2, logic-spec §5): pause a parameterized Job mid-stream,
  * edit config, resume — and the harvested result must still be COMPLETE and in order. It is the whole load-bearing
- * proof of the ParameterSource stream cursor + the ResultSink carry-without-clear: a source restart duplicates the
+ * proof of the FormulaSource stream cursor + the ResultSink carry-without-clear: a source restart duplicates the
  * prefix (overshoot), a dropped in-flight element falls short, an accumulation loss drops the prefix, and exact
  * list order pins the channel's FIFO carry. Modeled line-for-line on
  * [JobMigrationTest.migrationResumesReaderAndCarriesPreviewStateLosslessly].

@@ -3,7 +3,10 @@ package tech.kzen.auto.server.exec.job
 import tech.kzen.auto.common.objects.document.job.JobChannelSynthesis
 import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.auto.common.objects.document.job.JobSignatureCapability
+import tech.kzen.auto.common.objects.document.logic.ParameterDefaultDefiner
+import tech.kzen.auto.common.paradigm.logic.LogicConventions
 import tech.kzen.auto.server.exec.LogicCompilerServices
+import tech.kzen.lib.common.exec.tuple.TupleComponentName
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
@@ -24,11 +27,12 @@ import tech.kzen.lib.common.service.notation.NotationConventions
  * Because synthesized Channel identity is deterministic ([JobChannelSynthesis]), re-running this compile on a
  * live edit yields the same Channel [stable ids][tech.kzen.lib.common.service.store.normal.ObjectStableId] — so a
  * migrate ([tech.kzen.lib.server.exec.engine.RunEngine.migrate]) carries each channel's in-flight payloads across
- * the rebuild by stable id (see [JobRun]). The Logic signature is derived from the document's signature-marker
- * Workers via [tech.kzen.auto.common.objects.document.job.JobSignatureCapability] (parameters in document order,
- * typed by the ParameterSource output ports; results by the ResultSink input ports) — the same notation-only
- * derivation the client editors read, so the two sides cannot drift; [JobRun] seeds the parameters and harvests
- * the results at run time.
+ * the rebuild by stable id (see [JobRun]). The Logic signature is derived via
+ * [tech.kzen.auto.common.objects.document.job.JobSignatureCapability] (inputs from the `parameters` branch of
+ * typed ParameterBinding declarations, in document order; results by the ResultSink markers' input ports) — the
+ * same notation-only derivation the client editors read, so the two sides cannot drift; [JobRun] seeds the
+ * parameters (arguments falling back to declared defaults, see [JobParameters]) and harvests the results at run
+ * time.
  */
 object JobLogicCompiler {
     fun compile(
@@ -51,14 +55,26 @@ object JobLogicCompiler {
             .map { ObjectLocation(documentPath, it) }
 
         // Derived from the SAVED notation + metadata (the pre-synthesis structure, matching what the client sees):
-        // the signature reads ParameterSource / ResultSink markers, not the synthesized channels.
+        // inputs from the `parameters` declarations, outputs from the ResultSink markers — not the synthesized
+        // channels.
         val logicSignature = JobSignatureCapability.signature(graphDefinition.graphStructure, jobLocation)
+
+        // Per-parameter typed defaults (the `default` scalar coerced by the declared `type`), the fallback
+        // JobControl.parameter serves when the run binds no argument.
+        val parameterDefaults = documentNotation
+            .directNestedObjectPaths(NotationConventions.mainObjectPath, LogicConventions.parametersAttributeName)
+            .associate { parameterPath ->
+                val parameterLocation = ObjectLocation(documentPath, parameterPath)
+                TupleComponentName(parameterPath.name.value) to
+                        ParameterDefaultDefiner.resolve(parameterLocation, graphNotation)
+            }
 
         return JobLogic(
             filteredDefinition,
             workerLocations,
             synthesis.channelLocations,
             logicSignature,
+            JobParameters(logicSignature.inputs, parameterDefaults),
             graphNotation,
             graphDefinition,
             services)

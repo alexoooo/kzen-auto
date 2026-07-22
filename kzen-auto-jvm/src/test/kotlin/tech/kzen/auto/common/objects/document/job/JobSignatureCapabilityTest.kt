@@ -7,17 +7,20 @@ import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.model.structure.GraphStructure
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNull
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 
 /**
- * [JobSignatureCapability] derives a Job's Logic signature from its ParameterSource / ResultSink marker Workers,
- * the single source shared by [tech.kzen.auto.server.exec.job.JobLogicCompiler] (server) and the callee-parameter
- * editors (client). Loads a real notation graph and asserts: [JobSignatureCapability.roleOf] classifies Parameter /
- * Result / null; a user-defined ParameterSource SUBTYPE classifies Parameter with no code change (CC-17);
- * [JobSignatureCapability.signature] yields the parameter / result names in document order, filters a blank
- * parameter, maps a blank result to `main`, keeps a named result, types a port from its `of:` (else Any); and a
- * non-Job document yields the empty signature. Reads only notation + metadata — nothing is instantiated.
+ * [JobSignatureCapability] derives a Job's Logic signature — inputs from the `parameters` branch of typed
+ * ParameterBinding declarations, outputs from the ResultSink marker Workers — the single source shared by
+ * [tech.kzen.auto.server.exec.job.JobLogicCompiler] (server) and the callee-parameter editors (client). Loads a
+ * real notation graph and asserts: [JobSignatureCapability.isResultSink] classifies by inheritance chain (a
+ * user-defined ResultSink SUBTYPE is recognized with no code change, CC-17); [JobSignatureCapability.signature]
+ * yields the parameter / result names in document order, types each parameter from its declaration (untyped ->
+ * Any, generics preserved), maps a blank result to `main`, keeps a named result, types a result port from its
+ * `of:` (else Any); and a non-Job document yields the empty signature. Reads only notation + metadata — nothing
+ * is instantiated.
  */
 class JobSignatureCapabilityTest {
     companion object {
@@ -31,57 +34,51 @@ class JobSignatureCapabilityTest {
     }
 
 
-    private fun roleOf(workerName: String): JobSignatureCapability.Role? {
+    private fun isResultSink(workerName: String): Boolean {
         val workerLocation = ObjectLocation(documentPath, ObjectPath.parse("main.workers/$workerName"))
-        return JobSignatureCapability.roleOf(graphStructure.graphNotation, workerLocation)
+        return JobSignatureCapability.isResultSink(graphStructure.graphNotation, workerLocation)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    @Test
-    fun parameterSourceClassifiesAsParameter() {
-        assertEquals(JobSignatureCapability.Role.Parameter, roleOf("param"))
-    }
-
-
     @Test
     fun resultSinkClassifiesAsResult() {
-        assertEquals(JobSignatureCapability.Role.Result, roleOf("result"))
+        assertTrue(isResultSink("result"))
     }
 
 
     @Test
-    fun plainWorkerHasNoRole() {
-        assertNull(roleOf("plain"))
+    fun plainWorkerIsNotAResultSink() {
+        assertFalse(isResultSink("plain"))
     }
 
 
     @Test
-    fun thirdPartyParameterSourceSubtypeIsRecognizedWithoutCodeChange() {
-        // The CC-17 proof: a user-defined ParameterSource subtype classifies purely via its inheritance chain.
-        assertEquals(JobSignatureCapability.Role.Parameter, roleOf("typedParam"))
+    fun thirdPartyResultSinkSubtypeIsRecognizedWithoutCodeChange() {
+        // The CC-17 proof: a user-defined ResultSink subtype classifies purely via its inheritance chain.
+        assertTrue(isResultSink("subtypeResult"))
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     @Test
-    fun inputParametersAreNamedInDocumentOrderWithBlankFiltered() {
+    fun inputParametersAreDeclaredInDocumentOrder() {
         val signature = JobSignatureCapability.signature(graphStructure, jobMainLocation)
-        // param(items), blankParam(filtered), typedParam(records) -> [items, records] in document order.
-        assertEquals(listOf("items", "records"), signature.inputs.components.map { it.name.value })
+        assertEquals(listOf("items", "records", "counts"), signature.inputs.components.map { it.name.value })
     }
 
 
     @Test
     fun outputComponentsMapBlankToMainAndKeepNamed() {
         val signature = JobSignatureCapability.signature(graphStructure, jobMainLocation)
-        // result(blank -> main), namedResult(summary) -> [main, summary] in document order.
-        assertEquals(listOf("main", "summary"), signature.outputs.components.map { it.name.value })
+        // result(blank -> main), namedResult(summary), subtypeResult(typed) -> in document order.
+        assertEquals(listOf("main", "summary", "typed"), signature.outputs.components.map { it.name.value })
     }
 
 
     @Test
-    fun untypedParameterPortYieldsAny() {
+    fun undeclaredParameterTypeYieldsAny() {
+        // The `type` attribute resolves through the inheritance chain to the ParameterBinding archetype default.
         val signature = JobSignatureCapability.signature(graphStructure, jobMainLocation)
         val items = signature.inputs.components.first { it.name.value == "items" }
         assertEquals("kotlin.Any", items.type.metadata.className.asString())
@@ -89,12 +86,29 @@ class JobSignatureCapabilityTest {
 
 
     @Test
-    fun typedParameterPortYieldsItsElementType() {
+    fun declaredParameterTypeCarriesIntoSignature() {
         val signature = JobSignatureCapability.signature(graphStructure, jobMainLocation)
         val records = signature.inputs.components.first { it.name.value == "records" }
+        assertEquals("kotlin.String", records.type.metadata.className.asString())
+    }
+
+
+    @Test
+    fun genericParameterTypeIsPreserved() {
+        val signature = JobSignatureCapability.signature(graphStructure, jobMainLocation)
+        val counts = signature.inputs.components.first { it.name.value == "counts" }
+        assertEquals("kotlin.collections.List", counts.type.metadata.className.asString())
         assertEquals(
-            "kotlin.String",
-            records.type.metadata.className.asString())
+            listOf("kotlin.Int"),
+            counts.type.metadata.generics.map { it.className.asString() })
+    }
+
+
+    @Test
+    fun typedResultPortYieldsItsElementType() {
+        val signature = JobSignatureCapability.signature(graphStructure, jobMainLocation)
+        val typed = signature.outputs.components.first { it.name.value == "typed" }
+        assertEquals("kotlin.String", typed.type.metadata.className.asString())
     }
 
 

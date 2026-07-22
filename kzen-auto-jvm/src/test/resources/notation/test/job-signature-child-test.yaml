@@ -1,15 +1,24 @@
-# Parameterized Job fixture (J2 JobSignatureTest + JobSignatureMigrationTest): a ParameterSourceWorker streams the
-# bound `items` run argument element-by-element, a ResultSinkWorker collects them and yields the collection as the
-# `main` output component (blank `result` -> main). Both Worker channel ports are BLANK -> JobChannelSynthesis
-# derives one channel from Worker document order (params.output -> collect.input). batchSize 1 makes one element
-# roughly one step for the stepping / migration tests. Shared as the hosted callee by the Script / nested fixtures.
+# Parameterized Job fixture (J2 JobSignatureTest + JobSignatureMigrationTest): a typed `items` parameter
+# declaration (nullable Any: a bare run's expression evaluates to null, emitted as a single element) sourced by a
+# FormulaSourceWorker whose expression IS the parameter — an Iterable argument streams element-by-element, any
+# other value emits once — and a ResultSinkWorker collects and yields the collection as the `main` output
+# component (blank `result` -> main). Both Worker channel ports are BLANK -> JobChannelSynthesis derives one
+# channel from Worker document order (source.output -> collect.input). batchSize 1 makes one element roughly one
+# step for the stepping / migration tests. Shared as the hosted callee by the Script / nested fixtures.
 main:
   is: Job
   batchSize: 1
 
-main.workers/params:
-  is: ParameterSourceWorker
-  parameter: "items"
+main.parameters/items:
+  is: ParameterBinding
+  type:
+    class: kotlin.Any
+    generics: []
+    nullable: true
+
+main.workers/source:
+  is: FormulaSourceWorker
+  code: items
 
 main.workers/collect:
   is: ResultSinkWorker

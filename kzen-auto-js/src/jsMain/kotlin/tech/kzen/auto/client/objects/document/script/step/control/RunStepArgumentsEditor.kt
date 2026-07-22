@@ -184,9 +184,9 @@ class RunStepArgumentsEditor(
         //    the same shape LogicSignatureEditor edits) that we format into a badge label;
         //  - a Flow keeps them as FlowInput vertices in its `vertices` list (each carrying a `parameter` name),
         //    with no typed signature in this shape, so its parameters get no badge;
-        //  - a Job declares them as ParameterSource Workers (JobSignatureCapability derives the signature — the
-        //    same notation-only derivation JobLogicCompiler reads server-side, so the two can't drift), typed by
-        //    each source's output-port `of:` (untyped ports badge as "Any", Script parity).
+        //  - a Job declares them as ParameterBinding objects under its `parameters` branch, like a Script, but
+        //    read through JobSignatureCapability.signature (the same notation-only derivation JobLogicCompiler
+        //    reads server-side, so the two can't drift), typed by each declaration's `type` (Script parity).
         val instructionsParameters: List<String>?
         val newParameterTypes = mutableMapOf<String, String>()
         if (instructionsObjectLocation != null) {

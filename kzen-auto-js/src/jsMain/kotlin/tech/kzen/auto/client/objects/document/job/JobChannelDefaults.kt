@@ -57,10 +57,11 @@ class JobChannelDefaults(
     override fun ChildrenBuilder.render() {
         div {
             css {
-                // Floated top-right, anchored to JobController's (relative) stage — scrolls with content, like
-                // Script's Parameters / Results. A narrow, compact 3-row column (label, batch size, capacity).
+                // Floated top-right, anchored to JobController's (relative) stage — scrolls with content,
+                // stacked directly beneath the Parameters control (the ResultSignatureEditor stacking
+                // convention). A narrow, compact 3-row column (label, batch size, capacity).
                 position = Position.absolute
-                top = 0.5.em
+                top = 2.75.em
                 right = 0.5.em
                 zIndex = integer(2)
                 display = Display.flex

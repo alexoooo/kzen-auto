@@ -1,15 +1,23 @@
-# Mirror of the reproducing user notation (Script-2 -> Job-3): a scalar parameter payload streams through a
-# FormulaWorker — whose column formula auto-flattens the payload message (single `value` column) and appends a
-# flat `foo` column — into a ResultSinkWorker. The phase-1 element-model proof: the run COMPLETES (previously
-# the hard-typed FormulaWorker detonated on `Double cannot be cast to DataRecord`) and the yield is the PAYLOAD
-# (the boundary rule: payload wins; the flat part is auxiliary). All ports BLANK -> JobChannelSynthesis derives
-# the two channels from Worker document order.
+# Mirror of the reproducing user notation (Script-2 -> Job-3): a typed scalar `number` parameter, sourced by a
+# FormulaSourceWorker referencing it by name (a Double is not Iterable, so it emits a single payload message),
+# streams through a FormulaWorker — whose column formula auto-flattens the payload message (single `value`
+# column) and appends a flat `foo` column — into a ResultSinkWorker. The phase-1 element-model proof: the run
+# COMPLETES (previously the hard-typed FormulaWorker detonated on `Double cannot be cast to DataRecord`) and the
+# yield is the PAYLOAD (the boundary rule: payload wins; the flat part is auxiliary). All ports BLANK ->
+# JobChannelSynthesis derives the two channels from Worker document order.
 main:
   is: Job
 
-main.workers/param:
-  is: ParameterSourceWorker
-  parameter: "number"
+main.parameters/number:
+  is: ParameterBinding
+  type:
+    class: kotlin.Double
+    generics: []
+    nullable: false
+
+main.workers/source:
+  is: FormulaSourceWorker
+  code: number
 
 main.workers/formula:
   is: FormulaWorker

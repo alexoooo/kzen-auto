@@ -32,6 +32,55 @@ Logic:
 
 ###########################################################
 
+# Typed parameter declarations, shared by every Logic flavour with a `parameters` branch (Script and Job).
+# Moved here from script-jvm.yaml when the Job document gained the same branch.
+
+# A type for a parameter (or other typed binding). Parsed once at definition time by the definer
+# into a TypeMetadata, so a binding's constructor receives the type directly. Notation shape mirrors
+# TypeMetadata: { class: <qualified name>, generics: [ <nested type maps> ], nullable: <bool> }.
+# Bound at the type level (mirrors ResourceClosePolicy) so any `is: TypeMetadata` attribute inherits it.
+TypeMetadata:
+  abstract: true
+  class: tech.kzen.lib.common.model.structure.metadata.TypeMetadata
+  meta:
+    ref:
+      by: TypeMetadataDefiner
+
+TypeMetadataDefiner:
+  class: tech.kzen.auto.common.objects.document.logic.TypeMetadataDefiner
+
+
+# Coerces a parameter's optional `default` notation scalar into a typed runtime value keyed on the
+# sibling `type`; absent/unparseable/unsupported-type defaults resolve to null (see the definer class).
+ParameterDefaultDefiner:
+  class: tech.kzen.auto.common.objects.document.logic.ParameterDefaultDefiner
+
+
+# A typed parameter declaration, named by the object's own name; `type` declares its TypeMetadata
+# (defaults to Any) and `default` is the value used at runtime when a run supplies no argument (omitted =
+# no default). Lives in a Script's or Job's `parameters` branch. In a Script it is validated like a step
+# (its type flows into ScriptValidation) and referenceable by steps, but never executed — its value is
+# resolved from the run arguments on demand. In a Job only the notation is read: JobSignatureCapability
+# derives the typed signature and Worker expressions (Filter / Formula / FormulaSource) see it by name.
+ParameterBinding:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.server.objects.logic.ParameterBinding
+  icon: "material-symbols:input"
+  title: "Parameter"
+  type:
+    class: kotlin.Any
+    generics: []
+    nullable: false
+  meta:
+    type: TypeMetadata
+    default:
+      is: Object
+      by: ParameterDefaultDefiner
+
+
+###########################################################
+
 # TODO: factor out DocumentArchetype (concrete) vs DocumentRoot (concrete)?
 
 Script:
@@ -133,6 +182,12 @@ Job:
     channels:
       is: List
       of: Channel
+      by: NestedList
+    # Typed parameter declarations (Script parity): the Job's input signature derives from these
+    # (JobSignatureCapability), and every Worker expression sees them by name, typed.
+    parameters:
+      is: List
+      of: ParameterBinding
       by: NestedList
     selfLocation:
       is: ObjectLocation

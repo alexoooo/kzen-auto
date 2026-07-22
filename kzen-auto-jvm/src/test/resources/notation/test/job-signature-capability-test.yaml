@@ -1,26 +1,33 @@
-# Classification / derivation net for JobSignatureCapability (J2, CC-17): a Job whose Workers exercise every
-# signature-marker case — a ParameterSource (named `items`), a ParameterSource with a BLANK name (filtered from the
-# signature), a 3rd-party ParameterSource SUBTYPE with a typed `of: String` output port (proves type derivation
-# + inheritance-chain classification), a plain non-signature Worker (role null), a ResultSink with a blank result
-# (-> `main`), and a ResultSink with a named result (`summary`). Worker document order IS signature order. Never
-# run: only its notation + metadata are read.
+# Derivation net for JobSignatureCapability: INPUTS come from the `parameters` branch of typed ParameterBinding
+# declarations — an untyped one (the archetype default types it Any), a String-typed one, and a generic
+# List<Int> (proves TypeMetadata parsing incl. generics) — in document order; OUTPUTS come from the ResultSink
+# marker Workers — a blank result (-> `main`), a named result (`summary`), and a 3rd-party ResultSink SUBTYPE
+# with a typed `of: String` input port (proves type derivation + inheritance-chain classification, CC-17). A
+# plain non-signature Worker classifies false. Never run: only its notation + metadata are read.
 main:
   is: Job
 
-main.workers/param:
-  is: ParameterSourceWorker
-  parameter: "items"
+main.parameters/items:
+  is: ParameterBinding
 
-# Blank parameter name -> streams null, absent from the signature (Flow parity).
-main.workers/blankParam:
-  is: ParameterSourceWorker
+main.parameters/records:
+  is: ParameterBinding
+  type:
+    class: kotlin.String
+    generics: []
+    nullable: false
 
-# 3rd-party ParameterSource subtype with a typed output port -> its `of: String` types the parameter.
-main.workers/typedParam:
-  is: TypedParamSource
-  parameter: "records"
+main.parameters/counts:
+  is: ParameterBinding
+  type:
+    class: kotlin.collections.List
+    generics:
+      - class: kotlin.Int
+        generics: []
+        nullable: false
+    nullable: false
 
-# Plain source, not a signature marker -> role null.
+# Plain source, not a signature marker -> not a ResultSink.
 main.workers/plain:
   is: FormulaSourceWorker
 
@@ -33,19 +40,24 @@ main.workers/namedResult:
   is: ResultSinkWorker
   result: "summary"
 
+# 3rd-party ResultSink subtype -> classifies via the inheritance chain; its `of: String` types the component.
+main.workers/subtypeResult:
+  is: TypedResultSink
+  result: "typed"
+
 
 #######################################################################################################################
 # Test-only archetype (unique name, declared once, so there's no whole-graph reference ambiguity): a user-defined
-# ParameterSource subtype reusing the production class, with a typed output port. Must classify as a Parameter and
+# ResultSink subtype reusing the production class, with a typed input port. Must classify as a ResultSink and
 # type its component String purely via the inheritance chain + metadata, with no edit to JobSignatureCapability.
-TypedParamSource:
+TypedResultSink:
   abstract: true
-  is: ParameterSource
-  class: tech.kzen.auto.server.objects.job.worker.ParameterSourceWorker
-  output: ""
+  is: ResultSink
+  class: tech.kzen.auto.server.objects.job.worker.ResultSinkWorker
+  input: ""
   meta:
-    output:
-      is: ChannelOutput
+    input:
+      is: ChannelInput
       of: String
       creator: JobChannelCreator
       editor: SelectChannelEditor

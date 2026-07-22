@@ -16,6 +16,7 @@ import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
 import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.objects.document.bridge.InsertionKey
 import tech.kzen.auto.client.objects.document.common.dragdrop.dropZoneRegion
+import tech.kzen.auto.client.objects.document.common.signature.LogicSignatureEditor
 import tech.kzen.auto.client.objects.document.job.display.WorkerDisplayManager
 import tech.kzen.auto.client.objects.document.job.display.WorkerDisplayPropsCommon
 import tech.kzen.auto.client.objects.ribbon.RibbonController
@@ -569,8 +570,19 @@ class JobController(
             onDragOver = { event -> onStageDragOver(event) }
             onDrop = { event -> onStageDrop(event) }
 
+            // Typed parameter declarations (Script parity): the SAME editor Script uses, over the shared
+            // `parameters` branch of ParameterBinding objects — its "Parameters" control floats at the top-right
+            // and the declared rows flow above the Worker stage. The Script-only dependency gutter degrades to
+            // empty lanes here (no ScriptStore in the Job bridge).
+            LogicSignatureEditor::class.react {
+                objectLocation = main
+                clientStateGlobal = props.clientStateGlobal
+                mirroredGraphStore = props.mirroredGraphStore
+            }
+
             // Job-wide channel defaults (batchSize / capacity) applied to every auto-synthesized channel — floated
-            // at the top-right (rendered before the empty/populated split so it shows in both).
+            // at the top-right, stacked beneath the Parameters control (the ResultSignatureEditor stacking
+            // convention); rendered before the empty/populated split so it shows in both.
             JobChannelDefaults::class.react {
                 mainLocation = main
                 clientStateGlobal = props.clientStateGlobal

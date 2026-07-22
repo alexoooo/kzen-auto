@@ -7,19 +7,27 @@ import org.junit.Test
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.server.context.KzenAutoContext
+import tech.kzen.lib.common.exec.logic.model.LogicType
+import tech.kzen.lib.common.exec.tuple.TupleComponentDefinition
+import tech.kzen.lib.common.exec.tuple.TupleComponentName
+import tech.kzen.lib.common.exec.tuple.TupleDefinition
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
+import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
+import tech.kzen.lib.platform.ClassName
 import kotlin.test.assertEquals
 
 
 /**
  * Unit test for [FormulaSourceWorker] in isolation: drives the Worker's full [FormulaSourceWorker.run]
- * lifecycle (compile the Kotlin expression -> evaluate to an Iterable -> emit each element) against a capturing
- * [ChannelOutput] and a no-op [JobControl], using the real [CachedKotlinCompiler] from a test context. The
- * archetype wiring (JobChannelCreator handing the Worker a real channel view) is already covered by
- * [tech.kzen.auto.server.objects.job.JobExecutionTest] for the other Workers; this isolates the new Worker's
- * own compile-and-iterate logic.
+ * lifecycle (compile the Kotlin expression -> evaluate -> dispatch on the value: an Iterable streams
+ * element-by-element, anything else emits once) against a capturing [ChannelOutput] and a no-op [JobControl],
+ * using the real [CalculatedColumnEval] engine from a test context. Also covers the declared-parameter scope
+ * (bare typed accessor, value via [JobControl.parameter]) and the live-edit stream cursor (a same-code resume
+ * skips the delivered prefix; an edited expression restarts). The archetype wiring (JobChannelCreator handing
+ * the Worker a real channel view) is already covered by the engine-level Job tests; this isolates the Worker's
+ * own compile-and-dispatch logic.
  */
 class FormulaSourceWorkerTest {
     //-----------------------------------------------------------------------------------------------------------------
@@ -60,9 +68,75 @@ class FormulaSourceWorkerTest {
     }
 
 
+    @Test
+    fun scalarExpressionEmitsSingleElement() = runBlocking {
+        val emitted = runSource("6 * 7")
+        assertEquals(listOf(42), emitted)
+    }
+
+
+    @Test
+    fun blankExpressionEmitsNothing() = runBlocking {
+        val emitted = runSource("   ")
+        assertEquals(listOf(), emitted)
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
-    private suspend fun runSource(code: String): List<Any?> {
+    @Test
+    fun declaredParameterIsInScopeBareAndTyped() = runBlocking {
+        // `number` is a bare Int accessor (declared type), so arithmetic needs no cast.
+        val emitted = runSource("(1..number).toList()", parameterControl("number", 3))
+        assertEquals(listOf(1, 2, 3), emitted)
+    }
+
+
+    @Test
+    fun scalarParameterReferenceEmitsSingleElement() = runBlocking {
+        val emitted = runSource("number", parameterControl("number", 7))
+        assertEquals(listOf(7), emitted)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    @Test
+    fun sameCodeResumeSkipsDeliveredPrefix() = runBlocking {
+        val delivered = mutableListOf<Any?>()
+        val first = worker("1..4", delivered)
+        first.run(NoOpJobControl)
+        assertEquals(listOf<Any?>(1, 2, 3, 4), delivered)
+
+        // A rebuilt same-code instance adopts the cursor: everything was delivered, so nothing re-emits.
+        val reEmitted = mutableListOf<Any?>()
+        val resumed = worker("1..4", reEmitted)
+        resumed.loadMigrationState(first.captureMigrationState())
+        resumed.run(NoOpJobControl)
+        assertEquals(listOf(), reEmitted)
+    }
+
+
+    @Test
+    fun editedCodeIgnoresCursorAndRestarts() = runBlocking {
+        val first = worker("1..4")
+        first.run(NoOpJobControl)
+
         val emitted = mutableListOf<Any?>()
+        val edited = worker("1..2", emitted)
+        edited.loadMigrationState(first.captureMigrationState())
+        edited.run(NoOpJobControl)
+        assertEquals(listOf<Any?>(1, 2), emitted)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private suspend fun runSource(code: String, control: JobControl = NoOpJobControl): List<Any?> {
+        val emitted = mutableListOf<Any?>()
+        worker(code, emitted).run(control)
+        return emitted
+    }
+
+
+    private fun worker(code: String, emitted: MutableList<Any?> = mutableListOf()): FormulaSourceWorker {
         val output = object: ChannelOutput<Any?> {
             override suspend fun send(element: Any?) {
                 emitted.add((element as JobMessage).payload)
@@ -76,11 +150,8 @@ class FormulaSourceWorkerTest {
             DocumentPath.parse("test/formula-source-unit-test.yaml"),
             ObjectPath.parse("main.workers/source"))
 
-        val worker = FormulaSourceWorker(
-            output, code, selfLocation, context.cachedKotlinCompiler)
-
-        worker.run(NoOpJobControl)
-        return emitted
+        return FormulaSourceWorker(
+            output, code, selfLocation, context.calculatedColumnEval)
     }
 
 
@@ -94,5 +165,20 @@ class FormulaSourceWorkerTest {
         override fun publishProgress(location: ObjectLocation, value: Map<String, Any?>, force: Boolean) {}
         override suspend fun host(instructions: ObjectLocation, input: Any?) =
             throw UnsupportedOperationException("A FormulaSourceWorker hosts no child")
+    }
+
+
+    // A control exposing one declared parameter [name] of the value's type (Int in these tests) bound to [value].
+    private fun parameterControl(name: String, value: Int): JobControl {
+        return object: JobControl by NoOpJobControl {
+            override fun parameters(): TupleDefinition {
+                return TupleDefinition(listOf(
+                    TupleComponentDefinition(
+                        TupleComponentName(name),
+                        LogicType(TypeMetadata(ClassName("kotlin.Int"), listOf(), false)))))
+            }
+
+            override fun parameter(name: String): Any? = value
+        }
     }
 }

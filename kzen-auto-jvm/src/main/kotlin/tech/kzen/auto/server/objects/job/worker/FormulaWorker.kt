@@ -23,9 +23,10 @@ import tech.kzen.lib.platform.ClassNames
  * exactly as `ReportDocument` obtains it. This is why the flat part standardizes on
  * [tech.kzen.auto.plugin.model.record.FlatFileRecord] rather than `List<String>` (see [JobMessage]).
  *
- * Formulas are compiled lazily and recompiled only when the incoming header changes. All formulas evaluate
- * against the ORIGINAL columns, then their values are appended together (matching Report — formulas cannot
- * reference each other's outputs). The incoming message is mutated in place — the flat record grows the
+ * Formulas are compiled lazily and recompiled only when the incoming header changes. The Job's declared
+ * parameters are in every formula's scope, bare by name and typed, their run-constant values read via
+ * [JobControl.parameter]. All formulas evaluate against the ORIGINAL columns, then their values are appended
+ * together (matching Report — formulas cannot reference each other's outputs). The incoming message is mutated in place — the flat record grows the
  * computed fields and the view's header reference swaps to the augmented one — and forwarded with its
  * payload untouched (ownership has transferred to this Worker, so in-place append is race-free). A
  * payload-lane message auto-flattens first ([JobMessage.flatView]), so formulas over a scalar stream see a
@@ -64,12 +65,17 @@ class FormulaWorker(
         val flat = element.flatView()
         val header = flat.header
         if (header != compiledForHeader) {
+            // The Job's declared parameters join every formula's scope, bare by name and typed; their values are
+            // run-constant, injected once per compiled instance (never baked into the generated source).
+            val parameters = control.parameters()
+            val parameterValues = parameters.components.map { control.parameter(it.name.value) }
             compiledColumns = control.runBlockingIo {
                 formulaEntries.map { (name, expression) ->
                     calculatedColumnEval.create(
-                        name, expression, header, ClassNames.kotlinAny, classLoader)
+                        name, expression, header, ClassNames.kotlinAny, classLoader, parameters)
                 }
             }
+            compiledColumns.forEach { it.setParameters(parameterValues) }
             augmentedHeader = header.append(formulaNames)
             compiledForHeader = header
         }

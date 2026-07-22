@@ -10,7 +10,7 @@ import tech.kzen.lib.common.reflect.Reflect
 /**
  * A Flow input parameter, modelled as a source vertex (no predecessors). Its emitted message is the
  * value of the run argument named [parameter] — analogous to a Script parameter
- * ([ParameterBinding][tech.kzen.auto.server.objects.script.binding.ParameterBinding]), but as a graph
+ * ([ParameterBinding][tech.kzen.auto.server.objects.logic.ParameterBinding]), but as a graph
  * vertex. Downstream vertices wire to it via the [output] channel.
  *
  * The seeding is the [FlowRunInput] capability contract: the runner reads [tupleComponentName] from the run's

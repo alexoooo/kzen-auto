@@ -44,6 +44,8 @@ object LogicConventions {
     const val paramQuery = "query"
     const val paramSinceSequence = "since-sequence"
 
+    // The `parameters` branch of typed ParameterBinding declarations, shared by every Logic flavour that
+    // declares one (Script and Job); ScriptConventions aliases these so script-side code reads naturally.
     val parametersAttributeName = AttributeName("parameters")
     val parametersAttributePath = AttributePath.ofName(parametersAttributeName)
 

@@ -1,5 +1,6 @@
 package tech.kzen.auto.common.paradigm.job.control
 
+import tech.kzen.lib.common.exec.tuple.TupleDefinition
 import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.model.location.ObjectLocation
 
@@ -69,13 +70,22 @@ interface JobControl {
 
 
     /**
-     * The run argument bound to a declared Job parameter [name] — the value the caller passed for the
-     * ParameterSource worker that declares `parameter: <name>` (see
-     * [tech.kzen.auto.common.objects.document.job.JobSignatureCapability]). Null when the run was started with no
-     * such argument (or the argument is null): a parameterized Job run bare still executes, its sources streaming
-     * a single null. Values are run-constant — a live-edit migrate re-supplies the same arguments — so no carry is
-     * needed here (a streaming source carries only its own position). Default null: an environment without argument
-     * binding.
+     * The declared parameters of this Job — its typed input signature, derived from the document's `parameters`
+     * branch of ParameterBinding declarations (see
+     * [tech.kzen.auto.common.objects.document.job.JobSignatureCapability]). A Worker that compiles user
+     * expressions builds its typed parameter scope from this (name + TypeMetadata per component) with the values
+     * read via [parameter] — generic, so a third-party Worker gets the same scope with no framework change.
+     * Default empty: an environment without argument binding.
+     */
+    fun parameters(): TupleDefinition = TupleDefinition.empty
+
+
+    /**
+     * The value bound to the declared Job parameter [name]: the run argument the caller passed, falling back to
+     * the declaration's typed `default` when the run supplies none (Script parity). Null when neither exists (or
+     * the argument is null): a parameterized Job run bare still executes, its expressions seeing null. Values are
+     * run-constant — a live-edit migrate re-supplies the same arguments — so no carry is needed here (a streaming
+     * source carries only its own position). Default null: an environment without argument binding.
      */
     fun parameter(name: String): Any? = null
 

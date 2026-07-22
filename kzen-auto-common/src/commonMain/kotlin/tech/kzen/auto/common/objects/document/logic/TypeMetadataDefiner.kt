@@ -1,4 +1,4 @@
-package tech.kzen.auto.common.objects.document.script
+package tech.kzen.auto.common.objects.document.logic
 
 import tech.kzen.lib.common.api.AttributeDefiner
 import tech.kzen.lib.common.model.attribute.AttributeName

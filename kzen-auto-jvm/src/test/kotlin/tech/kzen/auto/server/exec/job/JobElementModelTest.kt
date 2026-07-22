@@ -32,6 +32,8 @@ import kotlin.test.assertIs
  * - **Scalar auto-flatten**: a Double stream through the expression Filter (referencing the flattened `value`
  *   column) into a CsvWriter — palette-insert-and-it-works over a payload lane.
  * - **Map auto-flatten**: Map payloads flatten to keyed columns for the CsvWriter.
+ * - **Parameter scope** (phase 2): a declared typed parameter gates a Filter `where` bare by name — the
+ *   declared default when the run binds nothing, the bound argument when it does.
  */
 class JobElementModelTest {
     //-----------------------------------------------------------------------------------------------------------------
@@ -68,6 +70,49 @@ class JobElementModelTest {
 
         val success = assertIs<Outcome.Success>(outcome)
         assertEquals(13.0, success.value.mainComponentValue())
+    }
+
+
+    @Test
+    fun declaredParameterGatesFilterViaDefault() {
+        // Run BARE: the Filter's `value.number > threshold` reads the DECLARED default (2), keeping 30.0 and 2.5.
+        val engine = newEngine("test/job-parameter-scope-test.yaml")
+        val outcome =
+            try {
+                runBlocking {
+                    engine.resume()
+                    engine.await()
+                }
+            }
+            finally {
+                engine.close()
+            }
+
+        val success = assertIs<Outcome.Success>(outcome, "outcome: $outcome")
+        assertEquals(listOf(30.0, 2.5), success.value.mainComponentValue())
+    }
+
+
+    @Test
+    fun boundArgumentOverridesDeclaredDefault() {
+        // The bound `threshold` argument (3) wins over the declared default (2): only 30.0 passes, and the
+        // sink's single-element convention unwraps it to a scalar.
+        val engine = newEngine(
+            "test/job-parameter-scope-test.yaml",
+            TupleValue(listOf(TupleComponentValue(TupleComponentName("threshold"), 3))))
+        val outcome =
+            try {
+                runBlocking {
+                    engine.resume()
+                    engine.await()
+                }
+            }
+            finally {
+                engine.close()
+            }
+
+        val success = assertIs<Outcome.Success>(outcome, "outcome: $outcome")
+        assertEquals(30.0, success.value.mainComponentValue())
     }
 
 

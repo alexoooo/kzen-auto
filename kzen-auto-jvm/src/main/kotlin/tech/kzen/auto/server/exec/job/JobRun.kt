@@ -36,10 +36,11 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableId
  * concurrently with structured concurrency. The run completes when every Worker settles.
  *
  * SIGNATURE (J2): the Job's bound run arguments arrive as the root [execution]'s typed [Execution.inputs] tuple —
- * each ParameterSource Worker reads its own by name off it (via [EngineJobControl.parameter]) — and each
- * ResultSink Worker's yielded component ([EngineJobControl.yieldResult]) is gathered by a per-run
- * [JobResultCollector] into the [TupleValue] this run returns (so a host — a Script RunStep, a Flow Run vertex, a
- * Job RunWorker — receives the Job's result). Discovery of which Workers play those roles is the compiler's job
+ * any Worker reads a declared parameter by name off it (via [EngineJobControl.parameter], falling back to the
+ * declaration's default per [JobParameters]) — and each ResultSink Worker's yielded component
+ * ([EngineJobControl.yieldResult]) is gathered by a per-run [JobResultCollector] into the [TupleValue] this run
+ * returns (so a host — a Script RunStep, a Flow Run vertex, a Job RunWorker — receives the Job's result).
+ * Discovery of the signature is the compiler's job
  * ([tech.kzen.auto.common.objects.document.job.JobSignatureCapability]); here the seeding / harvest is generic —
  * no Worker-type knowledge (the extension rule).
  *
@@ -84,6 +85,7 @@ class JobRun(
     private val filteredDefinition: GraphDefinition,
     private val workerLocations: List<ObjectLocation>,
     private val channelLocations: List<ObjectLocation>,
+    private val jobParameters: JobParameters,
     private val graphNotation: GraphNotation,
     private val graphDefinition: GraphDefinition,
     private val services: LogicCompilerServices
@@ -103,7 +105,7 @@ class JobRun(
         val childLogicHost = JobChildLogicHost(graphNotation, graphDefinition, services)
 
         // Parameter seeding + result harvest (JobSignatureCapability's runtime half): the root [execution]'s typed
-        // [Execution.inputs] tuple carries the Job's bound run arguments (a ParameterSourceWorker reads its own by
+        // [Execution.inputs] tuple carries the Job's bound run arguments (a Worker reads a declared parameter by
         // name via JobControl.parameter), and this collector gathers what the ResultSinkWorkers yield into the
         // tuple returned as the run's result. Owned per run — a migrate rebuilds it empty, so a carried sink
         // re-yields at its onComplete (yield is last-write-wins).
@@ -211,7 +213,7 @@ class JobRun(
                                     WorkerLogic(
                                         worker, childLogicHost, objectStableMapper,
                                         workerScratchDir, workerOutputDir,
-                                        execution.inputs, resultCollector))
+                                        execution.inputs, jobParameters, resultCollector))
                             }
                             finally {
                                 activeWorkers.decrementAndGet()

@@ -6,6 +6,7 @@ import tech.kzen.lib.common.exec.engine.Address
 import tech.kzen.lib.common.exec.engine.Execution
 import tech.kzen.lib.common.exec.tuple.TupleComponentName
 import tech.kzen.lib.common.exec.tuple.TupleComponentValue
+import tech.kzen.lib.common.exec.tuple.TupleDefinition
 import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
@@ -26,10 +27,10 @@ import java.nio.file.Path
  * [tech.kzen.auto.common.objects.document.job.JobConventions.workerProgressPath] (the path the JS Job UI polls),
  * throttled per Worker so a per-(small-)batch publisher doesn't flood the trace history.
  *
- * [parameter] / [yieldResult] are the Job-signature seam (J2): a ParameterSource Worker reads its bound run
- * argument off the run's typed inputs (threaded in as [jobInputs] by [JobRun]), and a ResultSink Worker yields a
- * named output component into the run's shared [resultCollector] — both generic, with no Worker-type knowledge
- * here (the compiler classifies which Workers play those roles; see [JobRun]).
+ * [parameters] / [parameter] / [yieldResult] are the Job-signature seam (J2): any Worker reads a declared
+ * parameter's bound run argument off the run's typed inputs (threaded in as [jobInputs] by [JobRun], falling back
+ * to the declaration's default per [jobParameters]), and a ResultSink Worker yields a named output component into
+ * the run's shared [resultCollector] — both generic, with no Worker-type knowledge here (see [JobRun]).
  *
  * [host] is the nested-Logic seam ([RunWorker][tech.kzen.auto.server.objects.job.worker.RunWorker]): it
  * compiles the child once via the run-shared [JobChildLogicHost] and hosts it under THIS Worker's own
@@ -43,6 +44,7 @@ class EngineJobControl(
     private val workerScratchDir: Path,
     private val workerOutputDir: Path,
     private val jobInputs: TupleValue,
+    private val jobParameters: JobParameters,
     private val resultCollector: JobResultCollector
 ): JobControl {
     //-----------------------------------------------------------------------------------------------------------------
@@ -120,11 +122,20 @@ class EngineJobControl(
     }
 
 
-    // The Job run's argument for [name], read off the root execution's typed inputs tuple (seeded by JobRun). A
-    // ParameterSource Worker streams this; null for an unbound / unknown name (indistinguishable from a bound null
-    // — matching TupleValue.find, and acceptable: a bare run streams a single null).
+    // The Job's declared parameters (its typed input signature) — the scope a Worker's expression compilation
+    // exposes by name (compiled by JobLogicCompiler, run-constant).
+    override fun parameters(): TupleDefinition {
+        return jobParameters.declarations
+    }
+
+
+    // The Job run's argument for [name], read off the root execution's typed inputs tuple (seeded by JobRun),
+    // falling back to the declaration's typed default (Script parity — ScriptLogic's binding seed). Null when
+    // neither exists (indistinguishable from a bound null — matching TupleValue.find, and acceptable: a bare run's
+    // expressions see null).
     override fun parameter(name: String): Any? {
         return jobInputs.find(TupleComponentName(name))
+            ?: jobParameters.defaults[TupleComponentName(name)]
     }
 
 

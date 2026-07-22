@@ -1,5 +1,7 @@
 package tech.kzen.auto.common.objects.document.script
 
+import tech.kzen.auto.common.objects.document.logic.TypeMetadataDefiner
+
 import tech.kzen.lib.common.api.AttributeDefiner
 import tech.kzen.lib.common.exec.logic.model.LogicType
 import tech.kzen.lib.common.exec.tuple.TupleComponentDefinition

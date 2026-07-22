@@ -1,5 +1,6 @@
 package tech.kzen.auto.common.objects.document.script
 
+import tech.kzen.auto.common.paradigm.logic.LogicConventions
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributePath
@@ -28,8 +29,9 @@ object ScriptConventions {
     // Branches that hold value bindings (named typed values) rather than executed body steps:
     // the Script's `parameters`, and a ForEachStep's per-iteration `item`. Bindings live here so they
     // are addressable/validated like steps but are rendered outside the body and never executed.
-    val parametersAttributeName = AttributeName("parameters")
-    val parametersAttributePath = AttributePath.ofName(parametersAttributeName)
+    // `parameters` is the flavour-neutral branch shared with Job, so the constant lives in LogicConventions.
+    val parametersAttributeName = LogicConventions.parametersAttributeName
+    val parametersAttributePath = LogicConventions.parametersAttributePath
 
     val itemAttributeName = AttributeName("item")
     val itemAttributePath = AttributePath.ofName(itemAttributeName)

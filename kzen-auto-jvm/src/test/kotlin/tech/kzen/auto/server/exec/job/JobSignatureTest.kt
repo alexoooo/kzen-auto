@@ -26,9 +26,9 @@ import kotlin.test.assertTrue
 
 
 /**
- * End-to-end for the Job signature (J2): a Job declares parameters (ParameterSource Workers) and produces an output
- * tuple (ResultSink Workers), so it can be hosted with arguments and its result consumed — completing the "flavours
- * nest each other uniformly" story. Covers the direct engine round trip (argument in -> stream -> collect -> harvest
+ * End-to-end for the Job signature (J2): a Job declares typed parameters (`parameters` branch ParameterBinding
+ * declarations, sourced by a FormulaSource expression) and produces an output tuple (ResultSink Workers), so it can
+ * be hosted with arguments and its result consumed — completing the "flavours nest each other uniformly" story. Covers the direct engine round trip (argument in -> stream -> collect -> harvest
  * -> tuple out, scalar and collection, plus a bare unbound run), a Script RunStep hosting a parameterized Job, a Job
  * RunWorker hosting one per element, and the appendix-mandated frame-trace pin (distinct retained executions per
  * hosted invocation, sharing the child's stable id). Jobs are nondeterministic, so assertions are on the harvested
@@ -54,7 +54,7 @@ class JobSignatureTest {
 
         assertEquals(
             listOf("items"), jobLogic.signature().inputs.components.map { it.name.value },
-            "the ParameterSource worker declares the `items` input parameter")
+            "the `items` parameter declaration is the Job's input signature")
         assertEquals(
             listOf("main"), jobLogic.signature().outputs.components.map { it.name.value },
             "the ResultSink worker (blank result) declares the `main` output component")

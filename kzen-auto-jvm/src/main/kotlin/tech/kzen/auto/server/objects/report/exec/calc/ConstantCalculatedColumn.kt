@@ -23,4 +23,14 @@ class ConstantCalculatedColumn<T>(
     ): ColumnValue {
         return value
     }
+
+
+    // Only produced for an empty formula (or an error placeholder), which has no raw value.
+    override fun evaluateRaw(
+        model: T,
+        flatFileRecord: FlatFileRecord,
+        headerListing: HeaderListing
+    ): Any? {
+        return null
+    }
 }

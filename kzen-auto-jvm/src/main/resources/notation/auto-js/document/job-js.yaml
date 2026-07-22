@@ -155,12 +155,6 @@ MultiFileReaderTool:
   delegate: MultiFileReaderWorker
 
 
-ParameterSourceTool:
-  is: RibbonTool
-  parent: JobGroup_Sources
-  delegate: ParameterSourceWorker
-
-
 ################################################################
 
 JobGroup_Transforms:

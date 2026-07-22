@@ -18,9 +18,11 @@ import tech.kzen.lib.platform.ClassNames
  * comparison, [where] is an arbitrary Kotlin BOOLEAN EXPRESSION evaluated against each message's flat part,
  * with the columns referenced by name (`City eq "Lviv"`, `temp.number > 30`, …). It is compiled by the
  * genuine [CalculatedColumnEval] engine — the SAME engine [FormulaWorker] uses, injected as a `@Service`
- * — so the expression is type-checked against the flat part's schema ([HeaderListing]). A payload-lane
- * message auto-flattens ([JobMessage.flatView]: a scalar filters via the `value` column), so the predicate
- * works over any stream; expressions over the typed payload itself are the element-model plan's phase 3.
+ * — so the expression is type-checked against the flat part's schema ([HeaderListing]). The Job's declared
+ * parameters are also in scope, bare by name and typed (`value > threshold`), their run-constant values read
+ * via [JobControl.parameter]. A payload-lane message auto-flattens ([JobMessage.flatView]: a scalar filters
+ * via the `value` column), so the predicate works over any stream; expressions over the typed payload itself
+ * are the element-model plan's phase 3.
  *
  * The predicate is compiled lazily and recompiled only when the incoming header changes; a message is kept
  * when the compiled expression's result is truthy ([tech.kzen.auto.server.objects.report.exec.calc.ColumnValue.truthy]
@@ -66,10 +68,14 @@ class FilterWorker(
         val flat = element.flatView()
         val header = flat.header
         if (header != compiledForHeader) {
+            // The Job's declared parameters join the expression scope, bare by name and typed; their values are
+            // run-constant, injected once per compiled instance (never baked into the generated source).
+            val parameters = control.parameters()
             compiled = control.runBlockingIo {
                 calculatedColumnEval.create(
-                    "filter", where, header, ClassNames.kotlinAny, classLoader)
+                    "filter", where, header, ClassNames.kotlinAny, classLoader, parameters)
             }
+            compiled!!.setParameters(parameters.components.map { control.parameter(it.name.value) })
             compiledForHeader = header
         }
 

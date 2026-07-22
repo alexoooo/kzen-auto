@@ -1,6 +1,6 @@
 package tech.kzen.auto.common.objects.document.job
 
-import tech.kzen.auto.common.objects.document.script.TypeMetadataDefiner
+import tech.kzen.auto.common.objects.document.logic.TypeMetadataDefiner
 import tech.kzen.lib.common.api.AttributeDefiner
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.definition.AttributeDefinitionAttempt

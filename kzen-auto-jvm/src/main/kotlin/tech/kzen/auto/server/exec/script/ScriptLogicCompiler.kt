@@ -1,9 +1,8 @@
 package tech.kzen.auto.server.exec.script
 
-import tech.kzen.auto.common.objects.document.script.ParameterDefaultDefiner
+import tech.kzen.auto.common.objects.document.logic.ParameterDefaultDefiner
 import tech.kzen.auto.common.objects.document.script.ResultSignatureDefiner
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
-import tech.kzen.auto.common.objects.document.script.TypeMetadataDefiner
 import tech.kzen.auto.common.objects.document.script.model.ScriptTree
 import tech.kzen.auto.server.exec.LogicCompilerServices
 import tech.kzen.auto.server.objects.script.ScriptValidator
@@ -12,13 +11,10 @@ import tech.kzen.lib.common.exec.logic.model.LogicType
 import tech.kzen.lib.common.exec.tuple.TupleComponentDefinition
 import tech.kzen.lib.common.exec.tuple.TupleComponentName
 import tech.kzen.lib.common.exec.tuple.TupleDefinition
-import tech.kzen.lib.common.model.attribute.AttributeName
-import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
-import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.service.context.GraphCreator
 
 
@@ -35,11 +31,6 @@ import tech.kzen.lib.common.service.context.GraphCreator
  * implements `ScriptStep`, nothing more.
  */
 object ScriptLogicCompiler {
-    //-----------------------------------------------------------------------------------------------------------------
-    private val defaultAttributePath = AttributePath.ofName(AttributeName("default"))
-    private val typeAttributePath = AttributePath.ofName(AttributeName("type"))
-
-
     //-----------------------------------------------------------------------------------------------------------------
     fun compile(
         scriptLocation: ObjectLocation,
@@ -96,18 +87,6 @@ object ScriptLogicCompiler {
         return ScriptParameter(
             services.objectStableMapper.objectStableId(location),
             TupleComponentName(location.objectPath.name.value),
-            parameterDefault(location, graphNotation))
-    }
-
-
-    private fun parameterDefault(location: ObjectLocation, graphNotation: GraphNotation): Any? {
-        val defaultText = (graphNotation.firstAttribute(location, defaultAttributePath)
-            as? ScalarAttributeNotation)
-            ?.value
-            ?: return null
-        val type = graphNotation.firstAttribute(location, typeAttributePath)
-            ?.let { TypeMetadataDefiner.parse(it) }
-            ?: return null
-        return ParameterDefaultDefiner.coerce(defaultText, type)
+            ParameterDefaultDefiner.resolve(location, graphNotation))
     }
 }

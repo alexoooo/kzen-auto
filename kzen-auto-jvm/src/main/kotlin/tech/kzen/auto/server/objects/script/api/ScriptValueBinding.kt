@@ -5,7 +5,7 @@ package tech.kzen.auto.server.objects.script.api
  * A [ScriptStep] that is a referenceable, typed VALUE rather than an executable step: it contributes a type to
  * validation (via [definition]) and can be referenced by other steps by name, but it is never placed in an
  * executed step sequence, so it has no [run]. The engine supplies its value directly — a
- * [tech.kzen.auto.server.objects.script.binding.ParameterBinding] from the run arguments, a
+ * [tech.kzen.auto.server.objects.logic.ParameterBinding] from the run arguments, a
  * [tech.kzen.auto.server.objects.script.binding.ForEachItemBinding] from the enclosing loop.
  *
  * This exists because [ScriptStep.run] is abstract (a runnable step MUST declare execution — no hidden fallback):
