@@ -45,7 +45,7 @@ class SummaryWorker(
     serve: ChannelServer<Any?, Any?>,
     selfLocation: ObjectLocation
 ):
-    TransformWorker<DataRecord, DataRecord>(input, output, selfLocation, serve)
+    TransformWorker(input, output, selfLocation, serve)
 {
     //-----------------------------------------------------------------------------------------------------------------
     // Discovered from the first record's header (all subsequent records map onto it by name). One builder per
@@ -59,11 +59,13 @@ class SummaryWorker(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun onElement(element: DataRecord, emit: Emitter<DataRecord>, control: JobControl) {
-        val index = ensureInitialized(element.header)
+    override suspend fun onElement(element: JobMessage, emit: Emitter, control: JobControl) {
+        val flat = element.flatView()
+        val header = flat.header
+        val index = ensureInitialized(header)
 
-        flyweight.selectHost(element.record)
-        val indices = index.indices(element.header)
+        flyweight.selectHost(flat.record)
+        val indices = index.indices(header)
         for (i in builders.indices) {
             val fieldIndex = indices[i]
             if (fieldIndex == -1) {

@@ -48,7 +48,7 @@ class MultiFileReaderWorkerTest {
             val fileB = writeLines(dir, "b.csv", "city,amount", "Odesa,30", "Dnipro,40")
             val paths = listOf(fileA.toString(), fileB.toString())
 
-            val emitted = mutableListOf<DataRecord>()
+            val emitted = mutableListOf<JobMessage>()
             MultiFileReaderWorker(capturingOutput(emitted, 1024), paths, ",", true, selfLocation)
                 .run(NoOpJobControl)
 
@@ -59,10 +59,10 @@ class MultiFileReaderWorkerTest {
                     listOf("Kyiv", "20"),
                     listOf("Odesa", "30"),
                     listOf("Dnipro", "40")),
-                emitted.map { it.record.toList() })
+                emitted.map { it.flat!!.record.toList() })
 
             // Every record carries the shared schema taken from the first file.
-            assertTrue(emitted.all { it.header == HeaderListing.of(listOf("city", "amount")) })
+            assertTrue(emitted.all { it.flat!!.header == HeaderListing.of(listOf("city", "amount")) })
         }
     }
 
@@ -74,7 +74,7 @@ class MultiFileReaderWorkerTest {
             val fileB = writeLines(dir, "b.csv", "Odesa,30")
             val paths = listOf(fileA.toString(), fileB.toString())
 
-            val emitted = mutableListOf<DataRecord>()
+            val emitted = mutableListOf<JobMessage>()
             MultiFileReaderWorker(capturingOutput(emitted, 1024), paths, ",", false, selfLocation)
                 .run(NoOpJobControl)
 
@@ -84,10 +84,10 @@ class MultiFileReaderWorkerTest {
                     listOf("Lviv", "10"),
                     listOf("Kyiv", "20"),
                     listOf("Odesa", "30")),
-                emitted.map { it.record.toList() })
+                emitted.map { it.flat!!.record.toList() })
 
             // Schema synthesized positionally from the first record's field count.
-            assertTrue(emitted.all { it.header == HeaderListing.of(listOf("c0", "c1")) })
+            assertTrue(emitted.all { it.flat!!.header == HeaderListing.of(listOf("c0", "c1")) })
         }
     }
 
@@ -100,13 +100,13 @@ class MultiFileReaderWorkerTest {
             val paths = listOf(fileA.toString(), fileB.toString())
 
             // Reference: a single uninterrupted run over the same files.
-            val reference = mutableListOf<DataRecord>()
+            val reference = mutableListOf<JobMessage>()
             MultiFileReaderWorker(capturingOutput(reference, 2), paths, ",", true, selfLocation)
                 .run(NoOpJobControl)
-            val expected = reference.map { it.record.toList() }
+            val expected = reference.map { it.flat!!.record.toList() }
 
             // Interrupted run: instance 1 parks at its second checkpoint (mid fileA), detaches its cursor.
-            val emitted1 = mutableListOf<DataRecord>()
+            val emitted1 = mutableListOf<JobMessage>()
             val parked = CompletableDeferred<Unit>()
             val parkForever = CompletableDeferred<Unit>()
             val pausingControl = object: JobControl {
@@ -135,13 +135,13 @@ class MultiFileReaderWorkerTest {
             job.cancelAndJoin()
 
             // Instance 2 adopts the cursor and reads the remaining records to completion.
-            val emitted2 = mutableListOf<DataRecord>()
+            val emitted2 = mutableListOf<JobMessage>()
             val worker2 = MultiFileReaderWorker(capturingOutput(emitted2, 2), paths, ",", true, selfLocation)
             worker2.loadMigrationState(captured)
             worker2.run(NoOpJobControl)
 
             // No loss, no duplication: the interrupted run's two halves reconstruct the uninterrupted output.
-            val combined = emitted1.map { it.record.toList() } + emitted2.map { it.record.toList() }
+            val combined = emitted1.map { it.flat!!.record.toList() } + emitted2.map { it.flat!!.record.toList() }
             assertEquals(expected, combined)
             assertTrue(emitted1.isNotEmpty(), "instance 1 should have emitted before parking")
             assertTrue(emitted2.isNotEmpty(), "instance 2 should have resumed and emitted")
@@ -168,10 +168,10 @@ class MultiFileReaderWorkerTest {
     }
 
 
-    private fun capturingOutput(sink: MutableList<DataRecord>, batchSize: Int): ChannelOutput<Any?> =
+    private fun capturingOutput(sink: MutableList<JobMessage>, batchSize: Int): ChannelOutput<Any?> =
         object: ChannelOutput<Any?> {
             override suspend fun send(element: Any?) {
-                sink.add(element as DataRecord)
+                sink.add(element as JobMessage)
             }
             override suspend fun flush() {}
             override fun batchSize(): Int = batchSize

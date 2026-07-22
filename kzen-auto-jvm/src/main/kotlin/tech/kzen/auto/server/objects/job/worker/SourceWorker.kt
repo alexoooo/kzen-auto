@@ -18,13 +18,13 @@ import tech.kzen.lib.common.model.location.ObjectLocation
  *   of the trailing partial batch on normal completion — so a source can never deadlock the pipeline by
  *   forgetting to close, nor drop its last sub-batch of rows.
  */
-abstract class SourceWorker<Out>(
+abstract class SourceWorker(
     private val output: ChannelOutput<Any?>,
     selfLocation: ObjectLocation
 ):
     WorkerBase(selfLocation)
 {
-    private val emitter = Emitter<Out>(output)
+    private val emitter = Emitter(output)
 
 
     final override suspend fun drive(control: JobControl) {
@@ -43,5 +43,5 @@ abstract class SourceWorker<Out>(
     }
 
 
-    protected abstract suspend fun produce(emit: Emitter<Out>, control: JobControl)
+    protected abstract suspend fun produce(emit: Emitter, control: JobControl)
 }

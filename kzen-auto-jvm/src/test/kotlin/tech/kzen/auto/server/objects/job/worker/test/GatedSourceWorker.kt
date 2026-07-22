@@ -3,6 +3,7 @@ package tech.kzen.auto.server.objects.job.worker.test
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.server.objects.job.worker.Emitter
+import tech.kzen.auto.server.objects.job.worker.JobMessage
 import tech.kzen.auto.server.objects.job.worker.SourceWorker
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
@@ -35,7 +36,7 @@ class GatedSourceWorker(
     private val total: Int,
     selfLocation: ObjectLocation
 ):
-    SourceWorker<Any?>(output, selfLocation)
+    SourceWorker(output, selfLocation)
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -59,14 +60,14 @@ class GatedSourceWorker(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun produce(emit: Emitter<Any?>, control: JobControl) {
+    override suspend fun produce(emit: Emitter, control: JobControl) {
         while (nextIndex < total) {
             val row = "row$nextIndex"
             // Claim the row BEFORE sending: a send parked on a full buffer holds its payload in the channel's
             // inFlight (drained into the migration carryover), so on resume this index must not re-send it.
             nextIndex += 1
             sendsStarted.incrementAndGet()
-            emit.send(row)
+            emit.send(JobMessage.ofPayload(row))
             control.checkpoint()
         }
     }

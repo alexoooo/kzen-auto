@@ -11,7 +11,7 @@
 
 # Reads a delimited text file (full RFC-4180 parsing: quoted fields, embedded delimiters / newlines, doubled
 # quotes) and emits batched records. With header=false (a headerless file, e.g. the 1BRC measurement set)
-# the schema is synthesized as positional names c0, c1, … so the strictly-typed downstream stages can still
+# the schema is synthesized as positional names c0, c1, … so the column-based downstream stages can still
 # reference columns by name over headerless data.
 CsvReaderWorker:
   abstract: true
@@ -25,7 +25,6 @@ CsvReaderWorker:
   meta:
     output:
       is: ChannelOutput
-      of: DataRecord
       creator: JobChannelCreator
       editor: SelectChannelEditor
     path: String
@@ -57,7 +56,6 @@ MultiFileReaderWorker:
   meta:
     output:
       is: ChannelOutput
-      of: DataRecord
       creator: JobChannelCreator
       editor: SelectChannelEditor
     paths:
@@ -132,12 +130,10 @@ FilterWorker:
   meta:
     input:
       is: ChannelInput
-      of: DataRecord
       creator: JobChannelCreator
       editor: SelectChannelEditor
     output:
       is: ChannelOutput
-      of: DataRecord
       creator: JobChannelCreator
       editor: SelectChannelEditor
     where: String
@@ -162,12 +158,10 @@ ValueSetFilterWorker:
   meta:
     input:
       is: ChannelInput
-      of: DataRecord
       creator: JobChannelCreator
       editor: SelectChannelEditor
     output:
       is: ChannelOutput
-      of: DataRecord
       creator: JobChannelCreator
       editor: SelectChannelEditor
     filter:
@@ -191,12 +185,10 @@ FormulaWorker:
   meta:
     input:
       is: ChannelInput
-      of: DataRecord
       creator: JobChannelCreator
       editor: SelectChannelEditor
     output:
       is: ChannelOutput
-      of: DataRecord
       creator: JobChannelCreator
       editor: SelectChannelEditor
     formula:
@@ -225,12 +217,10 @@ SummaryWorker:
   meta:
     input:
       is: ChannelInput
-      of: DataRecord
       creator: JobChannelCreator
       editor: SelectChannelEditor
     output:
       is: ChannelOutput
-      of: DataRecord
       creator: JobChannelCreator
       editor: SelectChannelEditor
     serve:
@@ -263,12 +253,10 @@ PivotWorker:
   meta:
     input:
       is: ChannelInput
-      of: DataRecord
       creator: JobChannelCreator
       editor: SelectChannelEditor
     output:
       is: ChannelOutput
-      of: DataRecord
       creator: JobChannelCreator
       editor: SelectChannelEditor
     serve:
@@ -300,12 +288,10 @@ SortWorker:
   meta:
     input:
       is: ChannelInput
-      of: DataRecord
       creator: JobChannelCreator
       editor: SelectChannelEditor
     output:
       is: ChannelOutput
-      of: DataRecord
       creator: JobChannelCreator
       editor: SelectChannelEditor
     sort:
@@ -330,7 +316,6 @@ CsvWriterWorker:
   meta:
     input:
       is: ChannelInput
-      of: DataRecord
       creator: JobChannelCreator
       editor: SelectChannelEditor
     path: String
@@ -361,7 +346,6 @@ ExportWriterWorker:
   meta:
     input:
       is: ChannelInput
-      of: DataRecord
       creator: JobChannelCreator
       editor: SelectChannelEditor
     export:
@@ -374,9 +358,9 @@ ExportWriterWorker:
 
 # Sink that shows a LIVE sample of incoming data: pushes a teaser (first rows + running count) to its trace
 # for the always-on view, and serves on-demand slice queries (offset / limit) over an external duplex Channel
-# `serve` for the browser to read its larger buffered sample. `sample` bounds the buffered rows. The input is
-# untyped (no `of:`): a DataRecord renders column-for-column, any other element as a single `value` column —
-# so the same view serves both the CSV lane and a scalar (FormulaSource / Run) lane.
+# `serve` for the browser to read its larger buffered sample. `sample` bounds the buffered rows. Renders each
+# message's flat part: the CSV lane column-for-column, a payload lane auto-flattened to a single `value`
+# column — so the same view serves both the CSV lane and a scalar (FormulaSource / Run) lane.
 PreviewWorker:
   abstract: true
   is: Worker
@@ -405,7 +389,7 @@ PreviewWorker:
 # over a run-scoped scratch dir) and serves on-demand random-access preview SLICES (offset / limit) over the
 # external duplex Channel `serve` — so the browser can page through ANY window of the full result without
 # buffering it all in memory. The Job analogue of Report's Explore output, and the heavy-duty counterpart to
-# PreviewWorker's bounded in-memory live tail. Input is typed DataRecord (the table indexes by header + fields).
+# PreviewWorker's bounded in-memory live tail. Indexes each message's flat part (a payload lane auto-flattens).
 # The scratch dir is closed-then-deleted when the run ends; live edit RESTARTS (re-indexes from a resuming
 # upstream reader), the WorkerBase default (coherent since the scratch path is deterministic per run).
 ExploreWorker:
@@ -419,7 +403,6 @@ ExploreWorker:
   meta:
     input:
       is: ChannelInput
-      of: DataRecord
       creator: JobChannelCreator
       editor: SelectChannelEditor
     serve:

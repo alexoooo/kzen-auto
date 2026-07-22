@@ -55,7 +55,7 @@ class ExportWriterWorker(
     private val export: OutputExportSpec,
     private val selfLocation: ObjectLocation
 ):
-    SinkWorker<DataRecord>(input, selfLocation)
+    SinkWorker(input, selfLocation)
 {
     //-----------------------------------------------------------------------------------------------------------------
     private val recordFormat: RecordFormat = when (ExportFormat.byName(export.format)) {
@@ -91,16 +91,19 @@ class ExportWriterWorker(
     }
 
 
-    override suspend fun onElement(element: DataRecord, control: JobControl) {
+    override suspend fun onElement(element: JobMessage, control: JobControl) {
         val out = out!!
+        val flat = element.flatView()
+        val elementHeader = flat.header
+        val record = flat.record
         control.runBlockingIo {
             if (! headerWritten) {
                 // The column header, once — rendered exactly as Report's ExportFormatter (`render` disambiguates
                 // duplicate-occurrence columns, e.g. "amount (2)").
-                writeRow(out, FlatFileRecord.of(element.header.values.map { it.render() }))
+                writeRow(out, FlatFileRecord.of(elementHeader.values.map { it.render() }))
                 headerWritten = true
             }
-            writeRow(out, element.record)
+            writeRow(out, record)
             written += 1
         }
     }

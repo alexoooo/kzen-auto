@@ -17,11 +17,12 @@ import kotlin.test.assertTrue
 
 
 /**
- * Unit test for [PreviewWorker]'s SCALAR lane in isolation: drives the sink's full [PreviewWorker.run] lifecycle
- * over a fake [ChannelInput] of arbitrary (non-[DataRecord]) elements — the shape a FormulaSource / Run
- * pipeline emits — and asserts each renders as a single `value` column. The record lane and the duplex
- * serve path are already covered end-to-end by [tech.kzen.auto.server.objects.job.JobExecutionTest]; this
- * isolates the new branch added so one Preview view serves both lanes.
+ * Unit test for [PreviewWorker]'s SCALAR (payload) lane in isolation: drives the sink's full [PreviewWorker.run]
+ * lifecycle over a fake [ChannelInput] of payload [JobMessage]s — the shape a FormulaSource / Run
+ * pipeline emits — and asserts each auto-flattens ([JobMessage.flatView]) to a single `value` column. The
+ * record lane and the duplex serve path are already covered end-to-end by
+ * [tech.kzen.auto.server.objects.job.JobExecutionTest]; this isolates the payload lane so one Preview view
+ * serves both.
  */
 class PreviewWorkerTest {
     //-----------------------------------------------------------------------------------------------------------------
@@ -43,10 +44,11 @@ class PreviewWorkerTest {
 
 
     @Test
-    fun nullScalarRendersAsEmptyString() = runBlocking {
+    fun nullScalarRendersAsNullText() = runBlocking {
+        // ColumnValue.toText's canonical null rendering (the same "null" an expression column would show).
         val snapshot = runPreview(listOf(null, "x"))
         assertEquals(listOf("value"), snapshot.header)
-        assertEquals(listOf(listOf(""), listOf("x")), snapshot.rows)
+        assertEquals(listOf(listOf("null"), listOf("x")), snapshot.rows)
     }
 
 
@@ -94,14 +96,15 @@ class PreviewWorkerTest {
 
     private fun scalarInput(chunks: List<List<Any?>>): ChannelInput<Any?> =
         object: ChannelInput<Any?> {
-            // The framework SinkWorker drive loop drains whole chunks: hand it each chunk in turn, then EOF.
+            // The framework SinkWorker drive loop drains whole chunks: hand it each chunk in turn (each raw
+            // value wrapped as a payload message, as a source's Emitter would), then EOF.
             private var next = 0
 
             override suspend fun receiveBatch(): List<Any?>? {
                 if (next >= chunks.size) {
                     return null
                 }
-                return chunks[next++]
+                return chunks[next++].map { JobMessage.ofPayload(it) }
             }
 
             override suspend fun receive(): Any? = error("unused")

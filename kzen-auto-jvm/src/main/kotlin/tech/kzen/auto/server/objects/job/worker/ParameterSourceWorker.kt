@@ -37,7 +37,7 @@ class ParameterSourceWorker(
     private val parameter: String,
     selfLocation: ObjectLocation
 ):
-    SourceWorker<Any?>(output, selfLocation)
+    SourceWorker(output, selfLocation)
 {
     // Next element index to emit; claimed BEFORE send (a send parked mid-flush holds its payload in the channel's
     // in-flight buffer, carried by the migration's drainBuffered — the resumed source must not re-send it).
@@ -46,7 +46,7 @@ class ParameterSourceWorker(
     private var nextIndex = 0
 
 
-    override suspend fun produce(emit: Emitter<Any?>, control: JobControl) {
+    override suspend fun produce(emit: Emitter, control: JobControl) {
         val argument = control.parameter(parameter)
         val elements: List<Any?> =
             when (argument) {
@@ -58,7 +58,7 @@ class ParameterSourceWorker(
             // The SourceWorker cadence checkpoints + flushes + publishes per batch, so this loop just emits.
             val element = elements[nextIndex]
             nextIndex += 1
-            emit.send(element)
+            emit.send(JobMessage.ofPayload(element))
         }
     }
 

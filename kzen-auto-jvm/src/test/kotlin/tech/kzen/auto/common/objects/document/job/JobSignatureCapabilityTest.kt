@@ -93,7 +93,7 @@ class JobSignatureCapabilityTest {
         val signature = JobSignatureCapability.signature(graphStructure, jobMainLocation)
         val records = signature.inputs.components.first { it.name.value == "records" }
         assertEquals(
-            "tech.kzen.auto.server.objects.job.worker.DataRecord",
+            "kotlin.String",
             records.type.metadata.className.asString())
     }
 

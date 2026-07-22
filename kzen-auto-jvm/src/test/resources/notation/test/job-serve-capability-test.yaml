@@ -51,12 +51,10 @@ CustomSummaryWorker:
   meta:
     input:
       is: ChannelInput
-      of: DataRecord
       creator: JobChannelCreator
       editor: SelectChannelEditor
     output:
       is: ChannelOutput
-      of: DataRecord
       creator: JobChannelCreator
       editor: SelectChannelEditor
     serve:

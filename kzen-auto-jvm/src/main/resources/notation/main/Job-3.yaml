@@ -1,15 +1,2 @@
 main:
   is: Job
-
-main.workers/Parameter:
-  is: ParameterSourceWorker
-  parameter: number
-
-main.workers/Formula:
-  is: FormulaWorker
-  formula:
-    foo: 2 + 2
-
-main.workers/Result:
-  is: ResultSinkWorker
-  result: this

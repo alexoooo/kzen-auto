@@ -20,7 +20,7 @@ import kotlin.test.assertEquals
 
 /**
  * Unit test for [ValueSetFilterWorker] in isolation: drives the transform's [ValueSetFilterWorker.run] lifecycle
- * over a fake [ChannelInput] of [DataRecord]s and a capturing [ChannelOutput], asserting which records SURVIVE
+ * over a fake [ChannelInput] of flat-part [JobMessage]s and a capturing [ChannelOutput], asserting which records SURVIVE
  * the distinct-value whitelist and that survivors are forwarded unchanged.
  *
  * The predicate is a verbatim copy of
@@ -39,8 +39,8 @@ class ValueSetFilterWorkerTest {
     private fun label(text: String): HeaderLabel =
         HeaderLabel(text, 0)
 
-    private fun record(vararg fields: String): DataRecord =
-        DataRecord(header, FlatFileRecord.of(fields.toList()))
+    private fun record(vararg fields: String): JobMessage =
+        JobMessage.ofFlat(header, FlatFileRecord.of(fields.toList()))
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -122,10 +122,10 @@ class ValueSetFilterWorkerTest {
         // Kyiv under the first schema becomes a no-op (ignored absent column) under the second.
         val otherHeader = HeaderListing.of(listOf("name", "age"))
 
-        val lviv = DataRecord(header, FlatFileRecord.of(listOf("Lviv", "30")))
-        val kyiv = DataRecord(header, FlatFileRecord.of(listOf("Kyiv", "40")))
-        val personA = DataRecord(otherHeader, FlatFileRecord.of(listOf("Ada", "30")))
-        val personB = DataRecord(otherHeader, FlatFileRecord.of(listOf("Bob", "40")))
+        val lviv = JobMessage.ofFlat(header, FlatFileRecord.of(listOf("Lviv", "30")))
+        val kyiv = JobMessage.ofFlat(header, FlatFileRecord.of(listOf("Kyiv", "40")))
+        val personA = JobMessage.ofFlat(otherHeader, FlatFileRecord.of(listOf("Ada", "30")))
+        val personB = JobMessage.ofFlat(otherHeader, FlatFileRecord.of(listOf("Bob", "40")))
 
         val filter = FilterSpec(mapOf(
             label("city") to ColumnFilterSpec(ColumnFilterType.RequireAny, setOf("Lviv"))))
@@ -138,7 +138,7 @@ class ValueSetFilterWorkerTest {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private suspend fun runFilter(filter: FilterSpec, records: List<DataRecord>): List<Any?> {
+    private suspend fun runFilter(filter: FilterSpec, records: List<JobMessage>): List<Any?> {
         val forwarded = mutableListOf<Any?>()
         val output = object: ChannelOutput<Any?> {
             override suspend fun send(element: Any?) {
@@ -160,7 +160,7 @@ class ValueSetFilterWorkerTest {
     }
 
 
-    private fun chunkedInput(records: List<DataRecord>): ChannelInput<Any?> =
+    private fun chunkedInput(records: List<JobMessage>): ChannelInput<Any?> =
         object: ChannelInput<Any?> {
             // The framework TransformWorker drive loop drains whole chunks: hand it every record as one chunk, then EOF.
             private var delivered = false

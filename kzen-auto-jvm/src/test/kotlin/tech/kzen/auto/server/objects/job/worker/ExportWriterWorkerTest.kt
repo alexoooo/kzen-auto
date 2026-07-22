@@ -24,7 +24,7 @@ import kotlin.test.assertEquals
 
 /**
  * Round-trip test for [ExportWriterWorker]: drives the sink's real [ExportWriterWorker.run] lifecycle over a fake
- * [ChannelInput] of [DataRecord]s writing to a temp file, then reads the file back — DECOMPRESSING per the
+ * [ChannelInput] of flat-part [JobMessage]s writing to a temp file, then reads the file back — DECOMPRESSING per the
  * configured compression and re-parsing with the Job's own [CsvRecordReader] — and asserts the records survive
  * exactly (the P4f "gz|zip|none → read back == input" gate).
  *
@@ -38,8 +38,8 @@ class ExportWriterWorkerTest {
     //-----------------------------------------------------------------------------------------------------------------
     private val header = HeaderListing.of(listOf("city", "amount"))
 
-    private fun record(city: String, amount: String): DataRecord =
-        DataRecord(header, FlatFileRecord.of(listOf(city, amount)))
+    private fun record(city: String, amount: String): JobMessage =
+        JobMessage.ofFlat(header, FlatFileRecord.of(listOf(city, amount)))
 
     // Rows with a comma and an embedded quote, so RFC-4180 quoting has to survive the compression round-trip.
     private val records = listOf(
@@ -96,7 +96,7 @@ class ExportWriterWorkerTest {
         format: String,
         compression: String,
         readDelimiter: String,
-        input: List<DataRecord> = records
+        input: List<JobMessage> = records
     ): List<List<String>> {
         val file = Files.createTempFile("exportworker", ".out")
         try {
@@ -147,7 +147,7 @@ class ExportWriterWorkerTest {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun chunkedInput(input: List<DataRecord>): ChannelInput<Any?> =
+    private fun chunkedInput(input: List<JobMessage>): ChannelInput<Any?> =
         object: ChannelInput<Any?> {
             private var delivered = false
 

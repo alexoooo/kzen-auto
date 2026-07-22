@@ -3,6 +3,7 @@ package tech.kzen.auto.server.objects.job.worker.test
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.server.objects.job.worker.Emitter
+import tech.kzen.auto.server.objects.job.worker.JobMessage
 import tech.kzen.auto.server.objects.job.worker.SourceWorker
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
@@ -22,13 +23,13 @@ class ScratchProbeSourceWorker(
     output: ChannelOutput<Any?>,
     selfLocation: ObjectLocation
 ):
-    SourceWorker<Any?>(output, selfLocation)
+    SourceWorker(output, selfLocation)
 {
     private val workerName = selfLocation.objectPath.name.value
 
 
-    override suspend fun produce(emit: Emitter<Any?>, control: JobControl) {
+    override suspend fun produce(emit: Emitter, control: JobControl) {
         ScratchProbeLog.probe(control, workerName)
-        emit.send("probe")
+        emit.send(JobMessage.ofPayload("probe"))
     }
 }

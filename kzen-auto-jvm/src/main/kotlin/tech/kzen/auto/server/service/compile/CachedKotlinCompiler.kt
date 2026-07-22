@@ -260,6 +260,16 @@ class CachedKotlinCompiler(
             return null
         }
         result as KotlinCompilerError
+
+        if (Thread.currentThread().isInterrupted) {
+            // A compile cut by cancellation (e.g. a Job run failing elsewhere interrupts an in-flight worker
+            // compile) reports arbitrary spurious errors — ClosedByInterruptException, or even bogus resolution
+            // failures. Persisting one would poison this signature's DURABLE cache entry, replaying the phantom
+            // error on every later compile of the same source. Leave the dir partial (no err/success marker)
+            // instead: the next request takes the recompile-partial branch and re-derives the truth.
+            return result.error
+        }
+
         writeErrorFile(codeDir, result.error)
         return result.error
     }

@@ -19,7 +19,7 @@ import kotlin.test.assertEquals
 
 /**
  * Unit test for [SortWorker] in isolation: drives the transform's real [SortWorker.run] lifecycle over a fake
- * [ChannelInput] of [DataRecord]s and a capturing [ChannelOutput], asserting the ordering it emits at
+ * [ChannelInput] of flat-part [JobMessage]s and a capturing [ChannelOutput], asserting the ordering it emits at
  * end-of-stream.
  *
  * Covers the sort semantics that make it a faithful multi-key operator — single-key ascending / descending,
@@ -34,8 +34,8 @@ class SortWorkerTest {
     // HeaderListing.of assigns occurrence 0 to a column's first appearance, so a sort key matches by (text, 0).
     private val header = HeaderListing.of(listOf("city", "amount"))
 
-    private fun record(city: String, amount: String): DataRecord =
-        DataRecord(header, FlatFileRecord.of(listOf(city, amount)))
+    private fun record(city: String, amount: String): JobMessage =
+        JobMessage.ofFlat(header, FlatFileRecord.of(listOf(city, amount)))
 
     private fun sortSpec(vararg keys: Pair<String, Boolean>): SortSpec =
         SortSpec(keys.map { SortColumnSpec(HeaderLabel(it.first, 0), it.second) })
@@ -135,7 +135,7 @@ class SortWorkerTest {
 
         // The rebuilt instance adopts the carried buffer, consumes the rest, and at end-of-stream emits the FULL
         // input sorted — not just the (c, d) tail a resuming upstream delivered.
-        val forwarded = mutableListOf<DataRecord>()
+        val forwarded = mutableListOf<JobMessage>()
         val second = SortWorker(
             chunkedInput(listOf(c, d)), capturingOutput(forwarded), sortSpec("amount" to true), selfLocation)
         second.loadMigrationState(carried)
@@ -147,18 +147,18 @@ class SortWorkerTest {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private suspend fun runSort(sort: SortSpec, records: List<DataRecord>): List<DataRecord> {
-        val forwarded = mutableListOf<DataRecord>()
+    private suspend fun runSort(sort: SortSpec, records: List<JobMessage>): List<JobMessage> {
+        val forwarded = mutableListOf<JobMessage>()
         val worker = SortWorker(chunkedInput(records), capturingOutput(forwarded), sort, selfLocation)
         worker.run(NoOpJobControl)
         return forwarded
     }
 
 
-    private fun capturingOutput(sink: MutableList<DataRecord>): ChannelOutput<Any?> =
+    private fun capturingOutput(sink: MutableList<JobMessage>): ChannelOutput<Any?> =
         object: ChannelOutput<Any?> {
             override suspend fun send(element: Any?) {
-                sink.add(element as DataRecord)
+                sink.add(element as JobMessage)
             }
             override suspend fun flush() {}
             override fun batchSize(): Int = 1024
@@ -175,7 +175,7 @@ class SortWorkerTest {
     }
 
 
-    private fun chunkedInput(records: List<DataRecord>): ChannelInput<Any?> =
+    private fun chunkedInput(records: List<JobMessage>): ChannelInput<Any?> =
         object: ChannelInput<Any?> {
             // The framework TransformWorker drive loop drains whole chunks: hand it every record as one chunk, then EOF.
             private var delivered = false
@@ -195,7 +195,7 @@ class SortWorkerTest {
 
     // Delivers one chunk, then throws on the next receive — simulating a pause cutting the stream mid-flight,
     // BEFORE end-of-stream (so onComplete never runs and the accumulated buffer is intact for capture).
-    private fun interruptedAfterFirstChunk(firstChunk: List<DataRecord>): ChannelInput<Any?> =
+    private fun interruptedAfterFirstChunk(firstChunk: List<JobMessage>): ChannelInput<Any?> =
         object: ChannelInput<Any?> {
             private var delivered = false
 

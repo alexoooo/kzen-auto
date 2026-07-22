@@ -27,11 +27,12 @@ import tech.kzen.lib.common.reflect.Reflect
  * the filtered columns onto the record's positions, a standalone [FlatFileRecordField] set per column for
  * allocation-free membership, and [ColumnFilterType.reject] for the accept/reject decision — so a Job chain
  * `reader → ValueSetFilter → …` produces byte-identical survivors to Report's filter over the same data (the
- * P4c A/B parity gate). The only adaptation is that the schema is discovered IN-BAND from each record's header
- * rather than from a static `inputAndFormulaColumns`: the compiled column set / types / value sets are rebuilt
- * whenever the incoming [HeaderListing] changes (like [FilterWorker] recompiles its expression), and a filter
- * on a column absent from the current header is IGNORED (exactly as `ReportFilterStage` drops filter columns
- * that aren't in the report schema). An all-empty [filter] keeps every record.
+ * P4c A/B parity gate). The only adaptation is that the schema is discovered IN-BAND from each message's flat
+ * part ([JobMessage.flatView] — a payload-lane message auto-flattens) rather than from a static
+ * `inputAndFormulaColumns`: the compiled column set / types / value sets are rebuilt whenever the incoming
+ * [HeaderListing] changes (like [FilterWorker] recompiles its expression), and a filter on a column absent
+ * from the current header is IGNORED (exactly as `ReportFilterStage` drops filter columns that aren't in the
+ * report schema). An all-empty [filter] keeps every record. The RECEIVED message is forwarded (payload intact).
  *
  * A plain [TransformWorker] (no `serve`, no scratch dir): its editor discovers candidate distinct values from an
  * upstream [SummaryWorker]'s serve port at config time (P4i), not from this Worker at run time.
@@ -44,7 +45,7 @@ class ValueSetFilterWorker(
     private val filter: FilterSpec,
     selfLocation: ObjectLocation
 ):
-    TransformWorker<DataRecord, DataRecord>(input, output, selfLocation)
+    TransformWorker(input, output, selfLocation)
 {
     //-----------------------------------------------------------------------------------------------------------------
     // The non-empty filter columns (those with a value set to match against), keyed for a fast header lookup.
@@ -72,12 +73,14 @@ class ValueSetFilterWorker(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun onElement(element: DataRecord, emit: Emitter<DataRecord>, control: JobControl) {
+    override suspend fun onElement(element: JobMessage, emit: Emitter, control: JobControl) {
         seen += 1
 
-        compileForHeader(element.header)
+        val flat = element.flatView()
+        val header = flat.header
+        compileForHeader(header)
 
-        if (test(element.record, element.header)) {
+        if (test(flat.record, header)) {
             kept += 1
             emit.send(element)
         }

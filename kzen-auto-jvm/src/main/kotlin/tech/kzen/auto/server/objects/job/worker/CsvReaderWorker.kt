@@ -12,15 +12,16 @@ import java.nio.file.Files
 /**
  * The CSV input stage as a Job Worker (analogue of `ReportInputReader`, reimplemented Job-native). Reads a
  * delimited text file with full RFC-4180 parsing (quoted fields, embedded delimiters / newlines, doubled
- * quotes) via [CsvRecordReader], emitting one [DataRecord] per row. Batching for transfer is the framework's
- * job (the referenced Channel's batch size), so this Worker no longer carries a `batch` attribute — it just
- * emits records and the [SourceWorker] cadence batches + checkpoints + publishes progress per batch.
+ * quotes) via [CsvRecordReader], emitting one flat-part [JobMessage] per row (payload null — the pure-flat
+ * lane). Batching for transfer is the framework's job (the referenced Channel's batch size), so this Worker no
+ * longer carries a `batch` attribute — it just emits records and the [SourceWorker] cadence batches +
+ * checkpoints + publishes progress per batch.
  *
  * When [header] is true the first record names the columns. When false (a headerless file, e.g. the 1BRC
  * measurement set) every record is data; the schema is then SYNTHESIZED as positional names `c0, c1, …`
- * (field-count taken from the first record), so the strictly-typed downstream stages (the expression
+ * (field-count taken from the first record), so the column-based downstream stages (the expression
  * [FilterWorker], [FormulaWorker]) can still reference columns by name — `c0`, `c1`, … — over headerless data.
- * The same immutable [HeaderListing] reference is shared by every emitted [DataRecord] (self-describing element).
+ * The same immutable [HeaderListing] reference is shared by every emitted message (self-describing element).
  *
  * File IO runs through [JobControl.runBlockingIo] so the read stays visible to quiescence detection.
  *
@@ -42,7 +43,7 @@ class CsvReaderWorker(
 
     selfLocation: ObjectLocation
 ):
-    SourceWorker<DataRecord>(output, selfLocation)
+    SourceWorker(output, selfLocation)
 {
     // Run-scoped reader state (null until opened; carried across a migration by capture/loadMigrationState).
     private var csvReader: CsvRecordReader? = null
@@ -53,7 +54,7 @@ class CsvReaderWorker(
     private var detached = false   // reader handed to a migration snapshot: onClose must NOT close it
 
 
-    override suspend fun produce(emit: Emitter<DataRecord>, control: JobControl) {
+    override suspend fun produce(emit: Emitter, control: JobControl) {
         if (finished) {
             // Resumed after already reaching EOF on unchanged config — nothing left to emit.
             return
@@ -64,7 +65,7 @@ class CsvReaderWorker(
         val headers = headerListing!!
 
         pendingFirstRecord?.let {
-            emit.send(DataRecord(headers, it))
+            emit.send(JobMessage.ofFlat(headers, it))
             count += 1
             pendingFirstRecord = null
         }
@@ -72,7 +73,7 @@ class CsvReaderWorker(
         while (true) {
             val record = control.runBlockingIo { reader.readRecord() }
                 ?: break
-            emit.send(DataRecord(headers, record))
+            emit.send(JobMessage.ofFlat(headers, record))
             count += 1
         }
 

@@ -1,6 +1,6 @@
 # Classification / derivation net for JobSignatureCapability (J2, CC-17): a Job whose Workers exercise every
 # signature-marker case — a ParameterSource (named `items`), a ParameterSource with a BLANK name (filtered from the
-# signature), a 3rd-party ParameterSource SUBTYPE with a typed `of: DataRecord` output port (proves type derivation
+# signature), a 3rd-party ParameterSource SUBTYPE with a typed `of: String` output port (proves type derivation
 # + inheritance-chain classification), a plain non-signature Worker (role null), a ResultSink with a blank result
 # (-> `main`), and a ResultSink with a named result (`summary`). Worker document order IS signature order. Never
 # run: only its notation + metadata are read.
@@ -15,7 +15,7 @@ main.workers/param:
 main.workers/blankParam:
   is: ParameterSourceWorker
 
-# 3rd-party ParameterSource subtype with a typed output port -> its `of: DataRecord` types the parameter.
+# 3rd-party ParameterSource subtype with a typed output port -> its `of: String` types the parameter.
 main.workers/typedParam:
   is: TypedParamSource
   parameter: "records"
@@ -37,7 +37,7 @@ main.workers/namedResult:
 #######################################################################################################################
 # Test-only archetype (unique name, declared once, so there's no whole-graph reference ambiguity): a user-defined
 # ParameterSource subtype reusing the production class, with a typed output port. Must classify as a Parameter and
-# type its component DataRecord purely via the inheritance chain + metadata, with no edit to JobSignatureCapability.
+# type its component String purely via the inheritance chain + metadata, with no edit to JobSignatureCapability.
 TypedParamSource:
   abstract: true
   is: ParameterSource
@@ -46,7 +46,7 @@ TypedParamSource:
   meta:
     output:
       is: ChannelOutput
-      of: DataRecord
+      of: String
       creator: JobChannelCreator
       editor: SelectChannelEditor
     selfLocation:

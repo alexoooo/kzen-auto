@@ -30,7 +30,7 @@ import kotlin.test.assertTrue
 
 /**
  * Unit test for [ExploreWorker]: driven through its real [ExploreWorker.run] lifecycle over a fake input of
- * [DataRecord]s, it asserts the two things that make it a faithful, PERSISTENT browse operator —
+ * flat-part [JobMessage]s, it asserts the two things that make it a faithful, PERSISTENT browse operator —
  *
  * 1. **Serve A/B parity** — a random-access slice query (`offset` / `limit`) answered by the Worker's serve path
  *    is byte-identical to what a direct [IndexedCsvTable] produces over the same records and slice (the P4g
@@ -51,8 +51,8 @@ class ExploreWorkerTest {
     //-----------------------------------------------------------------------------------------------------------------
     private val header = HeaderListing.of(listOf("city", "amount"))
 
-    private fun record(city: String, amount: String): DataRecord =
-        DataRecord(header, FlatFileRecord.of(listOf(city, amount)))
+    private fun record(city: String, amount: String): JobMessage =
+        JobMessage.ofFlat(header, FlatFileRecord.of(listOf(city, amount)))
 
     private val records = listOf(
         record("Lviv", "10"),
@@ -128,12 +128,12 @@ class ExploreWorkerTest {
 
     //-----------------------------------------------------------------------------------------------------------------
     // Runs `use` against a direct IndexedCsvTable built from `records` in a throwaway dir, then closes-and-deletes it.
-    private fun <R> withDirectTable(records: List<DataRecord>, use: (IndexedCsvTable) -> R): R {
+    private fun <R> withDirectTable(records: List<JobMessage>, use: (IndexedCsvTable) -> R): R {
         val dir = Files.createTempDirectory("explore-direct")
         try {
-            val table = IndexedCsvTable(records.first().header, dir)
+            val table = IndexedCsvTable(records.first().flat!!.header, dir)
             try {
-                records.forEach { table.add(it.record, it.header) }
+                records.forEach { table.add(it.flat!!.record, it.flat!!.header) }
                 return use(table)
             }
             finally {
@@ -151,7 +151,7 @@ class ExploreWorkerTest {
     // published — releases the serve loop to answer its query and blocks until it has, so the query is guaranteed
     // to land against the fully populated table before the stream ends.
     private fun coordinatedInput(
-        records: List<DataRecord>,
+        records: List<JobMessage>,
         readyForServe: CompletableDeferred<Unit>,
         serveAnswered: CompletableDeferred<Unit>
     ): ChannelInput<Any?> =

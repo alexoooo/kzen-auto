@@ -16,11 +16,12 @@ import tech.kzen.lib.common.reflect.Service
  * arbitrary Kotlin expression evaluating to an `Iterable<*>` (e.g. `(1..100)`, `listOf("a", "b")`, a generated
  * sequence); this Worker compiles it once via the genuine [StepExpressionCompiler] / [CachedKotlinCompiler]
  * path (the same engine [tech.kzen.auto.server.objects.script.step.eval.FormulaStep] uses, injected as a
- * `@Service`), evaluates it, and iterates the result, sending each element individually into [output].
+ * `@Service`), evaluates it, and iterates the result, sending each element as a payload [JobMessage] into
+ * [output].
  *
- * The output channel is UNTYPED (each element is whatever the expression yields, `Any?`), like RunWorker's
- * channels — the iterable's element type isn't carried in the channel typing, so an `of:` is omitted on the
- * port and any consumer is type-compatible.
+ * The output channel is UNTYPED (the payload is whatever the expression yields), like RunWorker's channels —
+ * the iterable's element type isn't carried in the channel typing, so an `of:` is omitted on the port and any
+ * consumer is type-compatible.
  *
  * A [SourceWorker]: the framework owns end-of-stream (closing [output] once [produce] returns), batching, the
  * per-batch checkpoint, and live progress publication (the source cadence). Compilation + evaluation are heavy /
@@ -41,18 +42,18 @@ class FormulaSourceWorker(
 
     @Service private val cachedKotlinCompiler: CachedKotlinCompiler
 ):
-    SourceWorker<Any?>(output, selfLocation)
+    SourceWorker(output, selfLocation)
 {
     private var emitted = 0L
 
 
-    override suspend fun produce(emit: Emitter<Any?>, control: JobControl) {
+    override suspend fun produce(emit: Emitter, control: JobControl) {
         val iterable = control.runBlockingIo { evaluate() }
 
         for (element in iterable) {
             // The SourceWorker cadence checkpoints + flushes + publishes per batch, so this loop just emits: one
             // step surfaces one batch downstream (cooperative pause / cancel land per batch).
-            emit.send(element)
+            emit.send(JobMessage.ofPayload(element))
             emitted += 1
         }
     }

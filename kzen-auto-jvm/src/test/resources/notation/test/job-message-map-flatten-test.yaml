@@ -1,0 +1,13 @@
+# A Map payload auto-flattens to KEYED columns (JobMessage.flatView): FormulaSource emits ordered Maps and
+# the CsvWriter writes them under the key-derived header — the Map lane of the auto-flatten fallback.
+# All ports BLANK -> JobChannelSynthesis derives the channel from Worker document order.
+main:
+  is: Job
+
+main.workers/source:
+  is: FormulaSourceWorker
+  code: 'listOf(mapOf("city" to "Lviv", "amount" to 30), mapOf("city" to "Kyiv", "amount" to 40))'
+
+main.workers/writer:
+  is: CsvWriterWorker
+  path: build/job-message-map-flatten/output.csv

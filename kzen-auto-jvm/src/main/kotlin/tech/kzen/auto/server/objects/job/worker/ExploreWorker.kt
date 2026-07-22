@@ -23,10 +23,10 @@ import java.nio.file.Path
  * pipeline). A [SinkWorker] with no output: every incoming record is appended to the table in [onElement], and
  * the browser reads ANY window of the accumulated result — no matter how large — via on-demand slice queries
  * (`offset` / `limit`) answered from the LIVE table in [onQuery]. It is the Job analogue of Report's Explore
- * output, and the heavy-duty counterpart to [PreviewWorker]: where Preview keeps a bounded in-memory live tail
- * (any lane, scalar or record), Explore indexes the FULL tabular stream to disk so the user can page through all
- * of it. Input is therefore typed [DataRecord] (the table indexes by header + fields; a schemaless scalar lane
- * has no columns to browse).
+ * output, and the heavy-duty counterpart to [PreviewWorker]: where Preview keeps a bounded in-memory live tail,
+ * Explore indexes the FULL tabular stream to disk so the user can page through all of it. It indexes each
+ * message's flat part (a payload-lane message auto-flattens — [JobMessage.flatView] — so a scalar stream
+ * browses as a `value` column).
  *
  * OUTPUT DIR (PERSISTENT): [IndexedCsvTable] is file-backed, so it opens under the per-Worker directory from
  * [JobControl.outputDir] (see [tech.kzen.auto.server.objects.job.service.JobWorkPool]) — but, UNLIKE
@@ -66,7 +66,7 @@ class ExploreWorker(
     serve: ChannelServer<Any?, Any?>,
     selfLocation: ObjectLocation
 ):
-    SinkWorker<DataRecord>(input, selfLocation, serve)
+    SinkWorker(input, selfLocation, serve)
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -97,13 +97,15 @@ class ExploreWorker(
     }
 
 
-    override suspend fun onElement(element: DataRecord, control: JobControl) {
+    override suspend fun onElement(element: JobMessage, control: JobControl) {
+        val flat = element.flatView()
+        val header = flat.header
         val activeTable = table
             ?: control
-                .runBlockingIo { IndexedCsvTable(element.header, outputDir!!) }
+                .runBlockingIo { IndexedCsvTable(header, outputDir!!) }
                 .also { table = it }
 
-        activeTable.add(element.record, element.header)
+        activeTable.add(flat.record, header)
         count += 1
     }
 

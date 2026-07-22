@@ -5,10 +5,9 @@ import tech.kzen.auto.common.paradigm.job.control.JobControl
 
 
 /**
- * Type-safe emission handle a [SourceWorker] / [TransformWorker] hands to its work hooks. It adapts the Worker's
- * declared output element type [T] onto the erased [ChannelOutput], so the Worker emits single elements with no
- * cast and never touches [ChannelOutput.close] — end-of-stream propagation is owned by the framework
- * ([WorkerBase]).
+ * Emission handle a [SourceWorker] / [TransformWorker] hands to its work hooks. Every channel element is a
+ * [JobMessage] (the uniform carrier), so the Worker emits single messages and never touches
+ * [ChannelOutput.close] — end-of-stream propagation is owned by the framework ([WorkerBase]).
  *
  * Batching is a framework concern: [send] only buffers; the accumulated elements reach the channel (as one
  * batch) on [flush]. A TRANSFORM leaves [flush] to its drive loop (called once per input batch, after the whole
@@ -17,7 +16,7 @@ import tech.kzen.auto.common.paradigm.job.control.JobControl
  * elements, checkpointing and publishing progress at that boundary — so a source still batches, stays
  * cooperatively pausable, and advances exactly one batch per step.
  */
-class Emitter<in T>(
+class Emitter(
     private val output: ChannelOutput<Any?>
 ) {
     private var cadence: Cadence? = null
@@ -34,7 +33,7 @@ class Emitter<in T>(
     }
 
 
-    suspend fun send(element: T) {
+    suspend fun send(element: JobMessage) {
         output.send(element)
 
         val cadence = cadence

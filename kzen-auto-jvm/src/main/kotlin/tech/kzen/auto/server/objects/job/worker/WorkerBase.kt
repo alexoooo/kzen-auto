@@ -132,6 +132,22 @@ abstract class WorkerBase(
 
     //-----------------------------------------------------------------------------------------------------------------
     /**
+     * The framework's per-element conversion: every Job channel element is a [JobMessage] (the uniform carrier —
+     * see its doc), so this can only fail on a raw / 3rd-party producer that bypassed the [Emitter]. Fails
+     * DESCRIPTIVELY — naming the Worker and the offending element — so the miswire surfaces as a readable run
+     * failure on the Worker's card rather than a bare ClassCastException.
+     */
+    internal fun receiveMessage(element: Any?): JobMessage {
+        return element as? JobMessage
+            ?: throw IllegalStateException(
+                "${selfLocation.objectPath.name.value} expects JobMessage elements, but received " +
+                    (element?.let { "${it::class.qualifiedName}: $it" } ?: "null") +
+                    " — every Job channel element must be a JobMessage (emit via Emitter.send)")
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    /**
      * Captures the snapshot for queries (when serving) and publishes the derived [progress] to the trace.
      * [force] reaches the progress hook (teaser vs final payload) as well as the publish throttle.
      */

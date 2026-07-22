@@ -5,6 +5,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.server.objects.job.worker.Emitter
+import tech.kzen.auto.server.objects.job.worker.JobMessage
 import tech.kzen.lib.common.model.location.ObjectLocation
 import kotlin.test.assertEquals
 
@@ -23,12 +24,12 @@ class JobBatchingTest {
         val channel = JobChannel(capacity = 8, batchSize = 3)
         val producer = channel.newProducer()
 
-        val emitter = Emitter<Any?>(producer)
+        val emitter = Emitter(producer)
         emitter.sourceCadence(NoOpControl) {}
 
         val sender = launch {
             for (i in 0 until 7) {
-                emitter.send(i)
+                emitter.send(JobMessage.ofPayload(i))
             }
             emitter.flush()   // trailing partial batch, exactly as SourceWorker flushes after produce returns
             producer.close()
@@ -41,7 +42,9 @@ class JobBatchingTest {
         sender.join()
 
         // 7 scalar elements at batch size 3 → full batches [0,1,2], [3,4,5], then the trailing [6].
-        assertEquals(listOf<List<Any?>>(listOf(0, 1, 2), listOf(3, 4, 5), listOf(6)), batches)
+        assertEquals(
+            listOf<List<Any?>>(listOf(0, 1, 2), listOf(3, 4, 5), listOf(6)),
+            batches.map { batch -> batch.map { (it as JobMessage).payload } })
     }
 
 

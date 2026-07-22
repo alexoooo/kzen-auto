@@ -48,13 +48,7 @@ JobChannelCreator:
 
 # Parses a Channel's `elementType` and validates channel wiring (port type compatibility + single-reader) at
 # definition time. Bound via the Channel's `elementType` meta (mirrors how TypeMetadataDefiner is bound).
+# Every channel element is a JobMessage at run time; `elementType` / a port's `of:` describe the message's
+# PAYLOAD type (the built-in Workers ship untyped — flat-consuming stages accept any payload via auto-flatten).
 ChannelTypeDefiner:
   class: tech.kzen.auto.common.objects.document.job.ChannelTypeDefiner
-
-
-# Type-only archetype (never instantiated) naming the element a data-pipeline Channel carries: one
-# FlatFileRecord with its shared header — the self-describing records-lane element (see the DataRecord class). A
-# Channel's `elementType` and a Worker port's `of:` both reference it by name so the two are checked equal.
-DataRecord:
-  abstract: true
-  class: tech.kzen.auto.server.objects.job.worker.DataRecord

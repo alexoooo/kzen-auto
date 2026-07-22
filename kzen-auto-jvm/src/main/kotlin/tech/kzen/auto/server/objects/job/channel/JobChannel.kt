@@ -16,8 +16,8 @@ import java.util.concurrent.atomic.AtomicInteger
  * [kotlinx.coroutines.channels.Channel], with the consumer endpoint exposed as [input] and each producer
  * endpoint handed out by [newProducer].
  *
- * **Framework batching.** Workers emit / consume single logical ELEMENTS (the domain unit, e.g. a
- * [tech.kzen.auto.server.objects.job.worker.DataRecord] or a scalar), but the physical transfer unit is a
+ * **Framework batching.** Workers emit / consume single logical ELEMENTS (the domain unit, a
+ * [tech.kzen.auto.server.objects.job.worker.JobMessage]), but the physical transfer unit is a
  * BATCH (a `List<Any?>` of up to [batchSize] elements) — so the per-element coroutine-channel overhead is
  * amortized without any worker hand-rolling batching (the retired `RecordBatch` hack). A producer buffers
  * emitted elements and flushes them as one batch (see [Producer]); the consumer receives a batch and yields its

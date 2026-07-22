@@ -1,6 +1,6 @@
-# A deliberately miswired Job: the channel declares it carries kotlin.String, but the CSV reader's `output`
-# port is typed DataRecord. ChannelTypeDefiner must fail the channel's `elementType` at definition time
-# (rather than letting it crash at run time on the `item as In` cast). See JobChannelTypingTest.
+# A deliberately miswired Job: the channel declares its PAYLOAD type as kotlin.String, but the (3rd-party-style)
+# source's `output` port is typed `of: Int`. ChannelTypeDefiner must fail the channel's `elementType` at
+# definition time — the payload-type cross-check for genuinely typed ports (the built-in Workers ship untyped).
 main:
   is: Job
 
@@ -9,7 +9,25 @@ main.channels/raw:
   elementType:
     class: kotlin.String
 
-main.workers/reader:
-  is: CsvReaderWorker
+main.workers/source:
+  is: IntTypedSource
+  code: '(1..3)'
   output: main.channels/raw
-  path: build/job-channel-type-mismatch/input.csv
+
+
+#######################################################################################################################
+# Test-only archetype (unique name, declared once): a user-defined FormulaSource subtype reusing the production
+# class, with an Int-typed output port — the genuinely typed 3rd-party port the mismatch check guards.
+IntTypedSource:
+  abstract: true
+  is: FormulaSourceWorker
+  output: ""
+  meta:
+    output:
+      is: ChannelOutput
+      of: Int
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    selfLocation:
+      is: ObjectLocation
+      by: Self

@@ -24,9 +24,9 @@ import tech.kzen.lib.common.reflect.Reflect
  *   snapshot over an (external, UI-facing) duplex Channel ([onQuery]) — the browser→worker request/reply path
  *   for reading a richer sample than the teaser carries.
  *
- * It consumes the untyped `Any?` input lane so one live view serves every stream: a [DataRecord] (the CSV
- * lane) renders column-for-column, while any other element (a scalar from a FormulaSource / Run lane — e.g. a
- * FizzBuzz `String`) renders as a single `value` column.
+ * One live view serves every stream via the message's flat part: a flat-part message (the CSV lane) renders
+ * column-for-column, while a payload-lane message (a scalar from a FormulaSource / Run lane — e.g. a FizzBuzz
+ * `String`) auto-flattens ([JobMessage.flatView]) to a single `value` column.
  *
  * It keeps a ROLLING window of the most recent [sample] records (a live tail — so the sample keeps changing as
  * data flows rather than freezing on the first [sample] records), copied off the hot-path [FlatFileRecord] to
@@ -44,15 +44,8 @@ class PreviewWorker(
     private val sample: Int,
     selfLocation: ObjectLocation
 ):
-    SinkWorker<Any?>(input, selfLocation, serve)
+    SinkWorker(input, selfLocation, serve)
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    companion object {
-        // Synthetic column name for the scalar lane (a non-RecordBatch element rendered as a one-column row).
-        private const val scalarColumn = "value"
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     // Rolling window of the most recent `sample` records (oldest -> newest); the oldest is evicted once full, so
     // the live view keeps sampling fresh data instead of freezing on the first batch. Confined to onBatch.
@@ -62,25 +55,15 @@ class PreviewWorker(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun onElement(element: Any?, control: JobControl) {
-        when (element) {
-            // CSV lane: a typed record, rendered column-for-column under its header.
-            is DataRecord -> {
-                if (header.isEmpty() && element.header.values.isNotEmpty()) {
-                    header = element.header.values.map { it.text }
-                }
-                addRow(element.record.toList())
-            }
-
-            // Scalar lane: a single arbitrary element (e.g. a FizzBuzz String from a Run Worker), rendered as
-            // one `value` column so the same live view works for non-record streams.
-            else -> {
-                if (header.isEmpty()) {
-                    header = listOf(scalarColumn)
-                }
-                addRow(listOf(element?.toString() ?: ""))
-            }
+    override suspend fun onElement(element: JobMessage, control: JobControl) {
+        // The flat part is the one rendering lane: the CSV lane renders column-for-column under its header, a
+        // payload lane auto-flattens to the shared `value` column (or a Map payload's keyed columns).
+        val flat = element.flatView()
+        val elementHeader = flat.header
+        if (header.isEmpty() && elementHeader.values.isNotEmpty()) {
+            header = elementHeader.values.map { it.text }
         }
+        addRow(flat.record.toList())
     }
 
 

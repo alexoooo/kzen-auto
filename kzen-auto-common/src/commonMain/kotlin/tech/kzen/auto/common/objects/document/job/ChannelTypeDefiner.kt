@@ -25,14 +25,17 @@ import tech.kzen.lib.platform.ClassNames
  * validates its wiring at DEFINITION time (before any run). Bound to the Channel's `elementType` attribute
  * via `by: ChannelTypeDefiner` (see job-jvm.yaml).
  *
- * A Channel carries one element type — a [TypeMetadata], `Any` when undeclared (an untyped channel). Every
- * Worker port referencing the channel declares its own element type via the `of:` generic, so the port's
- * metadata type is e.g. `ChannelOutput<DataRecord>` ([elementTypeOf] reads it back). This definer
- * cross-checks them:
+ * A Channel carries one declared type — a [TypeMetadata], `Any` when undeclared (an untyped channel). At run
+ * time every channel element is a `JobMessage` (the uniform carrier), so the declared type describes the
+ * message's PAYLOAD — the strongly typed value a source / Run lane streams — not the physical element. A
+ * Worker port referencing the channel may declare its own payload type via the `of:` generic, so the port's
+ * metadata type is e.g. `ChannelOutput<String>`. This definer cross-checks them:
  *
- * - **type compatibility** — each producer / consumer port's element type must match the channel's, with
- *   `Any` on either side acting as a wildcard (an undeclared channel or port is unconstrained). A
- *   concretely-typed mismatch (e.g. a `DataRecord` producer feeding a `String` channel) fails here.
+ * - **type compatibility** — each producer / consumer port's payload type must match the channel's, with
+ *   `Any` on either side acting as a wildcard (an undeclared channel or port is unconstrained — the built-in
+ *   Workers all ship untyped, since a flat-consuming stage accepts any payload via the auto-flatten
+ *   fallback). A concretely-typed mismatch (e.g. an `Int`-typed 3rd-party producer feeding a `String`
+ *   channel) fails here.
  * - **single-reader** — a channel may be drained by at most one consumer port (fan-OUT must be modelled
  *   explicitly, not by implicitly sharing a channel); fan-IN (many producers) is allowed, mirroring
  *   JobChannel's close-on-last-producer.
@@ -40,9 +43,10 @@ import tech.kzen.lib.platform.ClassNames
  * A violation returns [AttributeDefinitionAttempt.failure], naming the offending port; that drops the
  * channel from the graph and surfaces through the same `GraphDefinitionAttempt.failures` -> DefinitionErrors
  * -> StageController path as any other definition error — a pre-run, in-context message rather than a
- * run-time `ClassCastException` on the framework's centralized `item as In` cast (see
- * [tech.kzen.auto.server.objects.job.worker.TransformWorker] / `SinkWorker`), which this check makes the one
- * guaranteed-safe boundary.
+ * run-time failure. (Element-level safety no longer rests on this check at all: the framework dispatch in
+ * [tech.kzen.auto.server.objects.job.worker.TransformWorker] / `SinkWorker` receives the uniform
+ * `JobMessage`, failing descriptively on a raw element.) Payload-type FLOW — inferring undeclared types
+ * through the graph — is the element-model plan's phase 3.
  *
  * Reads only notation + metadata (DECLARED types), never resolved instances, so two sibling Workers need no
  * mutual definition ordering. Duplex DuplexChannels (request/reply — two element types) are not type-checked
@@ -91,7 +95,7 @@ class ChannelTypeDefiner: AttributeDefiner {
                     TypeMetadata.any
                 }
                 else {
-                    // Resolve a type-object reference (e.g. `elementType: DataRecord`) to its class; a
+                    // Resolve a type-object reference (e.g. `elementType: Int`) to its class; a
                     // dangling ref degrades to Any so a mid-edit notation still starts (cf. readAttributeType).
                     val referenced = graphNotation.coalesce.locateOptional(
                         ObjectReference.parse(notation.value),

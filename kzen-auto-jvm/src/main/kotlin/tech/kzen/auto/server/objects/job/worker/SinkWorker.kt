@@ -15,11 +15,10 @@ import tech.kzen.lib.common.model.location.ObjectLocation
  * the batch's elements to [onElement] one by one, throttled progress, and — when a [serve] port is supplied —
  * the duplex serve loop answering [WorkerBase.onQuery].
  *
- * The framework performs the single `item as In` cast here, made safe by
- * [tech.kzen.auto.common.objects.document.job.ChannelTypeDefiner] checking this worker's `in` port type against
- * the channel's element type at definition time (see [TransformWorker]).
+ * Every channel element is a [JobMessage] (the uniform carrier), converted per element by
+ * [WorkerBase.receiveMessage] with a descriptive failure on a raw element — see [TransformWorker].
  */
-abstract class SinkWorker<In>(
+abstract class SinkWorker(
     private val input: ChannelInput<Any?>,
     selfLocation: ObjectLocation,
     serve: ChannelServer<Any?, Any?>? = null
@@ -34,9 +33,7 @@ abstract class SinkWorker<In>(
                 ?: break
 
             for (element in batch) {
-                // Safe by construction: ChannelTypeDefiner checks this port's element type at definition time.
-                @Suppress("UNCHECKED_CAST")
-                onElement(element as In, control)
+                onElement(receiveMessage(element), control)
             }
 
             publish(control)
@@ -45,7 +42,7 @@ abstract class SinkWorker<In>(
     }
 
 
-    protected abstract suspend fun onElement(element: In, control: JobControl)
+    protected abstract suspend fun onElement(element: JobMessage, control: JobControl)
 
 
     protected open suspend fun onComplete(control: JobControl) {}

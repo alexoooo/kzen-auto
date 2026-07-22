@@ -20,10 +20,11 @@ import tech.kzen.lib.common.model.location.ObjectLocation
  * migration) and every produced element is in the output channel or its parked-mid-flush batch. This is what
  * keeps a mid-stream migration lossless at the batch grain.
  *
- * The framework performs the single `item as In` cast here. It is the ONE guaranteed-safe boundary: a Channel
- * declares its element type and [tech.kzen.auto.common.objects.document.job.ChannelTypeDefiner] validates at
- * definition time that this worker's `in` port type matches it (and that the channel is single-reader), so a
- * miswire is a pre-run definition error rather than a ClassCastException here.
+ * Every channel element is a [JobMessage] (the uniform carrier — payload and/or flat part), so the framework's
+ * dispatch needs no per-Worker element typing: [WorkerBase.receiveMessage] converts each element, failing
+ * descriptively on a raw element from a producer that bypassed the [Emitter]. A channel's declared element
+ * type / a port's `of:` describe the message's PAYLOAD type, cross-checked at definition time by
+ * [tech.kzen.auto.common.objects.document.job.ChannelTypeDefiner].
  *
  * An optional [serve] duplex port makes a passthrough transform LIVE-QUERYABLE — a Worker that accumulates a
  * side-summary as records flow through it (e.g. [SummaryWorker]) forwards each record downstream unchanged AND
@@ -31,7 +32,7 @@ import tech.kzen.lib.common.model.location.ObjectLocation
  * preserving for a plain transform: it defaults to null (no serve loop), so [FilterWorker] / [FormulaWorker] /
  * [RunWorker] are unchanged.
  */
-abstract class TransformWorker<In, Out>(
+abstract class TransformWorker(
     private val input: ChannelInput<Any?>,
     private val output: ChannelOutput<Any?>,
     selfLocation: ObjectLocation,
@@ -39,7 +40,7 @@ abstract class TransformWorker<In, Out>(
 ):
     WorkerBase(selfLocation, serve)
 {
-    private val emitter = Emitter<Out>(output)
+    private val emitter = Emitter(output)
 
 
     final override suspend fun drive(control: JobControl) {
@@ -53,9 +54,7 @@ abstract class TransformWorker<In, Out>(
                     ?: break
 
                 for (element in batch) {
-                    // Safe by construction: ChannelTypeDefiner checks this port's element type at definition time.
-                    @Suppress("UNCHECKED_CAST")
-                    onElement(element as In, emitter, control)
+                    onElement(receiveMessage(element), emitter, control)
                 }
 
                 // Send this input batch's whole output as one batch (park-on-backpressure is safe now: the input
@@ -72,8 +71,8 @@ abstract class TransformWorker<In, Out>(
     }
 
 
-    protected abstract suspend fun onElement(element: In, emit: Emitter<Out>, control: JobControl)
+    protected abstract suspend fun onElement(element: JobMessage, emit: Emitter, control: JobControl)
 
 
-    protected open suspend fun onComplete(emit: Emitter<Out>, control: JobControl) {}
+    protected open suspend fun onComplete(emit: Emitter, control: JobControl) {}
 }

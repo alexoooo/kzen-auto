@@ -65,7 +65,7 @@ class FormulaSourceWorkerTest {
         val emitted = mutableListOf<Any?>()
         val output = object: ChannelOutput<Any?> {
             override suspend fun send(element: Any?) {
-                emitted.add(element)
+                emitted.add((element as JobMessage).payload)
             }
             override suspend fun flush() {}
             override fun batchSize(): Int = 1024

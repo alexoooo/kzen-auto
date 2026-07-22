@@ -25,8 +25,9 @@ import java.nio.file.Path
 /**
  * The pivot-table analytics stage as a Job Worker — reusing Report's substrate-neutral [PivotBuilder] engine
  * (the disk-backed row index + value statistics; NOT Report's disruptor pipeline). It ACCUMULATES every incoming
- * record into the pivot in [onElement], then on end-of-stream ([onComplete]) EMITS the built pivot table
- * downstream row-by-row as [DataRecord]s under a stable [outputHeader] (row-key columns + one column per
+ * message's flat part into the pivot in [onElement] (a payload-lane message auto-flattens —
+ * [JobMessage.flatView]), then on end-of-stream ([onComplete]) EMITS the built pivot table downstream
+ * row-by-row as flat-part [JobMessage]s under a stable [outputHeader] (row-key columns + one column per
  * value/type), so it composes into any pipeline (`reader → pivot → writer` / `→ preview`) — an arbitrary DAG
  * replacing Report's fixed `analysis → output` coupling.
  *
@@ -56,7 +57,7 @@ class PivotWorker(
     private val pivot: PivotSpec,
     selfLocation: ObjectLocation
 ):
-    TransformWorker<DataRecord, DataRecord>(input, output, selfLocation, serve)
+    TransformWorker(input, output, selfLocation, serve)
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -93,13 +94,14 @@ class PivotWorker(
     }
 
 
-    override suspend fun onElement(element: DataRecord, emit: Emitter<DataRecord>, control: JobControl) {
+    override suspend fun onElement(element: JobMessage, emit: Emitter, control: JobControl) {
         // Accumulate only: the pivot table is emitted once, at end-of-stream (onComplete).
-        pivotBuilder!!.add(element.record, element.header)
+        val flat = element.flatView()
+        pivotBuilder!!.add(flat.record, flat.header)
     }
 
 
-    override suspend fun onComplete(emit: Emitter<DataRecord>, control: JobControl) {
+    override suspend fun onComplete(emit: Emitter, control: JobControl) {
         val builder = pivotBuilder!!
         val total = builder.rowCount()
 
@@ -110,7 +112,7 @@ class PivotWorker(
                 break
             }
             for (row in preview.rows) {
-                emit.send(DataRecord(outputHeader, FlatFileRecord.of(row)))
+                emit.send(JobMessage.ofFlat(outputHeader, FlatFileRecord.of(row)))
             }
             start += preview.rows.size
         }

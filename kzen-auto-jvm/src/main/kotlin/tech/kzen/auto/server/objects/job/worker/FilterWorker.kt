@@ -14,18 +14,19 @@ import tech.kzen.lib.platform.ClassNames
 
 
 /**
- * The filter stage as a Job Worker — the strictly-typed dataflow's predicate stage. Rather than a hardcoded
- * column/value comparison, [where] is an arbitrary Kotlin BOOLEAN EXPRESSION evaluated against each record,
- * with the record's columns referenced by name (`City eq "Lviv"`, `temp.number > 30`, …). It is compiled by
- * the genuine [CalculatedColumnEval] engine — the SAME engine [FormulaWorker] uses, injected as a `@Service`
- * — so the expression is type-checked against the element's schema ([HeaderListing]). This is the
- * typed-element expression bridge: today the "type" is the in-band record schema; the engine generalizes to
- * a richer TypeMetadata / minted-class element type without changing this Worker (see [DataRecord]).
+ * The filter stage as a Job Worker — the dataflow's predicate stage. Rather than a hardcoded column/value
+ * comparison, [where] is an arbitrary Kotlin BOOLEAN EXPRESSION evaluated against each message's flat part,
+ * with the columns referenced by name (`City eq "Lviv"`, `temp.number > 30`, …). It is compiled by the
+ * genuine [CalculatedColumnEval] engine — the SAME engine [FormulaWorker] uses, injected as a `@Service`
+ * — so the expression is type-checked against the flat part's schema ([HeaderListing]). A payload-lane
+ * message auto-flattens ([JobMessage.flatView]: a scalar filters via the `value` column), so the predicate
+ * works over any stream; expressions over the typed payload itself are the element-model plan's phase 3.
  *
- * The predicate is compiled lazily and recompiled only when the incoming header changes; a record is kept
+ * The predicate is compiled lazily and recompiled only when the incoming header changes; a message is kept
  * when the compiled expression's result is truthy ([tech.kzen.auto.server.objects.report.exec.calc.ColumnValue.truthy]
- * — coercing a Boolean / numeric / "yes"/"true" result to a predicate). An empty [where] keeps every record
- * (the batch passes through untouched). Surviving records are re-batched; an all-dropped batch is skipped.
+ * — coercing a Boolean / numeric / "yes"/"true" result to a predicate). An empty [where] keeps every message
+ * (the batch passes through untouched). The RECEIVED message is forwarded (payload intact); an all-dropped
+ * batch is skipped.
  *
  * A [TransformWorker]: the framework owns the drain loop, per-batch checkpoint, throttled progress, and
  * end-of-stream close propagation; this Worker only maps each batch.
@@ -40,7 +41,7 @@ class FilterWorker(
 
     @Service private val calculatedColumnEval: CalculatedColumnEval
 ):
-    TransformWorker<DataRecord, DataRecord>(input, output, selfLocation)
+    TransformWorker(input, output, selfLocation)
 {
     private val classLoader = ClassLoaderUtils.dynamicParentClassLoader()
     private val passThrough = where.isBlank()
@@ -53,7 +54,7 @@ class FilterWorker(
     private var kept = 0L
 
 
-    override suspend fun onElement(element: DataRecord, emit: Emitter<DataRecord>, control: JobControl) {
+    override suspend fun onElement(element: JobMessage, emit: Emitter, control: JobControl) {
         seen += 1
 
         if (passThrough) {
@@ -62,15 +63,17 @@ class FilterWorker(
             return
         }
 
-        if (element.header != compiledForHeader) {
+        val flat = element.flatView()
+        val header = flat.header
+        if (header != compiledForHeader) {
             compiled = control.runBlockingIo {
                 calculatedColumnEval.create(
-                    "filter", where, element.header, ClassNames.kotlinAny, classLoader)
+                    "filter", where, header, ClassNames.kotlinAny, classLoader)
             }
-            compiledForHeader = element.header
+            compiledForHeader = header
         }
 
-        if (compiled!!.evaluate(Unit, element.record, element.header).truthy) {
+        if (compiled!!.evaluate(Unit, flat.record, header).truthy) {
             kept += 1
             emit.send(element)
         }

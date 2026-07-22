@@ -17,16 +17,19 @@ import tech.kzen.lib.platform.ClassNames
 
 /**
  * The calculated-column stage as a Job Worker (analogue of `ReportFormulaStage`, reimplemented Job-native over
- * batched channels). Appends one field per [formula] entry to every record: each formula is an arbitrary
- * Kotlin expression over the record's columns (referenced by name), compiled via the genuine
+ * batched channels). Appends one flat-part field per [formula] entry to every message: each formula is an
+ * arbitrary Kotlin expression over the flat part's columns (referenced by name), compiled via the genuine
  * [CalculatedColumnEval] engine — **reused as shared infra, not reimplemented** — injected as a `@Service`,
- * exactly as `ReportDocument` obtains it. This is why the pipe standardizes on [FlatFileRecord] rather than
- * `List<String>` (see [DataRecord]).
+ * exactly as `ReportDocument` obtains it. This is why the flat part standardizes on
+ * [tech.kzen.auto.plugin.model.record.FlatFileRecord] rather than `List<String>` (see [JobMessage]).
  *
  * Formulas are compiled lazily and recompiled only when the incoming header changes. All formulas evaluate
  * against the ORIGINAL columns, then their values are appended together (matching Report — formulas cannot
- * reference each other's outputs). The incoming batch's records are mutated in place and forwarded under the
- * augmented header (ownership has transferred to this Worker, so in-place append is race-free).
+ * reference each other's outputs). The incoming message is mutated in place — the flat record grows the
+ * computed fields and the view's header reference swaps to the augmented one — and forwarded with its
+ * payload untouched (ownership has transferred to this Worker, so in-place append is race-free). A
+ * payload-lane message auto-flattens first ([JobMessage.flatView]), so formulas over a scalar stream see a
+ * `value` column; transforming the PAYLOAD itself is the element-model plan's phase 3 (`payload:` expression).
  *
  * A [TransformWorker]: the framework owns the drain loop, per-batch checkpoint, throttled progress, and
  * end-of-stream close propagation. Compilation is heavy blocking work, so it runs through
@@ -42,7 +45,7 @@ class FormulaWorker(
 
     @Service private val calculatedColumnEval: CalculatedColumnEval
 ):
-    TransformWorker<DataRecord, DataRecord>(input, output, selfLocation)
+    TransformWorker(input, output, selfLocation)
 {
     private val classLoader = ClassLoaderUtils.dynamicParentClassLoader()
     private val formulaEntries = formula.formulas.entries.toList()
@@ -57,27 +60,30 @@ class FormulaWorker(
     private var computed = 0L
 
 
-    override suspend fun onElement(element: DataRecord, emit: Emitter<DataRecord>, control: JobControl) {
-        if (element.header != compiledForHeader) {
+    override suspend fun onElement(element: JobMessage, emit: Emitter, control: JobControl) {
+        val flat = element.flatView()
+        val header = flat.header
+        if (header != compiledForHeader) {
             compiledColumns = control.runBlockingIo {
                 formulaEntries.map { (name, expression) ->
                     calculatedColumnEval.create(
-                        name, expression, element.header, ClassNames.kotlinAny, classLoader)
+                        name, expression, header, ClassNames.kotlinAny, classLoader)
                 }
             }
-            augmentedHeader = element.header.append(formulaNames)
-            compiledForHeader = element.header
+            augmentedHeader = header.append(formulaNames)
+            compiledForHeader = header
         }
 
-        val record = element.record
+        val record = flat.record
         for (i in compiledColumns.indices) {
             formulaValues[i] = ColumnValue.toText(
-                compiledColumns[i].evaluate(Unit, record, element.header))
+                compiledColumns[i].evaluate(Unit, record, header))
         }
         record.addAll(formulaValues)
         computed += 1
 
-        emit.send(DataRecord(augmentedHeader, record))
+        flat.header = augmentedHeader
+        emit.send(element)
     }
 
 

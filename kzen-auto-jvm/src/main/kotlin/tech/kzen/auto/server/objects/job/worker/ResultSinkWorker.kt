@@ -8,9 +8,12 @@ import tech.kzen.lib.common.reflect.Reflect
 
 
 /**
- * A SINK Worker that collects every incoming element and, at end-of-stream ([onComplete]), yields the collection
- * as the Job's named output component ([result], blank = "main") via [JobControl.yieldResult]. When exactly ONE
- * element arrived it yields that lone element instead of a singleton list — mirroring the hosts' single-positional
+ * A SINK Worker that collects every incoming message and, at end-of-stream ([onComplete]), yields the collection
+ * as the Job's named output component ([result], blank = "main") via [JobControl.yieldResult]. A LOGIC-BOUNDARY
+ * worker: a [JobMessage] never crosses out of the Job, so each collected message materializes via
+ * [JobMessage.boundaryValue] AT YIELD (payload when present, else the flat part as an ordered Map) — the buffer
+ * keeps the raw messages, so the migration carryover below is untouched by the boundary rule. When exactly ONE
+ * element arrived it yields that lone value instead of a singleton list — mirroring the hosts' single-positional
  * input convention (see [tech.kzen.auto.server.exec.job.EngineJobControl]), so a per-element `RunWorker` round trip
  * is scalar-in / scalar-out. Zero elements → an empty list. It is the Job-side analogue of Flow's `FlowOutput`
  * vertex, and what lets a `RunStep` / Flow `Run` vertex / Job `RunWorker` consume a Job's result.
@@ -37,12 +40,12 @@ class ResultSinkWorker(
     private val result: String,
     selfLocation: ObjectLocation
 ):
-    SinkWorker<Any?>(input, selfLocation)
+    SinkWorker(input, selfLocation)
 {
-    private var collected = ArrayList<Any?>()
+    private var collected = ArrayList<JobMessage>()
 
 
-    override suspend fun onElement(element: Any?, control: JobControl) {
+    override suspend fun onElement(element: JobMessage, control: JobControl) {
         collected.add(element)
     }
 
@@ -51,10 +54,10 @@ class ResultSinkWorker(
         val component = result.ifBlank { TupleComponentName.main.value }
         val value: Any? =
             if (collected.size == 1) {
-                collected[0]
+                collected[0].boundaryValue()
             }
             else {
-                collected.toList()
+                collected.map { it.boundaryValue() }
             }
         control.yieldResult(component, value)
         // NB: collected is deliberately NOT cleared — a post-completion live edit relaunches this worker, which
@@ -78,5 +81,5 @@ class ResultSinkWorker(
     }
 
 
-    private class CollectedState(val collected: ArrayList<Any?>)
+    private class CollectedState(val collected: ArrayList<JobMessage>)
 }

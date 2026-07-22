@@ -1,28 +1,52 @@
+# A correctly-wired TYPED payload lane: the channel declares its PAYLOAD type (Int) and both the
+# (3rd-party-style) source and sink ports declare the matching `of: Int` — ChannelTypeDefiner's payload-type
+# cross-check passes and the channel defines cleanly. Counterpart to job-channel-type-mismatch-test.yaml.
 main:
   is: Job
 
-main.channels/raw:
+main.channels/numbers:
   is: Channel
   capacity: 8
-  elementType: DataRecord
+  elementType: Int
 
-main.channels/kept:
-  is: Channel
-  capacity: 8
-  elementType: DataRecord
+main.workers/source:
+  is: TypedIntSource
+  code: '(1..10)'
+  output: main.channels/numbers
 
-main.workers/reader:
-  is: CsvReaderWorker
-  output: main.channels/raw
-  path: build/job-typed-channel/input.csv
+main.workers/collect:
+  is: TypedIntSink
+  input: main.channels/numbers
 
-main.workers/filter:
-  is: FilterWorker
-  input: main.channels/raw
-  output: main.channels/kept
-  where: 'amount.number > 2'
 
-main.workers/writer:
-  is: CsvWriterWorker
-  input: main.channels/kept
-  path: build/job-typed-channel/output.csv
+#######################################################################################################################
+# Test-only archetypes (unique names, declared once): user-defined subtypes reusing the production classes,
+# with Int-typed ports — the genuinely typed wiring the cross-check validates.
+TypedIntSource:
+  abstract: true
+  is: FormulaSourceWorker
+  output: ""
+  meta:
+    output:
+      is: ChannelOutput
+      of: Int
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
+TypedIntSink:
+  abstract: true
+  is: ResultSinkWorker
+  input: ""
+  meta:
+    input:
+      is: ChannelInput
+      of: Int
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    selfLocation:
+      is: ObjectLocation
+      by: Self

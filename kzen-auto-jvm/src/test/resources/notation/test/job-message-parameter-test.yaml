@@ -1,0 +1,20 @@
+# Mirror of the reproducing user notation (Script-2 -> Job-3): a scalar parameter payload streams through a
+# FormulaWorker — whose column formula auto-flattens the payload message (single `value` column) and appends a
+# flat `foo` column — into a ResultSinkWorker. The phase-1 element-model proof: the run COMPLETES (previously
+# the hard-typed FormulaWorker detonated on `Double cannot be cast to DataRecord`) and the yield is the PAYLOAD
+# (the boundary rule: payload wins; the flat part is auxiliary). All ports BLANK -> JobChannelSynthesis derives
+# the two channels from Worker document order.
+main:
+  is: Job
+
+main.workers/param:
+  is: ParameterSourceWorker
+  parameter: "number"
+
+main.workers/formula:
+  is: FormulaWorker
+  formula:
+    foo: 2 + 2
+
+main.workers/result:
+  is: ResultSinkWorker

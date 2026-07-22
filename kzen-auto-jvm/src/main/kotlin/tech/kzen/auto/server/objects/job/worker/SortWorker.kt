@@ -46,15 +46,15 @@ class SortWorker(
     private val sort: SortSpec,
     selfLocation: ObjectLocation
 ):
-    TransformWorker<DataRecord, DataRecord>(input, output, selfLocation)
+    TransformWorker(input, output, selfLocation)
 {
     //-----------------------------------------------------------------------------------------------------------------
     // The sort directions, index-aligned with sort.columns — precomputed for the hot comparator.
     private val ascending = BooleanArray(sort.columns.size) { sort.columns[it].ascending }
 
-    // Every buffered record (whole stream); replaced with a fresh empty list once emitted in onComplete, and
+    // Every buffered message (whole stream); replaced with a fresh empty list once emitted in onComplete, and
     // carried across a live edit by capture/loadMigrationState.
-    private var buffer = ArrayList<DataRecord>()
+    private var buffer = ArrayList<JobMessage>()
     private var buffered = 0L
     private var emitted = 0L
 
@@ -67,14 +67,14 @@ class SortWorker(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun onElement(element: DataRecord, emit: Emitter<DataRecord>, control: JobControl) {
+    override suspend fun onElement(element: JobMessage, emit: Emitter, control: JobControl) {
         // Accumulate only: the sorted stream is emitted once, at end-of-stream (onComplete).
         buffer.add(element)
         buffered += 1
     }
 
 
-    override suspend fun onComplete(emit: Emitter<DataRecord>, control: JobControl) {
+    override suspend fun onComplete(emit: Emitter, control: JobControl) {
         if (buffer.isEmpty()) {
             return
         }
@@ -85,7 +85,7 @@ class SortWorker(
             .sortedWith(comparator)
 
         for (decorated in sorted) {
-            emit.send(decorated.record)
+            emit.send(decorated.message)
             emitted += 1
         }
 
@@ -95,9 +95,10 @@ class SortWorker(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun decorate(dataRecord: DataRecord): Decorated {
-        val indices = indicesFor(dataRecord.header)
-        val record = dataRecord.record
+    private fun decorate(message: JobMessage): Decorated {
+        val flat = message.flatView()
+        val indices = indicesFor(flat.header)
+        val record = flat.record
         flyweight.selectHost(record)
 
         val texts = Array(ascending.size) { "" }
@@ -112,7 +113,7 @@ class SortWorker(
             }
         }
 
-        return Decorated(dataRecord, texts, numbers)
+        return Decorated(message, texts, numbers)
     }
 
 
@@ -178,14 +179,14 @@ class SortWorker(
     //-----------------------------------------------------------------------------------------------------------------
     // The carried run-scoped state: the accumulated input buffer (pure data, no live handle) + its running count.
     private class BufferState(
-        val buffer: ArrayList<DataRecord>,
+        val buffer: ArrayList<JobMessage>,
         val buffered: Long
     )
 
 
-    // A buffered record decorated with its precomputed sort key (per-column text + numeric value).
+    // A buffered message decorated with its precomputed sort key (per-column text + numeric value).
     private class Decorated(
-        val record: DataRecord,
+        val message: JobMessage,
         val texts: Array<String>,
         val numbers: DoubleArray
     )

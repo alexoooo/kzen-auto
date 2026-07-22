@@ -14,8 +14,9 @@ import tech.kzen.lib.common.reflect.Reflect
  * Run-Logic vertex ([tech.kzen.auto.server.objects.flow.vertex.RunLogicVertex]) — the seam that lets a Job
  * compose reusable sub-Logics into its dataflow rather than only built-in stages.
  *
- * Element-agnostic (the channel carries `Any?`): unlike the typed [DataRecord] stages, what flows is whatever
- * the child consumes / produces. A [TransformWorker], so the framework owns the drain loop, per-batch
+ * A LOGIC-BOUNDARY worker: a [JobMessage] never crosses into the child, so each incoming message unwraps via
+ * [JobMessage.boundaryValue] (payload when present, else the flat part as an ordered Map) and the child's main
+ * result wraps as a fresh payload message. A [TransformWorker], so the framework owns the drain loop, per-batch
  * [JobControl.checkpoint], throttled progress, and end-of-stream close propagation; this Worker only maps each
  * element through its child Logic via [JobControl.host].
  *
@@ -33,15 +34,15 @@ class RunWorker(
     private val instructions: ObjectLocation,
     selfLocation: ObjectLocation
 ):
-    TransformWorker<Any?, Any?>(input, output, selfLocation)
+    TransformWorker(input, output, selfLocation)
 {
     private var ran = 0L
 
 
-    override suspend fun onElement(element: Any?, emit: Emitter<Any?>, control: JobControl) {
-        val result = control.host(instructions, element)
+    override suspend fun onElement(element: JobMessage, emit: Emitter, control: JobControl) {
+        val result = control.host(instructions, element.boundaryValue())
         ran += 1
-        emit.send(result.mainComponentValue())
+        emit.send(JobMessage.ofPayload(result.mainComponentValue()))
     }
 
 

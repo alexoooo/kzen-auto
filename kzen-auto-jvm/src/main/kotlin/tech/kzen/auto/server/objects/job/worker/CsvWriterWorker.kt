@@ -10,9 +10,10 @@ import java.nio.file.Files
 
 
 /**
- * The CSV output stage as a Job Worker (analogue of `CompressedExportWriter`, minus compression). When
- * [header] is true the column names are written once (from the first batch) before the records; when false
- * (a headerless round-trip) only records are written. Fields are written with RFC-4180 quoting that is
+ * The CSV output stage as a Job Worker (analogue of `CompressedExportWriter`, minus compression). Writes each
+ * message's flat part (a payload-lane message auto-flattens — [JobMessage.flatView] — so a scalar stream
+ * writes a `value` column). When [header] is true the column names are written once (from the first batch)
+ * before the records; when false (a headerless round-trip) only records are written. Fields are written with RFC-4180 quoting that is
  * DELIMITER-AWARE: a field is quoted when it contains the [delimiter], a quote, or a line break, and quotes
  * are escaped by doubling (the same rules as `FlatFileRecord.writeCsvField`, but parameterized on the
  * configured delimiter rather than hard-coding the comma — so a `;`-delimited round-trip is correct).
@@ -34,7 +35,7 @@ class CsvWriterWorker(
 
     selfLocation: ObjectLocation
 ):
-    SinkWorker<DataRecord>(input, selfLocation)
+    SinkWorker(input, selfLocation)
 {
     private val delimiterChar: Char =
         if (delimiter.isEmpty()) ',' else delimiter[0]
@@ -49,14 +50,17 @@ class CsvWriterWorker(
     }
 
 
-    override suspend fun onElement(element: DataRecord, control: JobControl) {
+    override suspend fun onElement(element: JobMessage, control: JobControl) {
         val writer = writer!!
+        val flat = element.flatView()
+        val elementHeader = flat.header
+        val record = flat.record
         control.runBlockingIo {
             if (header && !headerWritten) {
-                writeRecord(writer, FlatFileRecord.of(element.header.values.map { it.text }))
+                writeRecord(writer, FlatFileRecord.of(elementHeader.values.map { it.text }))
                 headerWritten = true
             }
-            writeRecord(writer, element.record)
+            writeRecord(writer, record)
             written += 1
         }
     }
