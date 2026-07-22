@@ -14,9 +14,10 @@ import tech.kzen.lib.common.model.structure.notation.GraphNotation
  * A Job as a [Logic]: a graph of concurrently-running Workers connected by Channels (the third kzen-auto
  * paradigm, beside Script and Flow), run on the new engine. Thin and immutable — the structure is compiled once
  * by [JobLogicCompiler]; each [run] call makes a fresh [JobRun] holding that call's per-run instance graph, so
- * one [JobLogic] can be hosted more than once (e.g. a Job nested in a Script). The signature is empty in this
- * first port (no declared parameters / harvested output channels yet — matching
- * [tech.kzen.auto.server.objects.job.JobDocument]'s `define`).
+ * one [JobLogic] can be hosted more than once (e.g. a Job nested in a Script). The signature is derived by
+ * [JobLogicCompiler] from the document's ParameterSource / ResultSink Workers (see
+ * [tech.kzen.auto.common.objects.document.job.JobSignatureCapability]), so a Job can be hosted with arguments and
+ * its result consumed like any other Logic.
  *
  * The un-filtered [graphNotation] / [graphDefinition] and [services] are carried so a nested-Logic
  * [RunWorker][tech.kzen.auto.server.objects.job.worker.RunWorker] can compile its child from the full graph

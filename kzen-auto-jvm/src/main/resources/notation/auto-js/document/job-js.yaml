@@ -155,6 +155,12 @@ MultiFileReaderTool:
   delegate: MultiFileReaderWorker
 
 
+ParameterSourceTool:
+  is: RibbonTool
+  parent: JobGroup_Sources
+  delegate: ParameterSourceWorker
+
+
 ################################################################
 
 JobGroup_Transforms:
@@ -235,6 +241,12 @@ ExploreTool:
   is: RibbonTool
   parent: JobGroup_Sinks
   delegate: ExploreWorker
+
+
+ResultSinkTool:
+  is: RibbonTool
+  parent: JobGroup_Sinks
+  delegate: ResultSinkWorker
 
 
 ################################################################

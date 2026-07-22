@@ -69,6 +69,28 @@ interface JobControl {
 
 
     /**
+     * The run argument bound to a declared Job parameter [name] — the value the caller passed for the
+     * ParameterSource worker that declares `parameter: <name>` (see
+     * [tech.kzen.auto.common.objects.document.job.JobSignatureCapability]). Null when the run was started with no
+     * such argument (or the argument is null): a parameterized Job run bare still executes, its sources streaming
+     * a single null. Values are run-constant — a live-edit migrate re-supplies the same arguments — so no carry is
+     * needed here (a streaming source carries only its own position). Default null: an environment without argument
+     * binding.
+     */
+    fun parameter(name: String): Any? = null
+
+
+    /**
+     * Contribute a named component to this Job run's output tuple (the result a host — a Script RunStep, a Flow
+     * Run vertex, a Job RunWorker — receives when the run completes). Harvested once the run settles; last write
+     * per [component] wins, so a re-yield after a live-edit migrate is idempotent. The conventional component is
+     * "main" (the hosts' single-positional harvest reads it); a Job with several result sinks yields several named
+     * components. Default no-op: an environment without result harvesting.
+     */
+    fun yieldResult(component: String, value: Any?) {}
+
+
+    /**
      * Invoke another Logic ([instructions] — a Script / Flow / Job) as a confined child, binding [input] as its
      * first declared parameter (the single-positional convention shared with a Script Run step and a Flow
      * Run-Logic vertex), and return its output tuple. The seam that lets a Worker compose reusable sub-Logics

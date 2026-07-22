@@ -28,6 +28,8 @@ import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.select.SelectOption
 import tech.kzen.auto.client.wrap.select.muiAutocompleteField
 import tech.kzen.auto.common.objects.document.flow.FlowConventions
+import tech.kzen.auto.common.objects.document.job.JobConventions
+import tech.kzen.auto.common.objects.document.job.JobSignatureCapability
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.objects.document.script.model.RunStepInstructions
 import tech.kzen.lib.common.model.attribute.AttributeName
@@ -175,15 +177,16 @@ class RunStepArgumentsEditor(
         val instructionsObjectLocation = RunStepInstructions.instructionsLocation(
             graphNotation, props.objectLocation)
 
-        // Enumerate the callee Logic's parameter names. A Script keeps them as nested ParameterBinding
-        // objects under its `parameters` branch (named by object name); a Flow keeps them as FlowInput
-        // vertices in its `vertices` list (each carrying a `parameter` name) — so dispatch on the
-        // callee's document type rather than assuming the Script shape (which found nothing for a Flow
-        // and rendered no argument rows).
-        //
-        // For a Script callee we also read each ParameterBinding's declared `type` (a MapAttributeNotation
-        // of {class, generics, nullable}, the same shape LogicSignatureEditor edits) and format it into a
-        // badge label. A Flow callee carries no typed signature in this shape, so its parameters get no badge.
+        // Enumerate the callee Logic's parameter names, dispatching on the callee's document type (assuming the
+        // Script shape found nothing for a Flow / Job and rendered no argument rows):
+        //  - a Script keeps them as nested ParameterBinding objects under its `parameters` branch (named by
+        //    object name), each carrying a declared `type` (a MapAttributeNotation of {class, generics, nullable},
+        //    the same shape LogicSignatureEditor edits) that we format into a badge label;
+        //  - a Flow keeps them as FlowInput vertices in its `vertices` list (each carrying a `parameter` name),
+        //    with no typed signature in this shape, so its parameters get no badge;
+        //  - a Job declares them as ParameterSource Workers (JobSignatureCapability derives the signature — the
+        //    same notation-only derivation JobLogicCompiler reads server-side, so the two can't drift), typed by
+        //    each source's output-port `of:` (untyped ports badge as "Any", Script parity).
         val instructionsParameters: List<String>?
         val newParameterTypes = mutableMapOf<String, String>()
         if (instructionsObjectLocation != null) {
@@ -191,6 +194,16 @@ class RunStepArgumentsEditor(
             if (documentNotation != null && FlowConventions.isFlow(documentNotation)) {
                 instructionsParameters = FlowConventions.inputParameterNames(
                     graphNotation, instructionsObjectLocation)
+            }
+            else if (documentNotation != null && JobConventions.isJob(documentNotation)) {
+                val signature = JobSignatureCapability.signature(
+                    clientState.graphStructure(), instructionsObjectLocation)
+                instructionsParameters = signature.inputs.components.map { it.name.value }
+                for (component in signature.inputs.components) {
+                    val metadata = component.type.metadata
+                    newParameterTypes[component.name.value] =
+                        LogicTypeOptions.simpleLabel(metadata.className.asString(), metadata.nullable)
+                }
             }
             else {
                 val parameterPaths = documentNotation

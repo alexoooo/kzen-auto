@@ -95,6 +95,29 @@ FormulaSourceWorker:
       by: Self
 
 
+# Streams the Job's bound run argument for the parameter it declares (`parameter:`): a Collection argument is
+# streamed element-by-element (resuming from its position across a live edit), any other value (including an
+# unbound null) is emitted as a single element. The Job-side analogue of Flow's FlowInput vertex — what makes a
+# Job invocable with arguments from a Script RunStep / Flow Run vertex / Job RunWorker. Output is untyped (any
+# argument); a concrete object may declare `of:` on the output port to type the Job's signature (for a Collection
+# the `of:` describes the ELEMENT type). `parameter` (name) + its meta are inherited from the ParameterSource
+# marker; `output` sits here (gotcha 2: palette insert resolves every attribute blank-not-missing via the chain).
+ParameterSourceWorker:
+  abstract: true
+  is: ParameterSource
+  title: "Parameter"
+  class: tech.kzen.auto.server.objects.job.worker.ParameterSourceWorker
+  output: ""
+  meta:
+    output:
+      is: ChannelOutput
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
 # Keeps each record for which the Kotlin boolean expression `where` (columns referenced by name, e.g.
 # `City eq "Lviv"` or `temp.number > 30`) is truthy, compiled by the genuine CalculatedColumnEval engine.
 # An empty `where` keeps every record.
@@ -401,6 +424,28 @@ ExploreWorker:
       editor: SelectChannelEditor
     serve:
       is: ChannelServer
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
+# Collects every incoming element and, at end-of-stream, yields the collection as the Job's named output component
+# (`result:`, blank = main) — the single element itself when exactly one arrived, matching the hosts'
+# single-positional convention, so a per-element RunWorker round trip is scalar-in / scalar-out. The Job-side
+# analogue of Flow's FlowOutput vertex. The accumulated collection carries across a live edit (Sort's-buffer
+# precedent) and the yield is re-applied on the rebuilt run. `result` (name) + its meta are inherited from the
+# ResultSink marker; `input` sits here (gotcha 2: palette insert resolves every attribute blank-not-missing).
+ResultSinkWorker:
+  abstract: true
+  is: ResultSink
+  title: "Result"
+  class: tech.kzen.auto.server.objects.job.worker.ResultSinkWorker
+  input: ""
+  meta:
+    input:
+      is: ChannelInput
       creator: JobChannelCreator
       editor: SelectChannelEditor
     selfLocation:

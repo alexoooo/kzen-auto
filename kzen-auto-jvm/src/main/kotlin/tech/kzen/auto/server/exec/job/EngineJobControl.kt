@@ -4,6 +4,7 @@ import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.engine.Address
 import tech.kzen.lib.common.exec.engine.Execution
+import tech.kzen.lib.common.exec.tuple.TupleComponentName
 import tech.kzen.lib.common.exec.tuple.TupleComponentValue
 import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -25,6 +26,11 @@ import java.nio.file.Path
  * [tech.kzen.auto.common.objects.document.job.JobConventions.workerProgressPath] (the path the JS Job UI polls),
  * throttled per Worker so a per-(small-)batch publisher doesn't flood the trace history.
  *
+ * [parameter] / [yieldResult] are the Job-signature seam (J2): a ParameterSource Worker reads its bound run
+ * argument off the run's typed inputs (threaded in as [jobInputs] by [JobRun]), and a ResultSink Worker yields a
+ * named output component into the run's shared [resultCollector] — both generic, with no Worker-type knowledge
+ * here (the compiler classifies which Workers play those roles; see [JobRun]).
+ *
  * [host] is the nested-Logic seam ([RunWorker][tech.kzen.auto.server.objects.job.worker.RunWorker]): it
  * compiles the child once via the run-shared [JobChildLogicHost] and hosts it under THIS Worker's own
  * [Execution] node, so the engine drives the child's stepping and pause / cancel uniformly with the rest of
@@ -35,7 +41,9 @@ class EngineJobControl(
     private val childLogicHost: JobChildLogicHost,
     private val objectStableMapper: ObjectStableMapper,
     private val workerScratchDir: Path,
-    private val workerOutputDir: Path
+    private val workerOutputDir: Path,
+    private val jobInputs: TupleValue,
+    private val resultCollector: JobResultCollector
 ): JobControl {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -109,6 +117,21 @@ class EngineJobControl(
         // until the engine gains transient (non-retained) emits (see
         // kzen/plans/2026-07-05_logic-engine-improvements.md phase 4); then mark this emit non-retained.
         execution.emit(progressAddress, ExecutionValue.of(value))
+    }
+
+
+    // The Job run's argument for [name], read off the root execution's typed inputs tuple (seeded by JobRun). A
+    // ParameterSource Worker streams this; null for an unbound / unknown name (indistinguishable from a bound null
+    // — matching TupleValue.find, and acceptable: a bare run streams a single null).
+    override fun parameter(name: String): Any? {
+        return jobInputs.find(TupleComponentName(name))
+    }
+
+
+    // Contribute a ResultSink Worker's named component to the run's output tuple (harvested by JobRun once the run
+    // settles). Last write per component wins, so a re-yield after a live-edit migrate is idempotent.
+    override fun yieldResult(component: String, value: Any?) {
+        resultCollector.yieldResult(TupleComponentName(component), value)
     }
 
 

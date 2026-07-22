@@ -30,6 +30,19 @@ object JobConventions {
     // JobServeCapability classifies by inheritance-chain membership, so subtypes are recognized (see CC-17).
     val summaryServerObjectName = ObjectName("SummaryServer")
 
+    // Signature marker archetypes (common-job.yaml, the SummaryServer pattern): a Worker whose inheritance chain
+    // reaches one of these declares a Job input parameter / output component. JobSignatureCapability classifies by
+    // chain membership, so subtypes are recognized (CC-17).
+    val parameterSourceObjectName = ObjectName("ParameterSource")
+    val resultSinkObjectName = ObjectName("ResultSink")
+
+    // The marker-declared name attributes: a ParameterSource's `parameter` names the run argument it streams; a
+    // ResultSink's `result` names its output component (blank = main).
+    val parameterAttributeName = AttributeName("parameter")
+    val parameterAttributePath = AttributePath.ofName(parameterAttributeName)
+    val resultAttributeName = AttributeName("result")
+    val resultAttributePath = AttributePath.ofName(resultAttributeName)
+
     val workersAttributeName = AttributeName("workers")
     val workersAttributePath = AttributePath.ofName(workersAttributeName)
 

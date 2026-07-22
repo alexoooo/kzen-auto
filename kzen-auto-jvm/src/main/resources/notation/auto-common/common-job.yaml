@@ -69,3 +69,29 @@ ChannelServer:
 SummaryServer:
   abstract: true
   is: ChannelServer
+
+
+#######################################################################################################################
+# Job signature markers (semantic Worker refinements, the SummaryServer pattern): a Worker whose inheritance
+# chain reaches ParameterSource declares one Job input parameter (`parameter:` names it; its output port's
+# `of:` types it); one reaching ResultSink contributes one output component (`result:` names it, blank = main;
+# its input port's `of:` types it). JobSignatureCapability classifies by chain membership (CC-17), so a
+# third-party source/sink is recognized with no code change. The name attributes live HERE so any subtype
+# inherits the declaration contract. Neither marker touches Channel/DuplexChannel — both refine Worker (which has
+# an `is:` chain), so the name attributes self-define through the normal chain.
+
+
+ParameterSource:
+  abstract: true
+  is: Worker
+  parameter: ""
+  meta:
+    parameter: String
+
+
+ResultSink:
+  abstract: true
+  is: Worker
+  result: ""
+  meta:
+    result: String

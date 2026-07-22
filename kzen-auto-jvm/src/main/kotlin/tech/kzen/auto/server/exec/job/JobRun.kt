@@ -35,6 +35,14 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableId
  * wires between them), then hosts each Worker as its OWN confined engine node ([Execution.host]) launched
  * concurrently with structured concurrency. The run completes when every Worker settles.
  *
+ * SIGNATURE (J2): the Job's bound run arguments arrive as the root [execution]'s typed [Execution.inputs] tuple —
+ * each ParameterSource Worker reads its own by name off it (via [EngineJobControl.parameter]) — and each
+ * ResultSink Worker's yielded component ([EngineJobControl.yieldResult]) is gathered by a per-run
+ * [JobResultCollector] into the [TupleValue] this run returns (so a host — a Script RunStep, a Flow Run vertex, a
+ * Job RunWorker — receives the Job's result). Discovery of which Workers play those roles is the compiler's job
+ * ([tech.kzen.auto.common.objects.document.job.JobSignatureCapability]); here the seeding / harvest is generic —
+ * no Worker-type knowledge (the extension rule).
+ *
  * KEY COLLAPSE: each Worker checks pause / step / cancel at its own [Execution.checkpoint] (via [EngineJobControl]),
  * and the engine's `CountingDispatcher` brings the Workers to a quiescent wavefront — so the old supervisor poll
  * loop, the shared `JobControlImpl` phase + release-signal, and the manual await / deadlock-grace machinery all
@@ -93,6 +101,13 @@ class JobRun(
         // (RunWorker) host. Built from the FULL graph (not [filteredDefinition]), since a child is a different
         // document. Each Worker still hosts under its own node — this holds only the reusable compiled Logics.
         val childLogicHost = JobChildLogicHost(graphNotation, graphDefinition, services)
+
+        // Parameter seeding + result harvest (JobSignatureCapability's runtime half): the root [execution]'s typed
+        // [Execution.inputs] tuple carries the Job's bound run arguments (a ParameterSourceWorker reads its own by
+        // name via JobControl.parameter), and this collector gathers what the ResultSinkWorkers yield into the
+        // tuple returned as the run's result. Owned per run — a migrate rebuilds it empty, so a carried sink
+        // re-yields at its onComplete (yield is last-write-wins).
+        val resultCollector = JobResultCollector()
 
         // One shared instance graph for the whole run: the Channel objects are single shared instances and each
         // Worker's injected endpoint views reference them (via JobChannelCreator) — exactly as the old
@@ -195,7 +210,8 @@ class JobRun(
                                     workerStableId,
                                     WorkerLogic(
                                         worker, childLogicHost, objectStableMapper,
-                                        workerScratchDir, workerOutputDir))
+                                        workerScratchDir, workerOutputDir,
+                                        execution.inputs, resultCollector))
                             }
                             finally {
                                 activeWorkers.decrementAndGet()
@@ -212,7 +228,7 @@ class JobRun(
             externalClients.values.forEach { it.close() }
         }
 
-        return TupleValue.empty
+        return resultCollector.toTupleValue()
     }
 
 
