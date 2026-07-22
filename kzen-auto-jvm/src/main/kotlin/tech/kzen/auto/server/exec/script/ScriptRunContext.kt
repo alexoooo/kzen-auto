@@ -395,7 +395,12 @@ class ScriptRunContext(
 
 
     //----------------------------------------------------------------------------------- run-internal (for ScriptLogic)
-    /** Record a parameter / binding value by stable id (no trace) — used by [ScriptLogic] at run start. */
+    /**
+     * Record a parameter / binding value by stable id in the live value graph, with NO trace emit (see the
+     * [bind][tech.kzen.auto.server.objects.script.api.StepExecution.bind] contract — a loop-item binding is
+     * re-bound every iteration and nothing reads its address). A parameter's display value is surfaced
+     * separately, once at run start, by [ScriptLogic] via [tech.kzen.auto.server.exec.LogicParameterTrace].
+     */
     fun recordValue(stableId: ObjectStableId, value: Any?) {
         stepValues[stableId] = value
     }

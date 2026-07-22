@@ -3,10 +3,9 @@ package tech.kzen.auto.server.exec.job
 import tech.kzen.auto.common.objects.document.job.JobChannelSynthesis
 import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.auto.common.objects.document.job.JobSignatureCapability
-import tech.kzen.auto.common.objects.document.logic.ParameterDefaultDefiner
 import tech.kzen.auto.common.paradigm.logic.LogicConventions
 import tech.kzen.auto.server.exec.LogicCompilerServices
-import tech.kzen.lib.common.exec.tuple.TupleComponentName
+import tech.kzen.auto.server.exec.LogicParameter
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
@@ -59,15 +58,12 @@ object JobLogicCompiler {
         // the synthesized channels.
         val logicSignature = JobSignatureCapability.signature(graphDefinition.graphStructure, jobLocation)
 
-        // Per-parameter typed defaults (the `default` scalar coerced by the declared `type`), the fallback
-        // JobControl.parameter serves when the run binds no argument.
-        val parameterDefaults = documentNotation
+        // Per-parameter bindings (stable id + name + typed default — the `default` scalar coerced by the
+        // declared `type`): JobRun surfaces each resolved value to the trace at run start, and
+        // JobControl.parameter falls back to the default when the run binds no argument.
+        val parameterBindings = documentNotation
             .directNestedObjectPaths(NotationConventions.mainObjectPath, LogicConventions.parametersAttributeName)
-            .associate { parameterPath ->
-                val parameterLocation = ObjectLocation(documentPath, parameterPath)
-                TupleComponentName(parameterPath.name.value) to
-                        ParameterDefaultDefiner.resolve(parameterLocation, graphNotation)
-            }
+            .map { LogicParameter.of(ObjectLocation(documentPath, it), graphNotation, services.objectStableMapper) }
 
         return JobLogic(
             jobLocation,
@@ -75,7 +71,7 @@ object JobLogicCompiler {
             workerLocations,
             synthesis.channelLocations,
             logicSignature,
-            JobParameters(logicSignature.inputs, parameterDefaults),
+            JobParameters(logicSignature.inputs, parameterBindings),
             graphNotation,
             graphDefinition,
             services)

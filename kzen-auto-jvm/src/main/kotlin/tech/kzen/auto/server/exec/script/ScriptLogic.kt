@@ -1,6 +1,8 @@
 package tech.kzen.auto.server.exec.script
 
 import tech.kzen.auto.common.objects.document.script.model.ScriptJumpAnalysis
+import tech.kzen.auto.server.exec.LogicParameter
+import tech.kzen.auto.server.exec.LogicParameterTrace
 import tech.kzen.lib.common.exec.engine.Execution
 import tech.kzen.lib.common.exec.engine.Logic
 import tech.kzen.lib.common.exec.engine.LogicSignature
@@ -23,7 +25,7 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableId
  */
 class ScriptLogic(
     private val rootStepLocations: List<ObjectLocation>,
-    private val parameters: List<ScriptParameter>,
+    private val parameters: List<LogicParameter>,
     private val structure: ScriptRunStructure,
     private val logicSignature: LogicSignature
 ): Logic, Repositionable {
@@ -60,9 +62,9 @@ class ScriptLogic(
         execution.onCapture { context.captureState() }
 
         for (parameter in parameters) {
-            context.recordValue(
-                parameter.stableId,
-                execution.inputs.find(parameter.name) ?: parameter.default)
+            val value = parameter.resolve(execution.inputs)
+            context.recordValue(parameter.stableId, value)
+            LogicParameterTrace.emit(execution, parameter.stableId, value)
         }
 
         context.runSteps(rootStepLocations)

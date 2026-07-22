@@ -30,15 +30,26 @@ class JobProgressStore(
     private val objectStableMapper: ObjectStableMapper
 ) {
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun fetchWorkerProgress(
+    /**
+     * One trace fetch, two projections: the per-Worker progress this store interprets, plus the raw snapshot
+     * itself — threaded to the signature editor, which reads each declared parameter's emitted run value off
+     * it (see the server-side LogicParameterTrace contract). Null when the Job has no (retained) run.
+     */
+    data class RunProgress(
+        val traceSnapshot: LogicTraceSnapshot,
+        val workerProgress: Map<ObjectLocation, JobWorkerProgress>
+    )
+
+
+    suspend fun fetchRunProgress(
         mainLocation: ObjectLocation,
         workerLocations: Collection<ObjectLocation>
-    ): Map<ObjectLocation, JobWorkerProgress> {
+    ): RunProgress? {
         val logicRunExecutionId = mostRecent(mainLocation)
-            ?: return mapOf()
+            ?: return null
 
         val snapshot = lookupRun(logicRunExecutionId.logicRunId)
-            ?: return mapOf()
+            ?: return null
 
         val builder = mutableMapOf<ObjectLocation, JobWorkerProgress>()
         for (workerLocation in workerLocations) {
@@ -64,7 +75,7 @@ class JobProgressStore(
             }
             builder[workerLocation] = JobWorkerProgress.ofProgressMap(status, progressRaw, outcomeRaw)
         }
-        return builder
+        return RunProgress(snapshot, builder)
     }
 
 

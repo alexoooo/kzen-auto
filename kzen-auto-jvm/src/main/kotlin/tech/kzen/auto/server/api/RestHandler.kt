@@ -771,131 +771,12 @@ class RestHandler(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    fun benchmark(serverRequest: ServerRequest): Mono<ServerResponse> {
-//        val iterations: Int = serverRequest.getParam(
-//            "i", Integer::parseInt)
-//
-//        val startTime = System.currentTimeMillis()
-//
-//        // http://localhost:8080/command/object/insert-in-list?path=main%2FScript.yaml&object=main&in-attribute=steps&index=7&name=Escape&position=8&body=is%3A%20SendEscape
-//        val addCommand = InsertObjectInListAttributeCommand(
-//            ObjectLocation.parse("main/Script.yaml#main"),
-//            AttributePath.parse("steps"),
-//            PositionRelation.parse("7"),
-//            ObjectName("Escape"),
-//            PositionRelation.parse("8"),
-//            ServerContext.yamlParser.parseObject("is: SendEscape"))
-//
-//        // http://localhost:8080/command/object/remove-in?path=main%2FScript.yaml&object=main&in-attribute=steps.7
-//        val removeCommand = RemoveObjectInAttributeCommand(
-//            ObjectLocation.parse("main/Script.yaml#main"),
-//            AttributePath.parse("steps.7"))
-//
-//        for (i in 0 .. iterations) {
-//            applyAndDigest(addCommand)
-//            applyAndDigest(removeCommand)
-//        }
-//
-//        val duration = System.currentTimeMillis() - startTime
-//        return ServerResponse
-//                .ok()
-//                .body(Mono.just("$duration"))
-//    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     private fun applyCommand(command: NotationCommand): Digest {
         return runBlocking {
             graphStore.apply(command)
             graphStore.digest()
         }
     }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-//    fun actionList(): List<String> {
-//        val activeScripts = executionRepository.activeScripts()
-//        return activeScripts.map { it.asString() }
-//    }
-//
-//
-//    fun actionModel(parameters: Parameters): Map<String, Any?> {
-//        val documentPath: DocumentPath = parameters.getParam(
-//            CommonRestApi.paramDocumentPath, DocumentPath::parse)
-//
-//        val executionModel = runBlocking {
-//            val graphStructure = graphStore.graphStructure()
-//            executionRepository.executionModel(documentPath, graphStructure)
-//        }
-//
-//        return ImperativeModel.toCollection(executionModel)
-//    }
-//
-//
-//    fun actionStart(parameters: Parameters): String {
-//        val documentPath: DocumentPath = parameters.getParam(
-//            CommonRestApi.paramDocumentPath, DocumentPath::parse)
-//
-//        val digest = runBlocking {
-//            val graphStructure = graphStore
-//                    .graphStructure()
-//                    .filter(AutoConventions.serverAllowed)
-//
-//            executionRepository.start(
-//                documentPath, graphStructure)
-//        }
-//
-//        return digest.asString()
-//    }
-//
-//
-//    fun actionReturn(parameters: Parameters): String {
-//        val hostDocumentPath: DocumentPath = parameters.getParam(
-//            CommonRestApi.paramHostDocumentPath, DocumentPath::parse)
-//
-//        val digest = runBlocking {
-//            val graphStructure = graphStore
-//                    .graphStructure()
-//                    .filter(AutoConventions.serverAllowed)
-//
-//            executionRepository.returnFrame(
-//                hostDocumentPath, graphStructure)
-//        }
-//
-//        return digest.asString()
-//    }
-//
-//
-//    fun actionReset(parameters: Parameters) {
-//        val documentPath: DocumentPath = parameters.getParam(
-//            CommonRestApi.paramDocumentPath, DocumentPath::parse)
-//
-//        runBlocking {
-//            executionRepository.reset(documentPath)
-//        }
-//    }
-//
-//
-//    fun actionPerform(parameters: Parameters): Map<String, Any?> {
-//        val hostDocumentPath: DocumentPath = parameters.getParam(
-//            CommonRestApi.paramHostDocumentPath, DocumentPath::parse)
-//
-//        val documentPath: DocumentPath = parameters.getParam(
-//            CommonRestApi.paramDocumentPath, DocumentPath::parse)
-//
-//        val objectPath: ObjectPath = parameters.getParam(
-//            CommonRestApi.paramObjectPath, ObjectPath::parse)
-//
-//        val objectLocation = ObjectLocation(documentPath, objectPath)
-//
-//        val execution: ImperativeResponse = runBlocking {
-//            val graphStructure = graphStore.graphStructure()
-//            executionRepository.execute(
-//                hostDocumentPath, objectLocation, graphStructure)
-//        }
-//
-//        return execution.toCollection()
-//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -1383,19 +1264,6 @@ class RestHandler(
             id.value to location.asString()
         }
     }
-
-
-//    fun logicStartStep(parameters: Parameters): String {
-//        val runId: LogicRunId = parameters.getParam(CommonRestApi.paramRunId) {
-//            value -> LogicRunId(value)
-//        }
-//
-//        val response = runBlocking {
-//            serverLogicController.step(runId)
-//        }
-//
-//        return response.name
-//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------

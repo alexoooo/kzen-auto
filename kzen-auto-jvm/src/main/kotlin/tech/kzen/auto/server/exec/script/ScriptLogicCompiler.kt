@@ -1,15 +1,14 @@
 package tech.kzen.auto.server.exec.script
 
-import tech.kzen.auto.common.objects.document.logic.ParameterDefaultDefiner
 import tech.kzen.auto.common.objects.document.logic.ResultSignatureDefiner
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.objects.document.script.model.ScriptTree
 import tech.kzen.auto.server.exec.LogicCompilerServices
+import tech.kzen.auto.server.exec.LogicParameter
 import tech.kzen.auto.server.objects.script.ScriptValidator
 import tech.kzen.lib.common.exec.engine.LogicSignature
 import tech.kzen.lib.common.exec.logic.model.LogicType
 import tech.kzen.lib.common.exec.tuple.TupleComponentDefinition
-import tech.kzen.lib.common.exec.tuple.TupleComponentName
 import tech.kzen.lib.common.exec.tuple.TupleDefinition
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.location.AttributeLocation
@@ -65,7 +64,7 @@ object ScriptLogicCompiler {
 
         val parameters = ScriptConventions.orderedDirectChildLocations(
             graphNotation, AttributeLocation(scriptLocation, ScriptConventions.parametersAttributePath))
-            .map { parameter(it, graphNotation, services) }
+            .map { LogicParameter.of(it, graphNotation, services.objectStableMapper) }
 
         // The signature's inputs are the declared parameters (in order); a caller binding by signature — e.g. a
         // Flow logic-host vertex binding its wired inputs to the leading parameters — resolves the right name.
@@ -75,18 +74,5 @@ object ScriptLogicCompiler {
 
         return ScriptLogic(
             rootStepLocations, parameters, structure, LogicSignature(inputSignature, resultSignature))
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    private fun parameter(
-        location: ObjectLocation,
-        graphNotation: GraphNotation,
-        services: LogicCompilerServices
-    ): ScriptParameter {
-        return ScriptParameter(
-            services.objectStableMapper.objectStableId(location),
-            TupleComponentName(location.objectPath.name.value),
-            ParameterDefaultDefiner.resolve(location, graphNotation))
     }
 }

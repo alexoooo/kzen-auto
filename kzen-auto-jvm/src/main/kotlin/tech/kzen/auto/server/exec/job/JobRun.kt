@@ -13,6 +13,7 @@ import tech.kzen.auto.common.paradigm.job.api.ChannelClient
 import tech.kzen.auto.server.objects.job.JobValidator
 import tech.kzen.auto.common.paradigm.job.api.Worker
 import tech.kzen.auto.server.exec.LogicCompilerServices
+import tech.kzen.auto.server.exec.LogicParameterTrace
 import tech.kzen.auto.server.objects.job.channel.DuplexJobChannel
 import tech.kzen.auto.server.objects.job.channel.JobChannel
 import tech.kzen.lib.common.exec.ExecutionRequest
@@ -109,6 +110,11 @@ class JobRun(
 
 
     suspend fun run(): TupleValue {
+        // Surface each declared parameter's resolved value (bound argument falling back to the declared default)
+        // at the parameter's own address, once per (re)launch — the signature editor shows it beside the declared
+        // default. Emitted on the Job's ROOT node: parameters belong to the document, not any Worker.
+        LogicParameterTrace.emitAll(execution, jobParameters.bindings)
+
         // Shared across every Worker of this run: compiles + caches the child Logics that nested-Logic Workers
         // (RunWorker) host. Built from the FULL graph (not [filteredDefinition]), since a child is a different
         // document. Each Worker still hosts under its own node — this holds only the reusable compiled Logics.

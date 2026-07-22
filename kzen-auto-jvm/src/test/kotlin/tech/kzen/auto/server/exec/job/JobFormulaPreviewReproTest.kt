@@ -24,7 +24,7 @@ import kotlin.test.fail
  * The bug this guards: a Job's Workers are each hosted as their OWN engine node (registering their own stable id
  * in the trace history), but the Job ROOT (`main`) only HOSTS them and emits no trace event of its own — unlike a
  * Script / Flow root, whose per-element emits self-register it. So `mostRecent(main)` returned
- * null and [tech.kzen.auto.client.objects.document.job.JobProgressStore.fetchWorkerProgress] bailed on its very
+ * null and [tech.kzen.auto.client.objects.document.job.JobProgressStore.fetchRunProgress] bailed on its very
  * first line, hiding ALL live worker progress (an empty Preview) even though the progress was correctly in the
  * trace. (The engine-served view resolves this structurally now — the run's root node exists from engine
  * construction, so mostRecent(main) resolves it before any emit.) The assertions mirror that read path:
@@ -59,7 +59,7 @@ class JobFormulaPreviewReproTest {
         controller.continueOrStart(runId, attempt)
         awaitDone()
 
-        // JobProgressStore.fetchWorkerProgress FIRST resolves the run via mostRecent(main); a null here is the bug
+        // JobProgressStore.fetchRunProgress FIRST resolves the run via mostRecent(main); a null here is the bug
         // (the Preview never even fetches its worker progress).
         val recent = context.logicTrace.mostRecent(jobLocation)
         assertNotNull(recent, "the JS resolves the run via mostRecent(main); null => the Preview never fetches")

@@ -18,7 +18,6 @@ import tech.kzen.auto.client.objects.document.common.signature.ResultSignatureEd
 import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
 import tech.kzen.auto.client.objects.document.script.display.ScriptStepDisplayPropsCommon
 import tech.kzen.auto.client.objects.document.script.display.StepDisplayManager
-import tech.kzen.auto.client.objects.document.script.display.computeStepTraceInfo
 import tech.kzen.auto.client.objects.document.script.display.dependency.ScriptDependencyOverlay
 import tech.kzen.auto.client.objects.document.script.display.dependency.ScriptStepDragStore
 import tech.kzen.auto.client.objects.document.script.display.dependency.StepRowRefRegistry
@@ -39,8 +38,7 @@ import tech.kzen.auto.client.objects.document.script.display.ScriptMoveToArrow
 import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
-import tech.kzen.lib.common.exec.ExecutionValue
-import tech.kzen.lib.common.exec.NullExecutionValue
+import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceSnapshot
 import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.GraphStructure
@@ -75,9 +73,10 @@ external interface ScriptControllerState: State {
     var scriptLoaded: Boolean
     var globalError: String?
 
-    // Per-parameter runtime values (name -> traced value), shown in the signature editor while running.
-    // Kept value-stable across publishes so the RPureComponent shallow-equal bails when unchanged.
-    var parameterValues: Map<String, ExecutionValue>?
+    // The latest run's trace snapshot, threaded to the signature editor (which reads each parameter's
+    // emitted run value off it by stable id). Kept reference-stable across publishes so the RPureComponent
+    // shallow-equal bails when only unrelated progress state changed.
+    var logicTraceSnapshot: LogicTraceSnapshot?
 
     // Raw-view state. In View mode raw/editorModified are static (no typing), so they don't trigger
     // extra re-renders; in Raw mode they drive the editor and so are correctly render-consumed.
@@ -239,11 +238,11 @@ class ScriptController:
     override fun onScriptState(scriptState: ScriptState) {
         // NB: extract only what render reads. On expand/collapse these are unchanged, so the
         //     RPureComponent shallow-equal bails (no re-render, no fresh child props, no cascade).
-        val newParameterValues = computeParameterValues(scriptState)
-        // Reuse the existing reference when value-equal (computeParameterValues yields a fresh map each
-        // call), so the shallow-equal still bails when no parameter value changed.
-        val stableParameterValues =
-            if (newParameterValues == state.parameterValues) state.parameterValues else newParameterValues
+        val newSnapshot = scriptState.progress.logicTraceSnapshot
+        // Reuse the existing reference when value-equal (each progress refresh publishes a fresh snapshot
+        // instance), so the shallow-equal still bails when the trace content didn't change.
+        val stableSnapshot =
+            if (newSnapshot == state.logicTraceSnapshot) state.logicTraceSnapshot else newSnapshot
 
         setState {
             this.scriptLoaded = true
@@ -251,40 +250,8 @@ class ScriptController:
             this.viewMode = scriptState.viewMode
             this.raw = scriptState.raw
             this.editorModified = scriptState.editorModified
-            this.parameterValues = stableParameterValues
+            this.logicTraceSnapshot = stableSnapshot
         }
-    }
-
-
-    // Each Script parameter's current run-time value (name -> traced value), read from the run trace
-    // exactly like a step's value (computeStepTraceInfo). Empty when not running / before a value exists.
-    private fun computeParameterValues(scriptState: ScriptState): Map<String, ExecutionValue> {
-        val clientState = state.clientState
-            ?: return emptyMap()
-        val documentPath = clientState.navigationRoute.documentPath
-            ?: return emptyMap()
-        val documentNotation = clientState.graphStructure().graphNotation.documents[documentPath]
-            ?: return emptyMap()
-
-        val mainObjectPath = documentPath.toMainObjectLocation().objectPath
-        val parameterPaths = documentNotation.directNestedObjectPaths(
-            mainObjectPath, ScriptConventions.parametersAttributeName)
-        if (parameterPaths.isEmpty()) {
-            return emptyMap()
-        }
-
-        val result = mutableMapOf<String, ExecutionValue>()
-        for (path in parameterPaths) {
-            val location = ObjectLocation(documentPath, path)
-            val displayValue = computeStepTraceInfo(scriptState, location, props.objectStableMapper)
-                .trace
-                ?.displayValue
-                ?: continue
-            if (displayValue !is NullExecutionValue) {
-                result[path.name.value] = displayValue
-            }
-        }
-        return result
     }
 
 
@@ -410,7 +377,8 @@ class ScriptController:
             objectLocation = mainObjectLocation
             clientStateGlobal = props.clientStateGlobal
             mirroredGraphStore = props.mirroredGraphStore
-            parameterValues = state.parameterValues
+            logicTraceSnapshot = state.logicTraceSnapshot
+            objectStableMapper = props.objectStableMapper
         }
 
         ResultSignatureEditor::class.react {

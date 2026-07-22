@@ -36,6 +36,7 @@ import tech.kzen.auto.common.objects.document.job.JobChannelDerivation
 import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.auto.common.objects.document.job.model.JobValidation
 import tech.kzen.auto.common.util.AutoConventions
+import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceSnapshot
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -74,6 +75,11 @@ external interface JobControllerState: State {
     // each run-status change. Null until the first fetch. Threaded to each card via WorkerDisplayPropsCommon; a
     // preview card layers its own on-demand larger slice on top (see PreviewWorkerDisplay).
     var workerProgress: Map<ObjectLocation, JobWorkerProgress>?
+
+    // The latest run's trace snapshot (the same fetch [workerProgress] is projected from), threaded to the
+    // signature editor — it reads each declared parameter's emitted run value off it by stable id. Null until
+    // a run exists. Value-gated so the reference stays ===-stable across identical polls.
+    var traceSnapshot: LogicTraceSnapshot?
 
     // Per-Worker server-side validation (the static payload-type walk: inferred payload types + expression
     // compile errors), fetched from the JobValidator detached action on notation change. Null until the first
@@ -234,6 +240,7 @@ class JobController(
     override fun JobControllerState.init(props: JobControllerProps) {
         clientState = null
         workerProgress = null
+        traceSnapshot = null
         workerValidations = null
         workerLocations = null
         connectionsByUpstream = null
@@ -326,12 +333,19 @@ class JobController(
             .map { ObjectLocation(documentPath, it) }
 
         async {
-            val progress = jobProgressStore.fetchWorkerProgress(mainLocation, workerLocations)
-            // Value-equality gate (data class + map): skip setState when nothing changed so RPureComponent
+            val runProgress = jobProgressStore.fetchRunProgress(mainLocation, workerLocations)
+            // Value-equality gates (data class + map): skip setState when nothing changed so RPureComponent
             // bails out instead of re-rendering on every (identical) poll.
+            val progress = runProgress?.workerProgress ?: mapOf()
             if (progress != state.workerProgress) {
                 setState {
                     workerProgress = progress
+                }
+            }
+            val snapshot = runProgress?.traceSnapshot
+            if (snapshot != state.traceSnapshot) {
+                setState {
+                    traceSnapshot = snapshot
                 }
             }
         }
@@ -627,6 +641,8 @@ class JobController(
                 objectLocation = main
                 clientStateGlobal = props.clientStateGlobal
                 mirroredGraphStore = props.mirroredGraphStore
+                logicTraceSnapshot = state.traceSnapshot
+                objectStableMapper = props.objectStableMapper
             }
 
             // The declared result signature (Script parity): the SAME editor Script uses, over the `results`

@@ -40,6 +40,8 @@ import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.ListExecutionValue
 import tech.kzen.lib.common.exec.NullExecutionValue
 import tech.kzen.lib.common.exec.ScalarExecutionValue
+import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
+import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceSnapshot
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.attribute.AttributeSegment
@@ -53,6 +55,7 @@ import tech.kzen.lib.common.model.structure.notation.cqrs.RenameObjectRefactorCo
 import tech.kzen.lib.common.model.structure.notation.cqrs.ShiftObjectTreeCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.UpsertAttributeCommand
 import tech.kzen.lib.common.service.store.MirroredGraphStore
+import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import tech.kzen.lib.platform.collect.persistentMapOf
 import web.cssom.*
 import web.html.HTMLDivElement
@@ -66,9 +69,13 @@ external interface LogicSignatureEditorProps: Props {
     var clientStateGlobal: ClientStateGlobal
     var mirroredGraphStore: MirroredGraphStore
 
-    // Optional per-parameter run-time values (name -> traced value); rendered next to each row while a
-    // run is active. Null/absent when not running (purely presentational — supplied by the controller).
-    var parameterValues: Map<String, ExecutionValue>?
+    // The latest run's trace snapshot, fetched by the HOST controller — each flavour already polls it with
+    // the right frame semantics (ScriptStore's progress refresh, JobController's progress store). The editor
+    // reads each parameter's emitted run value off it by stable id (the flavour-neutral server-side
+    // LogicParameterTrace contract: a bounded plain value at the parameter's own address). Null when no run /
+    // not yet fetched — rows then show just the muted declared default.
+    var logicTraceSnapshot: LogicTraceSnapshot?
+    var objectStableMapper: ObjectStableMapper
 }
 
 
@@ -662,9 +669,18 @@ class LogicSignatureEditor:
     }
 
 
-    // `= value`: the live run-time value if running, else the declared default; nothing when neither exists.
+    // `= value`: shows the actual last-run value (bold, live) and the declared default (muted), so it is
+    // clear which is which and — once a run has produced a value — whether the default is the value in
+    // effect. Before any run only the muted default shows; a defaultless parameter shows nothing until run.
     private fun ChildrenBuilder.renderValue(parameter: ParameterRow) {
-        val runtimeValue = props.parameterValues?.get(parameter.name)
+        val defaultText = parameter.defaultText?.takeIf { it.isNotEmpty() }
+
+        // Keyed by stable id, so the value survives a parameter rename without a re-fetch (mirrors
+        // computeStepTraceInfo); an unbound defaultless parameter emits NullExecutionValue, hidden here.
+        val runtimeValue = props.logicTraceSnapshot
+            ?.values
+            ?.get(LogicTracePath.ofObjectStableId(props.objectStableMapper.objectStableId(parameter.location)))
+            ?.value
         val runtimeText =
             if (runtimeValue != null && runtimeValue !is NullExecutionValue) {
                 executionValueText(runtimeValue)
@@ -673,8 +689,9 @@ class LogicSignatureEditor:
                 null
             }
 
-        val displayText = runtimeText ?: parameter.defaultText?.takeIf { it.isNotEmpty() }
-            ?: return
+        if (runtimeText == null && defaultText == null) {
+            return
+        }
 
         span {
             css {
@@ -682,12 +699,33 @@ class LogicSignatureEditor:
                 color = Color("gray")
             }
             +"= "
-            span {
-                css {
-                    fontWeight = FontWeight.bold
-                    color = NamedColor.black
+
+            if (runtimeText == null) {
+                // Idle: only the declared default is known — muted (not bold) so it reads as "default", not live.
+                +defaultText!!
+            }
+            else {
+                // A run produced an actual value: render it as the live value (bold black) ...
+                span {
+                    css {
+                        fontWeight = FontWeight.bold
+                        color = NamedColor.black
+                    }
+                    +runtimeText
                 }
-                +displayText
+
+                // ... then annotate with the declared default: a muted "default" tag when the default is in
+                // effect, else "default: <text>" so both the live value and the overridden default are visible.
+                if (defaultText != null) {
+                    span {
+                        css {
+                            marginLeft = 0.35.em
+                            fontSize = 0.85.em
+                            color = Color("gray")
+                        }
+                        +if (runtimeText == defaultText) "default" else "default: $defaultText"
+                    }
+                }
             }
         }
     }
