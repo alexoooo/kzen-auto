@@ -54,6 +54,25 @@ class WorkerLane(
         }
         return JobMessage.valueHeader
     }
+
+
+    /**
+     * The static type of [JobMessage.boundaryValue] for this lane — what a boundary worker
+     * ([ResultSinkWorker] yield, [RunWorker] child argument) sends across: a typed payload lane crosses as
+     * its payload; a statically flat-only lane materializes to an ordered `Map<String, String>`. Null =
+     * statically unknown (a CSV lane's payload absence, an untyped source, or a statically empty message) —
+     * boundary-type checks are skipped, their errors surfacing at run time as before.
+     */
+    fun boundaryType(): TypeMetadata? {
+        payloadType?.let { return it }
+
+        val columns = flatColumns
+            ?: return null
+        if (columns.values.isEmpty()) {
+            return null
+        }
+        return TypeMetadata(mapClassName, listOf(TypeMetadata.string, TypeMetadata.string), false)
+    }
 }
 
 

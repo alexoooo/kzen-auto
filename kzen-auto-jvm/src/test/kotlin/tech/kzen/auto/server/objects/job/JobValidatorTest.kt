@@ -20,8 +20,10 @@ import kotlin.test.assertNull
  * wiring, each Worker's [tech.kzen.auto.server.objects.job.worker.WorkerBase.payloadFlow] mapping input to
  * output. Covers the typed chain (FormulaSource streams Int -> Formula `payload:` maps Int -> Filter / sink
  * identity — every card would show the Int chip), a broken expression surfacing as that Worker's validation
- * ERROR (not a crash), a nested-Logic RunWorker typed by its Script callee's declared `results` signature, and
- * the skip lane (a manually-wired CSV pipeline: unknown columns -> no static validation, so no false errors).
+ * ERROR (not a crash), a nested-Logic RunWorker typed by its Script callee's declared `results` signature, the
+ * ResultSink's declared-`results` checks (undeclared component; declared-vs-inferred assignability — mismatch
+ * rejected, supertype accepted, nullable-into-non-nullable rejected), and the skip lane (a manually-wired CSV
+ * pipeline: unknown columns -> no static validation, so no false errors).
  * Drives the same synthesize + filter + instantiate steps as [JobValidator.execute] (and
  * [tech.kzen.auto.server.exec.job.JobRun]), without the detached/cache layers.
  */
@@ -96,6 +98,47 @@ class JobValidatorTest {
         val source = validation.workerValidations[ObjectPath.parse("main.workers/source")]
         assertNotNull(source)
         assertNull(source.errorMessage, "only the sink carries the error")
+    }
+
+
+    @Test
+    fun declaredResultTypeMismatchIsSinkValidationError() {
+        // The static assignability check: the source streams Int but the document declares `main` as String —
+        // the sink's probe compile fails and the mismatch errors on ITS card before running.
+        val validation = validate("test/job-result-type-mismatch-test.yaml")
+
+        val collect = validation.workerValidations[ObjectPath.parse("main.workers/collect")]
+        assertNotNull(collect)
+        assertEquals("Result 'main' declares String but the stream carries Int", collect.errorMessage)
+
+        val source = validation.workerValidations[ObjectPath.parse("main.workers/source")]
+        assertNotNull(source)
+        assertNull(source.errorMessage, "only the sink carries the error")
+    }
+
+
+    @Test
+    fun declaredSupertypeResultValidatesClean() {
+        // TRUE assignability, not class-name equality: an Int stream into a declared Number result is fine
+        // (Kotlin's own subtyping via the probe compile).
+        val validation = validate("test/job-result-subtype-test.yaml")
+
+        assertEquals(TypeMetadata.int, typeOf(validation, "main.workers/collect"))
+        assertEquals(
+            listOf(), validation.workerValidations.values.mapNotNull { it.errorMessage },
+            "an Int stream into a declared Number result validates clean")
+    }
+
+
+    @Test
+    fun nullableLaneIntoNonNullableResultIsSinkValidationError() {
+        // Nullability is part of assignability: a String? lane (nullable parameter source) into a declared
+        // NON-nullable String result is rejected statically, consistent with the empty-stream run contract.
+        val validation = validate("test/job-result-nullability-test.yaml")
+
+        val collect = validation.workerValidations[ObjectPath.parse("main.workers/collect")]
+        assertNotNull(collect)
+        assertEquals("Result 'main' declares String but the stream carries String?", collect.errorMessage)
     }
 
 

@@ -1,0 +1,18 @@
+# Declared-vs-inferred type MISMATCH fixture (JobValidatorTest): the source streams (1..3) as Int payloads but
+# the document declares the `main` result as String — the ResultSink's static assignability check (probe
+# compile) fails, erroring on ITS card at validation time, before running; the well-formed source stays clean.
+# Ports BLANK -> JobChannelSynthesis derives the channel from Worker document order.
+main:
+  is: Job
+  results:
+    main:
+      class: kotlin.String
+      generics: []
+      nullable: false
+
+main.workers/source:
+  is: FormulaSourceWorker
+  code: "(1..3)"
+
+main.workers/collect:
+  is: ResultSinkWorker

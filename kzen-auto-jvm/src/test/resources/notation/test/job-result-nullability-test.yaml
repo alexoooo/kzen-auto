@@ -1,0 +1,26 @@
+# Declared-vs-inferred NULLABILITY fixture (JobValidatorTest): a nullable String parameter makes the lane
+# String?, but the document declares the `main` result NON-nullable String — the ResultSink's static
+# assignability check rejects nullable-into-non-nullable (Kotlin's own rules via probe compile), erroring on
+# the sink's card at validation time. The scalar-parameter-source pattern of job-signature-scalar-child-test.
+# Ports BLANK -> JobChannelSynthesis derives the channel from Worker document order.
+main:
+  is: Job
+  results:
+    main:
+      class: kotlin.String
+      generics: []
+      nullable: false
+
+main.parameters/item:
+  is: ParameterBinding
+  type:
+    class: kotlin.String
+    generics: []
+    nullable: true
+
+main.workers/source:
+  is: FormulaSourceWorker
+  code: item
+
+main.workers/collect:
+  is: ResultSinkWorker

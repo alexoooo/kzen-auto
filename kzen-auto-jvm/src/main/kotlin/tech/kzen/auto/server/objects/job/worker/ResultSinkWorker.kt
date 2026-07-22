@@ -4,9 +4,12 @@ import tech.kzen.auto.common.objects.document.logic.ResultSignatureDefiner
 import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.common.paradigm.logic.LogicConventions
+import tech.kzen.auto.server.objects.logic.TypeAssignability
+import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.lib.common.exec.tuple.TupleComponentName
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.service.notation.NotationConventions
 
 
@@ -14,8 +17,9 @@ import tech.kzen.lib.common.service.notation.NotationConventions
  * A SINK Worker that keeps a single element of the stream ([keep]: [first] / [last]) and, at end-of-stream
  * ([onComplete]), yields it as the Job's named output component ([result], blank = "main") via
  * [JobControl.yieldResult] — the Job-side analogue of Script's Result step, typed by the Job document's declared
- * `results` signature (Script parity: yielding into an undeclared component is a validation error, surfaced by
- * [payloadFlow] on the card and again as a run failure). An empty stream is a run failure unless the declared
+ * `results` signature (Script parity: yielding into an undeclared component — or a stream whose inferred
+ * boundary type is not assignable to the declared type — is a validation error, surfaced by [payloadFlow] on
+ * the card before running; the undeclared case fails the run too). An empty stream is a run failure unless the declared
  * type is nullable (then the result is null) — so a Job whose stream unexpectedly dried up fails loudly instead
  * of returning a silent empty. A LOGIC-BOUNDARY worker: a [JobMessage] never crosses out of the Job, so the kept
  * message materializes via [JobMessage.boundaryValue] AT YIELD (payload when present, else the flat part as an
@@ -40,7 +44,8 @@ class ResultSinkWorker(
     input: ChannelInput<Any?>,
     private val result: String,
     private val keep: String,
-    private val selfLocation: ObjectLocation
+    private val selfLocation: ObjectLocation,
+    @Service private val cachedKotlinCompiler: CachedKotlinCompiler
 ):
     SinkWorker(input, selfLocation)
 {
@@ -80,7 +85,7 @@ class ResultSinkWorker(
         val declaredType = control.results().find(TupleComponentName(component))?.metadata
             ?: error(noResultDeclared(component))
 
-        if (! hasAny) {
+        if (!hasAny) {
             check(declaredType.nullable) {
                 "No element arrived for Result '$component' — declare the result nullable to allow an empty stream"
             }
@@ -96,9 +101,12 @@ class ResultSinkWorker(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    // Static validation (identity lane — a sink's card displays its input): the strict Script-parity check
-    // that this sink's component is declared in the Job document's `results` signature map, plus the `keep`
-    // value check — both surfaced on the card before running.
+    // Static validation (identity lane — a sink's card displays its input), the strict Script-parity checks,
+    // all surfaced on the card before running: the `keep` value; this sink's component is declared in the Job
+    // document's `results` signature map; and the lane's inferred boundary type is ASSIGNABLE to the declared
+    // type ([TypeAssignability]'s probe compile — full Kotlin subtyping/nullability, ResultStep's forced-type
+    // strictness). A statically unknown lane ([WorkerLane.boundaryType] null) skips the assignability check —
+    // its mismatch surfaces at run time as before.
     override fun payloadFlow(input: WorkerLane, context: WorkerLaneContext): WorkerLaneAttempt {
         if (keep != first && keep != last) {
             return WorkerLaneAttempt(input, "Invalid result sink 'keep': $keep")
@@ -110,8 +118,17 @@ class ResultSinkWorker(
                 mainLocation, LogicConventions.resultsAttributePath))
 
         val component = componentName()
-        if (declaredResults.find(TupleComponentName(component)) == null) {
-            return WorkerLaneAttempt(input, noResultDeclared(component))
+        val declaredType = declaredResults.find(TupleComponentName(component))?.metadata
+            ?: return WorkerLaneAttempt(input, noResultDeclared(component))
+
+        val boundaryType = input.boundaryType()
+        if (boundaryType != null &&
+                !TypeAssignability.isAssignable(
+                    boundaryType, declaredType, cachedKotlinCompiler, context.classLoader)) {
+            return WorkerLaneAttempt(
+                input,
+                "Result '$component' declares ${declaredType.toSimple()} " +
+                    "but the stream carries ${boundaryType.toSimple()}")
         }
 
         return WorkerLaneAttempt(input, null)

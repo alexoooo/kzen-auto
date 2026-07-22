@@ -1,0 +1,18 @@
+# Declared-vs-inferred SUBTYPE fixture (JobValidatorTest): the source streams (1..3) as Int payloads and the
+# document declares the `main` result as the SUPERTYPE Number — the ResultSink's static assignability check is
+# true assignability (Kotlin's own rules via probe compile), not class-name equality, so this validates clean.
+# Ports BLANK -> JobChannelSynthesis derives the channel from Worker document order.
+main:
+  is: Job
+  results:
+    main:
+      class: kotlin.Number
+      generics: []
+      nullable: false
+
+main.workers/source:
+  is: FormulaSourceWorker
+  code: "(1..3)"
+
+main.workers/collect:
+  is: ResultSinkWorker
