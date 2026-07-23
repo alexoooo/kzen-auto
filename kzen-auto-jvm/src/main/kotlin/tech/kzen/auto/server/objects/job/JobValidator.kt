@@ -7,6 +7,7 @@ import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.auto.common.objects.document.job.JobSignatureCapability
 import tech.kzen.auto.common.objects.document.job.model.JobValidation
 import tech.kzen.auto.common.objects.document.logic.StepValidation
+import tech.kzen.auto.common.objects.document.logic.ValidationDigestEcho
 import tech.kzen.auto.common.paradigm.detached.DetachedAction
 import tech.kzen.auto.server.objects.job.worker.WorkerBase
 import tech.kzen.auto.server.objects.job.worker.WorkerLane
@@ -132,6 +133,11 @@ class JobValidator(
         val graphDefinitionAttempt = graphStore.graphDefinition()
         val transitiveSuccessful = graphDefinitionAttempt.transitiveSuccessful
 
+        // Resolved from the same snapshot the cache key and the compute use, so a cache hit echoes the digest
+        // of the notation its entry was computed against.
+        val documentNotation = graphDefinitionAttempt.graphStructure.graphNotation.documents[documentPath]
+            ?: return ExecutionResult.failure("Document not found: $documentPath")
+
         // A cache hit skips channel synthesis, graph filtering and instantiation entirely (keyed on the FULL
         // definition — linked-callee and registry edits must invalidate — matching the run path's key).
         val jobValidation = jobValidationCache.jobValidation(documentPath, transitiveSuccessful) {
@@ -147,6 +153,8 @@ class JobValidator(
                 graphInstance)
         }
 
-        return ExecutionSuccess.ofValue(jobValidation.asExecutionValue())
+        return ExecutionSuccess
+            .ofValue(jobValidation.asExecutionValue())
+            .withDetail(ValidationDigestEcho.detail(documentNotation))
     }
 }

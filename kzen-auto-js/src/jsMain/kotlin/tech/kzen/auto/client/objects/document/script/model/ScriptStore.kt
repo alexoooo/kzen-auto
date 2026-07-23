@@ -190,7 +190,8 @@ class ScriptStore(
     // latest-armed refresh runs and settles. An earlier refresh completing mid-flight of a newer one would
     // drop the busy indicator early and publish a stale reason; and since one store instance serves successive
     // same-archetype documents (see dependencyAnalysis), a superseded async could otherwise settle the OLD
-    // document's channel with a reason computed from the NEW document's state.
+    // document's channel with a reason computed from the NEW document's state. The epoch also aborts the fetch
+    // loop; what guards the STATE write against a stale server answer is the digest gate in ServerValidationFetch.
     private var validationEpoch = 0
 
 
@@ -199,17 +200,24 @@ class ScriptStore(
         // validation channel in-flight SYNCHRONOUSLY (before the yield below) so the run cluster's busy spinner
         // lights up with no flicker gap ahead of the actual refresh, carrying the LAST-KNOWN reason so Run
         // doesn't flicker-enable mid-revalidation.
-        val documentPath = state?.mainLocation?.documentPath
+        val currentState = state
             ?: return
+        val documentPath = currentState.mainLocation.documentPath
         val epoch = ++validationEpoch
         logicValidationGlobal.validation(documentPath, inFlight = true, invalidReason = currentValidationReason())
+
+        // Armed on every own-document notation change, so the arm-time digest IS the current local digest until
+        // a newer arm supersedes this epoch (which the lambda below signals by returning null).
+        val expectedDigest = currentState.documentNotation.digest()
 
         async {
             delay(refreshYieldMillis)
             if (epoch != validationEpoch || state == null) {
                 return@async
             }
-            validationStore.refresh()
+            validationStore.refresh {
+                if (epoch != validationEpoch || state == null) null else expectedDigest
+            }
 
             if (epoch != validationEpoch || state == null) {
                 // Superseded while the fetch was in flight (or the store unmounted, dropping the result) — the

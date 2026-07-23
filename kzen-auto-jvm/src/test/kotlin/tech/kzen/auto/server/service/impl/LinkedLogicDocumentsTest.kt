@@ -110,10 +110,33 @@ class LinkedLogicDocumentsTest {
     }
 
 
+    // Job Workers are pruned from transitiveSuccessful (blank channel ports by design), yet editing one
+    // must change the Job's signal — it keys the validation caches AND the live-edit migration compare.
+    @Test
+    fun signalSeesJobWorkerEdits() {
+        val baseNotation = AutoTestUtils.readNotation()
+        val baseline = jobSignalDigest(baseNotation)
+
+        val workerEdited = edit(
+            baseNotation,
+            ObjectLocation(jobRunHost, ObjectPath.parse("main.workers/source")),
+            "code", "(1..4)")
+        assertNotEquals(baseline, jobSignalDigest(workerEdited),
+            "Job Worker edit must change the Job's signal digest")
+    }
+
+
     private fun signalDigest(graphNotation: GraphNotation): Digest {
         val attempt = AutoTestUtils.graphDefinitionAttempt(graphNotation)
         return LinkedLogicDocuments.transitiveDigest(
             attempt.transitiveSuccessful, attempt.graphStructure, runParent)
+    }
+
+
+    private fun jobSignalDigest(graphNotation: GraphNotation): Digest {
+        val attempt = AutoTestUtils.graphDefinitionAttempt(graphNotation)
+        return LinkedLogicDocuments.transitiveDigest(
+            attempt.transitiveSuccessful, attempt.graphStructure, jobRunHost)
     }
 
 

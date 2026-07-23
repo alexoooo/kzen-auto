@@ -383,8 +383,14 @@ class JobController(
         props.logicValidationGlobal.validation(
             documentPath, inFlight = true, invalidReason = jobValidationReason(state.workerValidations))
 
+        // The arm condition IS this notation's reference change, so the arm-time digest is the current local
+        // digest until a newer arm supersedes this epoch (which the lambda below signals by returning null).
+        val expectedDigest = documentNotation.digest()
+
         async {
-            val validation = jobValidationStore.fetch(documentPath)
+            val validation = jobValidationStore.fetch(documentPath) {
+                if (epoch != validationEpoch) null else expectedDigest
+            }
             // Value-equality gate (data class + map): skip setState when nothing changed. A failed fetch
             // (null) leaves the previous validation standing rather than flashing the chips away.
             if (validation != null && validation != state.workerValidations) {

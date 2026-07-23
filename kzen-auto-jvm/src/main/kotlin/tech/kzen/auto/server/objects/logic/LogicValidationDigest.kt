@@ -10,7 +10,9 @@ import tech.kzen.lib.common.util.digest.Digest
 /**
  * The cache key a per-document validation pass is stored under (shared by the Script and Job validation
  * caches, so the key semantics cannot drift): a content digest over everything validation reads — the root
- * document's transitive closure PLUS each linked logic document's closure
+ * document's transitive closure (which per [tech.kzen.lib.common.model.definition.GraphDefinition.transitiveDigest]
+ * also covers the document's pruned-by-design members — a Job's Workers, dropped from the definition by their
+ * blank channel ports yet digested from notation — and member order) PLUS each linked logic document's closure
  * ([LinkedLogicDocuments.transitiveDigest] — a hosting object's value type comes from its weakly-linked
  * callee's signature, invisible to a plain per-document closure digest), PLUS every object-registry
  * document's declared class list (the expression type-visibility filter scans them globally; classpath

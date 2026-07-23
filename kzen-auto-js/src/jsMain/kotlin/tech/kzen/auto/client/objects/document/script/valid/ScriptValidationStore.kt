@@ -1,43 +1,44 @@
 package tech.kzen.auto.client.objects.document.script.valid
 
+import tech.kzen.auto.client.objects.document.common.valid.ServerValidationFetch
 import tech.kzen.auto.client.objects.document.script.model.ScriptStore
-import tech.kzen.auto.client.util.ClientError
-import tech.kzen.auto.client.util.ClientResult
-import tech.kzen.auto.client.util.ClientSuccess
 import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.objects.document.script.model.ScriptValidation
-import tech.kzen.lib.common.exec.ExecutionFailure
-import tech.kzen.lib.common.exec.ExecutionSuccess
-import tech.kzen.lib.common.exec.MapExecutionValue
-import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.util.digest.Digest
 
 
 class ScriptValidationStore(
     private val scriptStore: ScriptStore
 ) {
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun refresh() {
+    suspend fun refresh(currentDigest: () -> Digest?) {
         scriptStore.updateValidation {
             it.copy(loaded = false)
         }
 
         val mainLocation = scriptStore.mainLocation()
 
-        @Suppress("MoveVariableDeclarationIntoWhen", "RedundantSuppression")
-        val result = validationQuery(mainLocation)
+        val outcome = ServerValidationFetch.fetchCurrent(
+            currentDigest = currentDigest,
+            perform = {
+                scriptStore.restClient.performDetached(
+                    ScriptConventions.scriptValidatorLocation,
+                    CommonRestApi.paramHostDocumentPath to mainLocation.documentPath.asString())
+            },
+            parse = { ScriptValidation.ofExecutionValue(it) })
 
-        when (result) {
-            is ClientSuccess ->
+        when (outcome) {
+            is ServerValidationFetch.Outcome.Current ->
                 scriptStore.updateValidation {
                     it.copy(
-                        scriptValidation = result.value,
+                        scriptValidation = outcome.value,
                         loaded = true)
                 }
 
-            is ClientError ->
+            is ServerValidationFetch.Outcome.Failed ->
                 scriptStore.update { state -> state
-                    .withGlobalError(result.message)
+                    .withGlobalError(outcome.errorMessage)
                     .withValidation {
                         it.copy(
                             scriptValidation = null,
@@ -45,29 +46,8 @@ class ScriptValidationStore(
                         )
                     }
                 }
-        }
-    }
 
-
-    private suspend fun validationQuery(
-        mainLocation: ObjectLocation
-    ):
-        ClientResult<ScriptValidation>
-    {
-        val result = scriptStore.restClient.performDetached(
-            ScriptConventions.scriptValidatorLocation,
-            CommonRestApi.paramHostDocumentPath to mainLocation.documentPath.asString())
-
-        return when (result) {
-            is ExecutionSuccess -> {
-                val scriptValidation = ScriptValidation.ofExecutionValue(
-                    result.value as MapExecutionValue)
-
-                ClientResult.ofSuccess(scriptValidation)
-            }
-
-            is ExecutionFailure ->
-                ClientResult.ofError(result.errorMessage)
+            ServerValidationFetch.Outcome.Superseded -> {}
         }
     }
 }
