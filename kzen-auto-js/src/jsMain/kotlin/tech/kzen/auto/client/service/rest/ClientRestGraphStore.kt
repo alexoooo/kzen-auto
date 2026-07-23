@@ -23,7 +23,7 @@ class ClientRestGraphStore(
                     command.documentPath)
 
             // folders reuse the document create/delete endpoints — the path's trailing-slash form (Folder) tells
-            // the server to route to CreateFolderCommand / DeleteFolderCommand (see RestHandler)
+            // the server to route to CreateFolderCommand / DeleteFolderCommand (see NotationCommandHandler)
             is CreateFolderCommand ->
                 restClient.createDocument(
                     command.documentPath, "")

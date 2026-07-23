@@ -4,7 +4,14 @@ import kotlinx.coroutines.runBlocking
 import tech.kzen.auto.common.codegen.KzenAutoCommonModule
 import tech.kzen.auto.common.service.ServiceEnvironmentValidation
 import tech.kzen.auto.common.util.AutoConventions
-import tech.kzen.auto.server.api.RestHandler
+import tech.kzen.auto.server.api.handler.DetachedActionHandler
+import tech.kzen.auto.server.api.handler.FileListingHandler
+import tech.kzen.auto.server.api.handler.LogicHandler
+import tech.kzen.auto.server.api.handler.NotationQueryHandler
+import tech.kzen.auto.server.api.handler.ObjectStableHandler
+import tech.kzen.auto.server.api.handler.StorageHandler
+import tech.kzen.auto.server.api.handler.TaskHandler
+import tech.kzen.auto.server.api.handler.command.NotationCommandHandler
 import tech.kzen.auto.server.codegen.KzenAutoJvmModule
 import tech.kzen.auto.server.exec.job.JobTraceAddressRouting
 import tech.kzen.auto.server.exec.report.ReportTraceAddressRouting
@@ -223,18 +230,14 @@ class KzenAutoContext(
     // active-run checks can capture serverLogicController without construction-order cycles.
     val managedStorageRegistry = ManagedStorageRegistry()
 
-    val restHandler = RestHandler(
-        notationMedia,
-        notationParser,
-        graphStore,
-        detachedExecutor,
-        modelTaskRepository,
-        serverLogicController,
-        logicTrace,
-        objectStableMapper,
-        fileListingAction,
-        jobWorkPool,
-        managedStorageRegistry)
+    val notationQueryHandler = NotationQueryHandler(notationMedia)
+    val notationCommandHandler = NotationCommandHandler(graphStore, notationParser)
+    val detachedActionHandler = DetachedActionHandler(detachedExecutor, jobWorkPool)
+    val taskHandler = TaskHandler(modelTaskRepository)
+    val logicHandler = LogicHandler(serverLogicController, logicTrace, graphStore)
+    val objectStableHandler = ObjectStableHandler(objectStableMapper)
+    val fileListingHandler = FileListingHandler(fileListingAction)
+    val storageHandler = StorageHandler(managedStorageRegistry)
 
 
     //-----------------------------------------------------------------------------------------------------------------

@@ -47,7 +47,7 @@ import java.nio.file.Path
  * then seeks to read), so a query mid-stream sees every appended row. A running row count is pushed to the trace.
  *
  * DOWNLOAD (the Job analogue of Report's `DetachedDownloadAction`): because the table lives at a NOTATION-keyed
- * path that survives the run, [tech.kzen.auto.server.api.RestHandler.jobDownload] resolves it straight from the
+ * path that survives the run, [tech.kzen.auto.server.api.handler.DetachedActionHandler.jobDownload] resolves it straight from the
  * Worker's [ObjectLocation] — with NO live run — and streams `table.csv` (via [IndexedCsvTable.downloadCsvOffline]).
  * So the report downloads AFTER the run ends (post-settle the on-disk file is complete — [onClose] flushed it);
  * during a live run the same endpoint streams the rows flushed so far. This Worker holds no download logic of

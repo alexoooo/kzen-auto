@@ -124,13 +124,13 @@ object CommonRestApi {
     // ExecutionResult, served with Cache-Control: public, immutable (a content hash never changes). The trace
     // JSON references binaries by handle (run + hash) instead of inline base64; the browser fetches each unique
     // image once from here. Addressed by paramRunId (the retained run) + paramContentHash. See
-    // RestHandler.logicTraceBinary / RunEngineLogicTrace.lookupBinary.
+    // LogicHandler.logicTraceBinary / RunEngineLogicTrace.lookupBinary.
     const val logicTraceBinary = "${logicPrefix}trace-binary"
 
     // Streaming download of a Job Explore Worker's PERSISTED result as a table.csv attachment (raw file bytes,
     // not a JSON ExecutionResult). The Worker's on-disk table is keyed on its notation identity, so this
     // resolves it from path + object with NO live run — the report downloads after the run ends. See
-    // RestHandler.jobDownload; addressed by paramDocumentPath (the Job) + paramObjectPath (the Worker).
+    // DetachedActionHandler.jobDownload; addressed by paramDocumentPath (the Job) + paramObjectPath (the Worker).
     const val jobDownload = "/job/download"
 
     // stable object id mapping
