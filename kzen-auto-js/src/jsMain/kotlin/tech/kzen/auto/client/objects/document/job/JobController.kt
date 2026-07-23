@@ -24,6 +24,7 @@ import tech.kzen.auto.client.objects.ribbon.RibbonController
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.global.InsertionGlobal
+import tech.kzen.auto.client.service.logic.LogicValidationGlobal
 import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
@@ -61,6 +62,7 @@ import web.html.HTMLDivElement
 //---------------------------------------------------------------------------------------------------------------------
 external interface JobControllerProps: Props {
     var clientStateGlobal: ClientStateGlobal
+    var logicValidationGlobal: LogicValidationGlobal
     var restClient: ClientRestApi
     var objectStableMapper: ObjectStableMapper
     var mirroredGraphStore: MirroredGraphStore
@@ -141,6 +143,7 @@ class JobController(
         private val ribbonController: RibbonController.Wrapper,
         private val workerDisplayManager: WorkerDisplayManager.Wrapper,
         @Service private val clientStateGlobal: ClientStateGlobal,
+        @Service private val logicValidationGlobal: LogicValidationGlobal,
         @Service private val restClient: ClientRestApi,
         @Service private val objectStableMapper: ObjectStableMapper,
         @Service private val mirroredGraphStore: MirroredGraphStore
@@ -166,6 +169,7 @@ class JobController(
                 override fun ChildrenBuilder.child(block: Props.() -> Unit) {
                     JobController::class.react {
                         this.clientStateGlobal = this@Wrapper.clientStateGlobal
+                        this.logicValidationGlobal = this@Wrapper.logicValidationGlobal
                         this.restClient = this@Wrapper.restClient
                         this.objectStableMapper = this@Wrapper.objectStableMapper
                         this.mirroredGraphStore = this@Wrapper.mirroredGraphStore
@@ -234,6 +238,11 @@ class JobController(
     // so a reference compare suffices). Same accepted limitation as Script: a callee / registry edit
     // refreshes on the next own-document change.
     private var lastValidationNotation: DocumentNotation? = null
+
+    // Guards the validation channel against overlapping fetches: each arm bumps the epoch and only the
+    // latest-armed fetch settles — an earlier fetch completing mid-flight of a newer one would drop the run
+    // cluster's busy indicator early and publish a stale reason.
+    private var validationEpoch = 0
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -368,6 +377,12 @@ class JobController(
         }
         lastValidationNotation = documentNotation
 
+        // Mark the run cluster's validation channel in-flight synchronously (before the async fetch), carrying the
+        // last-known reason so Run doesn't flicker-enable mid-revalidation.
+        val epoch = ++validationEpoch
+        props.logicValidationGlobal.validation(
+            documentPath, inFlight = true, invalidReason = jobValidationReason(state.workerValidations))
+
         async {
             val validation = jobValidationStore.fetch(documentPath)
             // Value-equality gate (data class + map): skip setState when nothing changed. A failed fetch
@@ -377,7 +392,25 @@ class JobController(
                     workerValidations = validation
                 }
             }
+
+            if (epoch != validationEpoch) {
+                // Superseded while the fetch was in flight — the newest arm owns the settle.
+                return@async
+            }
+
+            // Settle the channel. On a failed fetch the previous validation still stands (reason unchanged);
+            // otherwise the freshly-fetched one. `validation` is read directly (not through the async setState).
+            val settled = validation ?: state.workerValidations
+            props.logicValidationGlobal.validation(
+                documentPath, inFlight = false, invalidReason = jobValidationReason(settled))
         }
+    }
+
+
+    // The first Worker-validation error across the given JobValidation — the flavour-agnostic "invalid" predicate
+    // (any StepValidation.errorMessage != null). Null when valid or not yet fetched.
+    private fun jobValidationReason(validation: JobValidation?): String? {
+        return validation?.workerValidations?.values?.firstNotNullOfOrNull { it.errorMessage }
     }
 
 

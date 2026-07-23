@@ -34,6 +34,7 @@ import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.global.ViewModeGlobal
 import tech.kzen.auto.client.service.logic.ClientLogicGlobal
+import tech.kzen.auto.client.service.logic.LogicValidationGlobal
 import tech.kzen.auto.client.objects.document.script.display.ScriptMoveToArrow
 import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.wrap.*
@@ -57,6 +58,7 @@ external interface ScriptControllerProps: Props {
     var scriptCommander: ScriptCommander
     var clientStateGlobal: ClientStateGlobal
     var clientLogicGlobal: ClientLogicGlobal
+    var logicValidationGlobal: LogicValidationGlobal
     var mirroredGraphStore: MirroredGraphStore
     var notationParser: NotationParser
     var restClient: ClientRestApi
@@ -122,6 +124,7 @@ class ScriptController:
         private val ribbonController: RibbonController.Wrapper,
         @Service private val clientStateGlobal: ClientStateGlobal,
         @Service private val clientLogicGlobal: ClientLogicGlobal,
+        @Service private val logicValidationGlobal: LogicValidationGlobal,
         @Service private val mirroredGraphStore: MirroredGraphStore,
         @Service private val notationParser: NotationParser,
         @Service private val restClient: ClientRestApi,
@@ -151,6 +154,7 @@ class ScriptController:
                         this.scriptCommander = this@Wrapper.scriptCommander
                         this.clientStateGlobal = this@Wrapper.clientStateGlobal
                         this.clientLogicGlobal = this@Wrapper.clientLogicGlobal
+                        this.logicValidationGlobal = this@Wrapper.logicValidationGlobal
                         this.mirroredGraphStore = this@Wrapper.mirroredGraphStore
                         this.notationParser = this@Wrapper.notationParser
                         this.restClient = this@Wrapper.restClient
@@ -168,7 +172,7 @@ class ScriptController:
     //     initializers). First access is componentDidMount, by which point props are available; the lazy
     //     value is computed once, keeping a stable reference for renders and the progress sub-store prop.
     private val store by lazy {
-        ScriptStore(props.clientStateGlobal, props.restClient, props.notationParser, props.mirroredGraphStore, props.objectStableMapper)
+        ScriptStore(props.clientStateGlobal, props.logicValidationGlobal, props.restClient, props.notationParser, props.mirroredGraphStore, props.objectStableMapper)
     }
 
     // NB: stable references for MultiStepDisplay's props so it (RPureComponent) bails out whenever

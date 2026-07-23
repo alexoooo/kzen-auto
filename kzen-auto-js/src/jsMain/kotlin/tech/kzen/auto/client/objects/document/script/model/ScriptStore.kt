@@ -8,6 +8,7 @@ import tech.kzen.auto.client.objects.document.script.valid.ScriptValidationStore
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.logic.ClientLogicState
+import tech.kzen.auto.client.service.logic.LogicValidationGlobal
 import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.common.objects.document.script.model.ScriptDependencyAnalysis
@@ -24,6 +25,7 @@ import kotlin.time.Duration.Companion.milliseconds
 
 class ScriptStore(
     val clientStateGlobal: ClientStateGlobal,
+    private val logicValidationGlobal: LogicValidationGlobal,
     val restClient: ClientRestApi,
     override val notationParser: NotationParser,
     override val mirroredGraphStore: MirroredGraphStore,
@@ -184,14 +186,50 @@ class ScriptStore(
     }
 
 
+    // Guards the validation channel against overlapping refreshes: each arm bumps the epoch and only the
+    // latest-armed refresh runs and settles. An earlier refresh completing mid-flight of a newer one would
+    // drop the busy indicator early and publish a stale reason; and since one store instance serves successive
+    // same-archetype documents (see dependencyAnalysis), a superseded async could otherwise settle the OLD
+    // document's channel with a reason computed from the NEW document's state.
+    private var validationEpoch = 0
+
+
     private fun refreshValidationAsync() {
+        // Only ever called after updateIfChanged(nextState) set `state`, so mainLocation is available. Mark the
+        // validation channel in-flight SYNCHRONOUSLY (before the yield below) so the run cluster's busy spinner
+        // lights up with no flicker gap ahead of the actual refresh, carrying the LAST-KNOWN reason so Run
+        // doesn't flicker-enable mid-revalidation.
+        val documentPath = state?.mainLocation?.documentPath
+            ?: return
+        val epoch = ++validationEpoch
+        logicValidationGlobal.validation(documentPath, inFlight = true, invalidReason = currentValidationReason())
+
         async {
             delay(refreshYieldMillis)
-            if (state == null) {
+            if (epoch != validationEpoch || state == null) {
                 return@async
             }
             validationStore.refresh()
+
+            if (epoch != validationEpoch || state == null) {
+                // Superseded while the fetch was in flight (or the store unmounted, dropping the result) — the
+                // newest arm owns the settle.
+                return@async
+            }
+
+            // Settle the channel with the freshly-computed reason (null when the fetch failed → Run enabled on
+            // unknown validity, matching "null = valid/unknown"; the global error banner carries the failure).
+            logicValidationGlobal.validation(
+                documentPath, inFlight = false, invalidReason = currentValidationReason())
         }
+    }
+
+
+    // The first step-validation error across the current (last-fetched) ScriptValidation — the flavour-agnostic
+    // "invalid" predicate (any StepValidation.errorMessage != null). Null when valid or not yet fetched.
+    private fun currentValidationReason(): String? {
+        return state?.validationState?.scriptValidation?.stepValidations?.values
+            ?.firstNotNullOfOrNull { it.errorMessage }
     }
 
 

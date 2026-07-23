@@ -46,4 +46,9 @@ class DebouncedSubmitter(
     fun cancel() {
         debounce.cancel()
     }
+
+
+    fun pending(): Boolean {
+        return debounce.pending()
+    }
 }

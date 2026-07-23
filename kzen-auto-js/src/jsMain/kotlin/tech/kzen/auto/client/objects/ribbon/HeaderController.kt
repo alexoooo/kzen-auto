@@ -11,6 +11,7 @@ import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.service.logic.ClientLogicGlobal
+import tech.kzen.auto.client.service.logic.LogicValidationGlobal
 import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
@@ -36,6 +37,7 @@ external interface HeaderControllerProps: react.Props {
     var restClient: ClientRestApi
     var clientStateGlobal: ClientStateGlobal
     var clientLogicGlobal: ClientLogicGlobal
+    var logicValidationGlobal: LogicValidationGlobal
 }
 
 
@@ -70,7 +72,8 @@ class HeaderController(
         @Service private val navigationGlobal: NavigationGlobal,
         @Service private val restClient: ClientRestApi,
         @Service private val clientStateGlobal: ClientStateGlobal,
-        @Service private val clientLogicGlobal: ClientLogicGlobal
+        @Service private val clientLogicGlobal: ClientLogicGlobal,
+        @Service private val logicValidationGlobal: LogicValidationGlobal
     ): ReactWrapper<HeaderControllerProps> {
         override fun ChildrenBuilder.child(block: HeaderControllerProps.() -> Unit) {
             HeaderController::class.react {
@@ -79,6 +82,7 @@ class HeaderController(
                 restClient = this@Wrapper.restClient
                 clientStateGlobal = this@Wrapper.clientStateGlobal
                 clientLogicGlobal = this@Wrapper.clientLogicGlobal
+                logicValidationGlobal = this@Wrapper.logicValidationGlobal
                 block()
             }
         }
@@ -266,6 +270,7 @@ class HeaderController(
             HeaderRunController::class.react {
                 clientStateGlobal = props.clientStateGlobal
                 clientLogicGlobal = props.clientLogicGlobal
+                logicValidationGlobal = props.logicValidationGlobal
                 navigationGlobal = props.navigationGlobal
             }
         }
@@ -275,12 +280,22 @@ class HeaderController(
     private fun ChildrenBuilder.renderStorageManager() {
         div {
             css {
-                display = Display.inlineBlock
+                // A vertical stack: the storage icon on top, the validity indicator tucked in the space beneath it
+                // (which the two-row run cluster to its left already makes tall enough), so the indicator adds no
+                // height and shifts nothing.
+                display = Display.inlineFlex
+                flexDirection = FlexDirection.column
+                alignItems = AlignItems.center
                 marginLeft = 0.5.em
             }
 
             StorageManagerController::class.react {
                 restClient = props.restClient
+            }
+
+            ValidationStatusDisplay::class.react {
+                clientStateGlobal = props.clientStateGlobal
+                logicValidationGlobal = props.logicValidationGlobal
             }
         }
     }

@@ -25,6 +25,7 @@ import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.global.ExecutionIntentGlobal
 import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.service.logic.LogicRunFrames
+import tech.kzen.auto.client.service.logic.LogicValidationGlobal
 import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
@@ -65,6 +66,7 @@ external interface FlowControllerProps: Props {
     var attributeController: AttributeEditorManager.Wrapper
 
     var clientStateGlobal: ClientStateGlobal
+    var logicValidationGlobal: LogicValidationGlobal
     var executionIntentGlobal: ExecutionIntentGlobal
     var mirroredGraphStore: MirroredGraphStore
     var restClient: ClientRestApi
@@ -82,6 +84,12 @@ external interface FlowControllerState: State {
     var creating: Boolean
 
     var visualFlowModel: VisualFlowModel?
+
+    // The pre-run structure lint (FlowStructureValidator) findings, computed on the state-derivation path rather
+    // than in render — publishing to LogicValidationGlobal from render would setState on HeaderRunController
+    // mid-render. Render reuses this; the first finding also disables Run via the global. Null before the first
+    // computation.
+    var structureFindings: List<String>?
 }
 
 
@@ -104,6 +112,7 @@ class FlowController(
         private val attributeController: AttributeEditorManager.Wrapper,
         private val ribbonController: RibbonController.Wrapper,
         @Service private val clientStateGlobal: ClientStateGlobal,
+        @Service private val logicValidationGlobal: LogicValidationGlobal,
         @Service private val executionIntentGlobal: ExecutionIntentGlobal,
         @Service private val mirroredGraphStore: MirroredGraphStore,
         @Service private val restClient: ClientRestApi,
@@ -131,6 +140,7 @@ class FlowController(
                     FlowController::class.react {
                         this.attributeController = this@Wrapper.attributeController
                         this.clientStateGlobal = this@Wrapper.clientStateGlobal
+                        this.logicValidationGlobal = this@Wrapper.logicValidationGlobal
                         this.executionIntentGlobal = this@Wrapper.executionIntentGlobal
                         this.mirroredGraphStore = this@Wrapper.mirroredGraphStore
                         this.restClient = this@Wrapper.restClient
@@ -150,6 +160,11 @@ class FlowController(
 
     // Refetch the trace-derived visual model only when the document or the run status changes.
     private var lastFetchKey: String? = null
+
+    // Recompute the (synchronous) structure findings only when this Flow's own notation actually changed —
+    // mirrors JobController.lastValidationNotation (progress polls and unrelated client-state publishes reuse the
+    // instance, so a reference compare suffices).
+    private var lastStructureNotation: DocumentNotation? = null
 
 
     init {
@@ -183,6 +198,47 @@ class FlowController(
         }
 
         refreshVisualModelIfNeeded(clientState)
+        refreshStructureFindingsIfNeeded(clientState)
+    }
+
+
+    // The same pre-run structure lint FlowLogicCompiler refuses to compile on, computed here (not in render) so
+    // it can both feed the render banner and — via LogicValidationGlobal — disable Run when the flow is
+    // structurally broken (previously it only warned; Run stayed enabled). Synchronous, so the validation channel
+    // is never in-flight.
+    private fun refreshStructureFindingsIfNeeded(clientState: ClientState) {
+        val documentPath = clientState.navigationRoute.documentPath
+            ?: return
+
+        val graphStructure = clientState.graphStructure()
+        val documentNotation = graphStructure.graphNotation.documents[documentPath]
+            ?: return
+
+        if (!FlowConventions.isFlow(documentNotation)) {
+            return
+        }
+
+        if (documentNotation === lastStructureNotation) {
+            return
+        }
+        lastStructureNotation = documentNotation
+
+        val verticesNotation = FlowMatrix.verticesNotation(documentNotation)
+        val edgesNotation = FlowMatrix.edgesNotation(documentNotation)
+        val flowMatrix = FlowMatrix.cellDescriptorLayers(graphStructure, verticesNotation, edgesNotation)
+
+        val mainLocation = ObjectLocation(documentPath, NotationConventions.mainObjectPath)
+        val findings = FlowStructureValidator.validate(
+            mainLocation, graphStructure.graphNotation, flowMatrix)
+
+        if (findings != state.structureFindings) {
+            setState {
+                structureFindings = findings
+            }
+        }
+
+        props.logicValidationGlobal.validation(
+            documentPath, inFlight = false, invalidReason = findings.firstOrNull())
     }
 
 
@@ -356,7 +412,7 @@ class FlowController(
         val flowMatrix = FlowMatrix.cellDescriptorLayers(
             state.graphStructure!!, verticesNotation, edgesNotation)
 
-        renderStructureFindings(flowMatrix)
+        renderStructureFindings()
 
         if (flowMatrix.isEmpty()) {
             div {
@@ -394,25 +450,14 @@ class FlowController(
 
 
     // The same pre-run structure lint FlowLogicCompiler refuses to compile on, surfaced the moment
-    // the mistake is made — a misplaced pipe otherwise silently rewires or disconnects the flow.
+    // the mistake is made — a misplaced pipe otherwise silently rewires or disconnects the flow. Findings are
+    // computed on the state-derivation path (refreshStructureFindingsIfNeeded) and reused here.
     //
     // NB: this container `div` is ALWAYS emitted (left empty when there are no findings) so the grid
     //     rendered after it keeps a stable child index across finding toggles — mirrors
     //     StageController.renderDefinitionErrors (see the remount rationale there).
-    private fun ChildrenBuilder.renderStructureFindings(flowMatrix: FlowMatrix) {
-        val documentPath = state.documentPath
-        val graphNotation = state.graphStructure?.graphNotation
-
-        val findings =
-            if (documentPath == null || graphNotation == null) {
-                listOf()
-            }
-            else {
-                FlowStructureValidator.validate(
-                    ObjectLocation(documentPath, NotationConventions.mainObjectPath),
-                    graphNotation,
-                    flowMatrix)
-            }
+    private fun ChildrenBuilder.renderStructureFindings() {
+        val findings = state.structureFindings ?: listOf()
 
         div {
             if (findings.isEmpty()) {

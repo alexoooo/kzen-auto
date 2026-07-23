@@ -13,6 +13,7 @@ import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.service.logic.ClientLogicGlobal
 import tech.kzen.auto.client.service.logic.ClientLogicState
 import tech.kzen.auto.client.service.logic.LogicRunFrames
+import tech.kzen.auto.client.service.logic.LogicValidationGlobal
 import tech.kzen.auto.client.util.DefinitionErrors
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
@@ -32,6 +33,7 @@ import web.html.HTMLElement
 external interface HeaderRunControllerProps: Props {
     var clientStateGlobal: ClientStateGlobal
     var clientLogicGlobal: ClientLogicGlobal
+    var logicValidationGlobal: LogicValidationGlobal
     var navigationGlobal: NavigationGlobal
 }
 
@@ -63,6 +65,13 @@ external interface HeaderRunControllerState: State {
     // the reason, shown as the disabled run-controls tooltip. Null when the document is runnable (or isn't a
     // logic document); folded into `runnable` so all the run controls disable without per-button changes.
     var runBlockReason: String?
+
+    // The focused paradigm's validation error (Script step compile failure, Job worker expression error, Flow
+    // structure finding, Report notationError), from LogicValidationGlobal. Additive to runBlockReason and folded
+    // into `runnable` the same way; the disabled tooltip prefers runBlockReason, then this. Null = valid/unknown.
+    // The busy / valid / invalid *visual* lives in ValidationStatusDisplay (under the storage icon); this gate
+    // reads the same global but only to disable Run on a known error.
+    var validationBlockReason: String?
 }
 
 
@@ -72,7 +81,8 @@ class HeaderRunController (
     props: HeaderRunControllerProps
 ):
     RPureComponent<HeaderRunControllerProps, HeaderRunControllerState>(props),
-    ClientStateGlobal.Observer
+    ClientStateGlobal.Observer,
+    LogicValidationGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -93,6 +103,11 @@ class HeaderRunController (
     private var mainObjectLocation: ObjectLocation? = null
     private var latestFrame: LogicRunFrameInfo? = null
 
+    // The definition-based runnability (isLogic && no definition failure), recomputed on each onClientState and
+    // held so the async LogicValidationGlobal channel (onLogicValidation) can re-fold `runnable` against it
+    // without re-reading clientState — validation blocks are additive to it.
+    private var runnableIgnoringValidation: Boolean = false
+
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun HeaderRunControllerState.init(props: HeaderRunControllerProps) {
@@ -106,12 +121,14 @@ class HeaderRunController (
         slowLooping = false
         slowStepOver = false
         runBlockReason = null
+        validationBlockReason = null
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
         props.clientStateGlobal.observe(this)
+        props.logicValidationGlobal.observe(this)
 
 //        async {
 //            ClientContext.executionRepository.observe(this)
@@ -131,6 +148,7 @@ class HeaderRunController (
     override fun componentWillUnmount() {
 //        ClientContext.executionRepository.unobserve(this)
         props.clientStateGlobal.unobserve(this)
+        props.logicValidationGlobal.unobserve(this)
     }
 
 
@@ -163,10 +181,19 @@ class HeaderRunController (
                 null
             }
 
+        val baseRunnable = isLogic && runBlocker == null
+        runnableIgnoringValidation = baseRunnable
+
+        // The paradigm's async validation, additive to the definition-based block. A non-logic document has no
+        // publisher, so its summary is `unknown` (no reason) — leaving the validation fold a no-op.
+        val summary = props.logicValidationGlobal.summaryFor(mainLocation.documentPath)
+        val validationReason = if (isLogic) summary.invalidReason else null
+
         val dropdownWasOpen = state.dropdownOpen
         setState {
-            runnable = isLogic && runBlocker == null
+            runnable = baseRunnable && validationReason == null
             runBlockReason = runBlocker
+            validationBlockReason = validationReason
             active = clientLogicState.isActive()
             executing = clientLogicState.isExecuting()
             slowLooping = clientLogicState.slowLooping
@@ -176,7 +203,40 @@ class HeaderRunController (
             }
         }
 
+        // Tidy summaries orphaned by document deletion/rename — this observes every client-state publish and holds
+        // the full document set, so it is the natural single choke point (harmless for correctness either way).
+        props.logicValidationGlobal.prune(graphNotation.documents.map.keys)
+
         refreshHasTraceIfNeeded()
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    // Push from LogicValidationGlobal (edit-pending and/or async validation moved). Filter to the focused
+    // document — a stale publish for a previously-focused one is ignored — and re-fold `runnable` against the
+    // definition-based runnableIgnoringValidation captured on the last onClientState. Null-guard the edge where a
+    // publish arrives before the first onClientState set mainObjectLocation. Compared before setState so a
+    // busy=true → busy=true publish never even reaches React.
+    override fun onLogicValidation(documentPath: DocumentPath) {
+        val mainLocation = mainObjectLocation
+            ?: return
+        if (documentPath != mainLocation.documentPath) {
+            return
+        }
+
+        val summary = props.logicValidationGlobal.summaryFor(documentPath)
+        val nextRunnable = runnableIgnoringValidation && summary.invalidReason == null
+
+        if (state.validationBlockReason == summary.invalidReason &&
+                state.runnable == nextRunnable
+        ) {
+            return
+        }
+
+        setState {
+            validationBlockReason = summary.invalidReason
+            runnable = nextRunnable
+        }
     }
 
 
@@ -368,8 +428,11 @@ class HeaderRunController (
                 }
 
                 if (!active && !runnable) {
-                    // A definition failure gives a specific reason; otherwise it's simply not a logic document.
-                    title = state.runBlockReason ?: "Current document is not runnable"
+                    // A definition failure gives a specific reason; the paradigm's validation error is the next
+                    // preference; otherwise it's simply not a logic document.
+                    title = state.runBlockReason
+                        ?: state.validationBlockReason
+                        ?: "Current document is not runnable"
                     disabled = true
                 }
 

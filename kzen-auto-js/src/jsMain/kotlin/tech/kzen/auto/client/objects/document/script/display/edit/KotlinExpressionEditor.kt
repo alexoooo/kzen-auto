@@ -21,6 +21,7 @@ import tech.kzen.auto.client.objects.document.script.model.ScriptStoreKey
 import tech.kzen.auto.client.objects.document.script.model.ScriptStepReferenceStoreKey
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
+import tech.kzen.auto.client.service.logic.LogicValidationGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
@@ -81,6 +82,7 @@ class KotlinExpressionEditor(
     class Wrapper(
         objectLocation: ObjectLocation,
         @Service private val clientStateGlobal: ClientStateGlobal,
+        @Service private val logicValidationGlobal: LogicValidationGlobal,
         @Service private val mirroredGraphStore: MirroredGraphStore
     ):
         AttributeEditor(objectLocation)
@@ -88,6 +90,7 @@ class KotlinExpressionEditor(
         override fun ChildrenBuilder.child(block: AttributeEditorProps.() -> Unit) {
             KotlinExpressionEditor::class.react {
                 clientStateGlobal = this@Wrapper.clientStateGlobal
+                logicValidationGlobal = this@Wrapper.logicValidationGlobal
                 mirroredGraphStore = this@Wrapper.mirroredGraphStore
                 block()
             }
@@ -109,7 +112,10 @@ class KotlinExpressionEditor(
                 ?.takeIf { it != state.serverValue }
                 ?.let { ScalarAttributeNotation(it) }
         },
-        onError = { message -> setState { errorMessage = message } })
+        onError = { message -> setState { errorMessage = message } },
+        // Light the run cluster's "revalidating" indicator on keystroke (before the debounce), held through the
+        // server revalidation — the motivating FormulaStep scenario.
+        logicValidationGlobal = this.props.logicValidationGlobal)
 
 
     //-----------------------------------------------------------------------------------------------------------------

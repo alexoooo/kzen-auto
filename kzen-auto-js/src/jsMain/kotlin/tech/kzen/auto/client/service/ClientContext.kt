@@ -9,6 +9,7 @@ import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.global.ExecutionIntentGlobal
 import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.service.logic.ClientLogicGlobal
+import tech.kzen.auto.client.service.logic.LogicValidationGlobal
 import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.service.rest.ClientRestGraphStore
 import tech.kzen.auto.client.service.rest.ClientRestNotationMedia
@@ -94,6 +95,10 @@ class ClientContext private constructor() {
     val clientLogicGlobal = ClientLogicGlobal(
         restClient, objectStableMapper)
 
+    // Flavour-agnostic document validity + revalidation summary, consumed by the run-control cluster (beside
+    // clientLogicGlobal, which it already consumes) and published to by each paradigm + the commit pipeline.
+    val logicValidationGlobal = LogicValidationGlobal()
+
     val clientStateGlobal = ClientStateGlobal()
 
 
@@ -117,6 +122,7 @@ class ClientContext private constructor() {
             .put(ClassName("tech.kzen.auto.client.service.global.NavigationGlobal"), navigationGlobal)
             .put(ClassName("tech.kzen.auto.client.service.global.ExecutionIntentGlobal"), executionIntentGlobal)
             .put(ClassName("tech.kzen.auto.client.service.logic.ClientLogicGlobal"), clientLogicGlobal)
+            .put(ClassName("tech.kzen.auto.client.service.logic.LogicValidationGlobal"), logicValidationGlobal)
             .put(ClassName("tech.kzen.auto.client.service.rest.ClientRestApi"), restClient)
             .put(ClassName("tech.kzen.auto.client.service.rest.ClientRestTaskRepository"), clientRestTaskRepository)
             .build()

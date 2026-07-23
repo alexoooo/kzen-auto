@@ -39,6 +39,9 @@ external interface FunctionWithDebounce {
 
     fun cancel()
     fun flush()
+
+    // Whether an invocation is scheduled but hasn't fired yet (lodash ≥4.17.7).
+    fun pending(): Boolean
 }
 
 

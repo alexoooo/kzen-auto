@@ -16,6 +16,7 @@ import tech.kzen.auto.client.objects.document.report.output.ReportOutputControll
 import tech.kzen.auto.client.objects.document.report.preview.ReportPreviewController
 import tech.kzen.auto.client.objects.document.report.run.ReportRunController
 import tech.kzen.auto.client.service.global.ClientStateGlobal
+import tech.kzen.auto.client.service.logic.LogicValidationGlobal
 import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.react
@@ -31,6 +32,7 @@ import web.cssom.*
 //---------------------------------------------------------------------------------------------------------------------
 external interface ReportControllerProps: Props {
     var clientStateGlobal: ClientStateGlobal
+    var logicValidationGlobal: LogicValidationGlobal
     var mirroredGraphStore: MirroredGraphStore
     var restClient: ClientRestApi
 }
@@ -62,6 +64,7 @@ class ReportController(
     class Wrapper(
         private val archetype: ObjectLocation,
         @Service private val clientStateGlobal: ClientStateGlobal,
+        @Service private val logicValidationGlobal: LogicValidationGlobal,
         @Service private val mirroredGraphStore: MirroredGraphStore,
         @Service private val restClient: ClientRestApi
     ):
@@ -84,6 +87,7 @@ class ReportController(
                 override fun ChildrenBuilder.child(block: Props.() -> Unit) {
                     ReportController::class.react {
                         clientStateGlobal = this@Wrapper.clientStateGlobal
+                        logicValidationGlobal = this@Wrapper.logicValidationGlobal
                         mirroredGraphStore = this@Wrapper.mirroredGraphStore
                         restClient = this@Wrapper.restClient
                         block()
@@ -122,6 +126,14 @@ class ReportController(
         setState {
             this.reportState = reportState
         }
+
+        // Publish the flavour-agnostic validity summary to the run cluster: a notationError disables Run, and a
+        // formula (re)load shows the busy indicator. Report's formula editor uses its own debounce, so keystroke
+        // immediacy is covered coarsely by formulaLoading rather than the shared committer instrumentation.
+        props.logicValidationGlobal.validation(
+            reportState.mainLocation.documentPath,
+            inFlight = reportState.formula.formulaLoading,
+            invalidReason = reportState.notationError)
     }
 
 
