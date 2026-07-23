@@ -8,6 +8,7 @@ import react.Props
 import react.ReactNode
 import react.State
 import react.dom.onChange
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -79,10 +80,16 @@ class MultiTextAttributeEditor(
         onCommitted = { notation ->
             this.props.onChange?.invoke((notation as ListAttributeNotation).values.map { it.asString()!! })
         },
-        onError = { message -> setState { errorMessage = message } })
+        onError = { message -> setState { errorMessage = message } },
+        editActivity = { documentEditActivity() })
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    init {
+        installContextType(DocumentBridgeContext)
+    }
+
+
     override fun MultiTextAttributeEditorState.init(props: MultiTextAttributeEditorProps) {
         this.value = props.value.toList()
     }

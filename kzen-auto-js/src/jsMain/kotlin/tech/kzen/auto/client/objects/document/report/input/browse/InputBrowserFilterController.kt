@@ -11,9 +11,11 @@ import react.Props
 import react.State
 import react.create
 import react.dom.onChange
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
+import tech.kzen.auto.client.objects.document.common.edit.DebouncedSubmitter
+import tech.kzen.auto.client.objects.document.common.edit.documentEditActivity
 import tech.kzen.auto.client.objects.document.report.input.model.ReportInputStore
 import tech.kzen.auto.client.util.ClientInputUtils
-import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.common.objects.document.report.spec.input.InputBrowserSpec
@@ -47,11 +49,13 @@ class InputBrowserFilterController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private var submitDebounce: FunctionWithDebounce = lodash.debounce({
-        async {
-            submitEdit()
-        }
-    }, 1000)
+    init {
+        installContextType(DocumentBridgeContext)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private val submitter = DebouncedSubmitter(editActivity = { documentEditActivity() }) { submitEdit() }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -59,7 +63,7 @@ class InputBrowserFilterController(
         setState {
             filterText = newValue
         }
-        submitDebounce.apply()
+        submitter.schedule()
     }
 
 
@@ -74,7 +78,7 @@ class InputBrowserFilterController(
 
     private fun handleEnter(event: react.dom.events.KeyboardEvent<HTMLDivElement>) {
         ClientInputUtils.handleEnter(event) {
-            submitDebounce.cancel()
+            submitter.cancel()
             submitEdit()
         }
     }
@@ -82,7 +86,7 @@ class InputBrowserFilterController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentWillUnmount() {
-        submitDebounce.flush()
+        submitter.flush()
     }
 
 
@@ -114,7 +118,7 @@ class InputBrowserFilterController(
 
             // Commit the pending debounced edit on focus loss, so a following separate command is
             // sequenced after this write rather than racing it (parity with the Enter handler).
-            onBlur = { submitDebounce.flush() }
+            onBlur = { submitter.flush() }
 
             value = state.filterText
 //                disabled = props.editDisabled

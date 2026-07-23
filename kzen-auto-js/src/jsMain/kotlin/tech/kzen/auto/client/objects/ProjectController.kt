@@ -15,6 +15,8 @@ import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.StageController
 import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
 import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
+import tech.kzen.auto.client.objects.document.common.edit.DocumentEditActivity
+import tech.kzen.auto.client.objects.document.common.edit.DocumentEditActivityKey
 import tech.kzen.auto.client.objects.ribbon.HeaderController
 import tech.kzen.auto.client.objects.ribbon.HeaderModel
 import tech.kzen.auto.client.objects.sidebar.SidebarController
@@ -24,6 +26,7 @@ import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.service.logic.ClientLogicGlobal
 import tech.kzen.auto.client.service.logic.LogicRunFrames
+import tech.kzen.auto.client.service.logic.LogicValidationGlobal
 import tech.kzen.auto.client.service.storage.SidebarPreferences
 import tech.kzen.auto.client.util.DefinitionErrors
 import tech.kzen.auto.client.util.async
@@ -60,6 +63,7 @@ external interface ProjectControllerProps: Props {
     var navigationGlobal: NavigationGlobal
     var clientStateGlobal: ClientStateGlobal
     var clientLogicGlobal: ClientLogicGlobal
+    var logicValidationGlobal: LogicValidationGlobal
 }
 
 
@@ -162,7 +166,8 @@ class ProjectController(
         @Service private val mirroredGraphStore: MirroredGraphStore,
         @Service private val navigationGlobal: NavigationGlobal,
         @Service private val clientStateGlobal: ClientStateGlobal,
-        @Service private val clientLogicGlobal: ClientLogicGlobal
+        @Service private val clientLogicGlobal: ClientLogicGlobal,
+        @Service private val logicValidationGlobal: LogicValidationGlobal
     ): ReactWrapper<Props> {
         override fun ChildrenBuilder.child(block: Props.() -> Unit) {
             ProjectController::class.react {
@@ -174,6 +179,7 @@ class ProjectController(
                 navigationGlobal = this@Wrapper.navigationGlobal
                 clientStateGlobal = this@Wrapper.clientStateGlobal
                 clientLogicGlobal = this@Wrapper.clientLogicGlobal
+                logicValidationGlobal = this@Wrapper.logicValidationGlobal
                 block()
             }
         }
@@ -365,10 +371,17 @@ class ProjectController(
         documentPath: DocumentPath?,
         parameters: RequestParams
     ) {
-        // Switching to a different document gets a fresh bridge; a same-document param change keeps it.
+        // Switching to a different document gets a fresh bridge; a same-document param change keeps it. The
+        // bridge carries the document's edit-activity handle so every debounced editor lights the run cluster's
+        // "revalidating" indicator on keystroke (looked up by key, no props threaded through the editor tree).
         if (documentPath != bridgeDocumentPath) {
             bridgeDocumentPath = documentPath
             documentBridge = DocumentBridge()
+            if (documentPath != null) {
+                documentBridge.provide(
+                    DocumentEditActivityKey,
+                    DocumentEditActivity(props.logicValidationGlobal, documentPath))
+            }
         }
 
         setState {

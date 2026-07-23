@@ -8,12 +8,13 @@ import react.Props
 import react.ReactNode
 import react.State
 import react.dom.onChange
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
+import tech.kzen.auto.client.objects.document.common.edit.DebouncedSubmitter
+import tech.kzen.auto.client.objects.document.common.edit.documentEditActivity
 import tech.kzen.auto.client.objects.document.report.input.model.ReportInputStore
 import tech.kzen.auto.client.util.ClientInputUtils
-import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.FunctionWithDebounce
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.client.wrap.lodash
+import tech.kzen.auto.client.wrap.installContextType
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.report.spec.input.InputSelectionSpec
 import web.cssom.em
@@ -46,11 +47,13 @@ class InputSelectedGroupController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private var submitDebounce: FunctionWithDebounce = lodash.debounce({
-        async {
-            submitEdit()
-        }
-    }, 1000)
+    init {
+        installContextType(DocumentBridgeContext)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private val submitter = DebouncedSubmitter(editActivity = { documentEditActivity() }) { submitEdit() }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -58,7 +61,7 @@ class InputSelectedGroupController(
         setState {
             groupByText = newValue
         }
-        submitDebounce.apply()
+        submitter.schedule()
     }
 
 
@@ -73,7 +76,7 @@ class InputSelectedGroupController(
 
     private fun handleEnter(event: react.dom.events.KeyboardEvent<*>) {
         ClientInputUtils.handleEnter(event) {
-            submitDebounce.cancel()
+            submitter.cancel()
             submitEdit()
         }
     }
@@ -81,7 +84,7 @@ class InputSelectedGroupController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentWillUnmount() {
-        submitDebounce.flush()
+        submitter.flush()
     }
 
 
@@ -103,7 +106,7 @@ class InputSelectedGroupController(
 
             // Commit the pending debounced edit on focus loss, so a following separate command is
             // sequenced after this write rather than racing it (parity with the Enter handler).
-            onBlur = { submitDebounce.flush() }
+            onBlur = { submitter.flush() }
 
             value = state.groupByText
             disabled = props.editDisabled

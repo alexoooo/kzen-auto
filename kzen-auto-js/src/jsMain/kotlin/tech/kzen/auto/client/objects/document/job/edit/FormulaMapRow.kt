@@ -15,10 +15,13 @@ import react.dom.html.ReactHTML.tbody
 import react.dom.html.ReactHTML.td
 import react.dom.html.ReactHTML.tr
 import react.dom.onChange
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.objects.document.common.edit.DebouncedSubmitter
+import tech.kzen.auto.client.objects.document.common.edit.documentEditActivity
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.inputLabelSlotProps
+import tech.kzen.auto.client.wrap.installContextType
 import tech.kzen.auto.client.wrap.setState
 import web.cssom.VerticalAlign
 import web.cssom.em
@@ -51,7 +54,13 @@ class FormulaMapRow(
     RPureComponent<FormulaMapRowProps, FormulaMapRowState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    private val submitter = DebouncedSubmitter { onSubmitEdit() }
+    private val submitter = DebouncedSubmitter(editActivity = { documentEditActivity() }) { onSubmitEdit() }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    init {
+        installContextType(DocumentBridgeContext)
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------

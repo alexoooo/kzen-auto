@@ -32,16 +32,12 @@ external interface Lodash {
 }
 
 
-// https://stackoverflow.com/questions/50557507/debounce-check-if-the-debounce-is-pending
 external interface FunctionWithDebounce {
 //    fun invoke()
     fun apply()
 
     fun cancel()
     fun flush()
-
-    // Whether an invocation is scheduled but hasn't fired yet (lodash ≥4.17.7).
-    fun pending(): Boolean
 }
 
 

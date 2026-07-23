@@ -8,6 +8,7 @@ import react.Props
 import react.ReactNode
 import react.State
 import react.dom.onChange
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.lib.common.model.attribute.AttributePath
@@ -74,10 +75,16 @@ class TextAttributeEditor(
         attributePath = { this.props.attributePath },
         pendingNotation = { ScalarAttributeNotation(state.value) },
         onCommitted = { this.props.onChange?.invoke((it as ScalarAttributeNotation).value) },
-        onError = { message -> setState { errorMessage = message } })
+        onError = { message -> setState { errorMessage = message } },
+        editActivity = { documentEditActivity() })
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    init {
+        installContextType(DocumentBridgeContext)
+    }
+
+
     override fun TextAttributeEditorState.init(props: TextAttributeEditorProps) {
         value = stateText(props.value, props.type)
     }

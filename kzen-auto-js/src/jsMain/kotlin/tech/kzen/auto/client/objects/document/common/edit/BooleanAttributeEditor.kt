@@ -7,8 +7,10 @@ import mui.system.sx
 import react.ChildrenBuilder
 import react.Props
 import react.State
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.client.wrap.installContextType
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -59,7 +61,14 @@ class BooleanAttributeEditor(
         attributePath = { this.props.attributePath },
         pendingNotation = { null },
         onCommitted = { this.props.onChange?.invoke((it as ScalarAttributeNotation).value.toBoolean()) },
-        onError = { message -> setState { errorMessage = message } })
+        onError = { message -> setState { errorMessage = message } },
+        editActivity = { documentEditActivity() })
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    init {
+        installContextType(DocumentBridgeContext)
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------

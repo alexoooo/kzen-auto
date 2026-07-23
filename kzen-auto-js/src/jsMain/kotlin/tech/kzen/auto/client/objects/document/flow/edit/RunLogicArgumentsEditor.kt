@@ -11,13 +11,16 @@ import react.ReactNode
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.onChange
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorProps
 import tech.kzen.auto.client.objects.document.common.edit.AttributeCommitter
+import tech.kzen.auto.client.objects.document.common.edit.documentEditActivity
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.iconify.icon
+import tech.kzen.auto.client.wrap.installContextType
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.flow.FlowConventions
@@ -98,10 +101,16 @@ class RunLogicArgumentsEditor(
         objectLocation = { this.props.objectLocation },
         attributePath = { AttributePath.ofName(this.props.attributeName) },
         pendingNotation = { pendingNotation() },
-        onError = { message -> setState { errorMessage = message } })
+        onError = { message -> setState { errorMessage = message } },
+        editActivity = { documentEditActivity() })
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    init {
+        installContextType(DocumentBridgeContext)
+    }
+
+
     override fun RunLogicArgumentsEditorState.init(props: AttributeEditorProps) {
         parameterNames = null
         values = null

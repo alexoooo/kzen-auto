@@ -15,9 +15,11 @@ import react.dom.html.ReactHTML.tbody
 import react.dom.html.ReactHTML.td
 import react.dom.html.ReactHTML.tr
 import react.dom.onChange
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
+import tech.kzen.auto.client.objects.document.common.edit.DebouncedSubmitter
+import tech.kzen.auto.client.objects.document.common.edit.documentEditActivity
 import tech.kzen.auto.client.objects.document.report.formula.model.ReportFormulaState
 import tech.kzen.auto.client.objects.document.report.formula.model.ReportFormulaStore
-import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
@@ -52,11 +54,13 @@ class FormulaItemController(
     RPureComponent<FormulaItemControllerProps, FormulaItemControllerState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    private var submitDebounce: FunctionWithDebounce = lodash.debounce({
-        async {
-            onSubmitEdit()
-        }
-    }, 1_000)
+    private val submitter = DebouncedSubmitter(editActivity = { documentEditActivity() }) { onSubmitEdit() }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    init {
+        installContextType(DocumentBridgeContext)
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -87,7 +91,7 @@ class FormulaItemController(
         setState {
             value = newValue
         }
-        submitDebounce.apply()
+        submitter.schedule()
     }
 
 
@@ -114,14 +118,14 @@ class FormulaItemController(
             value = newValue
         }
 
-        submitDebounce.cancel()
+        submitter.cancel()
         submitValue(newValue)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentWillUnmount() {
-        submitDebounce.flush()
+        submitter.flush()
     }
 
 
@@ -178,7 +182,7 @@ class FormulaItemController(
 
                             // Commit the pending debounced edit on focus loss, so a following
                             // separate command is sequenced after this write rather than racing it.
-                            onBlur = { submitDebounce.flush() }
+                            onBlur = { submitter.flush() }
 
                             disabled = props.runningOrLoading
                             this.error = error != null

@@ -28,3 +28,5 @@ main:
     pivot:
       rows: []
       values: {}
+  formula:
+    test: '"foobar"'

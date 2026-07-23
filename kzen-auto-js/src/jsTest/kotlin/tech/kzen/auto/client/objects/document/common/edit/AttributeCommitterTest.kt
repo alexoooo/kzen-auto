@@ -90,7 +90,8 @@ A:
             onError = {
                 capture.errorInvoked = true
                 capture.errorMessage = it
-            })
+            },
+            editActivity = { null })
     }
 
 

@@ -9,16 +9,17 @@ import tech.kzen.lib.common.model.document.DocumentPath
 // "revalidating…" indicator that lights up the instant a key is pressed and clears when everything settles.
 //
 // Per document it combines TWO orthogonal input channels into one derived LogicValidationSummary:
-//  - editActivity — the shared commit pipeline's edit-pending signal (the committer layer), a SET of active
-//    committer tokens (one document has many editor instances, so a boolean couldn't survive two overlapping
-//    edits). This lights up before the debounce even fires.
+//  - editActivity — every debounced editor's edit-pending signal, reported from the DebouncedSubmitter layer
+//    through each document's DocumentEditActivity bridge entry, a SET of active submitter tokens (one document
+//    has many editor instances, so a boolean couldn't survive two overlapping edits). This lights up before the
+//    debounce even fires.
 //  - validation — the paradigm's async (re)validation state (in-flight) plus its first validation error.
 //
-// The split is load-bearing, not a nicety: with a single busy field the committer and the paradigm would be two
+// The split is load-bearing, not a nicety: with a single busy field the edit layer and the paradigm would be two
 // writers to it, and last-writer-wins races follow directly (keystroke B lands mid-validation of keystroke A →
 // A's validation completes → the paradigm's busy=false stomps B's still-pending edit and the spinner drops
-// early). With split channels committers know nothing about validation and paradigms know nothing about
-// edit-pending, so the race is structurally impossible: whenever a keystroke is uncommitted its committer token
+// early). With split channels the submitter layer knows nothing about validation and paradigms know nothing about
+// edit-pending, so the race is structurally impossible: whenever a keystroke is uncommitted its submitter token
 // keeps editPending non-empty, and each commit re-arms the validation channel's in-flight before its token
 // clears — one continuous busy window.
 //
@@ -87,11 +88,11 @@ class LogicValidationGlobal {
 
 
     //----------------------------------------------------------------------------------------------------------------
-    // INPUT — edit-pending channel (the committer layer). `committerToken` identifies one editor's committer, so
-    // two overlapping edits on the same document each hold their own slot in the set. Idempotent: a keystroke
+    // INPUT — edit-pending channel (the DebouncedSubmitter layer). `editToken` identifies one editor's submitter,
+    // so two overlapping edits on the same document each hold their own slot in the set. Idempotent: a keystroke
     // re-marking an already-pending token doesn't fan out (Set.add returns false), so keystroke-frequency calls
     // are absorbed here rather than in the no-op guard downstream.
-    fun editActivity(documentPath: DocumentPath, committerToken: Any, pending: Boolean) {
+    fun editActivity(documentPath: DocumentPath, editToken: Any, pending: Boolean) {
         val record = records[documentPath]
         if (record == null && !pending) {
             // Nothing pending to clear, and no reason to allocate a record for a no-op.
@@ -101,10 +102,10 @@ class LogicValidationGlobal {
         val target = record ?: Record().also { records[documentPath] = it }
         val changed =
             if (pending) {
-                target.editPending.add(committerToken)
+                target.editPending.add(editToken)
             }
             else {
-                target.editPending.remove(committerToken)
+                target.editPending.remove(editToken)
             }
 
         if (changed) {

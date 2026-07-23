@@ -5,9 +5,11 @@ import js.objects.unsafeJso
 import react.ChildrenBuilder
 import react.State
 import react.dom.html.ReactHTML.div
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorProps
 import tech.kzen.auto.client.objects.document.common.edit.AttributeCommitter
+import tech.kzen.auto.client.objects.document.common.edit.documentEditActivity
 import tech.kzen.auto.client.objects.document.script.display.target.TargetTypeDisplay
 import tech.kzen.auto.client.objects.document.script.display.target.TargetValueEditorContext
 import tech.kzen.auto.client.service.global.ClientState
@@ -105,10 +107,16 @@ class TargetSpecEditor(
         graphStore = { this.props.mirroredGraphStore },
         objectLocation = { this.props.objectLocation },
         attributePath = { AttributePath.ofName(this.props.attributeName) },
-        pendingNotation = { pendingNotation() })
+        pendingNotation = { pendingNotation() },
+        editActivity = { documentEditActivity() })
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    init {
+        installContextType(DocumentBridgeContext)
+    }
+
+
     override fun TargetSpecEditorState.init(props: TargetSpecEditorProps) {
         initialized = false
     }

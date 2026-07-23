@@ -2,11 +2,14 @@ package tech.kzen.auto.client.objects.document.common.edit.select
 
 import react.ChildrenBuilder
 import react.State
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorProps
 import tech.kzen.auto.client.objects.document.common.edit.AttributeCommitter
 import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
+import tech.kzen.auto.client.objects.document.common.edit.documentEditActivity
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.client.wrap.installContextType
 import tech.kzen.auto.client.wrap.select.SelectOption
 import tech.kzen.auto.client.wrap.select.muiAutocompleteField
 import tech.kzen.auto.client.wrap.setState
@@ -69,7 +72,16 @@ abstract class SelectReferenceEditorBase<P: AttributeEditorProps, S: SelectRefer
         objectLocation = { this.props.objectLocation },
         attributePath = { AttributePath.ofName(this.props.attributeName) },
         pendingNotation = { null },
-        onError = { message -> setState { errorMessage = message } })
+        onError = { message -> setState { errorMessage = message } },
+        editActivity = { documentEditActivity() })
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    // Installed in the base so every subclass reaches its document's edit-activity via the committer; idempotent
+    // with subclasses that also install it for their own bridge lookups.
+    init {
+        installContextType(DocumentBridgeContext)
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------

@@ -7,11 +7,14 @@ import react.Props
 import react.ReactNode
 import react.State
 import react.dom.onChange
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
 import tech.kzen.auto.client.objects.document.common.edit.DebouncedSubmitter
+import tech.kzen.auto.client.objects.document.common.edit.documentEditActivity
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.client.wrap.installContextType
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -87,6 +90,12 @@ class JobChannelNumberField(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    init {
+        installContextType(DocumentBridgeContext)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
         props.clientStateGlobal.observe(this)
     }
@@ -99,7 +108,7 @@ class JobChannelNumberField(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val submitter = DebouncedSubmitter { submitEdit() }
+    private val submitter = DebouncedSubmitter(editActivity = { documentEditActivity() }) { submitEdit() }
 
 
     // Blank means "inherit the effective default" only for a nested per-channel knob (`channels.<port>.<knob>`,
