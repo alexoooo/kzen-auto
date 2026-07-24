@@ -7,6 +7,7 @@ import tech.kzen.auto.server.objects.logic.ExpressionReturnTypeInference
 import tech.kzen.auto.server.objects.report.exec.input.model.header.RecordHeaderIndex
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.auto.server.service.compile.KotlinCode
+import tech.kzen.auto.server.service.compile.KotlinSyntaxValidator
 import tech.kzen.lib.common.exec.tuple.TupleDefinition
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.platform.ClassNames.asTopLevelImport
@@ -34,7 +35,8 @@ import kotlin.reflect.KType
  * type — [inferredReturnKType]), the Job payload-type walk, and execution.
  */
 class CalculatedColumnEval(
-    private val cachedKotlinCompiler: CachedKotlinCompiler
+    private val cachedKotlinCompiler: CachedKotlinCompiler,
+    private val kotlinSyntaxValidator: KotlinSyntaxValidator
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     fun validate(
@@ -56,6 +58,17 @@ class CalculatedColumnEval(
         val code = generate(calculatedColumnName, calculatedColumnFormula, columnNames, modelType, parameters)
         val errorMessage = cachedKotlinCompiler.tryCompile(code, classLoader)
         return errorMessage?.let { cleanupErrorMessage(it) }
+    }
+
+
+    /**
+     * The scope-independent half of [validate], for a caller whose column scope is NOT statically known (a Job
+     * Worker on a CSV lane): reports malformed source, which no header could make compile, and stays silent on
+     * everything a header would have to settle. [validate] is unusable there — with no column accessors
+     * generated, every column reference would come back unresolved and a good expression would read as broken.
+     */
+    fun validateSyntax(calculatedColumnFormula: String): String? {
+        return kotlinSyntaxValidator.validate(calculatedColumnFormula)
     }
 
 

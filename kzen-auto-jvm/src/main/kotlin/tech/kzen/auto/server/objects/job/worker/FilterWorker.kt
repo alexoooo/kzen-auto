@@ -91,15 +91,16 @@ class FilterWorker(
 
     //-----------------------------------------------------------------------------------------------------------------
     // A filter forwards the received message untouched (identity lane); its contribution to the walk is
-    // static validation of [where], where the effective column view is known (the same scope the runtime
-    // compile will use — including the auto-flatten `value` column of a concrete payload lane).
+    // static validation of [where] — a full compile where the effective column view is known (the same scope
+    // the runtime compile will use, including the auto-flatten `value` column of a concrete payload lane),
+    // and a syntax-only check where it is not, since malformed source cannot compile under any header.
     override fun payloadFlow(input: WorkerLane, context: WorkerLaneContext): WorkerLaneAttempt {
         if (passThrough) {
             return WorkerLaneAttempt(input, null)
         }
 
         val columns = input.consumerFlatColumns()
-            ?: return WorkerLaneAttempt(input, null)
+            ?: return WorkerLaneAttempt(input, calculatedColumnEval.validateSyntax(where))
 
         val error = calculatedColumnEval.validate(
             "filter", where, columns,

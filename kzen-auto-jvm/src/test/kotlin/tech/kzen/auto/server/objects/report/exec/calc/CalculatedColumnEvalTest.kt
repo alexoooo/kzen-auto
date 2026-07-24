@@ -4,6 +4,7 @@ import org.junit.Test
 import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
+import tech.kzen.auto.server.service.compile.KotlinSyntaxValidator
 import tech.kzen.auto.server.service.compile.ScriptKotlinCompiler
 import tech.kzen.auto.server.util.ClassLoaderUtils
 import tech.kzen.auto.server.util.WorkUtils
@@ -525,6 +526,6 @@ class CalculatedColumnEvalTest {
     private fun calculatedColumnEval(workUtils: WorkUtils): CalculatedColumnEval {
         val kotlinCompiler = ScriptKotlinCompiler()
         val cachedKotlinCompiler = CachedKotlinCompiler(kotlinCompiler, workUtils)
-        return CalculatedColumnEval(cachedKotlinCompiler)
+        return CalculatedColumnEval(cachedKotlinCompiler, KotlinSyntaxValidator())
     }
 }

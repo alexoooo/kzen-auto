@@ -39,10 +39,10 @@ import tech.kzen.lib.common.service.store.LocalGraphStore
  * each Worker mapping its input lane to its output lane via the [WorkerBase.payloadFlow] capability — an
  * instance method, so no general layer learns a Worker type (the extension rule; a third-party Worker
  * participates by overriding it). Expression Workers compile-check their expressions where the static scope
- * is known, so a broken expression surfaces as a validation error on the Worker's card instead of a run-time
- * crash — and the inferred payload types flow downstream (each expression compiles against the receiver type
- * the walk gives it, both here and at run time via
- * [tech.kzen.auto.common.paradigm.job.control.JobControl.payloadType]).
+ * is known, and parse them for syntax where it is not (a CSV lane), so a broken expression surfaces as a
+ * validation error on the Worker's card instead of a run-time crash — and the inferred payload types flow
+ * downstream (each expression compiles against the receiver type the walk gives it, both here and at run
+ * time via [tech.kzen.auto.common.paradigm.job.control.JobControl.payloadType]).
  *
  * The walk needs live Worker instances, so [execute] synthesizes the channels and instantiates the Job graph
  * exactly as a run compile would (the ScriptValidator instantiate-to-validate precedent) — behind

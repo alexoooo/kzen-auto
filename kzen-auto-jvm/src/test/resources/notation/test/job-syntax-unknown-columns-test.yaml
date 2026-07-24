@@ -1,0 +1,22 @@
+# Malformed-expression-on-an-unknown-lane fixture (JobValidatorTest): a CSV reader's columns exist only at run
+# time, so the Formula's scope is statically unknown and its expression cannot be compile-checked — but
+# `c0 + "_foo"ab` is not parseable under ANY header, so the syntax half of the check still reports it on the
+# Worker's card. Ports are blank, so the order-driven derivation wires reader -> formula -> writer; the writer
+# is required so synthesis wires the formula's output port (a blank required reference is pruned by convention
+# and would get no entry at all). Nothing is read or written — the walk only instantiates.
+main:
+  is: Job
+
+main.workers/reader:
+  is: CsvReaderWorker
+  path: build/job-syntax-unknown-columns/input.csv
+  header: false
+
+main.workers/formula:
+  is: FormulaWorker
+  formula:
+    broken: c0 + "_foo"ab
+
+main.workers/writer:
+  is: CsvWriterWorker
+  path: build/job-syntax-unknown-columns/output.csv

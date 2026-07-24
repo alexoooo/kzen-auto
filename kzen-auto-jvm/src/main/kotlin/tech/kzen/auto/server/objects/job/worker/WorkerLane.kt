@@ -18,9 +18,12 @@ import tech.kzen.lib.platform.ClassNames
  *   payload (a flat/CSV lane, or an untyped source). Downstream expression compiles use it as the receiver
  *   (null → nullable `Any`), and it is what the editor's worker cards display.
  * - [flatColumns] — the flat part's columns, where statically derivable: null = UNKNOWN (a CSV lane's
- *   header only exists at run time — static expression validation is skipped there, its errors surfacing at
- *   run time as before); empty = statically NO flat part (a pure-payload lane). Known columns let the walk
- *   compile-check expressions with the exact scope the runtime will use.
+ *   header only exists at run time); empty = statically NO flat part (a pure-payload lane). Known columns
+ *   let the walk compile-check expressions with the exact scope the runtime will use. An unknown lane still
+ *   gets the scope-free half of that check — expressions are parsed for syntax
+ *   ([tech.kzen.auto.server.service.compile.KotlinSyntaxValidator]), since malformed source cannot compile
+ *   under any header; only errors a header would settle (unresolved columns, type mismatches) are left to
+ *   surface at run time.
  */
 class WorkerLane(
     val payloadType: TypeMetadata?,

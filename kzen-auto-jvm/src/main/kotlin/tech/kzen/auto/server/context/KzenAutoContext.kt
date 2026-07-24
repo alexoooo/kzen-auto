@@ -28,6 +28,7 @@ import tech.kzen.auto.server.objects.report.service.FilterIndex
 import tech.kzen.auto.server.objects.report.service.ReportWorkPool
 import tech.kzen.auto.server.objects.script.ScriptValidationCache
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
+import tech.kzen.auto.server.service.compile.KotlinSyntaxValidator
 import tech.kzen.auto.server.service.compile.ScriptKotlinCompiler
 import tech.kzen.auto.server.service.exec.GraphInstanceCache
 import tech.kzen.auto.server.service.exec.ModelDetachedExecutor
@@ -154,7 +155,8 @@ class KzenAutoContext(
 
     val kotlinCompiler = ScriptKotlinCompiler()
     val cachedKotlinCompiler = CachedKotlinCompiler(kotlinCompiler, workUtils)
-    val calculatedColumnEval = CalculatedColumnEval(cachedKotlinCompiler)
+    val kotlinSyntaxValidator = KotlinSyntaxValidator()
+    val calculatedColumnEval = CalculatedColumnEval(cachedKotlinCompiler, kotlinSyntaxValidator)
     val scriptValidationCache = ScriptValidationCache()
     val jobValidationCache = JobValidationCache()
 

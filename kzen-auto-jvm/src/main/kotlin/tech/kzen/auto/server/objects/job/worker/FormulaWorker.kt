@@ -157,17 +157,22 @@ class FormulaWorker(
     override fun payloadFlow(input: WorkerLane, context: WorkerLaneContext): WorkerLaneAttempt {
         val receiverType = input.payloadType ?: TypeMetadata.anyNullable
 
-        // Flat value formulas: compile-check against the auto-flattened consumer view when it is known.
+        // Flat value formulas: compile-check against the auto-flattened consumer view where it is known,
+        // otherwise syntax alone — the most that holds when the columns only arrive at run time.
         val formulaColumns = input.consumerFlatColumns()
         var errorMessage: String? = null
-        if (formulaColumns != null) {
-            for ((name, expression) in formulaEntries) {
-                val error = calculatedColumnEval.validate(
-                    name, expression, formulaColumns, receiverType, context.classLoader, context.parameters)
-                if (error != null) {
-                    errorMessage = "$name: $error"
-                    break
+        for ((name, expression) in formulaEntries) {
+            val error =
+                if (formulaColumns != null) {
+                    calculatedColumnEval.validate(
+                        name, expression, formulaColumns, receiverType, context.classLoader, context.parameters)
                 }
+                else {
+                    calculatedColumnEval.validateSyntax(expression)
+                }
+            if (error != null) {
+                errorMessage = "$name: $error"
+                break
             }
         }
 
@@ -187,8 +192,12 @@ class FormulaWorker(
             return WorkerLaneAttempt(WorkerLane(input.payloadType, outputColumns), errorMessage)
         }
 
+        // An unknown flat part leaves the payload expression's scope unknown too, so it degrades to syntax
+        // alone; the resulting payload type is whatever the run infers.
         val payloadColumns = input.flatColumns
-            ?: return WorkerLaneAttempt(WorkerLane(TypeMetadata.anyNullable, outputColumns), errorMessage)
+            ?: return WorkerLaneAttempt(
+                WorkerLane(TypeMetadata.anyNullable, outputColumns),
+                errorMessage ?: calculatedColumnEval.validateSyntax(payload))
 
         val payloadError = calculatedColumnEval.validate(
             selfLocation.objectPath.name.value, payload, payloadColumns,

@@ -48,6 +48,11 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-scripting-jvm-host:$kotlinVersion")
     implementation("org.jetbrains.kotlin:kotlin-scripting-compiler-embeddable:$kotlinVersion")
 
+    // Kotlin PSI parser (KotlinSyntaxValidator parses expressions whose scope isn't statically known).
+    // Arrives at runtime scope only via kotlin-scripting-jvm-host, so it needs declaring to be compiled
+    // against; adds no artifact. NB: this jar shades IntelliJ into org.jetbrains.kotlin.com.intellij.*.
+    implementation("org.jetbrains.kotlin:kotlin-compiler-embeddable:$kotlinVersion")
+
     api("ch.qos.logback:logback-classic:$logbackVersion")
     api("org.seleniumhq.selenium:selenium-java:$seleniumVersion")
     implementation("io.github.bonigarcia:webdrivermanager:$webdrivermanagerVersion")

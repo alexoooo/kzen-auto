@@ -22,8 +22,9 @@ import kotlin.test.assertNull
  * identity — every card would show the Int chip), a broken expression surfacing as that Worker's validation
  * ERROR (not a crash), a nested-Logic RunWorker typed by its Script callee's declared `results` signature, the
  * ResultSink's declared-`results` checks (undeclared component; declared-vs-inferred assignability — mismatch
- * rejected, supertype accepted, nullable-into-non-nullable rejected), and the skip lane (a manually-wired CSV
- * pipeline: unknown columns -> no static validation, so no false errors).
+ * rejected, supertype accepted, nullable-into-non-nullable rejected), and the unknown-column lane, where
+ * validation degrades to syntax rather than switching off: a manually-wired CSV pipeline of well-formed
+ * expressions yields no false errors, while malformed source on a CSV lane is still caught.
  * Drives the same synthesize + filter + instantiate steps as [JobValidator.execute] (and
  * [tech.kzen.auto.server.exec.job.JobRun]), without the detached/cache layers.
  */
@@ -145,15 +146,31 @@ class JobValidatorTest {
     @Test
     fun manuallyWiredCsvLaneSkipsWithoutFalseErrors() {
         // job-filter-expression-test wires its channels MANUALLY (non-blank ports), so the order-driven
-        // derivation contributes no connections: every lane is unknown, the Filter's `where` over runtime CSV
-        // columns is not statically validated (its errors surface at run time, as before), and no payload
-        // type shows.
+        // derivation contributes no connections: every lane is unknown, so the Filter's `where` over runtime
+        // CSV columns is only parsed — `amount.number > 2` references columns that cannot resolve here, and
+        // must NOT be reported. No payload type shows either.
         val validation = validate("test/job-filter-expression-test.yaml")
 
         for ((path, entry) in validation.workerValidations) {
             assertNull(entry.errorMessage, "no false static error on $path")
             assertNull(entry.typeMetadata, "no payload type on the flat lane $path")
         }
+    }
+
+
+    @Test
+    fun malformedExpressionOnCsvLaneIsStillCaught() {
+        // The counterpart: a CSV lane's columns are unknown, but malformed source could not compile under any
+        // header, so it must surface on the card rather than crashing the run on the first record.
+        val validation = validate("test/job-syntax-unknown-columns-test.yaml")
+
+        val formula = validation.workerValidations[ObjectPath.parse("main.workers/formula")]
+        assertNotNull(formula, "the broken Worker gets an entry")
+        assertNotNull(formula.errorMessage, "malformed source is caught without knowing the columns")
+
+        val reader = validation.workerValidations[ObjectPath.parse("main.workers/reader")]
+        assertNotNull(reader)
+        assertNull(reader.errorMessage, "only the broken Worker carries the error")
     }
 
 
