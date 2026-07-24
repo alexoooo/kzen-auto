@@ -10,7 +10,9 @@ import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorProps
 import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
+import tech.kzen.auto.client.objects.document.common.valid.ExpressionValidationIndicator
 import tech.kzen.auto.client.service.global.ClientStateGlobal
+import tech.kzen.auto.client.service.logic.LogicValidationGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RComponent
 import tech.kzen.auto.client.wrap.react
@@ -27,10 +29,20 @@ import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.common.service.store.MirroredGraphStore
+import web.cssom.None
+import web.cssom.Position
 import web.cssom.em
+import web.cssom.px
 
 
 //---------------------------------------------------------------------------------------------------------------------
+external interface FormulaMapEditorProps: AttributeEditorProps {
+    // Feeds the per-editor "validating…" overlay (see ExpressionValidationIndicator) — kept on the dedicated
+    // props subtype so the shared AttributeEditorProps stays single-purpose.
+    var logicValidationGlobal: LogicValidationGlobal
+}
+
+
 external interface FormulaMapEditorState: State {
     // The Worker's committed formula map (calculated-column name -> Kotlin expression), in document order.
     // Each row owns its own in-progress text; this only tracks the committed entry SET + values.
@@ -48,9 +60,9 @@ external interface FormulaMapEditorState: State {
 // the committed map from notation on store changes.
 @Suppress("unused")
 class FormulaMapEditor(
-    props: AttributeEditorProps
+    props: FormulaMapEditorProps
 ):
-    RComponent<AttributeEditorProps, FormulaMapEditorState>(props),
+    RComponent<FormulaMapEditorProps, FormulaMapEditorState>(props),
     LocalGraphStore.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
@@ -58,7 +70,8 @@ class FormulaMapEditor(
     class Wrapper(
         objectLocation: ObjectLocation,
         @Service private val clientStateGlobal: ClientStateGlobal,
-        @Service private val mirroredGraphStore: MirroredGraphStore
+        @Service private val mirroredGraphStore: MirroredGraphStore,
+        @Service private val logicValidationGlobal: LogicValidationGlobal
     ):
         AttributeEditor(objectLocation)
     {
@@ -66,6 +79,7 @@ class FormulaMapEditor(
             FormulaMapEditor::class.react {
                 clientStateGlobal = this@Wrapper.clientStateGlobal
                 mirroredGraphStore = this@Wrapper.mirroredGraphStore
+                logicValidationGlobal = this@Wrapper.logicValidationGlobal
                 block()
             }
         }
@@ -73,7 +87,7 @@ class FormulaMapEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun FormulaMapEditorState.init(props: AttributeEditorProps) {
+    override fun FormulaMapEditorState.init(props: FormulaMapEditorProps) {
         val graphNotation = props.clientStateGlobal.current()!!.graphStructure().graphNotation
         formulas = readFormulas(graphNotation)
     }
@@ -173,34 +187,56 @@ class FormulaMapEditor(
         val formulas = state.formulas
             ?: return
 
-        InputLabel {
-            sx {
-                fontSize = 0.8.em
-            }
-            +CommonEditUtils.formattedLabel(AttributePath.ofName(props.attributeName))
-        }
-
+        // Relative container so the "validating…" pulse (a whole-Worker signal — one formula map validates as
+        // one Worker) can sit in the editor's top-right corner rather than on every row.
         div {
-            for ((columnName, formula) in formulas) {
-                div {
-                    key = Key(columnName)
-                    css {
-                        marginBottom = 0.25.em
-                    }
+            css {
+                position = Position.relative
+            }
 
-                    FormulaMapRow::class.react {
-                        this.columnName = columnName
-                        this.formula = formula
-                        onUpdate = { name, value -> applyUpdate(name, value) }
-                        onDelete = { name -> applyDelete(name) }
+            InputLabel {
+                sx {
+                    fontSize = 0.8.em
+                }
+                +CommonEditUtils.formattedLabel(AttributePath.ofName(props.attributeName))
+            }
+
+            div {
+                for ((columnName, formula) in formulas) {
+                    div {
+                        key = Key(columnName)
+                        css {
+                            marginBottom = 0.25.em
+                        }
+
+                        FormulaMapRow::class.react {
+                            this.columnName = columnName
+                            this.formula = formula
+                            onUpdate = { name, value -> applyUpdate(name, value) }
+                            onDelete = { name -> applyDelete(name) }
+                        }
                     }
                 }
             }
-        }
 
-        FormulaMapAdd::class.react {
-            existingNames = formulas.keys
-            onAdd = { name -> applyAdd(name) }
+            FormulaMapAdd::class.react {
+                existingNames = formulas.keys
+                onAdd = { name -> applyAdd(name) }
+            }
+
+            div {
+                css {
+                    position = Position.absolute
+                    top = 0.px
+                    right = 0.px
+                    pointerEvents = None.none
+                }
+
+                ExpressionValidationIndicator::class.react {
+                    documentPath = props.objectLocation.documentPath
+                    logicValidationGlobal = props.logicValidationGlobal
+                }
+            }
         }
     }
 }

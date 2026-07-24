@@ -16,12 +16,14 @@ import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorPr
 import tech.kzen.auto.client.objects.document.common.edit.AttributeCommitter
 import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
 import tech.kzen.auto.client.objects.document.common.edit.documentEditActivity
+import tech.kzen.auto.client.objects.document.common.valid.ExpressionValidationIndicator
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
 import tech.kzen.auto.client.objects.document.script.model.ScriptStore
 import tech.kzen.auto.client.objects.document.script.model.ScriptStoreKey
 import tech.kzen.auto.client.objects.document.script.model.ScriptStepReferenceStoreKey
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
+import tech.kzen.auto.client.service.logic.LogicValidationGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
@@ -38,12 +40,22 @@ import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.service.store.MirroredGraphStore
 import web.cssom.AlignItems
 import web.cssom.Display
+import web.cssom.None
+import web.cssom.Position
 import web.cssom.number
 import web.cssom.px
 import web.html.HTMLTextAreaElement
 
 
 //---------------------------------------------------------------------------------------------------------------------
+external interface KotlinExpressionEditorProps: AttributeEditorProps {
+    // The per-box "validating…" overlay reflects this document's validation-busy state (see
+    // ExpressionValidationIndicator). Only this editor and FormulaMapEditor need it, so it lives on the
+    // dedicated props subtype rather than the shared AttributeEditorProps.
+    var logicValidationGlobal: LogicValidationGlobal
+}
+
+
 external interface KotlinExpressionEditorState: State {
     // Live edit buffer; null until the first server value hydrates it.
     var value: String?
@@ -71,9 +83,9 @@ external interface KotlinExpressionEditorState: State {
 // the caret; referencing the name is what creates the data dependency (derived lexically server-side).
 @Suppress("unused")
 class KotlinExpressionEditor(
-    props: AttributeEditorProps
+    props: KotlinExpressionEditorProps
 ):
-    RPureComponent<AttributeEditorProps, KotlinExpressionEditorState>(props),
+    RPureComponent<KotlinExpressionEditorProps, KotlinExpressionEditorState>(props),
     ClientStateGlobal.Observer,
     ScriptStore.Observer,
     ScriptStepReferenceStore.Observer
@@ -83,7 +95,8 @@ class KotlinExpressionEditor(
     class Wrapper(
         objectLocation: ObjectLocation,
         @Service private val clientStateGlobal: ClientStateGlobal,
-        @Service private val mirroredGraphStore: MirroredGraphStore
+        @Service private val mirroredGraphStore: MirroredGraphStore,
+        @Service private val logicValidationGlobal: LogicValidationGlobal
     ):
         AttributeEditor(objectLocation)
     {
@@ -91,6 +104,7 @@ class KotlinExpressionEditor(
             KotlinExpressionEditor::class.react {
                 clientStateGlobal = this@Wrapper.clientStateGlobal
                 mirroredGraphStore = this@Wrapper.mirroredGraphStore
+                logicValidationGlobal = this@Wrapper.logicValidationGlobal
                 block()
             }
         }
@@ -121,7 +135,7 @@ class KotlinExpressionEditor(
     }
 
 
-    override fun KotlinExpressionEditorState.init(props: AttributeEditorProps) {
+    override fun KotlinExpressionEditorState.init(props: KotlinExpressionEditorProps) {
         value = null
         serverValue = null
         stepReferences = null
@@ -373,9 +387,26 @@ class KotlinExpressionEditor(
                 css {
                     flexGrow = number(1.0)
                     minWidth = 0.px
+                    position = Position.relative
                 }
 
                 renderTextField(value)
+
+                // "Validating…" pulse overlaid in the field's top-right corner; pointer-events off so it
+                // never blocks clicking into the text area.
+                div {
+                    css {
+                        position = Position.absolute
+                        top = 4.px
+                        right = 4.px
+                        pointerEvents = None.none
+                    }
+
+                    ExpressionValidationIndicator::class.react {
+                        documentPath = props.objectLocation.documentPath
+                        logicValidationGlobal = props.logicValidationGlobal
+                    }
+                }
             }
 
             StepReferenceController::class.react {

@@ -6,12 +6,13 @@ main:
       generics: []
       nullable: false
 
-main.steps/Number range:
-  is: NumberRangeStep
+main.steps/Formula 3:
+  is: FormulaStep
+  code: 1..101
 
 main.steps/ForEach:
   is: ForEachStep
-  items: main.steps/Number range
+  items: main.steps/Formula 3
 
 main.steps/ForEach.steps/Formula:
   is: FormulaStep

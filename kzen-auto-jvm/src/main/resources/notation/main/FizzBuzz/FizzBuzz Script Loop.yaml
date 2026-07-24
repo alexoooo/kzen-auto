@@ -2,9 +2,9 @@ main:
   is: Script
   results: {}
 
-main.steps/Number range:
-  is: NumberRangeStep
-  to: 150
+main.steps/Formula 2:
+  is: FormulaStep
+  code: 1 .. 150
 
 main.steps/Range:
   is: FormulaStep
