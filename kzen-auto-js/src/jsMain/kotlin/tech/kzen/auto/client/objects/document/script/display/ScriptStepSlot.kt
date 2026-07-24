@@ -166,11 +166,20 @@ class ScriptStepSlot(
 
             title = "Select this step"
 
-            // Stop mousedown too (not just click): the expression editor's popover closes on a document-level
-            // mousedown-away (StepReferenceController.renderPopover). Swallowing mousedown here keeps a card
-            // press from reaching that listener, so the press picks (onClick below) instead of cancelling.
+            // Neutralize mousedown entirely (not just click) so a card press can't disturb the picking editor
+            // before its onClick lands:
+            //
+            //  - stopPropagation, because the expression editor's popover closes on a document-level
+            //    mousedown-away (StepReferenceController.renderPopover) — swallowing it keeps a card press
+            //    from reaching that listener, so the press picks instead of cancelling.
+            //  - preventDefault, because mousedown's default action is to move focus, and for the select
+            //    editors the dropdown's open state IS the pick session (StepPickingSelectEditorBase): blurring
+            //    their field would close it, end the session, and unmount this overlay BETWEEN mousedown and
+            //    mouseup. No click would ever reach it — the browser would dispatch one at the surviving
+            //    ancestor instead, firing the card's own expand-on-click and losing the pick.
             onMouseDown = { event ->
                 event.stopPropagation()
+                event.preventDefault()
             }
 
             onClick = { event ->

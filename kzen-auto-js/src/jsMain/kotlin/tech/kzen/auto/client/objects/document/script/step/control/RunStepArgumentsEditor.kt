@@ -74,9 +74,10 @@ external interface RunStepArgumentsEditorState: State {
     var parameterNames: PersistentList<String>?
     var parameterTypes: PersistentMap<String, String>?
 
-    // Which parameter's row owns the shared pick session, or null when none does — so only that row's toggle
-    // shows cancel. Per-parameter, not a plain Boolean: this editor renders one select per callee parameter.
-    var pickingParameter: String?
+    // Which parameter's dropdown is open, or null when none is. That open state IS the shared pick session
+    // (see StepPickingSelectEditorBase), and it is per-parameter rather than a plain Boolean because this
+    // editor renders one select per callee parameter.
+    var openParameter: String?
 }
 
 
@@ -134,7 +135,7 @@ class RunStepArgumentsEditor(
         predecessors = null
         parameterNames = null
         parameterTypes = null
-        pickingParameter = null
+        openParameter = null
     }
 
 
@@ -172,7 +173,7 @@ class RunStepArgumentsEditor(
         // back into this unmounting component.
         val referenceStore = referenceStore()
         referenceStore?.unobserve(this)
-        state.pickingParameter?.let { referenceStore?.end(editorLocation(it)) }
+        state.openParameter?.let { referenceStore?.end(editorLocation(it)) }
 
         props.mirroredGraphStore.unobserve(this)
         contextValue<DocumentBridge?>()?.lookup(ScriptStoreKey)?.unobserve(this)
@@ -312,33 +313,28 @@ class RunStepArgumentsEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    // Derive only this editor's slice of the active pick session — which of ITS parameter rows owns it — and skip
-    // setState when unchanged, so an unrelated editor's begin/clear doesn't re-render these rows.
+    // The session ending elsewhere closes the open dropdown. Only ever closes, never opens — begin() publishes
+    // synchronously from inside onFieldOpen below, while that gesture's setState is still pending. Skipping
+    // setState when nothing is open also keeps an unrelated editor's begin/clear from re-rendering these rows.
     override fun onStepReferenceChanged() {
-        val editorLocation = referenceStore()?.session?.editorLocation
+        val openParameter = state.openParameter
+            ?: return
 
-        val pickingParameter = editorLocation
-            ?.takeIf {
-                it.objectLocation == props.objectLocation &&
-                        it.attributePath.attribute == props.attributeName
-            }
-            ?.attributePath
-            ?.nesting
-            ?.segments
-            ?.lastOrNull()
-            ?.asKey()
-
-        if (state.pickingParameter == pickingParameter) {
+        if (referenceStore()?.session?.editorLocation == editorLocation(openParameter)) {
             return
         }
 
         setState {
-            this.pickingParameter = pickingParameter
+            this.openParameter = null
         }
     }
 
 
-    private fun onBeginPicking(parameterName: String) {
+    private fun onFieldOpen(parameterName: String) {
+        setState {
+            openParameter = parameterName
+        }
+
         val predecessors = state.predecessors
             ?: return
 
@@ -352,7 +348,10 @@ class RunStepArgumentsEditor(
     }
 
 
-    private fun onEndPicking(parameterName: String) {
+    private fun onFieldClose(parameterName: String) {
+        setState {
+            openParameter = null
+        }
         referenceStore()?.end(editorLocation(parameterName))
     }
 
@@ -495,12 +494,18 @@ class RunStepArgumentsEditor(
                     minWidth = 0.px
                 }
 
+                // Opening this dropdown arms the shared pick session, so the value can equally be chosen by
+                // clicking a step's card on the canvas — see StepPickingSelectEditorBase for why the gesture
+                // rides the open state instead of a separate button.
                 muiAutocompleteField(
                     label = parameterName,
                     options = selectOptions,
                     selectedOption = selectedOption,
                     onSelect = { onValueChange(parameterName, ObjectLocation.parse(it.value)) },
-                    disableClearable = true)
+                    disableClearable = true,
+                    open = state.openParameter == parameterName,
+                    onOpen = { onFieldOpen(parameterName) },
+                    onClose = { onFieldClose(parameterName) })
             }
 
             if (typeLabel != null) {
@@ -512,40 +517,6 @@ class RunStepArgumentsEditor(
                     size = Size.small
                     label = ReactNode(typeLabel)
                     variant = ChipVariant.outlined
-                }
-            }
-
-            renderPickToggle(parameterName, selectOptions.isEmpty())
-        }
-    }
-
-
-    // Arms the shared pick session for this parameter, so its value can be chosen by clicking a step's card on
-    // the canvas instead of using the dropdown — mirrors StepPickingSelectEditorBase's toggle.
-    private fun ChildrenBuilder.renderPickToggle(parameterName: String, noCandidates: Boolean) {
-        val picking = state.pickingParameter == parameterName
-
-        IconButton {
-            sx {
-                marginLeft = 0.25.em
-                flexShrink = number(0.0)
-            }
-            // While armed the same button cancels; Escape and picking a card also end the session.
-            title = if (picking) "Cancel" else "Pick a step from the canvas"
-            disabled = noCandidates
-
-            onClick = {
-                if (picking) {
-                    onEndPicking(parameterName)
-                }
-                else {
-                    onBeginPicking(parameterName)
-                }
-            }
-
-            icon(if (picking) "material-symbols:cancel" else "material-symbols:ads-click") {
-                style = unsafeJso {
-                    fontSize = 1.25.em
                 }
             }
         }

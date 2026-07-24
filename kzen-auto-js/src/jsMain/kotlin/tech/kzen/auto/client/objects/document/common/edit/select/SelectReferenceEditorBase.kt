@@ -183,14 +183,26 @@ abstract class SelectReferenceEditorBase<P: AttributeEditorProps, S: SelectRefer
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    protected fun ChildrenBuilder.selectField(options: Array<SelectOption>) {
+    // `open` / `onOpen` / `onClose` are for subclasses that attach a meaning to the dropdown being open (see
+    // StepPickingSelectEditorBase, where it arms a canvas pick session); left at their defaults the field
+    // keeps MUI's own uncontrolled toggle. The close reason isn't forwarded — no subclass needs to tell
+    // Escape from a click-away, they all just end whatever the open state meant.
+    protected fun ChildrenBuilder.selectField(
+        options: Array<SelectOption>,
+        open: Boolean? = null,
+        onOpen: (() -> Unit)? = null,
+        onClose: (() -> Unit)? = null
+    ) {
         muiAutocompleteField(
             label = label(),
             options = options,
             selectedOption = options.find { it.value == state.selected },
             onSelect = { selectAndCommit(it.value) },
             error = state.errorMessage != null,
-            disableClearable = true)
+            disableClearable = true,
+            open = open,
+            onOpen = onOpen,
+            onClose = onClose?.let { callback -> { _ -> callback() } })
     }
 
 

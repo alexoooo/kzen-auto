@@ -1,11 +1,6 @@
 package tech.kzen.auto.client.objects.document.script.display.edit
 
-import emotion.react.css
-import js.objects.unsafeJso
-import mui.material.IconButton
-import mui.system.sx
 import react.ChildrenBuilder
-import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
 import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorProps
@@ -17,24 +12,19 @@ import tech.kzen.auto.client.objects.document.script.model.ScriptStepReferenceSt
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.contextValue
 import tech.kzen.auto.client.wrap.installContextType
-import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.select.SelectOption
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.model.location.ObjectLocation
-import web.cssom.AlignItems
-import web.cssom.Display
-import web.cssom.em
-import web.cssom.number
-import web.cssom.px
 
 
 //---------------------------------------------------------------------------------------------------------------------
 external interface StepPickingSelectEditorState: SelectReferenceEditorState {
-    // True while THIS editor (object + attribute) owns the shared pick session — the toggle shows cancel and
-    // the in-scope step cards are highlighted.
-    var picking: Boolean
+    // The dropdown's open state, held here rather than left to MUI because it IS the pick session: opening
+    // arms the shared session, closing ends it, and a session ended from elsewhere — a canvas card click,
+    // Escape, another editor taking over — has to collapse the listbox in turn.
+    var open: Boolean
 }
 
 
@@ -42,6 +32,12 @@ external interface StepPickingSelectEditorState: SelectReferenceEditorState {
 // A reference-select editor whose candidates are Steps of the enclosing Script, so the value can also be chosen
 // by clicking the step's card on the canvas — the gesture KotlinExpressionEditor already offers for inserting a
 // reference into an expression, routed through the same shared ScriptStepReferenceStore.
+//
+// The gesture is folded INTO the dropdown rather than offered beside it as an arm/cancel button: while the
+// listbox is open the in-scope step cards are outlined and clickable, so the list and the canvas are two views
+// of one candidate set, and every way of dismissing a dropdown — click-away, Escape, clicking the field again,
+// picking an option — is also the way to cancel the pick. Only one session exists at a time, so opening this
+// dropdown ends whatever was picking before.
 //
 // Deliberately NOT folded into SelectReferenceEditorBase: that base is document-agnostic and shared with editors
 // that have nothing to do with Scripts (SelectObjectEditor, SelectLogicEditor), whereas ScriptStepReferenceStore
@@ -61,10 +57,10 @@ abstract class StepPickingSelectEditorBase(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    // Only `picking`: the base's note on its missing S.init still holds for selected/options (an unset
+    // Only `open`: the base's note on its missing S.init still holds for selected/options (an unset
     // external-interface slot already reads as null), but a non-null Boolean has no such default.
     override fun StepPickingSelectEditorState.init(props: AttributeEditorProps) {
-        picking = false
+        open = false
     }
 
 
@@ -106,21 +102,27 @@ abstract class StepPickingSelectEditorBase(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    // The session ending elsewhere closes this dropdown. Only ever closes, never opens: begin() publishes
+    // synchronously from inside onFieldOpen below, while that gesture's setState is still pending, so an
+    // ownership check alone would read as "someone else's session" and slam the listbox shut on open.
     final override fun onStepReferenceChanged() {
-        val picking = referenceStore()?.session?.editorLocation == editorLocation()
-        if (state.picking == picking) {
+        if (! state.open) {
+            return
+        }
+        if (referenceStore()?.session?.editorLocation == editorLocation()) {
             return
         }
         setState {
-            this.picking = picking
+            open = false
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun onBeginPicking() {
-        val options = state.options
-            ?: return
+    private fun onFieldOpen() {
+        setState {
+            open = true
+        }
 
         // The candidate set is derived from the list the dropdown is ALREADY showing rather than kept as a
         // second, drift-prone state field: option keys are full ObjectLocation strings, and parsing one back is
@@ -129,6 +131,8 @@ abstract class StepPickingSelectEditorBase(
         //
         // Candidates that render no step card (Script parameters / ForEach item bindings, which are addressable
         // values but not steps) are simply never matched by ScriptBranchDisplay — they stay dropdown-only.
+        val options = state.options
+            ?: emptyArray<SelectOption>()
         val candidates = options.map { ObjectLocation.parse(it.value) }.toSet()
 
         referenceStore()?.begin(editorLocation(), candidates) { stepLocation ->
@@ -139,62 +143,23 @@ abstract class StepPickingSelectEditorBase(
     }
 
 
-    private fun onEndPicking() {
+    private fun onFieldClose() {
+        setState {
+            open = false
+        }
         referenceStore()?.end(editorLocation())
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    // The field plus its pick toggle, sharing a flex row that owns the sizing which keeps the button from
-    // overflowing (same layout as SelectLogicEditor's launch button).
-    private fun ChildrenBuilder.selectFieldWithPickToggle(options: Array<SelectOption>) {
-        div {
-            css {
-                display = Display.flex
-                alignItems = AlignItems.center
-            }
-
-            // The select grows; minWidth 0 lets it shrink so the toggle never overflows.
-            div {
-                css {
-                    flexGrow = number(1.0)
-                    minWidth = 0.px
-                }
-
-                selectField(options)
-            }
-
-            IconButton {
-                sx {
-                    marginLeft = 0.25.em
-                }
-                // While armed the same button cancels; Escape and picking a card also end the session.
-                title = if (state.picking) "Cancel" else "Pick a step from the canvas"
-                disabled = options.isEmpty()
-
-                onClick = {
-                    if (state.picking) {
-                        onEndPicking()
-                    }
-                    else {
-                        onBeginPicking()
-                    }
-                }
-
-                icon(if (state.picking) "material-symbols:cancel" else "material-symbols:ads-click") {
-                    style = unsafeJso {
-                        fontSize = 1.25.em
-                    }
-                }
-            }
-        }
-    }
-
-
     override fun ChildrenBuilder.render() {
         val options = state.options
             ?: return
 
-        selectFieldWithPickToggle(options)
+        selectField(
+            options,
+            open = state.open,
+            onOpen = { onFieldOpen() },
+            onClose = { onFieldClose() })
     }
 }

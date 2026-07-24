@@ -24,8 +24,8 @@ import tech.kzen.lib.common.service.store.MirroredGraphStore
 //---------------------------------------------------------------------------------------------------------------------
 // Picks the step (or in-scope value binding) that a step input attribute references, from the steps that precede
 // it in the Script. Option keys are full ObjectLocation strings; the wire form is cropped to a bare name, since
-// the reference always resolves within the same document. A candidate step can also be chosen by clicking its
-// card on the canvas — see StepPickingSelectEditorBase.
+// the reference always resolves within the same document. While the dropdown is open a candidate step can
+// equally be chosen by clicking its card on the canvas — see StepPickingSelectEditorBase.
 @Suppress("unused")
 class SelectStepEditor(
     props: AttributeEditorProps

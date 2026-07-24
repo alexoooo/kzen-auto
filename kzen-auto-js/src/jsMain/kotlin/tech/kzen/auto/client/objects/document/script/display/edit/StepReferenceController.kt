@@ -2,6 +2,7 @@ package tech.kzen.auto.client.objects.document.script.display.edit
 
 import emotion.react.css
 import js.objects.unsafeJso
+import mui.base.AutocompleteCloseReason
 import mui.material.ClickAwayListenerMouseEvent
 import mui.material.IconButton
 import react.ChildrenBuilder
@@ -146,11 +147,13 @@ class StepReferenceController(
             }
             .toTypedArray()
 
-        // Labelled MUI Autocomplete: mounts focused with the list pinned open (forceOpen) and inserts on
-        // pick. forceOpen makes the popover behave as one persistent dropdown — clicking the input can't
+        // Labelled MUI Autocomplete: mounts focused with the list pinned open (`open = true`) and inserts on
+        // pick. Pinning makes the popover behave as one persistent dropdown — clicking the input can't
         // collapse the list, and a single click-away closes it. Click-away teardown is handled by the
         // surrounding ClickAwayListener (see renderPopover); disablePortal keeps the listbox inside that
-        // boundary so option / scrollbar clicks count as inside.
+        // boundary so option / scrollbar clicks count as inside. A selection unmounts the whole popover, so
+        // the only close worth honouring here is Escape — which MUI reports ONLY through this reason, having
+        // swallowed the keydown before any window listener could see it.
         muiAutocompleteField(
             label = "Step",
             options = selectOptions,
@@ -160,8 +163,12 @@ class StepReferenceController(
             autoFocus = true,
             disabled = props.editDisabled,
             disablePortal = true,
-            forceOpen = true,
+            open = true,
             opaqueBackground = true,
-            onEscape = { props.onCancel() })
+            onClose = { reason ->
+                if (reason == AutocompleteCloseReason.escape) {
+                    props.onCancel()
+                }
+            })
     }
 }

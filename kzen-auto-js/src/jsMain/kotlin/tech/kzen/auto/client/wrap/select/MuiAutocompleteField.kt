@@ -37,10 +37,14 @@ private fun objectAssign(target: Any, source: Any) {
 //
 // `opaqueBackground` fills the otherwise-transparent outlined field (and the floating label's overhang)
 // with white — for fields that float over arbitrary content (e.g. the script canvas) so nothing ghosts
-// through. `onEscape` (meaningful only with `forceOpen`) is invoked when the user presses Escape: MUI's
-// Autocomplete preventDefault+stopPropagation's the Escape keydown, so a window-level listener never sees
-// it, and this onClose(escape) is the only signal a forced-open popover gets to cancel. `onOpen` fires when
-// the listbox opens — for selects that lazily load their options on first open.
+// through.
+//
+// `open` puts the listbox's open state under caller control; null (the default) leaves MUI's own
+// uncontrolled toggle in charge. `onOpen` and `onClose` report the transitions the USER initiates — for
+// selects that lazily load their options on first open, and for those whose open state doubles as some
+// other mode. Driving the `open` prop from state does not itself re-fire them. `onClose` carries MUI's
+// reason (toggleInput / blur / selectOption / escape); the reason is the only signal a caller gets for
+// Escape, since MUI preventDefault+stopPropagation's that keydown so no window-level listener sees it.
 //
 // `onClosedKeyDown` lets a caller treat the field like a plain text input for Enter/Escape WHEN THE DROPDOWN
 // IS CLOSED. MUI's Autocomplete consumes Enter/Escape only while its listbox is open (Enter selects the
@@ -49,7 +53,7 @@ private fun objectAssign(target: Any, source: Any) {
 // Enter/Escape still picks/closes as usual and a *subsequent* Enter/Escape can commit/cancel a surrounding
 // editor — matching plain TextField fields beside the select. MUI invokes our onKeyDown before its own switch
 // (see useAutocomplete handleKeyDown), so the open state read here is the one settled by the previous
-// keypress. With `forceOpen` the listbox is always open, so this never fires (use `onEscape` there instead).
+// keypress. With the listbox pinned open (`open = true`) it never fires — use `onClose` there instead.
 fun ChildrenBuilder.muiAutocompleteField(
     label: String,
     options: Array<SelectOption>,
@@ -62,10 +66,10 @@ fun ChildrenBuilder.muiAutocompleteField(
     disabled: Boolean = false,
     disablePortal: Boolean = false,
     error: Boolean = false,
-    forceOpen: Boolean = false,
+    open: Boolean? = null,
     opaqueBackground: Boolean = false,
     onOpen: (() -> Unit)? = null,
-    onEscape: (() -> Unit)? = null,
+    onClose: ((AutocompleteCloseReason) -> Unit)? = null,
     onClosedKeyDown: ((react.dom.events.KeyboardEvent<*>) -> Unit)? = null
 ) {
     val component = Autocomplete.unsafeCast<FC<AutocompleteProps<SelectOption>>>()
@@ -88,18 +92,14 @@ fun ChildrenBuilder.muiAutocompleteField(
             this.onOpen = { onOpen() }
         }
 
-        // Pin the listbox open for the lifetime of the field (used by transient popovers that ARE the
-        // dropdown). This removes the input-click toggle: clicking the already-focused input can't collapse
-        // the list, and because the list is always shown a single click-away closes the popover (an outer
-        // ClickAwayListener fires onClickAway). A selection unmounts the whole popover so it need never close
-        // itself; the only close we honour is Escape -> onEscape (see the param doc above).
-        if (forceOpen) {
-            this.open = true
-            this.onClose = { _, reason ->
-                if (reason == AutocompleteCloseReason.escape) {
-                    onEscape?.invoke()
-                }
-            }
+        // Only assign when the caller opted in: leaving `open` unset is what keeps MUI's own uncontrolled
+        // toggle in charge, and undefined is not the same as false to useControlled.
+        if (open != null) {
+            this.open = open
+        }
+
+        if (onClose != null) {
+            this.onClose = { _, reason -> onClose(reason) }
         }
 
         // onChange is (event, value: Any, reason, details) — value is the picked option (non-null here

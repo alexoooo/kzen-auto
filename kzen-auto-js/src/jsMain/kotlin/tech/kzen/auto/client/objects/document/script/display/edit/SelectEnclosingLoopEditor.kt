@@ -29,7 +29,8 @@ import tech.kzen.lib.common.service.store.MirroredGraphStore
 // candidate set is the ENCLOSING loops from ScriptNestingAnalysis.enclosingLoops — the exact set ControlStep's
 // server-side definition() validates against, so dropdown and validation stay in lock-step. On a fresh (empty)
 // loop it pre-fills the innermost enclosing loop, so an inserted-and-expanded ControlStep is valid by default.
-// An enclosing loop can also be chosen by clicking its card on the canvas — see StepPickingSelectEditorBase.
+// While the dropdown is open an enclosing loop can equally be chosen by clicking its card on the canvas — see
+// StepPickingSelectEditorBase.
 @Suppress("unused")
 class SelectEnclosingLoopEditor(
     props: AttributeEditorProps

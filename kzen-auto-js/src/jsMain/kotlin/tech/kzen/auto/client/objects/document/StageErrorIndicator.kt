@@ -233,13 +233,13 @@ class StageErrorIndicator(
 
                 if (documentErrors.isNotEmpty()) {
                     renderSection("This document") {
-                        for (line in documentErrors) {
+                        for ((location, detail) in documentErrors) {
                             // Keyed by location AND detail: the merged list can hold several validation findings on
                             // the same object (e.g. a Flow's structure findings all tied to its main object), so
                             // location alone would collide.
                             renderLine(
-                                key = "${line.location.asString()}|${line.detail}",
-                                text = "${line.location.objectPath.name.value} — ${line.detail}")
+                                key = "${location.asString()}|$detail",
+                                text = "${location.objectPath.name.value} — $detail")
                         }
                     }
                 }
