@@ -6,6 +6,7 @@ import react.Props
 import react.State
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.common.dragdrop.dragHandle
+import tech.kzen.auto.client.objects.document.objectLocationMarker
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.lib.common.model.location.ObjectLocation
 import web.cssom.Color
@@ -97,6 +98,8 @@ class ScriptStepSlot(
             //     an If's Then branch) or over a branch's gap/padding. :has() is descendant-only, so a slot never
             //     suppresses its own handle — only a deeper hovered slot/branch does.
             asDynamic()["data-step-slot"] = ""
+
+            objectLocationMarker(props.objectLocation)
 
             css {
                 position = Position.relative

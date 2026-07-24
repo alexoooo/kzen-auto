@@ -24,6 +24,7 @@ import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.exec.RequestParams
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
+import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
@@ -94,6 +95,16 @@ class StageController(
 
     companion object {
         val StageContext = createContext(CoordinateContext.origin)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private val stageObjectLocator = StageObjectLocator(props.navigationGlobal)
+
+    // Held as a field so StageErrorIndicator (an RPureComponent) still bails out on unrelated re-renders — a
+    // closure rebuilt per render would compare unequal every time.
+    private val onSelectLocation: (ObjectLocation) -> Unit = { objectLocation ->
+        stageObjectLocator.locate(objectLocation, state.documentPath)
     }
 
 
@@ -357,6 +368,7 @@ class StageController(
             this.documentErrors = documentErrors
             this.otherErrors = otherErrors
             this.stageTop = contextValue<CoordinateContext>().stageTop
+            this.onSelectLocation = this@StageController.onSelectLocation
         }
     }
 

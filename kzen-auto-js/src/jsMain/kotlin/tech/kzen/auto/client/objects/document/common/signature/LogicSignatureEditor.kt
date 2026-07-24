@@ -21,6 +21,7 @@ import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.objects.document.common.dragdrop.dragHandle
 import tech.kzen.auto.client.objects.document.common.dragdrop.dropIndicator
 import tech.kzen.auto.client.objects.document.common.dragdrop.dropMarkerFor
+import tech.kzen.auto.client.objects.document.objectLocationMarker
 import tech.kzen.auto.client.objects.document.script.display.dependency.StepDependencyEdges
 import tech.kzen.auto.client.objects.document.script.display.dependency.scriptGutterRow
 import tech.kzen.auto.client.objects.document.script.display.dependency.stepDependencyGutterCellForStep
@@ -559,6 +560,8 @@ class LogicSignatureEditor:
     //-----------------------------------------------------------------------------------------------------------------
     private fun ChildrenBuilder.renderParameterBody(parameter: ParameterRow, index: Int) {
         div {
+            objectLocationMarker(parameter.location)
+
             css {
                 position = Position.relative
                 marginBottom = 0.25.em

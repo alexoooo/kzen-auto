@@ -3,7 +3,8 @@ main:
 
 main.steps/Formula:
   is: FormulaStep
-  code: ' 1.. 5x'
+  code: ' 1.. 5'
 
 main.steps/Display:
   is: DisplayValueStep
+  text: main.steps/Formula

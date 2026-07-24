@@ -10,7 +10,7 @@ main.workers/CSV Reader:
 main.workers/Formula:
   is: FormulaWorker
   formula:
-    test: 'c0 + "_foo"'
+    test: c0 + "_foo"abc
 
 main.workers/Preview:
   is: PreviewWorker

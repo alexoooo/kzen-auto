@@ -16,6 +16,7 @@ import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.createRef
 import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.setState
+import tech.kzen.lib.common.model.location.ObjectLocation
 import web.cssom.AlignItems
 import web.cssom.BoxShadow
 import web.cssom.Color
@@ -44,6 +45,11 @@ external interface StageErrorIndicatorProps: Props {
 
     // Top of the stage (== header height), from StageController.StageContext; the chip pins just below it.
     var stageTop: Length
+
+    // Invoked with the line's object when it is clicked, to bring that object into view (StageObjectLocator).
+    // Must be a stable reference from the owner — a fresh closure per render would defeat this component's
+    // shallow-compare bail-out.
+    var onSelectLocation: (ObjectLocation) -> Unit
 }
 
 
@@ -74,6 +80,9 @@ class StageErrorIndicator(
 
         // Muted tone when the current document is clean but another document has a failure.
         private val mutedColour = Color("gray")
+
+        // Neutral row highlight on the popover's white surface — a red tint would read as a severity change.
+        private val hoverColour = Color("#eeeeee")
 
         // Vertical space (em) this chip occupies at the stage's top-right, including its margin. Every float that
         // shares this corner — Parameters (LogicSignatureEditor), Result (ResultSignatureEditor), and a Job's
@@ -239,6 +248,7 @@ class StageErrorIndicator(
                             // location alone would collide.
                             renderLine(
                                 key = "${location.asString()}|$detail",
+                                location = location,
                                 text = "${location.objectPath.name.value} — $detail")
                         }
                     }
@@ -250,6 +260,7 @@ class StageErrorIndicator(
                         for (line in otherErrors) {
                             renderLine(
                                 key = "${line.location.asString()}|${line.detail}",
+                                location = line.location,
                                 text = "${line.location.asString()} — ${line.detail}")
                         }
                     }
@@ -272,13 +283,32 @@ class StageErrorIndicator(
     }
 
 
-    private fun ChildrenBuilder.renderLine(key: String, text: String) {
+    private fun ChildrenBuilder.renderLine(key: String, location: ObjectLocation, text: String) {
         div {
             this.key = Key(key)
             css {
                 marginTop = 0.25.em
+                paddingTop = 0.1.em
+                paddingBottom = 0.1.em
                 overflowWrap = OverflowWrap.anywhere
+                cursor = Cursor.pointer
+                borderRadius = 2.px
+
+                "&:hover" {
+                    backgroundColor = hoverColour
+                }
             }
+
+            // The "This document" section shows only the object's name, so the full location is worth surfacing;
+            // stating the action makes the row's clickability discoverable in both sections.
+            title = "Go to ${location.asString()}"
+
+            // Closed first so the popover isn't covering the object it's about to scroll to.
+            onClick = {
+                close()
+                props.onSelectLocation(location)
+            }
+
             +text
         }
     }

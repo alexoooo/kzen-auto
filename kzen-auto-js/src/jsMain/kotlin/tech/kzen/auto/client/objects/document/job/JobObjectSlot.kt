@@ -8,6 +8,7 @@ import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.common.dragdrop.dragHandle
 import tech.kzen.auto.client.objects.document.job.display.WorkerDisplayManager
 import tech.kzen.auto.client.objects.document.job.display.WorkerDisplayPropsCommon
+import tech.kzen.auto.client.objects.document.objectLocationMarker
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.refCallback
 import tech.kzen.auto.common.objects.document.logic.StepValidation
@@ -93,6 +94,8 @@ class JobObjectSlot(
             //     re-reconcile this slot on every mouse move (a false positive in React DevTools' highlight
             //     overlay even though RPureComponent bails). data-job-slot is the selector hook.
             asDynamic()["data-job-slot"] = ""
+
+            objectLocationMarker(props.objectLocation)
 
             css {
                 position = Position.relative
