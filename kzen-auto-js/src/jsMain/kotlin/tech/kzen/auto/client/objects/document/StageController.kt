@@ -2,7 +2,6 @@ package tech.kzen.auto.client.objects.document
 
 import emotion.react.css
 import react.ChildrenBuilder
-import react.Key
 import react.Props
 import react.State
 import react.createContext
@@ -12,9 +11,12 @@ import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.service.logic.ClientLogicGlobal
 import tech.kzen.auto.client.service.logic.ClientLogicState
 import tech.kzen.auto.client.service.logic.ControlError
+import tech.kzen.auto.client.service.logic.LogicValidationGlobal
 import tech.kzen.auto.client.util.DefinitionErrors
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.client.wrap.contextValue
+import tech.kzen.auto.client.wrap.installContextType
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.DocumentArchetype
@@ -44,6 +46,7 @@ external interface StageControllerProps: Props {
     var mirroredGraphStore: MirroredGraphStore
     var navigationGlobal: NavigationGlobal
     var clientLogicGlobal: ClientLogicGlobal
+    var logicValidationGlobal: LogicValidationGlobal
 }
 
 
@@ -55,6 +58,12 @@ external interface StageControllerState: State {
     // Definition failures grouped by the document they belong to; the open document's entry (if any) is shown
     // as an in-context error panel above its body. Recomputed on every graph-store update.
     var definitionErrorsByDocument: Map<DocumentPath, List<DefinitionErrors.Line>>
+
+    // The open document's async validation errors (Formula compile error, Flow structure finding, …), pulled from
+    // LogicValidationGlobal — the definition-failure channel above never sees these. Merged (deduped) into the
+    // indicator alongside definitionErrorsByDocument[documentPath]. Only the focused document publishes validation,
+    // so this is the current document's set only.
+    var currentDocumentValidationLines: List<DefinitionErrors.Line>
 
     // The run control (start / step / stop / …) the server last refused, shown above the document it was
     // aimed at. Cleared by the next control action.
@@ -69,7 +78,8 @@ class StageController(
     RPureComponent<StageControllerProps, StageControllerState>(props),
     LocalGraphStore.Observer,
     NavigationGlobal.Observer,
-    ClientLogicGlobal.Observer
+    ClientLogicGlobal.Observer,
+    LogicValidationGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     data class CoordinateContext(
@@ -88,12 +98,20 @@ class StageController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    init {
+        // Read the stage's top offset (header height) to pin the error indicator just below the fixed header.
+        installContextType(StageContext)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     @Reflect
     class Wrapper(
         private val documentControllers: List<DocumentController>,
         @Service private val mirroredGraphStore: MirroredGraphStore,
         @Service private val navigationGlobal: NavigationGlobal,
-        @Service private val clientLogicGlobal: ClientLogicGlobal
+        @Service private val clientLogicGlobal: ClientLogicGlobal,
+        @Service private val logicValidationGlobal: LogicValidationGlobal
     ): ReactWrapper<Props> {
         override fun ChildrenBuilder.child(block: Props.() -> Unit) {
             StageController::class.react {
@@ -101,6 +119,7 @@ class StageController(
                 mirroredGraphStore = this@Wrapper.mirroredGraphStore
                 navigationGlobal = this@Wrapper.navigationGlobal
                 clientLogicGlobal = this@Wrapper.clientLogicGlobal
+                logicValidationGlobal = this@Wrapper.logicValidationGlobal
                 block()
             }
         }
@@ -113,6 +132,7 @@ class StageController(
         documentPath = null
         transition = false
         definitionErrorsByDocument = emptyMap()
+        currentDocumentValidationLines = emptyList()
         controlError = null
     }
 
@@ -141,6 +161,7 @@ class StageController(
 
     override fun componentDidMount() {
         props.clientLogicGlobal.observe(this)
+        props.logicValidationGlobal.observe(this)
 
         async {
             props.mirroredGraphStore.observe(this)
@@ -153,6 +174,7 @@ class StageController(
         props.mirroredGraphStore.unobserve(this)
         props.navigationGlobal.unobserve(this)
         props.clientLogicGlobal.unobserve(this)
+        props.logicValidationGlobal.unobserve(this)
     }
 
 
@@ -200,9 +222,40 @@ class StageController(
         documentPath: DocumentPath?,
         parameters: RequestParams
     ) {
+        // Re-seed the validation lines for the newly-focused document (its record may already be settled from a
+        // prior visit; otherwise summaryFor gives an empty list and onLogicValidation fills it in when it settles).
+        val nextValidationLines = validationLinesFor(documentPath)
         setState {
             this.documentPath = documentPath
+            this.currentDocumentValidationLines = nextValidationLines
         }
+    }
+
+
+    // Push from the async validation channel. Only the focused document's errors feed the indicator (validation is
+    // computed lazily per focused document), so ignore other documents; value-guard to avoid render churn.
+    override fun onLogicValidation(documentPath: DocumentPath) {
+        if (documentPath != state.documentPath) {
+            return
+        }
+
+        val nextValidationLines = validationLinesFor(documentPath)
+        if (nextValidationLines == state.currentDocumentValidationLines) {
+            return
+        }
+
+        setState {
+            currentDocumentValidationLines = nextValidationLines
+        }
+    }
+
+
+    private fun validationLinesFor(documentPath: DocumentPath?): List<DefinitionErrors.Line> {
+        if (documentPath == null) {
+            return emptyList()
+        }
+        return props.logicValidationGlobal.summaryFor(documentPath).validationErrors
+            .map { DefinitionErrors.Line(it.objectLocation, it.message) }
     }
 
 
@@ -224,7 +277,7 @@ class StageController(
             return
         }
 
-        renderDefinitionErrors()
+        renderStageErrorIndicator()
         renderControlError()
 
         val archetypeName = documentArchetypeName()
@@ -277,24 +330,33 @@ class StageController(
     }
 
 
-    // The open document's objects that failed to define.
-    private fun ChildrenBuilder.renderDefinitionErrors() {
+    // The open document's failures drive a compact top-right indicator (chip + popover) instead of a full-width
+    // banner that shifted the layout; other documents' failures ride along as a secondary popover section, so the
+    // deleted whole-notation banner (ProjectController) loses no information. Always rendered — the indicator is
+    // out-of-flow and renders null when clean, so this never shifts the body's sibling index (see errorPanel's NB).
+    private fun ChildrenBuilder.renderStageErrorIndicator() {
         val documentPath = state.documentPath
-        val lines = documentPath?.let { state.definitionErrorsByDocument[it] }.orEmpty()
 
-        errorPanel(
-            "This document has a notation error and can't run until it's fixed"
-                .takeIf { lines.isNotEmpty() }
-        ) {
-            for (line in lines) {
-                div {
-                    key = Key(line.location.asString())
-                    css {
-                        marginTop = 0.25.em
-                    }
-                    +"${line.location.asString()} — ${line.detail}"
-                }
-            }
+        // Merge the open document's definition failures with its validation errors, deduped: an object that both
+        // fails to define AND fails validation (e.g. an empty-reference step is "Empty object reference" on the
+        // definition side and "Not found" on the validation side) is one problem, counted once — mirroring the
+        // step-level suppression in ScriptStepDisplayDefault. Dedup against the freshest definition set here.
+        val definitionLines = documentPath?.let { state.definitionErrorsByDocument[it] }.orEmpty()
+        val definitionLocations = definitionLines.map { it.location }.toSet()
+        val documentErrors = (definitionLines +
+                state.currentDocumentValidationLines.filter { it.location !in definitionLocations })
+            .sortedBy { it.location.asString() }
+
+        // Other documents contribute definition failures only — validation isn't computed for unfocused documents.
+        val otherErrors = state.definitionErrorsByDocument
+            .filterKeys { it != documentPath }
+            .values
+            .flatten()
+
+        StageErrorIndicator::class.react {
+            this.documentErrors = documentErrors
+            this.otherErrors = otherErrors
+            this.stageTop = contextValue<CoordinateContext>().stageTop
         }
     }
 

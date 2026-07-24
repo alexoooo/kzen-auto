@@ -56,6 +56,10 @@ external interface ScriptStepDisplayDefaultState: ScriptStepDisplayBaseState {
     var showSetNext: Boolean?
     var canSetNext: Boolean?
     var setNextReason: String?
+
+    // True when this step's object has attribute-level definition failures — surfaced per-field by the attribute
+    // editors — so the (redundant, less specific) step-level validation message is suppressed in the body.
+    var hasFieldDefinitionError: Boolean?
 }
 
 
@@ -248,6 +252,13 @@ class ScriptStepDisplayDefault(
             setNextReason = jumpPlan.invalidReason
         }
 
+        // The attribute editors now surface this step's attribute-level definition failures per-field, so the
+        // step-level validation message ("Not found") is redundant when any is present (see renderValidation).
+        val hasFieldDefinitionError = clientState
+            .graphDefinitionAttempt
+            .failures.map[props.common.objectLocation]
+            ?.attributeErrors?.isNotEmpty() == true
+
         // NB: value compare (==) — summaryAttributeNames is a fresh List each call (Kotlin List == is
         //     structural). Skip setState on no-op clientState publishes so the RPureComponent conversion
         //     isn't defeated by a fresh-list reference on every broadcast.
@@ -256,7 +267,8 @@ class ScriptStepDisplayDefault(
             state.hasBreakpoint == hasBreakpoint &&
             state.showSetNext == showSetNext &&
             state.canSetNext == canSetNext &&
-            state.setNextReason == setNextReason
+            state.setNextReason == setNextReason &&
+            state.hasFieldDefinitionError == hasFieldDefinitionError
         ) {
             return
         }
@@ -268,6 +280,7 @@ class ScriptStepDisplayDefault(
             this.showSetNext = showSetNext
             this.canSetNext = canSetNext
             this.setNextReason = setNextReason
+            this.hasFieldDefinitionError = hasFieldDefinitionError
         }
     }
 
@@ -569,6 +582,12 @@ class ScriptStepDisplayDefault(
 
 
     private fun ChildrenBuilder.renderValidation() {
+        // Suppressed when the attribute editors are already showing this step's definition failure(s) per-field:
+        // the step-level message (e.g. "Not found") is the same root cause, less specifically.
+        if (state.hasFieldDefinitionError == true) {
+            return
+        }
+
         val stepValidation = state.stepValidation
             ?: return
 

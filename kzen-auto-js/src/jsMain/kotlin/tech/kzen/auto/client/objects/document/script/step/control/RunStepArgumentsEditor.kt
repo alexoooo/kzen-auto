@@ -17,7 +17,9 @@ import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorProps
 import tech.kzen.auto.client.objects.document.common.signature.LogicTypeOptions
+import tech.kzen.auto.client.objects.document.script.display.edit.ScriptStepReferenceStore
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
+import tech.kzen.auto.client.objects.document.script.model.ScriptStepReferenceStoreKey
 import tech.kzen.auto.client.objects.document.script.model.ScriptStore
 import tech.kzen.auto.client.objects.document.script.model.ScriptStoreKey
 import tech.kzen.auto.client.service.global.ClientState
@@ -36,6 +38,7 @@ import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
+import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.location.ObjectReference
 import tech.kzen.lib.common.model.location.ObjectReferenceHost
@@ -70,6 +73,10 @@ external interface RunStepArgumentsEditorState: State {
     var predecessors: PersistentList<ObjectLocation>?
     var parameterNames: PersistentList<String>?
     var parameterTypes: PersistentMap<String, String>?
+
+    // Which parameter's row owns the shared pick session, or null when none does — so only that row's toggle
+    // shows cancel. Per-parameter, not a plain Boolean: this editor renders one select per callee parameter.
+    var pickingParameter: String?
 }
 
 
@@ -81,7 +88,8 @@ class RunStepArgumentsEditor(
     RPureComponent<AttributeEditorProps, RunStepArgumentsEditorState>(props),
     LocalGraphStore.Observer,
     ClientStateGlobal.Observer,
-    ScriptStore.Observer
+    ScriptStore.Observer,
+    ScriptStepReferenceStore.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
@@ -126,6 +134,7 @@ class RunStepArgumentsEditor(
         predecessors = null
         parameterNames = null
         parameterTypes = null
+        pickingParameter = null
     }
 
 
@@ -151,6 +160,7 @@ class RunStepArgumentsEditor(
     override fun componentDidMount() {
         props.clientStateGlobal.observe(this)
         contextValue<DocumentBridge?>()?.lookup(ScriptStoreKey)?.observe(this)
+        referenceStore()?.observe(this)
         async {
             props.mirroredGraphStore.observe(this)
         }
@@ -158,10 +168,29 @@ class RunStepArgumentsEditor(
 
 
     override fun componentWillUnmount() {
+        // Unobserve the reference store before ending the session, so the resulting clear/publish doesn't call
+        // back into this unmounting component.
+        val referenceStore = referenceStore()
+        referenceStore?.unobserve(this)
+        state.pickingParameter?.let { referenceStore?.end(editorLocation(it)) }
+
         props.mirroredGraphStore.unobserve(this)
         contextValue<DocumentBridge?>()?.lookup(ScriptStoreKey)?.unobserve(this)
         props.clientStateGlobal.unobserve(this)
     }
+
+
+    private fun referenceStore(): ScriptStepReferenceStore? =
+        contextValue<DocumentBridge?>()?.lookup(ScriptStepReferenceStoreKey)
+
+
+    // Attribute-scoped pick-session identity, nested down to the individual parameter — see
+    // ScriptStepReferenceStore.Session.editorLocation for why the object alone isn't enough. NB: a function,
+    // not a cached val — this editor outlives a rename of its own host, and a property initializer would pin
+    // the FIRST render's props.
+    private fun editorLocation(parameterName: String): AttributeLocation =
+        AttributeLocation(props.objectLocation, AttributePath.ofName(props.attributeName))
+            .nest(AttributeSegment.ofKey(parameterName))
 
 
     override fun onClientState(clientState: ClientState) {
@@ -279,6 +308,52 @@ class RunStepArgumentsEditor(
                 this.predecessors = predecessors
             }
         }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    // Derive only this editor's slice of the active pick session — which of ITS parameter rows owns it — and skip
+    // setState when unchanged, so an unrelated editor's begin/clear doesn't re-render these rows.
+    override fun onStepReferenceChanged() {
+        val editorLocation = referenceStore()?.session?.editorLocation
+
+        val pickingParameter = editorLocation
+            ?.takeIf {
+                it.objectLocation == props.objectLocation &&
+                        it.attributePath.attribute == props.attributeName
+            }
+            ?.attributePath
+            ?.nesting
+            ?.segments
+            ?.lastOrNull()
+            ?.asKey()
+
+        if (state.pickingParameter == pickingParameter) {
+            return
+        }
+
+        setState {
+            this.pickingParameter = pickingParameter
+        }
+    }
+
+
+    private fun onBeginPicking(parameterName: String) {
+        val predecessors = state.predecessors
+            ?: return
+
+        // Candidates are already ObjectLocations here (unlike the SelectOption-keyed select editors), so they
+        // feed the session directly. In-scope value bindings (Script parameters / ForEach items) are among them
+        // but render no step card, so ScriptBranchDisplay never matches them — they stay dropdown-only.
+        referenceStore()?.begin(editorLocation(parameterName), predecessors.toSet()) { stepLocation ->
+            // Same path the dropdown's onSelect takes, so the map rebuild + UpsertAttributeCommand is unchanged.
+            onValueChange(parameterName, stepLocation)
+        }
+    }
+
+
+    private fun onEndPicking(parameterName: String) {
+        referenceStore()?.end(editorLocation(parameterName))
     }
 
 
@@ -437,6 +512,40 @@ class RunStepArgumentsEditor(
                     size = Size.small
                     label = ReactNode(typeLabel)
                     variant = ChipVariant.outlined
+                }
+            }
+
+            renderPickToggle(parameterName, selectOptions.isEmpty())
+        }
+    }
+
+
+    // Arms the shared pick session for this parameter, so its value can be chosen by clicking a step's card on
+    // the canvas instead of using the dropdown — mirrors StepPickingSelectEditorBase's toggle.
+    private fun ChildrenBuilder.renderPickToggle(parameterName: String, noCandidates: Boolean) {
+        val picking = state.pickingParameter == parameterName
+
+        IconButton {
+            sx {
+                marginLeft = 0.25.em
+                flexShrink = number(0.0)
+            }
+            // While armed the same button cancels; Escape and picking a card also end the session.
+            title = if (picking) "Cancel" else "Pick a step from the canvas"
+            disabled = noCandidates
+
+            onClick = {
+                if (picking) {
+                    onEndPicking(parameterName)
+                }
+                else {
+                    onBeginPicking(parameterName)
+                }
+            }
+
+            icon(if (picking) "material-symbols:cancel" else "material-symbols:ads-click") {
+                style = unsafeJso {
+                    fontSize = 1.25.em
                 }
             }
         }

@@ -9,6 +9,7 @@ import react.ReactNode
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
+import tech.kzen.auto.client.objects.document.StageErrorIndicator
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.iconify.icon
@@ -60,8 +61,10 @@ class JobChannelDefaults(
                 // Floated top-right, anchored to JobController's (relative) stage — scrolls with content,
                 // stacked directly beneath the Parameters and Result controls (the ResultSignatureEditor
                 // stacking convention). A narrow, compact 3-row column (label, batch size, capacity).
+                // Third float in the stack, so it clears the reserved error-chip row too (see
+                // StageErrorIndicator.reservedRowEm) — omitting that term is what made it overlap Result.
                 position = Position.absolute
-                top = 5.5.em
+                top = (5.5 + StageErrorIndicator.reservedRowEm).em
                 right = 0.5.em
                 zIndex = integer(2)
                 display = Display.flex

@@ -133,7 +133,9 @@ class ReportController(
         props.logicValidationGlobal.validation(
             reportState.mainLocation.documentPath,
             inFlight = reportState.formula.formulaLoading,
-            invalidReason = reportState.notationError)
+            errors = listOfNotNull(reportState.notationError?.let {
+                LogicValidationGlobal.ValidationErrorLine(reportState.mainLocation, it)
+            }))
     }
 
 

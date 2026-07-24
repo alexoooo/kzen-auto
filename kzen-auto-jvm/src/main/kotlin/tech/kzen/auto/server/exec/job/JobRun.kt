@@ -30,6 +30,7 @@ import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.service.context.GraphCreator
 import tech.kzen.lib.common.service.store.normal.ObjectStableId
+import kotlin.time.Duration.Companion.milliseconds
 
 
 /**
@@ -302,6 +303,6 @@ class JobRun(
         // out rather than stalling status / pause / cancel. KNOWN BOUNDED SEAM: this is a `runBlocking` on the
         // controller thread; moving the wait off-monitor is only cheap once the controller is per-run (engine
         // plan E6, deferred), so the timeout-capped wait stands rather than redesigning the duplex bridge.
-        private const val externalRequestTimeoutMillis = 1000L
+        private val externalRequestTimeoutMillis = 1000.milliseconds
     }
 }

@@ -238,7 +238,8 @@ class FlowController(
         }
 
         props.logicValidationGlobal.validation(
-            documentPath, inFlight = false, invalidReason = findings.firstOrNull())
+            documentPath, inFlight = false,
+            errors = findings.map { LogicValidationGlobal.ValidationErrorLine(mainLocation, it) })
     }
 
 

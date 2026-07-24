@@ -28,6 +28,7 @@ import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.objects.document.script.model.ScriptTree
 import tech.kzen.auto.common.util.ExpressionUtils
 import tech.kzen.lib.common.model.attribute.AttributePath
+import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
@@ -142,7 +143,7 @@ class KotlinExpressionEditor(
         // call back into this unmounting component.
         val referenceStore = referenceStore()
         referenceStore?.unobserve(this)
-        referenceStore?.end(props.objectLocation)
+        referenceStore?.end(editorLocation())
 
         scriptStore()?.unobserve(this)
         props.clientStateGlobal.unobserve(this)
@@ -159,6 +160,14 @@ class KotlinExpressionEditor(
 
     private fun referenceStore(): ScriptStepReferenceStore? =
         contextValue<DocumentBridge?>()?.lookup(ScriptStepReferenceStoreKey)
+
+
+    // Attribute-scoped pick-session identity — see ScriptStepReferenceStore.Session.editorLocation for why.
+    // NB: a function, not a cached val — these editors outlive a rename of their own host (the manager
+    // re-renders them with a new objectLocation), and a property initializer would pin the FIRST render's
+    // props, the shadowing hazard documented on SelectReferenceEditorBase's committer.
+    private fun editorLocation(): AttributeLocation =
+        AttributeLocation(props.objectLocation, AttributePath.ofName(props.attributeName))
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -230,7 +239,7 @@ class KotlinExpressionEditor(
 
 
     override fun onStepReferenceChanged() {
-        val picking = referenceStore()?.session?.editorLocation == props.objectLocation
+        val picking = referenceStore()?.session?.editorLocation == editorLocation()
         if (state.picking == picking) {
             return
         }
@@ -289,14 +298,14 @@ class KotlinExpressionEditor(
     //-----------------------------------------------------------------------------------------------------------------
     private fun onBeginPicking() {
         val references = state.stepReferences ?: listOf()
-        referenceStore()?.begin(props.objectLocation, references.toSet()) { stepLocation ->
+        referenceStore()?.begin(editorLocation(), references.toSet()) { stepLocation ->
             insertReference(stepLocation)
         }
     }
 
 
     private fun onEndPicking() {
-        referenceStore()?.end(props.objectLocation)
+        referenceStore()?.end(editorLocation())
     }
 
 

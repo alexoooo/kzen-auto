@@ -2,15 +2,9 @@ package tech.kzen.auto.client.objects.document.script.display.edit
 
 import js.objects.unsafeJso
 import react.ChildrenBuilder
-import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
-import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorProps
-import tech.kzen.auto.client.objects.document.common.edit.select.SelectReferenceEditorBase
-import tech.kzen.auto.client.objects.document.common.edit.select.SelectReferenceEditorState
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
-import tech.kzen.auto.client.objects.document.script.model.ScriptStore
-import tech.kzen.auto.client.objects.document.script.model.ScriptStoreKey
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.*
@@ -35,13 +29,12 @@ import tech.kzen.lib.common.service.store.MirroredGraphStore
 // candidate set is the ENCLOSING loops from ScriptNestingAnalysis.enclosingLoops — the exact set ControlStep's
 // server-side definition() validates against, so dropdown and validation stay in lock-step. On a fresh (empty)
 // loop it pre-fills the innermost enclosing loop, so an inserted-and-expanded ControlStep is valid by default.
+// An enclosing loop can also be chosen by clicking its card on the canvas — see StepPickingSelectEditorBase.
 @Suppress("unused")
 class SelectEnclosingLoopEditor(
     props: AttributeEditorProps
 ):
-    SelectReferenceEditorBase<AttributeEditorProps, SelectReferenceEditorState>(props),
-    ClientStateGlobal.Observer,
-    ScriptStore.Observer
+    StepPickingSelectEditorBase(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
@@ -75,25 +68,6 @@ class SelectEnclosingLoopEditor(
     private var latestSelectedKey: String? = null
     private var latestHydrated = false
     private var defaultApplied = false
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    init {
-        installContextType(DocumentBridgeContext)
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun onMount() {
-        props.clientStateGlobal.observe(this)
-        contextValue<DocumentBridge?>()?.lookup(ScriptStoreKey)?.observe(this)
-    }
-
-
-    override fun onUnmount() {
-        contextValue<DocumentBridge?>()?.lookup(ScriptStoreKey)?.unobserve(this)
-        props.clientStateGlobal.unobserve(this)
-    }
 
 
     //-----------------------------------------------------------------------------------------------------------------

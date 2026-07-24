@@ -6,7 +6,6 @@ import kotlinx.coroutines.delay
 import org.w3c.dom.events.Event
 import org.w3c.dom.events.MouseEvent
 import react.ChildrenBuilder
-import react.Key
 import react.Props
 import react.RefObject
 import react.State
@@ -28,7 +27,6 @@ import tech.kzen.auto.client.service.logic.ClientLogicGlobal
 import tech.kzen.auto.client.service.logic.LogicRunFrames
 import tech.kzen.auto.client.service.logic.LogicValidationGlobal
 import tech.kzen.auto.client.service.storage.SidebarPreferences
-import tech.kzen.auto.client.util.DefinitionErrors
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.createRef
@@ -74,11 +72,6 @@ external interface ProjectControllerState: State {
     var documentPath: DocumentPath?
     var commandErrorMessage: String?
     var commandErrorRequest: NotationCommand?
-
-    // Objects that failed to define in the current notation (e.g. a meta-declared attribute with no value).
-    // Shown as a persistent banner so a corrupted notation is visible up front, not only as an opaque run-time
-    // "Missing: <doc>#main". Recomputed on every graph-store update; empty when the notation is clean.
-    var definitionErrors: List<DefinitionErrors.Line>
 
     var headerHeight: Int?
     var sidebarWidthPx: Double
@@ -241,7 +234,6 @@ class ProjectController(
         sidebarCollapsed = SidebarPreferences.loadCollapsed(false)
         executingDepths = emptyMap()
         tracedDocuments = emptySet()
-        definitionErrors = emptyList()
     }
 
 
@@ -321,14 +313,12 @@ class ProjectController(
 //        console.log("^^^ onCommandSuccess", event)
         val nextHeaderModel = headerModelBuilder.update(graphDefinition.graphStructure)
         val nextSidebarModel = sidebarModelBuilder.update(graphDefinition.graphStructure)
-        val nextDefinitionErrors = DefinitionErrors.all(graphDefinition)
         setState {
             structure = graphDefinition.graphStructure
             headerModel = nextHeaderModel
             sidebarModel = nextSidebarModel
             commandErrorRequest = null
             commandErrorMessage = null
-            definitionErrors = nextDefinitionErrors
         }
     }
 
@@ -356,12 +346,10 @@ class ProjectController(
 //        console.log("^^^ onStoreRefresh: " + graphDefinition.graphStructure)
         val nextSidebarModel = sidebarModelBuilder.update(graphDefinitionAttempt.graphStructure)
         val nextHeaderModel = headerModelBuilder.update(graphDefinitionAttempt.graphStructure)
-        val nextDefinitionErrors = DefinitionErrors.all(graphDefinitionAttempt)
         setState {
             structure = graphDefinitionAttempt.graphStructure
             headerModel = nextHeaderModel
             sidebarModel = nextSidebarModel
-            definitionErrors = nextDefinitionErrors
         }
     }
 
@@ -642,61 +630,9 @@ class ProjectController(
                 +"Command error: ${state.commandErrorMessage} - ${state.commandErrorRequest}"
             }
 
-            // Persistent banner for objects that failed to define in the current notation. Clears itself once the
-            // notation is fixed (the next store update recomputes an empty list).
-            //
-            // NB: the outer `div` is ALWAYS emitted (empty + display:none when clean) so the StageController
-            //     Provider after it keeps a STABLE child index — mirroring the command-error div above. As a
-            //     *conditional* sibling it index-shifted the stage on every appearance/removal, and React —
-            //     matching unkeyed siblings by position — REMOUNTED the entire StageController subtree, and with
-            //     it the active document controller (ScriptController / JobController / …). That recreates the
-            //     controller's `by lazy` store from ScriptState.initial, discarding ALL per-document UI state
-            //     (step expansion, scroll, in-progress editor buffers) every time the notation's definition-error
-            //     state toggled — e.g. the first time a RunStep's blank `instructions` is selected and the error
-            //     clears. Keeping the slot present (empty `div`, display:none ⇒ zero footprint) holds the stage
-            //     in place across toggles, exactly as the command-error div above intends ("avoid refreshing
-            //     StateController on error change").
-            val definitionErrors = state.definitionErrors
-            div {
-                css {
-                    if (definitionErrors.isEmpty()) {
-                        display = None.none
-                    }
-                    else {
-                        // extra top margin so the banner clears the fixed header (and its drop shadow)
-                        marginTop = 1.em
-                        marginRight = 0.5.em
-                        marginBottom = 0.5.em
-                        marginLeft = 0.5.em
-                        padding = 0.5.em
-                        color = NamedColor.red
-                        borderWidth = 1.px
-                        borderStyle = LineStyle.solid
-                        borderColor = NamedColor.red
-                        borderRadius = 4.px
-                    }
-                }
-
-                if (definitionErrors.isNotEmpty()) {
-                    div {
-                        css {
-                            fontWeight = FontWeight.bold
-                        }
-                        +"Notation error — ${definitionErrors.size} object(s) failed to define"
-                    }
-
-                    for (line in definitionErrors) {
-                        div {
-                            key = Key(line.location.asString())
-                            css {
-                                marginTop = 0.25.em
-                                overflowWrap = OverflowWrap.anywhere
-                            }
-                            +"${line.location.asString()} — ${line.detail}"
-                        }
-                    }
-                }
-            }
+            // Notation definition errors are now surfaced by StageController's top-right StageErrorIndicator
+            // (chip + popover), which lists both the open document's failures and other documents' — replacing
+            // this former whole-notation banner without shifting the layout.
 
             val context = StageController.CoordinateContext(
                 stageTop = headerHeight,

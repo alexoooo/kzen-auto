@@ -16,6 +16,7 @@ import react.dom.events.DragEvent
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
 import react.dom.onChange
+import tech.kzen.auto.client.objects.document.StageErrorIndicator
 import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.objects.document.common.dragdrop.dragHandle
 import tech.kzen.auto.client.objects.document.common.dragdrop.dropIndicator
@@ -485,7 +486,9 @@ class LogicSignatureEditor:
         div {
             css {
                 position = Position.absolute
-                top = 0.5.em
+                // First float in the stage's top-right stack, below the reserved error-chip row (see
+                // StageErrorIndicator.reservedRowEm for why that space is reserved unconditionally).
+                top = (0.5 + StageErrorIndicator.reservedRowEm).em
                 right = 0.5.em
                 display = Display.flex
                 alignItems = AlignItems.center

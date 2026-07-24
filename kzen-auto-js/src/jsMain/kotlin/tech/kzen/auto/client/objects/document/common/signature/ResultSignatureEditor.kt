@@ -11,6 +11,7 @@ import react.Props
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
+import tech.kzen.auto.client.objects.document.StageErrorIndicator
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.util.ClientInputUtils
@@ -179,7 +180,9 @@ class ResultSignatureEditor:
                 // own. The top offset clears the Parameters control row; right-anchoring (like Parameters)
                 // keeps it clear of the parameter list/editor, which flow in the left-hand dependency column.
                 position = Position.absolute
-                top = 2.75.em
+                // Second float in the stage's top-right stack: below Parameters, and below the reserved
+                // error-chip row (see StageErrorIndicator.reservedRowEm).
+                top = (2.75 + StageErrorIndicator.reservedRowEm).em
                 right = 0.5.em
                 display = Display.flex
                 alignItems = AlignItems.center

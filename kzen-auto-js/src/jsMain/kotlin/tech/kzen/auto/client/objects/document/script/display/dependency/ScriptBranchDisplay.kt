@@ -23,6 +23,8 @@ import tech.kzen.auto.client.objects.document.script.display.edit.ScriptStepRefe
 import tech.kzen.auto.client.objects.document.script.display.image.StepImageThumbnail
 import tech.kzen.auto.client.objects.document.script.model.ScriptDragStoreKey
 import tech.kzen.auto.client.objects.document.script.model.ScriptStepReferenceStoreKey
+import tech.kzen.auto.client.objects.document.script.model.ScriptStore
+import tech.kzen.auto.client.objects.document.script.model.ScriptStoreKey
 import tech.kzen.auto.client.objects.document.script.model.scriptDependencyAnalysis
 import tech.kzen.auto.client.objects.document.script.model.stepRowRefRegistry
 import tech.kzen.auto.client.service.global.ClientState
@@ -145,6 +147,10 @@ class ScriptBranchDisplay(
 
     private fun referenceStore(): ScriptStepReferenceStore? =
         contextValue<DocumentBridge?>()?.lookup(ScriptStepReferenceStoreKey)
+
+
+    private fun scriptStore(): ScriptStore? =
+        contextValue<DocumentBridge?>()?.lookup(ScriptStoreKey)
 
 
     private fun insertion(): InsertionGlobal? =
@@ -308,7 +314,7 @@ class ScriptBranchDisplay(
             ?.getAndClearSelection()
             ?: return
 
-        val commands = props.scriptCommander.createCommands(
+        val stepCreation = props.scriptCommander.createStep(
             props.attributeLocation,
             index,
             archetypeObjectLocation,
@@ -316,9 +322,14 @@ class ScriptBranchDisplay(
         )
 
         async {
-            for (command in commands) {
+            for (command in stepCreation.commands) {
                 props.mirroredGraphStore.apply(command)
             }
+
+            // A step is added in order to be configured, so open its body straight away. ScriptStore.observe
+            // replays the state on mount, so the new step's display picks this up whichever side of its own
+            // mount the write lands on.
+            scriptStore()?.stepStore?.setExpanded(stepCreation.objectLocation, true)
         }
     }
 

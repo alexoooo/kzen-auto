@@ -1,6 +1,7 @@
 package tech.kzen.auto.client.service.logic
 
 import tech.kzen.lib.common.model.document.DocumentPath
+import tech.kzen.lib.common.model.location.ObjectLocation
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -30,20 +31,34 @@ import tech.kzen.lib.common.model.document.DocumentPath
 // today.
 class LogicValidationGlobal {
     //-----------------------------------------------------------------------------------------------------------------
+    // One validation error, tied to the object that failed (a step / worker, or the document's main object for a
+    // structure- or document-level finding). The list of these — not just the first — is what lets a consumer
+    // that ENUMERATES problems (the stage error indicator) count and list them all.
+    data class ValidationErrorLine(
+        val objectLocation: ObjectLocation,
+        val message: String
+    )
+
+
     data class LogicValidationSummary(
         // = editPending.isNotEmpty() || validationInFlight — drives the "revalidating…" indicator only.
         val busy: Boolean,
         // The paradigm's first validation error → disables Run. Null = valid OR unknown (a paradigm that never
-        // published, or a fetch failure surfaced through the global error banner instead).
+        // published, or a fetch failure surfaced through the global error banner instead). DERIVED from
+        // validationErrors (its first message) — the run-cluster gate / status indicator read only this.
         val invalidReason: String?,
         // Whether a validation has ever SETTLED for this document (a paradigm published inFlight=false at least
         // once). Distinguishes "validated & valid" (invalidReason null AND validated) from "unknown / never
         // validated" (invalidReason null but NOT validated) — the status indicator shows a check only for the
         // former. The run-cluster gate ignores this (it blocks on invalidReason alone).
-        val validated: Boolean
+        val validated: Boolean,
+        // Every validation error for the document, each tied to its offending object, so the stage error
+        // indicator can show and count them all (invalidReason is just the first). Empty = valid or unknown.
+        val validationErrors: List<ValidationErrorLine>
     ) {
         companion object {
-            val unknown = LogicValidationSummary(busy = false, invalidReason = null, validated = false)
+            val unknown = LogicValidationSummary(
+                busy = false, invalidReason = null, validated = false, validationErrors = emptyList())
         }
     }
 
@@ -61,12 +76,16 @@ class LogicValidationGlobal {
     private class Record {
         val editPending: MutableSet<Any> = mutableSetOf()
         var validationInFlight: Boolean = false
-        var invalidReason: String? = null
+        var validationErrors: List<ValidationErrorLine> = emptyList()
         var validated: Boolean = false
         var published: LogicValidationSummary = LogicValidationSummary.unknown
 
         fun derive(): LogicValidationSummary =
-            LogicValidationSummary(editPending.isNotEmpty() || validationInFlight, invalidReason, validated)
+            LogicValidationSummary(
+                busy = editPending.isNotEmpty() || validationInFlight,
+                invalidReason = validationErrors.firstOrNull()?.message,
+                validated = validated,
+                validationErrors = validationErrors)
     }
 
 
@@ -114,10 +133,11 @@ class LogicValidationGlobal {
     }
 
 
-    // INPUT — the paradigm's validation channel: async (re)validation in-flight + first validation error. When a
-    // revalidation starts, pass the LAST-KNOWN reason (not null) so Run doesn't flicker-enable mid-keystroke; on
-    // completion pass the freshly-computed reason.
-    fun validation(documentPath: DocumentPath, inFlight: Boolean, invalidReason: String?) {
+    // INPUT — the paradigm's validation channel: async (re)validation in-flight + the current validation errors
+    // (each tied to its object). When a revalidation starts, pass the LAST-KNOWN errors (not empty) so Run doesn't
+    // flicker-enable mid-keystroke; on completion pass the freshly-computed errors. invalidReason (the Run gate)
+    // is derived from the first error, so a paradigm that only cares about the gate can pass a single-element list.
+    fun validation(documentPath: DocumentPath, inFlight: Boolean, errors: List<ValidationErrorLine>) {
         // A settle (inFlight=false) marks the document validated. Even the very first "valid" settle carries
         // information — it moves the status indicator from unknown → valid — so, unlike a no-op edit-clear, it
         // always warrants a record.
@@ -125,13 +145,13 @@ class LogicValidationGlobal {
 
         val nextValidated = target.validated || !inFlight
         if (target.validationInFlight == inFlight &&
-                target.invalidReason == invalidReason &&
+                target.validationErrors == errors &&
                 target.validated == nextValidated
         ) {
             return
         }
         target.validationInFlight = inFlight
-        target.invalidReason = invalidReason
+        target.validationErrors = errors
         target.validated = nextValidated
         reconcile(documentPath, target)
     }

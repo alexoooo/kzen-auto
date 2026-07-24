@@ -50,6 +50,15 @@ class ScriptCommander(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    // The new step's location travels with the commands that create it, so the caller can act on the step it
+    // just added without re-deriving the generated name.
+    data class StepCreation(
+        val objectLocation: ObjectLocation,
+        val commands: List<NotationCommand>
+    )
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     private val byArchetype: Map<ObjectLocation, ScriptStepCommander>
 
 
@@ -66,12 +75,12 @@ class ScriptCommander(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun createCommands(
+    fun createStep(
         containingAttributeLocation: AttributeLocation,
         indexInContainingAttribute: Int,
         archetypeObjectLocation: ObjectLocation,
         graphStructure: GraphStructure
-    ): List<NotationCommand> {
+    ): StepCreation {
         val containingObjectLocation = containingAttributeLocation.objectLocation
 
         val newName = findNextAvailable(
@@ -97,13 +106,16 @@ class ScriptCommander(
 
         val stepCommander = byArchetype[archetypeObjectLocation]
 
-        return if (stepCommander != null) {
-            listOf(command) + stepCommander.additionalCommands(
-                newObjectLocation, insertDocumentIndex, graphStructure)
-        }
-        else {
-            listOf(command)
-        }
+        val commands =
+            if (stepCommander != null) {
+                listOf(command) + stepCommander.additionalCommands(
+                    newObjectLocation, insertDocumentIndex, graphStructure)
+            }
+            else {
+                listOf(command)
+            }
+
+        return StepCreation(newObjectLocation, commands)
     }
 
 

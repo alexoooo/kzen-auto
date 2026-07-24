@@ -381,7 +381,7 @@ class JobController(
         // last-known reason so Run doesn't flicker-enable mid-revalidation.
         val epoch = ++validationEpoch
         props.logicValidationGlobal.validation(
-            documentPath, inFlight = true, invalidReason = jobValidationReason(state.workerValidations))
+            documentPath, inFlight = true, errors = jobValidationErrors(state.workerValidations, documentPath))
 
         // The arm condition IS this notation's reference change, so the arm-time digest is the current local
         // digest until a newer arm supersedes this epoch (which the lambda below signals by returning null).
@@ -408,15 +408,24 @@ class JobController(
             // otherwise the freshly-fetched one. `validation` is read directly (not through the async setState).
             val settled = validation ?: state.workerValidations
             props.logicValidationGlobal.validation(
-                documentPath, inFlight = false, invalidReason = jobValidationReason(settled))
+                documentPath, inFlight = false, errors = jobValidationErrors(settled, documentPath))
         }
     }
 
 
-    // The first Worker-validation error across the given JobValidation — the flavour-agnostic "invalid" predicate
-    // (any StepValidation.errorMessage != null). Null when valid or not yet fetched.
-    private fun jobValidationReason(validation: JobValidation?): String? {
-        return validation?.workerValidations?.values?.firstNotNullOfOrNull { it.errorMessage }
+    // Every Worker-validation error across the given JobValidation, each tied to its worker's ObjectLocation.
+    // Empty when valid or not yet fetched; the run gate's "invalid" predicate falls out of this being non-empty.
+    private fun jobValidationErrors(
+        validation: JobValidation?,
+        documentPath: DocumentPath
+    ): List<LogicValidationGlobal.ValidationErrorLine> {
+        val workerValidations = validation?.workerValidations
+            ?: return emptyList()
+        return workerValidations.mapNotNull { (objectPath, stepValidation) ->
+            stepValidation.errorMessage?.let {
+                LogicValidationGlobal.ValidationErrorLine(ObjectLocation(documentPath, objectPath), it)
+            }
+        }
     }
 
 

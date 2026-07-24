@@ -27,7 +27,7 @@ external interface ScriptStepSlotProps: Props {
 
     var isDragSource: Boolean
 
-    // Step-reference pick session: when true this step is a highlighted, clickable insert target. onPick
+    // Step-reference pick session: when true this step is a highlighted, clickable pick target. onPick
     // threads the slot's own objectLocation back so the parent can hold a single stable reference for all
     // slots (mirrors onDragStart threading indexInParent).
     var isPickTarget: Boolean
@@ -102,7 +102,7 @@ class ScriptStepSlot(
                 position = Position.relative
                 height = 100.pct
 
-                // Subtle outline framing this step as a click-to-insert target during a pick session. Outline
+                // Subtle outline framing this step as a click-to-pick target during a pick session. Outline
                 // (not border) and an inset offset so it doesn't shift the card's layout.
                 if (props.isPickTarget) {
                     borderRadius = 3.px
@@ -110,6 +110,18 @@ class ScriptStepSlot(
                     outlineStyle = LineStyle.solid
                     outlineColor = pickHighlightColor
                     outlineOffset = (-2).px
+
+                    // A container step's clickable pick region is its own chrome, NOT its body: this slot wraps
+                    // nested branches too (ForEachStepDisplay.render puts renderSteps() inside it), so the
+                    // full-card overlay below would otherwise swallow everything inside them. Load-bearing for
+                    // SelectEnclosingLoopEditor, whose candidates are the ENCLOSING loops — the overlay would
+                    // cover the very editor doing the picking, cancel button and all. Raising the branch above
+                    // the overlay's zIndex composes through nesting: a raised branch creates a stacking context,
+                    // so a deeper slot's own overlay still paints above its ancestor's.
+                    "& [data-step-branch]" {
+                        position = Position.relative
+                        zIndex = integer(2)
+                    }
                 }
 
                 "&:hover:not(:has([data-step-slot]:hover)):not(:has([data-step-branch]:hover)) > [data-drag-handle]" {
@@ -128,9 +140,9 @@ class ScriptStepSlot(
                 common = commonForProps()
             }
 
-            // Rendered last so it overlays the card: a transparent click target that inserts this step into
-            // the active expression editor (the whole card becomes clickable, taking precedence over the
-            // card's own expand-on-click). Present only while this step is a pick target.
+            // Rendered last so it overlays the card: a transparent click target that routes this step back to
+            // whichever editor armed the pick session (the card's own chrome becomes clickable, taking
+            // precedence over its expand-on-click). Present only while this step is a pick target.
             if (props.isPickTarget) {
                 renderPickOverlay()
             }
@@ -152,11 +164,11 @@ class ScriptStepSlot(
                 zIndex = integer(1)
             }
 
-            title = "Insert this step into the expression"
+            title = "Select this step"
 
-            // Stop mousedown too (not just click): the active editor's popover closes on a document-level
+            // Stop mousedown too (not just click): the expression editor's popover closes on a document-level
             // mousedown-away (StepReferenceController.renderPopover). Swallowing mousedown here keeps a card
-            // press from reaching that listener, so the press inserts (onClick below) instead of cancelling.
+            // press from reaching that listener, so the press picks (onClick below) instead of cancelling.
             onMouseDown = { event ->
                 event.stopPropagation()
             }

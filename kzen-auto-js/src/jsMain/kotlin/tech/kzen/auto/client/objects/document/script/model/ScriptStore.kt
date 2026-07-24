@@ -204,7 +204,7 @@ class ScriptStore(
             ?: return
         val documentPath = currentState.mainLocation.documentPath
         val epoch = ++validationEpoch
-        logicValidationGlobal.validation(documentPath, inFlight = true, invalidReason = currentValidationReason())
+        logicValidationGlobal.validation(documentPath, inFlight = true, errors = currentValidationErrors())
 
         // Armed on every own-document notation change, so the arm-time digest IS the current local digest until
         // a newer arm supersedes this epoch (which the lambda below signals by returning null).
@@ -228,16 +228,25 @@ class ScriptStore(
             // Settle the channel with the freshly-computed reason (null when the fetch failed → Run enabled on
             // unknown validity, matching "null = valid/unknown"; the global error banner carries the failure).
             logicValidationGlobal.validation(
-                documentPath, inFlight = false, invalidReason = currentValidationReason())
+                documentPath, inFlight = false, errors = currentValidationErrors())
         }
     }
 
 
-    // The first step-validation error across the current (last-fetched) ScriptValidation — the flavour-agnostic
-    // "invalid" predicate (any StepValidation.errorMessage != null). Null when valid or not yet fetched.
-    private fun currentValidationReason(): String? {
-        return state?.validationState?.scriptValidation?.stepValidations?.values
-            ?.firstNotNullOfOrNull { it.errorMessage }
+    // Every step-validation error across the current (last-fetched) ScriptValidation, each tied to its step's
+    // ObjectLocation. Empty when valid or not yet fetched. The run gate's "invalid" predicate (any
+    // StepValidation.errorMessage != null) falls out of this being non-empty.
+    private fun currentValidationErrors(): List<LogicValidationGlobal.ValidationErrorLine> {
+        val currentState = state
+            ?: return emptyList()
+        val documentPath = currentState.mainLocation.documentPath
+        val stepValidations = currentState.validationState.scriptValidation?.stepValidations
+            ?: return emptyList()
+        return stepValidations.mapNotNull { (objectPath, stepValidation) ->
+            stepValidation.errorMessage?.let {
+                LogicValidationGlobal.ValidationErrorLine(ObjectLocation(documentPath, objectPath), it)
+            }
+        }
     }
 
 

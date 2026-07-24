@@ -2,15 +2,9 @@ package tech.kzen.auto.client.objects.document.script.display.edit
 
 import js.objects.unsafeJso
 import react.ChildrenBuilder
-import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
-import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorProps
-import tech.kzen.auto.client.objects.document.common.edit.select.SelectReferenceEditorBase
-import tech.kzen.auto.client.objects.document.common.edit.select.SelectReferenceEditorState
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
-import tech.kzen.auto.client.objects.document.script.model.ScriptStore
-import tech.kzen.auto.client.objects.document.script.model.ScriptStoreKey
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.*
@@ -30,14 +24,13 @@ import tech.kzen.lib.common.service.store.MirroredGraphStore
 //---------------------------------------------------------------------------------------------------------------------
 // Picks the step (or in-scope value binding) that a step input attribute references, from the steps that precede
 // it in the Script. Option keys are full ObjectLocation strings; the wire form is cropped to a bare name, since
-// the reference always resolves within the same document.
+// the reference always resolves within the same document. A candidate step can also be chosen by clicking its
+// card on the canvas — see StepPickingSelectEditorBase.
 @Suppress("unused")
 class SelectStepEditor(
     props: AttributeEditorProps
 ):
-    SelectReferenceEditorBase<AttributeEditorProps, SelectReferenceEditorState>(props),
-    ClientStateGlobal.Observer,
-    ScriptStore.Observer
+    StepPickingSelectEditorBase(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
@@ -55,25 +48,6 @@ class SelectStepEditor(
                 block()
             }
         }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    init {
-        installContextType(DocumentBridgeContext)
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    override fun onMount() {
-        props.clientStateGlobal.observe(this)
-        contextValue<DocumentBridge?>()?.lookup(ScriptStoreKey)?.observe(this)
-    }
-
-
-    override fun onUnmount() {
-        contextValue<DocumentBridge?>()?.lookup(ScriptStoreKey)?.unobserve(this)
-        props.clientStateGlobal.unobserve(this)
     }
 
 

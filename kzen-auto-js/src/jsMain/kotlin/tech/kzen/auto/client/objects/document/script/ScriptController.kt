@@ -185,8 +185,9 @@ class ScriptController:
     // ScriptBranchDisplay in this script's subtree reads the same instance. One per mounted controller.
     private val dragStore = ScriptStepDragStore()
 
-    // Shared "insert a prior Step as a value" pick session; provided into the per-document bridge so the
-    // active KotlinExpressionEditor and every ScriptBranchDisplay coordinate the popover + canvas highlight.
+    // Shared "choose a Step as a value" pick session; provided into the per-document bridge so whichever editor
+    // is picking (expression, reference select, run argument) and every ScriptBranchDisplay coordinate the
+    // canvas highlight.
     private val stepReferenceStore = ScriptStepReferenceStore()
 
     // Shared step-row rect registry for the dependency overlay, the move-to arrow and drag insertion;
