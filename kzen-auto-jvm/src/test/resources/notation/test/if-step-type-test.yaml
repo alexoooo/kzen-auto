@@ -27,12 +27,12 @@ main.steps/Branch:
   condition: main.steps/Positive
 
 main.steps/Branch.then/Yes:
-  is: TextLiteralStep
-  value: "yes"
+  is: FormulaStep
+  code: '"yes"'
 
 main.steps/Branch.else/No:
-  is: TextLiteralStep
-  value: "no"
+  is: FormulaStep
+  code: '"no"'
 
 main.steps/Result:
   is: ResultStep

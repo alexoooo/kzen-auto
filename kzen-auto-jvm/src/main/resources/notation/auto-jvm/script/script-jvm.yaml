@@ -46,32 +46,6 @@ ScopedResource:
 # the `parameters` branch (and its typed bindings) is shared by Script and Job.
 
 
-BooleanLiteralStep:
-  abstract: true
-  is: ScriptStep
-  class: tech.kzen.auto.server.objects.script.step.value.BooleanLiteralStep
-  icon: "material-symbols:toggle-on"
-  title: "True or false"
-  value: false
-  meta:
-    value:
-      is: Boolean
-      summary: TextAttributeView
-
-
-TextLiteralStep:
-  abstract: true
-  is: ScriptStep
-  class: tech.kzen.auto.server.objects.script.step.value.TextLiteralStep
-  icon: "material-symbols:sms"
-  title: "Text"
-  value: ""
-  meta:
-    value:
-      is: String
-      summary: TextAttributeView
-
-
 FormulaStep:
   abstract: true
   is: ScriptStep
@@ -113,71 +87,6 @@ ResultStep:
         endScript: "End Script"
       summary: ResultThenAttributeView
     selfLocation: SelfLocation
-
-
-NumberLiteralStep:
-  abstract: true
-  is: ScriptStep
-  class: tech.kzen.auto.server.objects.script.step.value.NumberLiteralStep
-  icon: "material-symbols:looks-one"
-  title: "Number"
-  value: 0
-  meta:
-    value:
-      is: Double
-      summary: TextAttributeView
-
-
-NumberRangeStep:
-  abstract: true
-  is: ScriptStep
-  class: tech.kzen.auto.server.objects.script.step.value.NumberRangeStep
-  icon: "material-symbols:trip-origin"
-  title: "Number range"
-  from: 1
-  to: 10
-  meta:
-    from:
-      is: Int
-      summary: TextAttributeView
-    to:
-      is: Int
-      summary: TextAttributeView
-
-
-DivisibleCheckStep:
-  abstract: true
-  is: ScriptStep
-  class: tech.kzen.auto.server.objects.script.step.logic.DivisibleCheckStep
-  icon: "material-symbols:filter-list"
-  title: "Is divisible by"
-  number: ""
-  divisor: 1
-  meta:
-    number:
-      is: ObjectLocation
-      by: Nominal
-      editor: SelectStepEditor
-    divisor: Int
-
-
-LogicalAndStep:
-  abstract: true
-  is: ScriptStep
-  class: tech.kzen.auto.server.objects.script.step.logic.LogicalAndStep
-  icon: "material-symbols:add-box"
-  title: "Logical AND"
-  condition: ""
-  and: ""
-  meta:
-    condition:
-      is: ObjectLocation
-      by: Nominal
-      editor: SelectStepEditor
-    and:
-      is: ObjectLocation
-      by: Nominal
-      editor: SelectStepEditor
 
 
 DisplayValueStep:

@@ -2,9 +2,9 @@ main:
   is: Script
 
 main.steps/ChildA:
-  is: NumberLiteralStep
-  value: 10
+  is: FormulaStep
+  code: "10"
 
 main.steps/ChildB:
-  is: NumberLiteralStep
-  value: 20
+  is: FormulaStep
+  code: "20"

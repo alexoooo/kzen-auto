@@ -11,8 +11,8 @@ main.steps/Delay:
   milliseconds: 200
 
 main.steps/Greeting:
-  is: TextLiteralStep
-  value: hello
+  is: FormulaStep
+  code: '"hello"'
 
 main.steps/Result:
   is: ResultStep

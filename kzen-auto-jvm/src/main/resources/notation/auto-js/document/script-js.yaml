@@ -217,18 +217,6 @@ ScriptGroup_InputOutput:
   archetype: Script
 
 
-BooleanLiteralStepTool:
-  is: RibbonTool
-  parent: ScriptGroup_InputOutput
-  delegate: BooleanLiteralStep
-
-
-TextLiteralStepTool:
-  is: RibbonTool
-  parent: ScriptGroup_InputOutput
-  delegate: TextLiteralStep
-
-
 FormulaStepTool:
   is: RibbonTool
   parent: ScriptGroup_InputOutput
@@ -239,18 +227,6 @@ ResultStepTool:
   is: RibbonTool
   parent: ScriptGroup_InputOutput
   delegate: ResultStep
-
-
-NumberLiteralStepTool:
-  is: RibbonTool
-  parent: ScriptGroup_InputOutput
-  delegate: NumberLiteralStep
-
-
-NumberRangeStepTool:
-  is: RibbonTool
-  parent: ScriptGroup_InputOutput
-  delegate: NumberRangeStep
 
 
 DisplayValueStepTool:
@@ -307,18 +283,6 @@ ControlTool:
   is: RibbonTool
   parent: ScriptGroup_LogicControl
   delegate: ControlStep
-
-
-DivisibleCheckStepTool:
-  is: RibbonTool
-  parent: ScriptGroup_LogicControl
-  delegate: DivisibleCheckStep
-
-
-LogicalAndStepTool:
-  is: RibbonTool
-  parent: ScriptGroup_LogicControl
-  delegate: LogicalAndStep
 
 ################################################################
 

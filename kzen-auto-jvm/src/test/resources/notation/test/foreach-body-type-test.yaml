@@ -2,9 +2,8 @@ main:
   is: Script
 
 main.steps/Range:
-  is: NumberRangeStep
-  from: 1
-  to: 3
+  is: FormulaStep
+  code: "1..3"
 
 main.steps/Loop:
   is: ForEachStep

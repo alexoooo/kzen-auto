@@ -28,8 +28,8 @@ main.steps/Branch:
   condition: main.steps/Positive
 
 main.steps/Branch.then/Text:
-  is: TextLiteralStep
-  value: "yes"
+  is: FormulaStep
+  code: '"yes"'
 
 main.steps/Branch.else/Number:
   is: FormulaStep

@@ -13,8 +13,8 @@ main:
       nullable: false
 
 main.steps/Greeting:
-  is: TextLiteralStep
-  value: hello
+  is: FormulaStep
+  code: '"hello"'
 
 main.steps/Shouted:
   is: ShoutStep

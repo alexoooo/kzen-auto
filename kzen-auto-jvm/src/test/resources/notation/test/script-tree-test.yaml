@@ -12,12 +12,12 @@ main.steps/ForEach:
   items: main.steps/Formula
 
 main.steps/ForEach.steps/Item:
-  is: BooleanLiteralStep
+  is: FormulaStep
+  code: "1"
 
 main.steps/ForEach.steps/Is divisible by:
-  is: DivisibleCheckStep
-  number: main.steps/ForEach.steps/Item
-  divisor: 2
+  is: FormulaStep
+  code: "Item % 2 == 0"
 
 main.steps/Display:
   is: DisplayValueStep

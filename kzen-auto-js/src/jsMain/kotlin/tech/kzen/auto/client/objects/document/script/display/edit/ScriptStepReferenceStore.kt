@@ -22,10 +22,10 @@ import tech.kzen.lib.common.model.location.ObjectLocation
 class ScriptStepReferenceStore {
     //-----------------------------------------------------------------------------------------------------------------
     data class Session(
-        // Attribute-scoped, NOT just the owning step: one step can host several picking editors — LogicalAndStep
-        // declares two SelectStepEditor attributes (`condition` and `and`), and RunStepArgumentsEditor renders one
-        // select per parameter under a single attribute (identified by a nested key segment). With object-level
-        // identity they would all read as picking at once, and any one's end() would cancel the others' session.
+        // Attribute-scoped, NOT just the owning step: one step can host several picking editors —
+        // RunStepArgumentsEditor renders one select per parameter under a single attribute (identified by a nested
+        // key segment). With object-level identity they would all read as picking at once, and any one's end()
+        // would cancel the others' session.
         val editorLocation: AttributeLocation,
         val inScopeLocations: Set<ObjectLocation>)
 
