@@ -156,6 +156,15 @@ data class ScriptDependencyAnalysis(
                     val nestedAttrLocation = AttributeLocation(step, AttributePath.ofName(nestedName))
                     walkBranch(nestedAttrLocation, graphDefinition, branchOfStep)
                 }
+
+                // A ForEachStep's `item` binding, walked by name for exactly the reason the root's `parameters`
+                // branch is (see the call site above): binding branches hold a ScriptStep SUBTYPE, which
+                // stepBranchAttributeNames excludes by design, and ForEachStep's notation declares no `item`
+                // metadata at all. Without this the loop item is absent from branchOfStep, so classifyEdge drops
+                // every edge out of it and a body step referencing the item gets no dependency line. Steps with
+                // no item branch resolve to an empty list and cost nothing.
+                walkBranch(
+                    AttributeLocation(step, ScriptConventions.itemAttributePath), graphDefinition, branchOfStep)
             }
         }
 

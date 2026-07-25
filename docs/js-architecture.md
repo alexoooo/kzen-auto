@@ -2,7 +2,7 @@
 
 Patterns and plumbing of `kzen-auto-js`. Complements [`architecture.md`](architecture.md), which focuses on paradigms / server execution / graph sync.
 
-> **Snapshot:** as of `kotlin-wrappers 2026.5.3` (migrated 2026-05-11, in lockstep with kzen-launcher). The custom `RComponent` wrapper layer absorbed most of the migration surface; see [§5](#5-react-dsl-wrapper-layer-wrapreactkt) for the bridges it now carries and [§7](#7-pre-refactor-inventory) for the historical pre-refactor inventory.
+> **Snapshot:** as of `kotlin-wrappers 2026.7.1` (bumped 2026-07-07 alongside the JVM 26 / Gradle 9.6.1 update; the 2026.x migration itself landed 2026-05-11 at `2026.5.3`, in lockstep with kzen-launcher). The custom `RComponent` wrapper layer absorbed most of the migration surface; see [§5](#5-react-dsl-wrapper-layer-wrapreactkt) for the bridges it now carries and [§7](#7-pre-refactor-inventory-historical) for the historical pre-refactor inventory.
 
 ## 1. Top-level packages
 
@@ -11,10 +11,10 @@ Under `kzen-auto-js/src/jsMain/kotlin/tech/kzen/auto/client/`:
 | Package | Role |
 |---------|------|
 | `objects/` | All React components, organized by domain. `objects/document/<type>/` for each document type; `objects/ribbon/`, `objects/sidebar/` for chrome. |
-| `service/` | Composition root (`ClientContext`); global observer hubs under `service/global/`; REST clients under `service/rest/`; client-side logic under `service/logic/`. |
+| `service/` | Composition root (`ClientContext`); global observer hubs under `service/global/`; REST clients under `service/rest/`; client-side logic under `service/logic/`; browser-persisted preferences under `service/storage/`. |
 | `wrap/` | Custom React DSL wrapper (`wrap/React.kt` defines `RComponent`/`RPureComponent`) + adapters for MUI, Iconify, Lodash, react-select. **The layer most affected by wrappers upgrades.** |
 | `api/` | `ReactWrapper` interface — composable React-render bridge used by the dynamic `DocumentController` mount machinery. |
-| `codegen/` | KSP-generated module registration (`KzenAutoJsModule`), produced into `build/generated/ksp/js/jsMain/kotlin/` on every build. See [architecture.md § 8](architecture.md#8-module-registration). |
+| `codegen/` | KSP-generated module registration (`KzenAutoJsModule`), produced into `build/generated/ksp/js/jsMain/kotlin/` on every build. See [architecture.md § 9](architecture.md#9-module-registration). |
 | `util/` | Misc client-side helpers. |
 
 ## 2. The Controller / Store / State / Observer quartet
@@ -147,7 +147,9 @@ A RunStep's detail is a **film strip of every screenshot under it** (all nested 
 iterations), in execution order, grouped/labelled by sub-script execution. It is built from the
 **retained trace-event timeline** (kzen-lib's `lookupRunHistory`, value-agnostic — see
 [kzen-lib trace](../../kzen-lib/docs/architecture.md)), not from per-step "latest frame" lookups: a
-loop's `clearAll` deletes per-path frames each iteration, so only the history retains them.
+loop calls `Execution.resetEmitted` each iteration, which clears the live per-address values, so only
+the history retains them. (Since S7 a Script's step traces are transient emits anyway, so its history
+is the `execution.log` film strip alone — see [`architecture.md` § 3](architecture.md#3-rest-api-surface).)
 `ScriptProgressStore` fetches the run's history incrementally (by a sequence watermark, resetting on a
 new run) and publishes the accumulated `traceEvents`. Scoping a RunStep's strip to *only the
 executions that step launched* (not every execution of the same sub-script document — two RunSteps can
@@ -186,18 +188,18 @@ objects/document/<type>/
 └── …
 ```
 
-The `report/` document is the canonical example — seven sub-stores, deepest nesting. Other document types (graph/, script/, data/, plugin/, registry/, feature/) follow the same shape with fewer subdomains.
+The `report/` document is the canonical example — seven sub-stores, deepest nesting. Other document types (flow/, script/, job/, data/, plugin/, registry/, target/) follow the same shape with fewer subdomains.
 
 **`script/` is the reference for two patterns `report/` doesn't exercise:**
 
 - **Keyed-map dynamic sub-state.** Report's sections are fixed (input / filter / formula / …), so each gets its own sub-store. A Script's *steps* are dynamic and unbounded, so per-step UI state can't be a fixed set of sub-stores. Instead `ScriptStepState` lives under `ScriptState.steps: Map<ObjectLocation, ScriptStepState>`, written through a single `ScriptStepStore` sub-store that prunes entries equal to the default (so the map holds only non-default steps and never accumulates orphans as steps are collapsed or deleted). Reach for this shape whenever per-entity UI state is keyed by a *dynamic collection* rather than a fixed layout — distinct from the network-backed `progressStore` / `validationStore` siblings, which are kept beside it precisely because they are server calls, not pure UI toggles.
-- **React-Context store propagation.** Rather than thread the store (or its sub-stores) down as props through every step-display layer the way Report does, `ScriptController` publishes the store via `ScriptStoreContext = createContext<ScriptStore?>(null)`, and class-component descendants read it with the `installContextType` / `contextValue<ScriptStore?>()` helpers in `wrap/React.kt`. This replaced an earlier module-level `WeakRef<ScriptStore>` global (`ScriptGlobal`): context scopes the store to the mounted controller subtree explicitly, with no deref-may-fail surface. Prefer context over a global when a store must reach deeply, dynamically-nested descendants.
+- **React-Context store propagation, through one keyed bridge.** Rather than thread the store (or its sub-stores) down as props through every step-display layer the way Report does, `ScriptController` `provide`s it on the document's `DocumentBridge` under `ScriptStoreKey`, and class-component descendants read it with `installContextType` / `contextValue<DocumentBridge?>()?.lookup(ScriptStoreKey)` (helpers in `wrap/React.kt`). Script alone needs several such stores — `ScriptDragStoreKey`, `ScriptStepReferenceStoreKey` — and that is exactly why they share one context: a Kotlin/JS class component has a **single** `contextType` slot, so a context per store does not scale. This shape arrived in stages: first a module-level `WeakRef<ScriptStore>` global (`ScriptGlobal`), then a per-store React context (`ScriptStoreContext`), then the keyed bridge that folded every per-document context and `*Global` into one. Prefer a `BridgeKey` over a global or a bespoke context when a store must reach deeply, dynamically-nested descendants.
 
 Both still follow the core quartet — `ScriptStore: ClientStateGlobal.Observer` owns `progressStore` / `validationStore` / `stepStore`; `ScriptController` observes the store and re-renders. (One wrinkle: `ScriptController` *also* observes `ClientStateGlobal` directly for `clientLogicState`, whereas the canonical `ReportController` folds that into `ReportState` and observes only its store — tracked in `audit/2026-05-29_script-refactor-review_4.8-xhigh.md` A01.)
 
 `custom/` (the `CustomDocument` hybrid structured + raw-YAML editor) now **follows** the convention rather than being the exception to it: `model/` holds `CustomState` / `CustomStore` / `CustomStoreKey`, and `view/` holds `CustomViewStore` plus the view components (`CustomView`, `CustomCreate`, and the per-object cards under `view/obj/`). `CustomStore: ClientStateGlobal.Observer` is the one store; header and body are mounted in sibling slots and share it through the `DocumentBridge` under `CustomStoreKey`. Its Raw mode is the document-agnostic stack under `objects/document/common/raw/`, and the editor widget itself (`YamlEditor`) lives under `objects/document/common/edit/` because it's reusable.
 
-The pure view-model pieces — `CustomObjectInfo`, `CustomViewModel`, `CustomViewExports`, `CustomViewReorder` — live in **kzen-auto-common** (`common/objects/document/custom/model/`) rather than jsMain, because they are React-free projections and index arithmetic that deserve unit tests; kzen-auto-js has no real JS test net. See [`architecture.md` § 6](architecture.md#6-document-types-in-the-ui) for the parse/save flow and power-tool semantics.
+The pure view-model pieces — `CustomObjectInfo`, `CustomViewModel`, `CustomViewExports`, `CustomViewReorder` — live in **kzen-auto-common** (`common/objects/document/custom/model/`) rather than jsMain, because they are React-free projections and index arithmetic that deserve unit tests; kzen-auto-js has no real JS test net. See [`architecture.md` § 7](architecture.md#7-document-types-in-the-ui) for the parse/save flow and power-tool semantics.
 
 ## 4. Service-layer plumbing
 
@@ -236,10 +238,25 @@ Notable globals under `service/global/`:
 |-----------|------|
 | `ClientStateGlobal` | Top observer hub. Observes `NavigationGlobal`, `ClientLogicGlobal`, `LocalGraphStore`. Publishes a `ClientState` to its subscribers (typically the top-level `<Doc>Store`s). |
 | `NavigationGlobal` | URL routing → current `DocumentPath` + parameters. |
-| `ExecutionIntentGlobal` | Tracks user-initiated execution intents. |
-| `InsertionGlobal` | Tracks insertions into the graph (e.g. paste, drop). |
+| `ExecutionIntentGlobal` | Tracks user-initiated execution intents (hover-to-highlight the element a run would touch). |
+| `LogicValidationGlobal` | Validation results, published to by each paradigm and by the commit pipeline (under `service/logic/`). |
 
-`ClientLogicGlobal` (under `service/logic/`) bridges the Logic paradigm — controllers that need step/pause/resume state subscribe through it.
+Exactly these are constructed in `ClientContext`; most are also registered in the `graphEnvironment` so a notation-instantiated controller can take one as an `@Service` parameter.
+
+> **Not every `*Global` is a global.** `InsertionGlobal` and `ViewModeGlobal` are **per-document**
+> instances now, lazily created by that document's `DocumentBridge` under `InsertionKey` /
+> `ViewModeKey` (`objects/document/bridge/`) — the class names are historical. The bridge is a
+> per-document, keyed communication hub between the **header (ribbon)** and the **stage (body)**,
+> which are sibling React components with no shared parent state: `ProjectController` creates one per
+> mounted document and hands it to both subtrees through a single React context, and both sides reach
+> channels and stores by `BridgeKey`. A key that overrides `create()` is a dependency-free pub/sub
+> channel the bridge builds on first touch; a key that leaves it null is an owner-provided store the
+> owning controller `provide`s. This replaced the former per-document `*Global` singletons and the
+> per-subtree `ScriptStoreContext` / `ScriptStepDragStoreContext`, so a class component spends only its
+> single `contextType` slot on the bridge yet reaches everything by key — and a downstream document
+> type can define its own `BridgeKey` without touching framework code.
+
+`service/logic/` bridges the Logic paradigm — controllers that need step/pause/resume state subscribe through **`ClientLogicGlobal`**, which owns the SSE-push-with-adaptive-poll transport and the publish throttle (see [`architecture.md` § 3](architecture.md#3-rest-api-surface)) and publishes a **`ClientLogicState`**; `LogicRunFrames` derives frame/execution structure from it, `LogicValidationGlobal` carries validation results, and `ControlError` surfaces a refused control verb.
 
 `mirroredGraphStore` is the bridge to kzen-lib's CQRS layer. See [`architecture.md` § 2](architecture.md#2-client-server-graph-synchronization).
 
@@ -354,4 +371,5 @@ If you're starting work on the JS client cold:
 5. `objects/document/report/model/ReportState.kt` — canonical state composition.
 6. `objects/document/report/ReportController.kt` — canonical top-level controller (mount, observer, render, plus the inner `Wrapper: DocumentController` for dynamic mounting).
 7. `objects/ProjectController.kt` — top-level project orchestrator (where all document types get mounted via `DocumentController`s).
-8. `objects/document/script/model/ScriptStepStore.kt` + `model/ScriptStoreContext.kt` — reference for keyed-map dynamic sub-state and React-Context store propagation (see § 3).
+8. `objects/document/script/model/ScriptStepStore.kt` + `model/ScriptStoreKey.kt` — reference for keyed-map dynamic sub-state and bridge-keyed store propagation (see § 3).
+9. `objects/document/bridge/DocumentBridge.kt` — the per-document header↔stage hub every document type reaches its stores and channels through (see § 4).

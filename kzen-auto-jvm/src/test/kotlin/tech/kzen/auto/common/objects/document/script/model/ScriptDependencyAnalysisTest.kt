@@ -52,6 +52,30 @@ class ScriptDependencyAnalysisTest {
 
 
     @Test
+    fun detectsLoopItemReferencedByBodyStepAsCrossBranchEdge() {
+        val loopPath = DocumentPath.parse("test/foreach-item-binding-test.yaml")
+        val graphNotation = AutoTestUtils.readNotation()
+        val graphDefinitionAttempt = AutoTestUtils.graphDefinitionAttempt(graphNotation)
+
+        val analysis = ScriptDependencyAnalysis.analyze(graphDefinitionAttempt.successful(), loopPath)
+
+        fun loopLocation(objectPath: String) =
+            ObjectLocation(loopPath, ObjectPath.parse(objectPath))
+
+        // `Item * 2` in the loop body references the ForEachItemBinding by name. The binding lives in the
+        // ForEach's `item` branch, which stepBranchAttributeNames excludes by design (it holds a ScriptStep
+        // SUBTYPE), so analyze walks it explicitly — without that the item is absent from branchOfStep and
+        // classifyEdge silently drops this edge, leaving the loop item with no dependency line in the gutter.
+        val itemEdge = ScriptStepDependency(
+            loopLocation("main.steps/Loop.item/Item"), loopLocation("main.steps/Loop.steps/Doubled"))
+        assertTrue(itemEdge in analysis.edges)
+
+        // item branch vs steps branch, so it is drawn by the cross-branch overlay rather than an in-branch lane
+        assertTrue(itemEdge in analysis.crossBranchEdges())
+    }
+
+
+    @Test
     fun namesCollidingOnOneIdentifierAllBecomeSources() {
         val collisionPath = DocumentPath.parse("test/script-name-collision-test.yaml")
         val graphNotation = AutoTestUtils.readNotation()

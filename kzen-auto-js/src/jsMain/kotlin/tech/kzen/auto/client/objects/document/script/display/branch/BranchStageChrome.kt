@@ -8,8 +8,8 @@ import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------
-// Shared "recessed-stage chrome" for branch-bearing steps (If's Then/Else, ForEach's Each),
-// mirroring the page-level header/sidebar casting a soft shadow onto the gray stage: a crisp
+// Shared "recessed-stage chrome" for branch-bearing steps (If's Then/Else, DoWhile's Do, ForEach's
+// body), mirroring the page-level header/sidebar casting a soft shadow onto the gray stage: a crisp
 // 1px gray line at each chrome→stage boundary plus a soft shadow, running both horizontally
 // (under a white slab) and vertically (down the white trunk's right edge). All effects are
 // paint-only gradients (zero layout height); the opaque white trunk (rendered by
@@ -18,13 +18,26 @@ import web.cssom.*
 // Usage: wrap the branch row(s) in a `position: relative` div, then call branchStageLedge()
 // once (spans the whole wrapper), and per branch a branchStageSeam() followed by the branch
 // content inside branchStageTopShadow { ... }.
+//
+// TWO LEFT-EDGE TREATMENTS. If and DoWhile lay out against the labelled white trunk
+// ([branchTrunkOuterEdge]), framed by branchStageBase + branchStageLedge. ForEach has no trunk at
+// all — its loop item reads as a managed row in the body — so it gets branchStageRail instead: a
+// bare vertical scope line, with [branchRailWidth] of indent holding the body clear of it. The
+// masking note above applies only to the trunk case; the rail paints straight onto the gray stage,
+// which is why it is a gradient band and not a bordered box (see branchStageRail).
 
 // Boundary line colour — matches the page seam / sidebar border.
 private val seamColor = Color("rgba(0, 0, 0, 0.12)")
 
 // Trunk outer right edge from the row's left. scriptBranchContainer's trunk is content-box:
 // 3em content width + 2×0.75em horizontal padding = 4.5em (keep in sync with that width).
-private val trunkOuterEdge = 4.5.em
+val branchTrunkOuterEdge = 4.5.em
+
+// ForEach's body indent: how far the body's rows are held off the card's left edge. This is layout
+// only — branchStageRail's line is a few px of paint at x=0, and the rest is the breathing room
+// between that line and the dependency gutter, the way an editor's indent guide sits clear of the
+// code it groups.
+val branchRailWidth = 1.25.em
 
 
 // Full-width crisp 1px gray seam separating a white slab above from the branch stage below.
@@ -53,15 +66,18 @@ fun ChildrenBuilder.branchStageSeam() {
 }
 
 
-// Vertical ledge: 1px gray line + soft right-cast shadow down the trunk's outer right edge,
-// the "sidebar" analog. Absolutely positioned to span the full height of its `position:
-// relative` parent (so it's continuous across all branches); sits in the 0.5em trunk→stage
-// gap, pointer-events none so step cards stay clickable.
-fun ChildrenBuilder.branchStageLedge() {
+// The vertical counterpart of branchStageSeam, and the shared paint of both vertical edges below:
+// a crisp 1px gray line with a soft right-cast shadow fading over 8px, the "sidebar" analog.
+//
+// Absolutely positioned to span the full height of its `position: relative` parent (so it's
+// continuous across all branches of a construct); pointer-events none so step cards stay clickable.
+// The bottom end is masked away so the line trails off instead of terminating in a square edge that
+// would clash with the frame's rounded bottom corner.
+private fun ChildrenBuilder.branchStageVerticalEdge(edgeLeft: Length) {
     div {
         css {
             position = Position.absolute
-            left = trunkOuterEdge
+            left = edgeLeft
             top = 0.px
             bottom = 0.px
             width = 8.px
@@ -72,12 +88,31 @@ fun ChildrenBuilder.branchStageLedge() {
                 stop(seamColor, 1.px),
                 stop(Color("rgba(0, 0, 0, 0)"), 8.px))      // soft cast onto stage
 
-            // Fade out the bottom end so the vertical line doesn't hard-stop at the trunk's rounded
-            // bottom corner (the square termination would otherwise clash with the rounding).
             maskImage = "linear-gradient(to bottom, black calc(100% - 1.5em), transparent)"
                 .unsafeCast<MaskImage>()
         }
     }
+}
+
+
+// Trunk-bearing constructs (If, DoWhile): the ledge down the white trunk's outer RIGHT edge, sitting
+// in the 0.5em trunk→stage gap, with the trunk's white fill on one side and the gray stage on the
+// other. Paired with branchStageBase, which frames the trunk's other two edges.
+fun ChildrenBuilder.branchStageLedge() {
+    branchStageVerticalEdge(branchTrunkOuterEdge)
+}
+
+
+// Trunkless constructs (ForEach): the same edge moved to the construct's own LEFT edge, where it
+// becomes a thin vertical scope line — the header card's left edge continuing past the seam to group
+// the body, the way an editor's indent guide groups a block. [branchRailWidth] of body indent holds
+// the rows clear of it.
+//
+// Deliberately NOT branchStageBase: that frames a white trunk, and its cardRestingShadow casts on
+// all four sides of a box as wide as the indent — over a bare stage the right-hand cast has no white
+// fill to hide it, so the box outlines itself and reads as a translucent rectangle, not a line.
+fun ChildrenBuilder.branchStageRail() {
+    branchStageVerticalEdge(0.px)
 }
 
 
@@ -93,6 +128,11 @@ fun ChildrenBuilder.branchStageLedge() {
 // the white trunk's own rounded bottom (scriptBranchContainer's roundedBottom) — the border arc
 // traces the trunk's clipped white edge so the corner reads as truly rounded, not a line over a
 // square fill.
+//
+// Trunk-only, and requires the white fill: cardRestingShadow casts on ALL four sides of this box,
+// so over the trunk the right-hand cast lands on opaque white and is invisible, but on a bare
+// stage it would outline the box as a translucent rectangle. Trunkless constructs use
+// branchStageRail instead.
 fun ChildrenBuilder.branchStageBase() {
     div {
         css {
@@ -100,7 +140,7 @@ fun ChildrenBuilder.branchStageBase() {
             left = 0.px
             top = 0.px
             bottom = 0.px
-            width = trunkOuterEdge
+            width = branchTrunkOuterEdge
             pointerEvents = None.none
 
             borderLeft = Border(1.px, LineStyle.solid, seamColor)
@@ -122,12 +162,16 @@ fun ChildrenBuilder.branchStageBase() {
 //
 // The shadow is a separate absolute overlay (not a background on this content-wrapping div) so its
 // right edge can be faded with a mask without also clipping the overflowing step cards. It spans
-// the STAGE only (starts at the trunk's inner edge) and sits in the 32px insertion-reservation
+// the STAGE only — [leftEdgeWidth] is where the stage begins, i.e. the trunk's inner edge, or 0 for
+// a trunkless construct whose whole width is stage — and sits in the 32px insertion-reservation
 // strip at the top of the branch (no card content there — see firstOrLastInsertionPoint), so
 // painting it above content is invisible except over that empty strip. position:relative here just
 // scopes the overlay to the branch top; it sets no z-index, so it creates no stacking context (the
 // screenshot preview's cross-step z-ordering and the slot-anchored drag handle are unaffected).
-fun ChildrenBuilder.branchStageTopShadow(block: ChildrenBuilder.() -> Unit) {
+fun ChildrenBuilder.branchStageTopShadow(
+    leftEdgeWidth: Length = branchTrunkOuterEdge,
+    block: ChildrenBuilder.() -> Unit
+) {
     div {
         css {
             position = Position.relative
@@ -136,7 +180,7 @@ fun ChildrenBuilder.branchStageTopShadow(block: ChildrenBuilder.() -> Unit) {
         div {
             css {
                 position = Position.absolute
-                left = trunkOuterEdge
+                left = leftEdgeWidth
                 right = 0.px
                 top = 0.px
                 height = 7.px
@@ -175,7 +219,7 @@ fun ChildrenBuilder.branchStageThenLip() {
     div {
         css {
             position = Position.absolute
-            left = trunkOuterEdge
+            left = branchTrunkOuterEdge
             right = 0.px
             bottom = 0.px
             height = 18.px
