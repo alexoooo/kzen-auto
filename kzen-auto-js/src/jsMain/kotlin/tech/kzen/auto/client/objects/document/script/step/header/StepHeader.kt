@@ -46,6 +46,11 @@ external interface StepHeaderProps: Props {
     // "Skipped" chip so the grey status bar reads clearly.
     var skipped: Boolean?
 
+    // True when a forward move-to jump skipped over this step MID-FLIGHT and committed the value it had built
+    // up so far (a loop's completed iterations). It reads as Done, so the chip is the only thing saying the
+    // value is short of what a full run would have produced.
+    var partial: Boolean?
+
     var expanded: Boolean?
     var onToggleExpanded: (() -> Unit)?
 
@@ -283,6 +288,19 @@ class StepHeader(
                     }
                     size = Size.small
                     label = ReactNode("Skipped")
+                    variant = ChipVariant.outlined
+                }
+            }
+
+            // Partial chip: the jump's other outcome — skipped over, but mid-flight and holding a value worth
+            // committing. Mutually exclusive with Skipped (a step is one or the other), and placed alongside it.
+            if (props.partial == true) {
+                Chip {
+                    sx {
+                        marginRight = 0.5.em
+                    }
+                    size = Size.small
+                    label = ReactNode("Partial")
                     variant = ChipVariant.outlined
                 }
             }

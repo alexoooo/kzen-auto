@@ -17,6 +17,7 @@ import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
+import tech.kzen.auto.common.objects.document.script.model.ForEachProgress
 import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
@@ -149,6 +150,11 @@ class ForEachStepDisplay(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
+        // The loop's live iteration progress, which ForEachStep traces as this step's own detail (the loop is the
+        // current step while its body runs). Parsed per render rather than held in state: the base class already
+        // guards state.stepTrace by value, so this only re-runs when the trace actually changed.
+        val progress = ForEachProgress.ofExecutionValueOrNull(state.stepTrace?.detail)
+
         branchHeaderSlab(
             objectLocation = props.common.objectLocation,
             icon = state.icon ?: "",
@@ -158,7 +164,8 @@ class ForEachStepDisplay(
             isNextToRun = state.isNextToRun ?: false,
             mirroredGraphStore = props.mirroredGraphStore,
             typeMetadata = state.stepValidation?.typeMetadata?.toSimple(),
-            validationError = state.stepValidation?.errorMessage
+            validationError = state.stepValidation?.errorMessage,
+            partial = progress?.partial ?: false
         ) {
             props.attributeEditorManager.child(this) {
                 this.objectLocation = props.common.objectLocation
@@ -186,7 +193,7 @@ class ForEachStepDisplay(
 
             branchStageSeam()
             branchStageTopShadow(0.px) {
-                renderBody()
+                renderBody(progress)
             }
         }
     }
@@ -195,14 +202,14 @@ class ForEachStepDisplay(
     //-----------------------------------------------------------------------------------------------------------------
     // Item row and body steps share one indented container so their dependency gutters line up in a single column
     // — which is what lets the overlay's item -> step polyline read as one continuous elbow.
-    private fun ChildrenBuilder.renderBody() {
+    private fun ChildrenBuilder.renderBody(progress: ForEachProgress?) {
         div {
             css {
                 marginLeft = bodyIndent
                 minHeight = 4.em
             }
 
-            renderItem()
+            renderItem(progress)
 
             ScriptBranchDisplay::class.react {
                 attributeLocation = AttributeLocation(
@@ -218,16 +225,16 @@ class ForEachStepDisplay(
     }
 
 
-    private fun ChildrenBuilder.renderItem() {
+    private fun ChildrenBuilder.renderItem(progress: ForEachProgress?) {
         val itemLocation = state.itemLocation
             ?: return
 
         forEachItemRow(
             itemLocation = itemLocation,
             itemType = state.itemTypeMetadata,
-            // The live per-iteration value: ForEachStep traces it as this step's own detail (the loop is the
-            // current step while its body runs), so no separate binding trace is needed.
-            itemValue = state.stepTrace?.detail,
+            // Carries the live per-iteration item value AND the loop's counter / value journal — no separate
+            // binding trace is needed, since the loop is the current step while its body runs.
+            progress = progress,
             registry = stepRowRefRegistry(),
             edges = state.itemEdges ?: StepDependencyEdges.EMPTY)
     }

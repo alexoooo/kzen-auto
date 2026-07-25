@@ -9,6 +9,13 @@ import tech.kzen.lib.common.model.location.ObjectLocation
 import web.cssom.*
 
 
+// The body strip's fixed offset from the gutter: a dedicated lane for the absolute-positioned drag handle, which
+// sits at left: -1.25em off the body's left edge and would otherwise overlap the rightmost gutter lane. Named
+// because it is part of how far a row's body is pushed right of its container — see ForEachItemRow, which has to
+// undo that offset to line a control up with its construct's card edge.
+val scriptGutterRowBodyInset = 1.25.em
+
+
 // Shared row layout for the script's dependency column, used by both the step list (ScriptBranchDisplay)
 // and the parameter list (LogicSignatureEditor). A flex row whose leftmost cells are the dependency `gutter`
 // (phantom + in-branch lanes) and whose body is offset by a fixed drag-handle strip. The OUTER row element
@@ -64,9 +71,7 @@ fun ChildrenBuilder.scriptGutterRow(
             css {
                 width = ScriptController.stepWidth
                 flexShrink = number(0.0)
-                // NB: dedicated strip for the absolute-positioned drag handle (left: -1.25em off the body's
-                // left edge). Without this margin the handle overlaps the rightmost dependency-gutter lane.
-                marginLeft = 1.25.em
+                marginLeft = scriptGutterRowBodyInset
             }
             body()
         }

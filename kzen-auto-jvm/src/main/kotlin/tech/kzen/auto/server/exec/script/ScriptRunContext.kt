@@ -93,6 +93,11 @@ class ScriptRunContext(
     private val skippedSteps = HashSet<ObjectStableId>()
     private val descendSteps = HashSet<ObjectStableId>()
 
+    // The trace detail a partially-committed step brought with its value ([ScriptStep.partialOutcome]) — the
+    // journal a loop the jump skipped over had built while it was running. Consulted by [adoptCompleted], whose
+    // re-emit would otherwise blank it. Empty on an ordinary run / edit-migrate.
+    private val partialDetails = HashMap<ObjectStableId, ExecutionValue>()
+
     // Opaque per-step mid-flight migration sub-state ([StepExecution.recordCarry]) — a loop's iteration cursor —
     // carried alongside [completedOutcomes]: [carryStates] is the live capture source, [restoredCarries] the
     // predecessor run's carries seeded by [restore] (read via [StepExecution.restoredCarry], pruned by [dropReplay]).
@@ -437,8 +442,10 @@ class ScriptRunContext(
      * jump in the current [ScriptTree] ([jumpPlanFor]), apply outcome-set surgery instead of a plain restore:
      * drop the target and everything at/after it in document order, plus the descend ancestors (an enclosing
      * If) — so the rebuilt paused spine re-runs from (backward) or skips to (forward) the target and parks there.
-     * Steps the walk visits before the target but keeps no outcome for become [skippedSteps] (value-less); the
-     * ancestors become [descendSteps] (run, checkpoint suppressed). An unsupported / unresolvable [moveTarget]
+     * Steps the walk visits before the target but keeps no outcome for become [skippedSteps] (value-less),
+     * UNLESS one was mid-flight and offers a partial value ([ScriptStep.partialOutcome] — a loop's collected
+     * iterations), which is committed as a restored outcome instead; the ancestors become [descendSteps] (run,
+     * checkpoint suppressed). An unsupported / unresolvable [moveTarget]
      * falls back to a full restore — the engine ignore-contract (the controller's `canMoveTo` gate normally
      * makes that unreachable). The carried [result] is kept (decision 11); a Result at/after the target re-runs.
      */
@@ -474,9 +481,27 @@ class ScriptRunContext(
             descendSteps.add(objectStableMapper.objectStableId(ObjectLocation(documentPath, ancestor)))
         }
         for (preceding in plan.precedingOnPath) {
-            val stableId = objectStableMapper.objectStableId(ObjectLocation(documentPath, preceding))
-            if (stableId !in restoredOutcomes) {
+            val location = ObjectLocation(documentPath, preceding)
+            val stableId = objectStableMapper.objectStableId(location)
+            if (stableId in restoredOutcomes) {
+                continue
+            }
+
+            // A step the jump walked past that was MID-FLIGHT may still have a value worth handing downstream
+            // (a loop's collected iterations — see [ScriptStep.partialOutcome]). Committing it as a restored
+            // outcome routes it through the spine's existing replay short-circuit: adopted, never re-run, Done,
+            // and present in [stepValues] so a later reference resolves instead of error-parking.
+            val partial = restoredCarries[stableId]?.let { scriptStepAt(location).partialOutcome(it) }
+            if (partial == null) {
                 skippedSteps.add(stableId)
+            }
+            else {
+                restoredOutcomes[stableId] = partial.value
+                partialDetails[stableId] = partial.detail
+
+                // It is adopted rather than re-run, so its cursor is spent — a stale one must not survive to be
+                // consumed by a later backward jump back into the loop.
+                restoredCarries.remove(stableId)
             }
         }
 
@@ -534,7 +559,9 @@ class ScriptRunContext(
         val value = restoredOutcomes[stableId]
         stepValues[stableId] = value
         completedOutcomes[stableId] = value
-        emitStepTrace(stableId, StepTrace.State.Done, displayOf(value))
+        emitStepTrace(
+            stableId, StepTrace.State.Done, displayOf(value),
+            partialDetails[stableId] ?: NullExecutionValue)
         return value
     }
 

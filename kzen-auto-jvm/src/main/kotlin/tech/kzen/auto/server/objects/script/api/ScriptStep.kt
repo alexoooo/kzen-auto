@@ -41,4 +41,21 @@ interface ScriptStep {
     fun nestedStepLists(): List<List<ObjectLocation>> {
         return listOf()
     }
+
+
+    /**
+     * The value this step can commit when a forward move-to (Set Next Statement) skips over it while it was
+     * MID-FLIGHT, derived from the [carry] it had [recorded][StepExecution.recordCarry]. A loop returns the
+     * iterations it had already collected, so a step referencing it downstream reads a short list instead of
+     * error-parking on an absent value.
+     *
+     * Default null: the step has no meaningful partial value, and the jump short-circuits it value-less
+     * ([tech.kzen.auto.common.objects.document.script.model.StepTrace.State.Skipped]) as before. Only ever
+     * called for a step the jump walked past that recorded a carry and produced no completed outcome — so a
+     * step that completed normally is unaffected, and a third-party step opts in the same declarative way it
+     * opts into loop semantics via [nestedStepLists].
+     */
+    fun partialOutcome(carry: Any): PartialOutcome? {
+        return null
+    }
 }

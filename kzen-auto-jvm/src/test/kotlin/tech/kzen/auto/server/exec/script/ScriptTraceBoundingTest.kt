@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.exec.script
 
 import kotlinx.coroutines.runBlocking
+import tech.kzen.auto.common.objects.document.script.model.ForEachProgress
 import tech.kzen.auto.common.objects.document.script.model.StepTrace
 import tech.kzen.auto.common.util.TraceDisplay
 import tech.kzen.auto.server.context.KzenAutoContext
@@ -19,7 +20,9 @@ import tech.kzen.lib.server.exec.engine.RunEngine
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 
@@ -120,16 +123,66 @@ class ScriptTraceBoundingTest {
     }
 
 
+    //----------------------------------------------------------------------------------------- ForEach value journal
+    @Test
+    fun unreferencedLoopStillJournalsItsValues() {
+        // The counterpart to [unreferencedLoopCollectsNothing]: the loop collects no VALUES, but the display
+        // journal is kept regardless, so the card can still show what each iteration produced.
+        runScript("test/script-loop-collection-test.yaml") { engine, documentPath ->
+            val progress = progressOf(engine, documentPath, "main.steps/Loop")
+
+            assertEquals(3, progress.producedCount)
+            assertEquals(
+                listOf("1" to "2", "2" to "4", "3" to "6"),
+                progress.produced.map { it.item to it.value },
+                "every iteration is journalled even though the loop collected nothing")
+            assertEquals(
+                2, progress.index,
+                "the completed loop's counter still names its LAST iteration (the exit re-emit)")
+            assertNull(progress.size, "an IntRange is an Iterable, not a Collection — no known total")
+            assertFalse(progress.partial)
+        }
+    }
+
+
+    @Test
+    fun longLoopJournalIsCapped() {
+        runScript("test/script-loop-history-test.yaml") { engine, documentPath ->
+            val progress = progressOf(engine, documentPath, "main.steps/Loop")
+
+            assertEquals(10_000, progress.producedCount, "the total is untruncated")
+            assertEquals(
+                ForEachProgress.maxProducedEntries, progress.produced.size,
+                "a 10k-iteration loop must not put 10k entries into every client poll")
+            assertEquals(
+                ForEachProgress.Entry("10000", "20000"), progress.produced.last(),
+                "the journal keeps the most RECENT iterations")
+            assertEquals(10_000 - ForEachProgress.maxProducedEntries, progress.omittedCount())
+        }
+    }
+
+
     //----------------------------------------------------------------------------------------------------- internals
     // The step's live trace display, read off the engine's node tree exactly as a trace query would.
     private fun displayOf(engine: RunEngine, documentPath: DocumentPath, objectPath: String): String {
+        return (traceOf(engine, documentPath, objectPath).displayValue as TextExecutionValue).value
+    }
+
+
+    private fun progressOf(engine: RunEngine, documentPath: DocumentPath, objectPath: String): ForEachProgress {
+        return ForEachProgress.ofExecutionValueOrNull(traceOf(engine, documentPath, objectPath).detail)
+            ?: error("No ForEach progress traced for: $objectPath")
+    }
+
+
+    private fun traceOf(engine: RunEngine, documentPath: DocumentPath, objectPath: String): StepTrace {
         val stableId = context.objectStableMapper.objectStableId(
             ObjectLocation(documentPath, ObjectPath.parse(objectPath)))
 
         val value = findLive(engine.snapshot().root, Address.of(stableId.value))
             ?: error("No trace emitted for: $objectPath")
 
-        return (StepTrace.ofExecutionValue(value).displayValue as TextExecutionValue).value
+        return StepTrace.ofExecutionValue(value)
     }
 
 

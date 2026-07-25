@@ -27,6 +27,21 @@ private enum class MarkerKind { Source, Target }
 
 
 //---------------------------------------------------------------------------------------------------------------------
+/**
+ * The horizontal space a gutter cell occupies for [edges] — the lane columns [stepDependencyGutterCellForStep]
+ * and [stepDependencyGutterCellForBetween] emit, both of which lay out the same set: the phantom cross-branch
+ * column (when there is one) plus one per in-branch lane.
+ *
+ * Exposed because a gutter cell shifts everything to its right, so anything that has to line up with something
+ * OUTSIDE the row (a construct's own card edge) has to account for it. Kept here, beside the cells themselves,
+ * so the lane count and its width stay defined once.
+ */
+fun stepDependencyGutterWidthPx(edges: StepDependencyEdges): Int {
+    val phantomLanes = if (edges.hasCrossBranch) 1 else 0
+    return (phantomLanes + edges.numLanes) * stepDependencyLaneWidthPx
+}
+
+
 fun ChildrenBuilder.stepDependencyGutterCellForStep(index: Int, edges: StepDependencyEdges) {
     if (edges.numLanes == 0 && !edges.hasCrossBranch) {
         return

@@ -107,9 +107,13 @@ class StageErrorIndicator(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    // NB: the toggle is computed OUTSIDE setState. Its lambda builds a fresh, EMPTY partial-state object (see
+    // wrap/React.kt), so `!open` in there negates undefined — always true, leaving the chip unable to close
+    // itself once open (only click-away worked).
     private fun toggleOpen() {
+        val toggled = !state.open
         setState {
-            open = !open
+            open = toggled
         }
     }
 

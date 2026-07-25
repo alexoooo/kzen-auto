@@ -25,6 +25,7 @@ fun ChildrenBuilder.branchHeaderSlab(
     mirroredGraphStore: MirroredGraphStore,
     typeMetadata: String? = null,
     validationError: String? = null,
+    partial: Boolean = false,
     body: ChildrenBuilder.() -> Unit
 ) {
     val traceState = trace?.state ?: StepTrace.State.Idle
@@ -71,6 +72,7 @@ fun ChildrenBuilder.branchHeaderSlab(
                 this.typeMetadata = typeMetadata
                 this.validationError = validationError
                 this.skipped = traceState == StepTrace.State.Skipped
+                this.partial = partial
                 this.mirroredGraphStore = mirroredGraphStore
             }
         }

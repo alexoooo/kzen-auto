@@ -3,6 +3,8 @@ package tech.kzen.auto.server.service.impl
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import tech.kzen.auto.common.objects.document.script.model.ForEachProgress
+import tech.kzen.auto.common.objects.document.script.model.StepTrace
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.exec.script.test.CountingStep
 import tech.kzen.auto.server.exec.script.test.ScriptStepTestModule
@@ -10,11 +12,14 @@ import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunResponse
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunState
+import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
+import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceQuery
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import kotlin.test.fail
 
 
@@ -153,6 +158,40 @@ class ScriptMoveToTest {
 
 
     @Test
+    fun forwardJumpPastAMidFlightLoopCommitsItsPartialValue() {
+        val runId = startPaused(loopPath, pauseOnError = true)   // before Range
+        step(runId)                              // Range, before Loop
+        stepOver(runId)                          // enter loop, before Body iteration 1
+        stepOver(runId)                          // before Body iteration 2 (iteration 1 collected 1)
+        stepOver(runId)                          // before Body iteration 3 (iteration 2 collected 2)
+        assertEquals(2, CountingStep.count.get())
+
+        // Total reads `Loop.sum()`. The loop is mid-flight, so rather than being skipped value-less (which would
+        // error-park Total on the "No value produced" backstop) it commits the iterations it had collected.
+        assertEquals(LogicRunResponse.Submitted, moveTo(runId, loopPath, "main.steps/Total"))
+        awaitState(LogicRunState.Paused)
+        assertNextToRun(runId, ObjectLocation(loopPath, ObjectPath.parse("main.steps/Total")))
+
+        val loopTrace = stepTrace(runId, loopPath, "main.steps/Loop")
+            ?: fail("No loop trace")
+        assertEquals(StepTrace.State.Done, loopTrace.state, "the committed loop reads as done, not skipped")
+
+        val progress = ForEachProgress.ofExecutionValueOrNull(loopTrace.detail)
+            ?: fail("The committed value must keep the loop's journal, not blank it")
+        assertTrue(progress.partial, "committed short of a full run")
+        assertEquals(listOf("1" to "1", "2" to "2"), progress.produced.map { it.item to it.value })
+
+        resume(runId)
+        awaitDone()
+
+        assertEquals(2, CountingStep.count.get(), "the third iteration never ran")
+        assertEquals(
+            "3", stepTrace(runId, loopPath, "main.steps/Total")?.displayValue?.get(),
+            "Total summed the committed partial [1, 2]")
+    }
+
+
+    @Test
     fun jumpIntoAnIfBranchDescendsAndParks() {
         val runId = startPaused(ifPath)          // before Flag
         step(runId)                              // Flag, before Gate
@@ -211,6 +250,17 @@ class ScriptMoveToTest {
     private fun moveTo(runId: LogicRunId, documentPath: DocumentPath, objectPath: String): LogicRunResponse {
         return context.serverLogicController.moveTo(
             runId, ObjectLocation(documentPath, ObjectPath.parse(objectPath)), snapshot)
+    }
+
+
+    private fun stepTrace(runId: LogicRunId, documentPath: DocumentPath, objectPath: String): StepTrace? {
+        val snapshot = context.logicTrace.lookupRun(runId, LogicTraceQuery(LogicTracePath.root))
+            ?: return null
+        val stableId = context.objectStableMapper.objectStableId(
+            ObjectLocation(documentPath, ObjectPath.parse(objectPath)))
+        val entry = snapshot.values[LogicTracePath.ofObjectStableId(stableId)]
+            ?: return null
+        return StepTrace.ofExecutionValue(entry.value)
     }
 
 
