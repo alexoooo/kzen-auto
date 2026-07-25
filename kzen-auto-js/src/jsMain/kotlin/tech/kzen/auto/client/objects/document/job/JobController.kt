@@ -121,7 +121,7 @@ external interface JobControllerState: State {
 // keeps Worker ports blank and carries no Channel objects on the common path. Worker cards can be reordered by
 // drag/drop and the ribbon insert drops at a chosen position; reordering re-forms the pipes. Run / Step / Pause
 // come from the shared logic ribbon, exactly like Script / Flow. A graphical node-and-edge canvas is deferred
-// (see kzen/plans/2026-06-23_job-paradigm.md, M4).
+// (see kzen/plans/2026-07-25_job-improvements.md).
 @Suppress("unused")
 class JobController(
     props: JobControllerProps

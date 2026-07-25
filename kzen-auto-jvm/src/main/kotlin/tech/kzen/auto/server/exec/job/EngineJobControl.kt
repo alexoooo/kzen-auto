@@ -120,7 +120,8 @@ class EngineJobControl(
         // NOTE: every emit is retained in the engine's unbounded history, and old progress values are never
         // read back — payload bounding (WorkerBase's teaser-vs-final progress contract) is the mitigation
         // until the engine gains transient (non-retained) emits (see
-        // kzen/plans/2026-07-05_logic-engine-improvements.md phase 4); then mark this emit non-retained.
+        // kzen/plans/sprint-1/2026-07-05_logic-engine-improvements.md phase 4); then mark this emit
+        // non-retained — adoption is Job plan phase 7, kzen/plans/2026-07-25_job-improvements.md).
         execution.emit(progressAddress, ExecutionValue.of(value))
     }
 

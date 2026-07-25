@@ -22,7 +22,9 @@ import kotlin.test.assertIs
 
 
 /**
- * End-to-end for the phase-1 element model (`JobMessage` — see kzen/plans/2026-07-21_job-element-model.md): the
+ * End-to-end for the element model (`JobMessage` — see the model appendix of
+ * kzen/plans/2026-07-25_job-improvements.md; original design in
+ * kzen/plans/sprint-2/2026-07-21_job-element-model.md): the
  * uniform message carrier crossing every Job channel, with the auto-flatten fallback bridging payload lanes
  * into the column-based Workers. Three lanes, each a real notation on the engine:
  *
