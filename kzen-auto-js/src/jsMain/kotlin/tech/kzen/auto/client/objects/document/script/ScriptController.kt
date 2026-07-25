@@ -35,7 +35,7 @@ import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.global.ViewModeGlobal
 import tech.kzen.auto.client.service.logic.ClientLogicGlobal
 import tech.kzen.auto.client.service.logic.LogicValidationGlobal
-import tech.kzen.auto.client.objects.document.script.display.ScriptMoveToArrow
+import tech.kzen.auto.client.objects.document.script.display.ScriptExecutionMargin
 import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
@@ -50,6 +50,7 @@ import tech.kzen.lib.common.service.store.MirroredGraphStore
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import web.cssom.Position
 import web.cssom.em
+import web.cssom.px
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -190,7 +191,7 @@ class ScriptController:
     // canvas highlight.
     private val stepReferenceStore = ScriptStepReferenceStore()
 
-    // Shared step-row rect registry for the dependency overlay, the move-to arrow and drag insertion;
+    // Shared step-row rect registry for the dependency overlay, the execution margin and drag insertion;
     // provided into the per-document bridge so step rows and parameter rows register into one map.
     private val stepRowRefRegistry = StepRowRefRegistry()
 
@@ -311,7 +312,13 @@ class ScriptController:
 
         div {
             css {
-                marginLeft = 2.em
+                // The execution margin is CARVED OUT of the former 2em left margin rather than added to it:
+                // paddingLeft reserves the strip for the gutter (so flow content — cards, dependency lanes,
+                // thumbnails — starts to its right), while the two absolute inset:0 overlays resolve against
+                // the PADDING box and therefore still begin at this div's left edge. Net effect: card
+                // positions are unchanged from before the margin existed.
+                marginLeft = 10.px
+                paddingLeft = ScriptExecutionMargin.scriptExecutionMarginWidthPx.px
                 position = Position.relative
             }
 
@@ -342,14 +349,15 @@ class ScriptController:
 
             renderMain(mainObjectLocation)
 
-            // NB: mounted LAST so default stacking paints the draggable next-to-run arrow IN FRONT of the
-            //     step cards (the dependency overlay, first child, stays behind). Absolute inset:0 sibling
-            //     over the same relative container — it spans nested branches via the bridge-provided
-            //     StepRowRefRegistry
-            //     and never alters the flex-row layout the overlay's anchoring depends on.
-            ScriptMoveToArrow::class.react {
+            // NB: mounted LAST so default stacking paints the execution margin — breakpoint bands and the
+            //     draggable next-to-run arrow — IN FRONT of the step cards (the dependency overlay, first
+            //     child, stays behind). Absolute inset:0 sibling over the same relative container: it spans
+            //     nested branches via the bridge-provided StepRowRefRegistry and never alters the flex-row
+            //     layout the overlay's anchoring depends on.
+            ScriptExecutionMargin::class.react {
                 clientStateGlobal = props.clientStateGlobal
                 clientLogicGlobal = props.clientLogicGlobal
+                objectStableMapper = props.objectStableMapper
             }
         }
     }

@@ -10,7 +10,7 @@ import tech.kzen.lib.common.model.document.DocumentPath
 
 /**
  * The document's dependency analysis, served from [ScriptStore]'s memo so the four consumers in a
- * Script's subtree (branch gutters, dependency overlay, signature editor, move-to arrow) share one
+ * Script's subtree (branch gutters, dependency overlay, signature editor, execution margin) share one
  * computation per graph instead of re-lexing every value scalar once each per publish.
  *
  * Reached through the [DocumentBridge] (each consumer spends its single contextType slot on

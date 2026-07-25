@@ -49,19 +49,6 @@ external interface StepHeaderProps: Props {
     var expanded: Boolean?
     var onToggleExpanded: (() -> Unit)?
 
-    // Breakpoint gutter dot (rendered only when the callback is present — hosts without breakpoint
-    // support are unaffected). The unset dot is invisible until the enclosing card's :hover reveals it
-    // (the card owns that CSS rule — see ScriptStepDisplayDefault).
-    var breakpoint: Boolean?
-    var onToggleBreakpoint: (() -> Unit)?
-
-    // Move-to "Set next step here" fallback action (rendered only when the callback is present — i.e. while a
-    // settled-paused run of this document exists). canSetNextStep=false renders it disabled with the reason
-    // in a tooltip (e.g. a loop-body target). Like the breakpoint dot, it's hover-revealed by the card.
-    var onSetNextStep: (() -> Unit)?
-    var canSetNextStep: Boolean?
-    var setNextStepReason: String?
-
     var mirroredGraphStore: MirroredGraphStore
 }
 
@@ -79,16 +66,12 @@ class StepHeader(
 
         private val runIconSize = 40.px
 
-        // The card's hover-reveal rule targets the dot by state, so a SET dot keeps full opacity under hover.
-        const val breakpointDotAttribute = "data-breakpoint-dot"
-        const val breakpointDotSet = "set"
-        const val breakpointDotUnset = "unset"
-        private val breakpointColor = Color("#c62828")
-
-        // Marker for the card's hover-reveal rule (see ScriptStepDisplayDefault), plus the action's colours.
-        const val setNextStepAttribute = "data-set-next-step"
-        private val setNextStepColor = Color("#f9a825")
-        private val setNextStepDisabledColor = Color("#9e9e9e")
+        // Marks the header's top row (run icon · name · right cluster) as this step's "line" — the execution
+        // margin measures it to anchor the next-to-run arrow and the breakpoint dot beside the title rather
+        // than at the card's vertical middle. One marker covers every StepHeader host despite their differing
+        // paddings (leaf card, branchHeaderSlab, DoWhileStepDisplay), and querySelector is document-first, so a
+        // container row resolves to its OWN header, not a nested step's.
+        const val stepHeaderRowAttribute = "data-step-header"
 
 
         fun icon(graphStructure: GraphStructure, objectLocation: ObjectLocation): String {
@@ -148,6 +131,8 @@ class StepHeader(
             // a fixed vertical position — on a shared flex line the summary would grow the row and, under
             // centre alignment, shove them down on collapse.
             div {
+                asDynamic()[stepHeaderRowAttribute] = ""
+
                 css {
                     display = Display.flex
                     alignItems = AlignItems.center
@@ -184,83 +169,6 @@ class StepHeader(
                 style = unsafeJso {
                     color = NamedColor.black
                     fontSize = 1.75.em
-                }
-            }
-        }
-    }
-
-
-    // Rendered in the right cluster, immediately left of the Delete button.
-    private fun ChildrenBuilder.renderBreakpointDot() {
-        val onToggleBreakpoint = props.onToggleBreakpoint
-            ?: return
-        val breakpoint = props.breakpoint ?: false
-
-        div {
-            asDynamic()[breakpointDotAttribute] =
-                if (breakpoint) { breakpointDotSet } else { breakpointDotUnset }
-
-            css {
-                width = 12.px
-                height = 12.px
-                flexShrink = number(0.0)
-                borderRadius = 50.pct
-                backgroundColor = breakpointColor
-                cursor = Cursor.pointer
-                marginRight = 0.5.em
-                // The unset dot is invisible; the enclosing card's :hover rule reveals it faintly.
-                opacity = number(if (breakpoint) 1.0 else 0.0)
-            }
-
-            title = if (breakpoint) { "Remove breakpoint" } else { "Add breakpoint" }
-
-            // stopPropagation: the dot owns the toggle; don't also trip the card's click-to-expand.
-            onClick = {
-                it.stopPropagation()
-                onToggleBreakpoint()
-            }
-        }
-    }
-
-
-    // Rendered in the right cluster, just left of the breakpoint dot. Host-gated on onSetNextStep, so it
-    // only appears while a settled-paused run of this document exists (see ScriptStepDisplayDefault).
-    private fun ChildrenBuilder.renderSetNextStepAction() {
-        val onSetNextStep = props.onSetNextStep
-            ?: return
-        val canSet = props.canSetNextStep ?: false
-        val tooltipText =
-            if (canSet) { "Set next step here" }
-            else { props.setNextStepReason ?: "Can't set the next step here" }
-
-        Tooltip {
-            title = ReactNode(tooltipText)
-
-            span {
-                asDynamic()[setNextStepAttribute] = ""
-
-                css {
-                    display = Display.flex
-                    alignItems = AlignItems.center
-                    marginRight = 0.5.em
-                    cursor = if (canSet) { Cursor.pointer } else { Cursor.default }
-                    color = if (canSet) { setNextStepColor } else { setNextStepDisabledColor }
-                    // Invisible at rest; the enclosing card's :hover reveals it (same idiom as the dot).
-                    opacity = number(0.0)
-                }
-
-                // stopPropagation: this action owns its click; don't also trip the card's click-to-expand.
-                onClick = {
-                    it.stopPropagation()
-                    if (canSet) {
-                        onSetNextStep()
-                    }
-                }
-
-                icon("material-symbols:play-arrow") {
-                    style = unsafeJso {
-                        fontSize = 1.1.em
-                    }
                 }
             }
         }
@@ -391,10 +299,6 @@ class StepHeader(
                     variant = ChipVariant.outlined
                 }
             }
-
-            renderSetNextStepAction()
-
-            renderBreakpointDot()
 
             if (!props.managed) {
                 IconButton {

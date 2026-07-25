@@ -5,7 +5,7 @@ import web.html.HTMLElement
 
 
 // NB: registry of step-row DOM elements keyed by ObjectLocation. scriptGutterRow attaches/clears refs from
-//     each row's outer div via a callback ref; ScriptDependencyOverlay, ScriptMoveToArrow and
+//     each row's outer div via a callback ref; ScriptDependencyOverlay, ScriptExecutionMargin and
 //     ScriptBranchDisplay's drag-insertion read element rects from it.
 //     One instance per mounted ScriptController (like ScriptStepDragStore), provided into the per-document
 //     DocumentBridge under StepRowRefRegistryKey. The SAME instance is re-provided into the fresh bridge on a

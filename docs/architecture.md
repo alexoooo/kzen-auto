@@ -119,6 +119,14 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > and shares the migrate barrier (an edit-then-jump takes both in one rebuild). **Loop bodies are out of scope
 > v1**: a target inside a `rerun` branch is rejected (`canMoveTo` → `LogicRunResponse.Rejected`); a jump to
 > the loop step itself is allowed. (execution-control plan phase XC2; the client arrow affordance is XC3.)
+> **Client affordance (2026-07-25):** both move-to and breakpoints live in the Script's **execution margin** —
+> an IDE/VBA-style gutter column reserved by `ScriptController`'s `paddingLeft` and painted by
+> `ScriptExecutionMargin` (kzen-auto-js), which anchors a breakpoint band and the draggable next-to-run arrow on
+> each step's HEADER row. Dragging the arrow is the only way to reposition the run (the per-step "Set next step
+> here" header action is gone), and breakpoints are set by clicking the margin — step headers carry no execution
+> control at all. Bands cover every *executable* step (`ScriptNestingAnalysis.orderedExecutableStepPaths`,
+> kzen-auto-common), so `If` / `ForEach` / `DoWhile` headers are breakpointable and binding rows
+> (`parameters`, `item`) are not.
 
 ## 2. Client-server graph synchronization
 

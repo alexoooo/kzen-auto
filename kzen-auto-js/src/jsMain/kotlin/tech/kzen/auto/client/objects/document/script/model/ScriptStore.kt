@@ -273,7 +273,7 @@ class ScriptStore(
 
     //-----------------------------------------------------------------------------------------------------------------
     // Single-entry memo for ScriptDependencyAnalysis.analyze, shared by every consumer in this document's
-    // subtree (branch gutters, dependency overlay, signature editor, move-to arrow) — the analysis re-lexes
+    // subtree (branch gutters, dependency overlay, signature editor, execution margin) — the analysis re-lexes
     // every value scalar in the document, and used to run once per consumer per publish.
     // Self-keyed on the GraphDefinitionAttempt REFERENCE (replaced only on notation events — logic-status
     // publishes reuse it, so the run hot path always hits) plus the documentPath (ScriptController isn't

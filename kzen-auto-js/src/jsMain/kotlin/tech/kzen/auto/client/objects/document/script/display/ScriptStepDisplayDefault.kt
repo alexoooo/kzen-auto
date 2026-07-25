@@ -12,10 +12,7 @@ import tech.kzen.auto.client.objects.document.script.model.ScriptState
 import tech.kzen.auto.client.objects.document.script.step.header.StepHeader
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
-import tech.kzen.auto.client.service.logic.ClientLogicGlobal
 import tech.kzen.auto.client.wrap.*
-import tech.kzen.auto.common.objects.document.script.model.ScriptJumpAnalysis
-import tech.kzen.auto.common.objects.document.script.model.ScriptTree
 import tech.kzen.auto.common.objects.document.script.model.StepTrace
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.exec.*
@@ -33,7 +30,6 @@ import web.cssom.*
 external interface ScriptStepDisplayDefaultProps: ScriptStepDisplayBaseProps {
     var attributeEditorManager: AttributeEditorManager.Wrapper
     var attributeViewManager: AttributeViewManager.Wrapper
-    var clientLogicGlobal: ClientLogicGlobal
 
     // Optional extra content rendered at the bottom of the expanded body (inside the click-guarded
     // body region). Null for ordinary steps; RunStepDisplay uses it for the sub-script screenshot
@@ -48,14 +44,6 @@ external interface ScriptStepDisplayDefaultState: ScriptStepDisplayBaseState {
     var summaryAttributeNames: List<AttributeName>?
 
     var expanded: Boolean
-    var hasBreakpoint: Boolean?
-
-    // Move-to "Set next step here" fallback: whether to offer it (a settled-paused run of THIS document
-    // exists), whether this step is a valid jump target, and the reason it isn't (tooltip). Computed in
-    // onClientState from clientLogicState + ScriptJumpAnalysis.
-    var showSetNext: Boolean?
-    var canSetNext: Boolean?
-    var setNextReason: String?
 
     // True when this step's object has attribute-level definition failures — surfaced per-field by the attribute
     // editors — so the (redundant, less specific) step-level validation message is suppressed in the body.
@@ -160,7 +148,6 @@ class ScriptStepDisplayDefault(
         private val attributeEditorManager: AttributeEditorManager.Wrapper,
         private val attributeViewManager: AttributeViewManager.Wrapper,
         @Service private val clientStateGlobal: ClientStateGlobal,
-        @Service private val clientLogicGlobal: ClientLogicGlobal,
         @Service private val objectStableMapper: ObjectStableMapper,
         @Service private val mirroredGraphStore: MirroredGraphStore
     ):
@@ -171,7 +158,6 @@ class ScriptStepDisplayDefault(
                 this.attributeEditorManager = this@Wrapper.attributeEditorManager
                 this.attributeViewManager = this@Wrapper.attributeViewManager
                 this.clientStateGlobal = this@Wrapper.clientStateGlobal
-                this.clientLogicGlobal = this@Wrapper.clientLogicGlobal
                 this.objectStableMapper = this@Wrapper.objectStableMapper
                 this.mirroredGraphStore = this@Wrapper.mirroredGraphStore
                 block()
@@ -223,35 +209,6 @@ class ScriptStepDisplayDefault(
 
         val summaryAttributeNames = findSummaryAttributes(objectMetadata)
 
-        // Membership test against the stable-id-keyed breakpoint registry (rename-tracked by the mapper,
-        // so the dot follows a renamed step).
-        val hasBreakpoint = props.objectStableMapper.objectStableId(props.common.objectLocation) in
-                clientState.clientLogicState.breakpoints
-
-        // Move-to "Set next step here" fallback (leaf steps): offered only while THIS document's run is
-        // settled-paused / error-parked (the ROOT frame is this document — same gate as the server). The
-        // jump validity (and its reason, for a disabled tooltip) comes from the shared ScriptJumpAnalysis,
-        // run client-side against the current notation. The plan is only computed while paused, so the
-        // O(steps) walk never runs during normal editing.
-        val documentPath = props.common.objectLocation.documentPath
-        val logicState = clientState.clientLogicState
-        val activeFrame = logicState.logicStatus?.active?.frame
-        // Offered while the run is SETTLED (paused at any boundary — matches the server's !running && !stepping
-        // moveTo guard), not only at a Pause step / error-park (isHaltPaused would be too strict).
-        val showSetNext = logicState.isActive() && ! logicState.isExecuting() &&
-                activeFrame?.objectLocation?.documentPath == documentPath
-        var canSetNext: Boolean? = null
-        var setNextReason: String? = null
-        if (showSetNext) {
-            val jumpPlan = ScriptJumpAnalysis.plan(
-                graphStructure.graphNotation,
-                documentPath,
-                ScriptTree.read(documentPath, clientState.graphDefinitionAttempt.successful()),
-                props.common.objectLocation.objectPath)
-            canSetNext = jumpPlan.valid
-            setNextReason = jumpPlan.invalidReason
-        }
-
         // The attribute editors now surface this step's attribute-level definition failures per-field, so the
         // step-level validation message ("Not found") is redundant when any is present (see renderValidation).
         val hasFieldDefinitionError = clientState
@@ -264,10 +221,6 @@ class ScriptStepDisplayDefault(
         //     isn't defeated by a fresh-list reference on every broadcast.
         if (state.objectMetadata == objectMetadata &&
             state.summaryAttributeNames == summaryAttributeNames &&
-            state.hasBreakpoint == hasBreakpoint &&
-            state.showSetNext == showSetNext &&
-            state.canSetNext == canSetNext &&
-            state.setNextReason == setNextReason &&
             state.hasFieldDefinitionError == hasFieldDefinitionError
         ) {
             return
@@ -276,10 +229,6 @@ class ScriptStepDisplayDefault(
         setState {
             this.objectMetadata = objectMetadata
             this.summaryAttributeNames = summaryAttributeNames
-            this.hasBreakpoint = hasBreakpoint
-            this.showSetNext = showSetNext
-            this.canSetNext = canSetNext
-            this.setNextReason = setNextReason
             this.hasFieldDefinitionError = hasFieldDefinitionError
         }
     }
@@ -311,20 +260,6 @@ class ScriptStepDisplayDefault(
         // body and its sibling StepImageThumbnail (no prop path between them) re-render from the
         // resulting onScriptState publish, so there's no local setState here.
         scriptStore()?.stepStore?.setExpanded(props.common.objectLocation, !state.expanded)
-    }
-
-
-    private fun onToggleBreakpoint() {
-        // Single source of truth: the stable-id-keyed registry in ClientLogicGlobal (pushed to the server
-        // there); the resulting publish flows back through onClientState to repaint the dot.
-        props.clientLogicGlobal.toggleBreakpointAsync(props.common.objectLocation)
-    }
-
-
-    private fun onSetNextStep() {
-        // Move-to (Set Next Statement) via the same transport as the draggable arrow; a Rejected response
-        // surfaces through clientLogicState.controlError (not an exception).
-        props.clientLogicGlobal.moveToAsync(props.common.objectLocation)
     }
 
 
@@ -362,18 +297,6 @@ class ScriptStepDisplayDefault(
                     boxShadow = cardHoverShadow
                 }
 
-                // Reveal the (invisible) unset breakpoint dot faintly while hovering the card — pure CSS,
-                // per the ScriptStepSlot drag-handle idiom (no React hover state). Scoped to the UNSET dot
-                // so a set dot keeps full opacity under hover.
-                "&:hover [${StepHeader.breakpointDotAttribute}='${StepHeader.breakpointDotUnset}']" {
-                    opacity = number(0.3)
-                }
-
-                // Same hover-reveal idiom for the "Set next step here" action (only present while paused).
-                "&:hover [${StepHeader.setNextStepAttribute}]" {
-                    opacity = number(0.7)
-                }
-
                 // The whole card (its padding/outskirts included) toggles expand/collapse on click.
                 cursor = Cursor.pointer
             }
@@ -400,13 +323,6 @@ class ScriptStepDisplayDefault(
                 skipped = traceState == StepTrace.State.Skipped
                 expanded = state.expanded
                 onToggleExpanded = ::onToggleExpanded
-
-                breakpoint = state.hasBreakpoint ?: false
-                onToggleBreakpoint = ::onToggleBreakpoint
-
-                onSetNextStep = if (state.showSetNext == true) { ::onSetNextStep } else { null }
-                canSetNextStep = state.canSetNext
-                setNextStepReason = state.setNextReason
 
                 mirroredGraphStore = props.mirroredGraphStore
             }

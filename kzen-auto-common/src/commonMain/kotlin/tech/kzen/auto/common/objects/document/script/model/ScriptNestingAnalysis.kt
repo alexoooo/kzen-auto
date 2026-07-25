@@ -1,5 +1,6 @@
 package tech.kzen.auto.common.objects.document.script.model
 
+import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributePath
@@ -71,6 +72,56 @@ object ScriptNestingAnalysis {
                 AttributeSegment.ofKey(hostingAttribute.value),
                 AttributeSegment.ofKey(reRunKey))))
         return graphNotation.firstAttribute(container, reRunPath)?.asBoolean() == true
+    }
+
+
+    /**
+     * The executable body steps in [node]'s subtree, in document order — a strict subsequence of
+     * [ScriptTree.orderedDescendantObjectPaths] with the value-binding branches (a Script's `parameters`, a
+     * ForEach's `item`) and everything nested under them removed. Executable-ness is notation-driven:
+     * a branch counts iff [ScriptConventions.stepBranchAttributeNames] lists it (`is: List, of: ScriptStep`
+     * by exact name), so a third-party branching step is included without editing this, and a third-party
+     * BINDING branch is excluded without naming it here.
+     *
+     * The rows a Script paints an execution margin band beside: every step the engine can stop at, and
+     * nothing that merely looks like one. [node] must be the root tree of [documentPath].
+     */
+    fun orderedExecutableStepPaths(
+        graphNotation: GraphNotation,
+        documentPath: DocumentPath,
+        node: ScriptTree
+    ): List<ObjectPath> {
+        val buffer = mutableListOf<ObjectPath>()
+        collectExecutable(graphNotation, documentPath, node, buffer)
+        return buffer
+    }
+
+
+    private fun collectExecutable(
+        graphNotation: GraphNotation,
+        documentPath: DocumentPath,
+        node: ScriptTree,
+        buffer: MutableList<ObjectPath>
+    ) {
+        // NB: also the stale-node guard — stepBranchAttributeNames answers empty for a location that left the
+        //     notation (deleted / renamed mid-publish), terminating the walk instead of throwing.
+        val executableBranches = ScriptConventions
+            .stepBranchAttributeNames(graphNotation, ObjectLocation(documentPath, node.objectPath))
+            .toHashSet()
+
+        if (executableBranches.isEmpty()) {
+            return
+        }
+
+        for ((attributeName, childTrees) in node.children) {
+            if (attributeName !in executableBranches) {
+                continue
+            }
+            for (childTree in childTrees) {
+                buffer.add(childTree.objectPath)
+                collectExecutable(graphNotation, documentPath, childTree, buffer)
+            }
+        }
     }
 
 

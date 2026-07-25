@@ -8,7 +8,7 @@ import tech.kzen.auto.client.wrap.contextValue
 
 
 // Owner-provided: ScriptController provides the shared step-row rect registry into the DocumentBridge in
-// render(); the dependency overlay, the move-to arrow, the branch display's drag insertion and the signature
+// render(); the dependency overlay, the execution margin, the branch display's drag insertion and the signature
 // editor's parameter rows all reach the same instance through it.
 //
 // NB: owner-provided rather than a self-constructing channel ON PURPOSE. The bridge is recreated on every
