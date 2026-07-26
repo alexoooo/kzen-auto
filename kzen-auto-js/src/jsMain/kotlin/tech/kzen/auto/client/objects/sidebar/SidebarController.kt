@@ -37,6 +37,15 @@ external interface SidebarControllerProps : react.Props {
 external interface SidebarControllerState : State {
     // the document/folder currently being dragged (move source), shared with every drop target in the tree
     var dragSourcePath: DocumentPath?
+
+    // folders whose children are shown, keyed by the folder's own path; absent = collapsed, so "every folder
+    // starts collapsed" is just the empty initial set. Lifted here (rather than per SidebarFolder) because
+    // revealing a selection has to expand a whole ancestor chain at once.
+    var expandedFolderPaths: Set<DocumentPath>
+
+    // the selection whose ancestors have already been revealed — makes the reveal one-shot per navigation, so a
+    // folder the user collapses by hand stays collapsed across unrelated re-renders
+    var revealedSelection: DocumentPath?
 }
 
 
@@ -61,6 +70,25 @@ class SidebarController(
         setState { dragSourcePath = null }
     }
 
+    // NB: setState's lambda is write-only here (see wrap/React.kt) — compute the next set outside it
+    private val onToggleFolder: (DocumentPath) -> Unit = { folderPath ->
+        val next =
+            if (folderPath in state.expandedFolderPaths) {
+                state.expandedFolderPaths - folderPath
+            }
+            else {
+                state.expandedFolderPaths + folderPath
+            }
+        setState { expandedFolderPaths = next }
+    }
+
+    private val onExpandFolder: (DocumentPath) -> Unit = { folderPath ->
+        if (folderPath !in state.expandedFolderPaths) {
+            val next = state.expandedFolderPaths + folderPath
+            setState { expandedFolderPaths = next }
+        }
+    }
+
 
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
@@ -81,12 +109,15 @@ class SidebarController(
     //-----------------------------------------------------------------------------------------------------------------
     override fun SidebarControllerState.init(props: SidebarControllerProps) {
         dragSourcePath = null
+        expandedFolderPaths = emptySet()
+        revealedSelection = null
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
         redirectToFirstMainIfNoSelection()
+        revealSelection()
     }
 
 
@@ -96,6 +127,7 @@ class SidebarController(
         snapshot: Any
     ) {
         redirectToFirstMainIfNoSelection()
+        revealSelection()
     }
 
 
@@ -111,6 +143,27 @@ class SidebarController(
             ?: return
 
         props.navigationGlobal.goto(first)
+    }
+
+
+    // Expand the folders leading to the selected document, leaving folders the user opened by hand alone.
+    // The model can arrive after the selection does, hence the early return without recording revealedSelection.
+    private fun revealSelection() {
+        val model = props.sidebarModel
+            ?: return
+
+        val selected = props.documentPath
+            ?: return
+
+        if (state.revealedSelection == selected) {
+            return
+        }
+
+        val nextExpanded = state.expandedFolderPaths + model.ancestorFolderPaths(selected)
+        setState {
+            expandedFolderPaths = nextExpanded
+            revealedSelection = selected
+        }
     }
 
 
@@ -155,6 +208,10 @@ class SidebarController(
                     mirroredGraphStore = props.mirroredGraphStore
                     collapsed = props.collapsed
                     onToggleCollapsed = props.onToggleCollapsed
+
+                    expandedFolderPaths = state.expandedFolderPaths
+                    onToggleFolder = this@SidebarController.onToggleFolder
+                    onExpandFolder = this@SidebarController.onExpandFolder
 
                     dragSourcePath = state.dragSourcePath
                     onDragItemStart = this@SidebarController.onDragItemStart

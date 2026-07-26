@@ -59,6 +59,34 @@ data class SidebarModel(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    // Folders on the path from the root down to the given document — what must be expanded for the document's row
+    // to be visible. Directory-documents (e.g. Target) nest at their containing folder, so this covers them too.
+    // Walks the projected tree (rather than deriving paths arithmetically) so the returned values are the very
+    // same folderPath instances SidebarFolder tests against, and so a folder absent from the tree is never invented.
+    fun ancestorFolderPaths(documentPath: DocumentPath): Set<DocumentPath> {
+        val accumulator = mutableSetOf<DocumentPath>()
+        collectAncestorFolderPaths(rootChildren, documentPath.nesting, accumulator)
+        return accumulator
+    }
+
+
+    private fun collectAncestorFolderPaths(
+        nodes: List<SidebarNode>,
+        nesting: DocumentNesting,
+        accumulator: MutableSet<DocumentPath>
+    ) {
+        for (node in nodes) {
+            if (node !is SidebarFolderNode || !nesting.startsWith(node.contentNesting)) {
+                continue
+            }
+
+            accumulator.add(node.folderPath)
+            collectAncestorFolderPaths(node.children, nesting, accumulator)
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     class Builder(
         private val archetypeLocations: List<ObjectLocation>
     ) {

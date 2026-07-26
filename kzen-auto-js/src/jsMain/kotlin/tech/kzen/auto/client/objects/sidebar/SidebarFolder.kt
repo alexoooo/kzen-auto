@@ -45,6 +45,12 @@ external interface SidebarFolderProps: react.Props {
     var navigationGlobal: NavigationGlobal
     var mirroredGraphStore: MirroredGraphStore
 
+    // subtree expansion, owned by SidebarController: this folder shows its children when its own folderPath is in
+    // the set, so an unvisited folder is collapsed
+    var expandedFolderPaths: Set<DocumentPath>
+    var onToggleFolder: (DocumentPath) -> Unit
+    var onExpandFolder: (DocumentPath) -> Unit
+
     // drag-and-drop move: the live drag source (null when nothing is dragging) plus its publish/clear callbacks
     var dragSourcePath: DocumentPath?
     var onDragItemStart: (DocumentPath) -> Unit
@@ -57,9 +63,6 @@ external interface SidebarFolderProps: react.Props {
 
 
 external interface SidebarFolderState: State {
-    // per-folder subtree expansion (nested folders only; the root uses the `collapsed` prop instead)
-    var expanded: Boolean
-
     // a valid move source is hovering over this folder's header row (drop target highlight)
     var dragOver: Boolean
 }
@@ -88,7 +91,6 @@ class SidebarFolder(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun SidebarFolderState.init(props: SidebarFolderProps) {
-        expanded = true
         dragOver = false
     }
 
@@ -116,21 +118,29 @@ class SidebarFolder(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    // the synthetic root has no folderPath of its own and is always expanded — hiding the whole tree is the
+    // separate whole-sidebar `collapsed` prop
+    private fun isExpanded(): Boolean {
+        val node = props.node
+            ?: return true
+
+        return node.folderPath in props.expandedFolderPaths
+    }
+
+
     private fun toggleExpanded() {
-        // NB: setState's lambda is write-only here (see wrap/React.kt) — compute the next value outside it
-        val next = !state.expanded
-        setState {
-            expanded = next
-        }
+        val node = props.node
+            ?: return
+
+        props.onToggleFolder(node.folderPath)
     }
 
 
     private fun ensureExpanded() {
-        if (!isRoot() && !state.expanded) {
-            setState {
-                expanded = true
-            }
-        }
+        val node = props.node
+            ?: return
+
+        props.onExpandFolder(node.folderPath)
     }
 
 
@@ -290,8 +300,7 @@ class SidebarFolder(
 
         renderHeaderRow()
 
-        val showChildren = isRoot() || state.expanded
-        if (showChildren) {
+        if (isExpanded()) {
             renderChildren()
         }
     }
@@ -415,7 +424,7 @@ class SidebarFolder(
                 cursor = Cursor.pointer
             }
             onClick = { toggleExpanded() }
-            icon(if (state.expanded) "material-symbols:expand-more" else "material-symbols:chevron-right") {}
+            icon(if (isExpanded()) "material-symbols:expand-more" else "material-symbols:chevron-right") {}
         }
 
         // a folder isn't navigated to — clicking its name toggles the subtree
@@ -522,6 +531,10 @@ class SidebarFolder(
                         mirroredGraphStore = props.mirroredGraphStore
                         collapsed = false
                         onToggleCollapsed = null
+
+                        expandedFolderPaths = props.expandedFolderPaths
+                        onToggleFolder = props.onToggleFolder
+                        onExpandFolder = props.onExpandFolder
 
                         dragSourcePath = props.dragSourcePath
                         onDragItemStart = props.onDragItemStart
