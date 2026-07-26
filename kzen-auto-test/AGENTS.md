@@ -26,7 +26,7 @@ The tester JVM installs a shutdown hook that calls `KzenAutoSubprocessRegistry.c
 ## Prerequisites
 
 - Chrome installed locally (WebDriverManager downloads matching ChromeDriver automatically).
-- Java 25 (Gradle's toolchain handles this; tests inherit `java.home`).
+- The JDK 26 toolchain (Gradle handles this; tests inherit `java.home` — see `../kzen/AGENTS.md` Build & run).
 
 The kzen-auto fat jar is wired as an automatic `:kzen-auto-jvm:jar` task dependency from `selfTest` and `runTester`; no manual pre-build needed.
 
@@ -35,7 +35,7 @@ The kzen-auto fat jar is wired as an automatic `:kzen-auto-jvm:jar` task depende
 ### Interactive (IDE)
 
 1. Open kzen-auto in IntelliJ as its own project (not via the umbrella — composite breaks IDE run/debug; see umbrella AGENTS.md).
-2. Run `tech.kzen.auto.test.TesterMain` from the gutter — zero run-config setup. Everything launch-specific lives in code: the module root is located from the class's code source (any working directory works), the port defaults to `TesterMain.TESTER_PORT` (18081) when no `--server.port=` arg is given, and `kzenAutoJar` defaults to the newest locally-built `kzen-auto-jvm/build/libs/kzen-auto-jvm-*.jar` (build it once via `:kzen-auto-jvm:jar`, or add it as a before-run task). NB: run configs live in `.idea/` which is gitignored (machine-local, lost on a project-model reset — happened 2026-06-01), which is why none of this may depend on a "shared" run config.
+2. Run `tech.kzen.auto.test.TesterMain` from the gutter — zero run-config setup. Everything launch-specific lives in code: the module root is located from the class's code source (any working directory works), the port defaults to `TesterMain.TESTER_PORT` (18081) when no `--server.port=` arg is given, and `kzenAutoJar` defaults to the newest locally-built `kzen-auto-jvm/build/libs/kzen-auto-jvm-*.jar` (build it once via `:kzen-auto-jvm:jar`, or add it as a before-run task). NB: run configs live in `.idea/` which is gitignored (machine-local, lost on a project-model reset), which is why none of this may depend on a "shared" run config.
 3. Open `http://127.0.0.1:18081/` in a browser. Navigate to a test area (e.g. `main/FizzBuzz/`) and Run its root Script — Start spawns the SUT, the Browser steps drive it, Stop tears down. This tester can stay up indefinitely: `selfTest` takes a free port and will not contend with it (see Ports).
 4. Edit the Script in the browser (add steps, change parameters). Saves write through to `kzen-auto-test/src/main/resources/notation/main/.../`, so edits land in the source-controlled tree.
 
@@ -48,7 +48,7 @@ The kzen-auto fat jar is wired as an automatic `:kzen-auto-jvm:jar` task depende
 ./gradlew :kzen-auto-test:selfTest                                          # the actual end-to-end suite (opens Chrome, spawns SUT per test)
 ```
 
-`selfTest` is deliberately NOT bound to `check` — so `:kzen-auto:build` and umbrella `./gradlew build` do not pull this in.
+`selfTest` is deliberately NOT bound to `check` (and must stay that way — binding it would spawn Chrome on every `build`), so `:kzen-auto:build` does not pull this in. This module is also deliberately not the default home for new coverage: pure-logic behaviour belongs in a fast `kzen-auto-jvm/src/test` unit test (see the kzen-auto [`../AGENTS.md`](../AGENTS.md) Dev loop note) — add an e2e here only when explicitly asked.
 
 Override the kzen-auto jar (e.g. point at a CI-cached jar to skip the local `:kzen-auto-jvm:jar` rebuild), or pin the tester port (see Ports):
 ```powershell
@@ -64,11 +64,11 @@ Override the kzen-auto jar (e.g. point at a CI-cached jar to skip the local `:kz
 - **selfTest tester — ephemeral.** `SelfTestBase` takes a `FreePort.next()` port and prints it (`[selfTest] tester port: 50402`). Pin it with `-PtesterPort=<n>` when you want to open the *self-test's own* tester in a browser mid-run.
 - **SUT — ephemeral.** `StartKzenAutoStep`'s `port: 0` (the notation default) means "pick a free one". Navigate to it with **`BrowserGetSutStep`**, which addresses the SUT by `name` and reads the run-time port off the `SutHandle` that Start registered as an engine resource. A literal `port:` still works if you want a predictable URL to attach to.
 
-This is what retired the old "free ports + variable injection" open issue. The blocker used to be that `BrowserGetStep.location` is a static YAML literal, forcing each SUT's port to be written **twice** per file (on the Start step, and inside the URL) as two independent literals with nothing keeping them in sync. The fix was not interpolation but the **engine resource seam**: `StepExecution.resource(key)` already walks the host chain — the same way `BrowserGetStep` reaches the WebDriver its host opened — so the Get step reads the port from the handle instead of a hardcoded URL.
+The mechanism that makes port-free YAML possible is the **engine resource seam**: `StepExecution.resource(key)` walks the host chain (the same way `BrowserGetStep` reaches the WebDriver its host opened), so `BrowserGetSutStep` reads the run-time port from the `SutHandle` instead of a hardcoded URL literal.
 
-**An occupied port now fails loudly — it did not always.** `KzenAutoProcess.isAvailable` accepts *any* HTTP 200 on the port; it cannot tell our child from someone else's kzen-auto. So a stale instance answered the first poll (~250 ms), the freshly-spawned JVM died on a `BindException`, nothing checked `process.isAlive`, and **the whole suite silently ran against the stale process** — old classes, old notation, a green result that meant nothing. (Self-perpetuating for SUTs: `StopKzenAutoStep` killed the already-dead new handle and the stale one survived.) Two guards close this, and `FreePortTest` pins the semantics they rest on:
+**An occupied port fails loudly.** `KzenAutoProcess.isAvailable` accepts *any* HTTP 200 on the port — it cannot tell our child from a stale kzen-auto instance, which would silently serve the whole suite (old classes, old notation, meaningless green). Two guards prevent that, and `FreePortTest` pins the semantics they rest on:
 
-- `KzenAutoProcess.spawn` **pre-flights** the port (`FreePort.isFree`, a loopback bind matching `KzenAutoConfig.host`) before spawning. Nothing listening beforehand ⇒ a later 200 is necessarily ours. This is the only reason the identity-blind probe is sound.
+- `KzenAutoProcess.spawn` **pre-flights** the port (`FreePort.isFree`, a loopback bind matching `KzenAutoConfig.host`) before spawning. Nothing listening beforehand ⇒ a later 200 is necessarily ours — the only reason the identity-blind probe is sound.
 - `waitUntilAvailable` fails fast when the child dies, naming its exit code — a bad classpath / OOM / lost port race reports instantly instead of burning the 90 s timeout on a corpse.
 
 ## Adding a test
@@ -85,11 +85,10 @@ This covers failures in the **tester orchestration's own steps**. A failure insi
 
 ## Gotchas
 
-- **The `Unable to find an exact match for CDP version NNN` warning is cosmetic — don't chase it.** Nothing in kzen-auto opens a CDP session (no `getDevTools()`, no `NetworkInterceptor`, no BiDi); the browser steps use only the classic WebDriver surface. `ChromiumDriver`'s constructor probes the CDP version *eagerly* regardless, which is why an unused-CDP codebase still prints it. Selenium bundles only the last three `selenium-devtools-vNNN`, and Chrome bumps CDP roughly monthly, so **this reappears every time Chrome outruns the pinned Selenium** — it means nothing until something actually uses CDP. Bump `seleniumVersion` (`buildSrc/src/main/kotlin/Dependencies.kt`) when convenient, not urgently. (Last bump: 4.45.0 → **4.46.0** on 2026-07-15, for Chrome 150 / CDP v150.)
+- **The `Unable to find an exact match for CDP version NNN` warning is cosmetic — don't chase it.** Nothing in kzen-auto opens a CDP session (no `getDevTools()`, no `NetworkInterceptor`, no BiDi); the browser steps use only the classic WebDriver surface. `ChromiumDriver`'s constructor probes the CDP version *eagerly* regardless, which is why an unused-CDP codebase still prints it. Selenium bundles only the last three `selenium-devtools-vNNN`, and Chrome bumps CDP roughly monthly, so **this reappears every time Chrome outruns the pinned Selenium** — it means nothing until something actually uses CDP. Bump `seleniumVersion` (`buildSrc/src/main/kotlin/Dependencies.kt`) when convenient, not urgently.
 - **Tester startup is the slow path.** WebDriverManager downloads ChromeDriver on first run; subsequent runs are cached.
 - **`/` returns 302**, so port-readiness polling relies on `HttpURLConnection` following redirects to `/index.html` → 200.
 - **Chrome is NOT headless** — `BrowserOpenStep` does not currently set headless mode. CI use needs a kzen-auto-side toggle (deferred open issue).
-- **Don't bind `selfTest` to `check`** — that would spawn Chrome on every `:kzen-auto:build` and umbrella `./gradlew build`.
 - **`kzenAutoJar` resolution: explicit beats fallback.** The `runTester`/`selfTest` Gradle tasks pass `-DkzenAutoJar=...` (overridable via `-PkzenAutoJar`) pointing at the locally-built fat jar, and their `dependsOn(":kzen-auto-jvm:jar")` keeps it fresh. When the property is absent (bare IDE run), `TesterMain` falls back to the newest `kzen-auto-jvm/build/libs/kzen-auto-jvm-*.jar` — which can be stale, and if no jar was ever built, `StartKzenAutoStep` fails with a clear error at step-run time.
 - **Logback logs still follow the cwd.** A gutter-launched tester (cwd = repo root) writes `kzen-auto/logs/run.log`, not `kzen-auto-test/logs/` — check both when reconstructing which process ran where.
 - **`KzenAutoSubprocessRegistry` is per-tester-JVM**, but is no longer the only reaper. Killing the tester via IDE Stop fires the shutdown hook → SUTs reaped gracefully. Killing it via `taskkill /F` skips the hook, but the SUT's managed-child lifeline still reaps it (stdin EOF when the tester's handles close, plus the `--parent.pid` watchdog) — so orphan SUTs no longer survive a hard kill or an abandoned pause-on-error run. If a port *does* stay bound, check `jps` (e.g. a stale SUT from before this mechanism, or one launched without the lifeline flag).

@@ -2,7 +2,7 @@
 
 Patterns and plumbing of `kzen-auto-js`. Complements [`architecture.md`](architecture.md), which focuses on paradigms / server execution / graph sync.
 
-> **Snapshot:** as of `kotlin-wrappers 2026.7.1` (bumped 2026-07-07 alongside the JVM 26 / Gradle 9.6.1 update; the 2026.x migration itself landed 2026-05-11 at `2026.5.3`, in lockstep with kzen-launcher). The custom `RComponent` wrapper layer absorbed most of the migration surface; see [§5](#5-react-dsl-wrapper-layer-wrapreactkt) for the bridges it now carries and [§7](#7-pre-refactor-inventory-historical) for the historical pre-refactor inventory.
+> **Snapshot:** as of `kotlin-wrappers 2026.7.1`. The custom `RComponent` wrapper layer absorbed most of the 2026.x migration surface; [§5](#5-react-dsl-wrapper-layer-wrapreactkt) is the canonical home for the bridges it carries and the migration checklist.
 
 ## 1. Top-level packages
 
@@ -67,8 +67,9 @@ change, and that `*State` is a fresh object each time. So the default tendency �
 (which always re-renders on `setState`/parent render) and `setState { this.xState = xState }` with the
 whole object — makes one entity's change re-render every sibling observer. This is the dominant source
 of avoidable re-renders in this codebase (it also lights up *every* sibling in React DevTools'
-"Highlight updates" overlay — see the `audit/` notes). **Prefer the following unless there's a concrete
-reason a component must always re-render:**
+"Highlight updates" overlay — see [§7](#7-render-discipline--editor-commit-patterns) on measuring
+re-renders). **Prefer the following unless there's a concrete reason a component must always
+re-render:**
 
 1. **Extend `RPureComponent`, not `RComponent`.** `RPureComponent.shouldComponentUpdate`
    shallow-compares props and state (`===` per key, in `wrap/React.kt`) and bails when nothing changed —
@@ -299,7 +300,14 @@ fun <S : State> Component<*, S>.setState(buildState: S.() -> Unit) {
 }
 ```
 
-So `setState { … }` is a Kotlin-friendly builder. `init` is the equivalent of constructor-time default state. `ChildrenBuilder.render()` is the modern (non-legacy) render API. The three migration bridges (`RPureComponent`'s shallow-compare `shouldComponentUpdate`, `KClass<…>.react`, top-level `createRef`) all live in this file — the umbrella `AGENTS.md` has more on why each was needed.
+So `setState { … }` is a Kotlin-friendly builder. `init` is the equivalent of constructor-time default state. `ChildrenBuilder.render()` is the modern (non-legacy) render API. The three migration bridges (`RPureComponent`'s shallow-compare `shouldComponentUpdate`, `KClass<…>.react`, top-level `createRef`) all live in this file. One trap: the `setState { … }` builder lambda runs on a **fresh empty `unsafeJso`, not a copy of current state** — it is write-only. `this.someField` inside the lambda is `undefined`, so read-modify-write (`tick += 1`) silently produces `NaN`; compute any value that depends on prior state in a `val` outside the lambda and assign it inside.
+
+**2026.x migration checklist** (this section is the canonical home; kzen-launcher's `wrap/React.kt` mirrors this one, minus `createRef` — the launcher uses no refs). Copy `wrap/React.kt` verbatim for any future JS sibling; only the package path differs. Consumer-side breakage to expect:
+
+- `key = "stringExpr"` must wrap in `react.Key(...)`.
+- `ChangeEvent<C, T>` takes two mandatory type args; `event.target` returns the *second* arg and `event.currentTarget` the *first* — use `.currentTarget.checked` for `<input>` checkbox handlers.
+- `setState { … }` needs an explicit `import tech.kzen.auto.client.wrap.setState` (the old `PureComponent.setState` extension is gone), and `import react.react` becomes `import tech.kzen.auto.client.wrap.react`.
+- Build level: `useCommonJs()` and the mui-icons/BOM version match are load-bearing — see the umbrella `AGENTS.md` Toolchain pins.
 
 Other adapters in `wrap/`:
 
@@ -307,6 +315,8 @@ Other adapters in `wrap/`:
 - `wrap/iconify/*` — Iconify icon DSL.
 - `wrap/lodash.kt` — lodash debounce / throttle bindings.
 - `wrap/select/reactSelectDsl.kt` — react-select adapter. Pre-migration this was the last live consumer of `kotlin-react-legacy` types; post-migration its legacy code is fully commented out and no active legacy imports remain anywhere in the JS client.
+
+**MUI `Autocomplete` and `ClickAwayListener`.** Labelled select/filter dropdowns go through `ChildrenBuilder.muiAutocompleteField(...)` (`client/wrap/select/MuiAutocompleteField.kt`) — generic over the option type, floating material label, closes its listbox on click-away natively; prefer it over a bare `reactSelectField` when you want a label + native close. The wrapper API has sharp edges: `Autocomplete` is declared star-projected (`FC<AutocompleteProps<*>>`), so a generic invoke needs `Autocomplete.unsafeCast<FC<AutocompleteProps<T>>>()` — `Autocomplete<T> { }` does not compile; `options` is a `ReadonlyArray` (assign an `Array<T>` via `unsafeCast`); `onChange` is **4-arg** with `value: Any` (narrow with `unsafeCast<T>()`); `renderInput` is required, its params forwarded onto the inner `TextField.create { }` via a non-inline `Object.assign` helper (`js()` is illegal inside inline lambdas). For a floating popover, wrap it in `ClickAwayListener` — its document-level `click` fires *after* React's root-level `onClick`, so an insert path inside the popover wins the race and `onClickAway` becomes a guarded no-op; set `disablePortal = true` on an Autocomplete inside such a wrapper so listbox clicks count as "inside" (a `delay(1)`-deferred cancel does NOT work — it fires mid-click). And a wrapper bug still worked around: the generated `mui.material.ClickAwayListener` lacks `@JsName("default")`, importing a non-existent named export (`undefined` at runtime, React error #130) — the working form is the dedicated file `client/wrap/material/clickAwayListener.kt` with file-level `@file:JsModule("@mui/material/ClickAwayListener")` + `@JsName("default") external val`; a *declaration-level* `@JsModule` on the val does not work (it binds the module-namespace object and `@JsName` is ignored). Sanity-check any other missing-`@JsName("default")` wrapper component the same way before trusting it.
 
 **Icons — self-hosted Iconify, fetched on demand by name.** All icons render through the single DSL `icon("material-symbols:<name>")` in `wrap/iconify/iconifyDsl.kt` (backed by `@iconify/react`'s `<Icon>`). There is **no build-time registry and no icon data in the JS bundle**: the full Material Symbols collection JSON ships as a JVM resource (`kzen-auto-jvm` `copyIconCollection` task → `/icons/material-symbols.json`), and `IconCollectionHandler` serves `GET /icon/material-symbols.json?icons=a,b,c` (the Iconify API protocol). `IconLoader` (installed from `ClientContext.init()`) registers an `@iconify/react` custom loader that fetches missing names from that endpoint via `ClientContext.baseUrl` (so it rides the kzen-shell proxy prefix), batched and cached; `IconLoader.preload()` warms the always-visible chrome icons at startup. An unknown name renders the `texture` fallback (server substitutes it) and is reported in the response's `not_found`.
 
@@ -326,39 +336,41 @@ Other adapters in `wrap/`:
 
 Mutation (user edits a value) follows the same lattice in reverse: a controller calls `store.someMethod(…)`; the store mutates internal state; the store may call `mirroredGraphStore.apply(command)` to ship a `NotationCommand` to the server (see `architecture.md` § 2); the resulting graph change re-enters the observer chain via `LocalGraphStore.Observer` on `ClientStateGlobal`.
 
-## 7. Pre-refactor inventory (historical)
+## 7. Render discipline & editor-commit patterns
 
-Snapshot captured 2026-05-11 *before* the kotlin-wrappers `2025.12.11` → `2026.5.3` bump landed the same day. Kept here as a record of how the surface looked going in.
+Hard-won rules for the class-component + broadcast-observer world of §2. Each is a pattern that looked right, shipped, and was corrected — treat them as defaults, not suggestions.
 
-| Metric | Count |
-|--------|-------|
-| Total `.kt` files in `kzen-auto-js` | 161 |
-| Files using the custom `RComponent`/`RPureComponent` | ~50–70 classes across ~55 files |
-| Files using `setState` | 55 (262 occurrences total) |
-| Files using `react.FC` / `useState` / `useEffect` | **0** — fully class-based |
-| Files importing **kotlin-react-legacy types** directly (`RBuilder` etc.) | **1** (`wrap/select/reactSelectDsl.kt`) |
-| Files using string-literal `key = "..."` | 2 — `objects/document/report/output/OutputTableController.kt`, `objects/document/graph/GraphController.kt` |
-| Files using single-type-arg `ChangeEvent<C>` | 2 — `objects/document/common/AttributePathValueEditor.kt`, `objects/document/graph/edit/AttributePathValueEditorOld.kt` |
-| `…Old.kt` files (stale, candidates for deletion before refactor) | 5 under `objects/document/graph/edit/` |
-| Top builder/setState hotspots | `objects/document/target/TargetController.kt` (14), `objects/document/graph/GraphController.kt` (11), `objects/ProjectController.kt` (11) |
+### Measuring re-renders: visits are not renders
 
-**Implications for the wrappers bump (what we expected):**
+React DevTools' "Highlight updates when components render" overlay draws a box around every fiber the reconciler *visited* during a commit — including ones that bailed via `shouldComponentUpdate` (React clones the child-fiber list of every ancestor on the path to the updated node, and the overlay highlights those bailed clones). All siblings flashing does NOT mean they re-rendered. Authoritative signals: a `componentDidUpdate` console log (fires only on actual render), the Profiler's "Ranked" view (filters bail-outs entirely), or a Profiler JSON dump (`changeDescriptions` / `fiberActualDurations`). For a live overlay that highlights only genuine renders, kzen-auto ships **react-scan** in dev: a dev-gated CDN `<script>` emitted by `kzen-auto-jvm/.../backend/Pages.kt`, gated on `KzenAutoConfig.developmentMode()` (set only by `FrontendDevelopment`/`BackendDevelopment`) — nothing lands in the JS bundle or JAR. Don't npm-bundle react-scan: its dep tree needs a newer Node than KGP pins, and the script tag sidesteps npm entirely.
 
-- The custom `RComponent` wrapper already uses modern `react.Component` — class components don't need to become functional components just because of the wrappers bump.
-- Direct legacy-type breakage is **one file**, not the codebase. The catalog removal of `kotlin-react-legacy` still requires either keeping it as an explicit dependency (if available) or rewriting `reactSelectDsl.kt`.
-- Real surface area: the 4 files with `key` / `ChangeEvent` breakage, the 1 legacy file, plus whatever the wrappers bump touches incidentally in MUI / cssom / unsafeJso / etc. — the latter only knowable by attempting the bump.
+### Hover reveals are CSS `:hover`, not React state
 
-**What the migration actually touched (post-2026-05-11):**
+A hover-only visual reveal (show/hide via opacity) should be pure CSS, never an `isHovered` state field toggled by `onMouseEnter`/`onMouseLeave` — a hover-state field on one-of-many siblings makes React walk the shared parent down to the hovered child on every mouse move, and CSS produces no commit at all. Pattern: render the element always with `opacity = number(0.0)` and reveal via an `&:hover` rule; target descendants with stable `data-*` markers (emotion class names are hashed — never select on them); nested suppression (an outer slot must not reveal when a nested slot is the real hover target) uses `:has()` — see `ScriptStepSlot` / `StepNameEditor`. Exception: hover that drives more than visibility (z-index lift, expansion, measurement — e.g. `StepScreenshotPreview`) can legitimately stay JS.
 
-The "≈4 files plus 1 legacy" estimate held for the categories that were inventoried, but the migration also surfaced three larger categories the inventory missed entirely:
+### Conditional siblings remount unkeyed components
 
-- **~30 `key = "stringExpr"` sites** (the inventory found 2). The new wrappers require wrapping in `react.Key(...)`.
-- **~60 files** needed an explicit `import tech.kzen.auto.client.wrap.setState` — `setState { … }` used to resolve via a removed `PureComponent.setState` extension, so the inventory's "55 files using setState" all needed an import touched.
-- **~73 files** needed `import react.react` swapped to `import tech.kzen.auto.client.wrap.react` after the `KClass<…>.react` bridge moved in-house.
+Conditionally inserting an element (error banner, spinner) as a *sibling before* an unkeyed stateful component shifts the child index; positional reconciliation sees a type mismatch and **remounts** the component, wiping its state via `init()` — e.g. an error banner above a form erasing the very input the user needed to correct. Always render the container element (empty when inactive) so sibling positions are stable, or give the stateful component a stable `key`. Prefer the stable container — it also protects every sibling below.
 
-Plus the three §5 in-house bridges (`RPureComponent`, `KClass.react`, `createRef`) had to be authored fresh.
+### Async-hydrating editors must not echo a write on mount
 
-Lesson for the next refactor: anchored grep counts are fine for the categories you know to search, but they only tell you about the breakage categories you anticipated. A scratch build against the candidate library version surfaces the unknown unknowns faster than incremental inventory.
+An attribute editor that hydrates async (`componentDidMount` → observe → `onClientState` → `setState`) sees an `undefined → loaded` state transition on its first `componentDidUpdate`; if that hook fires the edit command on value-change, it echoes the just-read value back as a no-op `UpsertAttributeCommand` on every mount/expand. That write is not harmless: `DirectGraphStore.apply` publishes unconditionally and `MirroredGraphStore` fans out to every graph-store observer *and* round-trips to the server — the symptom presents as "expanding X re-renders everything," but the cause is a notation+network write on a pure view action (check the Network tab). Guard it: either initialize state synchronously in `init()` from `ClientContext.clientStateGlobal.current()` (no transition at all — `SelectLogicEditor`), or add an `initialized` flag set by the hydration `setState` and early-return `componentDidUpdate` when `!prevState.initialized` (`SelectStepEditor`, `TargetSpecEditor`).
+
+### Lifting a subscription changes sibling mount timing
+
+A child subscribing to a global observer in its own `componentDidMount` via `async { observe(this) }` runs the subscription in a microtask *after* mounting; siblings' subscriptions batch through the same coroutine batch, so cross-mount invariants (a sibling's constructor setting a shared handle that another child's `componentDidMount` reads) hold implicitly. Lifting that subscription to the *parent* — child receives the value as a prop — compresses the timing: the consumer child mounts already-loaded and its `componentDidMount` fires before any sibling has subscribed at all, breaking those invariants. When making a controller prop-driven, check whether any sibling constructor publishes something the lifted subtree consumes on mount; if so, lift both or neither, or keep that one piece of state self-subscribed.
+
+### Script step affordances: header right cluster vs execution margin
+
+Per-step **editing/status** affordances go inline in `StepHeader.renderRightCluster`, immediately left of the Delete button (the settled order: validation icon · Skipped chip · type chip · delete · chevron) — never absolutely positioned over the step icon, and never in the card's left padding (both were tried and rejected). Right-cluster items are flex items with a small `marginRight`, `stopPropagation` on click (the card owns click-to-expand), and CSS `:hover`-reveal for idle-invisible affordances. **Execution control** (breakpoints, the draggable next-to-run arrow) lives only in the document-level execution margin (see [`architecture.md` § 1](architecture.md#1-paradigm-system), Script move-to) — step headers carry no execution control at all. Margin implementation invariants: both affordances anchor on the step's **header row** (`StepHeader.stepHeaderRowAttribute`, `data-step-header`, measured via `querySelector` — exact across leaf cards, branch header slabs, and `DoWhileStepDisplay` without a second registry); breakpoint bands are **fixed-height at the anchor**, never row-height (a container step's row DOM-contains every nested step's row, so full-height bands would overlap); drag hit-testing is **nearest anchor line**, not rect containment (containment returned the first row in parent-before-descendant order, so a step nested in an `If` branch could never be dropped on — don't reintroduce it); a pointer-up under 4 px of travel is a click that toggles the step's breakpoint (a breakpoint on the next-to-run step renders as a ring so the arrow stays readable); bands cover every executable step via `ScriptNestingAnalysis.orderedExecutableStepPaths` — binding rows (`parameters`, `item`) share `StepRowRefRegistry` with step rows, so that filter is load-bearing (`ScriptExecutableStepsTest`); and the margin does **not** observe `ScriptStore` — its root is `inset: 0`, so expand/collapse changes the stage height and its `ResizeObserver` re-anchors everything, one subscription fewer.
+
+### Editor commits: `DebouncedSubmitter` semantics
+
+Debounced attribute submits go through the shared `DebouncedSubmitter` (`objects/document/common/edit/`); its rules:
+
+- **On unmount, `flush()` — never `cancel()`.** The debounce is buffering the user's pending edit before it reaches the server; cancelling silently discards their input. `cancel()` is only right for idempotent refresh-style callbacks with no user input at stake. Flushing from a non-suspend lifecycle method is fine even when the callback launches a coroutine — the launch is synchronous and the coroutine outlives the component.
+- **No `.pending()` on a lodash debounce.** The bundled lodash's debounced function has no `.pending()` — it throws, and inside a `util.async` Promise the throw is swallowed, presenting as a stuck-busy indicator. `DebouncedSubmitter` detects a keystroke-re-armed-mid-commit with an explicit `scheduleSequence` counter instead; the `pending()` binding was removed from `wrap/Lodash.kt` as dead + broken. Don't reintroduce it.
+- **Lossy round-trips compare semantically, and never overwrite user input.** Where the source of truth is a parsed model and deparse is lossy (the raw-YAML editor: `unparseDocument` drops comments/whitespace/key order), the "modified" check must be `parse(editorValue) != serverNotation` — not text equality — and the controller must never write a regenerated text form back into the editor, even on save success. Unparseable input counts as modified; external updates refresh the editor only when the user has no pending edits.
 
 ## 8. Critical files to read first
 
