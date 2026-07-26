@@ -74,8 +74,8 @@ class StepHeader(
         // Marks the header's top row (run icon · name · right cluster) as this step's "line" — the execution
         // margin measures it to anchor the next-to-run arrow and the breakpoint dot beside the title rather
         // than at the card's vertical middle. One marker covers every StepHeader host despite their differing
-        // paddings (leaf card, branchHeaderSlab, DoWhileStepDisplay), and querySelector is document-first, so a
-        // container row resolves to its OWN header, not a nested step's.
+        // paddings (leaf card, branchHeaderSlab), and querySelector is document-first, so a container row
+        // resolves to its OWN header, not a nested step's.
         const val stepHeaderRowAttribute = "data-step-header"
 
 

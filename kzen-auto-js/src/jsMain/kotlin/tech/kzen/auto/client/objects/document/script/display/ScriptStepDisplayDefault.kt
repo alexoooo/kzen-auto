@@ -80,6 +80,10 @@ class ScriptStepDisplayDefault(
         val cardRestingShadow = BoxShadow(0.px, 1.px, 3.px, Color("rgba(0, 0, 0, 0.12)"))
         val cardHoverShadow = BoxShadow(0.px, 2.px, 6.px, Color("rgba(0, 0, 0, 0.18)"))
 
+        // Width of the [statusBorderColor] bar — shared with branchHeaderSlab and branchStageAccentRail,
+        // so a construct whose stage runs between two white slabs shows one unbroken left edge.
+        val statusBorderWidth = 4.px
+
         fun statusBorderColor(
             traceState: StepTrace.State,
             error: String?,
@@ -277,7 +281,7 @@ class ScriptStepDisplayDefault(
                 width = ScriptController.stepWidth
                 height = 100.pct
                 boxSizing = BoxSizing.borderBox
-                borderLeftWidth = 4.px
+                borderLeftWidth = statusBorderWidth
                 borderLeftStyle = LineStyle.solid
                 borderLeftColor = statusBorderColor(
                     traceState, trace?.error, isNextToRun, state.stepValidation?.errorMessage)

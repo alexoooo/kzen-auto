@@ -6,11 +6,8 @@ import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
 import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
 import tech.kzen.auto.client.objects.document.script.display.*
-import tech.kzen.auto.client.objects.document.script.display.branch.branchStageLedge
-import tech.kzen.auto.client.objects.document.script.display.branch.branchStageSeam
-import tech.kzen.auto.client.objects.document.script.display.branch.branchStageTopShadow
-import tech.kzen.auto.client.objects.document.script.display.branch.scriptBranchContainer
-import tech.kzen.auto.client.objects.document.script.step.header.StepHeader
+import tech.kzen.auto.client.objects.document.script.display.branch.*
+import tech.kzen.auto.client.objects.document.script.display.dependency.ScriptBranchDisplay
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
@@ -34,12 +31,13 @@ class DoWhileStepDisplay(
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         // Hairline matching the branch-stage seam, used to separate the white While footer from the
-        // gray Do stage above it.
+        // gray body stage above it (and to terminate the stage's scope rail, which runs into it).
         private val bodySeamColor = Color("rgba(0, 0, 0, 0.12)")
 
-        // Status accent line down the left edge of the whole body — same 4px coloured border the leaf
-        // step card uses (white when idle, so there's no layout shift when a run starts).
-        private val accentWidth = 4.px
+        // Footer content inset, matching branchHeaderSlab's header padding: both sit inside a status bar
+        // of the same width, so header title, "While" label and the branchRailWidth-indented body all
+        // share one left column.
+        private val footerInset = 16.px
     }
 
 
@@ -73,97 +71,91 @@ class DoWhileStepDisplay(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
-        // Run status reads as a 4px coloured line down the LEFT of the whole body (the leaf step card's
-        // pattern), not a header tint — so the header stays neutral and the accent spans header → Do →
-        // While as one continuous edge.
+        // The header slab derives this same bar from the trace it is passed; the stage's band and the footer's
+        // border take it from here, so all three segments of the construct's left edge match.
         val trace = state.stepTrace
-        val traceState = trace?.state ?: StepTrace.State.Idle
         val accent = ScriptStepDisplayDefault.statusBorderColor(
-            traceState, trace?.error, state.isNextToRun ?: false, state.stepValidation?.errorMessage)
+            trace?.state ?: StepTrace.State.Idle,
+            trace?.error,
+            state.isNextToRun ?: false,
+            state.stepValidation?.errorMessage)
 
         // Three flush sections, ordered to match the do-while (run the body, THEN test the condition):
-        //   header (neutral white) → "Do" body steps (recessed gray stage) → full-width "While" footer.
-        renderHeader(accent)
-        renderDoStage(accent)
+        //   header slab (white) → body steps (recessed gray stage) → full-width "While" footer.
+        // The status bar runs the height of all three, so they read as one card.
+        renderHeader()
+        renderBodyStage(accent)
         renderWhileFooter(accent)
     }
 
 
-    // Neutral white title bar (rounded top); the status colour is carried by the left accent only.
-    private fun ChildrenBuilder.renderHeader(accent: Color) {
-        div {
-            css {
-                backgroundColor = NamedColor.white
-                borderTopLeftRadius = ScriptStepDisplayDefault.cardCornerRadius
-                borderTopRightRadius = ScriptStepDisplayDefault.cardCornerRadius
-                borderLeftWidth = accentWidth
-                borderLeftStyle = LineStyle.solid
-                borderLeftColor = accent
-                boxShadow = ScriptStepDisplayDefault.cardRestingShadow
-                paddingBottom = 0.5.em
-            }
-
-            div {
-                css {
-                    padding = Padding(16.px, 16.px, 0.px, 16.px)
-                }
-
-                StepHeader::class.react {
-                    this.objectLocation = props.common.objectLocation
-                    managed = false
-                    this.icon = state.icon ?: ""
-                    this.description = state.description ?: ""
-                    this.title = state.title ?: ""
-                    this.typeMetadata = state.stepValidation?.typeMetadata?.toSimple()
-                    this.validationError = state.stepValidation?.errorMessage
-                    this.mirroredGraphStore = props.mirroredGraphStore
-                }
-            }
-        }
+    // The same white title slab If and ForEach open with — minus its attribute-editor row: a do-while
+    // tests AFTER its body runs, so the condition editor belongs in the While footer, not up here.
+    private fun ChildrenBuilder.renderHeader() {
+        branchHeaderSlab(
+            objectLocation = props.common.objectLocation,
+            icon = state.icon ?: "",
+            description = state.description ?: "",
+            title = state.title ?: "",
+            trace = state.stepTrace,
+            isNextToRun = state.isNextToRun ?: false,
+            mirroredGraphStore = props.mirroredGraphStore,
+            typeMetadata = state.stepValidation?.typeMetadata?.toSimple(),
+            validationError = state.stepValidation?.errorMessage)
     }
 
 
-    // The "Do" body: the step list on the recessed gray stage. White "Do" trunk on the left (the
-    // accent border is the trunk's left edge), the gray page stage on the right where step cards float.
-    // No rounded bottom — the While footer below completes the frame.
-    private fun ChildrenBuilder.renderDoStage(accent: Color) {
+    // The loop body: the step list on the recessed gray stage, laid out against a scope line rather than
+    // a labelled white trunk (see BranchStageChrome's treatments) — a single-branch construct has no
+    // sibling branch for a label column to tell apart. The accent variant of the rail, since the header
+    // slab above and the While footer below bracket this stage between two white slabs.
+    private fun ChildrenBuilder.renderBodyStage(accent: Color) {
         div {
             css {
                 position = Position.relative
-                borderLeftWidth = accentWidth
-                borderLeftStyle = LineStyle.solid
-                borderLeftColor = accent
             }
 
-            // Vertical ledge down the trunk's right edge; seam + down-shadow under the header above.
-            branchStageLedge()
+            branchStageAccentRail(accent, fadeBottom = false)
+
+            // Seam + down-shadow cast by the header slab above. The shadow starts at the accent band's
+            // outer edge — that is where the stage begins, and a shadow over the band would smudge it.
             branchStageSeam()
-            branchStageTopShadow {
-                scriptBranchContainer(
-                    label = "Do",
-                    branchLocation = AttributeLocation(
-                        props.common.objectLocation, ScriptConventions.stepsAttributePath),
-                    stepDisplayManager = props.stepDisplayManager,
-                    scriptCommander = props.scriptCommander,
-                    roundedBottom = false,
-                    clientStateGlobal = props.clientStateGlobal,
-                    mirroredGraphStore = props.mirroredGraphStore,
-                    objectStableMapper = props.objectStableMapper)
+            branchStageTopShadow(ScriptStepDisplayDefault.statusBorderWidth) {
+                div {
+                    css {
+                        // The rail is paint only (absolutely positioned over the stage's left edge), so
+                        // this indent is the only thing holding the step rows off the scope line.
+                        marginLeft = branchRailWidth
+                        minHeight = 4.em
+                    }
+
+                    ScriptBranchDisplay::class.react {
+                        attributeLocation = AttributeLocation(
+                            props.common.objectLocation, ScriptConventions.stepsAttributePath)
+                        nested = true
+                        stepDisplayManager = props.stepDisplayManager
+                        scriptCommander = props.scriptCommander
+                        clientStateGlobal = props.clientStateGlobal
+                        mirroredGraphStore = props.mirroredGraphStore
+                        objectStableMapper = props.objectStableMapper
+                    }
+                }
             }
         }
     }
 
 
     // The "While" condition: a full-width white footer (NOT a branch — no step list, no gray stage).
-    // The "While" label sits in a left column aligned under the "Do" trunk; the Kotlin Boolean editor
-    // extends horizontally across the rest. Rounded bottom completes the construct's frame.
+    // The "While" label leads the row at the header's own inset, closing the body the way the header
+    // slab opens it; the Kotlin Boolean editor extends horizontally across the rest. Rounded bottom
+    // completes the construct's frame.
     private fun ChildrenBuilder.renderWhileFooter(accent: Color) {
         div {
             css {
                 display = Display.flex
-                alignItems = AlignItems.stretch
+                alignItems = AlignItems.center
                 backgroundColor = NamedColor.white
-                borderLeftWidth = accentWidth
+                borderLeftWidth = ScriptStepDisplayDefault.statusBorderWidth
                 borderLeftStyle = LineStyle.solid
                 borderLeftColor = accent
                 borderTop = Border(1.px, LineStyle.solid, bodySeamColor)
@@ -172,15 +164,13 @@ class DoWhileStepDisplay(
                 boxShadow = ScriptStepDisplayDefault.cardRestingShadow
             }
 
-            // "While" label column — same width as the Do trunk so the two labels align vertically.
+            // "While" label, sized to its own text — with no trunk above, there is no fixed column width
+            // to align to — and centred against the editor beside it by the row's alignItems.
             div {
                 css {
-                    width = 3.em
                     flexShrink = number(0.0)
-                    padding = Padding(16.px, 0.75.em)
+                    padding = Padding(0.px, 0.75.em, 0.px, footerInset)
                     color = Color("rgba(0, 0, 0, 0.7)")
-                    display = Display.flex
-                    alignItems = AlignItems.center
                 }
                 +"While"
             }

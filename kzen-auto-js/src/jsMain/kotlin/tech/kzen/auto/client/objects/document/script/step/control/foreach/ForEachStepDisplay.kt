@@ -18,6 +18,7 @@ import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.objects.document.script.model.ForEachProgress
+import tech.kzen.auto.common.objects.document.script.model.StepTrace
 import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
@@ -49,7 +50,7 @@ class ForEachStepDisplay(
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        // Body content's left offset from the card edge, clearing the scope line branchStageRail draws there.
+        // Body content's left offset from the card edge, clearing the accent band and scope line drawn there.
         // Keep at branchRailWidth: the rail is paint-only (absolutely positioned, a few px wide), so this
         // indent is the only thing keeping the item row and the step rows off it.
         private val bodyIndent = branchRailWidth
@@ -153,14 +154,22 @@ class ForEachStepDisplay(
         // The loop's live iteration progress, which ForEachStep traces as this step's own detail (the loop is the
         // current step while its body runs). Parsed per render rather than held in state: the base class already
         // guards state.stepTrace by value, so this only re-runs when the trace actually changed.
-        val progress = ForEachProgress.ofExecutionValueOrNull(state.stepTrace?.detail)
+        val trace = state.stepTrace
+        val progress = ForEachProgress.ofExecutionValueOrNull(trace?.detail)
+
+        // The stage's accent band continues this same bar down the card's left edge, so both read it here.
+        val accent = ScriptStepDisplayDefault.statusBorderColor(
+            trace?.state ?: StepTrace.State.Idle,
+            trace?.error,
+            state.isNextToRun ?: false,
+            state.stepValidation?.errorMessage)
 
         branchHeaderSlab(
             objectLocation = props.common.objectLocation,
             icon = state.icon ?: "",
             description = state.description ?: "",
             title = state.title ?: "",
-            trace = state.stepTrace,
+            trace = trace,
             isNextToRun = state.isNextToRun ?: false,
             mirroredGraphStore = props.mirroredGraphStore,
             typeMetadata = state.stepValidation?.typeMetadata?.toSimple(),
@@ -175,24 +184,22 @@ class ForEachStepDisplay(
 
         // Recessed-stage chrome, same treatment as IfStepDisplay's branches but WITHOUT the labelled white trunk:
         // a ForEach has a single body and its loop item reads as a managed row inside it, so there is nothing for
-        // a 4.5em label column to say. In its place branchStageRail draws a thin vertical scope line down the
-        // card's left edge, grouping the body the way an editor's indent guide groups a block.
+        // a 4.5em label column to say. In its place branchStageAccentRail continues the header slab's status bar
+        // down the card's left edge under a thin scope line, grouping the body the way an editor's indent guide
+        // groups a block, and fading out at the bottom where the stage ends on the open page.
         //
         // The trunk's two framing helpers are deliberately absent: branchStageBase frames a white trunk (and
         // needs its opaque fill to hide the right-hand side of its own resting shadow), and branchStageLedge
         // draws the trunk's RIGHT edge — there is no trunk to have either.
-        //
-        // The down-shadow starts at 0, not at the rail: with no trunk the construct's full width is stage, so
-        // the shadow spans exactly what branchStageSeam above it does.
         div {
             css {
                 position = Position.relative
             }
 
-            branchStageRail()
+            branchStageAccentRail(accent, fadeBottom = true)
 
             branchStageSeam()
-            branchStageTopShadow(0.px) {
+            branchStageTopShadow(ScriptStepDisplayDefault.statusBorderWidth) {
                 renderBody(progress)
             }
         }

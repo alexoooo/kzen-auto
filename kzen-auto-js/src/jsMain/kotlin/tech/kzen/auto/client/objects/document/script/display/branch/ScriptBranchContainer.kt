@@ -16,17 +16,18 @@ import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------
-// NB: shared branch-row layout for IfStep (Then/Else) and DoWhileStep (Do). Renders a narrow
-//     white "indent" column on the left holding just the label, paired with the branch's step list
-//     on the right. The strip stretches to the row's full height via flex `alignItems = stretch`
-//     plus 32px vertical padding — so the strip's white bg covers the right column's top/bottom
-//     32px placeholder reservations on the LEFT 4em, and adjacent branches' strips meet flush
-//     forming one continuous F-shape trunk that extends to the bottom of the last branch's row.
+// NB: shared branch-row layout for IfStep (Then/Else). Renders a narrow white "indent" column on
+//     the left holding just the label, paired with the branch's step list on the right. The strip
+//     stretches to the row's full height via flex `alignItems = stretch` plus 32px vertical padding
+//     — so the strip's white bg covers the right column's top/bottom 32px placeholder reservations
+//     on the LEFT 4em, and adjacent branches' strips meet flush forming one continuous F-shape trunk
+//     that extends to the bottom of the last branch's row.
 //
-//     ForEachStep deliberately does NOT use this: it has a single body whose only label would be
-//     its loop item, and that reads better as a managed row inside the body (see ForEachItemRow), so
-//     it lays out against a hairline rail instead of a trunk. The label column earns its width only
-//     where the label distinguishes sibling branches.
+//     The single-branch constructs deliberately do NOT use this: ForEachStep's only label would be
+//     its loop item, which reads better as a managed row inside the body (see ForEachItemRow), and
+//     DoWhileStep's body is bracketed by the header slab above and the While footer below. Both lay
+//     out against a hairline rail instead of a trunk (branchStageRail). The label column earns its
+//     width only where the label distinguishes sibling branches.
 //
 //     The right column is deliberately transparent (page gray shows through around the steps) so
 //     each step card reads as a discrete white card on gray, not as part of one solid slab.

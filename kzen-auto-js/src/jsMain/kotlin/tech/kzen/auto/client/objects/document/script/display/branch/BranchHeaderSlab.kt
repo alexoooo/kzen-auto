@@ -12,9 +12,12 @@ import tech.kzen.lib.common.service.store.MirroredGraphStore
 import web.cssom.*
 
 
-// Shared white-card scaffold for branch-bearing steps (If, ForEach): a header row over an
-// attribute-editor row, wrapped in a white card with a left status colour bar (matching leaf steps,
-// rather than a filled header) and bottom padding so the next branch slab meets it flush.
+// Shared white-card scaffold for branch-bearing steps (If, ForEach, DoWhile): a header row over an
+// optional attribute-editor row, wrapped in a white card with a left status colour bar (matching leaf
+// steps, rather than a filled header) and bottom padding so the next branch slab meets it flush.
+//
+// [body] is null for a construct that tests AFTER its branch runs (DoWhile), whose editor belongs in
+// the footer below the stage rather than in this slab.
 fun ChildrenBuilder.branchHeaderSlab(
     objectLocation: ObjectLocation,
     icon: String,
@@ -26,7 +29,7 @@ fun ChildrenBuilder.branchHeaderSlab(
     typeMetadata: String? = null,
     validationError: String? = null,
     partial: Boolean = false,
-    body: ChildrenBuilder.() -> Unit
+    body: (ChildrenBuilder.() -> Unit)? = null
 ) {
     val traceState = trace?.state ?: StepTrace.State.Idle
 
@@ -38,7 +41,7 @@ fun ChildrenBuilder.branchHeaderSlab(
             // Status shown as a left colour bar (gold next-to-run / running, green done, red error),
             // consistent with the leaf step cards — instead of filling the header background. 4px is
             // kept even when idle (white) so there's no layout shift on state change.
-            borderLeftWidth = 4.px
+            borderLeftWidth = ScriptStepDisplayDefault.statusBorderWidth
             borderLeftStyle = LineStyle.solid
             borderLeftColor = ScriptStepDisplayDefault.statusBorderColor(
                 traceState, trace?.error, isNextToRun, validationError)
@@ -77,11 +80,13 @@ fun ChildrenBuilder.branchHeaderSlab(
             }
         }
 
-        div {
-            css {
-                padding = Padding(0.em, 1.em, 0.em, 1.em)
+        if (body != null) {
+            div {
+                css {
+                    padding = Padding(0.em, 1.em, 0.em, 1.em)
+                }
+                body()
             }
-            body()
         }
     }
 }

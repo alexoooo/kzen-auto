@@ -19,24 +19,31 @@ import web.cssom.*
 // once (spans the whole wrapper), and per branch a branchStageSeam() followed by the branch
 // content inside branchStageTopShadow { ... }.
 //
-// TWO LEFT-EDGE TREATMENTS. If and DoWhile lay out against the labelled white trunk
-// ([branchTrunkOuterEdge]), framed by branchStageBase + branchStageLedge. ForEach has no trunk at
-// all — its loop item reads as a managed row in the body — so it gets branchStageRail instead: a
-// bare vertical scope line, with [branchRailWidth] of indent holding the body clear of it. The
-// masking note above applies only to the trunk case; the rail paints straight onto the gray stage,
-// which is why it is a gradient band and not a bordered box (see branchStageRail).
+// TWO LEFT-EDGE TREATMENTS. If lays its Then/Else out against the labelled white trunk
+// ([branchTrunkOuterEdge]), framed by branchStageBase + branchStageLedge. The single-branch
+// constructs (ForEach, DoWhile) have no trunk at all — with no sibling branch to tell apart, a label
+// column has nothing to say — so they get branchStageAccentRail instead: the header slab's status
+// bar continued down the card's own left edge, scope line riding its outer edge, with
+// [branchRailWidth] of indent holding the body clear of both. The masking note above applies only to
+// the trunk case; a rail paints straight onto the gray stage, which is why the line is a gradient
+// band and not a bordered box (see branchStageAccentRail).
 
 // Boundary line colour — matches the page seam / sidebar border.
 private val seamColor = Color("rgba(0, 0, 0, 0.12)")
+
+// Dissolves the last 1.5em of a vertical edge, for a stage that ends on the open page rather than on
+// another slab's seam. Shared by the accent band and the scope line so they trail off together.
+private val bottomFadeMask = "linear-gradient(to bottom, black calc(100% - 1.5em), transparent)"
+    .unsafeCast<MaskImage>()
 
 // Trunk outer right edge from the row's left. scriptBranchContainer's trunk is content-box:
 // 3em content width + 2×0.75em horizontal padding = 4.5em (keep in sync with that width).
 val branchTrunkOuterEdge = 4.5.em
 
-// ForEach's body indent: how far the body's rows are held off the card's left edge. This is layout
-// only — branchStageRail's line is a few px of paint at x=0, and the rest is the breathing room
-// between that line and the dependency gutter, the way an editor's indent guide sits clear of the
-// code it groups.
+// The trunkless body indent (ForEach, DoWhile): how far the body's rows are held off the card's left
+// edge. This is layout only — branchStageAccentRail's band and line are a few px of paint at the
+// card's edge, and the rest is the breathing room between them and the dependency gutter, the way an
+// editor's indent guide sits clear of the code it groups.
 val branchRailWidth = 1.25.em
 
 
@@ -72,8 +79,10 @@ fun ChildrenBuilder.branchStageSeam() {
 // Absolutely positioned to span the full height of its `position: relative` parent (so it's
 // continuous across all branches of a construct); pointer-events none so step cards stay clickable.
 // The bottom end is masked away so the line trails off instead of terminating in a square edge that
-// would clash with the frame's rounded bottom corner.
-private fun ChildrenBuilder.branchStageVerticalEdge(edgeLeft: Length) {
+// would clash with the frame's rounded bottom corner — unless [fadeBottom] is false, for a construct
+// whose stage is CLOSED by a white footer below (DoWhile's While row): there the line lands on that
+// footer's seam, and fading it short would leave the scope line hanging above a hard edge.
+private fun ChildrenBuilder.branchStageVerticalEdge(edgeLeft: Length, fadeBottom: Boolean) {
     div {
         css {
             position = Position.absolute
@@ -88,31 +97,56 @@ private fun ChildrenBuilder.branchStageVerticalEdge(edgeLeft: Length) {
                 stop(seamColor, 1.px),
                 stop(Color("rgba(0, 0, 0, 0)"), 8.px))      // soft cast onto stage
 
-            maskImage = "linear-gradient(to bottom, black calc(100% - 1.5em), transparent)"
-                .unsafeCast<MaskImage>()
+            if (fadeBottom) {
+                maskImage = bottomFadeMask
+            }
         }
     }
 }
 
 
-// Trunk-bearing constructs (If, DoWhile): the ledge down the white trunk's outer RIGHT edge, sitting
-// in the 0.5em trunk→stage gap, with the trunk's white fill on one side and the gray stage on the
-// other. Paired with branchStageBase, which frames the trunk's other two edges.
+// Trunk-bearing constructs (If): the ledge down the white trunk's outer RIGHT edge, sitting in the
+// 0.5em trunk→stage gap, with the trunk's white fill on one side and the gray stage on the other.
+// Paired with branchStageBase, which frames the trunk's other two edges.
 fun ChildrenBuilder.branchStageLedge() {
-    branchStageVerticalEdge(branchTrunkOuterEdge)
+    branchStageVerticalEdge(branchTrunkOuterEdge, fadeBottom = true)
 }
 
 
-// Trunkless constructs (ForEach): the same edge moved to the construct's own LEFT edge, where it
-// becomes a thin vertical scope line — the header card's left edge continuing past the seam to group
-// the body, the way an editor's indent guide groups a block. [branchRailWidth] of body indent holds
-// the rows clear of it.
+// Trunkless constructs (ForEach, DoWhile): the header slab's status bar continued down the stage's
+// own left edge in [accent], with a thin vertical scope line riding its outer edge the way
+// branchStageLedge rides the trunk's. The band carries the construct's white (or, once running, its
+// run colour) past the seam, so a stage closed by a second white slab reads as one card rather than
+// two; the line groups the body the way an editor's indent guide groups a block. [branchRailWidth] of
+// body indent measures past both.
+//
+// The stage therefore begins at the band's outer edge, so the caller passes that same width to
+// branchStageTopShadow — a down-shadow drawn over the band would smudge it.
+//
+// [fadeBottom] as in branchStageVerticalEdge, applied to band and line alike: on where the stage ends
+// on the open page (ForEach), off where a white footer closes it (DoWhile's While row).
 //
 // Deliberately NOT branchStageBase: that frames a white trunk, and its cardRestingShadow casts on
 // all four sides of a box as wide as the indent — over a bare stage the right-hand cast has no white
 // fill to hide it, so the box outlines itself and reads as a translucent rectangle, not a line.
-fun ChildrenBuilder.branchStageRail() {
-    branchStageVerticalEdge(0.px)
+fun ChildrenBuilder.branchStageAccentRail(accent: Color, fadeBottom: Boolean) {
+    div {
+        css {
+            position = Position.absolute
+            left = 0.px
+            top = 0.px
+            bottom = 0.px
+            width = ScriptStepDisplayDefault.statusBorderWidth
+            backgroundColor = accent
+            pointerEvents = None.none
+
+            if (fadeBottom) {
+                maskImage = bottomFadeMask
+            }
+        }
+    }
+
+    branchStageVerticalEdge(ScriptStepDisplayDefault.statusBorderWidth, fadeBottom)
 }
 
 
