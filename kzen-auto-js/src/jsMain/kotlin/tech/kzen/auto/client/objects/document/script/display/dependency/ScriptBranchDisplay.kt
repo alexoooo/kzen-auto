@@ -695,10 +695,7 @@ class ScriptBranchDisplay(
                 // NB: render the placeholder unconditionally so toggling insertion mode never
                 //     shifts layout. The 32px reservation also doubles as breathing room above/
                 //     below the step list. `insertionButton` itself is gated by `state.creating`,
-                //     so the visible "+" only appears when an archetype is selected. The branch-
-                //     indent strip in `scriptBranchContainer` uses `background-clip: content-box`
-                //     with matching 32px vertical padding so its white bg does NOT extend over
-                //     these placeholder regions.
+                //     so the visible "+" only appears when an archetype is selected.
                 // position:relative anchors the drop region for the top/bottom insertion points.
                 // showDropZone=false in the empty-branch case, where the whole region is filled instead.
                 div {

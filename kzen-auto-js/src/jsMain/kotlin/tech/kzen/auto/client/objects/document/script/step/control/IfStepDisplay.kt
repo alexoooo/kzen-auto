@@ -7,9 +7,11 @@ import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorMa
 import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
 import tech.kzen.auto.client.objects.document.script.display.*
 import tech.kzen.auto.client.objects.document.script.display.branch.*
+import tech.kzen.auto.client.objects.document.script.display.dependency.ScriptBranchDisplay
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
+import tech.kzen.auto.common.objects.document.script.model.StepTrace
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.location.AttributeLocation
@@ -18,7 +20,7 @@ import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.service.store.MirroredGraphStore
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
-import web.cssom.Position
+import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -37,6 +39,9 @@ class IfStepDisplay(
 
         private val elseAttributeName = AttributeName("else")
         private val elseAttributePath = AttributePath.ofName(elseAttributeName)
+
+        // Branch label: heading weight over the steps it groups, in the same subdued ink as DoWhile's "While".
+        private val branchLabelColor = Color("rgba(0, 0, 0, 0.7)")
     }
 
 
@@ -70,12 +75,21 @@ class IfStepDisplay(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
+        // The header slab derives this same bar from the trace it is passed; the stage's rail takes it from
+        // here, so the construct shows one left edge from the condition down through both branches.
+        val trace = state.stepTrace
+        val accent = ScriptStepDisplayDefault.statusBorderColor(
+            trace?.state ?: StepTrace.State.Idle,
+            trace?.error,
+            state.isNextToRun ?: false,
+            state.stepValidation?.errorMessage)
+
         branchHeaderSlab(
             objectLocation = props.common.objectLocation,
             icon = state.icon ?: "",
             description = state.description ?: "",
             title = state.title ?: "",
-            trace = state.stepTrace,
+            trace = trace,
             isNextToRun = state.isNextToRun ?: false,
             mirroredGraphStore = props.mirroredGraphStore,
             typeMetadata = state.stepValidation?.typeMetadata?.toSimple(),
@@ -87,72 +101,67 @@ class IfStepDisplay(
             }
         }
 
-        // Recessed-stage chrome wrapper, mirroring the page-level header/sidebar casting a shadow
-        // onto the gray stage. The white condition slab above plays the "header" role, the white
-        // trunk the "sidebar". Decorations are the shared branchStage* helpers; the only If-specific
-        // piece is the Then branch's bottom fade-to-white lip (see below).
+        // One recessed stage spanning both branches: a single rail down its whole height, since Then and Else
+        // are one construct's scope. Each branch then gets its own seam plus the down-shadow cast onto it from
+        // the white surface above — the condition slab for Then, the lip below for Else.
         div {
             css {
                 position = Position.relative
             }
 
-            // Vertical ledge down the trunk's right edge, continuous through both branches.
-            branchStageLedge()
+            branchStageAccentRail(accent, fadeBottom = true)
 
-            // Outer frame: hairline + soft shade down the trunk's left edge and across its bottom,
-            // with rounded bottom corners — completing the white "⌐" card frame (header = top).
-            branchStageBase()
-
-            // Then: shared seam + top down-shadow (cast from the white condition above). The white
-            // "lip" at the bottom of this branch (branchStageThenLip) stands in for a white slab
-            // above the Else seam, so both seams read the same (white above → 1px line → shadow
-            // below, the way the white condition slab sits above the Then seam).
             branchStageSeam()
             div {
                 css {
-                    // position:relative so the lip's bottom:0 anchors to THIS branch's bottom (not
-                    // the whole construct's), and so the lip sits in the positioned paint layer above
-                    // the absolutely-positioned branchStageLedge — the lip interrupts the ledge where
-                    // they cross, keeping the Else seam's white line crisp and continuous.
+                    // position:relative so the lip's bottom:0 anchors to THIS branch's bottom, not the whole
+                    // construct's.
                     position = Position.relative
                 }
                 branchStageTopShadow {
-                    renderThenBranch()
+                    renderBranch("Then", thenAttributePath)
                 }
                 branchStageThenLip()
             }
 
-            // Else: shared seam + top down-shadow, cast from the white lip formed above.
             branchStageSeam()
             branchStageTopShadow {
-                renderElseBranch()
+                renderBranch("Else", elseAttributePath)
             }
         }
     }
 
 
-    private fun ChildrenBuilder.renderThenBranch() {
-        scriptBranchContainer(
-            label = "Then",
-            branchLocation = AttributeLocation(props.common.objectLocation, thenAttributePath),
-            stepDisplayManager = props.stepDisplayManager,
-            scriptCommander = props.scriptCommander,
-            roundedBottom = false,
-            clientStateGlobal = props.clientStateGlobal,
-            mirroredGraphStore = props.mirroredGraphStore,
-            objectStableMapper = props.objectStableMapper)
-    }
+    // Then and Else differ only in label and branch attribute — the indent clearing the rail, the label heading
+    // it and the step list under it are one shape.
+    private fun ChildrenBuilder.renderBranch(label: String, branchAttributePath: AttributePath) {
+        div {
+            css {
+                // The rail is paint only (absolutely positioned over the stage's left edge), so this indent is
+                // the only thing holding the label and the step rows off the scope line.
+                marginLeft = branchRailWidth
+                minHeight = 4.em
+            }
 
+            div {
+                css {
+                    // Clears the seam above; the step list reserves its own 32px below, so no bottom padding here.
+                    paddingTop = 0.75.em
+                    fontWeight = FontWeight.bold
+                    color = branchLabelColor
+                }
+                +label
+            }
 
-    private fun ChildrenBuilder.renderElseBranch() {
-        scriptBranchContainer(
-            label = "Else",
-            branchLocation = AttributeLocation(props.common.objectLocation, elseAttributePath),
-            stepDisplayManager = props.stepDisplayManager,
-            scriptCommander = props.scriptCommander,
-            roundedBottom = true,
-            clientStateGlobal = props.clientStateGlobal,
-            mirroredGraphStore = props.mirroredGraphStore,
-            objectStableMapper = props.objectStableMapper)
+            ScriptBranchDisplay::class.react {
+                attributeLocation = AttributeLocation(props.common.objectLocation, branchAttributePath)
+                nested = true
+                stepDisplayManager = props.stepDisplayManager
+                scriptCommander = props.scriptCommander
+                clientStateGlobal = props.clientStateGlobal
+                mirroredGraphStore = props.mirroredGraphStore
+                objectStableMapper = props.objectStableMapper
+            }
+        }
     }
 }

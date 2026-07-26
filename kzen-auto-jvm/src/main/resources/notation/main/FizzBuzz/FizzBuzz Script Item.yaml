@@ -14,10 +14,6 @@ main.parameters/number:
     nullable: false
   default: 15
 
-main.steps/Formula 3:
-  is: FormulaStep
-  code: number
-
 main.steps/Divisible By 3:
   is: FormulaStep
   code: "number % 3 == 0"

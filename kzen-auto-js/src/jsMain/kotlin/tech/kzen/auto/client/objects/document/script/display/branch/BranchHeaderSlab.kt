@@ -48,7 +48,7 @@ fun ChildrenBuilder.branchHeaderSlab(
 
             // Soft elevation matching the leaf step cards (shared tokens). Only the TOP corners are
             // rounded — the bottom stays square (crisp), since that edge is where the recessed-stage
-            // down-shadow onto the branch below originates and the white trunk descends from it.
+            // down-shadow onto the branch below originates.
             // overflow:hidden clips inner content to the rounded top corners; the card's own
             // box-shadow is painted outside the box and is unaffected by the clip.
             borderTopLeftRadius = ScriptStepDisplayDefault.cardCornerRadius

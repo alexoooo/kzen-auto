@@ -182,15 +182,9 @@ class ForEachStepDisplay(
             }
         }
 
-        // Recessed-stage chrome, same treatment as IfStepDisplay's branches but WITHOUT the labelled white trunk:
-        // a ForEach has a single body and its loop item reads as a managed row inside it, so there is nothing for
-        // a 4.5em label column to say. In its place branchStageAccentRail continues the header slab's status bar
-        // down the card's left edge under a thin scope line, grouping the body the way an editor's indent guide
-        // groups a block, and fading out at the bottom where the stage ends on the open page.
-        //
-        // The trunk's two framing helpers are deliberately absent: branchStageBase frames a white trunk (and
-        // needs its opaque fill to hide the right-hand side of its own resting shadow), and branchStageLedge
-        // draws the trunk's RIGHT edge — there is no trunk to have either.
+        // Recessed stage: branchStageAccentRail continues the header slab's status bar down the card's left edge
+        // under a thin scope line, grouping the body the way an editor's indent guide groups a block, and fading
+        // out at the bottom where the stage ends on the open page.
         div {
             css {
                 position = Position.relative
@@ -199,7 +193,7 @@ class ForEachStepDisplay(
             branchStageAccentRail(accent, fadeBottom = true)
 
             branchStageSeam()
-            branchStageTopShadow(ScriptStepDisplayDefault.statusBorderWidth) {
+            branchStageTopShadow {
                 renderBody(progress)
             }
         }

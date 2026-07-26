@@ -105,10 +105,8 @@ class DoWhileStepDisplay(
     }
 
 
-    // The loop body: the step list on the recessed gray stage, laid out against a scope line rather than
-    // a labelled white trunk (see BranchStageChrome's treatments) — a single-branch construct has no
-    // sibling branch for a label column to tell apart. The accent variant of the rail, since the header
-    // slab above and the While footer below bracket this stage between two white slabs.
+    // The loop body: the step list on the recessed gray stage. The rail does not fade at its bottom here,
+    // since the header slab above and the While footer below bracket this stage between two white slabs.
     private fun ChildrenBuilder.renderBodyStage(accent: Color) {
         div {
             css {
@@ -117,10 +115,9 @@ class DoWhileStepDisplay(
 
             branchStageAccentRail(accent, fadeBottom = false)
 
-            // Seam + down-shadow cast by the header slab above. The shadow starts at the accent band's
-            // outer edge — that is where the stage begins, and a shadow over the band would smudge it.
+            // Seam + down-shadow cast by the header slab above.
             branchStageSeam()
-            branchStageTopShadow(ScriptStepDisplayDefault.statusBorderWidth) {
+            branchStageTopShadow {
                 div {
                     css {
                         // The rail is paint only (absolutely positioned over the stage's left edge), so
@@ -164,8 +161,8 @@ class DoWhileStepDisplay(
                 boxShadow = ScriptStepDisplayDefault.cardRestingShadow
             }
 
-            // "While" label, sized to its own text — with no trunk above, there is no fixed column width
-            // to align to — and centred against the editor beside it by the row's alignItems.
+            // "While" label, sized to its own text and centred against the editor beside it by the row's
+            // alignItems.
             div {
                 css {
                     flexShrink = number(0.0)
