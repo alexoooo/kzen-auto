@@ -81,8 +81,10 @@ class ScriptStepDisplayDefault(
         val cardHoverShadow = BoxShadow(0.px, 2.px, 6.px, Color("rgba(0, 0, 0, 0.18)"))
 
         // Width of the [statusBorderColor] bar — shared with branchHeaderSlab and branchStageAccentRail,
-        // so a construct whose stage runs between two white slabs shows one unbroken left edge.
-        val statusBorderWidth = 4.px
+        // so a construct whose stage runs between two white slabs shows one unbroken left edge. The Int form
+        // is what BranchStageChrome's rail geometry composes into gradient stop strings.
+        const val statusBorderWidthPx = 4
+        val statusBorderWidth = statusBorderWidthPx.px
 
         fun statusBorderColor(
             traceState: StepTrace.State,

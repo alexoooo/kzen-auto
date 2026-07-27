@@ -32,10 +32,34 @@ private val bottomFadeMask = "linear-gradient(to bottom, black calc(100% - 1.5em
 // dependency gutter, the way an editor's indent guide sits clear of the code it groups.
 val branchRailWidth = 1.25.em
 
+// The scope line's soft cast onto the stage, measured from the accent band's outer edge.
+private const val scopeLineWidthPx = 8
+private val scopeLineWidth = scopeLineWidthPx.px
 
-// Full-width crisp 1px gray seam separating a white slab above from the branch stage below. Runs the card's
-// whole width; the accent band paints over its left few px (absolutely positioned, later in paint order), so
-// the band stays unbroken where a construct's branches meet.
+// The rail's total painted width — accent band plus scope-line cast — and so where the stage's own surface
+// begins. branchStageSeam ramps its left end in from the band's outer edge to here, complementing the scope
+// line's fade over that same span so the two inks sum to a constant: the corner then carries the same weight
+// as either line alone, and the seam reads as JOINING the rail rather than crossing it.
+//
+// Both simpler alternatives are visibly wrong, and the ramp is the only option with neither artifact:
+//   - seam at full strength across the strip — it composites under the rail's translucent cast and the
+//     doubled ink shows through as a dark notch breaking the rail;
+//   - seam absent across the strip — that patch is then lighter than the seam beside it, and the eye reads
+//     the shortfall as a light rectangular gap at the corner.
+// Soft casts are a different case entirely and need no ramp — see branchStageTopShadow.
+private const val railPaintWidthPx = ScriptStepDisplayDefault.statusBorderWidthPx + scopeLineWidthPx
+
+
+// Crisp 1px gray seam separating a white slab above from the branch stage below. Its left end ramps in
+// across the rail's cast — from the accent band's outer edge to [railPaintWidthPx] — so the seam and the
+// rail meet as the construct's corner instead of one crossing the other; see [railPaintWidthPx] for why
+// both a plain overlap and a plain cut read as artifacts there.
+//
+// Opening seams only. The mirror hairline where a stage CLOSES onto a slab below (DoWhile's While footer)
+// is that slab's own `border-top`, not one of these: this element sits on the gray stage, so its 12% black
+// lands on ~225 and reads far darker than the same 12% on the footer's white ~255. Matching the two ends
+// structurally would visibly thicken the footer's edge — see branchStageAccentRail's bandOverhangBottomPx
+// for how that end's corner is kept clean instead.
 //
 // Deliberately a hard `height: 1px` fill for maximum sharpness. Caveat: on fractional display
 // scaling (Windows 125%/150% → device-pixel ratio 1.25/1.5) a 1 *CSS* px line is 1.25–1.5
@@ -50,10 +74,14 @@ fun ChildrenBuilder.branchStageSeam() {
             height = 1.px
             backgroundColor = seamColor
 
-            // Fade the line out at its right (open) end — the stage's side where step cards overflow
-            // — so it doesn't terminate in a hard vertical edge that clashes with the frame's rounded
-            // corners. The left end stays solid, running under the accent band to the card's edge.
-            maskImage = "linear-gradient(to right, black calc(100% - 2.5em), transparent)"
+            // Ramp the left end in across the rail's cast, mirroring its fade-out so the two sum to a
+            // constant — see [railPaintWidthPx]. Fade the right (open) end — the stage's side where step
+            // cards overflow — so it doesn't terminate in a hard vertical edge that clashes with the
+            // frame's rounded corners.
+            maskImage = ("linear-gradient(to right," +
+                    " transparent ${ScriptStepDisplayDefault.statusBorderWidthPx}px," +
+                    " black ${railPaintWidthPx}px," +
+                    " black calc(100% - 2.5em), transparent)")
                 .unsafeCast<MaskImage>()
         }
     }
@@ -69,23 +97,36 @@ fun ChildrenBuilder.branchStageSeam() {
 // Called ONCE per construct, on the wrapper spanning all of its branches, so a two-branch construct (If)
 // shows one unbroken rail through the seam that divides them.
 //
-// The stage therefore begins at the band's outer edge, which is where branchStageTopShadow starts its
-// down-shadow — a shadow drawn over the band would smudge it.
+// The stage's own surface therefore begins at the rail's outer edge, [railPaintWidthPx] — the span over
+// which branchStageSeam ramps its left end in, so its line joins the rail at the corner instead of crossing
+// it. branchStageTopShadow's soft cast starts at the band's outer edge and runs straight on over the scope
+// line, so the corner carries both casts overlapping as well.
 //
 // [fadeBottom]: on where the stage ends on the open page (If, ForEach); off where a white footer closes it
 // (DoWhile's While row), since there the rail lands on that footer's seam and fading it short would leave
 // band and line hanging above a hard edge.
 //
+// [bandOverhangBottomPx]: extends the BAND alone that many px past the wrapper, to paint over the hairline
+// of a slab closing the stage from below. A slab's `border-top` miters diagonally into its `border-left`,
+// so its leftmost few px are a wedge of hairline grey cutting across the status bar — a notch in what
+// should be one unbroken edge down the whole construct. Overhanging the opaque band by the hairline's own
+// width covers exactly that wedge and nothing else, so the slab's edge keeps the weight it gets from
+// sitting on white. Zero where no slab closes the stage.
+//
 // Deliberately a paint-only band and gradient line rather than a bordered box: cardRestingShadow on a box as
 // wide as the indent casts on all four sides, and over a bare stage the right-hand cast has no white fill to
 // hide it, so the box outlines itself and reads as a translucent rectangle, not a line.
-fun ChildrenBuilder.branchStageAccentRail(accent: Color, fadeBottom: Boolean) {
+fun ChildrenBuilder.branchStageAccentRail(
+    accent: Color,
+    fadeBottom: Boolean,
+    bandOverhangBottomPx: Int = 0
+) {
     div {
         css {
             position = Position.absolute
             left = 0.px
             top = 0.px
-            bottom = 0.px
+            bottom = (-bandOverhangBottomPx).px
             width = ScriptStepDisplayDefault.statusBorderWidth
             backgroundColor = accent
             pointerEvents = None.none
@@ -96,22 +137,23 @@ fun ChildrenBuilder.branchStageAccentRail(accent: Color, fadeBottom: Boolean) {
         }
     }
 
-    // Scope line — the vertical counterpart of branchStageSeam: a crisp 1px gray line with a soft cast
-    // fading over 8px onto the stage, the "sidebar" analog. Spans the full height of the `position: relative`
-    // wrapper, so it is continuous across every branch; pointer-events none so step cards stay clickable.
+    // Scope line — the vertical counterpart of branchStageSeam: a crisp 1px gray line with a soft cast fading
+    // over [scopeLineWidth] onto the stage, the "sidebar" analog. Spans the full height of the
+    // `position: relative` wrapper, so it is continuous across every branch; pointer-events none so step cards
+    // stay clickable.
     div {
         css {
             position = Position.absolute
             left = ScriptStepDisplayDefault.statusBorderWidth
             top = 0.px
             bottom = 0.px
-            width = 8.px
+            width = scopeLineWidth
             pointerEvents = None.none
             backgroundImage = linearGradient(
                 90.deg,
-                stop(seamColor, 0.px),                      // crisp 1px line
+                stop(seamColor, 0.px),                          // crisp 1px line
                 stop(seamColor, 1.px),
-                stop(Color("rgba(0, 0, 0, 0)"), 8.px))      // soft cast onto stage
+                stop(Color("rgba(0, 0, 0, 0)"), scopeLineWidth))  // soft cast onto stage
 
             if (fadeBottom) {
                 maskImage = bottomFadeMask
@@ -125,9 +167,12 @@ fun ChildrenBuilder.branchStageAccentRail(accent: Color, fadeBottom: Boolean) {
 // stage. Paint-only (zero layout height).
 //
 // The shadow is a separate absolute overlay (not a background on this content-wrapping div) so its
-// right edge can be faded with a mask without also clipping the overflowing step cards. It spans the
-// STAGE only — starting at the accent band's outer edge, since a shadow drawn over the band would smudge
-// it — and its 7px land in the empty space every branch body opens with (a leading row's top padding, or
+// right edge can be faded with a mask without also clipping the overflowing step cards. It starts at the
+// accent band's outer edge, since a shadow drawn over the opaque band would darken it outright — but unlike
+// branchStageSeam it needs no left-end ramp across the scope line: it is a soft cast to begin with, so
+// running straight on over that line just gives the inner corner two overlapping casts, the way a recessed
+// corner lit from above reads. Soft casts compound into depth; only a crisp line composited under one reads
+// as a break. Its 7px land in the empty space every branch body opens with (a leading row's top padding, or
 // the branch's own 32px insertion-reservation strip — see firstOrLastInsertionPoint), so painting it above
 // content is invisible. position:relative here just scopes the overlay to the branch top; it sets no
 // z-index, so it creates no stacking context (the screenshot preview's cross-step z-ordering and the
@@ -167,11 +212,12 @@ fun ChildrenBuilder.branchStageTopShadow(block: ChildrenBuilder.() -> Unit) {
 // way the white condition slab sits above the Then seam).
 //
 // A paint-only absolute element rather than a background on the branch wrapper, so its right edge can be
-// faded with a mask without also fading the (overflowing) step cards. It spans the STAGE only — starting at
-// the accent band's outer edge, so the band runs through it unbroken and a running If shows one continuous
-// coloured edge. Sits in the bottom gap below the last Then step (no card content there), and paints above
-// the rail's scope line (later in the positioned paint order), interrupting that line for its own height —
-// which is what keeps the Else seam's white reading crisp.
+// faded with a mask without also fading the (overflowing) step cards. Starts at the accent band's outer edge
+// and needs no ramp across the scope line the way branchStageSeam does: it is an OPAQUE white fill, so
+// nothing composites through it, and covering that line is the point — it paints above it (later in the
+// positioned paint order), interrupting it for its own height, which is what makes the Else seam read under
+// a white slab. Only the band is spared, so it runs through unbroken and a running If shows one continuous
+// coloured edge. Sits in the bottom gap below the last Then step (no card content there).
 //
 // Caller must give the wrapping branch div position:relative so bottom:0 anchors to the Then
 // branch's bottom (not the whole construct's).

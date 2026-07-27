@@ -30,8 +30,13 @@ class DoWhileStepDisplay(
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        // Hairline matching the branch-stage seam, used to separate the white While footer from the
-        // gray body stage above it (and to terminate the stage's scope rail, which runs into it).
+        // Hairline separating the white While footer from the gray body stage above it — the closing
+        // mirror of the stage's opening branchStageSeam. Drawn as the footer's own border-top rather than
+        // as a seam element on the stage: sitting on the footer's white, 12% black reads at the intended
+        // hairline weight, where the same colour on the gray stage would come out markedly darker. Its
+        // width is what the rail's band overhangs to cover the border's left miter.
+        private const val bodySeamWidthPx = 1
+        private val bodySeamWidth = bodySeamWidthPx.px
         private val bodySeamColor = Color("rgba(0, 0, 0, 0.12)")
 
         // Footer content inset, matching branchHeaderSlab's header padding: both sit inside a status bar
@@ -113,7 +118,11 @@ class DoWhileStepDisplay(
                 position = Position.relative
             }
 
-            branchStageAccentRail(accent, fadeBottom = false)
+            // The band overhangs onto the While footer's border-top, covering the wedge that border's
+            // miter would otherwise cut across the status bar — so the construct's left edge stays one
+            // unbroken bar through all three sections. Only the band overhangs; the footer's hairline is
+            // untouched everywhere right of it.
+            branchStageAccentRail(accent, fadeBottom = false, bandOverhangBottomPx = bodySeamWidthPx)
 
             // Seam + down-shadow cast by the header slab above.
             branchStageSeam()
@@ -155,7 +164,7 @@ class DoWhileStepDisplay(
                 borderLeftWidth = ScriptStepDisplayDefault.statusBorderWidth
                 borderLeftStyle = LineStyle.solid
                 borderLeftColor = accent
-                borderTop = Border(1.px, LineStyle.solid, bodySeamColor)
+                borderTop = Border(bodySeamWidth, LineStyle.solid, bodySeamColor)
                 borderBottomLeftRadius = ScriptStepDisplayDefault.cardCornerRadius
                 borderBottomRightRadius = ScriptStepDisplayDefault.cardCornerRadius
                 boxShadow = ScriptStepDisplayDefault.cardRestingShadow
