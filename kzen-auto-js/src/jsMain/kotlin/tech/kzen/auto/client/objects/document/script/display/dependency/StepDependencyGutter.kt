@@ -3,6 +3,7 @@ package tech.kzen.auto.client.objects.document.script.display.dependency
 import emotion.react.css
 import react.ChildrenBuilder
 import react.dom.html.ReactHTML.div
+import tech.kzen.auto.client.wrap.refCallback
 import tech.kzen.auto.common.objects.document.script.model.ScriptDependencyAnalysis
 import tech.kzen.lib.common.model.location.ObjectLocation
 import web.cssom.*
@@ -21,12 +22,6 @@ private val stepDependencyMarkerBorderWidth = 2.px
 
 private val stepDependencyTrunkLineHalfMarginNeg = (-stepDependencyTrunkLineWidthPx / 2).px
 private val stepDependencyMarkerHalfMarginNeg = (-stepDependencyMarkerSizePx / 2).px
-
-private val stepDependencyLaneHalfWidth = (stepDependencyLaneWidthPx / 2).px
-
-// Top offset that centres a trunk-width line on a marker anchored at the lane's top edge.
-private val stepDependencyTrunkTopAtMarkerCenter =
-    (stepDependencyMarkerSizePx / 2 - stepDependencyTrunkLineWidthPx / 2).px
 
 
 private enum class MarkerKind { Source, Target }
@@ -58,7 +53,7 @@ fun ChildrenBuilder.stepDependencyGutterCellForStep(index: Int, edges: StepDepen
         //     The overlay polyline endpoint is then at row.left + laneWidth/2, and the cross-branch
         //     horizontal segment terminates BEFORE reaching any in-branch lane column — preventing
         //     it from visually crossing the in-branch trunks.
-        stepDependencyPhantomLane(
+        phantomMarkerLane(
             showSource = index in edges.crossBranchOutgoingSourceIndices,
             showTarget = index in edges.crossBranchIncomingTargetIndices)
     }
@@ -87,7 +82,7 @@ fun ChildrenBuilder.stepDependencyGutterCellForStep(index: Int, edges: StepDepen
 fun ChildrenBuilder.stepDependencyGutterCellForBetween(stepIndexAbove: Int, edges: StepDependencyEdges) {
     if (edges.hasCrossBranch) {
         // NB: reserve phantom slot at leftmost, matching the step-row layout for body-x consistency.
-        stepDependencyPhantomLane()
+        phantomMarkerLane()
     }
 
     laneContainer(edges) { laneEdges ->
@@ -129,45 +124,66 @@ private fun ChildrenBuilder.laneContainer(
 }
 
 
-// The cross-branch column, on its own. A row standing for a single object (an If chain's IfBranch) can only
-// ever have cross-branch edges — an in-branch lane needs two distinct indices in the row's own list — so this
-// IS its whole gutter, and a caller emitting it directly can reserve the column unconditionally, keeping
-// sibling rows in one left column whether or not each has an edge.
-//
-// [targetLeadIn]: how far left of this lane a target marker's connector reaches. ScriptDependencyOverlay
-// paints its polylines BEHIND the cards, so on a row that sits on an opaque surface (an If chain's condition
-// slab) the line vanishes where that surface begins and the marker reads as unconnected — this carries it the
-// rest of the way in. Null on the gray stage, where the polyline arrives under its own steam.
-fun ChildrenBuilder.stepDependencyPhantomLane(
+// The cross-branch column, on its own: the leftmost lane of a gutter cell, where an edge that leaves the
+// branch entirely starts or ends. Marker-only — the connecting line is ScriptDependencyOverlay's, since it
+// spans rows this cell knows nothing about.
+private fun ChildrenBuilder.phantomMarkerLane(
     showSource: Boolean = false,
-    showTarget: Boolean = false,
-    targetLeadIn: Length? = null
+    showTarget: Boolean = false
 ) {
     laneBox {
         if (showSource) {
             dependencyMarker(MarkerKind.Source)
         }
         if (showTarget) {
-            if (targetLeadIn != null) {
-                targetMarkerLeadIn(targetLeadIn)
-            }
             dependencyMarker(MarkerKind.Target)
         }
     }
 }
 
 
-// Ends at the target marker's centre, at the marker's own vertical centre, so it reads as the same line the
-// overlay's polyline terminates with rather than a second stroke meeting it.
-private fun ChildrenBuilder.targetMarkerLeadIn(leadIn: Length) {
+//---------------------------------------------------------------------------------------------------------------------
+/**
+ * A dependency anchor standing free of any row: one lane column carrying [rowLocation]'s marker, registered in
+ * [registry] so ScriptDependencyOverlay terminates that object's polyline here. For an object whose own row
+ * cannot host the marker — an If chain's IfBranch, whose condition sits on the construct's opaque card, so a
+ * marker in that row would have the card's surface between it and the wire (the overlay paints behind the
+ * cards). The caller positions this wherever the wire should end.
+ *
+ * Zero height by design, so it costs no layout wherever it is placed: the overlay reads only the registered
+ * element's left edge (lane centre = left + laneWidth / 2) and its top (the target marker's own top), and it is
+ * the ONLY consumer of a branch's registration — ScriptExecutionMargin looks rows up by executable step path
+ * and ScriptBranchDisplay by its own step list, neither of which an IfBranch is in.
+ *
+ * A single object outside a step list can only ever be a cross-branch endpoint (an in-branch lane needs two
+ * distinct indices in one list), which is why this is the phantom column alone.
+ */
+fun ChildrenBuilder.stepDependencyAnchorLane(
+    rowLocation: ObjectLocation,
+    registry: StepRowRefRegistry?,
+    showTarget: Boolean
+) {
     div {
+        // NB: the same column [laneBox] lays out, minus its flex sizing — this one is positioned by its
+        //     caller rather than laid out in a gutter row, but the overlay's `left + laneWidth / 2` anchor
+        //     math is shared, so the width has to be.
         css {
-            position = Position.absolute
-            top = stepDependencyTrunkTopAtMarkerCenter
-            right = 50.pct
-            width = leadIn.plus(stepDependencyLaneHalfWidth)
-            height = stepDependencyTrunkLineWidth
-            backgroundColor = stepDependencyTrunkColor
+            position = Position.relative
+            width = stepDependencyLaneWidth
+        }
+
+        if (registry != null) {
+            // NB: React 19 invokes Cleanup on detach. The closure captures the registry instance, which is
+            //     correct across a bridge swap — the instance is controller-scoped (see scriptGutterRow).
+            ref = refCallback { element ->
+                registry.register(rowLocation, element)
+                val cleanup: () -> Unit = { registry.unregister(rowLocation, element) }
+                cleanup
+            }
+        }
+
+        if (showTarget) {
+            dependencyMarker(MarkerKind.Target)
         }
     }
 }

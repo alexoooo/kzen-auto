@@ -4,6 +4,7 @@ import emotion.react.css
 import mui.material.Button
 import mui.material.IconButton
 import mui.material.Size
+import mui.system.sx
 import react.ChildrenBuilder
 import react.Key
 import react.dom.events.DragEvent
@@ -13,16 +14,13 @@ import tech.kzen.auto.client.objects.document.common.dragdrop.computeDropIndex
 import tech.kzen.auto.client.objects.document.common.dragdrop.dragHandle
 import tech.kzen.auto.client.objects.document.common.dragdrop.dropIndicator
 import tech.kzen.auto.client.objects.document.common.dragdrop.dropMarkerFor
-import tech.kzen.auto.client.objects.document.script.ScriptController
 import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
 import tech.kzen.auto.client.objects.document.script.display.*
 import tech.kzen.auto.client.objects.document.script.display.branch.*
 import tech.kzen.auto.client.objects.document.script.display.dependency.ScriptBranchDisplay
 import tech.kzen.auto.client.objects.document.script.display.dependency.StepDependencyEdges
-import tech.kzen.auto.client.objects.document.script.display.dependency.scriptGutterRow
 import tech.kzen.auto.client.objects.document.script.display.dependency.scriptGutterRowBodyInset
-import tech.kzen.auto.client.objects.document.script.display.dependency.stepDependencyGutterWidthPx
-import tech.kzen.auto.client.objects.document.script.display.dependency.stepDependencyPhantomLane
+import tech.kzen.auto.client.objects.document.script.display.dependency.stepDependencyAnchorLane
 import tech.kzen.auto.client.objects.document.script.model.scriptDependencyAnalysis
 import tech.kzen.auto.client.objects.document.script.model.stepRowRefRegistry
 import tech.kzen.auto.client.service.global.ClientState
@@ -67,10 +65,6 @@ external interface IfStepDisplayState: ScriptStepDisplayBaseState {
     // polyline terminates in.
     var branchEdges: Map<ObjectLocation, StepDependencyEdges>?
 
-    // The Else branch's own lanes. Not for a marker — the Else row owns no object — but for its width: the
-    // lanes shift the step cards below it right, and the row's label and add control line up with those cards.
-    var elseEdges: StepDependencyEdges?
-
     // Branch reordering, deliberately LOCAL rather than in ScriptStepDragStore: a branch drag is scoped to one
     // If, and every other If (and every step branch) ignores it because their own drag index is null.
     var branchDragIndex: Int?
@@ -80,24 +74,10 @@ external interface IfStepDisplayState: ScriptStepDisplayBaseState {
 
 
 //---------------------------------------------------------------------------------------------------------------------
-// What sits directly below a recessed stage, and so what its bottom edge has to close onto.
-private enum class StageBelow {
-    // A white condition slab, whose own border-top is the closing hairline.
-    ConditionSlab,
-
-    // Another recessed stage, which needs a white lip standing in for a slab above its seam.
-    ElseZone,
-
-    // Nothing — the construct ends on the open page, so the rail trails off.
-    OpenPage
-}
-
-
-//---------------------------------------------------------------------------------------------------------------------
 /**
  * A segmented if / else-if / ... / else chain: the title slab, then per condition branch a white slab carrying
  * that branch's condition over a recessed stage carrying its steps, then the Else zone, always last. Else has
- * no condition, so it gets no slab of its own — it opens its stage as a labelled zone instead.
+ * no condition, so its slab is a contentless ledge and its label floats over the top of its own stage.
  *
  * The chain carries no positional labels: precedence is position, first true wins, and the layout is what says
  * so. A branch is a nested IfBranch object, so the chain's order is those objects' document order — which is
@@ -131,6 +111,10 @@ class IfStepDisplay(
         // instead of index-shifting the sections after it — which would reconcile a branch's step subtree, and
         // its async-hydrating condition editor, against a different branch's.
         private val elseSectionKey = Key("else")
+
+        // The band the floated Else caption centres itself in: the strip ScriptBranchDisplay reserves above a
+        // branch's first step for its leading insertion point, which is empty whenever no insertion is armed.
+        private val elseCaptionHeight = 32.px
     }
 
 
@@ -186,14 +170,12 @@ class IfStepDisplay(
         val branchEdges = branchLocations.associateWith {
             StepDependencyEdges.compute(listOf(it), analysis)
         }
-        val elseEdges = StepDependencyEdges.compute(elseStepLocations, analysis)
 
         // NB: value compare (==) — every derived value is freshly allocated each fire, so a reference guard
         //     would never bail and each progress tick would re-render the whole construct.
         if (state.branchLocations == branchLocations &&
             state.elseEmpty == elseEmpty &&
-            state.branchEdges == branchEdges &&
-            state.elseEdges == elseEdges
+            state.branchEdges == branchEdges
         ) {
             return
         }
@@ -202,7 +184,6 @@ class IfStepDisplay(
             this.branchLocations = branchLocations
             this.elseEmpty = elseEmpty
             this.branchEdges = branchEdges
-            this.elseEdges = elseEdges
         }
     }
 
@@ -380,7 +361,11 @@ class IfStepDisplay(
 
         div {
             key = elseSectionKey
-            renderBranchStage(accent, StageBelow.OpenPage) {
+
+            // Opens the Else exactly as a condition opens its branch, minus the condition.
+            branchSectionLedge(accent)
+
+            renderBranchStage(accent, fadeBottom = true) {
                 renderElseZone()
             }
         }
@@ -399,15 +384,22 @@ class IfStepDisplay(
         div {
             key = Key(branchLocation.toReference().asString())
 
-            // The first slab continues the title slab's white surface; the rest each close a stage.
-            branchSectionSlab(accent, stageAbove = index > 0) {
+            branchSectionSlab(
+                accent,
+                outsetMarker = {
+                    // The branch's own edges can only come from outside it, so this is the phantom target
+                    // marker the overlay's polyline terminates in. Emitted whether or not there is one, so
+                    // setting a condition on a fresh branch never shifts anything.
+                    stepDependencyAnchorLane(
+                        branchLocation,
+                        stepRowRefRegistry(),
+                        showTarget = state.branchEdges?.get(branchLocation)?.hasCrossBranch ?: false)
+                }
+            ) {
                 renderConditionRow(index, branchLocation, branchCount)
             }
 
-            renderBranchStage(
-                accent,
-                if (index == branchCount - 1) StageBelow.ElseZone else StageBelow.ConditionSlab
-            ) {
+            renderBranchStage(accent, fadeBottom = false) {
                 ScriptBranchDisplay::class.react {
                     attributeLocation = AttributeLocation(
                         branchLocation, ScriptConventions.stepsAttributePath)
@@ -425,22 +417,22 @@ class IfStepDisplay(
 
     // A section's recessed stage: the step list, under the seam and down-shadow cast by the white surface above
     // it, with the construct's status bar continuing down its left edge.
+    //
+    // [fadeBottom] only for the last stage in the chain (Else): every other one closes onto the next section's
+    // white surface. No band overhang anywhere — the surface below opens with a divider that is meant to cross
+    // the bar, so there is no border miter to cover (see branchStageAccentRail).
     private fun ChildrenBuilder.renderBranchStage(
         accent: Color,
-        below: StageBelow,
+        fadeBottom: Boolean,
         content: ChildrenBuilder.() -> Unit
     ) {
         div {
             css {
-                // position:relative so the rail and the lip anchor to THIS stage, not the whole construct.
+                // position:relative so the rail anchors to THIS stage, not the whole construct.
                 position = Position.relative
             }
 
-            branchStageAccentRail(
-                accent,
-                fadeBottom = below == StageBelow.OpenPage,
-                bandOverhangBottomPx =
-                    if (below == StageBelow.ConditionSlab) branchSectionSlabSeamWidthPx else 0)
+            branchStageAccentRail(accent, fadeBottom)
 
             branchStageSeam()
             branchStageTopShadow {
@@ -456,19 +448,18 @@ class IfStepDisplay(
                     content()
                 }
             }
-
-            if (below == StageBelow.ElseZone) {
-                branchStageSectionLip()
-            }
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    // The branch's own row: condition editor, remove and drag affordances. Routed through scriptGutterRow so it
-    // registers in StepRowRefRegistry — the sole contract ScriptDependencyOverlay anchors its polylines to,
-    // without which the dependency elbow into a condition silently vanishes — and so its content lands in the
-    // identical left column as the step cards below it, which is what branchSlabContentPadding measures out.
+    // The branch's own row: condition editor, remove and drag affordances.
+    //
+    // Not a scriptGutterRow — the marker the overlay terminates in sits OUTSIDE the card (see the slab's
+    // outsetMarker), so there is no gutter here to lay out. What remains of that row's geometry is this one
+    // inset: the slab's branchSlabContentPadding puts the row on the stage's own indent, and the margin then
+    // measures out the same drag-handle strip a step card gets — so a condition and the steps it guards start
+    // in one column.
     //
     // Deliberately NOT marked data-step-header: ScriptExecutionMargin anchors on the If's OWN header row, and
     // its querySelector is document-first.
@@ -477,84 +468,69 @@ class IfStepDisplay(
         branchLocation: ObjectLocation,
         branchCount: Int
     ) {
-        scriptGutterRow(
-            rowLocation = branchLocation,
-            registry = stepRowRefRegistry(),
-            gutter = {
-                // The branch's only edges come from outside it, so this is the phantom target marker the
-                // overlay's polyline terminates in. Its column is reserved whether or not there is an edge, so
-                // setting a condition on a fresh branch does not shift the row it sits in. The lead-in spans
-                // the slab's padding, where the slab's white hides the polyline; it stops at the status bar,
-                // which the polyline is interrupted by on a step row too.
-                stepDependencyPhantomLane(
-                    showTarget = state.branchEdges?.get(branchLocation)?.hasCrossBranch ?: false,
-                    targetLeadIn = branchSlabContentPadding)
-            },
-            body = {
+        div {
+            css {
+                position = Position.relative
+                marginLeft = scriptGutterRowBodyInset
+
+                "&:hover > [data-drag-handle]" {
+                    opacity = number(1.0)
+                }
+            }
+
+            onDragOver = { event -> onBranchDragOver(index, event) }
+            onDrop = { event -> onBranchDrop(index, event) }
+
+            // Only offered once there is something to reorder.
+            if (branchCount > 1) {
+                dragHandle(
+                    isVisible = state.branchDragIndex == index,
+                    handleColor = branchDragHandleColor,
+                    onStart = { onBranchDragStart(index) },
+                    onEnd = { onBranchDragEnd() })
+            }
+
+            dropIndicator(dropMarkerFor(
+                state.branchDragIndex,
+                state.branchDragOverIndex,
+                state.branchDropAfter ?: false,
+                index))
+
+            div {
+                css {
+                    display = Display.flex
+                    alignItems = AlignItems.center
+                }
+
                 div {
                     css {
-                        position = Position.relative
-
-                        "&:hover > [data-drag-handle]" {
-                            opacity = number(1.0)
-                        }
+                        flexGrow = number(1.0)
+                        minWidth = 0.px
                     }
 
-                    onDragOver = { event -> onBranchDragOver(index, event) }
-                    onDrop = { event -> onBranchDrop(index, event) }
-
-                    // Only offered once there is something to reorder.
-                    if (branchCount > 1) {
-                        dragHandle(
-                            isVisible = state.branchDragIndex == index,
-                            handleColor = branchDragHandleColor,
-                            onStart = { onBranchDragStart(index) },
-                            onEnd = { onBranchDragEnd() })
-                    }
-
-                    dropIndicator(dropMarkerFor(
-                        state.branchDragIndex,
-                        state.branchDragOverIndex,
-                        state.branchDropAfter ?: false,
-                        index))
-
-                    div {
-                        css {
-                            display = Display.flex
-                            alignItems = AlignItems.center
-                        }
-
-                        div {
-                            css {
-                                flexGrow = number(1.0)
-                                minWidth = 0.px
-                            }
-
-                            props.attributeEditorManager.child(this) {
-                                this.objectLocation = branchLocation
-                                this.attributeName = ScriptConventions.conditionAttributeName
-                            }
-                        }
-
-                        // Removing the LAST condition branch is disallowed: an If with no branch at all is a
-                        // hand-edit, not something the editor should produce.
-                        if (branchCount > 1) {
-                            IconButton {
-                                title = "Remove branch"
-                                size = Size.small
-
-                                onClick = {
-                                    it.stopPropagation()
-                                    onRemoveBranch(branchLocation)
-                                }
-
-                                icon("material-symbols:delete") {}
-                            }
-                        }
+                    props.attributeEditorManager.child(this) {
+                        this.objectLocation = branchLocation
+                        this.attributeName = ScriptConventions.conditionAttributeName
                     }
                 }
-            },
-            bodyFillsWidth = true)
+
+                // Removing the LAST condition branch is disallowed: an If with no branch at all is a
+                // hand-edit, not something the editor should produce.
+                if (branchCount > 1) {
+                    IconButton {
+                        title = "Remove branch"
+                        size = Size.small
+
+                        onClick = {
+                            it.stopPropagation()
+                            onRemoveBranch(branchLocation)
+                        }
+
+                        icon("material-symbols:delete") {}
+                    }
+                }
+            }
+        }
     }
 
 
@@ -566,7 +542,7 @@ class IfStepDisplay(
     private fun ChildrenBuilder.renderElseZone() {
         val ghost = state.elseEmpty ?: false
 
-        renderElseRow(ghost)
+        renderElseCaption(ghost)
 
         // Empty, the step list is dimmed to a ghost so the chain reads as ending at the last condition.
         div {
@@ -589,23 +565,35 @@ class IfStepDisplay(
     }
 
 
-    // Else has no condition, so it opens its stage with a labelled row rather than a slab of its own — the
-    // shape a ForEach's loop item takes above its body steps.
-    private fun ChildrenBuilder.renderElseRow(ghost: Boolean) {
+    // Else has no condition to slab, so it names itself: a caption floated across the top of its own stage,
+    // label at the leading edge and the add control at the trailing one.
+    //
+    // Out of flow deliberately. The label is chrome, not a row — costing the Else 32px of height above its
+    // first step would make it read as a section with something in it. It lands in the strip every branch
+    // already reserves for its leading insertion point (see ScriptBranchDisplay.firstOrLastInsertionPoint),
+    // which is empty by construction, and pointer-events pass through it so the branch keeps the whole of its
+    // own drop zone — only the button takes clicks back.
+    //
+    // Its containing block is branchStageTopShadow's wrapper, i.e. the stage: `left` measures from the
+    // construct's left edge (hence the rail width, matching the indent the steps get) and `right` from its
+    // card edge.
+    private fun ChildrenBuilder.renderElseCaption(ghost: Boolean) {
         div {
             css {
+                position = Position.absolute
+                top = 0.px
+                left = branchRailWidth
+                right = 0.px
+                height = elseCaptionHeight
                 display = Display.flex
                 alignItems = AlignItems.center
+                pointerEvents = None.none
 
-                // Clears the seam above; the step list reserves its own 32px below, so no bottom padding.
-                paddingTop = 0.75.em
-
-                // Starts where a step card starts — past the branch's dependency lanes and the drag-handle
-                // strip — and spans that card's width, so the label leads the steps it groups and the add
-                // control lands on their right edge.
-                marginLeft = scriptGutterRowBodyInset
-                    .plus(stepDependencyGutterWidthPx(state.elseEdges ?: StepDependencyEdges.EMPTY).px)
-                width = ScriptController.stepWidth
+                // Above the insertion strip it floats over. That strip is `position: relative` and comes
+                // LATER in the branch's DOM, so without this it paints over the caption and swallows every
+                // click aimed at the add control — the label still shows through (the strip draws nothing),
+                // which is what makes the miss look like a dead button rather than an occlusion.
+                zIndex = integer(1)
             }
 
             div {
@@ -625,11 +613,16 @@ class IfStepDisplay(
     }
 
 
-    // Trails the Else row, where the condition it adds lands: last in the chain, immediately above Else. Never
-    // dimmed with an empty Else — that is the case where it is needed most.
+    // Trails the Else caption, where the condition it adds lands: last in the chain, immediately above Else.
+    // Never dimmed with an empty Else — that is the case where it is needed most.
     private fun ChildrenBuilder.renderAddBranch() {
         Button {
             size = Size.small
+
+            sx {
+                // Back on, against the caption's pass-through.
+                pointerEvents = Auto.auto
+            }
 
             onClick = {
                 it.stopPropagation()

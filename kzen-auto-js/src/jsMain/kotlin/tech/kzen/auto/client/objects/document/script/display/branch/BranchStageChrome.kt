@@ -57,11 +57,10 @@ private const val railPaintWidthPx = ScriptStepDisplayDefault.statusBorderWidthP
 // rail meet as the construct's corner instead of one crossing the other; see [railPaintWidthPx] for why
 // both a plain overlap and a plain cut read as artifacts there.
 //
-// Opening seams only. The mirror hairline where a stage CLOSES onto a slab below (branchSectionSlab,
-// DoWhile's While footer) is that slab's own `border-top`, not one of these: this element sits on the gray
-// stage, so its 12% black lands on ~225 and reads far darker than the same 12% on the slab's white ~255.
-// Matching the two ends structurally would visibly thicken the slab's edge — see branchStageAccentRail's
-// bandOverhangBottomPx for how that end's corner is kept clean instead.
+// Opening seams only. The mirror hairline where a stage CLOSES onto a slab below (branchSectionSlab's
+// divider, DoWhile's While footer border) belongs to that slab, not to this element: this one sits on the
+// gray stage, so its 12% black lands on ~225 and reads far darker than the same 12% on the slab's white ~255.
+// Matching the two ends structurally would visibly thicken the slab's edge.
 //
 // Deliberately a hard `height: 1px` fill for maximum sharpness. Caveat: on fractional display
 // scaling (Windows 125%/150% → device-pixel ratio 1.25/1.5) a 1 *CSS* px line is 1.25–1.5
@@ -98,7 +97,8 @@ fun ChildrenBuilder.branchStageSeam() {
 //
 // Called once per recessed stage, on that stage's own `position: relative` wrapper. Where white slabs divide
 // a construct into several stages (an If chain's per-branch condition slabs), each slab's own `border-left`
-// carries the bar across the gap, so the construct still reads as one left edge from its title card down.
+// carries the bar across the gap — interrupted only where that slab's own divider crosses it, which is what
+// makes each section read as a unit rather than the whole construct as one block.
 //
 // The stage's own surface therefore begins at the rail's outer edge, [railPaintWidthPx] — the span over
 // which branchStageSeam ramps its left end in, so its line joins the rail at the corner instead of crossing
@@ -109,12 +109,13 @@ fun ChildrenBuilder.branchStageSeam() {
 // (DoWhile's While row), since there the rail lands on that footer's seam and fading it short would leave
 // band and line hanging above a hard edge.
 //
-// [bandOverhangBottomPx]: extends the BAND alone that many px past the wrapper, to paint over the hairline
-// of a slab closing the stage from below. A slab's `border-top` miters diagonally into its `border-left`,
-// so its leftmost few px are a wedge of hairline grey cutting across the status bar — a notch in what
-// should be one unbroken edge down the whole construct. Overhanging the opaque band by the hairline's own
-// width covers exactly that wedge and nothing else, so the slab's edge keeps the weight it gets from
-// sitting on white. Zero where no slab closes the stage.
+// [bandOverhangBottomPx]: extends the BAND alone that many px past the wrapper, to paint over the `border-top`
+// of a slab closing the stage from below (DoWhile's While footer). Such a border miters diagonally into the
+// slab's `border-left`, so its leftmost few px are a wedge of hairline grey cutting across the status bar — a
+// notch in what should be one unbroken edge. Overhanging the opaque band by the border's own width covers
+// exactly that wedge and nothing else, so the slab's edge keeps the weight it gets from sitting on white.
+// Zero where nothing closes the stage, and zero where the surface below opens with a divider that is MEANT to
+// cross the bar (branchSectionSlab).
 //
 // Deliberately a paint-only band and gradient line rather than a bordered box: cardRestingShadow on a box as
 // wide as the indent casts on all four sides, and over a bare stage the right-hand cast has no white fill to
@@ -206,46 +207,5 @@ fun ChildrenBuilder.branchStageTopShadow(block: ChildrenBuilder.() -> Unit) {
         }
 
         block()
-    }
-}
-
-
-// The white "lip" at the BOTTOM of a stage whose next section is itself a recessed stage rather than a white
-// slab (an If chain's last condition branch, followed by Else) — standing in for a white slab above the NEXT
-// stage's seam, so that seam reads the same as the first one (white above → 1px line → soft shadow below, the
-// way the white header slab sits above the first stage's seam). Where a real slab follows, that slab's own
-// `border-top` closes the stage instead and no lip is emitted.
-//
-// A paint-only absolute element rather than a background on the section wrapper, so its right edge can be
-// faded with a mask without also fading the (overflowing) step cards. Starts at the accent band's outer edge
-// and needs no ramp across the scope line the way branchStageSeam does: it is an OPAQUE white fill, so
-// nothing composites through it, and covering that line is the point — it paints above it (later in the
-// positioned paint order), interrupting it for its own height, which is what makes the next seam read under
-// a white slab. Only the band is spared, so it runs through unbroken and a running If shows one continuous
-// coloured edge. Sits in the bottom gap below the section's last step (no card content there).
-//
-// Caller must give the wrapping section div position:relative so bottom:0 anchors to THAT section's
-// bottom (not the whole construct's).
-fun ChildrenBuilder.branchStageSectionLip() {
-    div {
-        css {
-            position = Position.absolute
-            left = ScriptStepDisplayDefault.statusBorderWidth
-            right = 0.px
-            bottom = 0.px
-            height = 18.px
-            pointerEvents = None.none
-
-            backgroundImage = linearGradient(
-                0.deg,
-                stop(NamedColor.white, 0.px),                 // white at the bottom (the Else seam)
-                stop(NamedColor.white, 4.px),                 // hold solid white for a few px above the line
-                stop(Color("rgba(255, 255, 255, 0)"), 18.px)) // then fade up to transparent
-
-            // Fade the right (open) end so the white lip doesn't terminate in a hard vertical edge
-            // against the gray stage, matching the seam's right-end fade.
-            maskImage = "linear-gradient(to right, black calc(100% - 2.5em), transparent)"
-                .unsafeCast<MaskImage>()
-        }
     }
 }

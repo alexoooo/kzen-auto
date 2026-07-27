@@ -24,18 +24,12 @@ val scriptGutterRowBodyInset = 1.25.em
 // that keeps a step row and a parameter row vertically aligned in the same column. Steps pass a trailing
 // thumbnail; parameters pass none. The registry arrives as a parameter because this is a plain function, with
 // no contextType slot of its own to reach the DocumentBridge through.
-//
-// [bodyFillsWidth]: for a row that belongs to a construct's OWN card (an If chain's condition slab) rather
-// than to a branch's step column. It has to end at that card's inset: the fixed step width starts past the
-// gutter and the handle strip, so on a card it would run out past the card's own edge, leaving the row's
-// trailing content standing on the gray stage beyond where the white ends.
 fun ChildrenBuilder.scriptGutterRow(
     rowLocation: ObjectLocation?,
     registry: StepRowRefRegistry?,
     gutter: ChildrenBuilder.() -> Unit,
     body: ChildrenBuilder.() -> Unit,
-    trailing: (ChildrenBuilder.() -> Unit)? = null,
-    bodyFillsWidth: Boolean = false
+    trailing: (ChildrenBuilder.() -> Unit)? = null
 ) {
     div {
         css {
@@ -75,14 +69,8 @@ fun ChildrenBuilder.scriptGutterRow(
 
         div {
             css {
-                if (bodyFillsWidth) {
-                    flexGrow = number(1.0)
-                    minWidth = 0.px
-                }
-                else {
-                    width = ScriptController.stepWidth
-                    flexShrink = number(0.0)
-                }
+                width = ScriptController.stepWidth
+                flexShrink = number(0.0)
                 marginLeft = scriptGutterRowBodyInset
             }
             body()
