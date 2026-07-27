@@ -16,8 +16,9 @@ import web.cssom.*
 // optional attribute-editor row, wrapped in a white card with a left status colour bar (matching leaf
 // steps, rather than a filled header) and bottom padding so the next branch slab meets it flush.
 //
-// [body] is null for a construct that tests AFTER its branch runs (DoWhile), whose editor belongs in
-// the footer below the stage rather than in this slab.
+// [body] is null where the construct's editors belong to its sections rather than to its title: DoWhile tests
+// AFTER its branch runs, so its editor sits in the footer below the stage; an If chain has one condition per
+// branch, each in its own branchSectionSlab.
 fun ChildrenBuilder.branchHeaderSlab(
     objectLocation: ObjectLocation,
     icon: String,

@@ -16,12 +16,13 @@ import web.cssom.*
 // layout height) drawn straight onto the gray stage, so [branchRailWidth] of body indent is the only thing
 // holding a branch's rows clear of them.
 //
-// Usage: wrap the construct's branch row(s) in a `position: relative` div, call branchStageAccentRail once
-// (it spans the whole wrapper, so a two-branch construct gets one continuous rail), then per branch a
-// branchStageSeam() followed by that branch's content inside branchStageTopShadow { ... }.
+// Usage, once per recessed stage: wrap that stage's rows in a `position: relative` div, then
+// branchStageAccentRail (it spans the whole wrapper), branchStageSeam(), and the stage's content inside
+// branchStageTopShadow { ... }.
 
-// Boundary line colour — matches the page seam / sidebar border.
-private val seamColor = Color("rgba(0, 0, 0, 0.12)")
+// Boundary line colour — matches the page seam / sidebar border. Shared with branchSectionSlab, so the two
+// ends of a stage (its opening seam and the closing hairline of the slab below it) are the same ink.
+val branchSeamColor = Color("rgba(0, 0, 0, 0.12)")
 
 // Dissolves the last 1.5em of a vertical edge, for a stage that ends on the open page rather than on
 // another slab's seam. Shared by the accent band and the scope line so they trail off together.
@@ -56,11 +57,11 @@ private const val railPaintWidthPx = ScriptStepDisplayDefault.statusBorderWidthP
 // rail meet as the construct's corner instead of one crossing the other; see [railPaintWidthPx] for why
 // both a plain overlap and a plain cut read as artifacts there.
 //
-// Opening seams only. The mirror hairline where a stage CLOSES onto a slab below (DoWhile's While footer)
-// is that slab's own `border-top`, not one of these: this element sits on the gray stage, so its 12% black
-// lands on ~225 and reads far darker than the same 12% on the footer's white ~255. Matching the two ends
-// structurally would visibly thicken the footer's edge — see branchStageAccentRail's bandOverhangBottomPx
-// for how that end's corner is kept clean instead.
+// Opening seams only. The mirror hairline where a stage CLOSES onto a slab below (branchSectionSlab,
+// DoWhile's While footer) is that slab's own `border-top`, not one of these: this element sits on the gray
+// stage, so its 12% black lands on ~225 and reads far darker than the same 12% on the slab's white ~255.
+// Matching the two ends structurally would visibly thicken the slab's edge — see branchStageAccentRail's
+// bandOverhangBottomPx for how that end's corner is kept clean instead.
 //
 // Deliberately a hard `height: 1px` fill for maximum sharpness. Caveat: on fractional display
 // scaling (Windows 125%/150% → device-pixel ratio 1.25/1.5) a 1 *CSS* px line is 1.25–1.5
@@ -73,7 +74,7 @@ fun ChildrenBuilder.branchStageSeam() {
     div {
         css {
             height = 1.px
-            backgroundColor = seamColor
+            backgroundColor = branchSeamColor
 
             // Ramp the left end in across the rail's cast, mirroring its fade-out so the two sum to a
             // constant — see [railPaintWidthPx]. Fade the right (open) end — the stage's side where step
@@ -95,8 +96,9 @@ fun ChildrenBuilder.branchStageSeam() {
 // groups the body the way an editor's indent guide groups a block. [branchRailWidth] of body indent measures
 // past both.
 //
-// Called ONCE per construct, on the wrapper spanning all of its branches, so a multi-section construct (an
-// If chain) shows one unbroken rail through every seam that divides them.
+// Called once per recessed stage, on that stage's own `position: relative` wrapper. Where white slabs divide
+// a construct into several stages (an If chain's per-branch condition slabs), each slab's own `border-left`
+// carries the bar across the gap, so the construct still reads as one left edge from its title card down.
 //
 // The stage's own surface therefore begins at the rail's outer edge, [railPaintWidthPx] — the span over
 // which branchStageSeam ramps its left end in, so its line joins the rail at the corner instead of crossing
@@ -152,8 +154,8 @@ fun ChildrenBuilder.branchStageAccentRail(
             pointerEvents = None.none
             backgroundImage = linearGradient(
                 90.deg,
-                stop(seamColor, 0.px),                          // crisp 1px line
-                stop(seamColor, 1.px),
+                stop(branchSeamColor, 0.px),                    // crisp 1px line
+                stop(branchSeamColor, 1.px),
                 stop(Color("rgba(0, 0, 0, 0)"), scopeLineWidth))  // soft cast onto stage
 
             if (fadeBottom) {
@@ -208,11 +210,11 @@ fun ChildrenBuilder.branchStageTopShadow(block: ChildrenBuilder.() -> Unit) {
 }
 
 
-// The white "lip" at the BOTTOM of a stage section that is followed by another one (an If chain's condition
-// branches, each followed by the next branch or by Else) — standing in for a white slab above the NEXT
-// section's seam, so that seam reads the same as the first one (white above → 1px line → soft shadow below,
-// the way the white header slab sits above the first section's seam). Emitted on every section except the
-// last, whose stage ends on the open page.
+// The white "lip" at the BOTTOM of a stage whose next section is itself a recessed stage rather than a white
+// slab (an If chain's last condition branch, followed by Else) — standing in for a white slab above the NEXT
+// stage's seam, so that seam reads the same as the first one (white above → 1px line → soft shadow below, the
+// way the white header slab sits above the first stage's seam). Where a real slab follows, that slab's own
+// `border-top` closes the stage instead and no lip is emitted.
 //
 // A paint-only absolute element rather than a background on the section wrapper, so its right edge can be
 // faded with a mask without also fading the (overflowing) step cards. Starts at the accent band's outer edge

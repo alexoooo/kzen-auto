@@ -22,6 +22,12 @@ private val stepDependencyMarkerBorderWidth = 2.px
 private val stepDependencyTrunkLineHalfMarginNeg = (-stepDependencyTrunkLineWidthPx / 2).px
 private val stepDependencyMarkerHalfMarginNeg = (-stepDependencyMarkerSizePx / 2).px
 
+private val stepDependencyLaneHalfWidth = (stepDependencyLaneWidthPx / 2).px
+
+// Top offset that centres a trunk-width line on a marker anchored at the lane's top edge.
+private val stepDependencyTrunkTopAtMarkerCenter =
+    (stepDependencyMarkerSizePx / 2 - stepDependencyTrunkLineWidthPx / 2).px
+
 
 private enum class MarkerKind { Source, Target }
 
@@ -52,7 +58,7 @@ fun ChildrenBuilder.stepDependencyGutterCellForStep(index: Int, edges: StepDepen
         //     The overlay polyline endpoint is then at row.left + laneWidth/2, and the cross-branch
         //     horizontal segment terminates BEFORE reaching any in-branch lane column — preventing
         //     it from visually crossing the in-branch trunks.
-        phantomMarkerLane(
+        stepDependencyPhantomLane(
             showSource = index in edges.crossBranchOutgoingSourceIndices,
             showTarget = index in edges.crossBranchIncomingTargetIndices)
     }
@@ -81,7 +87,7 @@ fun ChildrenBuilder.stepDependencyGutterCellForStep(index: Int, edges: StepDepen
 fun ChildrenBuilder.stepDependencyGutterCellForBetween(stepIndexAbove: Int, edges: StepDependencyEdges) {
     if (edges.hasCrossBranch) {
         // NB: reserve phantom slot at leftmost, matching the step-row layout for body-x consistency.
-        phantomMarkerLane(showSource = false, showTarget = false)
+        stepDependencyPhantomLane()
     }
 
     laneContainer(edges) { laneEdges ->
@@ -123,13 +129,45 @@ private fun ChildrenBuilder.laneContainer(
 }
 
 
-private fun ChildrenBuilder.phantomMarkerLane(showSource: Boolean, showTarget: Boolean) {
+// The cross-branch column, on its own. A row standing for a single object (an If chain's IfBranch) can only
+// ever have cross-branch edges — an in-branch lane needs two distinct indices in the row's own list — so this
+// IS its whole gutter, and a caller emitting it directly can reserve the column unconditionally, keeping
+// sibling rows in one left column whether or not each has an edge.
+//
+// [targetLeadIn]: how far left of this lane a target marker's connector reaches. ScriptDependencyOverlay
+// paints its polylines BEHIND the cards, so on a row that sits on an opaque surface (an If chain's condition
+// slab) the line vanishes where that surface begins and the marker reads as unconnected — this carries it the
+// rest of the way in. Null on the gray stage, where the polyline arrives under its own steam.
+fun ChildrenBuilder.stepDependencyPhantomLane(
+    showSource: Boolean = false,
+    showTarget: Boolean = false,
+    targetLeadIn: Length? = null
+) {
     laneBox {
         if (showSource) {
             dependencyMarker(MarkerKind.Source)
         }
         if (showTarget) {
+            if (targetLeadIn != null) {
+                targetMarkerLeadIn(targetLeadIn)
+            }
             dependencyMarker(MarkerKind.Target)
+        }
+    }
+}
+
+
+// Ends at the target marker's centre, at the marker's own vertical centre, so it reads as the same line the
+// overlay's polyline terminates with rather than a second stroke meeting it.
+private fun ChildrenBuilder.targetMarkerLeadIn(leadIn: Length) {
+    div {
+        css {
+            position = Position.absolute
+            top = stepDependencyTrunkTopAtMarkerCenter
+            right = 50.pct
+            width = leadIn.plus(stepDependencyLaneHalfWidth)
+            height = stepDependencyTrunkLineWidth
+            backgroundColor = stepDependencyTrunkColor
         }
     }
 }
