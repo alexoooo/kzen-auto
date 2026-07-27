@@ -183,7 +183,7 @@ object FlowUtils {
             val vertexDescriptor = flowMatrix.verticesByLocation[vertexLocation]
                     ?: continue
 
-            if (! inputsReady(vertexDescriptor, flowMatrix, visualFlowModel)) {
+            if (!inputsReady(vertexDescriptor, flowMatrix, visualFlowModel)) {
                 continue
             }
 

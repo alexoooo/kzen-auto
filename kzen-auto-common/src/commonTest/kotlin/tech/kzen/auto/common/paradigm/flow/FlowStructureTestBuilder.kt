@@ -37,7 +37,7 @@ object FlowStructureTestBuilder {
     fun vertex(name: String, row: Int, column: Int, vararg inputNames: String): VertexDescriptor {
         val allInputs = inputNames.map { AttributeName(it.removePrefix("?")) }
         val requiredInputs = inputNames
-                .filter { ! it.startsWith("?") }
+                .filter { !it.startsWith("?") }
                 .map { AttributeName(it) }
 
         return VertexDescriptor(

@@ -48,7 +48,7 @@ object ScriptValueReferences {
 
         fun walk(steps: List<ObjectLocation>) {
             for (step in steps) {
-                if (! allSteps.add(step)) {
+                if (!allSteps.add(step)) {
                     continue
                 }
                 val instance = graphInstance[step]?.reference as? ScriptStep
@@ -66,7 +66,7 @@ object ScriptValueReferences {
         }
         walk(rootStepLocations)
 
-        if (! complete || allSteps.any { it !in analysis.branchOfStep }) {
+        if (!complete || allSteps.any { it !in analysis.branchOfStep }) {
             return allSteps
         }
 

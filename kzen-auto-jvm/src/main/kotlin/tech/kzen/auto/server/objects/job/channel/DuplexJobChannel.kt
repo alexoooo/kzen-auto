@@ -77,7 +77,7 @@ class DuplexJobChannel(
         }
 
         override fun close() {
-            if (! closed) {
+            if (!closed) {
                 closed = true
                 closeOneClient()
             }

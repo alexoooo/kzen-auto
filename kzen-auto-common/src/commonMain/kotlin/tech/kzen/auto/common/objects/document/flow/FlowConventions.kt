@@ -108,6 +108,6 @@ object FlowConventions {
             .map {
                 (graphNotation.firstAttribute(it, nameAttributeName) as? ScalarAttributeNotation)?.value ?: ""
             }
-            .filter { ! filterEmpty || it.isNotEmpty() }
+            .filter { !filterEmpty || it.isNotEmpty() }
     }
 }

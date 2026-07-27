@@ -106,7 +106,7 @@ abstract class StepPickingSelectEditorBase(
     // synchronously from inside onFieldOpen below, while that gesture's setState is still pending, so an
     // ownership check alone would read as "someone else's session" and slam the listbox shut on open.
     final override fun onStepReferenceChanged() {
-        if (! state.open) {
+        if (!state.open) {
             return
         }
         if (referenceStore()?.session?.editorLocation == editorLocation()) {

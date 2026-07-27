@@ -122,7 +122,7 @@ class PivotWorkerTest {
             val rows = push[JobConventions.progressRowsKey] as List<*>
             assertTrue(rows.all { it is List<*> })
 
-            if (! force) {
+            if (!force) {
                 assertTrue(rows.size <= JobConventions.progressTeaserRowCount)
             }
         }

@@ -68,7 +68,7 @@ class JobValidator(
             val graphNotation = graphStructure.graphNotation
             val documentNotation = graphNotation.documents[documentPath]
                 ?: return JobValidation.empty
-            if (! JobConventions.isJob(documentNotation)) {
+            if (!JobConventions.isJob(documentNotation)) {
                 return JobValidation.empty
             }
 

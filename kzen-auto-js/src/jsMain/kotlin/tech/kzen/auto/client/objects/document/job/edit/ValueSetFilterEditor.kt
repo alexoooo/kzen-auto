@@ -545,7 +545,7 @@ class ValueSetFilterColumn(
 
 
     private fun onOpenToggle() {
-        val toggle = ! state.open
+        val toggle = !state.open
         setState {
             open = toggle
         }
@@ -722,7 +722,7 @@ class ValueSetFilterColumn(
                                 Checkbox {
                                     this.checked = checked
                                     onChange = { _, _ ->
-                                        applyToggleValue(entry.key, ! checked)
+                                        applyToggleValue(entry.key, !checked)
                                     }
                                 }
                             }

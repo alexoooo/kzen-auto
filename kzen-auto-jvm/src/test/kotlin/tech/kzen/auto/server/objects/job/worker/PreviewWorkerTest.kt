@@ -65,7 +65,7 @@ class PreviewWorkerTest {
         worker.run(control)
 
         // One non-forced push per input batch, bounded to the teaser tail of the rolling window.
-        val periodic = control.progressPushes.filter { ! it.second }.map { it.first }
+        val periodic = control.progressPushes.filter { !it.second }.map { it.first }
         assertEquals(3, periodic.size)
         for (push in periodic) {
             val rows = push[JobConventions.progressRowsKey] as List<*>

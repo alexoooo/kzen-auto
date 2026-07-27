@@ -301,7 +301,7 @@ class SortSpecEditor(
                                     "Descending (click for ascending)"
                                 }
                             onClick = {
-                                applyToggleDirection(column, ! sortColumn.ascending)
+                                applyToggleDirection(column, !sortColumn.ascending)
                             }
                             if (sortColumn.ascending) {
                                 icon("material-symbols:arrow-upward") {}

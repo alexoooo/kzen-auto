@@ -93,10 +93,11 @@ class ScriptStepSlot(
             //     re-renders nothing (RPureComponent bails out) but still flashes every sibling in React DevTools'
             //     "Highlight updates" overlay — a false positive that obscures real render work.
             //
-            //     data-step-slot / data-step-branch (the latter set by ScriptBranchDisplay) mark "yield zones":
-            //     an enclosing slot's handle stays hidden when the cursor is over a nested slot (e.g. a step inside
-            //     an If's Then branch) or over a branch's gap/padding. :has() is descendant-only, so a slot never
-            //     suppresses its own handle — only a deeper hovered slot/branch does.
+            //     data-step-slot, data-step-branch (set by ScriptBranchDisplay) and data-step-section (set by
+            //     branchSectionSlab) mark "yield zones": an enclosing slot's handle stays hidden when the cursor is
+            //     over a nested slot (e.g. a step inside an If's Then branch), over a branch's gap/padding, or over
+            //     a segmented construct's section header — each of which carries a grip of its own. :has() is
+            //     descendant-only, so a slot never suppresses its own handle — only a deeper hovered zone does.
             asDynamic()["data-step-slot"] = ""
 
             objectLocationMarker(props.objectLocation)
@@ -127,7 +128,9 @@ class ScriptStepSlot(
                     }
                 }
 
-                "&:hover:not(:has([data-step-slot]:hover)):not(:has([data-step-branch]:hover)) > [data-drag-handle]" {
+                ("&:hover" +
+                    ":not(:has(:is([data-step-slot],[data-step-branch],[data-step-section]):hover))" +
+                    " > [data-drag-handle]") {
                     opacity = number(1.0)
                 }
             }

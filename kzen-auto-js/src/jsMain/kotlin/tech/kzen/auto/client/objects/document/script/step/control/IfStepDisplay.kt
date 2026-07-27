@@ -42,6 +42,8 @@ import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.service.store.MirroredGraphStore
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import web.cssom.*
+import web.data.DropEffect
+import web.data.move
 import web.html.HTMLDivElement
 
 
@@ -115,6 +117,9 @@ class IfStepDisplay(
         // The band the floated Else caption centres itself in: the strip ScriptBranchDisplay reserves above a
         // branch's first step for its leading insertion point, which is empty whenever no insertion is armed.
         private val elseCaptionHeight = 32.px
+
+        // How far the section under the cursor's grip recedes while it is being dragged.
+        private val draggedSectionOpacity = number(0.5)
     }
 
 
@@ -254,17 +259,40 @@ class IfStepDisplay(
     }
 
 
-    // Guarded on our OWN drag being in progress, so a step drag passing over a branch row is left entirely to
+    // Guarded on our OWN drag being in progress, so a step drag passing over a section is left entirely to
     // ScriptBranchDisplay (whose handlers are symmetrically guarded on the shared ScriptStepDragStore).
-    private fun onBranchDragOver(index: Int, event: DragEvent<HTMLDivElement>) {
+    //
+    // Bound in the CAPTURE phase (see branchSection): a section wraps that branch's own ScriptBranchDisplay,
+    // whose drop handler stopPropagation()s unconditionally ahead of its guards — so a branch released over a
+    // section's steps could never bubble back out to the section. Claiming in capture also keeps a branch drag
+    // from reaching the nested branch at all, while a step drag (guard false, nothing claimed) passes straight
+    // through to it.
+    //
+    // [alwaysAbove] for the Else, which is not a branch and so has no "after": dropping on it can only mean
+    // last in the chain.
+    private fun onBranchDragOver(
+        index: Int,
+        event: DragEvent<HTMLDivElement>,
+        alwaysAbove: Boolean = false
+    ) {
         if (state.branchDragIndex == null) {
             return
         }
         event.preventDefault()
         event.stopPropagation()
 
-        val rect = event.currentTarget.getBoundingClientRect()
-        val dropAfter = event.clientY > rect.top + rect.height / 2
+        // Move cursor rather than the default copy. effectAllowed is uninitialized (treated as "all"), so
+        // setting this on the target alone carries.
+        event.dataTransfer.dropEffect = DropEffect.move
+
+        val dropAfter =
+            if (alwaysAbove) {
+                false
+            }
+            else {
+                val rect = event.currentTarget.getBoundingClientRect()
+                event.clientY > rect.top + rect.height / 2
+            }
 
         if (state.branchDragOverIndex == index && state.branchDropAfter == dropAfter) {
             return
@@ -281,15 +309,18 @@ class IfStepDisplay(
     // index. Nothing is renamed, so stable ids, breakpoints, React keys and expand state all survive; `else`
     // children interleaved in the document are unaffected, since order only means anything within an attribute.
     private fun onBranchDrop(index: Int, event: DragEvent<HTMLDivElement>) {
+        // Guard BEFORE claiming the event: in capture this sees every drop inside the section, including a
+        // step being dropped into this branch's own list — which has to reach ScriptBranchDisplay untouched.
+        val source = state.branchDragIndex
+            ?: return
         event.preventDefault()
         event.stopPropagation()
 
-        val source = state.branchDragIndex
         val dropAfter = state.branchDropAfter ?: false
         val branchLocations = state.branchLocations
         clearBranchDrag()
 
-        if (source == null || branchLocations == null) {
+        if (branchLocations == null) {
             return
         }
 
@@ -308,7 +339,7 @@ class IfStepDisplay(
 
         // Document order with the dragged subtree removed — the frame PositionRelation.at resolves against.
         val remainingPaths = documentNotation.objects.notations.map.keys.filter {
-            it != draggedRoot && ! it.startsWith(draggedRoot)
+            it != draggedRoot && !it.startsWith(draggedRoot)
         }
 
         val siblings = branchLocations.filterIndexed { i, _ -> i != source }
@@ -359,9 +390,9 @@ class IfStepDisplay(
             renderBranch(accent, index, branchLocation, branchLocations.size)
         }
 
-        div {
-            key = elseSectionKey
-
+        // Dropping a branch here means "last in the chain" — the Else is always the end, so it has no
+        // "after" of its own to aim at.
+        branchSection(elseSectionKey, branchLocations.size, alwaysAbove = true) {
             // Opens the Else exactly as a condition opens its branch, minus the condition.
             branchSectionLedge(accent)
 
@@ -373,6 +404,60 @@ class IfStepDisplay(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    /**
+     * A section of the chain as one drag/drop unit. The whole section moves and the whole section is a target,
+     * so "drag it over the section you want to displace" works — the condition row alone would be a ~60px
+     * strip in a section several hundred px tall.
+     *
+     * [index] is the branch's index, or the branch count for the Else (see [alwaysAbove]) — which is exactly
+     * what [computeDropIndex] and [dropMarkerFor] want for "past the last branch", including their own no-op
+     * suppression when the last branch is dragged onto it.
+     */
+    private fun ChildrenBuilder.branchSection(
+        sectionKey: Key,
+        index: Int,
+        alwaysAbove: Boolean = false,
+        content: ChildrenBuilder.() -> Unit
+    ) {
+        div {
+            key = sectionKey
+
+            css {
+                // Anchors this section's drop line. No z-index at rest, so no stacking context — the slab's
+                // own absolute children (divider, outset marker) keep the slab as their containing block.
+                position = Position.relative
+
+                if (state.branchDragIndex == index) {
+                    // What says which section is travelling: the native drag image is the grip icon alone,
+                    // which shows nothing of the steps coming with it.
+                    opacity = draggedSectionOpacity
+                }
+
+                if (state.branchDragOverIndex == index) {
+                    // Above the section BELOW this one, whose slab is position:relative and later in the DOM
+                    // — without this it paints over a Below line sitting on the seam the two share.
+                    zIndex = integer(1)
+                }
+            }
+
+            onDragOverCapture = { event -> onBranchDragOver(index, event, alwaysAbove) }
+            onDropCapture = { event -> onBranchDrop(index, event) }
+
+            content()
+
+            // Last, so it paints over this section's own surfaces. Offset zero because sections butt against
+            // each other: the line lands ON the seam it will become, at the card's full width.
+            dropIndicator(
+                dropMarkerFor(
+                    state.branchDragIndex,
+                    state.branchDragOverIndex,
+                    state.branchDropAfter ?: false,
+                    index),
+                offset = 0.px)
+        }
+    }
+
+
     // One section of the chain: the branch's condition on the construct's own white surface, over the recessed
     // stage holding that branch's steps.
     private fun ChildrenBuilder.renderBranch(
@@ -381,9 +466,7 @@ class IfStepDisplay(
         branchLocation: ObjectLocation,
         branchCount: Int
     ) {
-        div {
-            key = Key(branchLocation.toReference().asString())
-
+        branchSection(Key(branchLocation.toReference().asString()), index) {
             branchSectionSlab(
                 accent,
                 outsetMarker = {
@@ -453,13 +536,16 @@ class IfStepDisplay(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    // The branch's own row: condition editor, remove and drag affordances.
+    // The branch's own row: condition editor, remove control, and the grip that drags the whole section.
     //
     // Not a scriptGutterRow — the marker the overlay terminates in sits OUTSIDE the card (see the slab's
     // outsetMarker), so there is no gutter here to lay out. What remains of that row's geometry is this one
     // inset: the slab's branchSlabContentPadding puts the row on the stage's own indent, and the margin then
     // measures out the same drag-handle strip a step card gets — so a condition and the steps it guards start
     // in one column.
+    //
+    // The grip is only anchored here: the enclosing slab's hover reveals it (branchSectionSlab) and the
+    // enclosing section receives the drop (branchSection) — you aim at a header, but you aim for a section.
     //
     // Deliberately NOT marked data-step-header: ScriptExecutionMargin anchors on the If's OWN header row, and
     // its querySelector is document-first.
@@ -470,16 +556,10 @@ class IfStepDisplay(
     ) {
         div {
             css {
+                // Containing block for the grip, which hangs off the row's left edge.
                 position = Position.relative
                 marginLeft = scriptGutterRowBodyInset
-
-                "&:hover > [data-drag-handle]" {
-                    opacity = number(1.0)
-                }
             }
-
-            onDragOver = { event -> onBranchDragOver(index, event) }
-            onDrop = { event -> onBranchDrop(index, event) }
 
             // Only offered once there is something to reorder.
             if (branchCount > 1) {
@@ -489,12 +569,6 @@ class IfStepDisplay(
                     onStart = { onBranchDragStart(index) },
                     onEnd = { onBranchDragEnd() })
             }
-
-            dropIndicator(dropMarkerFor(
-                state.branchDragIndex,
-                state.branchDragOverIndex,
-                state.branchDropAfter ?: false,
-                index))
 
             div {
                 css {

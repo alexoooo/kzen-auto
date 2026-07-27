@@ -250,7 +250,7 @@ class FlowController(
         val documentNotation = clientState.graphStructure().graphNotation.documents[documentPath]
             ?: return
 
-        if (! FlowConventions.isFlow(documentNotation)) {
+        if (!FlowConventions.isFlow(documentNotation)) {
             return
         }
 

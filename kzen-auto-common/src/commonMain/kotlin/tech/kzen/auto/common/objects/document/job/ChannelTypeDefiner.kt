@@ -165,12 +165,12 @@ class ChannelTypeDefiner: AttributeDefiner {
         }
 
         for (port in producers) {
-            if (! compatible(port.elementType, declaredElementType)) {
+            if (!compatible(port.elementType, declaredElementType)) {
                 return mismatch(port, declaredElementType)
             }
         }
         for (port in consumers) {
-            if (! compatible(port.elementType, declaredElementType)) {
+            if (!compatible(port.elementType, declaredElementType)) {
                 return mismatch(port, declaredElementType)
             }
         }

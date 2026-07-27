@@ -200,7 +200,7 @@ class SortWorkerTest {
             private var delivered = false
 
             override suspend fun receiveBatch(): List<Any?>? {
-                if (! delivered) {
+                if (!delivered) {
                     delivered = true
                     return firstChunk
                 }

@@ -85,7 +85,7 @@ class ScriptBranchReorderTest {
             .notations
             .map
             .keys
-            .filter { it != dragged && ! it.startsWith(dragged) }
+            .filter { it != dragged && !it.startsWith(dragged) }
 
         val lastSibling = ScriptConventions
             .orderedDirectChildLocations(

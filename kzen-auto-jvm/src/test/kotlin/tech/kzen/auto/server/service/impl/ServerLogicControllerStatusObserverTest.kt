@@ -83,7 +83,7 @@ class ServerLogicControllerStatusObserverTest {
 
             val settledState = assertNotNull(controller.status().active).state
             assertTrue(
-                ! settledState.isExecuting(),
+                !settledState.isExecuting(),
                 "run should have settled, was $settledState")
 
             // THE regression guard: some notification must have carried the settled state. Delete the notify
@@ -173,7 +173,7 @@ class ServerLogicControllerStatusObserverTest {
     private fun awaitSettled(controller: ServerLogicController) {
         for (attempt in 0 until 500) {
             val state = controller.status().active?.state
-            if (state != null && ! state.isExecuting()) {
+            if (state != null && !state.isExecuting()) {
                 return
             }
             Thread.sleep(10)

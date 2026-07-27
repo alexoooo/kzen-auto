@@ -716,7 +716,7 @@ class ServerLogicController(
 
         // Capability gate: reject an unsupported flavour or a structurally-invalid target (loop body / binding /
         // unknown id) BEFORE the executor tears anything down — the run keeps its current state.
-        if (logic !is Repositionable || ! logic.canMoveTo(targetId)) {
+        if (logic !is Repositionable || !logic.canMoveTo(targetId)) {
             return LogicRunResponse.Rejected
         }
 

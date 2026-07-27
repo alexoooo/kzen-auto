@@ -228,12 +228,12 @@ class ClientLogicGlobal(
         // -per-origin HTTP/1.1 cap, which is shared across EVERY tab of this origin (in the packaged product
         // that is the shell: the launcher and every project). A background tab has nothing to animate, and
         // re-syncs on becoming visible, so the realistic worst case is one connection per window.
-        if (! isDocumentVisible()) {
+        if (!isDocumentVisible()) {
             return
         }
 
         // Nothing to watch: no run is executing. Matches scheduleRefresh's gate.
-        if (! clientLogicState.isExecuting()) {
+        if (!clientLogicState.isExecuting()) {
             return
         }
 
@@ -284,7 +284,7 @@ class ClientLogicGlobal(
         // a stream that was already replaced.
         async {
             delay(sseProbeMillis.toLong())
-            if (eventSource === source && ! sseHealthy && sseOpened) {
+            if (eventSource === source && !sseHealthy && sseOpened) {
                 sseUnavailable = true
                 closeEventSource()
                 rearmRefresh()
@@ -295,7 +295,7 @@ class ClientLogicGlobal(
 
     private fun noteSseMessage() {
         lastSseMessageMillis = Date.now()
-        if (! sseHealthy) {
+        if (!sseHealthy) {
             // Promote: push is proven to deliver, so the poll drops to its relaxed net.
             sseHealthy = true
             rearmRefresh()
@@ -304,7 +304,7 @@ class ClientLogicGlobal(
 
 
     private fun demoteSse() {
-        if (! sseHealthy) {
+        if (!sseHealthy) {
             return
         }
         // Back to the pre-push cadence, immediately — never leave the UI slower than it used to be.
@@ -401,7 +401,7 @@ class ClientLogicGlobal(
         // not a pre-push leftover to be gated away on sseHealthy. It is the call that moves the state to
         // Stepping/Running so this gate opens the stream and arms the poll; without it neither would ever start
         // and the settle would never arrive.
-        if (! running) {
+        if (!running) {
             // Settled: give the connection back and drop any interval still armed. The cancel is deliberately
             // NOT skipped when refreshPending is set — an interval in flight is precisely what needs cancelling,
             // and gating it that way let exactly one stray poll fire after every settle. Both calls are
@@ -723,7 +723,7 @@ class ClientLogicGlobal(
         publish()
 
         async {
-            if (! clientLogicState.isActive()) {
+            if (!clientLogicState.isActive()) {
                 // Start a fresh run in stepping (paused) mode; this also executes the first step. In step-over
                 // mode the bootstrap step is itself a Step Over, so the run never descends into a sub-Logic on
                 // the first tick (without this it would descend on the bootstrap and only climb out on the first
@@ -760,7 +760,7 @@ class ClientLogicGlobal(
     // Stop the slow-motion loop after its current step; the run stays Paused (so the user can then Step,
     // continue at full speed, resume slow-motion, or Stop).
     fun pauseSlowAsync() {
-        if (! clientLogicState.slowLooping) {
+        if (!clientLogicState.slowLooping) {
             return
         }
         clientLogicState = clientLogicState.copy(slowLooping = false, slowStepOver = false)
@@ -771,7 +771,7 @@ class ClientLogicGlobal(
     private suspend fun runSlowLoop() {
         while (clientLogicState.slowLooping) {
             // Stop once the run finished / was cancelled.
-            if (! clientLogicState.isActive()) {
+            if (!clientLogicState.isActive()) {
                 break
             }
 
@@ -786,7 +786,7 @@ class ClientLogicGlobal(
             delay(slowPacingMillis.toLong())
 
             // The user may have toggled slow-motion off (or taken manual control) during the dwell.
-            if (! clientLogicState.slowLooping || ! clientLogicState.isActive()) {
+            if (!clientLogicState.slowLooping || !clientLogicState.isActive()) {
                 break
             }
 
@@ -846,7 +846,7 @@ class ClientLogicGlobal(
             delay(slowSettlePollMillis.toLong())
             waited += slowSettlePollMillis
 
-            if (! sseHealthy) {
+            if (!sseHealthy) {
                 // Through the same throttle as the pushed path, so a dead stream changes the SAMPLING rate,
                 // not the repaint rule. Without it this publishes at the poll rate (~5/s at
                 // slowSettlePollMillis, ~20 REST calls/s downstream) where push publishes ~1/s for the same

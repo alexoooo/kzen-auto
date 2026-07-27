@@ -84,7 +84,7 @@ class ServerLogicControllerScriptMigrationTest {
         // Step until Flag (the first step) has completed but Branch / Result have not yet run — the completed
         // prefix the resume must preserve. Each step passes the base snapshot, so none of them migrate.
         var guard = 0
-        while (! isDone(runId, flagLocation) && guard < 50) {
+        while (!isDone(runId, flagLocation) && guard < 50) {
             controller.step(runId, base)
             awaitState(LogicRunState.Paused)
             guard += 1

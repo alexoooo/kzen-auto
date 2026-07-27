@@ -204,7 +204,7 @@ class JobChannel(
 
 
         override fun close() {
-            if (! closed) {
+            if (!closed) {
                 closed = true
                 closeOneProducer()
             }

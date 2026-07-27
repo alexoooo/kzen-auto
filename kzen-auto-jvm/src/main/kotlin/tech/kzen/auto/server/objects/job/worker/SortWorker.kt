@@ -147,8 +147,8 @@ class SortWorker(
 
     // A provable total order: both-numeric → numeric; numeric sorts before non-numeric; both-text → lexical.
     private fun compareField(aNumber: Double, aText: String, bNumber: Double, bText: String): Int {
-        val aIsNumber = ! aNumber.isNaN()
-        val bIsNumber = ! bNumber.isNaN()
+        val aIsNumber = !aNumber.isNaN()
+        val bIsNumber = !bNumber.isNaN()
         return when {
             aIsNumber && bIsNumber -> aNumber.compareTo(bNumber)
             aIsNumber -> -1

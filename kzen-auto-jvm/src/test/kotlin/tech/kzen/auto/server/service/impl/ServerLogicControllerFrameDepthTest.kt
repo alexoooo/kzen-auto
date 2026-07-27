@@ -85,7 +85,7 @@ class ServerLogicControllerFrameDepthTest {
         for (attempt in 0 until 500) {
             // The leaf document halts at a Pause step (ExplicitPaused); accept any settled pause state.
             val state = controller.status().active?.state
-            if (state != null && ! state.isExecuting()) {
+            if (state != null && !state.isExecuting()) {
                 return
             }
             Thread.sleep(10)

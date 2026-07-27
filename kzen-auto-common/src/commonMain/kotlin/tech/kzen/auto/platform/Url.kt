@@ -44,7 +44,7 @@ class Url private constructor(
 
 
         fun parse(location: String): Url? {
-            if (! hasValidScheme(location)) {
+            if (!hasValidScheme(location)) {
                 return null
             }
 
@@ -99,7 +99,7 @@ class Url private constructor(
                 .substringBefore('?')
                 .substringBefore('#')
 
-            if (! afterScheme.startsWith("//")) {
+            if (!afterScheme.startsWith("//")) {
                 // an opaque path is not an authority + path, and is returned untouched
                 return afterScheme
             }

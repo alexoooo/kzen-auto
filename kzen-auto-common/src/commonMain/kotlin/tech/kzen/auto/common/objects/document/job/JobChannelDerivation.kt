@@ -67,7 +67,7 @@ object JobChannelDerivation {
         val graphNotation = graphStructure.graphNotation
         val documentNotation = graphNotation.documents[jobDocumentPath]
             ?: return Result.empty
-        if (! JobConventions.isJob(documentNotation)) {
+        if (!JobConventions.isJob(documentNotation)) {
             return Result.empty
         }
 
@@ -111,7 +111,7 @@ object JobChannelDerivation {
             for ((attributeName, attributeMetadata) in metadata.attributes.map) {
                 val kind = JobChannelPorts.kindOf(attributeMetadata.type)
                     ?: continue
-                if (! isOpenPort(graphStructure.graphNotation, workerLocation, attributeName)) {
+                if (!isOpenPort(graphStructure.graphNotation, workerLocation, attributeName)) {
                     continue
                 }
                 when (kind) {

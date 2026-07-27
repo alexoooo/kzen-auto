@@ -50,6 +50,12 @@ fun ChildrenBuilder.branchSectionSlab(
     content: ChildrenBuilder.() -> Unit
 ) {
     div {
+        // NB: marks this slab as a "yield zone" so an enclosing step slot's drag handle stays hidden while the
+        //     cursor is over a section header — the section has a grip of its own, and two visible handles
+        //     (the construct's, spanning its whole card, and the section's) make the wrong one the obvious
+        //     grab. Same mechanism as data-step-slot / data-step-branch; see ScriptStepSlot's :has() rule.
+        asDynamic()["data-step-section"] = ""
+
         css {
             // Anchors the divider and the outset marker to THIS slab.
             position = Position.relative
@@ -64,6 +70,13 @@ fun ChildrenBuilder.branchSectionSlab(
             paddingRight = branchSlabContentPadding
             paddingTop = branchSectionSlabPaddingVertical
             paddingBottom = branchSectionSlabPaddingVertical
+
+            // The slab is the section's hover region, so a grip inside it reveals over the whole white
+            // surface, padding included. Descendant selector because the grip belongs to the header the
+            // caller renders — and a slab heads exactly one, so it can match nothing else.
+            "&:hover [data-drag-handle]" {
+                opacity = number(1.0)
+            }
         }
 
         branchSectionDivider()

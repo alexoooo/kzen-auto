@@ -97,7 +97,7 @@ class ExportWriterWorker(
         val elementHeader = flat.header
         val record = flat.record
         control.runBlockingIo {
-            if (! headerWritten) {
+            if (!headerWritten) {
                 // The column header, once — rendered exactly as Report's ExportFormatter (`render` disambiguates
                 // duplicate-occurrence columns, e.g. "amount (2)").
                 writeRow(out, FlatFileRecord.of(elementHeader.values.map { it.render() }))

@@ -470,7 +470,7 @@ class ProjectController(
         else if (current != null && current != lastAutoNavigated) {
             followingRun = false
         }
-        if (! followingRun) {
+        if (!followingRun) {
             return
         }
 

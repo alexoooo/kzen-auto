@@ -314,7 +314,7 @@ class WorkerDisplayDefault(
         for ((attributeName, attributeMetadata) in objectMetadata.attributes.map) {
             val hasSummaryView = AttributeWrapperLookup.wrapperName(
                 attributeMetadata, AttributeWrapperLookup.summaryAttributePath) != null
-            if (! hasSummaryView) {
+            if (!hasSummaryView) {
                 continue
             }
 

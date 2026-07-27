@@ -80,7 +80,7 @@ class ServerLogicControllerLinkedDocumentMigrationTest {
         // Step until Seed (the first step) has completed but the hosting Call step has not yet run — the
         // callee compiles lazily on Call's first host(), so the edit must land before that compile.
         var guard = 0
-        while (! isDone(runId, seedLocation) && guard < 50) {
+        while (!isDone(runId, seedLocation) && guard < 50) {
             controller.step(runId, base)
             awaitState(LogicRunState.Paused)
             guard += 1

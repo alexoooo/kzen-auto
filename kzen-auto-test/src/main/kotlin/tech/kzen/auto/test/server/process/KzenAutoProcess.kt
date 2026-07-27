@@ -140,7 +140,7 @@ class KzenAutoProcess private constructor(
                 // A dead child will never answer, so waiting out the full timeout only delays the
                 //  report and buries the cause. Fail now, naming the exit code — this is what turns a
                 //  bad classpath / an OOM / a lost port race into an immediate, diagnosable error.
-                if (! process.isAlive) {
+                if (!process.isAlive) {
                     throw IllegalStateException(
                         "'$name' exited with code ${process.exitValue()} before responding on port " +
                             "$port — see the [$name] output above for the cause")

@@ -116,7 +116,7 @@ class PreviewWorkerDisplay(
     // Keep any opened larger slice live while the run is active (each pull is a fresh sample of the Worker's rolling
     // window), and drop it once the run ends so the persisted teaser shows instead.
     override fun onClientState(clientState: ClientState) {
-        if (! clientState.clientLogicState.isActive()) {
+        if (!clientState.clientLogicState.isActive()) {
             lastSliceFetchKey = null
             if (state.previewDetail != null) {
                 setState {
@@ -243,7 +243,7 @@ class PreviewWorkerDisplay(
             Button {
                 variant = ButtonVariant.outlined
                 size = Size.small
-                disabled = ! active
+                disabled = !active
                 onClick = { onQueryPreview() }
                 +"Larger sample"
             }

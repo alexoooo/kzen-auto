@@ -188,7 +188,7 @@ class FormulaWorker(
                 }
             }
 
-        if (! payloadTransform) {
+        if (!payloadTransform) {
             return WorkerLaneAttempt(WorkerLane(input.payloadType, outputColumns), errorMessage)
         }
 

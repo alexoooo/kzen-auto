@@ -110,7 +110,7 @@ class EngineJobControl(
 
     override fun publishProgress(location: ObjectLocation, value: Map<String, Any?>, force: Boolean) {
         val now = System.nanoTime()
-        if (! force && lastProgressNanos != 0L && now - lastProgressNanos < progressThrottleNanos) {
+        if (!force && lastProgressNanos != 0L && now - lastProgressNanos < progressThrottleNanos) {
             return
         }
         lastProgressNanos = now

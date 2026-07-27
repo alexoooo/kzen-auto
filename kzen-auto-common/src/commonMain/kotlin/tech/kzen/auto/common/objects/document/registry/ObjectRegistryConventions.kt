@@ -55,7 +55,7 @@ object ObjectRegistryConventions {
     fun scanDigest(graphNotation: GraphNotation): Digest {
         return Digest.build {
             for ((path, documentNotation) in graphNotation.documents.map.entries.sortedBy { it.key.asString() }) {
-                if (! isObjectRegistry(documentNotation)) {
+                if (!isObjectRegistry(documentNotation)) {
                     continue
                 }
                 addDigestible(path)

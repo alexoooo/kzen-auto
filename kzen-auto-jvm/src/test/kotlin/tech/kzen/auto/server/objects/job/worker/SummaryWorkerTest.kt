@@ -96,7 +96,7 @@ class SummaryWorkerTest {
         worker.run(control)
 
         // One non-forced push per input batch, each count-only.
-        val periodic = control.progressPushes.filter { ! it.second }.map { it.first }
+        val periodic = control.progressPushes.filter { !it.second }.map { it.first }
         assertEquals(3, periodic.size)
         for (push in periodic) {
             assertTrue(JobConventions.progressCountKey in push)

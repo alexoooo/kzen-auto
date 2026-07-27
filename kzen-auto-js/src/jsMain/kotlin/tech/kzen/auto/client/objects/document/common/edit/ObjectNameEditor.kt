@@ -97,7 +97,7 @@ class ObjectNameEditor(
 
 
     private fun onSave() {
-        if (! isModified()) {
+        if (!isModified()) {
             props.onClose()
             return
         }
@@ -170,7 +170,7 @@ class ObjectNameEditor(
                     marginRight = 0.25.em
                 }
 
-                disabled = ! isModified() || isBlank()
+                disabled = !isModified() || isBlank()
 
                 onClick = {
                     onSave()

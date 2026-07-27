@@ -106,7 +106,7 @@ class SummaryWorker(
     // run (survives run-end + browser refresh, like Preview's teaser). During the run the full summary is
     // served on demand (onQuery) for the downstream filter / pivot editors.
     override fun progress(snapshot: Any?, force: Boolean): Map<String, Any?> {
-        if (! force) {
+        if (!force) {
             return mapOf(JobConventions.progressCountKey to count)
         }
         val tableSummary = snapshot as? TableSummary

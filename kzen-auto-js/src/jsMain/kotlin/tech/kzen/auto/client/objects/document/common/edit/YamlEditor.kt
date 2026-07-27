@@ -94,12 +94,12 @@ class YamlEditor(
                     val isSave = (event.ctrlKey || event.metaKey) &&
                             !event.altKey && !event.shiftKey &&
                             (event.key == "s" || event.key == "S")
-                    if (! isSave) {
+                    if (!isSave) {
                         return@handler
                     }
                     event.preventDefault()
                     val onSave = props.onSave
-                    if (onSave != null && ! props.disabled) {
+                    if (onSave != null && !props.disabled) {
                         onSave()
                     }
                 }

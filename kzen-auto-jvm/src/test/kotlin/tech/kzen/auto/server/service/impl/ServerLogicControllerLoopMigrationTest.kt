@@ -211,7 +211,7 @@ class ServerLogicControllerLoopMigrationTest {
         // Step until the whole loop is Done (its cursor cleared, its own outcome recorded) but Post has not run.
         val loopLocation = ObjectLocation(forEachDocumentPath, ObjectPath.parse("main.steps/Loop"))
         var guard = 0
-        while (! isDone(runId, loopLocation) && guard < 100) {
+        while (!isDone(runId, loopLocation) && guard < 100) {
             controller.step(runId, base)
             awaitState(LogicRunState.Paused)
             guard += 1

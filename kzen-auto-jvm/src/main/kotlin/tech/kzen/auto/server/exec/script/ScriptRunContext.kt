@@ -302,7 +302,7 @@ class ScriptRunContext(
             // checkpoint is suppressed (claim-once), so the paused rebuild parks at the target inside its branch,
             // not at the ancestor's own boundary. Ordinary steps always take the boundary.
             val suppressBoundary = descendSteps.remove(stableId)
-            if (! suppressBoundary) {
+            if (!suppressBoundary) {
                 execution.checkpoint(stableId)
             }
 

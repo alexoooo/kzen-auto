@@ -49,7 +49,7 @@ object JobSignatureCapability {
         val graphNotation = graphStructure.graphNotation
         val documentNotation = graphNotation.documents[jobMainLocation.documentPath]
             ?: return LogicSignature.empty
-        if (! JobConventions.isJob(documentNotation)) {
+        if (!JobConventions.isJob(documentNotation)) {
             return LogicSignature.empty
         }
 

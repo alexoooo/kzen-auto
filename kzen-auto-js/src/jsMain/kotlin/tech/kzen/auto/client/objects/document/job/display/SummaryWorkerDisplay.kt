@@ -126,7 +126,7 @@ class SummaryWorkerDisplay(
     // Keep this Worker's live TableSummary fresh while the run is active, so the downstream filter / pivot editors
     // can source a column's distinct values from it. Kept (not cleared) once the run ends.
     override fun onClientState(clientState: ClientState) {
-        if (! clientState.clientLogicState.isActive()) {
+        if (!clientState.clientLogicState.isActive()) {
             return
         }
 
@@ -256,8 +256,8 @@ class SummaryWorkerDisplay(
         val opaque = columnSummary.opaqueValueSummary
 
         val typeHint = when {
-            ! numeric.isEmpty() -> "numeric · count ${formatCount(numeric.count)}"
-            ! nominal.isEmpty() -> "nominal · ${formatCount(nominal.histogram.size.toLong())} distinct"
+            !numeric.isEmpty() -> "numeric · count ${formatCount(numeric.count)}"
+            !nominal.isEmpty() -> "nominal · ${formatCount(nominal.histogram.size.toLong())} distinct"
             else -> "sample"
         }
 
@@ -301,14 +301,14 @@ class SummaryWorkerDisplay(
         nominal: NominalValueSummary,
         opaque: OpaqueValueSummary
     ): String {
-        if (! numeric.isEmpty()) {
+        if (!numeric.isEmpty()) {
             val mean = numeric.sum / numeric.count
             return "min ${formatNumber(numeric.min)} · " +
                     "max ${formatNumber(numeric.max)} · " +
                     "mean ${formatNumber(mean)}"
         }
 
-        if (! nominal.isEmpty()) {
+        if (!nominal.isEmpty()) {
             val top = nominal.histogram.entries
                 .sortedByDescending { it.value }
                 .take(topNominalValues)
@@ -316,7 +316,7 @@ class SummaryWorkerDisplay(
             return if (nominal.histogram.size > top.size) "$rendered …" else rendered
         }
 
-        if (! opaque.isEmpty()) {
+        if (!opaque.isEmpty()) {
             val sample = opaque.sample.take(topSampleValues)
             val rendered = sample.joinToString(" · ") { abbreviate(it) }
             return if (opaque.sample.size > sample.size) "$rendered …" else rendered
@@ -335,7 +335,7 @@ class SummaryWorkerDisplay(
 
     // A compact decimal: round to 3 places, drop a trailing ".0" (JS-safe — the JVM ColumnValueUtils formatter isn't).
     private fun formatNumber(value: Double): String {
-        if (! value.isFinite()) {
+        if (!value.isFinite()) {
             return value.toString()
         }
         val rounded = round(value * 1000.0) / 1000.0

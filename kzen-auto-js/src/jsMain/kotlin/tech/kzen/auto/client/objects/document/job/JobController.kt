@@ -294,7 +294,7 @@ class JobController(
         val graphStructure = clientState.graphStructure()
         val documentNotation = graphStructure.graphNotation.documents[documentPath]
             ?: return
-        if (! JobConventions.isJob(documentNotation)) {
+        if (!JobConventions.isJob(documentNotation)) {
             return
         }
 
@@ -323,7 +323,7 @@ class JobController(
         val documentNotation = clientState.graphStructure().graphNotation.documents[documentPath]
             ?: return
 
-        if (! JobConventions.isJob(documentNotation)) {
+        if (!JobConventions.isJob(documentNotation)) {
             return
         }
 
@@ -368,7 +368,7 @@ class JobController(
         val documentNotation = clientState.graphStructure().graphNotation.documents[documentPath]
             ?: return
 
-        if (! JobConventions.isJob(documentNotation)) {
+        if (!JobConventions.isJob(documentNotation)) {
             return
         }
 
@@ -468,7 +468,7 @@ class JobController(
             ?: return
         val documentNotation = graphNotation.documents[documentPath]
             ?: return
-        if (! JobConventions.isJob(documentNotation)) {
+        if (!JobConventions.isJob(documentNotation)) {
             return
         }
 
@@ -660,7 +660,7 @@ class JobController(
         val documentNotation = graphNotation.documents[documentPath]
             ?: return
 
-        if (! JobConventions.isJob(documentNotation)) {
+        if (!JobConventions.isJob(documentNotation)) {
             return
         }
 
@@ -804,7 +804,7 @@ class JobController(
                 // sizes its own gap; a collapsed channel uses minHeight (not a fixed height) so a customized
                 // channel's caption + bottom margin add intrinsic height instead of being clipped; an empty gap
                 // is a thin strip. The "+" appears as an absolute overlay (below), contributing no height.
-                if (! expanded) {
+                if (!expanded) {
                     when {
                         connection != null -> minHeight = if (customized) 2.6.em else 1.5.em
                         else -> height = 0.75.em
@@ -848,7 +848,7 @@ class JobController(
             // Insert-mode: the "+" is an absolute overlay anchored to the RIGHT of the gap (like dropZoneRegion,
             // out of flow) so it ADDS an insertion point without displacing, resizing, or covering the centred
             // channel pipe / its caption. Skipped over an expanded editor, where a "+" makes no sense.
-            if (state.creating && ! expanded) {
+            if (state.creating && !expanded) {
                 div {
                     css {
                         position = Position.absolute
@@ -885,7 +885,7 @@ class JobController(
             ?.graphStructure()?.graphNotation
             ?: return
         val hasOverride = graphNotation.firstAttribute(workerLocation, configPath) != null
-        if (! hasOverride) {
+        if (!hasOverride) {
             return
         }
 

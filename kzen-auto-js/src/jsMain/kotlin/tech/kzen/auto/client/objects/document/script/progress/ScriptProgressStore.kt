@@ -329,7 +329,7 @@ class ScriptProgressStore(
         childrenByParent: Map<String, List<LogicRunExecutionInfo>>,
         out: MutableSet<String>
     ) {
-        if (! out.add(node.executionId.value)) {
+        if (!out.add(node.executionId.value)) {
             // Already collected — also guards against a pathological cycle in the tree.
             return
         }

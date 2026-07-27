@@ -109,7 +109,13 @@ fun ChildrenBuilder.dropZoneRegion() {
 }
 
 
-fun ChildrenBuilder.dropIndicator(marker: DropMarker?) {
+// [offset]: how far the line sits OUTSIDE the edge it marks. The default floats it in the gap between two
+// step cards, where the parent is the gap strip itself. Zero for edges that butt against each other with no
+// gap to float in — an If chain's section boundaries, where the line lands on the seam it will become.
+fun ChildrenBuilder.dropIndicator(
+    marker: DropMarker?,
+    offset: Length = (-0.4).em
+) {
     if (marker == null) {
         return
     }
@@ -126,8 +132,8 @@ fun ChildrenBuilder.dropIndicator(marker: DropMarker?) {
             boxShadow = BoxShadow(0.px, 0.px, 6.px, 1.px, Color("rgba(41, 121, 255, 0.55)"))
             pointerEvents = None.none
             when (marker) {
-                DropMarker.Above -> top = (-0.4).em
-                DropMarker.Below -> bottom = (-0.4).em
+                DropMarker.Above -> top = offset
+                DropMarker.Below -> bottom = offset
             }
         }
     }

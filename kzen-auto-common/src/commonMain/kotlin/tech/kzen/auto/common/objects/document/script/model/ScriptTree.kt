@@ -164,7 +164,7 @@ data class ScriptTree(
             for ((index, childTree) in childTrees.withIndex()) {
                 val foundInChild = childTree.predecessors(target, buffer)
                 if (foundInChild) {
-                    if (! isGroup) {
+                    if (!isGroup) {
                         if (childTree.children.isEmpty()) {
                             for (i in 0 ..< index) {
                                 buffer.add(childTrees[i].objectPath)

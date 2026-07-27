@@ -141,7 +141,7 @@ class SelectEnclosingLoopEditor(
         // Pre-fill the innermost enclosing loop when this control step's target is still unset — makes a
         // freshly inserted ControlStep valid without manual selection. Runs once, as a single deliberate write
         // through the base's one commit path. Guarded on the plain-field mirrors, not `state`.
-        if (! defaultApplied && latestHydrated && latestSelectedKey == null && candidates.isNotEmpty()) {
+        if (!defaultApplied && latestHydrated && latestSelectedKey == null && candidates.isNotEmpty()) {
             defaultApplied = true
             latestSelectedKey = candidates.first().asString()
             selectAndCommit(latestSelectedKey!!)

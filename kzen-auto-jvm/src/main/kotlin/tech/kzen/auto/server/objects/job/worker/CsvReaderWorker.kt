@@ -113,7 +113,7 @@ class CsvReaderWorker(
 
     override fun onClose() {
         // Skip closing a reader that was handed to a migration snapshot (it lives on in the rebuilt instance).
-        if (! detached) {
+        if (!detached) {
             csvReader?.close()
         }
     }

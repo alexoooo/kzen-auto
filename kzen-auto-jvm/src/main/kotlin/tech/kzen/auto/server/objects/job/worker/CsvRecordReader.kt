@@ -93,7 +93,7 @@ class CsvRecordReader(
             }
         }
 
-        if (! sawAnyChar) {
+        if (!sawAnyChar) {
             // End of input with nothing pending: no more records.
             return null
         }
