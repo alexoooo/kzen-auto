@@ -19,14 +19,14 @@ main.steps/Gate:
 
 main.steps/Gate.branches/Branch:
   is: IfBranch
-  condition: main.steps/Off
+  condition: Off
 
 main.steps/Gate.branches/Branch.steps/A1:
   is: CountingStep
 
 main.steps/Gate.branches/Branch 2:
   is: IfBranch
-  condition: main.steps/On
+  condition: On
 
 main.steps/Gate.branches/Branch 2.steps/B1:
   is: CountingStep

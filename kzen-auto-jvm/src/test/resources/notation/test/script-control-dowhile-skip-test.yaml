@@ -20,7 +20,7 @@ main.steps/Loop.steps/Branch:
 
 main.steps/Loop.steps/Branch.branches/Branch:
   is: IfBranch
-  condition: main.steps/Loop.steps/IsFirst
+  condition: IsFirst
 
 main.steps/Loop.steps/Branch.branches/Branch.steps/Skip:
   is: ControlStep

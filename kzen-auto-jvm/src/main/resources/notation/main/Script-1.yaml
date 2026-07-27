@@ -23,7 +23,7 @@ main.steps/ForEach.steps/If:
 
 main.steps/ForEach.steps/If.branches/Branch:
   is: IfBranch
-  condition: main.steps/ForEach.steps/Formula
+  condition: Formula
 
 main.steps/ForEach.steps/If.branches/Branch.steps/Result:
   is: ResultStep

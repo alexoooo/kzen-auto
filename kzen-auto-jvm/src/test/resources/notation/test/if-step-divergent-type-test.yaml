@@ -33,7 +33,7 @@ main.steps/Branch:
 
 main.steps/Branch.branches/Branch:
   is: IfBranch
-  condition: main.steps/Positive
+  condition: Positive
 
 main.steps/Branch.branches/Branch.steps/Text:
   is: FormulaStep
@@ -41,7 +41,7 @@ main.steps/Branch.branches/Branch.steps/Text:
 
 main.steps/Branch.branches/Branch 2:
   is: IfBranch
-  condition: main.steps/Big
+  condition: Big
 
 main.steps/Branch.branches/Branch 2.steps/Number:
   is: FormulaStep

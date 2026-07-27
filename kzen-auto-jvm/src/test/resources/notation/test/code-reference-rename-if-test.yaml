@@ -1,0 +1,35 @@
+# An If branch condition is a Kotlin expression like any other code attribute, so renaming a step it names
+# rewrites the condition (KzenAutoCodeReferenceRewriter). A reference-typed attribute would instead be skipped
+# by the rewriter, which kzen-lib adjusts generically.
+#
+# Its own fixture rather than an addition to code-reference-rename-test.yaml, which ScriptExecutableStepsTest
+# also reads and pins the exact step list of.
+#
+# `Guarded` names Source too, from INSIDE the branch: the rewrite must reach both, and the second branch's
+# `Untouched` pins that a sibling branch group is out of scope for neither one.
+
+main:
+  is: Script
+
+main.steps/Source:
+  is: FormulaStep
+  code: 42
+
+main.steps/Gate:
+  is: IfStep
+
+main.steps/Gate.branches/Branch:
+  is: IfBranch
+  condition: "Source > 0"
+
+main.steps/Gate.branches/Branch.steps/Guarded:
+  is: FormulaStep
+  code: Source + 1
+
+main.steps/Gate.branches/Branch 2:
+  is: IfBranch
+  condition: "Source < 0"
+
+main.steps/Gate.branches/Branch 2.steps/Untouched:
+  is: FormulaStep
+  code: '"Source stays in this string"'

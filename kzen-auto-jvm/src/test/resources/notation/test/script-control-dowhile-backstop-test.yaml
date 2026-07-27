@@ -17,7 +17,7 @@ main.steps/Loop.steps/Branch:
 
 main.steps/Loop.steps/Branch.branches/Branch:
   is: IfBranch
-  condition: main.steps/Loop.steps/Guard
+  condition: Guard
 
 main.steps/Loop.steps/Branch.branches/Branch.steps/Skip:
   is: ControlStep

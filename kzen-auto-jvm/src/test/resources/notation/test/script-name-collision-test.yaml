@@ -23,7 +23,7 @@ main.steps/Branch:
 
 main.steps/Branch.branches/Branch:
   is: IfBranch
-  condition: main.steps/Flag
+  condition: Flag
 
 main.steps/Branch.branches/Branch.steps/Shadowed:
   is: FormulaStep

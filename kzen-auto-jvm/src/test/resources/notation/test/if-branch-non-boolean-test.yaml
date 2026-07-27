@@ -1,0 +1,34 @@
+# A branch condition that does not evaluate to Boolean. The generated expression forces a Boolean return, so
+# this is an ordinary Kotlin compile error — surfaced as the IF's validation error, since an IfBranch is never
+# executed and has no validation surface of its own. The broken branch is the SECOND one, which pins that the
+# error names the branch by POSITION (branch object names are deliberately never shown in the editor).
+
+main:
+  is: Script
+
+main.parameters/n:
+  is: ParameterBinding
+  type:
+    class: kotlin.Int
+    generics: []
+    nullable: false
+  default: 1
+
+main.steps/Chain:
+  is: IfStep
+
+main.steps/Chain.branches/Branch:
+  is: IfBranch
+  condition: "true"
+
+main.steps/Chain.branches/Branch.steps/First:
+  is: FormulaStep
+  code: "1"
+
+main.steps/Chain.branches/Branch 2:
+  is: IfBranch
+  condition: "n"
+
+main.steps/Chain.branches/Branch 2.steps/Second:
+  is: FormulaStep
+  code: "2"

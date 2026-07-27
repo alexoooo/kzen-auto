@@ -15,6 +15,7 @@ import kotlin.test.assertTrue
 class KzenAutoCodeReferenceRewriterTest {
     //-----------------------------------------------------------------------------------------------------------------
     private val documentPath = DocumentPath.parse("test/code-reference-rename-test.yaml")
+    private val ifDocumentPath = DocumentPath.parse("test/code-reference-rename-if-test.yaml")
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -35,6 +36,29 @@ class KzenAutoCodeReferenceRewriterTest {
 
 
     @Test
+    fun rewritesAnIfBranchCondition() {
+        val commands = rename(ifDocumentPath, "main.steps/Source", "Renamed")
+
+        // The branch condition is an ordinary value scalar, so it rewrites exactly like a Formula's `code`
+        // — a reference-typed attribute would be skipped here instead. Both branch conditions AND the
+        // in-branch step's code are in scope of the renamed root step.
+        assertEquals(
+            "Renamed > 0",
+            rewritten(commands, ifLocation("main.steps/Gate.branches/Branch")))
+        assertEquals(
+            "Renamed < 0",
+            rewritten(commands, ifLocation("main.steps/Gate.branches/Branch 2")))
+        assertEquals(
+            "Renamed + 1",
+            rewritten(commands, ifLocation("main.steps/Gate.branches/Branch.steps/Guarded")))
+
+        // The string literal in the other branch is still left alone.
+        val untouched = ifLocation("main.steps/Gate.branches/Branch 2.steps/Untouched")
+        assertTrue(commands.none { it.objectLocation == untouched })
+    }
+
+
+    @Test
     fun rewritesBacktickedReference() {
         val commands = rename("main.steps/My Source", "My Target")
 
@@ -47,10 +71,19 @@ class KzenAutoCodeReferenceRewriterTest {
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun rename(oldObjectPath: String, newName: String): List<UpdateInAttributeCommand> {
+        return rename(documentPath, oldObjectPath, newName)
+    }
+
+
+    private fun rename(
+        inDocumentPath: DocumentPath,
+        oldObjectPath: String,
+        newName: String
+    ): List<UpdateInAttributeCommand> {
         val graphNotation = AutoTestUtils.readNotation()
         val graphDefinitionAttempt = AutoTestUtils.graphDefinitionAttempt(graphNotation)
 
-        val oldLocation = location(oldObjectPath)
+        val oldLocation = ObjectLocation(inDocumentPath, ObjectPath.parse(oldObjectPath))
         val newLocation = oldLocation.copy(
             objectPath = oldLocation.objectPath.copy(name = ObjectName(newName)))
 
@@ -59,7 +92,21 @@ class KzenAutoCodeReferenceRewriterTest {
     }
 
 
+    private fun rewritten(
+        commands: List<UpdateInAttributeCommand>,
+        objectLocation: ObjectLocation
+    ): String {
+        return (commands.single { it.objectLocation == objectLocation }
+            .attributeNotation as ScalarAttributeNotation).value
+    }
+
+
     private fun location(objectPath: String): ObjectLocation {
         return ObjectLocation(documentPath, ObjectPath.parse(objectPath))
+    }
+
+
+    private fun ifLocation(objectPath: String): ObjectLocation {
+        return ObjectLocation(ifDocumentPath, ObjectPath.parse(objectPath))
     }
 }

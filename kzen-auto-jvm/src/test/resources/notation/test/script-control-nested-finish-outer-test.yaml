@@ -35,7 +35,7 @@ main.steps/OuterLoop.steps/InnerLoop.steps/Branch:
 
 main.steps/OuterLoop.steps/InnerLoop.steps/Branch.branches/Branch:
   is: IfBranch
-  condition: main.steps/OuterLoop.steps/InnerLoop.steps/Check
+  condition: Check
 
 main.steps/OuterLoop.steps/InnerLoop.steps/Branch.branches/Branch.steps/FinishOuter:
   is: ControlStep

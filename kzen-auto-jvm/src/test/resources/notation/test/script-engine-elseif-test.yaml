@@ -44,7 +44,7 @@ main.steps/Chain:
 
 main.steps/Chain.branches/Branch:
   is: IfBranch
-  condition: main.steps/Is One
+  condition: "`Is One`"
 
 main.steps/Chain.branches/Branch.steps/One:
   is: FormulaStep
@@ -52,7 +52,7 @@ main.steps/Chain.branches/Branch.steps/One:
 
 main.steps/Chain.branches/Branch 2:
   is: IfBranch
-  condition: main.steps/Is Two
+  condition: "`Is Two`"
 
 main.steps/Chain.branches/Branch 2.steps/Two:
   is: FormulaStep
@@ -60,7 +60,7 @@ main.steps/Chain.branches/Branch 2.steps/Two:
 
 main.steps/Chain.branches/Branch 3:
   is: IfBranch
-  condition: main.steps/Is Positive
+  condition: "`Is Positive`"
 
 main.steps/Chain.branches/Branch 3.steps/Counter:
   is: CountingStep

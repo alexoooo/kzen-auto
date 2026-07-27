@@ -159,7 +159,7 @@ IfStep:
   display: IfStepDisplay
   icon: "material-symbols:share"
   title: "If"
-  description: "Run the first branch whose condition holds, else the Else steps"
+  description: "Run the first branch whose Kotlin condition holds, else the Else steps"
   meta:
     branches:
       is: List
@@ -174,11 +174,11 @@ IfStep:
       by: NestedList
 
 
-# One branch of an IfStep chain: a condition (a step reference, like the old IfStep.condition) and the steps
-# that run when it is the first true one. Deliberately NOT `is: ScriptStep` — it is never executed, so
-# ScriptValidator's step collection (an inheritance-chain filter on ScriptStep) skips it and it never enters a
-# step-validation surface. Parentless, so `title` needs its own metadata to define (see the Channel archetype
-# gotcha in AGENTS.md); it feeds ScriptCommander.findNextAvailable's name prefix ("Branch", "Branch 2", ...).
+# One branch of an IfStep chain: a Kotlin Boolean condition and the steps that run when it is the first true
+# one. Deliberately NOT `is: ScriptStep` — it is never executed, so ScriptValidator's step collection (an
+# inheritance-chain filter on ScriptStep) skips it and it never enters a step-validation surface. Parentless,
+# so `title` needs its own metadata to define (see the Channel archetype gotcha in AGENTS.md); it feeds
+# ScriptCommander.findNextAvailable's name prefix ("Branch", "Branch 2", ...).
 IfBranch:
   abstract: true
   class: tech.kzen.auto.server.objects.script.step.control.IfBranch
@@ -186,10 +186,15 @@ IfBranch:
   condition: ""
   meta:
     title: String
+    # Compiled with a forced Boolean return by IfStep (which owns every branch's condition — see IfStep's
+    # KDoc), exactly like DoWhileStep.condition below. NO `scope: body` marker: a branch condition is
+    # evaluated BEFORE its branch runs, so its in-scope references are the If's own predecessors plus the
+    # in-scope bindings — the default scoping both KotlinExpressionEditor and StepExpressionSupport apply
+    # (ScriptTree.predecessors already excludes the sibling branch groups).
     condition:
-      is: ObjectLocation
-      by: Nominal
-      editor: SelectStepEditor
+      is: String
+      multiline: true
+      editor: KotlinExpressionEditor
     steps:
       is: List
       of: ScriptStep

@@ -23,16 +23,22 @@ import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 
 /**
  * The If chain (if / else-if / ... / else) end to end: which section runs, and what type the If contributes.
  *
- * Two things distinguish a chain from the former two-way then/else and are what these tests pin. FIRST-TRUE-WINS
+ * Two things distinguish a chain from a plain two-way if/else and are what these tests pin. FIRST-TRUE-WINS
  * IS LAZY — the engine stops at the first holding condition and never evaluates or runs a later branch whose
  * condition also holds — and the TYPE JOIN FOLDS over N+1 terminals (every condition branch plus the else)
  * rather than combining exactly two, so one divergent section widens the whole If to Any and one valueless
  * section makes it Unit.
+ *
+ * A condition is a Kotlin EXPRESSION (compiled with a forced Boolean return, like DoWhileStep's), not a
+ * reference to a Boolean step, so the last group here pins that an inline expression works with no upstream
+ * step to point at, and that a non-Boolean or unset one is reported as the If's own error by branch position.
  */
 class ScriptIfChainTest {
     //-----------------------------------------------------------------------------------------------------------------
@@ -40,6 +46,9 @@ class ScriptIfChainTest {
     private val noElsePath = DocumentPath.parse("test/script-engine-if-no-else-test.yaml")
     private val uniformTypePath = DocumentPath.parse("test/if-step-type-test.yaml")
     private val divergentTypePath = DocumentPath.parse("test/if-step-divergent-type-test.yaml")
+    private val expressionPath = DocumentPath.parse("test/if-branch-expression-test.yaml")
+    private val nonBooleanPath = DocumentPath.parse("test/if-branch-non-boolean-test.yaml")
+    private val unsetConditionPath = DocumentPath.parse("test/if-branch-unset-condition-test.yaml")
 
     private lateinit var context: KzenAutoContext
 
@@ -126,10 +135,78 @@ class ScriptIfChainTest {
     }
 
 
+    //---------------------------------------------------------------------------------- conditions as expressions
+    @Test
+    fun aBranchConditionMixesAPriorStepsValueWithAnInScopeBinding() {
+        // `Enabled && n == 1` — the expression names a predecessor step AND the Script parameter, which is
+        // exactly the scope ScriptTree.inScopeReferencePaths gives the branch. Branch 2 (`n > 0`) also holds
+        // at n = 1, so its CountingStep proves the later condition was never even evaluated.
+        val outcome = runExpressionChain(1)
+        assertEquals("small", assertIs<Outcome.Success>(outcome).value.mainComponentValue())
+        assertEquals(0, CountingStep.count.get())
+    }
+
+
+    @Test
+    fun aBranchConditionIsAnInlineExpressionNeedingNoUpstreamBooleanStep() {
+        // n = 5 fails branch 1 and takes branch 2, whose `n > 0` names nothing but the parameter — no Boolean
+        // step has to exist anywhere in the document for the branch to test it.
+        val outcome = runExpressionChain(5)
+        assertEquals("big", assertIs<Outcome.Success>(outcome).value.mainComponentValue())
+        assertEquals(1, CountingStep.count.get())
+    }
+
+
+    @Test
+    fun everyExpressionFalseFallsThroughToTheElse() {
+        val outcome = runExpressionChain(0)
+        assertEquals("none", assertIs<Outcome.Success>(outcome).value.mainComponentValue())
+        assertEquals(0, CountingStep.count.get())
+    }
+
+
+    @Test
+    fun uniformExpressionSectionsStillGiveTheIfTheirPreciseType() {
+        // The condition shape does not touch the value join: every section terminates in a String.
+        assertEquals(
+            TypeMetadata.string,
+            ifTypeOf(expressionPath, "main.steps/Chain"))
+    }
+
+
+    @Test
+    fun aNonBooleanBranchConditionIsTheIfsValidationError() {
+        // The branch is not a step, so its broken condition has to surface on the If — located by position,
+        // since branch object names are never shown.
+        val error = ifErrorOf(nonBooleanPath, "main.steps/Chain")
+        assertNotNull(error, "an Int condition must not validate")
+        assertTrue(
+            error.startsWith("Branch 2: "),
+            "the error must name the offending branch by position, was: $error")
+    }
+
+
+    @Test
+    fun anUnsetBranchConditionReportsConditionNotSet() {
+        // A freshly-added branch carries the archetype's empty default; that is called out explicitly rather
+        // than left to the compiler's "Boolean expected, got Unit".
+        assertEquals(
+            "Branch 2: condition not set",
+            ifErrorOf(unsetConditionPath, "main.steps/Chain"))
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private fun runChain(n: Int): Outcome {
         return runScript(
             chainPath,
+            TupleValue(listOf(TupleComponentValue(TupleComponentName("n"), n))))
+    }
+
+
+    private fun runExpressionChain(n: Int): Outcome {
+        return runScript(
+            expressionPath,
             TupleValue(listOf(TupleComponentValue(TupleComponentName("n"), n))))
     }
 
@@ -176,6 +253,13 @@ class ScriptIfChainTest {
         return validationOf(documentPath)
             .stepValidations[ObjectPath.parse(objectPath)]
             ?.typeMetadata
+    }
+
+
+    private fun ifErrorOf(documentPath: DocumentPath, objectPath: String): String? {
+        return validationOf(documentPath)
+            .stepValidations[ObjectPath.parse(objectPath)]
+            ?.errorMessage
     }
 
 

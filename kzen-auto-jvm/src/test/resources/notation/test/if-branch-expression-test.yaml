@@ -1,0 +1,62 @@
+# Branch conditions as Kotlin EXPRESSIONS rather than references to a Boolean step: branch 1 mixes a prior
+# step's value with a Script parameter, branch 2 is written purely inline against the parameter and has no
+# upstream Boolean step to point at at all. Branch 2's condition also holds whenever branch 1's does, so its
+# CountingStep is the observable that first-true-wins still short-circuits — a later condition must never be
+# evaluated, let alone run, once an earlier one holds.
+#
+#   n = 1 -> branch 1 ("small"), count 0   an expression branch wins over a later one that also holds
+#   n = 5 -> branch 2 ("big"),   count 1   a purely inline condition is reachable on its own
+#   n = 0 -> else     ("none"),  count 0   every expression false falls through
+#
+# Every section's terminal is a String, so the If's joined type is String and the declared String result
+# type-checks against the If reference.
+
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.String
+      generics: []
+      nullable: false
+
+main.parameters/n:
+  is: ParameterBinding
+  type:
+    class: kotlin.Int
+    generics: []
+    nullable: false
+  default: 0
+
+main.steps/Enabled:
+  is: FormulaStep
+  code: "true"
+
+main.steps/Chain:
+  is: IfStep
+
+main.steps/Chain.branches/Branch:
+  is: IfBranch
+  condition: "Enabled && n == 1"
+
+main.steps/Chain.branches/Branch.steps/Small:
+  is: FormulaStep
+  code: '"small"'
+
+main.steps/Chain.branches/Branch 2:
+  is: IfBranch
+  condition: "n > 0"
+
+main.steps/Chain.branches/Branch 2.steps/Counter:
+  is: CountingStep
+
+main.steps/Chain.branches/Branch 2.steps/Big:
+  is: FormulaStep
+  code: '"big"'
+
+main.steps/Chain.else/None:
+  is: FormulaStep
+  code: '"none"'
+
+main.steps/Result:
+  is: ResultStep
+  code: Chain

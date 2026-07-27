@@ -13,7 +13,7 @@ main.steps/Gate:
 
 main.steps/Gate.branches/Branch:
   is: IfBranch
-  condition: main.steps/Flag
+  condition: Flag
 
 main.steps/Gate.branches/Branch.steps/T1:
   is: CountingStep

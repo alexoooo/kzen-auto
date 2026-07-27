@@ -14,24 +14,12 @@ main.parameters/number:
     nullable: false
   default: 15
 
-main.steps/Divisible By 15:
-  is: FormulaStep
-  code: "number % 15 == 0"
-
-main.steps/Divisible By 3:
-  is: FormulaStep
-  code: "number % 3 == 0"
-
-main.steps/Divisible By 5:
-  is: FormulaStep
-  code: "number % 5 == 0"
-
 main.steps/FizzBuzz:
   is: IfStep
 
 main.steps/FizzBuzz.branches/Branch:
   is: IfBranch
-  condition: main.steps/Divisible By 15
+  condition: number % 15 == 0
 
 main.steps/FizzBuzz.branches/Branch.steps/Formula:
   is: FormulaStep
@@ -39,7 +27,7 @@ main.steps/FizzBuzz.branches/Branch.steps/Formula:
 
 main.steps/FizzBuzz.branches/Branch 2:
   is: IfBranch
-  condition: main.steps/Divisible By 3
+  condition: number % 3 == 0
 
 main.steps/FizzBuzz.branches/Branch 2.steps/Formula 4:
   is: FormulaStep
@@ -47,7 +35,7 @@ main.steps/FizzBuzz.branches/Branch 2.steps/Formula 4:
 
 main.steps/FizzBuzz.branches/Branch 3:
   is: IfBranch
-  condition: main.steps/Divisible By 5
+  condition: number % 5 == 0
 
 main.steps/FizzBuzz.branches/Branch 3.steps/Formula 5:
   is: FormulaStep

@@ -573,7 +573,12 @@ class IfStepDisplay(
             div {
                 css {
                     display = Display.flex
-                    alignItems = AlignItems.center
+
+                    // Top-aligned, not centred: the condition is a MULTILINE expression field that grows
+                    // downward, and KotlinExpressionEditor top-aligns its own insert-reference button the same
+                    // way — so remove and insert stay on one line with the field's first row however tall it
+                    // gets, instead of drifting to the middle of a long expression.
+                    alignItems = AlignItems.flexStart
                 }
 
                 div {

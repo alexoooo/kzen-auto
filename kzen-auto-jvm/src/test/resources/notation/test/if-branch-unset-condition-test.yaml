@@ -1,0 +1,25 @@
+# A freshly-added branch, exactly as the editor's "+ Else if" writes it: no `condition` attribute of its own,
+# so it inherits the IfBranch archetype's empty default. An empty expression is called out as "condition not
+# set" rather than left to the Kotlin compiler, whose "Boolean expected, got Unit" would say nothing about
+# what the user has to do. Positioned second, like if-branch-non-boolean-test.yaml, to pin the numbering.
+
+main:
+  is: Script
+
+main.steps/Chain:
+  is: IfStep
+
+main.steps/Chain.branches/Branch:
+  is: IfBranch
+  condition: "true"
+
+main.steps/Chain.branches/Branch.steps/First:
+  is: FormulaStep
+  code: "1"
+
+main.steps/Chain.branches/Branch 2:
+  is: IfBranch
+
+main.steps/Chain.branches/Branch 2.steps/Second:
+  is: FormulaStep
+  code: "2"

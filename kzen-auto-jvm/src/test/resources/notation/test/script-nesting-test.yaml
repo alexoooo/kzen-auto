@@ -32,7 +32,7 @@ main.steps/OuterLoop.steps/InnerLoop.steps/Branch:
 
 main.steps/OuterLoop.steps/InnerLoop.steps/Branch.branches/Branch:
   is: IfBranch
-  condition: main.steps/Flag
+  condition: Flag
 
 main.steps/OuterLoop.steps/InnerLoop.steps/Branch.branches/Branch.steps/DeepStep:
   is: FormulaStep
@@ -46,7 +46,7 @@ main.steps/TopIf:
 
 main.steps/TopIf.branches/Branch:
   is: IfBranch
-  condition: main.steps/Flag
+  condition: Flag
 
 main.steps/TopIf.branches/Branch.steps/ThenStep:
   is: FormulaStep
@@ -54,7 +54,7 @@ main.steps/TopIf.branches/Branch.steps/ThenStep:
 
 main.steps/TopIf.branches/Branch 2:
   is: IfBranch
-  condition: main.steps/Flag
+  condition: Flag
 
 main.steps/TopIf.branches/Branch 2.steps/ElseIfStep:
   is: FormulaStep

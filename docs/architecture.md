@@ -133,12 +133,13 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > (`ScriptNestingAnalysis` descends through it; `ScriptJumpAnalysis` rejects it and filters it out of
 > the descend ancestors), sibling groups are excluded from each other's scope (`ScriptTree.predecessors`
 > — an earlier If branch did not run when a later one does), and the group node itself is registered as
-> a dependency-edge endpoint so its condition reference draws a line (`ScriptDependencyAnalysis`).
+> a dependency-edge endpoint so the identifiers its condition names draw a line (`ScriptDependencyAnalysis`
+> — a lexical code-scalar edge, since a branch condition is a Kotlin expression, not a reference).
 > An N-way construct that shared code has never heard of therefore needs no edit here — the contract
 > `ScriptBranchDiscoveryTest` pins.
 
 > **Kotlin expressions — reference analysis, rename rewriting, validation.** Expressions
-> (`FormulaStep`, `ResultStep`, `DoWhile` conditions, Job formulas) are analyzed by
+> (`FormulaStep`, `ResultStep`, `DoWhile` and `IfBranch` conditions, Job formulas) are analyzed by
 > **`KotlinExpressionAnalyzer`** (kzen-auto-common `util/`), a hand-rolled Kotlin lexer:
 > `referencedIdentifiers(code)` / `renameIdentifier(code, from, to)` correctly skip strings
 > (including raw strings and `${}` templates, whose identifiers ARE references), char literals,

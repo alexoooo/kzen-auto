@@ -20,7 +20,7 @@ main.steps/Chain:
 
 main.steps/Chain.branches/Branch:
   is: IfBranch
-  condition: main.steps/Never
+  condition: Never
 
 main.steps/Chain.branches/Branch.steps/Skipped:
   is: CountingStep
