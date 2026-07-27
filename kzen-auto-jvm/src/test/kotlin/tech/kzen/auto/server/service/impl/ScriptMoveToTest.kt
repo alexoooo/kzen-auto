@@ -27,7 +27,8 @@ import kotlin.test.fail
  * End-to-end move-to (Set Next Statement) coverage (execution-control phase XC2) driven through the real
  * [ServerLogicController] + [tech.kzen.lib.server.exec.engine.RunEngine]: backward re-run, forward skip (and the
  * value backstop), the no-op frontier jump, jump after terminal, a loop-step restart, a loop-body rejection, and
- * an If-branch descend. Each fixture uses the test-only [CountingStep] so re-execution is observable via the
+ * an If-branch descend (both into the first branch and into a later one, whose path crosses a structural branch
+ * group node). Each fixture uses the test-only [CountingStep] so re-execution is observable via the
  * process-global count; the suite resets it per test and relies on sequential execution (as the sibling
  * static-fixture engine tests do).
  */
@@ -37,6 +38,7 @@ class ScriptMoveToTest {
     private val backstopPath = DocumentPath.parse("test/script-moveto-backstop-test.yaml")
     private val loopPath = DocumentPath.parse("test/script-moveto-loop-test.yaml")
     private val ifPath = DocumentPath.parse("test/script-moveto-if-test.yaml")
+    private val elseIfPath = DocumentPath.parse("test/script-moveto-elseif-test.yaml")
 
     private lateinit var context: KzenAutoContext
 
@@ -202,14 +204,43 @@ class ScriptMoveToTest {
 
         // Backward into the If branch: Gate re-runs its condition (descend, checkpoint suppressed), T1 is
         // adopted (kept), and the run parks at T2 — nothing re-executes yet.
-        assertEquals(LogicRunResponse.Submitted, moveTo(runId, ifPath, "main.steps/Gate.then/T2"))
+        assertEquals(LogicRunResponse.Submitted, moveTo(runId, ifPath, "main.steps/Gate.branches/Branch.steps/T2"))
         awaitState(LogicRunState.Paused)
-        assertNextToRun(runId, ObjectLocation(ifPath, ObjectPath.parse("main.steps/Gate.then/T2")))
+        assertNextToRun(runId, ObjectLocation(ifPath, ObjectPath.parse("main.steps/Gate.branches/Branch.steps/T2")))
         assertEquals(2, CountingStep.count.get())
 
         resume(runId)
         awaitDone()
         assertEquals(3, CountingStep.count.get())   // only T2 re-ran; T1 (kept) did not
+    }
+
+
+    @Test
+    fun jumpIntoASecondIfBranchDescendsThroughTheGroupAndParks() {
+        // Same descend contract one level deeper: the target lives in the SECOND branch of an if/else-if chain,
+        // so the path to it runs through an IfBranch group node. Only Gate is a real container step, so only
+        // Gate may be in the descend set — a group node in there would ask the spine to "run" a notation object
+        // that has no execution.
+        val runId = startPaused(elseIfPath)       // before Off
+        step(runId)                               // Off, before On
+        step(runId)                               // On, before Gate
+        step(runId)                               // into Gate (branch 1 false, branch 2 true), before B1
+        step(runId)                               // B1, before B2
+        step(runId)                               // B2, before After (Gate completes)
+        assertEquals(2, CountingStep.count.get())  // B1 + B2; branch 1's A1 never ran
+
+        assertEquals(
+            LogicRunResponse.Submitted,
+            moveTo(runId, elseIfPath, "main.steps/Gate.branches/Branch 2.steps/B2"))
+        awaitState(LogicRunState.Paused)
+        assertNextToRun(
+            runId,
+            ObjectLocation(elseIfPath, ObjectPath.parse("main.steps/Gate.branches/Branch 2.steps/B2")))
+        assertEquals(2, CountingStep.count.get())
+
+        resume(runId)
+        awaitDone()
+        assertEquals(3, CountingStep.count.get())  // only B2 re-ran; B1 (kept) and A1 (not taken) did not
     }
 
 

@@ -14,6 +14,7 @@ import tech.kzen.lib.common.exec.tuple.TupleDefinition
 import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
+import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.platform.ClassNames
 
@@ -218,7 +219,8 @@ class ForEachStep(
     }
 
 
-    override fun nestedStepLists(): List<List<ObjectLocation>> {
+    // The body is injected directly (no group nesting), so the notation is not needed here.
+    override fun nestedStepLists(graphNotation: GraphNotation): List<List<ObjectLocation>> {
         return listOf(bodySteps)
     }
 

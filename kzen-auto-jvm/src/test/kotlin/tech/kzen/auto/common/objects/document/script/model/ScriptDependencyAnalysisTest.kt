@@ -86,7 +86,7 @@ class ScriptDependencyAnalysisTest {
         fun collisionLocation(objectPath: String) =
             ObjectLocation(collisionPath, ObjectPath.parse(objectPath))
 
-        val user = collisionLocation("main.steps/Branch.then/Shadow User")
+        val user = collisionLocation("main.steps/Branch.branches/Branch.steps/Shadow User")
 
         // `Shadowed + 1` cannot be attributed to one of the two same-named steps from its text, so BOTH get the
         // edge. Over-reporting is the safe direction: a dropped edge would let ScriptValueReferences call a value
@@ -95,8 +95,33 @@ class ScriptDependencyAnalysisTest {
             ScriptStepDependency(collisionLocation("main.steps/Shadowed"), user) in analysis.edges,
             "the root-level `Shadowed` must be reported as a source")
         assertTrue(
-            ScriptStepDependency(collisionLocation("main.steps/Branch.then/Shadowed"), user) in analysis.edges,
+            ScriptStepDependency(collisionLocation("main.steps/Branch.branches/Branch.steps/Shadowed"), user) in analysis.edges,
             "the branch-nested `Shadowed` must be reported as a source")
+    }
+
+
+    @Test
+    fun anIfBranchConditionIsACrossBranchEdgeIntoTheBranchGroup() {
+        val collisionPath = DocumentPath.parse("test/script-name-collision-test.yaml")
+        val graphNotation = AutoTestUtils.readNotation()
+        val graphDefinitionAttempt = AutoTestUtils.graphDefinitionAttempt(graphNotation)
+
+        val analysis = ScriptDependencyAnalysis.analyze(graphDefinitionAttempt.successful(), collisionPath)
+
+        fun collisionLocation(objectPath: String) =
+            ObjectLocation(collisionPath, ObjectPath.parse(objectPath))
+
+        // A branch's condition now lives on the IfBranch group object, not on the If — so the dependency runs
+        // `Flag -> IfBranch`. The group child is reached only through the `group: true` walk; without it the
+        // IfBranch is absent from branchOfStep, classifyEdge drops the edge, and the condition row loses its
+        // dependency elbow in the gutter.
+        val conditionEdge = ScriptStepDependency(
+            collisionLocation("main.steps/Flag"),
+            collisionLocation("main.steps/Branch.branches/Branch"))
+        assertTrue(conditionEdge in analysis.edges)
+
+        // root `steps` branch vs the If's `branches` group, so the overlay draws it as a cross-branch line
+        assertTrue(conditionEdge in analysis.crossBranchEdges())
     }
 
 

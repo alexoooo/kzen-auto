@@ -32,7 +32,7 @@ object ScriptNestingAnalysis {
     /**
      * The loop steps enclosing [target] in [scriptTree]'s document, INNERMOST-first: each ancestor on the path
      * root -> [target] whose hosting attribute of the descending branch is `rerun`-flagged ([isReRunAttribute]).
-     * Empty when [target] is at the document root or nested only under non-`rerun` branches (an If's then/else).
+     * Empty when [target] is at the document root or nested only under non-`rerun` branches (an If's branches).
      * [scriptTree] must be the root tree of [documentPath].
      */
     fun enclosingLoops(
@@ -78,10 +78,12 @@ object ScriptNestingAnalysis {
     /**
      * The executable body steps in [node]'s subtree, in document order — a strict subsequence of
      * [ScriptTree.orderedDescendantObjectPaths] with the value-binding branches (a Script's `parameters`, a
-     * ForEach's `item`) and everything nested under them removed. Executable-ness is notation-driven:
-     * a branch counts iff [ScriptConventions.stepBranchAttributeNames] lists it (`is: List, of: ScriptStep`
-     * by exact name), so a third-party branching step is included without editing this, and a third-party
-     * BINDING branch is excluded without naming it here.
+     * ForEach's `item`) and everything nested under them removed, and the structural GROUP nodes
+     * ([ScriptConventions.stepGroupAttributeNames] — an IfStep's IfBranch children) descended through but not
+     * themselves listed. Executable-ness is notation-driven: a branch counts iff
+     * [ScriptConventions.stepBranchAttributeNames] lists it (`is: List, of: ScriptStep` by exact name), so a
+     * third-party branching step is included without editing this, and a third-party BINDING branch is excluded
+     * without naming it here.
      *
      * The rows a Script paints an execution margin band beside: every step the engine can stop at, and
      * nothing that merely looks like one. [node] must be the root tree of [documentPath].
@@ -103,23 +105,38 @@ object ScriptNestingAnalysis {
         node: ScriptTree,
         buffer: MutableList<ObjectPath>
     ) {
-        // NB: also the stale-node guard — stepBranchAttributeNames answers empty for a location that left the
-        //     notation (deleted / renamed mid-publish), terminating the walk instead of throwing.
+        // NB: also the stale-node guard — both lookups answer empty for a location that left the notation
+        //     (deleted / renamed mid-publish), terminating the walk instead of throwing.
+        val objectLocation = ObjectLocation(documentPath, node.objectPath)
         val executableBranches = ScriptConventions
-            .stepBranchAttributeNames(graphNotation, ObjectLocation(documentPath, node.objectPath))
+            .stepBranchAttributeNames(graphNotation, objectLocation)
+            .toHashSet()
+        val groupBranches = ScriptConventions
+            .stepGroupAttributeNames(graphNotation, objectLocation)
             .toHashSet()
 
-        if (executableBranches.isEmpty()) {
+        if (executableBranches.isEmpty() && groupBranches.isEmpty()) {
             return
         }
 
         for ((attributeName, childTrees) in node.children) {
-            if (attributeName !in executableBranches) {
-                continue
-            }
-            for (childTree in childTrees) {
-                buffer.add(childTree.objectPath)
-                collectExecutable(graphNotation, documentPath, childTree, buffer)
+            when (attributeName) {
+                // A group child (an IfBranch) is a structural node, not a step: it is never executed, so it gets
+                // no execution-margin band and no breakpoint — but its OWN step branches are body steps, so the
+                // walk descends through it. That is the whole group rule; no step type is named here.
+                in groupBranches ->
+                    for (childTree in childTrees) {
+                        collectExecutable(graphNotation, documentPath, childTree, buffer)
+                    }
+
+                in executableBranches ->
+                    for (childTree in childTrees) {
+                        buffer.add(childTree.objectPath)
+                        collectExecutable(graphNotation, documentPath, childTree, buffer)
+                    }
+
+                else ->
+                    continue
             }
         }
     }

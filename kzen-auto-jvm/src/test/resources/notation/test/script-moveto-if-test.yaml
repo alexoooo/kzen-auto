@@ -10,12 +10,15 @@ main.steps/Flag:
 
 main.steps/Gate:
   is: IfStep
+
+main.steps/Gate.branches/Branch:
+  is: IfBranch
   condition: main.steps/Flag
 
-main.steps/Gate.then/T1:
+main.steps/Gate.branches/Branch.steps/T1:
   is: CountingStep
 
-main.steps/Gate.then/T2:
+main.steps/Gate.branches/Branch.steps/T2:
   is: CountingStep
 
 main.steps/After:

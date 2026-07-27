@@ -32,9 +32,12 @@ main.steps/OuterLoop.steps/InnerLoop.steps/Check:
 
 main.steps/OuterLoop.steps/InnerLoop.steps/Branch:
   is: IfStep
+
+main.steps/OuterLoop.steps/InnerLoop.steps/Branch.branches/Branch:
+  is: IfBranch
   condition: main.steps/OuterLoop.steps/InnerLoop.steps/Check
 
-main.steps/OuterLoop.steps/InnerLoop.steps/Branch.then/FinishOuter:
+main.steps/OuterLoop.steps/InnerLoop.steps/Branch.branches/Branch.steps/FinishOuter:
   is: ControlStep
   loop: main.steps/OuterLoop
   action: finishLoop

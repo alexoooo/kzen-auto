@@ -1,0 +1,39 @@
+# Move-to descend into a NON-FIRST branch of an If chain (ScriptMoveToTest): the jump target lives in the
+# second branch group, so the descend set must be [Gate] alone — the IfBranch on the path is a structural group
+# node, never executed, so it must not be treated as a container step to re-run. On the rebuilt run Gate
+# re-evaluates its conditions (branch 1 false, branch 2 true), B1 is adopted, and the run parks at B2.
+# A1 / B1 / B2 are side-effect CountingSteps so what re-ran is observable.
+main:
+  is: Script
+
+main.steps/Off:
+  is: FormulaStep
+  code: "false"
+
+main.steps/On:
+  is: FormulaStep
+  code: "true"
+
+main.steps/Gate:
+  is: IfStep
+
+main.steps/Gate.branches/Branch:
+  is: IfBranch
+  condition: main.steps/Off
+
+main.steps/Gate.branches/Branch.steps/A1:
+  is: CountingStep
+
+main.steps/Gate.branches/Branch 2:
+  is: IfBranch
+  condition: main.steps/On
+
+main.steps/Gate.branches/Branch 2.steps/B1:
+  is: CountingStep
+
+main.steps/Gate.branches/Branch 2.steps/B2:
+  is: CountingStep
+
+main.steps/After:
+  is: FormulaStep
+  code: "1"

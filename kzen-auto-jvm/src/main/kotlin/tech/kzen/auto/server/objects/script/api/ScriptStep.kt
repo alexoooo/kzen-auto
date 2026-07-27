@@ -2,6 +2,7 @@ package tech.kzen.auto.server.objects.script.api
 
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.model.structure.notation.GraphNotation
 
 
 /**
@@ -28,9 +29,16 @@ interface ScriptStep {
 
 
     /**
-     * The nested step-list branches this step owns (an If's then/else, a loop's body), or empty for a leaf.
-     * The spine recurses through these to expand the live-edit replay set ([StepExecution.dropReplay]); a control
-     * step overrides to expose its branches so the mechanism stays generic — no per-type knowledge in the spine.
+     * The nested step-list branches this step owns (an If chain's per-branch steps and its else, a loop's body),
+     * or empty for a leaf. The spine recurses through these to expand the live-edit replay set
+     * ([StepExecution.dropReplay]); a control step overrides to expose its branches so the mechanism stays
+     * generic — no per-type knowledge in the spine.
+     *
+     * [graphNotation] is passed because a step's branches may live one nesting level down, under a structural
+     * GROUP child rather than directly on the step (IfStep's `branches` holds IfBranch objects, each owning its
+     * own `steps` — the group is declared `group: true` in the step's attribute metadata and discovered by
+     * `ScriptConventions.stepGroupAttributeNames`). Resolving those needs notation; a step whose branches are
+     * its own constructor-injected lists ignores the parameter.
      *
      * A LOOP step additionally flags the branch it re-runs as `rerun: true` in its `meta.<branch>` notation
      * metadata (e.g. ForEachStep/DoWhileStep `meta.steps.rerun`) and consumes a control signal targeting itself
@@ -38,7 +46,7 @@ interface ScriptStep {
      * semantics declaratively by declaring both — ControlStep may then target it and move-to jumps into its body
      * are excluded — with no change to shared code (read by `ScriptNestingAnalysis`).
      */
-    fun nestedStepLists(): List<List<ObjectLocation>> {
+    fun nestedStepLists(graphNotation: GraphNotation): List<List<ObjectLocation>> {
         return listOf()
     }
 

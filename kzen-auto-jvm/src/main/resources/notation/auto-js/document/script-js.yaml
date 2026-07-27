@@ -74,20 +74,29 @@ IfStepDisplay:
   attributeEditorManager: AttributeEditorManager
   stepDisplayManager: StepDisplayManagerHandle
   scriptCommander: ScriptCommander
+  # The archetype the "+ Else if" affordance instantiates — resolved here rather than named in the display,
+  # so a branch group type stays a notation concern.
+  branchArchetype: IfBranch
+  meta:
+    branchArchetype:
+      is: ObjectLocation
+      by: Nominal
 
-#IfStepCommander:
-#  is: ScriptStepCommander
-#  class: tech.kzen.auto.client.objects.document.script.command.IfStepCommander
-#  parent: ScriptCommander
-#  stepArchetype: IfStep
-#  branchArchetype: MultiScriptStep
-#  meta:
-#    stepArchetype:
-#      is: ObjectLocation
-#      by: Nominal
-#    branchArchetype:
-#      is: ObjectLocation
-#      by: Nominal
+# Seeds a freshly-inserted If with its first branch, so the ribbon gives a usable one-branch construct
+# rather than an empty chain (the ForEach/Item analogue).
+IfStepCommander:
+  is: ScriptStepCommander
+  class: tech.kzen.auto.client.objects.document.script.step.control.IfStepCommander
+  parent: ScriptCommander
+  ifStepArchetype: IfStep
+  branchArchetype: IfBranch
+  meta:
+    ifStepArchetype:
+      is: ObjectLocation
+      by: Nominal
+    branchArchetype:
+      is: ObjectLocation
+      by: Nominal
 
 ForEachStepDisplay:
   is: ScriptStepDisplay

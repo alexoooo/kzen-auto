@@ -1,7 +1,8 @@
-# The two branches yield different value types (String vs Int), so the If's joined `main` type widens to the
-# only guaranteed common supertype, Any. The If is still referenceable, but a Result step declared as String
-# referencing it (`Branch`) now fails with a meaningful type mismatch (Any !-> String) rather than an
-# "unresolved reference". Making the branches uniform would give a precise, assignable type.
+# One section of the chain yields a different value type from the others (Int vs String), so the If's joined
+# `main` type widens to the only guaranteed common supertype, Any — the N-way fold is only as precise as its
+# least uniform terminal. The If is still referenceable, but a Result step declared as String referencing it
+# (`Branch`) now fails with a meaningful type mismatch (Any !-> String) rather than an "unresolved reference".
+# Making every section uniform would give a precise, assignable type (see if-step-type-test.yaml).
 
 main:
   is: Script
@@ -23,17 +24,32 @@ main.steps/Positive:
   is: FormulaStep
   code: "n > 0"
 
+main.steps/Big:
+  is: FormulaStep
+  code: "n > 100"
+
 main.steps/Branch:
   is: IfStep
+
+main.steps/Branch.branches/Branch:
+  is: IfBranch
   condition: main.steps/Positive
 
-main.steps/Branch.then/Text:
+main.steps/Branch.branches/Branch.steps/Text:
   is: FormulaStep
   code: '"yes"'
 
-main.steps/Branch.else/Number:
+main.steps/Branch.branches/Branch 2:
+  is: IfBranch
+  condition: main.steps/Big
+
+main.steps/Branch.branches/Branch 2.steps/Number:
   is: FormulaStep
   code: "n"
+
+main.steps/Branch.else/Other:
+  is: FormulaStep
+  code: '"no"'
 
 main.steps/Result:
   is: ResultStep

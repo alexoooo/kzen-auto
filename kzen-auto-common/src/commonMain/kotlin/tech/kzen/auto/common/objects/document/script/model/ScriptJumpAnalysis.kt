@@ -1,7 +1,9 @@
 package tech.kzen.auto.common.objects.document.script.model
 
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
+import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.document.DocumentPath
+import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
 
@@ -48,8 +50,9 @@ object ScriptJumpAnalysis {
      * against the current [graphNotation]. Valid iff [target] resolves to a jumpable step: it exists in the
      * tree, it lives in an executable step-list branch (not a `parameters` / `item` binding — both are
      * `is: ScriptStep` archetypes, so the hosting branch, not the inheritance chain, is what distinguishes a
-     * step from a binding), and it is not inside a `rerun`-flagged loop body (a jump TO a loop step itself is
-     * valid — the loop restarts at iteration 0).
+     * step from a binding — and not a `group: true` branch, whose children are structural branch groups), and
+     * it is not inside a `rerun`-flagged loop body (a jump TO a loop step itself is valid — the loop restarts
+     * at iteration 0).
      */
     fun plan(
         graphNotation: GraphNotation,
@@ -68,19 +71,37 @@ object ScriptJumpAnalysis {
 
         // The branch [target] directly lives in. A binding (loop item / script parameter) is a ScriptStep
         // archetype but is not walked by the spine, so it is not a jumpable target.
-        val hostingAttribute = path.last().second
+        val (hostingContainer, hostingAttribute) = path.last()
         if (hostingAttribute == ScriptConventions.itemAttributeName ||
                 hostingAttribute == ScriptConventions.parametersAttributeName) {
             return ScriptJumpPlan.invalid("Not a step (binding)")
+        }
+
+        // Likewise a structural GROUP child (an IfBranch): notation object, never executed, so nothing can park
+        // at it. Notation-driven via the `group: true` marker — no step type named here.
+        if (isGroupAttribute(graphNotation, documentPath, hostingContainer, hostingAttribute)) {
+            return ScriptJumpPlan.invalid("Not a step (branch)")
         }
 
         if (ScriptNestingAnalysis.enclosingLoops(graphNotation, documentPath, scriptTree, target).isNotEmpty()) {
             return ScriptJumpPlan.invalid("Inside a loop body (not supported)")
         }
 
+        // The descend set is the CONTAINER STEPS the rebuilt spine re-runs; a group node on the path is not a
+        // step, so it is filtered out (an entry is a group node when the entry BEFORE it descends through one of
+        // its container's group attributes). Group paths left in [dropSet] are harmless — no outcome ever exists
+        // for one — so they are not worth filtering.
+        val groupNodePaths = HashSet<ObjectPath>()
+        for (i in 0 ..< path.size - 1) {
+            val (containerPath, descendingAttribute) = path[i]
+            if (isGroupAttribute(graphNotation, documentPath, containerPath, descendingAttribute)) {
+                groupNodePaths.add(path[i + 1].first)
+            }
+        }
+
         val ancestors = path
             .map { it.first }
-            .filterNot { it == ObjectPath.main }
+            .filterNot { it == ObjectPath.main || it in groupNodePaths }
 
         val precedingOnPath = scriptTree.predecessors(target)
 
@@ -91,6 +112,17 @@ object ScriptJumpAnalysis {
         dropSet.addAll(ordered.subList(targetIndex, ordered.size))
 
         return ScriptJumpPlan(true, null, ancestors, precedingOnPath, dropSet)
+    }
+
+
+    private fun isGroupAttribute(
+        graphNotation: GraphNotation,
+        documentPath: DocumentPath,
+        container: ObjectPath,
+        attributeName: AttributeName
+    ): Boolean {
+        return attributeName in ScriptConventions.stepGroupAttributeNames(
+            graphNotation, ObjectLocation(documentPath, container))
     }
 
 

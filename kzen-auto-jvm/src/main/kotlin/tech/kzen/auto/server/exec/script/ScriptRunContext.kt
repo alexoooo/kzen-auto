@@ -547,7 +547,7 @@ class ScriptRunContext(
         val result = ArrayList<ObjectStableId>()
         for (location in locations) {
             result.add(objectStableMapper.objectStableId(location))
-            for (nestedList in scriptStepAt(location).nestedStepLists()) {
+            for (nestedList in scriptStepAt(location).nestedStepLists(structure.graphNotation)) {
                 result.addAll(nestedStableIds(nestedList))
             }
         }

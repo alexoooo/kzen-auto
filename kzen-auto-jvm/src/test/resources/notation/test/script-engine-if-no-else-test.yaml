@@ -1,0 +1,34 @@
+# An If chain whose only condition is false and which declares NO else section: the If contributes no value
+# (its else step list is empty, so the spine's walk over it yields nothing) and the Script simply proceeds to
+# the next step. Doubles as the type-join fixture for Unit dominance — the empty else's Unit terminal wins over
+# the branch's Int terminal, so the If's `main` type is Unit and it is not a referenceable value.
+
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.Int
+      generics: []
+      nullable: false
+
+main.steps/Never:
+  is: FormulaStep
+  code: "false"
+
+main.steps/Chain:
+  is: IfStep
+
+main.steps/Chain.branches/Branch:
+  is: IfBranch
+  condition: main.steps/Never
+
+main.steps/Chain.branches/Branch.steps/Skipped:
+  is: CountingStep
+
+main.steps/After:
+  is: FormulaStep
+  code: "7"
+
+main.steps/Result:
+  is: ResultStep
+  code: "After"

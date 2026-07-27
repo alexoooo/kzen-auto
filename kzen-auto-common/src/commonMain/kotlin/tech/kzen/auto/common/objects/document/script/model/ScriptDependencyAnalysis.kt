@@ -67,8 +67,8 @@ data class ScriptDependencyAnalysis(
             // (`` `my step` ``) is matched.
             //
             // Collisions are real and must OVER-report: an ObjectPath is name + nesting, so `main.steps/Foo` and
-            // `main.steps/If.then/Foo` are distinct steps sharing one identifier, and an expression naming `Foo`
-            // cannot be attributed to one of them from the text alone. Every candidate therefore gets the edge.
+            // `main.steps/If.branches/B.steps/Foo` are distinct steps sharing one identifier, and an expression
+            // naming `Foo` cannot be attributed to one from the text alone. Every candidate therefore gets it.
             // Over-reporting is the safe direction for both consumers: the client draws a surplus dependency
             // line, and [valueReferencedSteps] keeps collecting a value it might not have needed. Attributing to
             // a single winner would instead LOSE an edge — which for the value-referenced set means silently
@@ -87,7 +87,7 @@ data class ScriptDependencyAnalysis(
                 if (sourceLocation == targetLocation || sourceLocation.documentPath != documentPath) {
                     return
                 }
-                // NB: structural containment (e.g. IfStep.then[*] → its child steps) is not a data dep.
+                // NB: structural containment (e.g. an IfBranch → its own child steps) is not a data dep.
                 if (sourceLocation.objectPath.startsWith(targetLocation.objectPath) ||
                     targetLocation.objectPath.startsWith(sourceLocation.objectPath)) {
                     return
@@ -112,7 +112,7 @@ data class ScriptDependencyAnalysis(
 
                 // NB: scan only value-typed scalar strings (catches code-attribute refs like FormulaStep.code).
                 //     Reference-typed subtrees are skipped to avoid matching identifier paths like
-                //     "main.steps/If.then/Formula 3" as the word "Formula".
+                //     "main.steps/If.branches/Branch.steps/Formula 3" as the word "Formula".
                 val objectNotation = coalesce[targetLocation]
                     ?: continue
                 walkValueScalars(objectDefinition, objectNotation) { stringValue ->
@@ -165,6 +165,29 @@ data class ScriptDependencyAnalysis(
                 // no item branch resolve to an empty list and cost nothing.
                 walkBranch(
                     AttributeLocation(step, ScriptConventions.itemAttributePath), graphDefinition, branchOfStep)
+
+                // A `group: true` branch (an IfStep's `branches`) holds structural branch groups, not steps:
+                // each child owns its own condition plus a nested step branch. Registering the group child
+                // itself is what makes its condition reference an edge (`condition -> IfBranch`, replacing the
+                // old `condition -> IfStep`), and recursing into its step branches is what classifies the
+                // branch's steps — without which ScriptValueReferences' completeness check would declare the
+                // whole document unanalysable and the dependency gutter would lose its lanes. Notation-driven
+                // like the branch recursion above: a future N-way construct needs no edit here.
+                for (groupName in ScriptConventions.stepGroupAttributeNames(graphNotation, step)) {
+                    val groupLocation = AttributeLocation(step, AttributePath.ofName(groupName))
+                    for (groupChild in ScriptConventions.orderedDirectChildLocations(
+                            graphNotation, groupLocation)) {
+                        branchOfStep[groupChild] = groupLocation
+
+                        for (nestedName in
+                                ScriptConventions.stepBranchAttributeNames(graphNotation, groupChild)) {
+                            walkBranch(
+                                AttributeLocation(groupChild, AttributePath.ofName(nestedName)),
+                                graphDefinition,
+                                branchOfStep)
+                        }
+                    }
+                }
             }
         }
 

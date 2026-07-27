@@ -59,6 +59,6 @@ class ScriptNestingAnalysisTest {
             listOf(
                 loc("main.steps/OuterLoop.steps/InnerLoop"),
                 loc("main.steps/OuterLoop")),
-            enclosingLoops("main.steps/OuterLoop.steps/InnerLoop.steps/Branch.then/DeepStep"))
+            enclosingLoops("main.steps/OuterLoop.steps/InnerLoop.steps/Branch.branches/Branch.steps/DeepStep"))
     }
 }

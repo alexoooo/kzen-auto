@@ -20,9 +20,12 @@ main.steps/ForEach.steps/Formula:
 
 main.steps/ForEach.steps/If:
   is: IfStep
+
+main.steps/ForEach.steps/If.branches/Branch:
+  is: IfBranch
   condition: main.steps/ForEach.steps/Formula
 
-main.steps/ForEach.steps/If.then/Result:
+main.steps/ForEach.steps/If.branches/Branch.steps/Result:
   is: ResultStep
   code: Item
   then: endScript

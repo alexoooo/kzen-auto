@@ -1,5 +1,7 @@
 # Two steps share the name `Shadowed`: an ObjectPath is name + nesting, so `main.steps/Shadowed` and
-# `main.steps/Branch.then/Shadowed` are distinct steps that both escape to the identifier `Shadowed`.
+# `main.steps/Branch.branches/Branch.steps/Shadowed` are distinct steps that both escape to the identifier
+# `Shadowed`. (The If step and its first branch group are both called `Branch` — that is just what the generated
+# branch name happens to be here, incidental to the shadowing scenario under test.)
 #
 # `Shadow User`'s code names `Shadowed`, and the text alone cannot say which one it means. The analysis must
 # therefore report BOTH as sources: attributing to a single winner would drop an edge, and a dropped edge means
@@ -18,12 +20,15 @@ main.steps/Flag:
 
 main.steps/Branch:
   is: IfStep
+
+main.steps/Branch.branches/Branch:
+  is: IfBranch
   condition: main.steps/Flag
 
-main.steps/Branch.then/Shadowed:
+main.steps/Branch.branches/Branch.steps/Shadowed:
   is: FormulaStep
   code: 2
 
-main.steps/Branch.then/Shadow User:
+main.steps/Branch.branches/Branch.steps/Shadow User:
   is: FormulaStep
   code: Shadowed + 1

@@ -13,8 +13,9 @@ import kotlin.test.assertTrue
 
 /**
  * Locks [ScriptJumpAnalysis.plan] — the move-to (Set Next Statement) target surgery (execution-control phase 2):
- * validity (step vs binding vs loop-body), the descend/ancestor set, the preceding-on-path skip candidates, and
- * the drop set. Reuses the ScriptNestingAnalysis fixture (ForEach -> DoWhile -> If.then, plus a root-level If).
+ * validity (step vs binding vs branch group vs loop-body), the descend/ancestor set, the preceding-on-path skip
+ * candidates, and the drop set. Reuses the ScriptNestingAnalysis fixture (ForEach -> DoWhile -> If, plus a
+ * root-level two-branch If).
  */
 class ScriptJumpAnalysisTest {
     //-----------------------------------------------------------------------------------------------------------------
@@ -61,27 +62,47 @@ class ScriptJumpAnalysisTest {
         assertTrue(path("main.steps/OuterLoop") in jumpPlan.dropSet)
         // the loop body restarts at iteration 0: its nested steps are dropped
         assertTrue(
-            path("main.steps/OuterLoop.steps/InnerLoop.steps/Branch.then/DeepStep") in jumpPlan.dropSet)
+            path("main.steps/OuterLoop.steps/InnerLoop.steps/Branch.branches/Branch.steps/DeepStep") in jumpPlan.dropSet)
         assertFalse(path("main.steps/OuterRange") in jumpPlan.dropSet)
     }
 
 
     @Test
     fun ifBranchStepIsValidWithTheIfAsDescendAncestor() {
-        val jumpPlan = plan("main.steps/TopIf.then/ThenStep")
+        val jumpPlan = plan("main.steps/TopIf.branches/Branch.steps/ThenStep")
         assertTrue(jumpPlan.valid)
         assertEquals(listOf(path("main.steps/TopIf")), jumpPlan.ancestors)
         // the descend ancestor and the target itself are dropped (the If re-runs its condition on rebuild)
         assertTrue(path("main.steps/TopIf") in jumpPlan.dropSet)
-        assertTrue(path("main.steps/TopIf.then/ThenStep") in jumpPlan.dropSet)
+        assertTrue(path("main.steps/TopIf.branches/Branch.steps/ThenStep") in jumpPlan.dropSet)
     }
 
 
     @Test
     fun loopBodyStepIsInvalid() {
-        val jumpPlan = plan("main.steps/OuterLoop.steps/InnerLoop.steps/Branch.then/DeepStep")
+        val jumpPlan = plan("main.steps/OuterLoop.steps/InnerLoop.steps/Branch.branches/Branch.steps/DeepStep")
         assertFalse(jumpPlan.valid)
         assertTrue(jumpPlan.invalidReason!!.contains("loop body"))
+    }
+
+
+    @Test
+    fun ifBranchGroupItselfIsInvalid() {
+        // The IfBranch is a structural group node — condition + steps, never executed — so the run can no more
+        // park at it than at a loop-item binding.
+        val jumpPlan = plan("main.steps/TopIf.branches/Branch 2")
+        assertFalse(jumpPlan.valid)
+        assertTrue(jumpPlan.invalidReason!!.contains("branch"))
+    }
+
+
+    @Test
+    fun aStepInALaterBranchStillDescendsThroughTheIfAlone() {
+        // The path to a second-branch step crosses an IfBranch group node, which must not join the descend set:
+        // only the If itself is a container step the rebuilt spine can re-run.
+        val jumpPlan = plan("main.steps/TopIf.branches/Branch 2.steps/ElseIfStep")
+        assertTrue(jumpPlan.valid)
+        assertEquals(listOf(path("main.steps/TopIf")), jumpPlan.ancestors)
     }
 
 

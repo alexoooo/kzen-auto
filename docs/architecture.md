@@ -120,6 +120,23 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > `GraphNotation.firstAttribute(loc, AttributeName)` throws when absent — use the nullable
 > `AttributePath` overload for optional attributes.
 
+> **Script branch metadata markers.** Three attribute-metadata keys on a step's `meta.<branch>` steer
+> the shared Script analyses without naming any step type, so a third-party construct joins each
+> semantic declaratively (all three are inert for definition): **`rerun: true`** marks a branch a loop
+> re-runs (`ScriptNestingAnalysis` — ControlStep targets, move-to rejection); **`scope: body`** marks
+> an expression whose in-scope references are the declaring step's own body rather than its
+> predecessors (`DoWhileStep.condition`, read by `ScriptConventions.isBodyScopedExpression`); and
+> **`group: true`** marks a branch whose children are structural GROUP nodes rather than steps —
+> `IfStep.branches`, whose children are `IfBranch` objects each owning a condition plus their own
+> `steps` sub-branch. `ScriptConventions.stepGroupAttributeNames` is the single reader, and every
+> group-aware rule keys off it: the group node gets no execution band and is not a jump target
+> (`ScriptNestingAnalysis` descends through it; `ScriptJumpAnalysis` rejects it and filters it out of
+> the descend ancestors), sibling groups are excluded from each other's scope (`ScriptTree.predecessors`
+> — an earlier If branch did not run when a later one does), and the group node itself is registered as
+> a dependency-edge endpoint so its condition reference draws a line (`ScriptDependencyAnalysis`).
+> An N-way construct that shared code has never heard of therefore needs no edit here — the contract
+> `ScriptBranchDiscoveryTest` pins.
+
 > **Kotlin expressions — reference analysis, rename rewriting, validation.** Expressions
 > (`FormulaStep`, `ResultStep`, `DoWhile` conditions, Job formulas) are analyzed by
 > **`KotlinExpressionAnalyzer`** (kzen-auto-common `util/`), a hand-rolled Kotlin lexer:
@@ -171,7 +188,8 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > a loop step restarts it at iteration 0), the value-less pre-target steps become a **skip set**
 > (short-circuited with no value and a new `StepTrace.State.Skipped`; a later reference to one error-parks via
 > the existing `referencedValue` "No value produced" backstop), and the descend **ancestors** (an enclosing
-> `IfStep`) run — re-evaluating their condition — with their `checkpoint` suppressed, so the paused rebuild
+> `IfStep`; a branch GROUP node on the path is filtered out — it is not an executed step) run — re-evaluating
+> their conditions — with their `checkpoint` suppressed, so the paused rebuild
 > parks at the target rather than the ancestor's boundary. A jump always recompiles from the current notation
 > and shares the migrate barrier (an edit-then-jump takes both in one rebuild). **Loop bodies are out of scope
 > v1**: a target inside a `rerun` branch is rejected (`canMoveTo` → `LogicRunResponse.Rejected`); a jump to

@@ -14,9 +14,12 @@ main.steps/Loop.steps/Guard:
 
 main.steps/Loop.steps/Branch:
   is: IfStep
+
+main.steps/Loop.steps/Branch.branches/Branch:
+  is: IfBranch
   condition: main.steps/Loop.steps/Guard
 
-main.steps/Loop.steps/Branch.then/Skip:
+main.steps/Loop.steps/Branch.branches/Branch.steps/Skip:
   is: ControlStep
   loop: main.steps/Loop
   action: skipIteration

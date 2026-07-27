@@ -12,9 +12,12 @@ main.steps/Flag:
 
 main.steps/Branch:
   is: IfStep
+
+main.steps/Branch.branches/Branch:
+  is: IfBranch
   condition: main.steps/Flag
 
-main.steps/Branch.then/Yes:
+main.steps/Branch.branches/Branch.steps/Yes:
   is: FormulaStep
   code: "10"
 

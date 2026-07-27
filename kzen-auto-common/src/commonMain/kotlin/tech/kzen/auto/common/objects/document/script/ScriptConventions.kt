@@ -67,6 +67,14 @@ object ScriptConventions {
     private const val scopeKey = "scope"
     private const val scopeBodyValue = "body"
 
+    // Attribute-metadata key marking a branch whose children are structural GROUPS rather than steps — an
+    // IfStep's `branches`, each child an IfBranch owning its own condition and `steps` sub-branch. Like `rerun`
+    // and `scope`, a plain metadata marker: inert for definition, read only by the Script analyses (see
+    // [stepGroupAttributeNames]). Every group-aware rule keys off the marker, so an N-way construct shared code
+    // has never heard of joins the same semantics declaratively.
+    private const val groupKey = "group"
+    private val groupSegment = AttributeSegment.ofKey(groupKey)
+
 
     /**
      * The branch attributes of [objectLocation]'s type: the attributes whose merged metadata (through the `is:`
@@ -105,6 +113,45 @@ object ScriptConventions {
 
             when {
                 declaresList && declaresStepElements -> AttributeName(attributeSegment.asKey())
+                else -> null
+            }
+        }
+    }
+
+
+    /**
+     * The GROUP attributes of [objectLocation]'s type: the attributes whose merged metadata (through the `is:`
+     * inheritance chain) declares `group: true` — IfStep's `branches`, whose children are IfBranch objects, not
+     * steps. Exact mirror of [stepBranchAttributeNames], including its stale-location guard.
+     *
+     * A group child is a structural node the analyses must see through, never treat as a step: it gets no
+     * execution band and is not a jump target, its own step branches ARE walked (per-branch recursion
+     * everywhere), and it does not enter its siblings' scope (an earlier branch did not run when a later one
+     * does — see `ScriptTree.predecessors`).
+     *
+     * [stepBranchAttributeNames] continues to ignore a group branch for free: it matches `of: ScriptStep` by
+     * exact name, and a group branch is `of:` its own group type. The group child's OWN `steps` attribute is
+     * discovered as an ordinary step branch, which is what drives the recursion.
+     */
+    fun stepGroupAttributeNames(
+        graphNotation: GraphNotation,
+        objectLocation: ObjectLocation
+    ): List<AttributeName> {
+        if (objectLocation !in graphNotation.coalesce) {
+            // NB: stale location (step deleted or renamed) — the inheritance chain walk would throw
+            return listOf()
+        }
+
+        val metaNotation = graphNotation.mergeAttribute(
+            objectLocation, NotationConventions.metaAttributeName) as? MapAttributeNotation
+            ?: return listOf()
+
+        return metaNotation.map.mapNotNull { (attributeSegment, attributeMeta) ->
+            val attributeMetaMap = attributeMeta as? MapAttributeNotation
+                ?: return@mapNotNull null
+
+            when (attributeMetaMap.map[groupSegment]?.asBoolean()) {
+                true -> AttributeName(attributeSegment.asKey())
                 else -> null
             }
         }

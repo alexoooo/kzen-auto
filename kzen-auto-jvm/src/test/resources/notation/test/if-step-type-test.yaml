@@ -1,6 +1,8 @@
-# Both branches of the If yield String, so the If's joined `main` type is String: a downstream Result step
-# can reference the If by name (`Branch`) and the declared String result type-checks. n=1 => then branch =>
-# the Script result is "yes" (the taken branch's terminal value, read through the If reference).
+# All three sections of the chain (two condition branches + the else) yield String, so the If's joined `main`
+# type is String: a downstream Result step can reference the If by name (`Branch`) and the declared String
+# result type-checks. The join folds over N+1 terminals, so this pins the N-way case, not just then/else.
+# n=1 => the FIRST branch's condition holds => the Script result is "yes" (the taken branch's terminal value,
+# read through the If reference); the second branch's condition is never even evaluated.
 
 main:
   is: Script
@@ -22,13 +24,28 @@ main.steps/Positive:
   is: FormulaStep
   code: "n > 0"
 
+main.steps/Big:
+  is: FormulaStep
+  code: "n > 100"
+
 main.steps/Branch:
   is: IfStep
+
+main.steps/Branch.branches/Branch:
+  is: IfBranch
   condition: main.steps/Positive
 
-main.steps/Branch.then/Yes:
+main.steps/Branch.branches/Branch.steps/Yes:
   is: FormulaStep
   code: '"yes"'
+
+main.steps/Branch.branches/Branch 2:
+  is: IfBranch
+  condition: main.steps/Big
+
+main.steps/Branch.branches/Branch 2.steps/Huge:
+  is: FormulaStep
+  code: '"huge"'
 
 main.steps/Branch.else/No:
   is: FormulaStep

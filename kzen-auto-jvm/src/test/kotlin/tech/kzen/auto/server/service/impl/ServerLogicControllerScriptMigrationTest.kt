@@ -35,18 +35,18 @@ import kotlin.test.fail
  * [tech.kzen.auto.server.exec.script.ScriptLogicCompiler] recompiles to a logic whose step stable ids MATCH the
  * original, so the Script root's captured outcomes line up on the rebuilt run.
  *
- * Uses the `if` fixture (Flag -> Branch{ then/Yes : else/No } -> Result). At the pause Flag has completed; the
- * edit changes BOTH a completed step (Flag true -> false) and a not-yet-run step (then/Yes 10 -> 99). Only a
- * correct replay yields 99: Flag is re-adopted as `true` (so Branch still takes the THEN branch — a clean restart
- * would re-run Flag as `false` -> else -> 20) while the live `then/Yes` edit takes effect (proving migration
- * actually fired against the new definition — a silently-ignored edit would resume the old `then/Yes` -> 10).
+ * Uses the `if` fixture (Flag -> Branch{ first branch: Yes : else/No } -> Result). At the pause Flag has
+ * completed; the edit changes BOTH a completed step (Flag true -> false) and a not-yet-run step (Yes 10 -> 99).
+ * Only a correct replay yields 99: Flag is re-adopted as `true` (so Branch still takes the FIRST branch — a clean
+ * restart would re-run Flag as `false` -> else -> 20) while the live `Yes` edit takes effect (proving migration
+ * actually fired against the new definition — a silently-ignored edit would resume the old `Yes` -> 10).
  */
 class ServerLogicControllerScriptMigrationTest {
     //-----------------------------------------------------------------------------------------------------------------
     private val documentPath = DocumentPath.parse("test/script-engine-if-test.yaml")
     private val scriptLocation = ObjectLocation(documentPath, ObjectPath.parse("main"))
     private val flagLocation = ObjectLocation(documentPath, ObjectPath.parse("main.steps/Flag"))
-    private val yesLocation = ObjectLocation(documentPath, ObjectPath.parse("main.steps/Branch.then/Yes"))
+    private val yesLocation = ObjectLocation(documentPath, ObjectPath.parse("main.steps/Branch.branches/Branch.steps/Yes"))
     private val resultLocation = ObjectLocation(documentPath, ObjectPath.parse("main.steps/Result"))
 
     private lateinit var context: KzenAutoContext

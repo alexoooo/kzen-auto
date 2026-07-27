@@ -14,6 +14,10 @@ main.parameters/number:
     nullable: false
   default: 15
 
+main.steps/Divisible By 15:
+  is: FormulaStep
+  code: "number % 15 == 0"
+
 main.steps/Divisible By 3:
   is: FormulaStep
   code: "number % 3 == 0"
@@ -22,38 +26,41 @@ main.steps/Divisible By 5:
   is: FormulaStep
   code: "number % 5 == 0"
 
-main.steps/div 3:
+main.steps/FizzBuzz:
   is: IfStep
-  condition: main.steps/Divisible By 3
 
-main.steps/div 3.else/div 5:
-  is: IfStep
-  condition: main.steps/Divisible By 5
+main.steps/FizzBuzz.branches/Branch:
+  is: IfBranch
+  condition: main.steps/Divisible By 15
 
-main.steps/div 3.else/div 5.then/Formula 5:
-  is: FormulaStep
-  code: '"buzz"'
-
-main.steps/div 3.else/div 5.else/Formula 2:
-  is: FormulaStep
-  code: "number.toString()"
-
-main.steps/div 3.then/div 3 and 5:
-  is: IfStep
-  condition: main.steps/Divisible By 5
-
-main.steps/div 3.then/div 3 and 5.then/Formula:
+main.steps/FizzBuzz.branches/Branch.steps/Formula:
   is: FormulaStep
   code: '"fizzbuzz"'
 
-main.steps/div 3.then/div 3 and 5.else/Formula 4:
+main.steps/FizzBuzz.branches/Branch 2:
+  is: IfBranch
+  condition: main.steps/Divisible By 3
+
+main.steps/FizzBuzz.branches/Branch 2.steps/Formula 4:
   is: FormulaStep
   code: '"fizz"'
 
+main.steps/FizzBuzz.branches/Branch 3:
+  is: IfBranch
+  condition: main.steps/Divisible By 5
+
+main.steps/FizzBuzz.branches/Branch 3.steps/Formula 5:
+  is: FormulaStep
+  code: '"buzz"'
+
+main.steps/FizzBuzz.else/Formula 2:
+  is: FormulaStep
+  code: "number.toString()"
+
 main.steps/Display:
   is: DisplayValueStep
-  text: main.steps/div 3
+  text: main.steps/FizzBuzz
 
 main.steps/Result:
   is: ResultStep
-  code: "`div 3`"
+  code: "FizzBuzz"

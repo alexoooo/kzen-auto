@@ -8,7 +8,8 @@ import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------
-// Shared "recessed-stage chrome" for branch-bearing steps (If's Then/Else, DoWhile's Do, ForEach's body),
+// Shared "recessed-stage chrome" for branch-bearing steps (an If chain's branches + Else, DoWhile's Do,
+// ForEach's body),
 // mirroring the page-level header/sidebar casting a soft shadow onto the gray stage: the construct's white
 // header slab casts a shadow down onto the stage, and the stage's left edge carries that slab's status bar
 // down under a thin scope line. Every effect is paint-only (absolutely positioned bands and gradients, zero
@@ -94,8 +95,8 @@ fun ChildrenBuilder.branchStageSeam() {
 // groups the body the way an editor's indent guide groups a block. [branchRailWidth] of body indent measures
 // past both.
 //
-// Called ONCE per construct, on the wrapper spanning all of its branches, so a two-branch construct (If)
-// shows one unbroken rail through the seam that divides them.
+// Called ONCE per construct, on the wrapper spanning all of its branches, so a multi-section construct (an
+// If chain) shows one unbroken rail through every seam that divides them.
 //
 // The stage's own surface therefore begins at the rail's outer edge, [railPaintWidthPx] — the span over
 // which branchStageSeam ramps its left end in, so its line joins the rail at the corner instead of crossing
@@ -207,21 +208,23 @@ fun ChildrenBuilder.branchStageTopShadow(block: ChildrenBuilder.() -> Unit) {
 }
 
 
-// If-specific: the white "lip" at the BOTTOM of the Then branch — standing in for a white slab above the
-// Else seam, so that seam reads the same as the Then seam (white above → 1px line → soft shadow below, the
-// way the white condition slab sits above the Then seam).
+// The white "lip" at the BOTTOM of a stage section that is followed by another one (an If chain's condition
+// branches, each followed by the next branch or by Else) — standing in for a white slab above the NEXT
+// section's seam, so that seam reads the same as the first one (white above → 1px line → soft shadow below,
+// the way the white header slab sits above the first section's seam). Emitted on every section except the
+// last, whose stage ends on the open page.
 //
-// A paint-only absolute element rather than a background on the branch wrapper, so its right edge can be
+// A paint-only absolute element rather than a background on the section wrapper, so its right edge can be
 // faded with a mask without also fading the (overflowing) step cards. Starts at the accent band's outer edge
 // and needs no ramp across the scope line the way branchStageSeam does: it is an OPAQUE white fill, so
 // nothing composites through it, and covering that line is the point — it paints above it (later in the
-// positioned paint order), interrupting it for its own height, which is what makes the Else seam read under
+// positioned paint order), interrupting it for its own height, which is what makes the next seam read under
 // a white slab. Only the band is spared, so it runs through unbroken and a running If shows one continuous
-// coloured edge. Sits in the bottom gap below the last Then step (no card content there).
+// coloured edge. Sits in the bottom gap below the section's last step (no card content there).
 //
-// Caller must give the wrapping branch div position:relative so bottom:0 anchors to the Then
-// branch's bottom (not the whole construct's).
-fun ChildrenBuilder.branchStageThenLip() {
+// Caller must give the wrapping section div position:relative so bottom:0 anchors to THAT section's
+// bottom (not the whole construct's).
+fun ChildrenBuilder.branchStageSectionLip() {
     div {
         css {
             position = Position.absolute

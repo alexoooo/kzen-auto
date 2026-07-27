@@ -40,6 +40,7 @@ object ScriptValueReferences {
         rootStepLocations: List<ObjectLocation>
     ): Set<ObjectLocation> {
         val analysis = ScriptDependencyAnalysis.analyze(graphDefinition, documentPath)
+        val graphNotation = graphDefinition.graphStructure.graphNotation
 
         val referenced = analysis.valueReferencedSources().toMutableSet()
         val allSteps = mutableSetOf<ObjectLocation>()
@@ -57,7 +58,7 @@ object ScriptValueReferences {
                     complete = false
                     continue
                 }
-                for (nestedSteps in instance.nestedStepLists()) {
+                for (nestedSteps in instance.nestedStepLists(graphNotation)) {
                     nestedSteps.lastOrNull()?.let { referenced.add(it) }
                     walk(nestedSteps)
                 }

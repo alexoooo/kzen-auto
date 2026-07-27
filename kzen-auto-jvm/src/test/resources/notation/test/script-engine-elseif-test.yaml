@@ -1,0 +1,78 @@
+# A three-branch If chain plus an else, driven by the parameter `n` so one fixture covers every path
+# (ScriptIfChainTest). The LAST condition (`n > 0`) is true whenever either of the first two is, so a run that
+# takes branch 1 or 2 proves first-true-wins rather than merely "some true branch ran": branch 3's CountingStep
+# is the observable — it must NOT increment unless branch 3 is the one taken.
+#
+#   n = 1 -> branch 1 ("one"),   count 0   first true wins over a later true branch
+#   n = 2 -> branch 2 ("two"),   count 0   a middle branch is reachable
+#   n = 3 -> branch 3 ("three"), count 1   a later branch runs once the earlier ones are false
+#   n = 0 -> else     ("other"), count 0   fall-through when every condition is false
+#
+# Every section's terminal is a String, so the If's joined type is String and the declared String result
+# type-checks against the If reference.
+
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.String
+      generics: []
+      nullable: false
+
+main.parameters/n:
+  is: ParameterBinding
+  type:
+    class: kotlin.Int
+    generics: []
+    nullable: false
+  default: 0
+
+main.steps/Is One:
+  is: FormulaStep
+  code: "n == 1"
+
+main.steps/Is Two:
+  is: FormulaStep
+  code: "n == 2"
+
+main.steps/Is Positive:
+  is: FormulaStep
+  code: "n > 0"
+
+main.steps/Chain:
+  is: IfStep
+
+main.steps/Chain.branches/Branch:
+  is: IfBranch
+  condition: main.steps/Is One
+
+main.steps/Chain.branches/Branch.steps/One:
+  is: FormulaStep
+  code: '"one"'
+
+main.steps/Chain.branches/Branch 2:
+  is: IfBranch
+  condition: main.steps/Is Two
+
+main.steps/Chain.branches/Branch 2.steps/Two:
+  is: FormulaStep
+  code: '"two"'
+
+main.steps/Chain.branches/Branch 3:
+  is: IfBranch
+  condition: main.steps/Is Positive
+
+main.steps/Chain.branches/Branch 3.steps/Counter:
+  is: CountingStep
+
+main.steps/Chain.branches/Branch 3.steps/Three:
+  is: FormulaStep
+  code: '"three"'
+
+main.steps/Chain.else/Other:
+  is: FormulaStep
+  code: '"other"'
+
+main.steps/Result:
+  is: ResultStep
+  code: "Chain"

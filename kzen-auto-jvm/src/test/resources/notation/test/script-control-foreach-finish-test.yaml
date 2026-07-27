@@ -25,9 +25,12 @@ main.steps/Loop.steps/IsThree:
 
 main.steps/Loop.steps/Branch:
   is: IfStep
+
+main.steps/Loop.steps/Branch.branches/Branch:
+  is: IfBranch
   condition: main.steps/Loop.steps/IsThree
 
-main.steps/Loop.steps/Branch.then/Finish:
+main.steps/Loop.steps/Branch.branches/Branch.steps/Finish:
   is: ControlStep
   loop: main.steps/Loop
   action: finishLoop
