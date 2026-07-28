@@ -58,7 +58,9 @@ class ScriptLogic(
         // the spine replays-short-circuits completed steps, and register the capture so a later edit carries this
         // run's completed work forward. Null on a fresh run -> nothing to adopt, everything runs live. A migration
         // may also carry a move-to target (Set Next Statement); restore applies the jump surgery when it does.
-        execution.restoredAs<ScriptMigrationState>()?.let { context.restore(it, execution.moveTarget) }
+        execution.restoredAs<ScriptMigrationState>()?.let {
+            context.restore(it, execution.moveTarget, execution.removedStableIds)
+        }
         execution.onCapture { context.captureState() }
 
         for (parameter in parameters) {

@@ -94,7 +94,7 @@ class ScriptRunContext(
     private val descendSteps = HashSet<ObjectStableId>()
 
     // The trace detail a partially-committed step brought with its value ([ScriptStep.partialOutcome]) — the
-    // journal a loop the jump skipped over had built while it was running. Consulted by [adoptCompleted], whose
+    // journal a loop the jump skipped over had built while it was running. Consulted by [adoptOutcome], whose
     // re-emit would otherwise blank it. Empty on an ordinary run / edit-migrate.
     private val partialDetails = HashMap<ObjectStableId, ExecutionValue>()
 
@@ -292,7 +292,7 @@ class ScriptRunContext(
             // Live-edit replay (logic-spec §5): a step that completed in the pre-edit run re-adopts its outcome
             // without re-executing — no "next to run" highlight, no checkpoint boundary, no work.
             if (restoredOutcomes.containsKey(stableId)) {
-                last = adoptCompleted(stableId)
+                last = adoptCompleted(stepLocation, stableId)
                 continue
             }
 
@@ -438,6 +438,12 @@ class ScriptRunContext(
     /**
      * Seed the carried-over completed work from the predecessor run's capture (read once at run start).
      *
+     * Work an element the edit DELETED produced is dropped rather than carried ([removedStableIds], logic-spec
+     * §5): a stable id is the element's address, so a step created where the deleted one stood mints the same
+     * id and would otherwise be replay-adopted as Done — reported complete, holding the deleted step's value,
+     * having never run. The same filter drops an id that resolves to nothing at all, which is that removal
+     * seen from a run whose barrier could not report it (a deleted document).
+     *
      * When the migration barrier carried a move-to [moveTarget] (Set Next Statement) that resolves to a valid
      * jump in the current [ScriptTree] ([jumpPlanFor]), apply outcome-set surgery instead of a plain restore:
      * drop the target and everything at/after it in document order, plus the descend ancestors (an enclosing
@@ -449,11 +455,18 @@ class ScriptRunContext(
      * falls back to a full restore — the engine ignore-contract (the controller's `canMoveTo` gate normally
      * makes that unreachable). The carried [result] is kept (decision 11); a Result at/after the target re-runs.
      */
-    fun restore(state: ScriptMigrationState, moveTarget: ObjectStableId?) {
+    fun restore(
+        state: ScriptMigrationState,
+        moveTarget: ObjectStableId?,
+        removedStableIds: Set<ObjectStableId>
+    ) {
+        val carriedOutcomes = state.completedOutcomes.filterKeys { survivesEdit(it, removedStableIds) }
+        val carriedCarries = state.stepCarry.filterKeys { survivesEdit(it, removedStableIds) }
+
         val plan = moveTarget?.let { jumpPlanFor(it) }
         if (plan == null) {
-            restoredOutcomes.putAll(state.completedOutcomes)
-            restoredCarries.putAll(state.stepCarry)
+            restoredOutcomes.putAll(carriedOutcomes)
+            restoredCarries.putAll(carriedCarries)
             resultValue = state.result
             return
         }
@@ -463,12 +476,12 @@ class ScriptRunContext(
             objectStableMapper.objectStableId(ObjectLocation(documentPath, it))
         }
 
-        for ((stableId, value) in state.completedOutcomes) {
+        for ((stableId, value) in carriedOutcomes) {
             if (stableId !in dropStableIds) {
                 restoredOutcomes[stableId] = value
             }
         }
-        for ((stableId, carry) in state.stepCarry) {
+        for ((stableId, carry) in carriedCarries) {
             // A dropped loop restarts at iteration 0, so its stale cursor must not carry (else it would resume
             // mid-iteration instead of restarting).
             if (stableId !in dropStableIds) {
@@ -514,6 +527,14 @@ class ScriptRunContext(
     }
 
 
+    // Whether the element that produced a carried entry is still the element this id names. The removal set is
+    // the authority; the unresolvable-id check is the backstop for a removal no barrier reported.
+    private fun survivesEdit(stableId: ObjectStableId, removedStableIds: Set<ObjectStableId>): Boolean {
+        return stableId !in removedStableIds &&
+                objectStableMapper.objectLocationOrNull(stableId) != null
+    }
+
+
     // Resolve a move-to target stable id against the CURRENT structure to a valid [ScriptJumpAnalysis.ScriptJumpPlan],
     // or null when it does not resolve to a jumpable step in this Script's root document (the ignore-contract).
     private fun jumpPlanFor(moveTarget: ObjectStableId): ScriptJumpAnalysis.ScriptJumpPlan? {
@@ -555,7 +576,26 @@ class ScriptRunContext(
     }
 
 
-    private fun adoptCompleted(stableId: ObjectStableId): Any? {
+    // Adopting a CONTAINER (an If, a loop) adopts the steps nested within it too. Their outcomes were carried
+    // alongside their container's, but adopting it means its own [runSteps] over them never runs — so without
+    // this descent the rebuilt display would show a Done container above a subtree repainted Idle, and a
+    // reference to a branch-internal step would find no value in [stepValues] and error-park.
+    // Only nested steps the carry actually holds are adopted: a branch the run never took, or a loop-body
+    // iteration [dropReplay] reset, has no outcome and stays Idle — which is what was on screen before the edit.
+    private fun adoptCompleted(stepLocation: ObjectLocation, stableId: ObjectStableId): Any? {
+        for (nestedStepList in scriptStepAt(stepLocation).nestedStepLists(structure.graphNotation)) {
+            for (nestedLocation in nestedStepList) {
+                val nestedStableId = objectStableMapper.objectStableId(nestedLocation)
+                if (restoredOutcomes.containsKey(nestedStableId)) {
+                    adoptCompleted(nestedLocation, nestedStableId)
+                }
+            }
+        }
+        return adoptOutcome(stableId)
+    }
+
+
+    private fun adoptOutcome(stableId: ObjectStableId): Any? {
         val value = restoredOutcomes[stableId]
         stepValues[stableId] = value
         completedOutcomes[stableId] = value
@@ -581,7 +621,7 @@ class ScriptRunContext(
         error: String? = null
     ) {
         // NB: currentNote belongs to the step the spine is currently running; every emit site except
-        // [adoptCompleted] (which emits for a replayed step while the note is the parent's) targets it.
+        // [adoptOutcome] (which emits for a replayed step while the note is the parent's) targets it.
         val note = if (stableId == currentStableId) currentNote else null
         val trace = StepTrace(state, display, detail, error, note)
 

@@ -71,6 +71,10 @@ class ClientLogicGlobal(
         private const val slowSettlePollMillis = 200
         private const val slowSettleMaxMillis = 30_000
 
+        // Settle before re-reading status after a control verb landed: the server submits the verb to its
+        // executor and answers immediately, so an instant read would race the state change it asked for.
+        private const val controlSettleMillis = 10
+
         // Shared by the two ways to start a run (plain / slow-motion) and the two trace clears (this document /
         // all documents), so a failure reads the same wherever it was triggered from.
         private const val startLabel = "Unable to start"
@@ -484,9 +488,7 @@ class ClientLogicGlobal(
                 controlError = error)
 
             if (error == null) {
-                delay(10)
-                lookupStatus()
-                scheduleRefresh()
+                refreshAfterControl()
             }
 
             publish()
@@ -538,13 +540,28 @@ class ClientLogicGlobal(
                 controlError = error)
 
             if (error == null) {
-                delay(10)
-                lookupStatus()
-                scheduleRefresh()
+                refreshAfterControl()
             }
 
             publish()
         }
+    }
+
+
+    // The read that follows a landed control verb: the run state moved, so it is re-read and the refresh
+    // re-armed. A failure here is the follow-up READ failing, not the user's action, so it neither surfaces as
+    // a [ControlError] nor escapes as an unobserved rejection — escaping would skip the caller's publish,
+    // stranding `pending` with the poll unarmed until the NEXT control verb, which reads as a frozen ribbon
+    // and a run indicator stuck on the state before the verb.
+    private suspend fun refreshAfterControl() {
+        try {
+            delay(controlSettleMillis.toLong())
+            lookupStatus()
+        }
+        catch (t: Throwable) {
+            console.warn("Unable to read the run status", t)
+        }
+        scheduleRefresh()
     }
 
 

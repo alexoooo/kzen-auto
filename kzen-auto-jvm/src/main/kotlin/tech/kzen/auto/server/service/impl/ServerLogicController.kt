@@ -36,6 +36,7 @@ import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
 import tech.kzen.lib.common.service.context.environment.GraphEnvironment
 import tech.kzen.lib.common.service.metadata.NotationMetadataReader
 import tech.kzen.lib.common.service.store.LocalGraphStore
+import tech.kzen.lib.common.service.store.normal.ObjectStableId
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import tech.kzen.lib.common.util.digest.Digest
 import tech.kzen.lib.server.exec.engine.RunEngine
@@ -311,12 +312,17 @@ class ServerLogicController(
         val structureVersion = refreshStructureVersion(
             StructureSignature(epoch, state.runId, runState, collectNodeIds(snapshot.root)))
 
+        // The root frame is the handle the client controls the run through, so it survives even a deleted root
+        // document by falling back to the location the run was started from.
+        val rootLocation = objectStableMapper.objectLocationOrNull(snapshot.root.stableId)
+            ?: state.rootLocation
+
         // snapshot.sequence is the run's monotonic trace high-water: a client holding it has, by construction,
         // nothing newer to fetch — so it doubles as the run's cache version (see LogicRunInfo.sequence).
         return LogicStatus(
             epoch,
             structureVersion,
-            LogicRunInfo(state.runId, nodeToFrame(snapshot.root), runState, snapshot.sequence))
+            LogicRunInfo(state.runId, nodeToFrame(snapshot.root, rootLocation), runState, snapshot.sequence))
     }
 
     // Bumps structureVersion iff the run's structure moved since the last status() (see the field doc). Called
@@ -389,6 +395,10 @@ class ServerLogicController(
             }
 
         val runId = runExecutionId.logicRunId
+
+        // A fresh run has no carried state, so deletions recorded before it are irrelevant. Discarding them
+        // here is also what keeps the mapper's removal record from growing across an editing session.
+        objectStableMapper.drainRemovedIds()
 
         val rootStableId = objectStableMapper.objectStableId(root)
         val engine = RunEngine(logic, rootStableId)
@@ -609,6 +619,7 @@ class ServerLogicController(
         check(!state.cancelRequested) { "Can't run, cancel already requested" }
 
         val migration = pendingMigration(state, snapshotGraphDefinitionAttempt)
+        val removedStableIds = migrationRemovals(migration)
 
         state.pauseRequested = false
         state.launched = true
@@ -619,7 +630,7 @@ class ServerLogicController(
             if (migration != null) {
                 // The notation changed under the paused run: rebuild from the edit and run free (the migrate
                 // carries each flavour's surviving state across by stable id).
-                state.engine.migrate(migration, paused = false)
+                state.engine.migrate(migration, paused = false, removedStableIds = removedStableIds)
             }
             else {
                 state.engine.resume()
@@ -720,12 +731,15 @@ class ServerLogicController(
             return LogicRunResponse.Rejected
         }
 
+        val removedStableIds = objectStableMapper.drainRemovedIds()
+
         state.pauseRequested = false
         state.stepping = true
 
         executor.execute {
             state.engine.awaitQuiescent()
-            state.engine.migrate(logic, paused = true, moveTarget = targetId)
+            state.engine.migrate(
+                logic, paused = true, moveTarget = targetId, removedStableIds = removedStableIds)
             state.engine.awaitQuiescent()
             synchronized(this@ServerLogicController) {
                 settleAfterDrive(state)
@@ -753,6 +767,7 @@ class ServerLogicController(
         check(!state.cancelRequested) { "Can't step, cancel already requested" }
 
         val migration = pendingMigration(state, snapshotGraphDefinitionAttempt)
+        val removedStableIds = migrationRemovals(migration)
 
         state.pauseRequested = false
         state.launched = true
@@ -762,7 +777,7 @@ class ServerLogicController(
             state.engine.awaitQuiescent()
             if (migration != null) {
                 // Step after an edit: rebuild from the edit and park at the new definition's first wavefront.
-                state.engine.migrate(migration, paused = true)
+                state.engine.migrate(migration, paused = true, removedStableIds = removedStableIds)
             }
             else {
                 state.engine.step(mode)
@@ -874,14 +889,27 @@ class ServerLogicController(
     // The live frame tree (sidebar run indicator) shows only active frames: a completed child node lingers in
     // the engine's tree (for trace/history), but is pruned here so a hosted child that ran to completion
     // (step-over / step-out) doesn't count toward the paused stack depth.
-    private fun nodeToFrame(node: Node): LogicRunFrameInfo {
+    //
+    // Every stable id here is resolved leniently, because a run keeps executing while its notation is edited:
+    // deleting the step a paused run is parked at drops that id from [ObjectStableMapper], and a throw would
+    // take out both /logic/status and the SSE loop that re-serializes it, wedging the client out of the very
+    // step that would migrate the run past the deletion. An unresolvable position reports none — the truth
+    // once the next-to-run step is gone — and an unresolvable child frame is pruned, like [RunEngineLogicTrace].
+    private fun nodeToFrame(node: Node, objectLocation: ObjectLocation): LogicRunFrameInfo {
         return LogicRunFrameInfo(
-            objectStableMapper.objectLocation(node.stableId),
+            objectLocation,
             LogicExecutionId(node.id.value),
             node.children
                 .filter { it.status !is NodeStatus.Terminal }
-                .map { nodeToFrame(it) },
-            node.position?.let { objectStableMapper.objectLocation(it) })
+                .mapNotNull { nodeToFrameOrNull(it) },
+            node.position?.let { objectStableMapper.objectLocationOrNull(it) })
+    }
+
+
+    private fun nodeToFrameOrNull(node: Node): LogicRunFrameInfo? {
+        val objectLocation = objectStableMapper.objectLocationOrNull(node.stableId)
+            ?: return null
+        return nodeToFrame(node, objectLocation)
     }
 
 
@@ -910,6 +938,18 @@ class ServerLogicController(
             LogicCompilerServices(
                 environment, objectStableMapper, cachedKotlinCompiler, scriptValidationCache,
                 jobValidationCache, notationMetadataReader, jobWorkPool, runExecutionId))
+    }
+
+
+    // The elements deleted since the last barrier, for the migrate that is about to consume them (see
+    // [RunEngine.migrate]). Claimed only when a rebuild actually happens: a release that keeps the current
+    // definition running must leave them pending for the barrier that does rebuild, or the run would carry a
+    // deleted step's outcome onto whatever the user creates in its place.
+    private fun migrationRemovals(migration: Logic?): Set<ObjectStableId> {
+        return when (migration) {
+            null -> emptySet()
+            else -> objectStableMapper.drainRemovedIds()
+        }
     }
 
 

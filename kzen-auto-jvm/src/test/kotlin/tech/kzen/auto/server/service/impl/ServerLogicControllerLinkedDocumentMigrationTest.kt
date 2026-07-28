@@ -21,6 +21,7 @@ import tech.kzen.lib.common.model.structure.notation.cqrs.UpsertAttributeCommand
 import tech.kzen.lib.common.service.notation.NotationReducer
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlin.test.fail
 
@@ -36,6 +37,12 @@ import kotlin.test.fail
  * edit changes the CHILD's formula to `number + 100`. Only a detected callee edit yields 106: the rebuilt run
  * compiles the callee fresh from the post-edit notation, while a silently-ignored edit would host the
  * stale callee compiled from the run-start notation snapshot and yield 7.
+ *
+ * The second test runs the same pair the other way round — the callee has already COMPLETED when the CALLER is
+ * edited. The rebuilt spine replay-adopts the completed RunStep instead of re-invoking it, so nothing
+ * re-creates the sub-Script's frame; the engine has to carry the settled frame across the barrier itself
+ * (logic-spec §5 "settled frames survive the rebuild"), or every trace query — all of which project the node
+ * tree — reports the finished sub-document as having no execution state at all.
  */
 class ServerLogicControllerLinkedDocumentMigrationTest {
     //-----------------------------------------------------------------------------------------------------------------
@@ -43,6 +50,7 @@ class ServerLogicControllerLinkedDocumentMigrationTest {
     private val childPath = DocumentPath.parse("test/script-engine-child-test.yaml")
 
     private val scriptLocation = ObjectLocation(parentPath, ObjectPath.parse("main"))
+    private val childScriptLocation = ObjectLocation(childPath, ObjectPath.parse("main"))
     private val seedLocation = ObjectLocation(parentPath, ObjectPath.parse("main.steps/Seed"))
     private val callLocation = ObjectLocation(parentPath, ObjectPath.parse("main.steps/Call"))
     private val resultLocation = ObjectLocation(parentPath, ObjectPath.parse("main.steps/Result"))
@@ -101,6 +109,66 @@ class ServerLogicControllerLinkedDocumentMigrationTest {
             "106", resultDisplay(runId),
             "the callee edit (number + 1 -> number + 100) must take effect on the paused caller's next " +
                 "host() — a signal blind to the weakly-linked callee would resume the stale callee -> 7")
+    }
+
+
+    @Test
+    fun aCompletedRunStepsSubDocumentKeepsItsExecutionStateAcrossAnEdit() {
+        val controller = context.serverLogicController
+
+        val baseNotation = AutoTestUtils.readNotation()
+        val base = AutoTestUtils.graphDefinitionAttempt(baseNotation)
+
+        val runId = controller.start(scriptLocation, base)
+            ?: fail("Unable to start run")
+
+        // Step until the hosting Call step has COMPLETED — its sub-Script frame is settled but retained, which
+        // is what makes the sub-document navigable after the fact.
+        var guard = 0
+        while (!isDone(runId, callLocation) && guard < 50) {
+            controller.step(runId, base)
+            awaitState(LogicRunState.Paused)
+            guard += 1
+        }
+        assertTrue(isDone(runId, callLocation), "the RunStep should complete before the edit")
+        assertNotNull(
+            context.logicTrace.mostRecent(childScriptLocation),
+            "before the edit the finished sub-document resolves to its own execution")
+
+        // An edit to the not-yet-run Result: it triggers the rebuild without touching anything the completed
+        // prefix reports. The rebuilt spine replay-adopts Call rather than re-invoking it, so ONLY the engine's
+        // carry of settled frames can keep the sub-Script's execution addressable.
+        val edited = AutoTestUtils.graphDefinitionAttempt(
+            edit(baseNotation, resultLocation, "code", "Call + 0"))
+        runBlocking { controller.onStoreRefresh(edited) }
+
+        controller.step(runId, edited)
+        awaitState(LogicRunState.Paused)
+
+        val childExecution = context.logicTrace.mostRecent(childScriptLocation)
+            ?: fail("the finished sub-document must still resolve to an execution after the caller was edited")
+
+        // This is the exact read ScriptProgressStore performs when the user navigates into the sub-document:
+        // a null execution id above blanks its whole progress view, and an empty snapshot here blanks its steps.
+        val childSnapshot = context.logicTrace.lookup(childExecution, LogicTraceQuery(LogicTracePath.root))
+            ?: fail("the carried frame must still serve its own trace snapshot")
+        val plusStableId = context.objectStableMapper.objectStableId(childPlusLocation)
+        val plusEntry = childSnapshot.values[LogicTracePath.ofObjectStableId(plusStableId)]
+            ?: fail("the sub-document's step must keep its trace across the caller's edit")
+        assertEquals(
+            StepTrace.State.Done, StepTrace.ofExecutionValue(plusEntry.value).state,
+            "the sub-document's step is still reported done, exactly as it was before the edit")
+
+        // The RunStep's screenshot film strip scopes itself by walking the execution tree from the viewed
+        // document's execution, so the carried frame has to keep its parent link and its call-site too.
+        val callStableId = context.objectStableMapper.objectStableId(callLocation)
+        val rootExecutionId = controller.status().active?.frame?.executionId
+            ?: fail("the run must still be active")
+        val childExecutions = context.logicTrace.lookupRunExecutions(runId)
+            .filter { it.parentExecutionId == rootExecutionId }
+        assertEquals(
+            listOf(callStableId), childExecutions.map { it.callerStableId },
+            "the carried frame stays a child of the root execution, attributed to the RunStep that hosted it")
     }
 
 

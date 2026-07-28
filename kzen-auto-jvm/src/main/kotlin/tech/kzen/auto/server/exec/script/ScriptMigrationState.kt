@@ -31,12 +31,13 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableId
  * natural end, which interactive development prefers over re-running completed side effects. All of this is
  * in-memory within one JVM run, like the rest of the migration state.
  *
- * COALESCING (move-to, execution-control phase 2): [completedOutcomes] records a completed CONTAINER (an If, a
- * loop) as one entry, WITHOUT re-inserting its branch contents — so after any migrate / jump, the individual
- * outcomes of a completed branch's steps are gone. A later move-to jump back INTO such a branch therefore
- * treats its value-less pre-target steps as skipped (they had run; their values are no longer carried); a
- * reference to one error-parks the referencing step (the decided runtime policy — [ScriptRunContext.referencedValue]).
- * Jumping to the earliest needed step instead re-runs everything. Accepted v1 behaviour.
+ * CONTAINERS: a completed If / loop carries its own outcome AND its nested steps' — each step that finished
+ * recorded one, at whatever depth. Adopting the container therefore adopts its whole completed subtree
+ * ([ScriptRunContext.adoptCompleted]), since nothing else re-walks it. The one gap is a nested step whose
+ * outcome the run itself dropped — a loop-body iteration reset by [ScriptRunContext.dropReplay] keeps only the
+ * final iteration — so a later move-to jump back INTO such a body treats the value-less steps as skipped and a
+ * reference to one error-parks the referencing step (the decided runtime policy —
+ * [ScriptRunContext.referencedValue]). Jumping to the earliest needed step instead re-runs everything.
  */
 data class ScriptMigrationState(
     val completedOutcomes: Map<ObjectStableId, Any?>,

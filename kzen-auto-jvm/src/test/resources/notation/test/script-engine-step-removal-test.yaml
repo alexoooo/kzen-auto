@@ -1,0 +1,23 @@
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.Int
+      generics: []
+      nullable: false
+
+main.steps/First:
+  is: FormulaStep
+  code: "1"
+
+main.steps/Second:
+  is: FormulaStep
+  code: "2"
+
+main.steps/Third:
+  is: FormulaStep
+  code: "3"
+
+main.steps/Result:
+  is: ResultStep
+  code: Third

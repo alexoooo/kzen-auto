@@ -187,6 +187,32 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > (kzen-auto-common) — a third-party loop step opts into loop semantics declaratively, no shared-code
 > edit.
 
+> **Deleting a step under a live run.** Three things behave differently from an attribute edit, because a
+> stable id is the step's *address* (a fourth, below, is really about *any* edit — a deletion is just where
+> it was first noticed). (1) The run's frame **position** names the deleted step, so
+> `ServerLogicController.nodeToFrame` resolves every id leniently (`objectLocationOrNull`) — a throw there
+> would take out `/logic/status` **and** the `/logic/events` SSE loop that re-serializes it, leaving the client
+> unable to issue the very step that migrates past the deletion (`ClientLogicGlobal.refreshAfterControl` is
+> the client-side twin: a failed post-verb status read must not strand `pending` with the poll unarmed).
+> (2) A step created where the deleted one stood mints the **same id**, so the deletion is reported explicitly
+> across the barrier — `ObjectStableMapper.drainRemovedIds` → `RunEngine.migrate(removedStableIds)` →
+> `Execution.removedStableIds`, filtered in `ScriptRunContext.restore` (logic-spec §5 "removal must be
+> reported, not inferred"); without it the replacement is replay-adopted as Done holding the deleted step's
+> value, having never run. (3) A completed container's nested steps are re-traced only by the replay adopt
+> (`ScriptRunContext.adoptCompleted` descends `ScriptStep.nestedStepLists`) — nothing else re-walks a branch
+> the rebuild short-circuits, so without the descent an `If` reports Done above a subtree repainted Idle.
+> Pinned by `ServerLogicControllerStepRemovalTest`.
+>
+> (4) The same replay short-circuit means a completed **`RunStep`** is never re-invoked, so nothing re-creates
+> the sub-Script **frame** its `execution.host` opened — and every trace query (`mostRecent`, `lookupRun`,
+> `lookupRunExecutions`) projects the engine's node tree, so after any edit the finished sub-document showed
+> **no execution state at all** and `ScriptProgressStore.refresh` reset its whole progress view. The fix is in
+> the engine, not here: `RunEngine.migrate` now lifts every settled `retainTrace` frame before `nodes.clear()`
+> and re-attaches it to the rebuilt node sharing its host's stable id (`liftRetiredFrames` /
+> `adoptRetiredFrames` / `supersedeRetiredFrames`, logic-spec §5 "settled frames survive the rebuild"), so
+> kzen-auto's projections pick it up unchanged — `nodeToFrame` already prunes `Terminal` children, keeping a
+> carried frame trace-only. Pinned by `ServerLogicControllerLinkedDocumentMigrationTest`.
+
 > **Script move-to / Set Next Statement.** A settled (paused or **error-parked**) Script run
 > can be repositioned to a target step **without executing the intervening steps** — backward = re-run from
 > the target, forward = skip over — via `ServerLogicController.moveTo` / `/logic/moveTo`. It is realised as a
