@@ -1,0 +1,18 @@
+# An items expression whose inferred type is DEFINITELY not an Iterable — the one case the loop rejects
+# statically (an `Any`-typed expression is accepted instead, see foreach-items-opaque-test.yaml). The body
+# step must still validate and show its own type: the loop owns the error, and the item binding publishes
+# Any? rather than deferring, so a broken items expression does not cascade into "Unresolved" everywhere.
+
+main:
+  is: Script
+
+main.steps/Loop:
+  is: ForEachStep
+  items: "42"
+
+main.steps/Loop.item/Item:
+  is: ForEachItemBinding
+
+main.steps/Loop.steps/Body:
+  is: FormulaStep
+  code: '"body"'

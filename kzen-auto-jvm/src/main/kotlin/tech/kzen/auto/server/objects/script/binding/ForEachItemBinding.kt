@@ -1,31 +1,34 @@
 package tech.kzen.auto.server.objects.script.binding
 
-import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.server.objects.script.api.ScriptStepDefinition
 import tech.kzen.auto.server.objects.script.api.ScriptValueBinding
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
-import tech.kzen.auto.server.util.IterableElementTypeReflect
+import tech.kzen.auto.server.objects.script.step.control.foreach.ForEachItemsExpression
+import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.lib.common.exec.logic.model.LogicType
 import tech.kzen.lib.common.exec.tuple.TupleDefinition
 import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.lib.common.model.location.ObjectReference
-import tech.kzen.lib.common.model.location.ObjectReferenceHost
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
-import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.reflect.Service
 
 
 /**
  * Exposes a ForEachStep's current loop item to nested steps by name, fully typed, without a body row
  * (replaces the old ForEachItemStep). Lives in the enclosing ForEach's `item` branch, so it is validated
- * and referenceable like a step but never executed. Its type is the element type of the ForEach's `items`
- * collection, resolved directly from that collection (NOT via the ForEach's own output type, which is the
- * List of the body's terminal type — reading it would be circular whenever the body references this item);
- * its value is supplied by the engine's loop at run time.
+ * and referenceable like a step but never executed; its value is supplied by the engine's loop at run time.
+ *
+ * Its type is the element type of the enclosing ForEach's `items` EXPRESSION, derived here from that
+ * expression directly rather than read back from the ForEach's validation — which is not merely a style
+ * choice: the ForEach's own type is the List of its BODY's terminal type, so reading it would be circular
+ * whenever the body references this item, and `ScriptValidator` records a step's definition exactly once,
+ * which rules out the ForEach publishing the element type alongside a deferred type of its own. See
+ * [ForEachItemsExpression], which owns the derivation for both and makes the second compile a cache hit.
  */
 @Reflect
 class ForEachItemBinding(
-    private val selfLocation: ObjectLocation
+    private val selfLocation: ObjectLocation,
+    @Service private val cachedKotlinCompiler: CachedKotlinCompiler
 ):
     ScriptValueBinding()
 {
@@ -33,40 +36,27 @@ class ForEachItemBinding(
         val forEachLocation = selfLocation.parent()
             ?: return ScriptStepDefinition.of(TupleDefinition.ofMain(LogicType.anyNullable))
 
-        val graphNotation = scriptDefinitionContext.graphNotation
+        val code = ForEachItemsExpression.code(
+            forEachLocation, scriptDefinitionContext.graphNotation)
 
-        // Resolve the enclosing ForEach's `items` reference to the collection step it points at.
-        val itemsReference = (graphNotation
-            .firstAttribute(forEachLocation, ScriptConventions.itemsAttributePath)
-            as? ScalarAttributeNotation)
-            ?.value
-            ?: return ScriptStepDefinition.of(TupleDefinition.ofMain(LogicType.anyNullable))
+        val elementType = when (val attempt = ForEachItemsExpression.analyze(
+                forEachLocation, code, scriptDefinitionContext, cachedKotlinCompiler)) {
+            // The same defer the ForEach takes, and for the same reason: a step is recorded ONCE, so
+            // publishing a fallback now would permanently lose the precise element type.
+            ForEachItemsExpression.Attempt.Deferred ->
+                return null
 
-        val itemsLocation = graphNotation.coalesce.locateOptional(
-            ObjectReference.parse(itemsReference),
-            ObjectReferenceHost.ofLocation(forEachLocation))
-            ?: return ScriptStepDefinition.of(TupleDefinition.ofMain(LogicType.anyNullable))
+            // No error reported here — the ForEach owns the items editor and reports it there. The item must
+            // still publish a TYPE, so the body keeps validating and showing its own problems rather than a
+            // cascade of "Unresolved: circular or unavailable dependency".
+            is ForEachItemsExpression.Attempt.Invalid ->
+                TypeMetadata.anyNullable
 
-        // Element type of that collection. Defer (null) until items has been validated so the element type
-        // can refine past Any (ScriptValidator iterates to a fixpoint).
-        val itemsType = scriptDefinitionContext.scriptValidation
-            .stepValidations[itemsLocation.objectPath]?.typeMetadata
-            ?: return null
+            is ForEachItemsExpression.Attempt.Valid ->
+                attempt.elementType
+        }
 
-        val metadata = elementTypeOf(itemsType)
         return ScriptStepDefinition.of(
-            TupleDefinition.ofMain(LogicType(metadata)))
-    }
-
-
-    // The element type of the items collection: its first generic parameter when it has one
-    // (List<X>, Set<X>, …); otherwise — for an Iterable that fixes its element type and so exposes no
-    // generic parameter (IntRange : Iterable<Int>, a FormulaStep `1..100`) — recovered reflectively from
-    // the class's Iterable<E> supertype. Falls back to Any when neither applies.
-    private fun elementTypeOf(collectionType: TypeMetadata): TypeMetadata {
-        collectionType.generics.firstOrNull()?.let { return it }
-
-        return IterableElementTypeReflect.elementType(collectionType.className)
-            ?: TypeMetadata.any
+            TupleDefinition.ofMain(LogicType(elementType)))
     }
 }

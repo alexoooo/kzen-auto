@@ -52,7 +52,11 @@ object ExpressionReturnTypeInference {
         ClassNames.kotlinList,
         ClassNames.kotlinSet,
         // `1..100` infers to IntRange; recognize it so the expression (and anything iterating over it) is typed.
-        ClassName("kotlin.ranges.IntRange"))
+        ClassName("kotlin.ranges.IntRange"),
+        // The generic iteration interface, which `asIterable()` / a custom sequence pipeline infers to.
+        // Without it such an expression approximates to `Any`, and a ForEachStep iterating it would lose the
+        // element type — so the loop item degrades to `Any?` for a value whose element type is right there.
+        ClassName("kotlin.collections.Iterable"))
 
 
     //-----------------------------------------------------------------------------------------------------------------

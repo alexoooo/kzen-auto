@@ -9,6 +9,7 @@ import tech.kzen.auto.server.objects.script.api.ScriptStep
 import tech.kzen.auto.server.objects.script.api.ScriptStepDefinition
 import tech.kzen.auto.server.objects.script.api.StepExecution
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
+import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.lib.common.exec.logic.model.LogicType
 import tech.kzen.lib.common.exec.tuple.TupleDefinition
 import tech.kzen.lib.common.model.location.AttributeLocation
@@ -16,14 +17,34 @@ import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.platform.ClassNames
 
 
+/**
+ * A for-each loop: [items] is a user-supplied Kotlin expression yielding an [Iterable], and the body runs
+ * once per element with the current element bound under the loop's `item` binding so body expressions can
+ * reference it by name.
+ *
+ * The expression is compiled in the INFERENCE form (see [ForEachItemsExpression]) rather than with a forced
+ * `Iterable<*>` return, because the inferred ELEMENT type is what the `item` binding publishes to the body —
+ * a forced return would compile identically and erase it.
+ *
+ * It is NOT `scope: body`: the items expression is evaluated at loop ENTRY, so the loop's own body steps are
+ * not in scope — the default [tech.kzen.auto.common.objects.document.script.model.ScriptTree
+ * .inScopeReferencePaths] scoping applies (this loop's predecessors plus the in-scope parameters / ENCLOSING
+ * loop items).
+ *
+ * NB: like every expression step, the items expression resolves EVERY in-scope value at run time, not only
+ * the ones its text names (see [StepExecution.isValueReferenced]) — so a loop whose predecessor was skipped
+ * by control flow reaches the `referencedValue` "No value produced" backstop.
+ */
 @Reflect
 class ForEachStep(
-    private val items: ObjectLocation,
+    private val items: String,
     steps: List<ObjectLocation>,
-    private val selfLocation: ObjectLocation
+    private val selfLocation: ObjectLocation,
+    @Service private val cachedKotlinCompiler: CachedKotlinCompiler
 ):
     ScriptStep
 {
@@ -38,8 +59,9 @@ class ForEachStep(
      * for ANY [Iterable] with no re-iterability constraint — plus the in-flight [currentItem] (already consumed
      * from the iterator; the resumed iteration replays it), its [currentIndex], the [collectedOutputs] so far,
      * and the [totalSize] for the progress counter. Best-effort by design (logic-spec §5): the iterator belongs
-     * to the pre-edit items value, so an edit to the items PRODUCER is not reflected until the loop next starts
-     * — far better for interactive development than re-running completed iterations' side effects from scratch.
+     * to the pre-edit items value, so an edit to the items EXPRESSION (or to anything it reads) is not reflected
+     * until the loop next starts — far better for interactive development than re-running completed iterations'
+     * side effects from scratch.
      *
      * [collectedOutputs] is likewise the LIVE list, not a per-iteration snapshot of it — the same "carry live
      * state as-is" rule the iterator follows, and O(1) per iteration rather than the O(n) copy that made a long
@@ -62,8 +84,8 @@ class ForEachStep(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    // Loop over the iterable a predecessor produced, running the body once per element and collecting each
-    // iteration's terminal value. The current element is bound under the loop's `item` binding so body
+    // Loop over the iterable the items expression yields, running the body once per element and collecting
+    // each iteration's terminal value. The current element is bound under the loop's `item` binding so body
     // expressions can reference it.
     //
     // MID-LOOP MIGRATION RESUME (logic-spec §5): reaching here means the loop did NOT complete pre-edit (a
@@ -113,8 +135,11 @@ class ForEachStep(
             replayInFlight = true
         }
         else {
-            val iterable = execution.referencedValue(items) as? Iterable<*>
-                ?: error("ForEach items are not iterable: $items")
+            // Evaluated once, HERE — at loop entry, not per iteration (and skipped entirely on a resumed
+            // loop, which carries its live iterator instead).
+            val iterable = ForEachItemsExpression
+                .evaluate(selfLocation, items, execution, cachedKotlinCompiler) as? Iterable<*>
+                ?: error("ForEach items are not iterable: $selfLocation")
             iterator = iterable.iterator()
             output = ArrayList()
             size = (iterable as? Collection<*>)?.size
@@ -251,11 +276,31 @@ class ForEachStep(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun definition(scriptDefinitionContext: ScriptDefinitionContext): ScriptStepDefinition? {
+        // The items expression is validated (or reported / deferred on) before any type work: an unconfigured
+        // or broken loop must report promptly, and a broken items expression makes the whole loop broken
+        // regardless of the body. The element type it yields is not used here — that is the loop VARIABLE's
+        // type, which ForEachItemBinding derives for itself from this same expression (see
+        // [ForEachItemsExpression] for why it cannot read it back from this step's validation).
+        when (val attempt = ForEachItemsExpression.analyze(
+                selfLocation,
+                items,
+                scriptDefinitionContext,
+                cachedKotlinCompiler)) {
+            ForEachItemsExpression.Attempt.Deferred ->
+                return null
+
+            is ForEachItemsExpression.Attempt.Invalid ->
+                return ScriptStepDefinition(null, attempt.error)
+
+            is ForEachItemsExpression.Attempt.Valid ->
+                Unit
+        }
+
         // Output is a List of what the loop collects each iteration: the body's terminal step value,
         // mirroring IfStep whose type is its branches' terminal type. NOT the `items` element type — that's
-        // the loop variable's type (ForEachItemBinding), which it reads straight from `items`. An empty body
-        // has no value to collect, so its element type is unknown (Any). Defer (null) until the terminal step
-        // is validated; ScriptValidator iterates to a fixpoint.
+        // the loop variable's type (ForEachItemBinding). An empty body has no value to collect, so its
+        // element type is unknown (Any). Defer (null) until the terminal step is validated; ScriptValidator
+        // iterates to a fixpoint.
         val elementType = bodyTerminalType(scriptDefinitionContext)
             ?: return null
 

@@ -208,13 +208,19 @@ ForEachStep:
   display: ForEachStepDisplay
   icon: "material-symbols:forward"
   title: "ForEach"
-  description: "Use each item in a list"
+  description: "Loop over the items a Kotlin expression evaluates to"
   items: ""
   meta:
+    # Compiled in the INFERENCE form by ForEachStep (see ForEachItemsExpression), not with a forced
+    # Iterable<*> return: the inferred ELEMENT type is what the `item` binding below publishes to the body.
+    # NO `summary:` — a branch-header step never wires StepHeader's attributeViewManager, so the marker would
+    # be inert (IfBranch.condition omits it for the same reason). NO `scope: body` either: the expression is
+    # evaluated at loop ENTRY, so its in-scope references are this loop's predecessors plus the in-scope
+    # bindings — the default scoping both KotlinExpressionEditor and StepExpressionSupport apply.
     items:
-      is: ObjectLocation
-      by: Nominal
-      editor: SelectStepEditor
+      is: String
+      multiline: true
+      editor: KotlinExpressionEditor
     steps:
       is: List
       of: ScriptStep

@@ -36,8 +36,9 @@ object ScriptConventions {
     val itemAttributeName = AttributeName("item")
     val itemAttributePath = AttributePath.ofName(itemAttributeName)
 
-    // A ForEachStep's collection reference (the values it iterates over) — distinct from `item`, the
-    // branch that holds the per-iteration ForEachItemBinding.
+    // A ForEachStep's collection: the Kotlin EXPRESSION whose value it iterates over (compiled in the
+    // inference form, so its element type is the loop variable's) — distinct from `item`, the branch that
+    // holds the per-iteration ForEachItemBinding.
     val itemsAttributeName = AttributeName("items")
     val itemsAttributePath = AttributePath.ofName(itemsAttributeName)
 
@@ -51,8 +52,9 @@ object ScriptConventions {
     val instructionsAttributeName = AttributeName("instructions")
     val instructionsAttributePath = AttributePath.ofName(instructionsAttributeName)
 
-    // The branching condition of a control step, shared by IfStep (a step reference) and DoWhileStep (a Kotlin
-    // expression) — the name is common, the declared type and editor are each step's own.
+    // The branching condition of a control step, shared by IfBranch and DoWhileStep — both Kotlin expressions
+    // compiled with a forced Boolean return. The name is common; the SCOPING is each step's own (DoWhile
+    // marks its condition `scope: body`, an IfBranch's is predecessor-scoped).
     val conditionAttributeName = AttributeName("condition")
 
 

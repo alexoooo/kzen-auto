@@ -176,9 +176,19 @@ class ForEachStepDisplay(
             validationError = state.stepValidation?.errorMessage,
             partial = progress?.partial ?: false
         ) {
-            props.attributeEditorManager.child(this) {
-                this.objectLocation = props.common.objectLocation
-                this.attributeName = ScriptConventions.itemsAttributeName
+            // Vertical breathing room the slab's own body padding does not give (it is zero top/bottom):
+            // items is a MULTILINE Kotlin expression field now, not the compact select it used to be, so its
+            // outline would otherwise sit flush against the header above and the stage seam below. Matches
+            // the padding DoWhileStepDisplay gives its condition editor.
+            div {
+                css {
+                    padding = Padding(12.px, 0.px, 12.px, 0.px)
+                }
+
+                props.attributeEditorManager.child(this) {
+                    this.objectLocation = props.common.objectLocation
+                    this.attributeName = ScriptConventions.itemsAttributeName
+                }
             }
         }
 

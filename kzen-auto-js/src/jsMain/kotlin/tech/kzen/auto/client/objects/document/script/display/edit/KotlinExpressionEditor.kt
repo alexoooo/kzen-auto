@@ -76,7 +76,8 @@ external interface KotlinExpressionEditorState: State {
 
 //---------------------------------------------------------------------------------------------------------------------
 // Editor for a free-text Kotlin expression attribute that can reference prior in-scope steps by name —
-// FormulaStep.code and DoWhileStep.condition (selected via `editor: KotlinExpressionEditor`). A multiline
+// FormulaStep.code, ResultStep.code, DoWhileStep and IfBranch conditions, and ForEachStep.items (selected
+// via `editor: KotlinExpressionEditor`, the only mechanism that picks it). A multiline
 // text field (mirrors FormulaItemController's debounced buffer) plus a dual-function insert button: it opens
 // a filterable popover of the in-scope steps AND highlights those step cards in the canvas for click-to-insert
 // (via the shared ScriptStepReferenceStore). Either path inserts the step's escaped Kotlin variable name at

@@ -1,13 +1,9 @@
 main:
   is: Script
 
-main.steps/Formula:
-  is: FormulaStep
-  code: 1..133
-
 main.steps/ForEach:
   is: ForEachStep
-  items: main.steps/Formula
+  items: 1..133
 
 main.steps/ForEach.item/Item:
   is: ForEachItemBinding

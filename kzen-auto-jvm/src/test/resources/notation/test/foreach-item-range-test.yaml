@@ -1,15 +1,14 @@
+# The items expression inline, with NO upstream producer step to point at — the whole point of `items`
+# being an expression. It evaluates to an IntRange (an Iterable<Int> exposing no generic parameter of its
+# own), so the loop item's Int type comes from projecting onto the Iterable supertype, not from a generic
+# argument.
+
 main:
   is: Script
 
-# items is an IntRange (an Iterable<Int> with no generic parameter), not a List<Int> — so the loop
-# item's Int type comes from range-element mapping, not from a generic parameter.
-main.steps/Range:
-  is: FormulaStep
-  code: 1..3
-
 main.steps/Loop:
   is: ForEachStep
-  items: main.steps/Range
+  items: "1..3"
 
 main.steps/Loop.item/Item:
   is: ForEachItemBinding

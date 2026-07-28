@@ -19,7 +19,7 @@ main.steps/Items:
 
 main.steps/Loop:
   is: ForEachStep
-  items: main.steps/Items
+  items: Items
 
 main.steps/Loop.item/Item:
   is: ForEachItemBinding

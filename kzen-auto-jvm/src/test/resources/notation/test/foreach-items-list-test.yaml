@@ -1,0 +1,13 @@
+# A parameterized collection: the element type comes from the generic argument, and its NULLABILITY is
+# carried through — the generated accessor casts with `as <type>`, so a List<String?> whose item typed as
+# a non-null String would throw on the null element.
+
+main:
+  is: Script
+
+main.steps/Loop:
+  is: ForEachStep
+  items: 'listOf("a", null)'
+
+main.steps/Loop.item/Item:
+  is: ForEachItemBinding

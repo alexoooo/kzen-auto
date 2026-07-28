@@ -132,6 +132,16 @@ object KotlinExpressionAnalyzer {
                     afterMemberSelector = false
                 }
 
+                // `..` / `..<` is the RANGE operator, not two member selectors, so what follows it is a
+                // genuine reference. Load-bearing rather than a nicety: `1..Count` is the canonical
+                // ForEachStep `items` expression, and reading it as `1.` then `.Count` would drop the
+                // dependency edge and leave the expression silently un-rewritten by a rename of `Count`.
+                // The trailing `<` of `..<` falls through to the catch-all below, which is a no-op here.
+                c == '.' && i + 1 < to && code[i + 1] == '.' -> {
+                    afterMemberSelector = false
+                    i += 2
+                }
+
                 c == '.' -> {
                     afterMemberSelector = true
                     i++

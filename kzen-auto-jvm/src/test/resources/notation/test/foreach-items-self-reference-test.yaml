@@ -1,0 +1,13 @@
+# A loop's OWN item is NOT in scope for the expression that determines it — otherwise the item's type would
+# be defined in terms of itself. ScriptTree.collectEnclosingItems stops AT the target before adding that
+# node's own item branch, so `Item` is simply an unresolved reference here rather than a validator cycle.
+
+main:
+  is: Script
+
+main.steps/Loop:
+  is: ForEachStep
+  items: Item
+
+main.steps/Loop.item/Item:
+  is: ForEachItemBinding

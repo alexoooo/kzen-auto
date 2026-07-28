@@ -2,17 +2,9 @@ main:
   is: Script
   results: {}
 
-main.steps/Formula 2:
-  is: FormulaStep
-  code: 1 .. 150
-
-main.steps/Range:
-  is: FormulaStep
-  code: 1..200
-
 main.steps/Loop:
   is: ForEachStep
-  items: main.steps/Range
+  items: 1..200
 
 main.steps/Loop.steps/Run:
   is: RunStep
@@ -29,7 +21,7 @@ main.steps/Display:
 
 main.steps/ForEach:
   is: ForEachStep
-  items: main.steps/Number range
+  items: 1..150
 
 main.steps/ForEach.steps/Run 2:
   is: RunStep

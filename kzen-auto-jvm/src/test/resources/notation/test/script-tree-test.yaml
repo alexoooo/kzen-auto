@@ -9,7 +9,7 @@ main.steps/Formula:
 
 main.steps/ForEach:
   is: ForEachStep
-  items: main.steps/Formula
+  items: Formula
 
 main.steps/ForEach.steps/Item:
   is: FormulaStep

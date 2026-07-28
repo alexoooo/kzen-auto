@@ -24,6 +24,40 @@ class KotlinExpressionAnalyzerTest {
 
 
     @Test
+    fun rangeOperandsAreReferencedNotTreatedAsMemberSelectors() {
+        // `..` is the range operator, so `Count` is a real reference — NOT the `.Count` of a `1.` member
+        // access. This is the canonical ForEachStep `items` shape, so misreading it would cost the loop its
+        // dependency edge and leave it un-rewritten when `Count` is renamed.
+        assertEquals(
+            setOf("Count"),
+            KotlinExpressionAnalyzer.referencedIdentifiers("1..Count"))
+
+        assertEquals(
+            setOf("first", "last"),
+            KotlinExpressionAnalyzer.referencedIdentifiers("first..last"))
+
+        // the open-ended form too
+        assertEquals(
+            setOf("Count"),
+            KotlinExpressionAnalyzer.referencedIdentifiers("0..<Count"))
+
+        // and a back-ticked operand
+        assertEquals(
+            setOf("Outer Item"),
+            KotlinExpressionAnalyzer.referencedIdentifiers("1..`Outer Item`"))
+    }
+
+
+    @Test
+    fun aMemberSelectorAfterARangeIsStillExcluded() {
+        // the `size` of `xs.size` remains a selector even though a range precedes it
+        assertEquals(
+            setOf("start", "xs"),
+            KotlinExpressionAnalyzer.referencedIdentifiers("start..xs.size"))
+    }
+
+
+    @Test
     fun safeCallAndCallableReferenceExcluded() {
         assertEquals(
             setOf("a", "b"),

@@ -14,7 +14,7 @@ main.steps/Range:
 
 main.steps/Loop:
   is: ForEachStep
-  items: main.steps/Range
+  items: Range
 
 main.steps/Loop.item/Item:
   is: ForEachItemBinding

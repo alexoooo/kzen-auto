@@ -53,8 +53,8 @@ class FormulaStepTest {
 
     @Test
     fun infersIntRangeType() {
-        // `1..100` infers to IntRange — recognized rather than falling back to Any (drives a ForEach's
-        // loop-item element type; see ForEachItemBindingTest).
+        // `1..100` infers to IntRange — recognized rather than falling back to Any (the same inference a
+        // ForEach's items expression runs to type its loop item; see ForEachItemsTest).
         assertEquals(
             TypeMetadata(ClassName("kotlin.ranges.IntRange"), listOf(), false),
             typeMetadataFor("main.steps/RangeFormula"))

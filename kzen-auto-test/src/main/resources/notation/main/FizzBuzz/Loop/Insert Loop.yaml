@@ -21,11 +21,13 @@ main.steps/Click 4:
   is: BrowserClickStep
   target:
     type: Xpath
-    value: "//label[text()='Items']/..//input"
+    value: "//label[text()='Items']/..//textarea"
+    # Items is a Kotlin expression edited through the multiline editor, which renders a second (hidden)
+    # autosize-shadow textarea; the visible one is the first (see FizzBuzz Formula.yaml).
+    policy: first
 
+# The expression names the Range step in scope. No Enter afterwards: this is a textarea, so Enter would
+# insert a newline rather than commit — the editor's debounce plus the next script's click-blur commits.
 main.steps/Write:
   is: BrowserWriteStep
   text: Range
-
-main.steps/Enter:
-  is: BrowserEnterStep

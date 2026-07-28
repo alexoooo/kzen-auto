@@ -1,0 +1,31 @@
+# An items expression whose STATIC type says nothing about iterability: `as Any` erases it, and an inferred
+# `Any` is exactly what an expression naming an unregistered type also approximates to. Such a loop must be
+# ACCEPTED and left to the run-time `as? Iterable<*>` backstop — rejecting it would break scripts that work.
+# The item binding types Any? in that case, which is what a body referencing it sees.
+
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.Int
+      generics: []
+      nullable: false
+
+main.steps/Opaque:
+  is: FormulaStep
+  code: "listOf(1, 2, 3) as Any"
+
+main.steps/Loop:
+  is: ForEachStep
+  items: Opaque
+
+main.steps/Loop.item/Item:
+  is: ForEachItemBinding
+
+main.steps/Loop.steps/Doubled:
+  is: FormulaStep
+  code: "(Item as Int) * 2"
+
+main.steps/Result:
+  is: ResultStep
+  code: "Loop.sumOf { it as Int }"

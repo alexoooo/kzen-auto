@@ -1,0 +1,39 @@
+# An ENCLOSING loop's item is in scope for an inner loop's items expression — the inner range is a function
+# of the outer element. This is what ScriptTree.inScopeBindingPaths gives the inner loop, and it is the other
+# half of foreach-items-self-reference-test.yaml (a loop's OWN item is not in scope for its own items).
+#
+# Outer over 1..3; inner over 1..`Outer Item`, summing 1 + (1+2) + (1+2+3) = 10.
+
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.Int
+      generics: []
+      nullable: false
+
+main.steps/Outer:
+  is: ForEachStep
+  items: "1..3"
+
+main.steps/Outer.item/Outer Item:
+  is: ForEachItemBinding
+
+main.steps/Outer.steps/Inner:
+  is: ForEachStep
+  items: "1..`Outer Item`"
+
+main.steps/Outer.steps/Inner.item/Inner Item:
+  is: ForEachItemBinding
+
+main.steps/Outer.steps/Inner.steps/Value:
+  is: FormulaStep
+  code: "`Inner Item`"
+
+main.steps/Outer.steps/Subtotal:
+  is: FormulaStep
+  code: "Inner.sum()"
+
+main.steps/Result:
+  is: ResultStep
+  code: "Outer.sum()"

@@ -76,6 +76,27 @@ class ScriptDependencyAnalysisTest {
 
 
     @Test
+    fun aForEachItemsExpressionIsAnEdgeIntoTheLoop() {
+        val loopPath = DocumentPath.parse("test/foreach-item-binding-test.yaml")
+        val graphNotation = AutoTestUtils.readNotation()
+        val graphDefinitionAttempt = AutoTestUtils.graphDefinitionAttempt(graphNotation)
+
+        val analysis = ScriptDependencyAnalysis.analyze(graphDefinitionAttempt.successful(), loopPath)
+
+        fun loopLocation(objectPath: String) =
+            ObjectLocation(loopPath, ObjectPath.parse(objectPath))
+
+        // `items` is a Kotlin expression now, so this edge comes from the LEXICAL value-scalar scan rather
+        // than from attributeReferencesIncludingWeak — the same handoff an IfBranch condition made. It has to
+        // survive that move: ScriptValueReferences is built on these edges, and without it the Range's value
+        // would be considered unread and elided out from under the loop.
+        assertTrue(
+            ScriptStepDependency(loopLocation("main.steps/Range"), loopLocation("main.steps/Loop"))
+                    in analysis.edges)
+    }
+
+
+    @Test
     fun namesCollidingOnOneIdentifierAllBecomeSources() {
         val collisionPath = DocumentPath.parse("test/script-name-collision-test.yaml")
         val graphNotation = AutoTestUtils.readNotation()

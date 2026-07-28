@@ -10,7 +10,7 @@ main.steps/OuterRange:
 
 main.steps/OuterLoop:
   is: ForEachStep
-  items: main.steps/OuterRange
+  items: OuterRange
 
 main.steps/OuterLoop.item/OuterItem:
   is: ForEachItemBinding
@@ -21,7 +21,7 @@ main.steps/OuterLoop.steps/InnerRange:
 
 main.steps/OuterLoop.steps/InnerLoop:
   is: ForEachStep
-  items: main.steps/OuterLoop.steps/InnerRange
+  items: InnerRange
 
 main.steps/OuterLoop.steps/InnerLoop.item/InnerItem:
   is: ForEachItemBinding

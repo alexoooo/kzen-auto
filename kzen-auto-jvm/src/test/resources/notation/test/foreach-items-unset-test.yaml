@@ -1,0 +1,12 @@
+# A freshly-inserted loop, exactly as the ribbon writes it: no `items` attribute of its own, so it inherits
+# the ForEachStep archetype's empty default. An empty expression is called out as "Items not set" rather than
+# left to the Kotlin compiler, whose "Unit is not an Iterable" would say nothing about what the user has to do.
+
+main:
+  is: Script
+
+main.steps/Loop:
+  is: ForEachStep
+
+main.steps/Loop.item/Item:
+  is: ForEachItemBinding

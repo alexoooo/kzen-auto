@@ -1,6 +1,7 @@
 package tech.kzen.auto.common.objects.document.script.model
 
 import org.junit.Test
+import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -16,6 +17,7 @@ class KzenAutoCodeReferenceRewriterTest {
     //-----------------------------------------------------------------------------------------------------------------
     private val documentPath = DocumentPath.parse("test/code-reference-rename-test.yaml")
     private val ifDocumentPath = DocumentPath.parse("test/code-reference-rename-if-test.yaml")
+    private val forEachDocumentPath = DocumentPath.parse("test/code-reference-rename-foreach-test.yaml")
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -55,6 +57,35 @@ class KzenAutoCodeReferenceRewriterTest {
         // The string literal in the other branch is still left alone.
         val untouched = ifLocation("main.steps/Gate.branches/Branch 2.steps/Untouched")
         assertTrue(commands.none { it.objectLocation == untouched })
+    }
+
+
+    @Test
+    fun rewritesAForEachItemsExpression() {
+        val commands = rename(forEachDocumentPath, "main.steps/Source", "Renamed")
+
+        // `items` is a value scalar now, so it rewrites like a Formula's `code`; while it was a reference
+        // attribute this rewriter skipped it entirely and kzen-lib adjusted the path instead.
+        val items = commands.single { it.objectLocation == forEachLocation("main.steps/Outer") }
+        assertEquals(ScriptConventions.itemsAttributePath, items.attributePath)
+        assertEquals("1..Renamed", (items.attributeNotation as ScalarAttributeNotation).value)
+
+        // The string literal in the loop body is still left alone.
+        val untouched = forEachLocation("main.steps/Outer.steps/Inner.steps/Untouched")
+        assertTrue(commands.none { it.objectLocation == untouched })
+    }
+
+
+    @Test
+    fun rewritesAnInnerLoopsItemsWhenTheOuterItemIsRenamed() {
+        // The item binding is in scope for the inner loop's items expression, so renaming it must rewrite
+        // the range that reads it — the same scope (ScriptTree.inScopeReferencePaths) the server compiles
+        // that expression against.
+        val commands = rename(forEachDocumentPath, "main.steps/Outer.item/Outer Item", "Element")
+
+        assertEquals(
+            "1..Element",
+            rewritten(commands, forEachLocation("main.steps/Outer.steps/Inner")))
     }
 
 
@@ -108,5 +139,10 @@ class KzenAutoCodeReferenceRewriterTest {
 
     private fun ifLocation(objectPath: String): ObjectLocation {
         return ObjectLocation(ifDocumentPath, ObjectPath.parse(objectPath))
+    }
+
+
+    private fun forEachLocation(objectPath: String): ObjectLocation {
+        return ObjectLocation(forEachDocumentPath, ObjectPath.parse(objectPath))
     }
 }

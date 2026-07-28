@@ -110,7 +110,14 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > execution margin, dependency analysis) is reused; they are typed and validated (via
 > `TypeMetadataDefiner`) but never executed, resolving on demand through
 > `ScriptExecutionContext.referencedValue` (`ParameterBinding` with a leniently-coerced `default:`,
-> `ForEachItemBinding`, `ScriptValueBinding`). The result signature is **ResultStep-only**: the
+> `ForEachItemBinding`, `ScriptValueBinding`). A loop item's TYPE is the inferred element type of its
+> loop's `items` expression, which `ForEachItemBinding` derives from that expression itself rather than
+> reading back from the ForEach's validation: the ForEach's own type is the List of its BODY's terminal
+> type, and `ScriptValidator` records a step's definition exactly once, so any channel from the loop to
+> its binding would be circular whenever the body references the item. `ForEachItemsExpression` owns the
+> derivation for both, and because `CachedKotlinCompiler` is keyed by content signature and both callers
+> pass the ForEach's location, the second derivation is a cache hit rather than a second compile. The
+> result signature is **ResultStep-only**: the
 > `results` map (`ResultSignatureDefiner`) types the output tuple, and the Script's value is the
 > last invoked `ResultStep`'s (VB-style), or void when none ran — there is no last-step fallback,
 > so a Script consumed via `RunStep` / `ForEachStep` returns void until a ResultStep is added. Two
@@ -139,11 +146,14 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > `ScriptBranchDiscoveryTest` pins.
 
 > **Kotlin expressions — reference analysis, rename rewriting, validation.** Expressions
-> (`FormulaStep`, `ResultStep`, `DoWhile` and `IfBranch` conditions, Job formulas) are analyzed by
+> (`FormulaStep`, `ResultStep`, `DoWhile` and `IfBranch` conditions, `ForEachStep.items`, Job
+> formulas) are analyzed by
 > **`KotlinExpressionAnalyzer`** (kzen-auto-common `util/`), a hand-rolled Kotlin lexer:
 > `referencedIdentifiers(code)` / `renameIdentifier(code, from, to)` correctly skip strings
 > (including raw strings and `${}` templates, whose identifiers ARE references), char literals,
-> comments, back-tick identifiers, and member selectors. It is lexical, not semantic (a local
+> comments, back-tick identifiers, and member selectors — but NOT the operand after a `..` / `..<`
+> range (`1..Count` references `Count`; reading it as a `1.` member access would silently drop the
+> edge and the rename, and a range is the canonical `items` expression). It is lexical, not semantic (a local
 > `val foo` shadowing a step is not resolved) — but do not re-introduce regex / word-boundary
 > matching or unconditional back-ticking anywhere. **`ExpressionUtils`** (kzen-auto-common) is the
 > canonical name↔identifier conversion (`escapeKotlinVariableName` + `identifierContent`), shared

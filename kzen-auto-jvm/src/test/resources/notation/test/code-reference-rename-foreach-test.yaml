@@ -1,0 +1,32 @@
+# Rename rewriting reaches a ForEach's `items`, which is a Kotlin expression (a plain value scalar) and so
+# belongs to this rewriter — a reference-typed attribute would be adjusted by kzen-lib's generic reference
+# machinery instead and never reach here. Its own fixture because code-reference-rename-test.yaml's step
+# list is pinned by ScriptExecutableStepsTest.
+#
+# Two scopes are covered: a root step named by an outer loop's items, and an OUTER LOOP'S ITEM named by an
+# inner loop's items (renaming a binding must rewrite the inner range that reads it).
+
+main:
+  is: Script
+
+main.steps/Source:
+  is: FormulaStep
+  code: "3"
+
+main.steps/Outer:
+  is: ForEachStep
+  items: "1..Source"
+
+main.steps/Outer.item/Outer Item:
+  is: ForEachItemBinding
+
+main.steps/Outer.steps/Inner:
+  is: ForEachStep
+  items: "1..`Outer Item`"
+
+main.steps/Outer.steps/Inner.item/Inner Item:
+  is: ForEachItemBinding
+
+main.steps/Outer.steps/Inner.steps/Untouched:
+  is: FormulaStep
+  code: '"Source stays in this string"'

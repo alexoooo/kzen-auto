@@ -1,0 +1,13 @@
+# An items expression naming something that does not exist. The Kotlin compile error becomes the LOOP's
+# validation error (it owns the editor the user must fix), while the item binding still publishes a type so
+# the rest of the document keeps validating.
+
+main:
+  is: Script
+
+main.steps/Loop:
+  is: ForEachStep
+  items: nowhere
+
+main.steps/Loop.item/Item:
+  is: ForEachItemBinding
