@@ -1,11 +1,13 @@
 main:
   is: Script
 
-'main.steps/Click "Number range" ribbon tool':
+# "Number range" was removed along with the other deprecated literal steps; a Formula holding the
+# Kotlin expression 1..100 replaces it, and the ForEach names it in scope (see Insert Loop.yaml).
+'main.steps/Click "Formula" ribbon tool':
   is: BrowserClickStep
   target:
     type: Text
-    value: Number range
+    value: Formula
 
 "main.steps/Click [add] target in script":
   is: BrowserClickStep
@@ -13,19 +15,21 @@ main:
     value: "main/Actions/Plus Circle/~main.yaml#main"
     type: Visual
 
-"main.steps/Click [Expand]":
+main.steps/Click Code:
   is: BrowserClickStep
   target:
     type: Xpath
-    value: "//button[@title='Expand']"
+    value: "//label[text()='Code']/..//textarea"
+    # The multiline editor renders a second (hidden) autosize-shadow textarea; the visible one is
+    # the first (as in FizzBuzz Formula.yaml). No [Expand] click precedes this: a newly created step
+    # opens its body straight away (ScriptBranchDisplay.onCreate).
+    policy: first
 
-'main.steps/Append "0"':
+'main.steps/Write "1..100"':
   is: BrowserWriteStep
-  target:
-    type: Text
-    value: 10
-  text: 0
+  text: "1..100"
 
+# Clicking [Rename] also blurs the textarea, which commits the debounced code edit above.
 "main.steps/Click [Rename]":
   is: BrowserClickStep
   target:
