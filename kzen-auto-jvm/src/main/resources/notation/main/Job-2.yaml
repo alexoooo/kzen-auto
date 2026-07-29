@@ -7,11 +7,8 @@ main.workers/CSV Reader:
   delimiter: ";"
   header: false
 
-main.workers/Formula:
-  is: FormulaWorker
-  formula:
-    test: c0 + "_foo"
+main.workers/Summary:
+  is: SummaryWorker
 
 main.workers/Preview:
   is: PreviewWorker
-  sample: 10

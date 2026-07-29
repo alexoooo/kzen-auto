@@ -1,2 +1,3 @@
 main:
   is: Target
+  tolerance: 0.8

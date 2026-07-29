@@ -5,7 +5,7 @@ main:
 
 main.workers/Formula Source:
   is: FormulaSourceWorker
-  code: 1 .. 6
+  code: 1 .. 100
 
 main.workers/Run:
   is: RunWorker
