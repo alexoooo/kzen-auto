@@ -1,5 +1,11 @@
+# This document OWNS the SUT and the browser: the sub-script below opens both, and without these slots each
+# would bind to that sub-script and be disposed at its settle, leaving every later sub-script with nothing.
 main:
   is: Script
+  context:
+    slots:
+      - SutContext
+      - BrowserContext
 
 main.steps/Open Kzen and Browser:
   is: RunStep

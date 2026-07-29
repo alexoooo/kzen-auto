@@ -1,5 +1,8 @@
 main:
   is: Script
+  context:
+    requires:
+      - BrowserContext
 
 # Open the preloaded failing Script from the SUT navigation tree (it shows by its document name).
 main.steps/Open Script:

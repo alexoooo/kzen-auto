@@ -1,0 +1,24 @@
+# Qualified round trip (ScriptContextRuntimeTest): one Context family, two independent members addressed by
+# qualifier (`sut:a` / `sut:b`). Each provide sees nothing before it — they do not overwrite one another —
+# and each release finds its own. This is the shape a SUT-per-name uses.
+
+main:
+  is: Script
+
+main.steps/Provide A:
+  is: ProvideContextTestStep
+  value: alpha
+  qualifier: a
+
+main.steps/Provide B:
+  is: ProvideContextTestStep
+  value: beta
+  qualifier: b
+
+main.steps/Release A:
+  is: ReleaseContextTestStep
+  qualifier: a
+
+main.steps/Release B:
+  is: ReleaseContextTestStep
+  qualifier: b

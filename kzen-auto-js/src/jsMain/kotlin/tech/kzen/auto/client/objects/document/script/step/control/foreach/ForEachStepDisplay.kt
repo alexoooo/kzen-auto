@@ -162,7 +162,8 @@ class ForEachStepDisplay(
             trace?.state ?: StepTrace.State.Idle,
             trace?.error,
             state.isNextToRun ?: false,
-            state.stepValidation?.errorMessage)
+            state.stepValidation?.errorMessage,
+            state.stepValidation?.warningMessage)
 
         branchHeaderSlab(
             objectLocation = props.common.objectLocation,
@@ -174,6 +175,7 @@ class ForEachStepDisplay(
             mirroredGraphStore = props.mirroredGraphStore,
             typeMetadata = state.stepValidation?.typeMetadata?.toSimple(),
             validationError = state.stepValidation?.errorMessage,
+            validationWarning = state.stepValidation?.warningMessage,
             partial = progress?.partial ?: false
         ) {
             // Vertical breathing room the slab's own body padding does not give (it is zero top/bottom):

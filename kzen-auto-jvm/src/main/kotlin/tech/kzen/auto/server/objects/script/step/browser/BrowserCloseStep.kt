@@ -25,11 +25,13 @@ class BrowserCloseStep(
         delay(250)
 
         // Explicit close: dispose the browser ourselves and deregister it so the engine's auto-disposer won't
-        // fire a second time (this is what a Manual closePolicy relies on).
-        (execution.resource(WebDriverSupport.resourceKey) as? RemoteWebDriver)?.let {
+        // fire a second time (this is what a Manual closePolicy relies on). Deliberately TOLERANT of an
+        // already-absent browser — a closer's job is to make the absence true, which is why this step declares
+        // `releases: BrowserContext` (never gated by the spine) rather than `requires`.
+        (execution.contextValueOrNull() as? RemoteWebDriver)?.let {
             execution.blocking { WebDriverSupport.quitQuietly(it) }
         }
-        execution.releaseResource(WebDriverSupport.resourceKey)
+        execution.releaseContext()
 
         execution.traceDetail("Browser closed")
 

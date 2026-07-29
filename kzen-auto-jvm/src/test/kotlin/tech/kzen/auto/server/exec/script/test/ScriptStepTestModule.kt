@@ -13,7 +13,8 @@ import tech.kzen.lib.common.reflect.ReflectionRegistry
  * mirror, and the contrast between the two paths is itself the coverage.
  *
  * Registers the test-only Script steps ([ShoutStep], [OpenResourceTestStep], [FailStep], [FlakyStep],
- * [AssertDisposedStep], [ReadResourceStep], [CountingStep], [BinaryDetailStep]), which therefore carry no
+ * [AssertDisposedStep], [ReadResourceStep], [CountingStep], [BinaryDetailStep], [ProvideContextTestStep],
+ * [RequireContextTestStep], [ReleaseContextTestStep]), which therefore carry no
  * `@Reflect` annotation. That these third-party steps run end-to-end after only this registration — with no
  * change to [tech.kzen.auto.server.exec.script.ScriptLogicCompiler] or any kzen dispatch — is the extensibility
  * guarantee [tech.kzen.auto.server.exec.script.ScriptExtensibilityTest] asserts. Idempotently [register]ed into
@@ -75,6 +76,27 @@ object ScriptStepTestModule: ModuleReflection {
             listOf()
         ) {
             BinaryDetailStep()
+        }
+
+        reflectionRegistry.put(
+            "tech.kzen.auto.server.exec.script.test.ProvideContextTestStep",
+            listOf("value", "qualifier", "closePolicy")
+        ) { args ->
+            ProvideContextTestStep(args[0] as String, args[1] as String, args[2] as String)
+        }
+
+        reflectionRegistry.put(
+            "tech.kzen.auto.server.exec.script.test.RequireContextTestStep",
+            listOf()
+        ) {
+            RequireContextTestStep()
+        }
+
+        reflectionRegistry.put(
+            "tech.kzen.auto.server.exec.script.test.ReleaseContextTestStep",
+            listOf("qualifier")
+        ) { args ->
+            ReleaseContextTestStep(args[0] as String)
         }
     }
 }

@@ -35,9 +35,11 @@ import kotlin.test.assertIs
  *   disposes each resource per its [ResourceClosePolicy][tech.kzen.lib.common.exec.logic.ResourceClosePolicy] when
  *   the run settles: Auto always, Manual never (auto), KeepOnFailure only when the run did not fail.
  *
- * - [parentScopedResourceOutlivesChildAndDisposesAtParent] / [runScopedResourceOutlivesEveryAncestorUntilRoot]
- *   check the ancestor-scoped policies (`parent` / `run`): a resource a child sub-Script opens is owned by an
- *   ancestor node, so it outlives the opener's own settle and disposes only when that ancestor settles.
+ * - [slotOwnedResourceOutlivesOpenerAndDisposesAtSlotOwner] / [rootDeclaredSlotOwnsAResourceOpenedTwoLevelsDown]
+ *   check slot ownership (logic-spec §6): a resource a child sub-Script opens is owned by the nearest ANCESTOR
+ *   document declaring a `context.slots` entry for its key, so it outlives the opener's own settle and disposes
+ *   only when that ancestor settles. Both fixtures open through the RAW string API, which pins the interop
+ *   half too: the slot is declared with a typed `Context` whose `key` is the same plain string.
  *
  * - [openResourceSurvivesLiveEditMigration] checks the live-edit barrier (logic-spec §5 "open resources"):
  *   a resource opened before a [RunEngine.migrate] is NOT disposed by the teardown — its registration is
@@ -85,10 +87,11 @@ class ScriptExtensibilityTest {
 
 
     @Test
-    fun parentScopedResourceOutlivesChildAndDisposesAtParent() {
-        // A child sub-Script opens `sut` with the `parent` policy; the parent's AssertDisposedStep (which runs
-        // after the child settled) would throw if `sut` were already disposed, so a Success proves it outlived
-        // the child, and the disposal set proves it was disposed when the parent settled.
+    fun slotOwnedResourceOutlivesOpenerAndDisposesAtSlotOwner() {
+        // The parent declares a TestSutContext slot (key `sut`); a child sub-Script opens `sut` and declares
+        // none. The parent's AssertDisposedStep (which runs after the child settled) would throw if `sut` were
+        // already disposed, so a Success proves it outlived the opener, and the disposal set proves it was
+        // disposed when the SLOT OWNER settled.
         val outcome = runScript("test/script-resource-parent-scope-test.yaml")
         assertIs<Outcome.Success>(outcome)
         assertEquals(setOf("sut"), ResourceDisposalLog.disposed())
@@ -96,10 +99,11 @@ class ScriptExtensibilityTest {
 
 
     @Test
-    fun runScopedResourceOutlivesEveryAncestorUntilRoot() {
-        // root → mid → leaf; the leaf opens `sut` with the `run` policy. AssertDisposedStep in both mid (after the
-        // leaf settled) and root (after mid settled) would throw if it had been disposed early, so a Success proves
-        // it survived both ancestor settles, and the disposal set proves it was disposed at the root settle.
+    fun rootDeclaredSlotOwnsAResourceOpenedTwoLevelsDown() {
+        // root (declares the slot) → mid → leaf (opens `sut`). AssertDisposedStep in both mid (after the leaf
+        // settled) and root (after mid settled) would throw if it had been disposed early, so a Success proves
+        // ownership walked past both undeclared documents, and the disposal set proves it was disposed at the
+        // root settle.
         val outcome = runScript("test/script-resource-run-scope-test.yaml")
         assertIs<Outcome.Success>(outcome)
         assertEquals(setOf("sut"), ResourceDisposalLog.disposed())

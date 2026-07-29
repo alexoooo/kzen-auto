@@ -1,0 +1,19 @@
+# The soundness case (ScriptContextValidationTest). This document hosts a sub-Script that PROVIDES the
+# Context, and neither declares a slot for it — so at run time the provide binds to the sub-Script's own node
+# (the engine's Self fallback) and is disposed the moment that document settles. An analysis that counted the
+# hosted provide as available would certify exactly the configuration that fails, in precisely the case a
+# migration from the old reach-up close policies produces.
+#
+# Two warnings are therefore correct: one on the RunStep (the provide escapes into nothing), and one on the
+# later step (the Context is NOT available). The inverse fixture is script-context-host-test.yaml, where the
+# caller declares the slot and both go silent.
+
+main:
+  is: Script
+
+main.steps/Run:
+  is: RunStep
+  instructions: "test/script-context-host-child-test.yaml#main"
+
+main.steps/Read:
+  is: RequireContextTestStep

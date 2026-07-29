@@ -1,5 +1,8 @@
 main:
   is: Script
+  context:
+    requires:
+      - BrowserContext
 
 main.steps/Click:
   is: BrowserClickStep

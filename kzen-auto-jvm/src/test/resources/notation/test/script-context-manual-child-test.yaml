@@ -1,0 +1,12 @@
+# Hosted side of script-context-warn-manual-escape-test.yaml: provides with `closePolicy: manual`, declaring
+# no slot. Manual is the SECOND way a resource outlives its opener — at this document's settle the engine
+# hands the registration one level up — so the provide escapes without any slot at all. This is the shape the
+# FormulaError self-test uses for its browser.
+
+main:
+  is: Script
+
+main.steps/Provide:
+  is: ProvideContextTestStep
+  value: manual-hosted
+  closePolicy: manual

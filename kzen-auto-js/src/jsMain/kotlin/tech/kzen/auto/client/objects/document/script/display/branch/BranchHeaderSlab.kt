@@ -29,6 +29,7 @@ fun ChildrenBuilder.branchHeaderSlab(
     mirroredGraphStore: MirroredGraphStore,
     typeMetadata: String? = null,
     validationError: String? = null,
+    validationWarning: String? = null,
     partial: Boolean = false,
     body: (ChildrenBuilder.() -> Unit)? = null
 ) {
@@ -45,7 +46,7 @@ fun ChildrenBuilder.branchHeaderSlab(
             borderLeftWidth = ScriptStepDisplayDefault.statusBorderWidth
             borderLeftStyle = LineStyle.solid
             borderLeftColor = ScriptStepDisplayDefault.statusBorderColor(
-                traceState, trace?.error, isNextToRun, validationError)
+                traceState, trace?.error, isNextToRun, validationError, validationWarning)
 
             // Soft elevation matching the leaf step cards (shared tokens). Only the TOP corners are
             // rounded — the bottom stays square (crisp), since that edge is where the recessed-stage
@@ -75,6 +76,7 @@ fun ChildrenBuilder.branchHeaderSlab(
                 this.title = title
                 this.typeMetadata = typeMetadata
                 this.validationError = validationError
+                this.validationWarning = validationWarning
                 this.skipped = traceState == StepTrace.State.Skipped
                 this.partial = partial
                 this.mirroredGraphStore = mirroredGraphStore

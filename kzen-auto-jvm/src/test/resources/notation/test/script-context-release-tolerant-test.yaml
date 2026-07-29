@@ -1,0 +1,10 @@
+# Closer tolerance (ScriptContextRuntimeTest): a step declaring `releases:` runs with NOTHING provided. It
+# must SUCCEED — a closer's job is to make the absence true, so "already absent" is success, not an error.
+# Declaring it as `requires:` instead would put it behind the spine's uniform gate and convert this into a
+# hard failure plus a pause-on-error park.
+
+main:
+  is: Script
+
+main.steps/Release:
+  is: ReleaseContextTestStep

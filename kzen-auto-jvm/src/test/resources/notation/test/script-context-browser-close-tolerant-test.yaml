@@ -1,0 +1,10 @@
+# The PRODUCTION closer, with no browser ever opened (ScriptContextRuntimeTest). BrowserCloseStep declares
+# `releases: BrowserContext`, so it is not gated and its tolerant body runs: it finds nothing, releases
+# nothing, and the run SUCCEEDS. Reaching the real archetype (rather than a test stand-in) is the point —
+# it pins that the first-party closer category really is declared as a release.
+
+main:
+  is: Script
+
+main.steps/Close Browser:
+  is: BrowserCloseStep

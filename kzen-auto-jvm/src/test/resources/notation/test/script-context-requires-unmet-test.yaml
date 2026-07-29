@@ -1,0 +1,9 @@
+# The uniform requires gate (ScriptContextRuntimeTest): a step declaring `requires:` with nothing provided
+# fails at the SPINE, with one framing, before its body runs — instead of at whatever ad-hoc read it happens
+# to reach.
+
+main:
+  is: Script
+
+main.steps/Read:
+  is: RequireContextTestStep

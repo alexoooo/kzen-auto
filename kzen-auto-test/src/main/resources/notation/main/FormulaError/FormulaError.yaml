@@ -1,5 +1,12 @@
+# Owns the SUT: the sub-script below starts it with `closePolicy: auto`, which without this slot would bind
+# it to that sub-script and kill the subprocess at its settle. The BROWSER needs no slot — it is opened
+# `manual` there, and a Manual registration hands up one level at its owner's settle, which reproduces the
+# reach this suite had before slots existed.
 main:
   is: Script
+  context:
+    slots:
+      - SutContext
 
 main.steps/Open Kzen and Browser:
   is: RunStep

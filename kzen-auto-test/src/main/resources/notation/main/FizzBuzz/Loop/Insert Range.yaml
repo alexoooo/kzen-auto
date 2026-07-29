@@ -1,5 +1,8 @@
 main:
   is: Script
+  context:
+    requires:
+      - BrowserContext
 
 # "Number range" was removed along with the other deprecated literal steps; a Formula holding the
 # Kotlin expression 1..100 replaces it, and the ForEach names it in scope (see Insert Loop.yaml).

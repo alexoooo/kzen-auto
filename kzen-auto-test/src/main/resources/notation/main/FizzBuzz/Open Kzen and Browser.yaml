@@ -5,14 +5,14 @@ main.steps/Start SUT:
   is: StartKzenAutoStep
   name: main
   fixture: fixtures/empty-project
-  closePolicy: parent
+  closePolicy: auto
 
 main.steps/Wait:
   is: WaitStep
 
 main.steps/Open Browser:
   is: BrowserOpenStep
-  closePolicy: parentKeepOnFailure
+  closePolicy: keepOnFailure
 
 main.steps/Navigate:
   is: BrowserGetSutStep

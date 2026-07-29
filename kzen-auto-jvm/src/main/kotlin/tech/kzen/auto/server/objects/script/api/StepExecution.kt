@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.objects.script.api
 
+import tech.kzen.auto.common.objects.document.logic.context.ContextDescriptor
 import tech.kzen.auto.common.objects.document.script.model.ScriptTree
 import tech.kzen.auto.common.objects.document.script.model.ScriptValidation
 import tech.kzen.lib.common.exec.ExecutionValue
@@ -150,7 +151,51 @@ interface StepExecution {
     fun traceNote(note: String)
 
 
+    //------------------------------------------------------------------------------------------- StepExecution: context
+    /**
+     * The Contexts the currently-running step DECLARES, in any role — its `provides`, its `requires`, and its
+     * `releases`, deduplicated. This is what the argument-free forms below resolve against: a step declaring
+     * exactly one Context names nothing; a step declaring several passes the one it means.
+     */
+    fun declaredContexts(): List<ContextDescriptor>
+
+    /**
+     * Open the resource this step's `provides:` Context names: register [value] and its disposal with the
+     * engine per [closePolicy]. Ownership is the nearest enclosing document declaring a `context.slots` entry
+     * for that Context, falling back to this document — so a sub-script may open a browser the root owns, but
+     * only because the root said so. [qualifier] addresses one member of a Context family (a SUT by name).
+     *
+     * Later [contextValue] reads see the handle from any step of this run and from any document it hosts
+     * (Script, Flow, or Job — the engine reads along the host chain). The registration survives a live edit
+     * with its owning frame (logic-spec §5 "open resources"); re-providing replaces the prior handle + closer.
+     */
+    fun provideContext(
+        value: Any?,
+        closePolicy: ResourceClosePolicy,
+        qualifier: String? = null,
+        closer: () -> Unit)
+
+    /**
+     * The live handle held for [context] (defaulting to this step's sole declared Context), failing uniformly
+     * when nothing is open — the same framing the spine's requires gate produces, so a typed read and a
+     * missing declaration read alike.
+     */
+    fun contextValue(context: ObjectLocation? = null, qualifier: String? = null): Any
+
+    /** [contextValue] without the failure: null when nothing is open. What a closer and a replace-existing path use. */
+    fun contextValueOrNull(context: ObjectLocation? = null, qualifier: String? = null): Any?
+
+    /**
+     * Dispose-and-forget the resource held for [context] because this step tore it down itself, so the
+     * engine's auto-disposer won't fire a second time. Tolerant: releasing what is not open is a no-op.
+     */
+    fun releaseContext(context: ObjectLocation? = null, qualifier: String? = null)
+
+
     //------------------------------------------------------------------------------------------ StepExecution: resources
+    // The raw string-keyed escape hatch beneath the typed Context API above. Keys are a global namespace, so
+    // a raw caller and a typed one that name the same key share one registration — which is the point: a
+    // plugin (or a test fixture) can interoperate with a first-party Context without declaring one.
     /**
      * Open a run-scoped resource (e.g. a browser) under [key]: register [value] and its disposal with the
      * engine per [closePolicy], so later [resource] reads see the handle from any step of this run — and any
@@ -199,4 +244,45 @@ interface StepExecution {
      * boundary uniformly.
      */
     suspend fun host(instructions: ObjectLocation, arguments: TupleValue): TupleValue
+}
+
+
+/**
+ * The unique Context this step declares whose `class:` is [T]. That is what disambiguates a step declaring
+ * several — `BrowserGetSutStep` requires both a browser and a SUT, and each is addressed by its value type
+ * rather than by name.
+ *
+ * Fails when no declared Context names [T], or when several do (name the Context explicitly then).
+ */
+inline fun <reified T: Any> StepExecution.contextDescriptor(): ContextDescriptor {
+    val className = T::class.qualifiedName
+    val matching = declaredContexts().filter { it.valueClass == className }
+
+    return when {
+        matching.isEmpty() ->
+            error("No declared context of type $className — declare one as `provides` / `requires` / `releases`")
+
+        matching.size > 1 ->
+            error("Several declared contexts of type $className " +
+                    "(${matching.joinToString { it.label() }}) — name the one to read")
+
+        else ->
+            matching.single()
+    }
+}
+
+
+/**
+ * The typed read: the live handle of this step's declared [T]-valued Context, failing uniformly when nothing
+ * is open for it. The ordinary form for a step that declares the Context as a `requires` — the spine's gate
+ * already covered the family, so this only fails on a qualifier the gate cannot see.
+ */
+inline fun <reified T: Any> StepExecution.context(qualifier: String? = null): T {
+    return contextValue(contextDescriptor<T>().location, qualifier) as T
+}
+
+
+/** [context] without the failure: null when nothing is open. For a closer, or a step with its own diagnostic. */
+inline fun <reified T: Any> StepExecution.contextOrNull(qualifier: String? = null): T? {
+    return contextValueOrNull(contextDescriptor<T>().location, qualifier) as T?
 }

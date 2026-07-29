@@ -9,8 +9,10 @@ import mui.material.Size
 import mui.material.Tooltip
 import mui.system.sx
 import react.ChildrenBuilder
+import react.Fragment
 import react.Props
 import react.ReactNode
+import react.create
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeViewManager
@@ -18,7 +20,9 @@ import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.react
+import tech.kzen.auto.common.objects.document.logic.context.ContextDescriptor
 import tech.kzen.auto.common.util.AutoConventions
+import tech.kzen.lib.common.exec.logic.ResourceClosePolicy
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.GraphStructure
@@ -41,6 +45,23 @@ external interface StepHeaderProps: Props {
     var attributeViewManager: AttributeViewManager.Wrapper?
     var typeMetadata: String?
     var validationError: String?
+
+    // Advisory validation message (an unsatisfied context requirement) — rendered as an amber icon beside the
+    // red-orange error one. Never blocks Run, so it is deliberately a second, differently-coloured indicator
+    // rather than a severity applied to the same icon.
+    var validationWarning: String?
+
+    // The run-scoped Contexts this step declares, read off notation by the host display
+    // (LogicContextConventions) and badged in the right cluster. Null / empty when it declares none.
+    var providesContext: ContextDescriptor?
+    // The provider's `closePolicy` wire value (`auto` / `manual` / `keepOnFailure`), phrased into the badge's
+    // tooltip; null when the step inherits no policy.
+    var providesClosePolicy: String?
+    // True when the step's OWN document declares a slot for the provided Context. False means no local slot
+    // owns it, so it binds to whichever document called this one — the distinction the tooltip spells out.
+    var providesBoundToDocument: Boolean?
+    var requiresContexts: List<ContextDescriptor>?
+    var releasesContext: ContextDescriptor?
 
     // True when this step was short-circuited (value-less) by a forward move-to jump — renders a small
     // "Skipped" chip so the grey status bar reads clearly.
@@ -77,6 +98,21 @@ class StepHeader(
         // paddings (leaf card, branchHeaderSlab), and querySelector is document-first, so a container row
         // resolves to its OWN header, not a nested step's.
         const val stepHeaderRowAttribute = "data-step-header"
+
+        // Mirrors ScriptStepDisplayDefault.validationErrorColour / .validationWarningColour — the same two
+        // accents the card's 4px status bar uses, so the bar and the icon that explains it always agree.
+        private val validationErrorColour = Color("#d84315")
+        private val validationWarningColour = Color("#f9a825")
+
+        // The provides badge's accent: a blue that appears nowhere in the run-status palette (gold / green /
+        // red / grey / white), so "this step opens a resource" can never be misread as a run outcome.
+        private val providesAccentColour = Color("#1565c0")
+        private val providesFillColour = Color("rgba(21, 101, 192, 0.10)")
+
+        // requires reads as an ordinary neutral outline (it merely consumes); releases is muted and dashed —
+        // a closer is never gated and never ambered, so it must not compete with the two consumer states.
+        private val requiresAccentColour = Color("rgba(0, 0, 0, 0.55)")
+        private val releasesAccentColour = Color("rgba(0, 0, 0, 0.40)")
 
 
         fun icon(graphStructure: GraphStructure, objectLocation: ObjectLocation): String {
@@ -271,7 +307,32 @@ class StepHeader(
 
                         icon("material-symbols:error") {
                             style = unsafeJso {
-                                color = Color("#d84315")
+                                color = validationErrorColour
+                                fontSize = 1.25.em
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Validation warning: the advisory sibling of the block above — a different icon AND a different
+            // colour, so it can never be mistaken for an error. Both can be present at once (a step may fail
+            // to compile AND ask for a Context nothing provides), and they read left-to-right worst-first.
+            val validationWarning = props.validationWarning
+            if (validationWarning != null) {
+                Tooltip {
+                    title = ReactNode(validationWarning)
+
+                    span {
+                        css {
+                            display = Display.flex
+                            alignItems = AlignItems.center
+                            marginRight = 0.5.em
+                        }
+
+                        icon("material-symbols:warning") {
+                            style = unsafeJso {
+                                color = validationWarningColour
                                 fontSize = 1.25.em
                             }
                         }
@@ -318,6 +379,8 @@ class StepHeader(
                 }
             }
 
+            renderContextDeclarations()
+
             if (!props.managed) {
                 IconButton {
                     title = "Delete"
@@ -349,6 +412,122 @@ class StepHeader(
                     icon(if (expanded) "KeyboardArrowUp" else "KeyboardArrowDown") {}
                 }
             }
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    // The step's run-scoped Context declarations, as three badges that must read as three DIFFERENT things —
+    // a step that opens a resource, one that merely reads it, and one that closes it are not interchangeable,
+    // and an identical chip for each would say they are. The role is carried by the chip's own skin (filled
+    // blue / plain outline / dashed muted), the identity by the Context's own icon + label, and the semantics
+    // (close policy, ownership, why a closer is never gated) by the tooltip.
+    private fun ChildrenBuilder.renderContextDeclarations() {
+        props.providesContext?.let { provided ->
+            val binding =
+                if (props.providesBoundToDocument == true) {
+                    "bound to: this document"
+                }
+                else {
+                    // The owner is the nearest ENCLOSING document declaring a slot for it; with none here,
+                    // that is somewhere up the call chain — which is what makes the distinction worth stating,
+                    // since it decides when the resource is disposed.
+                    "bound to: a calling document"
+                }
+
+            contextBadge(
+                provided,
+                listOfNotNull(
+                    "Provides ${provided.label()}",
+                    closePolicyPhrase(props.providesClosePolicy),
+                    binding
+                ).joinToString(" — "),
+                fill = providesFillColour,
+                accent = providesAccentColour,
+                borderLine = LineStyle.solid)
+        }
+
+        props.requiresContexts?.forEach { required ->
+            contextBadge(
+                required,
+                "Requires ${required.label()} — a step before this one must provide it, " +
+                        "or this document's context requires must declare that a caller does",
+                fill = null,
+                accent = requiresAccentColour,
+                borderLine = LineStyle.solid)
+        }
+
+        props.releasesContext?.let { released ->
+            contextBadge(
+                released,
+                "Releases ${released.label()} — this step closes it. A closer's job is to make the absence " +
+                        "true, so it is never gated and never warned about when the Context is already gone",
+                fill = null,
+                accent = releasesAccentColour,
+                borderLine = LineStyle.dashed)
+        }
+    }
+
+
+    private fun ChildrenBuilder.contextBadge(
+        descriptor: ContextDescriptor,
+        tooltipText: String,
+        fill: Color?,
+        accent: Color,
+        borderLine: LineStyle
+    ) {
+        Tooltip {
+            title = ReactNode(tooltipText)
+
+            // The span (not the Chip) is the tooltip's ref-bearing child and the flex item, matching the
+            // validation-icon blocks above. No stopPropagation: a click still bubbles to the card's expand.
+            span {
+                css {
+                    display = Display.flex
+                    alignItems = AlignItems.center
+                    marginRight = 0.5.em
+                }
+
+                Chip {
+                    size = Size.small
+                    variant = ChipVariant.outlined
+                    label = ReactNode(descriptor.label())
+                    icon = Fragment.create {
+                        icon(descriptor.icon) {
+                            style = unsafeJso {
+                                color = accent
+                            }
+                        }
+                    }
+                    sx {
+                        color = accent
+                        borderColor = accent
+                        borderStyle = borderLine
+                        if (fill != null) {
+                            backgroundColor = fill
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
+    // The `closePolicy` wire value as the clause the tooltip needs. Unknown / absent yields null so the
+    // tooltip simply omits the clause rather than asserting a policy the notation never declared.
+    private fun closePolicyPhrase(closePolicy: String?): String? {
+        return when (closePolicy) {
+            ResourceClosePolicy.Auto.key ->
+                "closed when the owning document finishes"
+
+            ResourceClosePolicy.Manual.key ->
+                "kept open until an explicit close step disposes it"
+
+            ResourceClosePolicy.KeepOnFailure.key ->
+                "closed on the owner's success or cancel, kept on failure to inspect"
+
+            else ->
+                null
         }
     }
 }

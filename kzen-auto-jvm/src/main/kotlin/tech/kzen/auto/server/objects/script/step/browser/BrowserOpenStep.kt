@@ -26,10 +26,13 @@ class BrowserOpenStep(
 
 
     override suspend fun run(execution: StepExecution): Any? {
-        // "Open a new browser window (existing one will be closed)": dispose any browser still open under the key.
-        (execution.resource(WebDriverSupport.resourceKey) as? RemoteWebDriver)?.let {
+        // "Open a new browser window (existing one will be closed)": dispose any browser still open in this
+        // step's declared context. Argument-free: BrowserContext is this step's sole declaration (its
+        // `provides`) — a provider declares no `requires`, or the spine's gate would fail it before it could
+        // ever open one.
+        (execution.contextValueOrNull() as? RemoteWebDriver)?.let {
             execution.blocking { WebDriverSupport.quitQuietly(it) }
-            execution.releaseResource(WebDriverSupport.resourceKey)
+            execution.releaseContext()
         }
 
         // Driver-manager setup (download / discovery) and the Chrome process launch are long blocking calls —
@@ -47,9 +50,11 @@ class BrowserOpenStep(
             ChromeDriver(chromeOptions)
         }
 
-        // Open the browser as a run-scoped resource: shared with the action steps (and any hosted child Script),
-        // disposed per closePolicy when the run settles (or by an explicit Close step).
-        execution.openResource(WebDriverSupport.resourceKey, driver, closePolicy) {
+        // Provide the browser as this step's declared BrowserContext: shared with the action steps (and any
+        // hosted child Script), owned by the nearest enclosing document declaring a BrowserContext slot —
+        // falling back to this document — and disposed per closePolicy at that owner's settle (or by an
+        // explicit Close step).
+        execution.provideContext(driver, closePolicy) {
             WebDriverSupport.quitQuietly(driver)
         }
 

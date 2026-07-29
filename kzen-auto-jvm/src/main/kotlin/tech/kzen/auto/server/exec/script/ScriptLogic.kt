@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.exec.script
 
+import tech.kzen.auto.common.objects.document.logic.context.LogicContextConventions
 import tech.kzen.auto.common.objects.document.script.model.ScriptJumpAnalysis
 import tech.kzen.auto.server.exec.LogicParameter
 import tech.kzen.auto.server.exec.LogicParameterTrace
@@ -53,6 +54,15 @@ class ScriptLogic(
 
     override suspend fun run(execution: Execution): TupleValue {
         val context = ScriptRunContext(execution, structure)
+
+        // Context slots this document OWNS (logic-spec §6): declared BEFORE any step runs and before any
+        // child is hosted, so a provide anywhere below binds here and its disposal follows this document's
+        // settle. Every Script's own Logic does this — root and hosted alike — which is why hosting needs no
+        // knowledge of the child's notation. A migrate rebuild re-runs `run`, so re-declaration is free.
+        for (slot in LogicContextConventions.documentSlots(
+                structure.graphNotation, structure.scriptLocation.documentPath)) {
+            execution.declareSlot(slot.key)
+        }
 
         // Live-edit migration (logic-spec §5): adopt the predecessor run's completed work (read once at start) so
         // the spine replays-short-circuits completed steps, and register the capture so a later edit carries this

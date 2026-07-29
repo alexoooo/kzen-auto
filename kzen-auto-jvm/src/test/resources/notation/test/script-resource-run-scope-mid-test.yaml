@@ -1,6 +1,6 @@
-# Intermediate document for script-resource-run-scope-test.yaml: runs the leaf that opens the `run`-scoped
-# resource, then asserts it survived the leaf's settle (a `run`-scoped resource is owned by the root, not this
-# mid document).
+# Intermediate document for script-resource-run-scope-test.yaml: runs the leaf that opens the resource, then
+# asserts it survived the leaf's settle. This document declares NO slot, so it does not own the resource — the
+# root two levels up does.
 
 main:
   is: Script

@@ -13,12 +13,16 @@ import tech.kzen.auto.client.objects.document.script.step.header.StepHeader
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.*
+import tech.kzen.auto.common.objects.document.logic.context.ContextDescriptor
+import tech.kzen.auto.common.objects.document.logic.context.LogicContextConventions
 import tech.kzen.auto.common.objects.document.script.model.StepTrace
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.exec.*
 import tech.kzen.lib.common.model.attribute.AttributeName
+import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.ObjectMetadata
+import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.service.store.MirroredGraphStore
@@ -48,6 +52,15 @@ external interface ScriptStepDisplayDefaultState: ScriptStepDisplayBaseState {
     // True when this step's object has attribute-level definition failures — surfaced per-field by the attribute
     // editors — so the (redundant, less specific) step-level validation message is suppressed in the body.
     var hasFieldDefinitionError: Boolean?
+
+    // The run-scoped Context declarations this step carries, badged by the header. Derived HERE rather than in
+    // StepHeader because this component already owns the ClientState subscription and the value-equality guard
+    // that keeps a fresh-list-per-publish from defeating StepHeader's RPureComponent prop check.
+    var providesContext: ContextDescriptor?
+    var providesClosePolicy: String?
+    var providesBoundToDocument: Boolean?
+    var requiresContexts: List<ContextDescriptor>?
+    var releasesContext: ContextDescriptor?
 }
 
 
@@ -71,6 +84,13 @@ class ScriptStepDisplayDefault(
         // run-failure red above, so a static "this step won't compile" reads differently from a runtime failure.
         val validationErrorColour = Color("#d84315")
 
+        // Validation WARNING accent (an unsatisfied context requirement) — an amber, and deliberately a full
+        // hue step away from the red-orange above rather than a lighter shade of it: the two occupy the same
+        // 4px bar, so a neighbouring red would read as "a worse error" when the opposite is true. A warning is
+        // advisory — Run is never gated on it (see ScriptStore.currentValidationErrors) — and yellow is the
+        // only accent in this palette that says "look, but you may proceed".
+        val validationWarningColour = Color("#f9a825")
+
         // Soft-elevation card chrome — lifts a step card off the grey stage; matches the app-wide
         // 3px card radius (Report controllers, VertexController). Single-layer shadow per the
         // StepImageThumbnail idiom. Resting is subtle; hover deepens it as an interactivity cue.
@@ -86,19 +106,30 @@ class ScriptStepDisplayDefault(
         const val statusBorderWidthPx = 4
         val statusBorderWidth = statusBorderWidthPx.px
 
+        // Read straight off notation for the provides badge's tooltip. The nullable AttributePath overload,
+        // because a step that provides nothing has no such attribute (the AttributeName overload throws).
+        private val closePolicyAttributePath = AttributePath.ofName(AttributeName("closePolicy"))
+
         fun statusBorderColor(
             traceState: StepTrace.State,
             error: String?,
             nextToRun: Boolean,
-            validationError: String? = null
+            validationError: String? = null,
+            validationWarning: String? = null
         ): Color {
             // Precedence: an active run status wins (so a running/done/failed step shows its run colour);
             // otherwise a validation error tints the bar red-orange (the step is idle and can't run);
+            // otherwise a validation warning tints it amber (the step is idle and CAN run — the requirement
+            // it names may be satisfied by a caller the editor cannot see, so the accent is advisory only);
             // otherwise idle white — not a gray line (the gray accent blended into the gray stage; the
             // card's resting shadow provides separation). 4px width is kept even when white, so there's
             // no layout shift when the step transitions to running/done.
             return activeStatusColor(traceState, error, nextToRun)
-                ?: if (validationError != null) validationErrorColour else NamedColor.white
+                ?: when {
+                    validationError != null -> validationErrorColour
+                    validationWarning != null -> validationWarningColour
+                    else -> NamedColor.white
+                }
         }
 
         fun backgroundColor(
@@ -222,12 +253,38 @@ class ScriptStepDisplayDefault(
             .failures.map[props.common.objectLocation]
             ?.attributeErrors?.isNotEmpty() == true
 
-        // NB: value compare (==) — summaryAttributeNames is a fresh List each call (Kotlin List == is
-        //     structural). Skip setState on no-op clientState publishes so the RPureComponent conversion
-        //     isn't defeated by a fresh-list reference on every broadcast.
+        val graphNotation = graphStructure.graphNotation
+        val stepLocation = props.common.objectLocation
+
+        val providesContext = LogicContextConventions.stepProvides(graphNotation, stepLocation)
+        val requiresContexts = LogicContextConventions.stepRequires(graphNotation, stepLocation)
+        val releasesContext = LogicContextConventions.stepReleases(graphNotation, stepLocation)
+
+        val providesClosePolicy = providesContext?.let {
+            (graphNotation.firstAttribute(stepLocation, closePolicyAttributePath) as? ScalarAttributeNotation)
+                ?.value
+        }
+
+        // Where the provided resource actually lives: this document's own slot, or (no local slot) whichever
+        // caller owns it. The badge's tooltip says which, because that is exactly the distinction a migration
+        // from the old reach-up close policies gets wrong (see LogicContextAnalysis.analyzeRunStep).
+        val providesBoundToDocument = providesContext?.let { provided ->
+            LogicContextConventions
+                .documentSlots(graphNotation, stepLocation.documentPath)
+                .any { it.location == provided.location }
+        }
+
+        // NB: value compare (==) — summaryAttributeNames and the two context lists are freshly built each call
+        //     (Kotlin List / data-class == is structural). Skip setState on no-op clientState publishes so the
+        //     RPureComponent conversion isn't defeated by a fresh reference on every broadcast.
         if (state.objectMetadata == objectMetadata &&
             state.summaryAttributeNames == summaryAttributeNames &&
-            state.hasFieldDefinitionError == hasFieldDefinitionError
+            state.hasFieldDefinitionError == hasFieldDefinitionError &&
+            state.providesContext == providesContext &&
+            state.providesClosePolicy == providesClosePolicy &&
+            state.providesBoundToDocument == providesBoundToDocument &&
+            state.requiresContexts == requiresContexts &&
+            state.releasesContext == releasesContext
         ) {
             return
         }
@@ -236,6 +293,11 @@ class ScriptStepDisplayDefault(
             this.objectMetadata = objectMetadata
             this.summaryAttributeNames = summaryAttributeNames
             this.hasFieldDefinitionError = hasFieldDefinitionError
+            this.providesContext = providesContext
+            this.providesClosePolicy = providesClosePolicy
+            this.providesBoundToDocument = providesBoundToDocument
+            this.requiresContexts = requiresContexts
+            this.releasesContext = releasesContext
         }
     }
 
@@ -286,7 +348,11 @@ class ScriptStepDisplayDefault(
                 borderLeftWidth = statusBorderWidth
                 borderLeftStyle = LineStyle.solid
                 borderLeftColor = statusBorderColor(
-                    traceState, trace?.error, isNextToRun, state.stepValidation?.errorMessage)
+                    traceState,
+                    trace?.error,
+                    isNextToRun,
+                    state.stepValidation?.errorMessage,
+                    state.stepValidation?.warningMessage)
                 backgroundColor = NamedColor.white
                 paddingLeft = 1.em
                 paddingRight = 0.5.em
@@ -326,6 +392,12 @@ class ScriptStepDisplayDefault(
                 attributeViewManager = props.attributeViewManager
                 typeMetadata = state.stepValidation?.typeMetadata?.toSimple()
                 validationError = state.stepValidation?.errorMessage
+                validationWarning = state.stepValidation?.warningMessage
+                providesContext = state.providesContext
+                providesClosePolicy = state.providesClosePolicy
+                providesBoundToDocument = state.providesBoundToDocument
+                requiresContexts = state.requiresContexts
+                releasesContext = state.releasesContext
                 skipped = traceState == StepTrace.State.Skipped
                 expanded = state.expanded
                 onToggleExpanded = ::onToggleExpanded
@@ -378,6 +450,12 @@ class ScriptStepDisplayDefault(
     ) {
         for (e in objectMetadata.attributes.map) {
             if (AutoConventions.isManaged(e.key)) {
+                continue
+            }
+
+            // Context declarations (provides/requires/releases) are meta-declared (by: Nominal) and so appear
+            //  here, but they are managed by the header badges + ContextSignatureEditor, not body-edited.
+            if (LogicContextConventions.isContextDeclaration(e.key)) {
                 continue
             }
 

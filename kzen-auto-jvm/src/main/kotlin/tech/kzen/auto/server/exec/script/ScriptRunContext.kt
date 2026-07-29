@@ -1,5 +1,8 @@
 package tech.kzen.auto.server.exec.script
 
+import tech.kzen.auto.common.objects.document.logic.context.ContextConventions
+import tech.kzen.auto.common.objects.document.logic.context.ContextDescriptor
+import tech.kzen.auto.common.objects.document.logic.context.LogicContextConventions
 import tech.kzen.auto.common.objects.document.script.model.ScriptJumpAnalysis
 import tech.kzen.auto.common.objects.document.script.model.ScriptTree
 import tech.kzen.auto.common.objects.document.script.model.ScriptValidation
@@ -17,7 +20,6 @@ import tech.kzen.lib.common.exec.engine.ClosePolicy
 import tech.kzen.lib.common.exec.engine.Execution
 import tech.kzen.lib.common.exec.engine.Logic
 import tech.kzen.lib.common.exec.engine.PauseReason
-import tech.kzen.lib.common.exec.engine.ResourceScope
 import tech.kzen.lib.common.exec.logic.ResourceClosePolicy
 import tech.kzen.lib.common.exec.tuple.TupleComponentName
 import tech.kzen.lib.common.exec.tuple.TupleDefinition
@@ -126,6 +128,16 @@ class ScriptRunContext(
     private var currentStableId: ObjectStableId? = null
     private var currentDetail: ExecutionValue = NullExecutionValue
     private var currentNote: String? = null
+
+    // The running step's own location, tracked alongside [currentStableId] (and saved / restored the same
+    // way): the typed context API resolves the step's `provides` / `requires` / `releases` from NOTATION, and
+    // the stable id alone cannot address it.
+    private var currentStepLocation: ObjectLocation? = null
+
+    // Per-step context declarations, read from notation once per location: the spine's requires gate consults
+    // them before EVERY step, including a loop body's on every iteration. Confined to the run coroutine.
+    private val declaredContextsCache = HashMap<ObjectLocation, List<ContextDescriptor>>()
+    private val requiredContextsCache = HashMap<ObjectLocation, List<ContextDescriptor>>()
 
 
     //----------------------------------------------------------------------------------------- StepExecution: control
@@ -255,13 +267,107 @@ class ScriptRunContext(
     }
 
 
+    //------------------------------------------------------------------------------------------- StepExecution: context
+    // The typed layer over the raw resource API below: a step names a Context object (or, declaring exactly
+    // one, names nothing) and this resolves it to the engine key. Ownership is the engine's — the nearest
+    // enclosing document that declared a slot for the key, else the providing document (see
+    // [Execution.resource]); nothing here reaches up on the opener's behalf.
+    override fun declaredContexts(): List<ContextDescriptor> {
+        val stepLocation = currentStepLocation
+            ?: return listOf()
+        return declaredContextsCache.getOrPut(stepLocation) {
+            LogicContextConventions.stepDeclaredContexts(graphNotation, stepLocation)
+        }
+    }
+
+
+    override fun provideContext(
+        value: Any?,
+        closePolicy: ResourceClosePolicy,
+        qualifier: String?,
+        closer: () -> Unit
+    ) {
+        val stepLocation = currentStepLocation
+            ?: error("No step is running")
+        val descriptor = LogicContextConventions.stepProvides(graphNotation, stepLocation)
+            ?: error("Step declares no `provides` context: $stepLocation")
+        execution.resource(resourceKeyOf(descriptor, qualifier), closePolicy.toEngine(), value, closer)
+    }
+
+
+    override fun contextValue(context: ObjectLocation?, qualifier: String?): Any {
+        val descriptor = resolveDeclaredContext(context)
+        return execution.resourceValue(resourceKeyOf(descriptor, qualifier))
+            ?: error(missingContextMessage(descriptor, qualifier))
+    }
+
+
+    override fun contextValueOrNull(context: ObjectLocation?, qualifier: String?): Any? {
+        val descriptor = resolveDeclaredContext(context)
+        return execution.resourceValue(resourceKeyOf(descriptor, qualifier))
+    }
+
+
+    override fun releaseContext(context: ObjectLocation?, qualifier: String?) {
+        val descriptor = resolveDeclaredContext(context)
+        execution.releaseResource(resourceKeyOf(descriptor, qualifier))
+    }
+
+
+    // The Context an argument-free call means: the step's SOLE declaration across `provides` / `requires` /
+    // `releases`. All three kinds count — a provider declares no `requires` yet still reads back on its
+    // replace-existing path, and a closer declares only `releases` yet must resolve something.
+    private fun resolveDeclaredContext(context: ObjectLocation?): ContextDescriptor {
+        val declared = declaredContexts()
+
+        if (context != null) {
+            // Naming a Context explicitly does not require declaring it — a step may read one it did not
+            // declare (at the cost of the spine's requires gate not covering it).
+            return declared.firstOrNull { it.location == context }
+                ?: ContextConventions.descriptorOrNull(graphNotation, context)
+                ?: error("Not a context: $context")
+        }
+
+        return when {
+            declared.isEmpty() ->
+                error("Step declares no context — declare one as `provides` / `requires` / `releases`, " +
+                        "or name the context to use")
+
+            declared.size > 1 ->
+                error("Step declares several contexts (${declared.joinToString { it.label() }}) — " +
+                        "name the one to use")
+
+            else ->
+                declared.single()
+        }
+    }
+
+
+    // A Context's engine key, family-qualified when a qualifier addresses one member (a SUT by name) —
+    // matching the "<family>:<qualifier>" form the engine's slot matching and family check both read.
+    private fun resourceKeyOf(descriptor: ContextDescriptor, qualifier: String?): String {
+        return when {
+            qualifier.isNullOrEmpty() -> descriptor.key
+            else -> "${descriptor.key}:$qualifier"
+        }
+    }
+
+
+    private fun missingContextMessage(descriptor: ContextDescriptor, qualifier: String?): String {
+        val label = descriptor.label()
+        return when {
+            qualifier.isNullOrEmpty() -> "Requires $label: not provided"
+            else -> "Requires $label '$qualifier': not provided"
+        }
+    }
+
+
     //------------------------------------------------------------------------------------------ StepExecution: resources
     // Delegated wholly to the engine, which stores the live handle with the registration: reading walks the
     // ancestor chain (so a hosted child — Script, Flow, or Job — borrows the handle its host opened), and the
     // registration survives a live edit with its owning frame's stable identity (logic-spec §5/§6).
     override fun openResource(key: String, value: Any?, closePolicy: ResourceClosePolicy, closer: () -> Unit) {
-        val (scope, enginePolicy) = closePolicy.toEngine()
-        execution.resource(key, enginePolicy, scope, value, closer)
+        execution.resource(key, closePolicy.toEngine(), value, closer)
     }
 
 
@@ -310,9 +416,11 @@ class ScriptRunContext(
             // to it and carry into its Done / Error trace; saved / restored so a nested branch it runs doesn't
             // clobber it.
             val previousStableId = currentStableId
+            val previousStepLocation = currentStepLocation
             val previousDetail = currentDetail
             val previousNote = currentNote
             currentStableId = stableId
+            currentStepLocation = stepLocation
             try {
                 // Pause-on-error (logic-spec §4): the engine renders the failure (Error trace) then, if
                 // pause-on-error is on, parks the step Suspended(Error) for fix + resume and re-runs it on resume;
@@ -332,6 +440,7 @@ class ScriptRunContext(
                     currentDetail = NullExecutionValue
                     currentNote = null
                     emitStepTrace(stableId, StepTrace.State.Running, NullExecutionValue, currentDetail)
+                    checkRequiredContexts(stepLocation)
                     step.run(this)
                 }
 
@@ -353,11 +462,35 @@ class ScriptRunContext(
             }
             finally {
                 currentStableId = previousStableId
+                currentStepLocation = previousStepLocation
                 currentDetail = previousDetail
                 currentNote = previousNote
             }
         }
         return last
+    }
+
+
+    /**
+     * The uniform requires gate: a step whose declared `requires` are not open fails HERE rather than at
+     * whatever ad-hoc read it happens to reach. Called inside the [Execution.recoverable] unit, so the
+     * failure gets the standard framing for free — an Error trace, a pause-on-error park, and a re-check when
+     * the run resumes (so providing the context and resuming lets the step proceed).
+     *
+     * FAMILY-granular by design (see [Execution.hasResourceInFamily]): a qualifier is a step parameter and may
+     * be computed, so this answers "is SOME SUT started", never "is `sut:other` started". A qualifier mismatch
+     * therefore passes the gate and surfaces at read, with the step's own diagnostic. Steps declaring
+     * `releases` are deliberately NOT gated: a closer's job is to make the absence true.
+     */
+    private fun checkRequiredContexts(stepLocation: ObjectLocation) {
+        val required = requiredContextsCache.getOrPut(stepLocation) {
+            LogicContextConventions.stepRequires(graphNotation, stepLocation)
+        }
+        for (descriptor in required) {
+            if (! execution.hasResourceInFamily(descriptor.key)) {
+                error("Requires ${descriptor.label()}: not provided")
+            }
+        }
     }
 
 
@@ -655,17 +788,4 @@ class ScriptRunContext(
     }
 
 
-    // Decompose the notation-level close policy an opening step declares into the engine's two orthogonal
-    // primitives: which node owns the resource (ResourceScope) and how that node's settle disposes it (ClosePolicy).
-    private fun ResourceClosePolicy.toEngine(): Pair<ResourceScope, ClosePolicy> {
-        return when (this) {
-            ResourceClosePolicy.Auto -> ResourceScope.Self to ClosePolicy.Auto
-            ResourceClosePolicy.Manual -> ResourceScope.Self to ClosePolicy.Manual
-            ResourceClosePolicy.KeepOnFailure -> ResourceScope.Self to ClosePolicy.KeepOnFailure
-            ResourceClosePolicy.ParentDocument -> ResourceScope.Parent to ClosePolicy.Auto
-            ResourceClosePolicy.ParentDocumentKeepOnFailure -> ResourceScope.Parent to ClosePolicy.KeepOnFailure
-            ResourceClosePolicy.Run -> ResourceScope.Root to ClosePolicy.Auto
-            ResourceClosePolicy.RunKeepOnFailure -> ResourceScope.Root to ClosePolicy.KeepOnFailure
-        }
-    }
 }

@@ -8,9 +8,9 @@ import tech.kzen.auto.common.objects.document.target.TargetSpec
 import tech.kzen.auto.server.objects.script.api.ScriptStep
 import tech.kzen.auto.server.objects.script.api.ScriptStepDefinition
 import tech.kzen.auto.server.objects.script.api.StepExecution
+import tech.kzen.auto.server.objects.script.api.context
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
 import tech.kzen.auto.server.service.target.TargetLocator
-import tech.kzen.auto.server.service.webdriver.WebDriverSupport
 import tech.kzen.lib.common.exec.BinaryExecutionValue
 import kotlin.math.roundToLong
 import kotlin.time.Duration.Companion.milliseconds
@@ -35,8 +35,9 @@ abstract class BrowserTargetStep(
 
     //-----------------------------------------------------------------------------------------------------------------
     final override suspend fun run(execution: StepExecution): Any? {
-        val driver = execution.resource(WebDriverSupport.resourceKey) as? RemoteWebDriver
-            ?: error("Browser is not open")
+        // The spine's uniform requires gate already failed this step if no browser is open (every concrete
+        // subclass declares `requires: [BrowserContext]`), so this read cannot be null.
+        val driver = execution.context<RemoteWebDriver>()
 
         val match = targetLocator.locateElement(target, driver)
         match.error?.let {

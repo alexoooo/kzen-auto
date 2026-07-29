@@ -1,0 +1,32 @@
+# Duplicate `key:` across Contexts (ScriptContextValidationTest). A Context's key is a GLOBAL namespace —
+# deliberately, since it is what lets the typed and raw resource APIs interoperate — so two Contexts naming
+# one key silently share a single registration. That is reported, never prevented.
+#
+# The two aliases below use a key (`probe`) no other Context in the graph uses, so this fixture cannot leak
+# alias warnings into the other scenarios. The document's own `context.requires` seeds availability, so the
+# only finding left on the step is the alias itself.
+
+AliasContextOne:
+  abstract: true
+  is: Context
+  class: kotlin.String
+  key: probe
+  title: "Probe One"
+
+AliasContextTwo:
+  abstract: true
+  is: Context
+  class: kotlin.String
+  key: probe
+  title: "Probe Two"
+
+main:
+  is: Script
+  context:
+    requires:
+      - AliasContextOne
+
+main.steps/Read:
+  is: RequireContextTestStep
+  requires:
+    - AliasContextOne

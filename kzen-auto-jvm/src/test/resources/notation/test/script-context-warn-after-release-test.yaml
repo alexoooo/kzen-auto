@@ -1,0 +1,19 @@
+# `releases:` removes availability (ScriptContextValidationTest): a consumer placed AFTER a closer ambers.
+# This is a new diagnostic with no prior behaviour to regress against — one of the three jobs the third
+# marker does that a `requires`-with-exemptions could not.
+
+main:
+  is: Script
+
+main.steps/Provide:
+  is: ProvideContextTestStep
+  value: opened
+
+main.steps/Read Before:
+  is: RequireContextTestStep
+
+main.steps/Release:
+  is: ReleaseContextTestStep
+
+main.steps/Read After:
+  is: RequireContextTestStep

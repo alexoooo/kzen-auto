@@ -371,7 +371,8 @@ class IfStepDisplay(
             trace?.state ?: StepTrace.State.Idle,
             trace?.error,
             state.isNextToRun ?: false,
-            state.stepValidation?.errorMessage)
+            state.stepValidation?.errorMessage,
+            state.stepValidation?.warningMessage)
 
         // No body: the conditions belong to the branches, one slab each, not to the If itself.
         branchHeaderSlab(
@@ -383,7 +384,8 @@ class IfStepDisplay(
             isNextToRun = state.isNextToRun ?: false,
             mirroredGraphStore = props.mirroredGraphStore,
             typeMetadata = state.stepValidation?.typeMetadata?.toSimple(),
-            validationError = state.stepValidation?.errorMessage)
+            validationError = state.stepValidation?.errorMessage,
+            validationWarning = state.stepValidation?.warningMessage)
 
         val branchLocations = state.branchLocations ?: listOf()
         for ((index, branchLocation) in branchLocations.withIndex()) {

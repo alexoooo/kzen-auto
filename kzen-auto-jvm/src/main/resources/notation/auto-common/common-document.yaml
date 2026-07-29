@@ -32,6 +32,41 @@ Logic:
 
 ###########################################################
 
+# A named kind of run-scoped resource a Logic can provide, require, or release — the browser a Script opens,
+# a system-under-test process, a database session a plugin manages. First-class notation, so a third party
+# introduces one with zero framework changes: declare `is: Context` and the editor, the validation and the
+# runtime pick it up.
+#
+# `key` is the ENGINE resource key this Context names, and it is a GLOBAL NAMESPACE: two Context objects
+# declaring the same key share one registration. That is deliberate — the raw-string resource API
+# (`StepExecution.openResource`) names keys as plain strings, and "same key => same registration" is what
+# lets a typed step and a raw one interoperate. Deriving the key from the object's location would make
+# collisions impossible but would break that interop, so the aliasing risk is carried instead and surfaced
+# as a validation warning (duplicate keys are reported graph-wide).
+#
+# A key may be QUALIFIED at run time as "<key>:<qualifier>" (a SUT addressed by name): the slot owns the
+# whole family, and each qualifier is an independent registration.
+#
+# A concrete Context declares `abstract: true` — the standard never-instantiated-archetype pattern
+# (ResourceClosePolicy, TypeMetadata, IfBranch): its `class:` carries the type a provider registers without
+# GraphCreator ever constructing it. Attributes that NAME a Context (`provides:` / `requires:` / `releases:` /
+# `context.slots`) are declared `by: Nominal` (weak references), so a dangling entry degrades to a validation
+# message instead of failing the referring object's definition, and renaming a Context propagates into them.
+Context:
+  abstract: true
+  key: ""
+  title: ""
+  icon: ""
+  description: ""
+  meta:
+    key: String
+    title: String
+    icon: String
+    description: String
+
+
+###########################################################
+
 # Typed parameter declarations, shared by every Logic flavour with a `parameters` branch (Script and Job).
 # Moved here from script-jvm.yaml when the Job document gained the same branch.
 
@@ -92,6 +127,12 @@ Script:
   title: "Script"
   icon: "material-symbols:playlist-play"
   results: {}
+  # The document's context declarations, read from notation by LogicContextConventions:
+  #   slots:    Contexts this document OWNS. A step anywhere below (including in a hosted sub-Script) that
+  #             provides one of these binds HERE, so disposal follows this document's settle.
+  #   requires: Contexts a CALLER must already have provided. Asserts an outer owner the local analysis
+  #             cannot see, and seeds this document's own availability so its steps do not amber.
+  context: {}
   meta:
     steps:
       is: List
@@ -101,6 +142,15 @@ Script:
       is: List
       of: ParameterBinding
       by: NestedList
+    # Weak references (by: Nominal): data for the validator/runtime/editor — never constructor-injected,
+    # never pruned when an entry dangles or names an abstract Context; renames propagate.
+    context:
+      is: Map
+      of:
+        - String
+        - is: List
+          of: ObjectLocation
+      by: Nominal
     # The result signature: a map (component name -> TypeMetadata) parsed into the output TupleDefinition.
     # Plain data (not a live step object); empty/absent => void. Only `main` is wired today, but the map
     # shape leaves room for additional named results with no schema change.
@@ -121,11 +171,25 @@ ScriptStep:
   class: tech.kzen.auto.server.objects.script.api.ScriptStep
   description: "Script step"
   display: ScriptStepDisplayDefault
+  requires: []
+  releases: ""
   meta:
     icon: String
     title: String
     description: String
     display: String
+    # Context declarations — weak references (by: Nominal): data for the validator/runtime/editor, never
+    # constructor-injected, never pruned when an entry dangles or names an abstract Context; renames
+    # propagate. `nullable` on `releases` lets the empty default define; `of:` is mandatory on the list.
+    # (Suppressed from the step-body editor by LogicContextConventions.isContextDeclaration.)
+    requires:
+      is: List
+      of: ObjectLocation
+      by: Nominal
+    releases:
+      is: ObjectLocation
+      nullable: true
+      by: Nominal
 
 
 ################################################################

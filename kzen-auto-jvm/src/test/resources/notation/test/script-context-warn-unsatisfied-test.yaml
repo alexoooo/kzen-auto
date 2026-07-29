@@ -1,0 +1,8 @@
+# Unsatisfied requires (ScriptContextValidationTest): nothing before the step provides its Context, and this
+# document asserts no caller either, so the editor ambers it.
+
+main:
+  is: Script
+
+main.steps/Read:
+  is: RequireContextTestStep

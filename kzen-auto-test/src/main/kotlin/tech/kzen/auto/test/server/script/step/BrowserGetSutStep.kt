@@ -6,9 +6,9 @@ import org.openqa.selenium.remote.RemoteWebDriver
 import tech.kzen.auto.server.objects.script.api.ScriptStep
 import tech.kzen.auto.server.objects.script.api.ScriptStepDefinition
 import tech.kzen.auto.server.objects.script.api.StepExecution
+import tech.kzen.auto.server.objects.script.api.context
+import tech.kzen.auto.server.objects.script.api.contextOrNull
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
-import tech.kzen.auto.server.service.webdriver.WebDriverSupport
-import tech.kzen.auto.test.server.process.KzenAutoSubprocessRegistry
 import tech.kzen.auto.test.server.process.SutHandle
 import tech.kzen.lib.common.exec.BinaryExecutionValue
 import tech.kzen.lib.common.reflect.Reflect
@@ -41,10 +41,13 @@ class BrowserGetSutStep(
 
 
     override suspend fun run(execution: StepExecution): Any? {
-        val driver = execution.resource(WebDriverSupport.resourceKey) as? RemoteWebDriver
-            ?: error("Browser is not open")
+        // This step declares BOTH contexts (`requires: [BrowserContext, SutContext]`), so the typed reads
+        // disambiguate by value class. The spine's uniform gate already covered "some browser open" and
+        // "some SUT started"; the qualifier is what it cannot check (a name may be computed), so a wrong
+        // `name` still surfaces here with its own diagnostic.
+        val driver = execution.context<RemoteWebDriver>()
 
-        val sut = execution.resource(KzenAutoSubprocessRegistry.resourceKey(name)) as? SutHandle
+        val sut = execution.contextOrNull<SutHandle>(name)
             ?: error("SUT '$name' is not started - is there a preceding Start SUT step with this name?")
 
         driver.get("${sut.baseUrl}/${path.removePrefix("/")}")

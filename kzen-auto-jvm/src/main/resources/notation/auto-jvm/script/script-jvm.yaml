@@ -7,10 +7,14 @@ ScriptValidator:
 
 #######################################################################################################################
 
-# Run-scoped resource disposal policy (kzen-lib enum). Parsed once at definition time by the definer, so
+# Run-scoped resource disposal RULE (kzen-lib enum). Parsed once at definition time by the definer, so
 # an opening step's `closePolicy` constructor param receives the enum directly; rendered as a labelled
 # dropdown by SelectValuesEditor from the `values:` map below (keys are the enum's wire values).
 # Bound here at the type level so any `is: ResourceClosePolicy` attribute inherits both.
+#
+# The OWNER is not chosen here: it is the nearest enclosing document declaring a `context.slots` entry for
+# the provided Context, falling back to the providing document when none does. So "when the owning Script
+# finishes" may mean several documents up — the ancestor's own declaration, never the opener's reach-up.
 ResourceClosePolicy:
   abstract: true
   class: tech.kzen.lib.common.exec.logic.ResourceClosePolicy
@@ -19,25 +23,33 @@ ResourceClosePolicy:
       by: ResourceClosePolicyDefiner
       editor: SelectValuesEditor
       values:
-        auto: "Auto — close when the run finishes (success, failure, or cancel)"
+        auto: "Auto — close when the owning Script finishes (success, failure, or cancel)"
         manual: "Manual — keep open; only an explicit close step disposes it"
-        keepOnFailure: "Keep on failure — close on success/cancel, keep on a failed run to inspect"
-        parent: "Parent — close when the calling Script (one level up) finishes"
-        parentKeepOnFailure: "Parent, keep on failure — close when the caller finishes, keep if it failed"
-        run: "Run — close when the whole run finishes"
-        runKeepOnFailure: "Run, keep on failure — close at run end, keep if the run failed"
+        keepOnFailure: "Keep on failure — close on the owner's success/cancel, keep on failure to inspect"
 
 ResourceClosePolicyDefiner:
   class: tech.kzen.auto.common.objects.document.script.ResourceClosePolicyDefiner
 
-# Mix-in for any Logic that registers a run-scoped resource: contributes the `closePolicy` attribute
-# (default `auto`) bound to ResourceClosePolicy. Combined via multiple inheritance — e.g.
-# `is: [ScriptStep, ScopedResource]` — so the policy is not pinned to the script-step lineage.
-ScopedResource:
+# Mix-in for any step that PROVIDES a Context (opens the run-scoped resource it names): contributes the
+# `provides` declaration plus the `closePolicy` attribute (default `auto`) bound to ResourceClosePolicy.
+# Combined via multiple inheritance — e.g. `is: [ScriptStep, ContextProvider]` — so it is not pinned to the
+# script-step lineage.
+#
+# `provides` is a weak reference (by: Nominal, like every context declaration): data for the
+# validator/runtime/editor, never constructor-injected, and a dangling or abstract-targeted entry degrades
+# to a validation message instead of failing the object's definition; renaming a Context propagates into it.
+# `nullable` lets the empty default define. `closePolicy` stays meta-declared with a real definer because it
+# IS a constructor param and needs the dropdown.
+ContextProvider:
   abstract: true
+  provides: ""
   closePolicy: auto
   meta:
     closePolicy: ResourceClosePolicy
+    provides:
+      is: ObjectLocation
+      nullable: true
+      by: Nominal
 
 
 #######################################################################################################################
@@ -295,19 +307,35 @@ ControlStep:
 
 #######################################################################################################################
 
+# The browser a Script drives: one RemoteWebDriver, opened by BrowserOpenStep and read by every browser
+# action step. `key: browser` is the engine resource key — the same plain string WebDriverSupport.resourceKey
+# names, so a raw-string step and a typed one share one registration.
+BrowserContext:
+  abstract: true
+  is: Context
+  class: org.openqa.selenium.remote.RemoteWebDriver
+  key: browser
+  icon: "material-symbols:open-in-new"
+  title: "Browser"
+  description: "A browser window driven by this run"
+
 
 BrowserOpenStep:
   abstract: true
   is:
     - ScriptStep
-    - ScopedResource
+    - ContextProvider
   class: tech.kzen.auto.server.objects.script.step.browser.BrowserOpenStep
   icon: "material-symbols:open-in-new"
   title: "Open browser"
   description: "Open a new browser window (existing one will be closed)"
-  meta:
+  provides: BrowserContext
 
 
+# `releases:`, not `requires:` — a closer's job is to make the absence true, so "already absent" is success,
+# not an error. It is therefore never gated by the runtime requires check and never ambers; it does supply
+# the descriptor that lets `contextValueOrNull()` / `releaseContext()` resolve argument-free, and it removes
+# the Context from the static analysis's availability so a browser step placed AFTER a Close warns.
 BrowserCloseStep:
   abstract: true
   is: ScriptStep
@@ -315,7 +343,7 @@ BrowserCloseStep:
   icon: "material-symbols:close"
   title: "Close browser"
   description: "Close the browser window"
-  meta:
+  releases: BrowserContext
 
 
 BrowserGetStep:
@@ -327,6 +355,8 @@ BrowserGetStep:
   description: "Navigate to a new URL"
   location: "https://www.google.com/"
   screenshotDelayMilliseconds: 0
+  requires:
+    - BrowserContext
   meta:
     location:
       is: String
@@ -343,6 +373,8 @@ BrowserClickStep:
   target:
     type: Focus
   delaySeconds: 0
+  requires:
+    - BrowserContext
   meta:
     target:
       is: TargetSpec
@@ -361,6 +393,8 @@ BrowserReadStep:
     type: Focus
   attribute: ""
   delaySeconds: 0
+  requires:
+    - BrowserContext
   meta:
     target:
       is: TargetSpec
@@ -383,6 +417,8 @@ BrowserWriteStep:
     type: Focus
   overwrite: false
   delaySeconds: 0
+  requires:
+    - BrowserContext
   meta:
     text:
       is: String
@@ -406,6 +442,8 @@ BrowserSubmitStep:
   target:
     type: Focus
   delaySeconds: 0
+  requires:
+    - BrowserContext
   meta:
     target:
       is: TargetSpec
@@ -419,7 +457,8 @@ BrowserEscapeStep:
   class: tech.kzen.auto.server.objects.script.step.browser.BrowserEscapeStep
   icon: "material-symbols:cancel-presentation"
   title: "Escape"
-  meta:
+  requires:
+    - BrowserContext
 
 
 BrowserEnterStep:
@@ -428,7 +467,8 @@ BrowserEnterStep:
   class: tech.kzen.auto.server.objects.script.step.browser.BrowserEnterStep
   icon: "material-symbols:keyboard-return"
   title: "Enter"
-  meta:
+  requires:
+    - BrowserContext
 
 
 #BrowserFocusStep:

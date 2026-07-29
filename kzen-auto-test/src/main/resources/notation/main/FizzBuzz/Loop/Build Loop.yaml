@@ -1,5 +1,10 @@
+# A pure aggregator — see the note in `../Item/Build Item.yaml`: every sub-script it hosts requires the
+# browser, so this document declares the requirement it passes through.
 main:
   is: Script
+  context:
+    requires:
+      - BrowserContext
 
 main.steps/Create Script:
   is: RunStep

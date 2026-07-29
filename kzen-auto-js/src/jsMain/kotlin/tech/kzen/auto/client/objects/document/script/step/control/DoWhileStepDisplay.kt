@@ -83,7 +83,8 @@ class DoWhileStepDisplay(
             trace?.state ?: StepTrace.State.Idle,
             trace?.error,
             state.isNextToRun ?: false,
-            state.stepValidation?.errorMessage)
+            state.stepValidation?.errorMessage,
+            state.stepValidation?.warningMessage)
 
         // Three flush sections, ordered to match the do-while (run the body, THEN test the condition):
         //   header slab (white) → body steps (recessed gray stage) → full-width "While" footer.
@@ -106,7 +107,8 @@ class DoWhileStepDisplay(
             isNextToRun = state.isNextToRun ?: false,
             mirroredGraphStore = props.mirroredGraphStore,
             typeMetadata = state.stepValidation?.typeMetadata?.toSimple(),
-            validationError = state.stepValidation?.errorMessage)
+            validationError = state.stepValidation?.errorMessage,
+            validationWarning = state.stepValidation?.warningMessage)
     }
 
 

@@ -2,6 +2,7 @@ package tech.kzen.auto.server.objects.script
 
 import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.objects.document.logic.ResultSignatureDefiner
+import tech.kzen.auto.common.objects.document.logic.context.LogicContextAnalysis
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.objects.document.script.model.ScriptTree
 import tech.kzen.auto.common.objects.document.script.model.ScriptValidation
@@ -96,6 +97,17 @@ class ScriptValidator(
             for (survivor in remainingSteps) {
                 stepValidationBuffer.putIfAbsent(
                     survivor, StepValidation(null, "Unresolved: circular or unavailable dependency"))
+            }
+
+            // Context warnings (logic-spec §6) merge in LAST — after the type fixpoint and after the survivor
+            // pass — because the analysis reads notation only and depends on neither. Two cases, both real:
+            // a step that already has an entry keeps its type and error and gains the warning; a step with NO
+            // entry (its `definition()` returned null, so the iteration `continue`d past it) needs a fresh
+            // one. The `?: StepValidation(null, null)` covers both without a branch.
+            for ((objectPath, warning) in LogicContextAnalysis.analyze(graphNotation, documentPath)) {
+                stepValidationBuffer[objectPath] =
+                    (stepValidationBuffer[objectPath] ?: StepValidation(null, null))
+                        .copy(warningMessage = warning)
             }
 
             return ScriptValidation(stepValidationBuffer)

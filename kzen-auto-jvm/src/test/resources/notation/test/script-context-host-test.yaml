@@ -1,0 +1,17 @@
+# Typed provide / consume across a RunStep (ScriptContextRuntimeTest), caller side: THIS document declares
+# the slot, a hosted sub-Script provides into it, and a step back here reads it — proving the typed API
+# resolves through the engine's slot ownership exactly as the raw string API does, and that a provide made
+# inside a hosted document survives that document's settle when an enclosing slot owns it.
+
+main:
+  is: Script
+  context:
+    slots:
+      - TestSutContext
+
+main.steps/Run:
+  is: RunStep
+  instructions: "test/script-context-host-child-test.yaml#main"
+
+main.steps/Read:
+  is: RequireContextTestStep

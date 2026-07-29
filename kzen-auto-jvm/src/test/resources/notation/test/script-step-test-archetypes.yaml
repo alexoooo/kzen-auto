@@ -19,6 +19,21 @@ ShoutStep:
       by: Nominal
 
 
+# The Context the resource-ownership fixtures declare slots for. `key: sut` deliberately matches the key the
+# fixtures already open under through the RAW string API — that is what makes the interop assertion real:
+# same key => same registration, so a slot declared with this typed Context owns a raw step's resource.
+# A pure data object with no `meta:`, so it does not drag a JS-only editor reference into the JVM-only test
+# graph (see the OpenResourceTestStep KDoc for the trap it would otherwise hit).
+TestSutContext:
+  abstract: true
+  is: Context
+  class: kotlin.String
+  key: sut
+  icon: "material-symbols:lock-open"
+  title: "Test SUT"
+  description: "Stand-in for a system-under-test resource, for the resource-ownership fixtures"
+
+
 # Opens a run-scoped resource under `key` with the named `closePolicy` (a plain String parsed in the step),
 # recording its disposal into the ResourceDisposalLog sink.
 OpenResourceTestStep:
@@ -100,6 +115,57 @@ BinaryDetailStep:
   class: tech.kzen.auto.server.exec.script.test.BinaryDetailStep
   icon: "material-symbols:photo-camera"
   title: "Binary detail (test)"
+
+
+# The typed context trio, mirroring the three declaration kinds a production step uses. `provides` /
+# `requires` / `releases` are weak references (by: Nominal, declared on the ScriptStep/ContextProvider
+# archetypes), so declaring them here is safe in the JVM-only test graph; `closePolicy` stays a plain
+# String for the reason OpenResourceTestStep documents. NB: not `is: ContextProvider` (whose `provides`
+# meta would also apply) — this fixture carries its own `provides` meta so the trio stays self-contained.
+ProvideContextTestStep:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.server.exec.script.test.ProvideContextTestStep
+  icon: "material-symbols:lock-open"
+  title: "Provide context (test)"
+  provides: TestSutContext
+  value: ""
+  qualifier: ""
+  closePolicy: auto
+  meta:
+    provides:
+      is: ObjectLocation
+      nullable: true
+      by: Nominal
+    value:
+      is: String
+    qualifier:
+      is: String
+    closePolicy:
+      is: String
+
+
+RequireContextTestStep:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.server.exec.script.test.RequireContextTestStep
+  icon: "material-symbols:visibility"
+  title: "Require context (test)"
+  requires:
+    - TestSutContext
+
+
+ReleaseContextTestStep:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.server.exec.script.test.ReleaseContextTestStep
+  icon: "material-symbols:lock"
+  title: "Release context (test)"
+  releases: TestSutContext
+  qualifier: ""
+  meta:
+    qualifier:
+      is: String
 
 
 # Fails its first invocation (globally) then succeeds, returning its referenced `input` — a transient failure

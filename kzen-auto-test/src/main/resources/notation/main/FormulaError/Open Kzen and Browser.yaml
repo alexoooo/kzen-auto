@@ -8,7 +8,7 @@ main.steps/Start SUT:
   is: StartKzenAutoStep
   name: formula-error-sut
   fixture: fixtures/formula-error
-  closePolicy: parent
+  closePolicy: auto
 
 main.steps/Open Browser:
   is: BrowserOpenStep

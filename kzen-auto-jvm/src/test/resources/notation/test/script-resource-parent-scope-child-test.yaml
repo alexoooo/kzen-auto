@@ -1,5 +1,7 @@
-# Child Script for script-resource-parent-scope-test.yaml: opens a run-scoped resource under `sut` bound to the
-# PARENT document's lifetime (`parent` policy). It must therefore outlive this child's own settle.
+# Child Script for script-resource-parent-scope-test.yaml: opens a run-scoped resource under `sut`. Ownership
+# is the PARENT document's, because that document declares a `sut` slot — this child declares none, so the
+# resource binds there and must outlive this child's own settle. Deliberately opened through the raw string
+# API (OpenResourceTestStep), which pins the interop half: same key => same registration, typed or not.
 
 main:
   is: Script
@@ -7,4 +9,4 @@ main:
 main.steps/OpenSut:
   is: OpenResourceTestStep
   key: sut
-  closePolicy: parent
+  closePolicy: auto

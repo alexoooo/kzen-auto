@@ -1,5 +1,6 @@
-# Leaf document for script-resource-run-scope-test.yaml: opens a run-scoped resource under `sut` bound to the
-# overall run (`run` policy), so it outlives both this leaf and the intermediate mid document.
+# Leaf document for script-resource-run-scope-test.yaml: opens a resource under `sut`. Neither this leaf nor
+# the intermediate mid document declares a `sut` slot, so ownership walks past both to the ROOT, which does —
+# the resource outlives them both.
 
 main:
   is: Script
@@ -7,4 +8,4 @@ main:
 main.steps/OpenSut:
   is: OpenResourceTestStep
   key: sut
-  closePolicy: run
+  closePolicy: auto

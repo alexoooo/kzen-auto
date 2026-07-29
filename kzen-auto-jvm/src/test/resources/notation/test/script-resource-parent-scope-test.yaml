@@ -1,10 +1,13 @@
-# Parent-scoped resource fixture (ScriptExtensibilityTest): a parent Script runs a child Script that opens a
-# resource under `sut` with the `parent` close policy, then asserts the resource is STILL open after the child
-# has settled (a self-scoped resource would already be disposed here). The engine disposes it when this parent
-# Script settles.
+# Slot-owned resource fixture (ScriptExtensibilityTest): this parent Script DECLARES a TestSutContext slot,
+# then runs a child Script that opens a resource under `sut`. The child declares no slot, so the nearest
+# declaring ancestor — this document — owns it, and it is STILL open after the child has settled (an
+# unslotted open would already be disposed here). The engine disposes it when this parent Script settles.
 
 main:
   is: Script
+  context:
+    slots:
+      - TestSutContext
 
 main.steps/Run:
   is: RunStep

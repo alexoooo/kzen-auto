@@ -1,0 +1,10 @@
+# Hosted side of script-context-host-test.yaml: provides the context and declares no slot of its own, so
+# ownership walks up to the caller. `requires:` here is what tells the static analysis (and a reader) that
+# this document cannot stand alone — it is deliberately absent, because this document is the PROVIDER.
+
+main:
+  is: Script
+
+main.steps/Provide:
+  is: ProvideContextTestStep
+  value: hosted

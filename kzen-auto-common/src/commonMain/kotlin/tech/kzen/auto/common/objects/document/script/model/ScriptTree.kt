@@ -21,7 +21,16 @@ data class ScriptTree(
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         fun read(documentPath: DocumentPath, graphDefinition: GraphDefinition): ScriptTree {
-            val graphNotation = graphDefinition.graphStructure.graphNotation
+            return read(documentPath, graphDefinition.graphStructure.graphNotation)
+        }
+
+
+        /**
+         * The tree is derived entirely from object NESTING plus each type's branch metadata, so notation is
+         * all it needs — no definition, no instantiation. That is what lets a notation-only analysis (the
+         * context analysis) share this walk with the definition-driven consumers.
+         */
+        fun read(documentPath: DocumentPath, graphNotation: GraphNotation): ScriptTree {
             val documentNotation = graphNotation.documents[documentPath]
                 ?: throw IllegalStateException("Not found: $documentPath")
 

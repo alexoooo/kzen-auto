@@ -58,12 +58,14 @@ class StartKzenAutoStep(
 
         KzenAutoSubprocessRegistry.put(name, process, tempDir)
 
-        // Register the SUT as a run-scoped resource: the engine auto-disposes it (killing the process and
-        //  deleting its temp dir via the registry) when the run settles, per closePolicy. A matching Stop
-        //  step tears it down eagerly and releaseResource-s the key, so this closer does not double-fire.
-        //  The registered VALUE is the handle, so a later step can resolve this SUT's run-time port by
-        //  name through the engine's ancestor-chain lookup — no YAML repeats the port as a URL literal.
-        execution.openResource(KzenAutoSubprocessRegistry.resourceKey(name), handle, closePolicy) {
+        // Provide the SUT as this step's declared SutContext, qualified by name — the engine key is
+        //  "sut:$name", so one `sut` slot owns every named SUT independently. The engine auto-disposes it
+        //  (killing the process and deleting its temp dir via the registry) at the OWNING document's settle,
+        //  per closePolicy. A matching Stop step tears it down eagerly and releases the key, so this closer
+        //  does not double-fire. The registered VALUE is the handle, so a later step can resolve this SUT's
+        //  run-time port by name through the engine's ancestor-chain lookup — no YAML repeats the port as a
+        //  URL literal.
+        execution.provideContext(handle, closePolicy, qualifier = name) {
             KzenAutoSubprocessRegistry.removeAndClose(name)
         }
 

@@ -1,0 +1,12 @@
+# Dangling reference (ScriptContextValidationTest). These declarations are weak (by: Nominal), so a bad name
+# does not fail the object's definition (renames rewrite them, but a hand-typed miss still dangles) — this
+# warning is the ONLY thing that surfaces the mistake. The instance overrides its archetype's list, which is
+# the documented "closest wins" rule: a concrete declaration REPLACES an inherited one rather than extending it.
+
+main:
+  is: Script
+
+main.steps/Read:
+  is: RequireContextTestStep
+  requires:
+    - NoSuchContext
