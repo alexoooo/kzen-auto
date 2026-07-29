@@ -97,6 +97,11 @@ class ScriptContextRuntimeTest {
             listOf(
                 "provide[first] saw nothing",
                 "provide[second] saw first",
+                // Supersession, from the typed side: re-providing a live key disposes the registration it
+                // displaces, right there rather than never (logic-spec §6). A provider that means to replace
+                // an existing resource should still tear it down and `releaseContext` it FIRST — as
+                // BrowserOpenStep does — because this closer runs after the replacement is already registered.
+                "disposed[first]",
                 "require saw second",
                 "disposed[second]"),
             ContextProbeLog.entries(),

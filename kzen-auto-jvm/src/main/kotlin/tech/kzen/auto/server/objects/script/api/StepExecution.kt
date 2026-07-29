@@ -167,7 +167,14 @@ interface StepExecution {
      *
      * Later [contextValue] reads see the handle from any step of this run and from any document it hosts
      * (Script, Flow, or Job — the engine reads along the host chain). The registration survives a live edit
-     * with its owning frame (logic-spec §5 "open resources"); re-providing replaces the prior handle + closer.
+     * with its owning frame (logic-spec §5 "open resources").
+     *
+     * Re-providing the same Context + [qualifier] **supersedes**: the displaced registration's closer runs, so
+     * a step that re-opens in a loop does not leak. [closer] must therefore dispose the handle it CAPTURED and
+     * never re-resolve its target by name — it runs after the replacement is already registered (the closer
+     * contract on [tech.kzen.lib.common.exec.engine.Execution.resource]). A step that deliberately replaces an
+     * existing resource should instead read it via [contextValueOrNull], tear it down, and [releaseContext] it
+     * before providing the new one, so nothing is disposed out from under a live handle.
      */
     fun provideContext(
         value: Any?,
@@ -201,7 +208,10 @@ interface StepExecution {
      * engine per [closePolicy], so later [resource] reads see the handle from any step of this run — and any
      * document it hosts (Script, Flow, or Job — the engine reads along the host chain) — and it is torn down
      * when the owning document settles. The registration survives a live edit with its owning frame
-     * (logic-spec §5 "open resources"). Re-opening the same key replaces the prior handle + closer.
+     * (logic-spec §5 "open resources"). Re-opening the same key **supersedes**: the displaced registration's
+     * closer runs, so [closer] must dispose the handle it CAPTURED rather than re-resolving its target by
+     * name — see [provideContext] and the closer contract on
+     * [tech.kzen.lib.common.exec.engine.Execution.resource].
      */
     fun openResource(key: String, value: Any?, closePolicy: ResourceClosePolicy, closer: () -> Unit)
 

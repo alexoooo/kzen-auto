@@ -12,11 +12,9 @@ main:
     type: Text
     value: Formula
 
-"main.steps/Click [add] target in script":
-  is: BrowserClickStep
-  target:
-    value: "main/Actions/Plus Circle/~main.yaml#main"
-    type: Visual
+main.steps/Run:
+  is: RunStep
+  instructions: main/Actions/Insert Last.yaml#main
 
 main.steps/Click Code:
   is: BrowserClickStep

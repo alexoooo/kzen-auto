@@ -65,8 +65,13 @@ class StartKzenAutoStep(
         //  does not double-fire. The registered VALUE is the handle, so a later step can resolve this SUT's
         //  run-time port by name through the engine's ancestor-chain lookup — no YAML repeats the port as a
         //  URL literal.
+        //
+        //  The closer captures THIS process rather than closing by name (the closer contract on
+        //  Execution.resource): re-running this step under the same name supersedes the prior registration,
+        //  and its closer runs after `put` above already installed the replacement — a name-only close would
+        //  kill the SUT that just started.
         execution.provideContext(handle, closePolicy, qualifier = name) {
-            KzenAutoSubprocessRegistry.removeAndClose(name)
+            KzenAutoSubprocessRegistry.removeAndClose(name, process)
         }
 
         execution.traceDetail("started '$name' on ${handle.baseUrl} (cwd=$tempDir)")
