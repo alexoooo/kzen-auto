@@ -25,13 +25,13 @@ import kotlin.test.assertNotEquals
  */
 class LinkedLogicDocumentsTest {
     //-----------------------------------------------------------------------------------------------------------------
-    private val runParent = DocumentPath.parse("test/script-engine-run-test.yaml")
-    private val runChild = DocumentPath.parse("test/script-engine-child-test.yaml")
-    private val flowRunHost = DocumentPath.parse("test/flow-run-test.yaml")
-    private val jobRunHost = DocumentPath.parse("test/job-run-host-test.yaml")
-    private val ifDocument = DocumentPath.parse("test/script-engine-if-test.yaml")
-    private val cycleA = DocumentPath.parse("test/script-linked-cycle-a-test.yaml")
-    private val cycleB = DocumentPath.parse("test/script-linked-cycle-b-test.yaml")
+    private val runParent = DocumentPath.parse("test/script/engine/script-engine-run-test.yaml")
+    private val runChild = DocumentPath.parse("test/script/engine/script-engine-child-test.yaml")
+    private val flowRunHost = DocumentPath.parse("test/flow/flow-run-test.yaml")
+    private val jobRunHost = DocumentPath.parse("test/job/run/job-run-host-test.yaml")
+    private val ifDocument = DocumentPath.parse("test/script/control/script-engine-if-test.yaml")
+    private val cycleA = DocumentPath.parse("test/script/structure/script-linked-cycle-a-test.yaml")
+    private val cycleB = DocumentPath.parse("test/script/structure/script-linked-cycle-b-test.yaml")
 
     private val graphStructure: GraphStructure by lazy {
         val graphNotation = AutoTestUtils.readNotation()

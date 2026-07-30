@@ -1,0 +1,16 @@
+# Two-hop export chain (ScriptExtensibilityTest), root document: root → mid → leaf. The leaf opens the resource
+# and exports it, the mid re-exports it, and THIS document declares nothing — so each declaration carries
+# ownership one frame further and it rests here. After the mid child has settled, the resource must still be
+# open (checked here); the engine disposes it only when this root settles.
+
+main:
+  is: Script
+
+main.steps/Run:
+  is: RunStep
+  instructions: "test/script/resource/script-resource-run-scope-mid-test.yaml#main"
+
+main.steps/CheckStillOpen:
+  is: AssertDisposedStep
+  key: sut
+  expectedDisposed: false

@@ -36,7 +36,7 @@ import kotlin.test.fail
  */
 class ServerLogicControllerPauseOnErrorTest {
     //-----------------------------------------------------------------------------------------------------------------
-    private val documentPath = DocumentPath.parse("test/pause-on-error-test.yaml")
+    private val documentPath = DocumentPath.parse("test/script/engine/pause-on-error-test.yaml")
     private val mainLocation = ObjectLocation(documentPath, ObjectPath.parse("main"))
     private val boomLocation = ObjectLocation(documentPath, ObjectPath.parse("main.steps/Boom"))
 

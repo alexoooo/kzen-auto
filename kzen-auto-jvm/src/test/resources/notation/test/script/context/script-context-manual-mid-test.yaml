@@ -1,0 +1,10 @@
+# Middle document of script-context-manual-two-level-test.yaml: runs the manual provider and declares nothing
+# at all, so its caller sees a document with no export contract and no provide of its own to read a
+# `closePolicy` off.
+
+main:
+  is: Script
+
+main.steps/Run:
+  is: RunStep
+  instructions: "test/script/context/script-context-manual-child-test.yaml#main"

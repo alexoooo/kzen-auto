@@ -1,0 +1,15 @@
+# Step-navigation fixture whose FIRST step is a RunStep (contrast step-nav-test, where First precedes Run).
+# It makes "start stepping OVER" observably differ from "start stepping (Into)": startStep(Into) descends into
+# the child on the bootstrap step (pausing at ChildA, depth 1), while startStep(Over) runs the whole child to
+# completion and pauses before Last (depth 0). The child is the shared test/script/navigation/step-nav-child-test.yaml.
+
+main:
+  is: Script
+
+main.steps/Run:
+  is: RunStep
+  instructions: "test/script/navigation/step-nav-child-test.yaml#main"
+
+main.steps/Last:
+  is: FormulaStep
+  code: "3"

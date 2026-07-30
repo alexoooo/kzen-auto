@@ -55,7 +55,7 @@ class JobRunWorkerTest {
         // FormulaSource emits 1..3; the RunWorker hosts the child Script (number + 1) once per element and emits
         // its result downstream. That the sink records {2, 3, 4} proves the child Logic ran per element through
         // the host seam — the RunWorker composed a reusable sub-Logic into the Job's dataflow.
-        val engine = newEngine("test/job-run-host-test.yaml")
+        val engine = newEngine("test/job/run/job-run-host-test.yaml")
         val outcome =
             try {
                 runBlocking {
@@ -78,7 +78,7 @@ class JobRunWorkerTest {
         // A pre-armed step lands the Job at its first quiescent wavefront (it must not have run to completion);
         // resuming drives the RunWorker's hosted children to full, correct output. Proves stepping crosses the
         // host boundary uniformly for a Job Worker exactly as it does for a Script RunStep.
-        val engine = newEngine("test/job-run-host-test.yaml")
+        val engine = newEngine("test/job/run/job-run-host-test.yaml")
         val outcome =
             try {
                 runBlocking {
@@ -108,7 +108,7 @@ class JobRunWorkerTest {
         // quiescent paused wavefront rather than failing — a child breakpoint IS a run-wide pause, with no
         // explicit halt request. A plain resume re-runs the (now-cleared) step to success and the remaining
         // elements process, so all three reach the sink.
-        val engine = newEngine("test/job-run-flaky-test.yaml")
+        val engine = newEngine("test/job/run/job-run-flaky-test.yaml")
         val outcome =
             try {
                 runBlocking {
@@ -140,7 +140,7 @@ class JobRunWorkerTest {
     fun childFailureWithoutPauseOnErrorFailsTheRun() {
         // With pause-on-error off (the default), the hosted child's failure propagates through the RunWorker and
         // fails the whole Job — the same terminal semantics as any other failing Worker.
-        val engine = newEngine("test/job-run-flaky-test.yaml")
+        val engine = newEngine("test/job/run/job-run-flaky-test.yaml")
         val outcome =
             try {
                 runBlocking {

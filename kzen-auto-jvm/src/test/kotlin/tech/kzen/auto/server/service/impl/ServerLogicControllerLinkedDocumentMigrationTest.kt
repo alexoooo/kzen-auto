@@ -46,8 +46,8 @@ import kotlin.test.fail
  */
 class ServerLogicControllerLinkedDocumentMigrationTest {
     //-----------------------------------------------------------------------------------------------------------------
-    private val parentPath = DocumentPath.parse("test/script-engine-run-test.yaml")
-    private val childPath = DocumentPath.parse("test/script-engine-child-test.yaml")
+    private val parentPath = DocumentPath.parse("test/script/engine/script-engine-run-test.yaml")
+    private val childPath = DocumentPath.parse("test/script/engine/script-engine-child-test.yaml")
 
     private val scriptLocation = ObjectLocation(parentPath, ObjectPath.parse("main"))
     private val childScriptLocation = ObjectLocation(childPath, ObjectPath.parse("main"))

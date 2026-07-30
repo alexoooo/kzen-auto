@@ -33,7 +33,7 @@ class ContextRenameTest {
 
     private val documentPath = DocumentPath.parse("test/context-rename-test.yaml")
 
-    private val archetypesPath = DocumentPath.parse("test/script-step-test-archetypes.yaml")
+    private val archetypesPath = DocumentPath.parse("test/script/engine/script-step-test-archetypes.yaml")
     private val originalContext = ObjectLocation(archetypesPath, ObjectPath.parse("TestSutContext"))
     private val renamedContext = ObjectLocation(archetypesPath, ObjectPath.parse("RenamedSutContext"))
 

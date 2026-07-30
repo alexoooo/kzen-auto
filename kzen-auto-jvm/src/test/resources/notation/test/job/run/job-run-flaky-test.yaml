@@ -1,0 +1,20 @@
+# RunWorker pause-on-error fixture (JobRunWorkerTest): a FormulaSource emits 1..3 into a RunWorker hosting the
+# flaky child Script (test/job/run/job-run-flaky-child-test.yaml#main), whose FlakyStep fails its first invocation. The
+# first hosted child throws; under pause-on-error the whole Job parks Suspended(Error) and a plain resume
+# re-runs the child step to success, then the remaining elements process cleanly. Channels are order-synthesized
+# (source.output -> run.input, run.output -> sink.input). RecordingSinkWorker archetype in
+# job-run-worker-archetypes.yaml.
+
+main:
+  is: Job
+
+main.workers/source:
+  is: FormulaSourceWorker
+  code: "(1..3)"
+
+main.workers/run:
+  is: RunWorker
+  instructions: "test/job/run/job-run-flaky-child-test.yaml#main"
+
+main.workers/sink:
+  is: RecordingSinkWorker

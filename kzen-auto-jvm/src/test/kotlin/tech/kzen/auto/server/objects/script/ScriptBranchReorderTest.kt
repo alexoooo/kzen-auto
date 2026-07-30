@@ -28,7 +28,7 @@ import kotlin.test.assertTrue
  */
 class ScriptBranchReorderTest {
     //-----------------------------------------------------------------------------------------------------------------
-    private val documentPath = DocumentPath.parse("test/script-nesting-test.yaml")
+    private val documentPath = DocumentPath.parse("test/script/structure/script-nesting-test.yaml")
     private val ifPath = ObjectPath.parse("main.steps/TopIf")
     private val branchesAttribute = AttributePath.ofName(AttributeName("branches"))
 

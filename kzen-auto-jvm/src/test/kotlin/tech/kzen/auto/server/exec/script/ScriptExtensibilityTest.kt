@@ -66,14 +66,14 @@ class ScriptExtensibilityTest {
     //-----------------------------------------------------------------------------------------------------------------
     @Test
     fun thirdPartyStepRunsWithNoCompilerChange() {
-        val outcome = runScript("test/script-extensibility-test.yaml")
+        val outcome = runScript("test/script/engine/script-extensibility-test.yaml")
         assertEquals("HELLO!!!", assertIs<Outcome.Success>(outcome).value.mainComponentValue())
     }
 
 
     @Test
     fun resourcesDisposedPerClosePolicyOnSuccess() {
-        val outcome = runScript("test/script-resource-success-test.yaml")
+        val outcome = runScript("test/script/resource/script-resource-success-test.yaml")
         assertIs<Outcome.Success>(outcome)
         assertEquals(setOf("auto", "keep"), ResourceDisposalLog.disposed())
     }
@@ -81,7 +81,7 @@ class ScriptExtensibilityTest {
 
     @Test
     fun keepOnFailureResourceRetainedOnFailure() {
-        val outcome = runScript("test/script-resource-failure-test.yaml")
+        val outcome = runScript("test/script/resource/script-resource-failure-test.yaml")
         assertIs<Outcome.Failed>(outcome)
         assertEquals(setOf("auto"), ResourceDisposalLog.disposed())
     }
@@ -93,7 +93,7 @@ class ScriptExtensibilityTest {
         // nothing, so the chain stops there. The parent's AssertDisposedStep (which runs after the child
         // settled) would throw if `sut` were already disposed, so a Success proves it outlived the opener, and
         // the disposal set proves it was disposed when the frame it rests on settled.
-        val outcome = runScript("test/script-resource-parent-scope-test.yaml")
+        val outcome = runScript("test/script/resource/script-resource-parent-scope-test.yaml")
         assertIs<Outcome.Success>(outcome)
         assertEquals(setOf("sut"), ResourceDisposalLog.disposed())
     }
@@ -105,7 +105,7 @@ class ScriptExtensibilityTest {
         // AssertDisposedStep in both mid (after the leaf settled) and root (after mid settled) would throw if it
         // had been disposed early, so a Success proves each declaration carried ownership one frame further, and
         // the disposal set proves it was disposed at the root settle.
-        val outcome = runScript("test/script-resource-run-scope-test.yaml")
+        val outcome = runScript("test/script/resource/script-resource-run-scope-test.yaml")
         assertIs<Outcome.Success>(outcome)
         assertEquals(setOf("sut"), ResourceDisposalLog.disposed())
     }
@@ -117,7 +117,7 @@ class ScriptExtensibilityTest {
         // would throw if the barrier had disposed the handle; Success proves the lifted registration was
         // re-adopted with its value, and the disposal set proves the closer still fired (exactly once) when the
         // run settled.
-        val outcome = migrateAtBarrier("test/script-resource-migration-test.yaml", stepsToBarrier = 2)
+        val outcome = migrateAtBarrier("test/script/resource/script-resource-migration-test.yaml", stepsToBarrier = 2)
 
         assertIs<Outcome.Success>(outcome)
         assertEquals(setOf("sut"), ResourceDisposalLog.disposed(),
@@ -131,7 +131,7 @@ class ScriptExtensibilityTest {
         // export moved ownership to the root, so the lift keys the registration by the ROOT's stable id.
         // Success proves the root re-adopted it (the Read there finds the live handle), and the disposal set
         // proves it disposes at that resting frame and nowhere else.
-        val outcome = migrateAtBarrier("test/script-resource-export-migration-test.yaml", stepsToBarrier = 3)
+        val outcome = migrateAtBarrier("test/script/resource/script-resource-export-migration-test.yaml", stepsToBarrier = 3)
 
         assertIs<Outcome.Success>(outcome)
         assertEquals(setOf("sut"), ResourceDisposalLog.disposed(),

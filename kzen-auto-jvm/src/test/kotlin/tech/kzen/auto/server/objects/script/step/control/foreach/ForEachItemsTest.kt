@@ -39,16 +39,16 @@ import kotlin.test.assertTrue
  */
 class ForEachItemsTest {
     //-----------------------------------------------------------------------------------------------------------------
-    private val inlineRangePath = DocumentPath.parse("test/foreach-item-range-test.yaml")
-    private val bodyTypePath = DocumentPath.parse("test/foreach-body-type-test.yaml")
-    private val listPath = DocumentPath.parse("test/foreach-items-list-test.yaml")
-    private val nonIterablePath = DocumentPath.parse("test/foreach-items-non-iterable-test.yaml")
-    private val unsetPath = DocumentPath.parse("test/foreach-items-unset-test.yaml")
-    private val compileErrorPath = DocumentPath.parse("test/foreach-items-compile-error-test.yaml")
-    private val opaquePath = DocumentPath.parse("test/foreach-items-opaque-test.yaml")
-    private val outerItemPath = DocumentPath.parse("test/foreach-items-outer-item-test.yaml")
-    private val selfReferencePath = DocumentPath.parse("test/foreach-items-self-reference-test.yaml")
-    private val nonCollectionPath = DocumentPath.parse("test/script-loop-migration-noncollection-test.yaml")
+    private val inlineRangePath = DocumentPath.parse("test/script/control/foreach-item-range-test.yaml")
+    private val bodyTypePath = DocumentPath.parse("test/script/control/foreach-body-type-test.yaml")
+    private val listPath = DocumentPath.parse("test/script/control/foreach-items-list-test.yaml")
+    private val nonIterablePath = DocumentPath.parse("test/script/control/foreach-items-non-iterable-test.yaml")
+    private val unsetPath = DocumentPath.parse("test/script/control/foreach-items-unset-test.yaml")
+    private val compileErrorPath = DocumentPath.parse("test/script/control/foreach-items-compile-error-test.yaml")
+    private val opaquePath = DocumentPath.parse("test/script/control/foreach-items-opaque-test.yaml")
+    private val outerItemPath = DocumentPath.parse("test/script/control/foreach-items-outer-item-test.yaml")
+    private val selfReferencePath = DocumentPath.parse("test/script/control/foreach-items-self-reference-test.yaml")
+    private val nonCollectionPath = DocumentPath.parse("test/script/loop/script-loop-migration-noncollection-test.yaml")
 
     private lateinit var context: KzenAutoContext
 

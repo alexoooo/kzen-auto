@@ -19,7 +19,7 @@ import kotlin.test.assertTrue
  */
 class ScriptJumpAnalysisTest {
     //-----------------------------------------------------------------------------------------------------------------
-    private val documentPath = DocumentPath.parse("test/script-nesting-test.yaml")
+    private val documentPath = DocumentPath.parse("test/script/structure/script-nesting-test.yaml")
 
 
     private fun plan(targetPath: String): ScriptJumpAnalysis.ScriptJumpPlan {

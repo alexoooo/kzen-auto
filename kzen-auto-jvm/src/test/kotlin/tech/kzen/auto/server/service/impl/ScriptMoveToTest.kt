@@ -35,12 +35,12 @@ import kotlin.test.fail
  */
 class ScriptMoveToTest {
     //-----------------------------------------------------------------------------------------------------------------
-    private val linearPath = DocumentPath.parse("test/script-moveto-test.yaml")
-    private val backstopPath = DocumentPath.parse("test/script-moveto-backstop-test.yaml")
-    private val loopPath = DocumentPath.parse("test/script-moveto-loop-test.yaml")
-    private val ifPath = DocumentPath.parse("test/script-moveto-if-test.yaml")
-    private val elseIfPath = DocumentPath.parse("test/script-moveto-elseif-test.yaml")
-    private val abandonPath = DocumentPath.parse("test/script-moveto-abandon-test.yaml")
+    private val linearPath = DocumentPath.parse("test/script/navigation/script-moveto-test.yaml")
+    private val backstopPath = DocumentPath.parse("test/script/navigation/script-moveto-backstop-test.yaml")
+    private val loopPath = DocumentPath.parse("test/script/navigation/script-moveto-loop-test.yaml")
+    private val ifPath = DocumentPath.parse("test/script/navigation/script-moveto-if-test.yaml")
+    private val elseIfPath = DocumentPath.parse("test/script/navigation/script-moveto-elseif-test.yaml")
+    private val abandonPath = DocumentPath.parse("test/script/navigation/script-moveto-abandon-test.yaml")
 
     private lateinit var context: KzenAutoContext
 

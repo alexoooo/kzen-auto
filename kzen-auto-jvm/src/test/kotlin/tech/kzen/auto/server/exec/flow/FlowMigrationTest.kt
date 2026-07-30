@@ -37,7 +37,7 @@ import kotlin.test.assertTrue
  */
 class FlowMigrationTest {
     //-----------------------------------------------------------------------------------------------------------------
-    private val documentPath = DocumentPath.parse("test/flow-migration-test.yaml")
+    private val documentPath = DocumentPath.parse("test/flow/flow-migration-test.yaml")
     private val flowLocation = ObjectLocation(documentPath, ObjectPath.parse("main"))
     private val sinkLocation = ObjectLocation(documentPath, ObjectPath.parse("FmSink"))
     private val sourceTotal = 5

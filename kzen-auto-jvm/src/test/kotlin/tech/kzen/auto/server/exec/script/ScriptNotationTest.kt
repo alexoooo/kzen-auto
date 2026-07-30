@@ -42,21 +42,21 @@ class ScriptNotationTest {
     //-----------------------------------------------------------------------------------------------------------------
     @Test
     fun foreachDoublesEachItemAndSums() {
-        val outcome = runScript("test/script-engine-foreach-test.yaml")
+        val outcome = runScript("test/script/control/script-engine-foreach-test.yaml")
         assertEquals(12, assertIs<Outcome.Success>(outcome).value.mainComponentValue())
     }
 
 
     @Test
     fun ifRunsTheSelectedBranch() {
-        val outcome = runScript("test/script-engine-if-test.yaml")
+        val outcome = runScript("test/script/control/script-engine-if-test.yaml")
         assertEquals(10, assertIs<Outcome.Success>(outcome).value.mainComponentValue())
     }
 
 
     @Test
     fun parameterDefaultUsedWhenNoInput() {
-        val outcome = runScript("test/script-engine-parameter-test.yaml")
+        val outcome = runScript("test/script/result/script-engine-parameter-test.yaml")
         assertEquals(4, assertIs<Outcome.Success>(outcome).value.mainComponentValue())
     }
 
@@ -65,28 +65,28 @@ class ScriptNotationTest {
     fun parameterFromRunInput() {
         val inputs = TupleValue(listOf(
             TupleComponentValue(TupleComponentName("Start"), 5)))
-        val outcome = runScript("test/script-engine-parameter-test.yaml", inputs)
+        val outcome = runScript("test/script/result/script-engine-parameter-test.yaml", inputs)
         assertEquals(10, assertIs<Outcome.Success>(outcome).value.mainComponentValue())
     }
 
 
     @Test
     fun literalAndWaitProduceTheLiteral() {
-        val outcome = runScript("test/script-engine-literal-wait-test.yaml")
+        val outcome = runScript("test/script/engine/script-engine-literal-wait-test.yaml")
         assertEquals("hello", assertIs<Outcome.Success>(outcome).value.mainComponentValue())
     }
 
 
     @Test
     fun doWhileRunsBodyAndCapturesResult() {
-        val outcome = runScript("test/script-engine-dowhile-test.yaml")
+        val outcome = runScript("test/script/control/script-engine-dowhile-test.yaml")
         assertEquals(7, assertIs<Outcome.Success>(outcome).value.mainComponentValue())
     }
 
 
     @Test
     fun runStepInvokesChildScriptWithArgument() {
-        val outcome = runScript("test/script-engine-run-test.yaml")
+        val outcome = runScript("test/script/engine/script-engine-run-test.yaml")
         assertEquals(7, assertIs<Outcome.Success>(outcome).value.mainComponentValue())
     }
 
@@ -97,7 +97,7 @@ class ScriptNotationTest {
         // sum + result Formulas) evaluates thousands of times. Rebuilding a URLClassLoader per evaluation would
         // take orders of magnitude longer than this bound; the cached load keeps it well under a second.
         val start = System.nanoTime()
-        val outcome = runScript("test/script-engine-foreach-benchmark-test.yaml")
+        val outcome = runScript("test/script/control/script-engine-foreach-benchmark-test.yaml")
         val elapsedMillis = (System.nanoTime() - start) / 1_000_000
 
         assertEquals(1_001_000, assertIs<Outcome.Success>(outcome).value.mainComponentValue())

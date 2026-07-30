@@ -40,9 +40,9 @@ import kotlin.test.assertTrue
  */
 class ScriptValidationCacheTest {
     //-----------------------------------------------------------------------------------------------------------------
-    private val runParent = DocumentPath.parse("test/script-engine-run-test.yaml")
-    private val runChild = DocumentPath.parse("test/script-engine-child-test.yaml")
-    private val ifDocument = DocumentPath.parse("test/script-engine-if-test.yaml")
+    private val runParent = DocumentPath.parse("test/script/engine/script-engine-run-test.yaml")
+    private val runChild = DocumentPath.parse("test/script/engine/script-engine-child-test.yaml")
+    private val ifDocument = DocumentPath.parse("test/script/control/script-engine-if-test.yaml")
     private val registryDocument = DocumentPath.parse("auto-jvm/registry/registry-jvm.yaml")
 
 

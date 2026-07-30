@@ -55,21 +55,21 @@ class FlowCapabilityTest {
     //-----------------------------------------------------------------------------------------------------------------
     @Test
     fun thirdPartyCapabilityVerticesRunWithNoSharedCodeEdit() {
-        val outcome = runFlow("test/flow-capability-test.yaml", argument("aliased-x", 6))
+        val outcome = runFlow("test/flow/flow-capability-test.yaml", argument("aliased-x", 6))
         assertEquals(12, assertIs<Outcome.Success>(outcome).value.find(TupleComponentName("aliased-out")))
     }
 
 
     @Test
     fun vertexInspectMessageRendersTrace() {
-        val engine = engineFor("test/flow-capability-test.yaml", argument("aliased-x", 6))
+        val engine = engineFor("test/flow/flow-capability-test.yaml", argument("aliased-x", 6))
         try {
             runBlocking {
                 engine.resume()
                 engine.await()
             }
 
-            val rendered = tracedMessages(engine, "test/flow-capability-test.yaml", "FcapInput")
+            val rendered = tracedMessages(engine, "test/flow/flow-capability-test.yaml", "FcapInput")
             assertTrue(rendered.contains("inspected:6"), "traced messages: $rendered")
         }
         finally {
@@ -80,14 +80,14 @@ class FlowCapabilityTest {
 
     @Test
     fun requiredOutputNotSetFailsTheVertex() {
-        val outcome = runFlow("test/flow-required-output-test.yaml", argument("x", 6))
+        val outcome = runFlow("test/flow/flow-required-output-test.yaml", argument("x", 6))
         assertIs<Outcome.Failed>(outcome)
     }
 
 
     @Test
     fun requiredOutputNotSetPausesWhenPauseOnError() {
-        val engine = engineFor("test/flow-required-output-test.yaml", argument("x", 6))
+        val engine = engineFor("test/flow/flow-required-output-test.yaml", argument("x", 6))
         try {
             engine.pauseOnError(true)
             engine.resume()
@@ -97,7 +97,7 @@ class FlowCapabilityTest {
             assertEquals(PauseReason.Error, assertIs<NodeStatus.Suspended>(status).reason)
 
             val vertex = assertNotNull(
-                tracedVertex(engine, "test/flow-required-output-test.yaml", "FreqSilent"))
+                tracedVertex(engine, "test/flow/flow-required-output-test.yaml", "FreqSilent"))
             assertTrue(
                 assertNotNull(vertex.error).contains("Required output"),
                 "vertex error: ${vertex.error}")
@@ -110,14 +110,14 @@ class FlowCapabilityTest {
 
     @Test
     fun doubleSetWithoutDrainFailsTheVertex() {
-        val engine = engineFor("test/flow-double-emit-test.yaml", argument("x", 6))
+        val engine = engineFor("test/flow/flow-double-emit-test.yaml", argument("x", 6))
         try {
             engine.pauseOnError(true)
             engine.resume()
             engine.awaitQuiescent()
 
             val vertex = assertNotNull(
-                tracedVertex(engine, "test/flow-double-emit-test.yaml", "FdupEmit"))
+                tracedVertex(engine, "test/flow/flow-double-emit-test.yaml", "FdupEmit"))
             assertTrue(
                 assertNotNull(vertex.error).contains("already set"),
                 "vertex error: ${vertex.error}")

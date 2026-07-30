@@ -53,7 +53,7 @@ class JobSignatureTest {
     //-----------------------------------------------------------------------------------------------------------------
     @Test
     fun directRunSeedsParameterAndHarvestsResult() {
-        val jobLogic = compile("test/job-signature-child-test.yaml")
+        val jobLogic = compile("test/job/signature/job-signature-child-test.yaml")
 
         assertEquals(
             listOf("items"), jobLogic.signature().inputs.components.map { it.name.value },
@@ -63,7 +63,7 @@ class JobSignatureTest {
             "the document's declared `results` map declares the `main` output component")
 
         val outcome = runToCompletion(
-            jobLogic, "test/job-signature-child-test.yaml",
+            jobLogic, "test/job/signature/job-signature-child-test.yaml",
             inputs("items" to listOf(1, 2, 3)))
 
         val success = assertIs<Outcome.Success>(outcome)
@@ -77,9 +77,9 @@ class JobSignatureTest {
     fun scalarArgumentYieldsScalarResult() {
         // The SCALAR child: `item` is declared nullable Any (not an Iterable type), so strict-static dispatch
         // single-emits the bound value regardless of what it is.
-        val jobLogic = compile("test/job-signature-scalar-child-test.yaml")
+        val jobLogic = compile("test/job/signature/job-signature-scalar-child-test.yaml")
         val outcome = runToCompletion(
-            jobLogic, "test/job-signature-scalar-child-test.yaml", inputs("item" to 7))
+            jobLogic, "test/job/signature/job-signature-scalar-child-test.yaml", inputs("item" to 7))
 
         val success = assertIs<Outcome.Success>(outcome)
         assertEquals(
@@ -90,9 +90,9 @@ class JobSignatureTest {
 
     @Test
     fun unboundScalarParameterEmitsSingleNull() {
-        val jobLogic = compile("test/job-signature-scalar-child-test.yaml")
+        val jobLogic = compile("test/job/signature/job-signature-scalar-child-test.yaml")
         val outcome = runToCompletion(
-            jobLogic, "test/job-signature-scalar-child-test.yaml", TupleValue.empty)
+            jobLogic, "test/job/signature/job-signature-scalar-child-test.yaml", TupleValue.empty)
 
         val success = assertIs<Outcome.Success>(outcome)
         assertTrue(
@@ -109,9 +109,9 @@ class JobSignatureTest {
         // Strict-static dispatch: the List-typed `items` declaration makes the source a STREAM lane, so a bare
         // run's null value is an empty stream, not a null element — and the child's declared result is NULLABLE,
         // so the empty stream yields null instead of failing the run.
-        val jobLogic = compile("test/job-signature-child-test.yaml")
+        val jobLogic = compile("test/job/signature/job-signature-child-test.yaml")
         val outcome = runToCompletion(
-            jobLogic, "test/job-signature-child-test.yaml", TupleValue.empty)
+            jobLogic, "test/job/signature/job-signature-child-test.yaml", TupleValue.empty)
 
         val success = assertIs<Outcome.Success>(outcome)
         assertTrue(
@@ -125,8 +125,8 @@ class JobSignatureTest {
 
     @Test
     fun keepFirstYieldsFirstElement() {
-        val jobLogic = compile("test/job-result-first-test.yaml")
-        val outcome = runToCompletion(jobLogic, "test/job-result-first-test.yaml", TupleValue.empty)
+        val jobLogic = compile("test/job/signature/job-result-first-test.yaml")
+        val outcome = runToCompletion(jobLogic, "test/job/signature/job-result-first-test.yaml", TupleValue.empty)
 
         val success = assertIs<Outcome.Success>(outcome)
         assertEquals(
@@ -139,8 +139,8 @@ class JobSignatureTest {
     fun emptyStreamWithNonNullableResultFailsTheRun() {
         // The empty-stream contract's strict half: the declared `main` result is NON-nullable, so an empty
         // stream at end-of-stream is a run failure (the sink's error names the component), never a silent null.
-        val jobLogic = compile("test/job-result-empty-test.yaml")
-        val outcome = runToCompletion(jobLogic, "test/job-result-empty-test.yaml", TupleValue.empty)
+        val jobLogic = compile("test/job/signature/job-result-empty-test.yaml")
+        val outcome = runToCompletion(jobLogic, "test/job/signature/job-result-empty-test.yaml", TupleValue.empty)
 
         assertIs<Outcome.Failed>(
             outcome,
@@ -153,9 +153,9 @@ class JobSignatureTest {
         // The typed parameter accessor enforces the declaration: a non-List value bound to the List-typed
         // `items` fails the cast when the expression reads it — a run failure naming the violation, never a
         // silent wrong-shaped stream (Script's typed-binding contract).
-        val jobLogic = compile("test/job-signature-child-test.yaml")
+        val jobLogic = compile("test/job/signature/job-signature-child-test.yaml")
         val outcome = runToCompletion(
-            jobLogic, "test/job-signature-child-test.yaml", inputs("items" to 7))
+            jobLogic, "test/job/signature/job-signature-child-test.yaml", inputs("items" to 7))
 
         assertIs<Outcome.Failed>(
             outcome,
@@ -169,7 +169,7 @@ class JobSignatureTest {
         context = KzenAutoContext.forTest()
 
         val scriptLocation = ObjectLocation(
-            DocumentPath.parse("test/job-signature-script-test.yaml"), ObjectPath.parse("main"))
+            DocumentPath.parse("test/job/signature/job-signature-script-test.yaml"), ObjectPath.parse("main"))
         val scriptLogic = LogicCompiler.compile(
             scriptLocation, notation, definition(notation), services())
 
@@ -186,10 +186,10 @@ class JobSignatureTest {
     @Test
     fun runWorkerHostsParameterizedJobPerElement() {
         RecordingSinkWorker.reset()
-        val jobLogic = compile("test/job-signature-nested-test.yaml")
+        val jobLogic = compile("test/job/signature/job-signature-nested-test.yaml")
         val outcome = runEngine(
             jobLogic,
-            context.objectStableMapper.objectStableId(mainOf("test/job-signature-nested-test.yaml")))
+            context.objectStableMapper.objectStableId(mainOf("test/job/signature/job-signature-nested-test.yaml")))
 
         assertIs<Outcome.Success>(outcome)
         assertEquals(
@@ -207,10 +207,10 @@ class JobSignatureTest {
         // the retired JobNestedLogicTest pins at the engine grain (the Script-side ghosting pin lives in
         // SubScriptTraceScopingTest).
         RecordingSinkWorker.reset()
-        val jobLogic = compile("test/job-run-host-test.yaml")
+        val jobLogic = compile("test/job/run/job-run-host-test.yaml")
 
         val engine = RunEngine(
-            jobLogic, context.objectStableMapper.objectStableId(mainOf("test/job-run-host-test.yaml")))
+            jobLogic, context.objectStableMapper.objectStableId(mainOf("test/job/run/job-run-host-test.yaml")))
         try {
             val outcome = runBlocking {
                 engine.resume()
@@ -220,7 +220,7 @@ class JobSignatureTest {
 
             val runStableId = context.objectStableMapper.objectStableId(
                 ObjectLocation(
-                    DocumentPath.parse("test/job-run-host-test.yaml"), ObjectPath.parse("main.workers/run")))
+                    DocumentPath.parse("test/job/run/job-run-host-test.yaml"), ObjectPath.parse("main.workers/run")))
             val runNode = engine.snapshot().root.children.first { it.stableId == runStableId }
 
             assertEquals(
@@ -231,7 +231,7 @@ class JobSignatureTest {
 
             val childStableId = context.objectStableMapper.objectStableId(
                 ObjectLocation(
-                    DocumentPath.parse("test/script-engine-child-test.yaml"), ObjectPath.parse("main")))
+                    DocumentPath.parse("test/script/engine/script-engine-child-test.yaml"), ObjectPath.parse("main")))
             assertTrue(
                 runNode.children.all { it.stableId == childStableId },
                 "every hosted invocation carries the child document's stable id")

@@ -28,7 +28,7 @@ import kotlin.test.assertTrue
 class JobChannelDefaultTest {
     @Test
     fun jobWideDefaultsAreStampedOntoSynthesizedChannels() {
-        val documentPath = DocumentPath.parse("test/job-batchsize-default-test.yaml")
+        val documentPath = DocumentPath.parse("test/job/channel/job-batchsize-default-test.yaml")
 
         val graphNotation = AutoTestUtils.readNotation()
         val result = synthesize(graphNotation, documentPath)
@@ -52,7 +52,7 @@ class JobChannelDefaultTest {
 
     @Test
     fun perWorkerOutputConfigStampedOntoSynthesizedChannel() {
-        val documentPath = DocumentPath.parse("test/job-worker-config-test.yaml")
+        val documentPath = DocumentPath.parse("test/job/channel/job-worker-config-test.yaml")
 
         val graphNotation = AutoTestUtils.readNotation()
         val result = synthesize(graphNotation, documentPath)
@@ -82,7 +82,7 @@ class JobChannelDefaultTest {
 
     @Test
     fun workerOutputConfigSurvivesUpstreamWorkerRename() {
-        val documentPath = DocumentPath.parse("test/job-worker-config-test.yaml")
+        val documentPath = DocumentPath.parse("test/job/channel/job-worker-config-test.yaml")
 
         val graphNotation = AutoTestUtils.readNotation()
         val readerLocation = ObjectLocation(documentPath, ObjectPath.parse("main.workers/reader"))

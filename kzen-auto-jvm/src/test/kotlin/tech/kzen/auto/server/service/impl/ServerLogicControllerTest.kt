@@ -30,12 +30,12 @@ import kotlin.test.fail
  */
 class ServerLogicControllerTest {
     //-----------------------------------------------------------------------------------------------------------------
-    private val foreachPath = DocumentPath.parse("test/script-engine-foreach-test.yaml")
+    private val foreachPath = DocumentPath.parse("test/script/control/script-engine-foreach-test.yaml")
     private val foreachMain = ObjectLocation(foreachPath, ObjectPath.parse("main"))
     private val foreachFirstStep = ObjectLocation(foreachPath, ObjectPath.parse("main.steps/Range"))
     private val foreachResult = ObjectLocation(foreachPath, ObjectPath.parse("main.steps/Result"))
 
-    private val waitPath = DocumentPath.parse("test/script-engine-literal-wait-test.yaml")
+    private val waitPath = DocumentPath.parse("test/script/engine/script-engine-literal-wait-test.yaml")
     private val waitMain = ObjectLocation(waitPath, ObjectPath.parse("main"))
     private val waitResult = ObjectLocation(waitPath, ObjectPath.parse("main.steps/Result"))
 

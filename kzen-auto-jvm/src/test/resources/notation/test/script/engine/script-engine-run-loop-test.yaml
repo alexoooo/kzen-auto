@@ -1,0 +1,17 @@
+main:
+  is: Script
+
+main.steps/Range:
+  is: FormulaStep
+  code: "1..2"
+
+main.steps/Loop:
+  is: ForEachStep
+  items: Range
+
+main.steps/Loop.item/Item:
+  is: ForEachItemBinding
+
+main.steps/Loop.steps/Call:
+  is: RunStep
+  instructions: "test/script/navigation/step-nav-child-test.yaml#main"

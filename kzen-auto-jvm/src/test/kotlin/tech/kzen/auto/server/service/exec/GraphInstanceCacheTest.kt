@@ -36,7 +36,7 @@ class GraphInstanceCacheTest {
     private val cachedArchetype = ObjectLocation.parse("test/detached-cache-test.yaml#CachedActionArchetype")
     private val cacheNamed = ObjectLocation.parse("test/detached-cache-test.yaml#CacheNamed")
     private val freshAction = ObjectLocation.parse("test/detached-cache-test.yaml#FreshAction")
-    private val unrelated = ObjectLocation.parse("test/flow-run-test.yaml#FrunInput")
+    private val unrelated = ObjectLocation.parse("test/flow/flow-run-test.yaml#FrunInput")
 
 
     //-----------------------------------------------------------------------------------------------------------------

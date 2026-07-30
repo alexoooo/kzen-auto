@@ -56,7 +56,7 @@ class PluginReportDefinitionRepositoryTest {
         store.graphStructure = structureOf(edit(
             baseNotation,
             ObjectLocation(
-                DocumentPath.parse("test/script-engine-if-test.yaml"),
+                DocumentPath.parse("test/script/control/script-engine-if-test.yaml"),
                 ObjectPath.parse("main.steps/Flag")),
             "code",
             ScalarAttributeNotation("false")))

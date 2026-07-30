@@ -1,0 +1,16 @@
+# Move-to abandoned-invocation fixture (ScriptMoveToTest): a CountingStep, a RunStep hosting a sub-Script that
+# holds its own CountingStep, and a trailing CountingStep. Jumping backward PAST the completed RunStep drops its
+# outcome, so the spine re-runs it and re-hosts the child — and the process-global count is what proves the fresh
+# invocation actually EXECUTED rather than replay-adopting the abandoned one's migration capture.
+main:
+  is: Script
+
+main.steps/Before:
+  is: CountingStep
+
+main.steps/Call:
+  is: RunStep
+  instructions: "test/script/navigation/script-moveto-abandon-child-test.yaml#main"
+
+main.steps/After:
+  is: CountingStep

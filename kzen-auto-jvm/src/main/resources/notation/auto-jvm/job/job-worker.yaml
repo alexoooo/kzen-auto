@@ -6,7 +6,7 @@
 # duplex DuplexChannel for request/reply). Value attributes carry defaults (the meta-scalar-needs-value
 # convention). `selfLocation` is the Worker's own ObjectLocation (by: Self), used to publish live progress
 # to its trace. Concrete Job documents wire these together — see the
-# job-*-test.yaml fixtures under src/test/resources/notation/test/.
+# job-*-test.yaml fixtures under src/test/resources/notation/test/job/.
 
 
 # Reads a delimited text file (full RFC-4180 parsing: quoted fields, embedded delimiters / newlines, doubled

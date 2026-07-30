@@ -45,7 +45,7 @@ import kotlin.test.fail
  */
 class ServerLogicControllerMigrationTest {
     //-----------------------------------------------------------------------------------------------------------------
-    private val documentPath = DocumentPath.parse("test/job-migration-preview-test.yaml")
+    private val documentPath = DocumentPath.parse("test/job/migration/job-migration-preview-test.yaml")
     private val jobLocation = ObjectLocation(documentPath, ObjectPath.parse("main"))
     private val previewLocation = ObjectLocation(documentPath, ObjectPath.parse("main.workers/preview"))
 

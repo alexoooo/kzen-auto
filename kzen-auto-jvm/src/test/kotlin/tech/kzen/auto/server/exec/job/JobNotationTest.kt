@@ -35,7 +35,7 @@ import kotlin.test.assertTrue
  */
 class JobNotationTest {
     //-----------------------------------------------------------------------------------------------------------------
-    private val documentPath = DocumentPath.parse("test/job-engine-linear-test.yaml")
+    private val documentPath = DocumentPath.parse("test/job/job-engine-linear-test.yaml")
     private val jobLocation = ObjectLocation(documentPath, ObjectPath.parse("main"))
 
     // The blank-port pipeline wires its reader/writer to these relative paths; the Workers resolve the same

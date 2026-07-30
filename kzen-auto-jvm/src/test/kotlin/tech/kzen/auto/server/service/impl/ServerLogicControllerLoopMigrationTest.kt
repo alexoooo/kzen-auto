@@ -50,10 +50,10 @@ import kotlin.test.fail
  */
 class ServerLogicControllerLoopMigrationTest {
     //-----------------------------------------------------------------------------------------------------------------
-    private val forEachDocumentPath = DocumentPath.parse("test/script-loop-migration-test.yaml")
-    private val childLoopDocumentPath = DocumentPath.parse("test/script-loop-child-migration-test.yaml")
-    private val nonCollectionDocumentPath = DocumentPath.parse("test/script-loop-migration-noncollection-test.yaml")
-    private val doWhileDocumentPath = DocumentPath.parse("test/script-dowhile-migration-test.yaml")
+    private val forEachDocumentPath = DocumentPath.parse("test/script/loop/script-loop-migration-test.yaml")
+    private val childLoopDocumentPath = DocumentPath.parse("test/script/loop/script-loop-child-migration-test.yaml")
+    private val nonCollectionDocumentPath = DocumentPath.parse("test/script/loop/script-loop-migration-noncollection-test.yaml")
+    private val doWhileDocumentPath = DocumentPath.parse("test/script/control/script-dowhile-migration-test.yaml")
 
     private lateinit var context: KzenAutoContext
 

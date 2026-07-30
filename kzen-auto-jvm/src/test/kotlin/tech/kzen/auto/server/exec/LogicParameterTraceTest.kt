@@ -50,7 +50,7 @@ class LogicParameterTraceTest {
     //--------------------------------------------------------------------------------------------------------- Script
     @Test
     fun scriptParameterDefaultEmitsPlainValueAtItsAddress() {
-        runLogic("test/script-engine-parameter-test.yaml") { engine, documentPath ->
+        runLogic("test/script/result/script-engine-parameter-test.yaml") { engine, documentPath ->
             assertEquals(
                 ExecutionValue.of("2"),
                 liveValue(engine, documentPath, "main.parameters/Start"),
@@ -64,7 +64,7 @@ class LogicParameterTraceTest {
         val inputs = TupleValue(listOf(
             TupleComponentValue(TupleComponentName("Start"), 5)))
 
-        runLogic("test/script-engine-parameter-test.yaml", inputs) { engine, documentPath ->
+        runLogic("test/script/result/script-engine-parameter-test.yaml", inputs) { engine, documentPath ->
             assertEquals(
                 ExecutionValue.of("5"),
                 liveValue(engine, documentPath, "main.parameters/Start"),
@@ -75,7 +75,7 @@ class LogicParameterTraceTest {
 
     @Test
     fun forEachItemBindingEmitsNoTrace() {
-        runLogic("test/script-engine-foreach-test.yaml") { engine, documentPath ->
+        runLogic("test/script/control/script-engine-foreach-test.yaml") { engine, documentPath ->
             assertNull(
                 liveValue(engine, documentPath, "main.steps/Loop.item/Item"),
                 "bind records a loop-item value with NO trace entry (see the StepExecution.bind contract)")
@@ -89,7 +89,7 @@ class LogicParameterTraceTest {
         val inputs = TupleValue(listOf(
             TupleComponentValue(TupleComponentName("items"), listOf(1, 2, 3))))
 
-        runLogic("test/job-signature-child-test.yaml", inputs) { engine, documentPath ->
+        runLogic("test/job/signature/job-signature-child-test.yaml", inputs) { engine, documentPath ->
             assertEquals(
                 ExecutionValue.of("[1, 2, 3]"),
                 liveValue(engine, documentPath, "main.parameters/items"),
@@ -100,7 +100,7 @@ class LogicParameterTraceTest {
 
     @Test
     fun jobUnboundDefaultlessParameterEmitsNull() {
-        runLogic("test/job-signature-scalar-child-test.yaml") { engine, documentPath ->
+        runLogic("test/job/signature/job-signature-scalar-child-test.yaml") { engine, documentPath ->
             assertEquals(
                 NullExecutionValue,
                 liveValue(engine, documentPath, "main.parameters/item"),

@@ -42,13 +42,13 @@ import kotlin.test.assertTrue
  */
 class ScriptIfChainTest {
     //-----------------------------------------------------------------------------------------------------------------
-    private val chainPath = DocumentPath.parse("test/script-engine-elseif-test.yaml")
-    private val noElsePath = DocumentPath.parse("test/script-engine-if-no-else-test.yaml")
-    private val uniformTypePath = DocumentPath.parse("test/if-step-type-test.yaml")
-    private val divergentTypePath = DocumentPath.parse("test/if-step-divergent-type-test.yaml")
-    private val expressionPath = DocumentPath.parse("test/if-branch-expression-test.yaml")
-    private val nonBooleanPath = DocumentPath.parse("test/if-branch-non-boolean-test.yaml")
-    private val unsetConditionPath = DocumentPath.parse("test/if-branch-unset-condition-test.yaml")
+    private val chainPath = DocumentPath.parse("test/script/control/script-engine-elseif-test.yaml")
+    private val noElsePath = DocumentPath.parse("test/script/control/script-engine-if-no-else-test.yaml")
+    private val uniformTypePath = DocumentPath.parse("test/script/control/if-step-type-test.yaml")
+    private val divergentTypePath = DocumentPath.parse("test/script/control/if-step-divergent-type-test.yaml")
+    private val expressionPath = DocumentPath.parse("test/script/control/if-branch-expression-test.yaml")
+    private val nonBooleanPath = DocumentPath.parse("test/script/control/if-branch-non-boolean-test.yaml")
+    private val unsetConditionPath = DocumentPath.parse("test/script/control/if-branch-unset-condition-test.yaml")
 
     private lateinit var context: KzenAutoContext
 

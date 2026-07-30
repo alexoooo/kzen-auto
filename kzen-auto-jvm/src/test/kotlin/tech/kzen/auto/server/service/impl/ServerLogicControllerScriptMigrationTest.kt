@@ -43,7 +43,7 @@ import kotlin.test.fail
  */
 class ServerLogicControllerScriptMigrationTest {
     //-----------------------------------------------------------------------------------------------------------------
-    private val documentPath = DocumentPath.parse("test/script-engine-if-test.yaml")
+    private val documentPath = DocumentPath.parse("test/script/control/script-engine-if-test.yaml")
     private val scriptLocation = ObjectLocation(documentPath, ObjectPath.parse("main"))
     private val flagLocation = ObjectLocation(documentPath, ObjectPath.parse("main.steps/Flag"))
     private val yesLocation = ObjectLocation(documentPath, ObjectPath.parse("main.steps/Branch.branches/Branch.steps/Yes"))

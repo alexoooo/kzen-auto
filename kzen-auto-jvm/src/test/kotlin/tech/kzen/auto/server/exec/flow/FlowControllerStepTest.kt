@@ -44,7 +44,7 @@ class FlowControllerStepTest {
         context = KzenAutoContext.forTest()
         val controller = context.serverLogicController
         val flowMain = ObjectLocation(
-            DocumentPath.parse("test/flow-stream-test.yaml"), ObjectPath.parse("main"))
+            DocumentPath.parse("test/flow/flow-stream-test.yaml"), ObjectPath.parse("main"))
 
         // Start with the graph-store snapshot (as logicStart does), then step with NO snapshot (as logicStep
         // does) — the controller re-fetches a fresh definition each tick.

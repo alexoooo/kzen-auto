@@ -22,7 +22,7 @@ import kotlin.test.assertTrue
  */
 class ScriptBranchDiscoveryTest {
     //-----------------------------------------------------------------------------------------------------------------
-    private val documentPath = DocumentPath.parse("test/script-branch-discovery-test.yaml")
+    private val documentPath = DocumentPath.parse("test/script/structure/script-branch-discovery-test.yaml")
 
     private val switchLocation = location("main.steps/Switch")
     private val loopLocation = location("main.steps/Loop")

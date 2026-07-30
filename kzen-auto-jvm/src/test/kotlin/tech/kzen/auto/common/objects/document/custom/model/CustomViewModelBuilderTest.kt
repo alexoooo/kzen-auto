@@ -26,8 +26,8 @@ import kotlin.test.assertTrue
  */
 class CustomViewModelBuilderTest {
     //-----------------------------------------------------------------------------------------------------------------
-    private val documentPath = DocumentPath.parse("test/custom-view-model-test.yaml")
-    private val elsewherePath = DocumentPath.parse("test/custom-prototype-elsewhere-test.yaml")
+    private val documentPath = DocumentPath.parse("test/custom/custom-view-model-test.yaml")
+    private val elsewherePath = DocumentPath.parse("test/custom/custom-prototype-elsewhere-test.yaml")
 
     private val greeting = ObjectPath.parse("main.objects/Greeting")
     private val other = ObjectPath.parse("main.objects/Other")
@@ -103,7 +103,7 @@ class CustomViewModelBuilderTest {
     @Test
     fun prototypeAddedElsewhereChangesModel() {
         // The whole point of running the Builder per notation event rather than per this document's own state
-        // change: nothing in test/custom-view-model-test.yaml moved, yet the picker must pick this up.
+        // change: nothing in test/custom/custom-view-model-test.yaml moved, yet the picker must pick this up.
         val builder = CustomViewModel.Builder()
         val baseNotation = AutoTestUtils.readNotation()
 

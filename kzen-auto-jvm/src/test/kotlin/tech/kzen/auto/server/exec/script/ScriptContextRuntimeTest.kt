@@ -65,7 +65,7 @@ class ScriptContextRuntimeTest {
     //-----------------------------------------------------------------------------------------------------------------
     @Test
     fun unmetRequiresFailsAtTheSpineNotAtTheRead() {
-        val outcome = runScript("test/script-context-requires-unmet-test.yaml")
+        val outcome = runScript("test/script/context/script-context-requires-unmet-test.yaml")
 
         val failed = assertIs<Outcome.Failed>(outcome)
         assertContains(failed.message, "Requires Test SUT: not provided")
@@ -76,7 +76,7 @@ class ScriptContextRuntimeTest {
 
     @Test
     fun closerWithNothingOpenSucceeds() {
-        val outcome = runScript("test/script-context-release-tolerant-test.yaml")
+        val outcome = runScript("test/script/context/script-context-release-tolerant-test.yaml")
 
         assertIs<Outcome.Success>(outcome)
         assertEquals(listOf("release saw nothing"), ContextProbeLog.entries(),
@@ -88,14 +88,14 @@ class ScriptContextRuntimeTest {
     fun productionBrowserCloseWithNoBrowserSucceeds() {
         // The real BrowserCloseStep archetype, not a test stand-in: it declares `releases: BrowserContext`,
         // so closing a browser that was never opened is success, exactly as before the feature.
-        val outcome = runScript("test/script-context-browser-close-tolerant-test.yaml")
+        val outcome = runScript("test/script/context/script-context-browser-close-tolerant-test.yaml")
         assertIs<Outcome.Success>(outcome, (outcome as? Outcome.Failed)?.message)
     }
 
 
     @Test
     fun providerReadsBackItsOwnProvidesArgumentFree() {
-        val outcome = runScript("test/script-context-replace-test.yaml")
+        val outcome = runScript("test/script/context/script-context-replace-test.yaml")
 
         assertIs<Outcome.Success>(outcome)
         assertEquals(
@@ -116,7 +116,7 @@ class ScriptContextRuntimeTest {
 
     @Test
     fun qualifiedMembersOfOneFamilyAreIndependent() {
-        val outcome = runScript("test/script-context-qualified-test.yaml")
+        val outcome = runScript("test/script/context/script-context-qualified-test.yaml")
 
         assertIs<Outcome.Success>(outcome)
         assertEquals(
@@ -135,7 +135,7 @@ class ScriptContextRuntimeTest {
         // The hosted sub-Script provides and EXPORTS; the caller declares nothing, which is how it receives —
         // it is the first frame that does not export the Context, so ownership rests there. The caller's Read
         // runs after that sub-Script settled, so the Success here IS the assertion that ownership climbed.
-        val outcome = runScript("test/script-context-host-test.yaml")
+        val outcome = runScript("test/script/context/script-context-host-test.yaml")
 
         assertIs<Outcome.Success>(outcome)
         assertEquals(
@@ -150,7 +150,7 @@ class ScriptContextRuntimeTest {
 
     @Test
     fun anUnexportedProvideIsDisposedAtItsProvidersSettle() {
-        val outcome = runScript("test/script-context-private-provide-test.yaml")
+        val outcome = runScript("test/script/context/script-context-private-provide-test.yaml")
 
         val failed = assertIs<Outcome.Failed>(outcome)
         assertContains(failed.message, "Requires Test SUT: not provided")
@@ -165,7 +165,7 @@ class ScriptContextRuntimeTest {
 
     @Test
     fun documentRequiresGateFailsTheRunBeforeAnyStep() {
-        val outcome = runScript("test/script-context-satisfied-test.yaml")
+        val outcome = runScript("test/script/context/script-context-satisfied-test.yaml")
 
         val failed = assertIs<Outcome.Failed>(outcome)
         assertContains(failed.message, "Requires Test SUT: not provided by caller")

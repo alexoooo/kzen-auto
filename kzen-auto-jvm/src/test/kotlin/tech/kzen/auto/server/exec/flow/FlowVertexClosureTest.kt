@@ -25,7 +25,7 @@ class FlowVertexClosureTest {
     @Test
     fun vertexClosuresExcludeSiblingsAndAreCreatable() {
         // this document hosts a RunLogicVertex, the one vertex kind with a (weak) link to another document
-        val documentPath = DocumentPath.parse("test/flow-run-test.yaml")
+        val documentPath = DocumentPath.parse("test/flow/flow-run-test.yaml")
 
         val notation = AutoTestUtils.readNotation()
         val definition = AutoTestUtils.graphDefinitionAttempt(notation).transitiveSuccessful

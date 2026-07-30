@@ -60,7 +60,7 @@ class JobElementModelTest {
         // (appending a flat column) while the payload rides through untouched — so the Job yields 13.0, not a
         // record, and no cast failure occurs anywhere.
         val engine = newEngine(
-            "test/job-message-parameter-test.yaml",
+            "test/job/message/job-message-parameter-test.yaml",
             TupleValue(listOf(TupleComponentValue(TupleComponentName("number"), 13.0))))
         val outcome =
             try {
@@ -82,7 +82,7 @@ class JobElementModelTest {
     fun declaredParameterGatesFilterViaDefault() {
         // Run BARE: the Filter's `value.number > threshold` reads the DECLARED default (2), keeping 30.0 and
         // 2.5 — the sink keeps the LAST survivor (default `keep`).
-        val engine = newEngine("test/job-parameter-scope-test.yaml")
+        val engine = newEngine("test/job/message/job-parameter-scope-test.yaml")
         val outcome =
             try {
                 runBlocking {
@@ -104,7 +104,7 @@ class JobElementModelTest {
         // The bound `threshold` argument (3) wins over the declared default (2): only 30.0 passes, which the
         // sink keeps as the result.
         val engine = newEngine(
-            "test/job-parameter-scope-test.yaml",
+            "test/job/message/job-parameter-scope-test.yaml",
             TupleValue(listOf(TupleComponentValue(TupleComponentName("threshold"), 3))))
         val outcome =
             try {
@@ -127,7 +127,7 @@ class JobElementModelTest {
         // Phase 3: FormulaSource (1..3) streams Int payloads; the Formula's `payload: payload * 10` maps each
         // (bare Int arithmetic — the receiver is the lane's inferred type); the Filter's `where: payload > 15`
         // reads the typed payload; the sink keeps the last surviving transformed payload.
-        val engine = newEngine("test/job-payload-formula-test.yaml")
+        val engine = newEngine("test/job/message/job-payload-formula-test.yaml")
         val outcome =
             try {
                 runBlocking {
@@ -153,7 +153,7 @@ class JobElementModelTest {
         Files.createDirectories(output.parent)
         Files.deleteIfExists(output)
 
-        val engine = newEngine("test/job-message-flatten-test.yaml")
+        val engine = newEngine("test/job/message/job-message-flatten-test.yaml")
         val outcome =
             try {
                 runBlocking {
@@ -176,7 +176,7 @@ class JobElementModelTest {
         Files.createDirectories(output.parent)
         Files.deleteIfExists(output)
 
-        val engine = newEngine("test/job-message-map-flatten-test.yaml")
+        val engine = newEngine("test/job/message/job-message-map-flatten-test.yaml")
         val outcome =
             try {
                 runBlocking {

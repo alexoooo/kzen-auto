@@ -46,7 +46,7 @@ import kotlin.test.assertTrue
 class JobMigrationTest {
     //-----------------------------------------------------------------------------------------------------------------
     // Preview-pipeline fixture (shared with JobStateMigrationTest): CsvReaderWorker -> raw channel -> PreviewWorker.
-    private val previewDocumentPath = DocumentPath.parse("test/job-migration-preview-test.yaml")
+    private val previewDocumentPath = DocumentPath.parse("test/job/migration/job-migration-preview-test.yaml")
     private val previewJobLocation = ObjectLocation(previewDocumentPath, ObjectPath.parse("main"))
     private val previewWorkerLocation = ObjectLocation(previewDocumentPath, ObjectPath.parse("main.workers/preview"))
     private val previewDir = Path.of("build/job-migration")
@@ -54,7 +54,7 @@ class JobMigrationTest {
 
     // Gated channel-carryover fixture (shared with JobMigrationCarryoverTest): GatedSourceWorker -> buffered
     // channel -> GatedCountingSinkWorker (first instance never drains). Must match the fixture's `buffer`/`total`.
-    private val carryoverDocumentPath = DocumentPath.parse("test/job-migration-carryover-test.yaml")
+    private val carryoverDocumentPath = DocumentPath.parse("test/job/migration/job-migration-carryover-test.yaml")
     private val carryoverJobLocation = ObjectLocation(carryoverDocumentPath, ObjectPath.parse("main"))
     private val carryoverSinkLocation = ObjectLocation(carryoverDocumentPath, ObjectPath.parse("main.workers/sink"))
     private val channelBuffer = 4

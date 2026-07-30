@@ -37,7 +37,7 @@ import kotlin.test.assertTrue
  */
 class JobSignatureMigrationTest {
     //-----------------------------------------------------------------------------------------------------------------
-    private val documentPath = DocumentPath.parse("test/job-signature-child-test.yaml")
+    private val documentPath = DocumentPath.parse("test/job/signature/job-signature-child-test.yaml")
     private val jobLocation = ObjectLocation(documentPath, ObjectPath.parse("main"))
     private val sinkLocation = ObjectLocation(documentPath, ObjectPath.parse("main.workers/collect"))
     private val total = 50

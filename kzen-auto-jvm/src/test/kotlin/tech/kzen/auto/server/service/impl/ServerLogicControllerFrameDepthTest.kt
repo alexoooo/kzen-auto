@@ -28,9 +28,9 @@ import kotlin.test.fail
  */
 class ServerLogicControllerFrameDepthTest {
     //-----------------------------------------------------------------------------------------------------------------
-    private val level1Path = DocumentPath.parse("test/nested-depth-test.yaml")
-    private val level2Path = DocumentPath.parse("test/nested-depth-test-2.yaml")
-    private val level3Path = DocumentPath.parse("test/nested-depth-test-3.yaml")
+    private val level1Path = DocumentPath.parse("test/script/engine/nested-depth-test.yaml")
+    private val level2Path = DocumentPath.parse("test/script/engine/nested-depth-test-2.yaml")
+    private val level3Path = DocumentPath.parse("test/script/engine/nested-depth-test-3.yaml")
     private val level1 = ObjectLocation(level1Path, ObjectPath.parse("main"))
 
     private lateinit var context: KzenAutoContext

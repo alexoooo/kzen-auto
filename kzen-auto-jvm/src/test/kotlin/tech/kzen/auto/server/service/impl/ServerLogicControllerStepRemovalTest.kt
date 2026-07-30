@@ -48,13 +48,13 @@ import kotlin.test.fail
  */
 class ServerLogicControllerStepRemovalTest {
     //-----------------------------------------------------------------------------------------------------------------
-    private val documentPath = DocumentPath.parse("test/script-engine-step-removal-test.yaml")
+    private val documentPath = DocumentPath.parse("test/script/engine/script-engine-step-removal-test.yaml")
     private val scriptLocation = ObjectLocation(documentPath, ObjectPath.parse("main"))
     private val firstLocation = ObjectLocation(documentPath, ObjectPath.parse("main.steps/First"))
     private val secondLocation = ObjectLocation(documentPath, ObjectPath.parse("main.steps/Second"))
     private val thirdLocation = ObjectLocation(documentPath, ObjectPath.parse("main.steps/Third"))
 
-    private val ifDocumentPath = DocumentPath.parse("test/script-engine-if-test.yaml")
+    private val ifDocumentPath = DocumentPath.parse("test/script/control/script-engine-if-test.yaml")
     private val ifScriptLocation = ObjectLocation(ifDocumentPath, ObjectPath.parse("main"))
     private val branchLocation = ObjectLocation(ifDocumentPath, ObjectPath.parse("main.steps/Branch"))
     private val yesLocation = ObjectLocation(

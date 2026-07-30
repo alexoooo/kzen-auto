@@ -108,7 +108,7 @@ class FormulaStepTest {
         // An expression whose whole type is Nothing (e.g. `error(...)`) must compile with NO validation error
         // and throw at run time — K2 refuses an inferred-Nothing declaration, so the probe codegen must use a
         // shape that never declares Nothing directly. The inferred type approximates to Any (like Char above).
-        val validation = scriptValidationFor("test/formula-step-type-inference-test.yaml")
+        val validation = scriptValidationFor("test/script/result/formula-step-type-inference-test.yaml")
             .stepValidations[ObjectPath.parse("main.steps/NothingFormula")]
         assertNull(validation?.errorMessage,
             "a Nothing-typed expression is valid: it fails at run time, not validation time")
@@ -120,7 +120,7 @@ class FormulaStepTest {
 
     @Test
     fun unresolvableDependencyGetsAnExplicitDiagnostic() {
-        val validation = scriptValidationFor("test/script-unresolved-dependency-test.yaml")
+        val validation = scriptValidationFor("test/script/structure/script-unresolved-dependency-test.yaml")
         assertEquals(
             "Unresolved: circular or unavailable dependency",
             validation.stepValidations[ObjectPath.parse("main.steps/Dependent")]?.errorMessage)
@@ -129,7 +129,7 @@ class FormulaStepTest {
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun typeMetadataFor(stepObjectPath: String): TypeMetadata? {
-        return scriptValidationFor("test/formula-step-type-inference-test.yaml")
+        return scriptValidationFor("test/script/result/formula-step-type-inference-test.yaml")
             .stepValidations[ObjectPath.parse(stepObjectPath)]
             ?.typeMetadata
     }

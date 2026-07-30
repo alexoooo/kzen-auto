@@ -1,0 +1,14 @@
+main:
+  is: Script
+
+main.steps/First:
+  is: FormulaStep
+  code: "1"
+
+main.steps/Run:
+  is: RunStep
+  instructions: "test/script/navigation/step-nav-child-test.yaml#main"
+
+main.steps/Last:
+  is: FormulaStep
+  code: "3"

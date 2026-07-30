@@ -34,7 +34,7 @@ import kotlin.test.assertTrue
  */
 class JobDeadlockTest {
     //-----------------------------------------------------------------------------------------------------------------
-    private val documentPath = DocumentPath.parse("test/job-deadlock-csv-test.yaml")
+    private val documentPath = DocumentPath.parse("test/job/channel/job-deadlock-csv-test.yaml")
     private val jobLocation = ObjectLocation(documentPath, ObjectPath.parse("main"))
 
     private lateinit var context: KzenAutoContext

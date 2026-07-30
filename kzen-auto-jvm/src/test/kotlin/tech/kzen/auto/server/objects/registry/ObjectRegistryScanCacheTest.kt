@@ -29,7 +29,7 @@ import kotlin.test.assertSame
 class ObjectRegistryScanCacheTest {
     //-----------------------------------------------------------------------------------------------------------------
     private val registryDocument = DocumentPath.parse("auto-jvm/registry/registry-jvm.yaml")
-    private val unrelatedDocument = DocumentPath.parse("test/script-engine-if-test.yaml")
+    private val unrelatedDocument = DocumentPath.parse("test/script/control/script-engine-if-test.yaml")
 
 
     //-----------------------------------------------------------------------------------------------------------------

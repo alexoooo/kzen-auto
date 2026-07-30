@@ -1,0 +1,42 @@
+# Loop-hosting-a-child migration-resume fixture (the FizzBuzz Script Loop shape): a ForEach over an IntRange
+# (1..4 — Iterable but not a Collection; the cursor carries the live iterator, so it RESUMES) whose body hosts
+# a sub-script per item (script-loop-migration-child-test.yaml, returning item * 10). Post is the unrelated
+# edit target (10 -> 99). A correct resume collects [10, 20, 30, 40] with no child invocation re-run or
+# stale-adopted; Result = 100 + Post.
+
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.Int
+      generics: []
+      nullable: false
+
+main.steps/Items:
+  is: FormulaStep
+  code: "1..4"
+
+main.steps/Loop:
+  is: ForEachStep
+  items: Items
+
+main.steps/Loop.item/Item:
+  is: ForEachItemBinding
+
+main.steps/Loop.steps/Run:
+  is: RunStep
+  instructions: "test/script/loop/script-loop-migration-child-test.yaml#main"
+  arguments:
+    number: main.steps/Loop.item/Item
+
+main.steps/Loop.steps/After:
+  is: FormulaStep
+  code: "Run"
+
+main.steps/Post:
+  is: FormulaStep
+  code: "10"
+
+main.steps/Result:
+  is: ResultStep
+  code: "Loop.sum() + Post"

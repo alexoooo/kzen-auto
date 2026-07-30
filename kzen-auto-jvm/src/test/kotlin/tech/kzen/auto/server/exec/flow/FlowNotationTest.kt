@@ -55,28 +55,28 @@ class FlowNotationTest {
     //-----------------------------------------------------------------------------------------------------------------
     @Test
     fun inputArgumentFlowsToOutputResult() {
-        val outcome = runFlow("test/flow-execution-test.yaml", argument("x", 42))
+        val outcome = runFlow("test/flow/flow-execution-test.yaml", argument("x", 42))
         assertEquals(42, assertIs<Outcome.Success>(outcome).value.find(TupleComponentName("out")))
     }
 
 
     @Test
     fun replaceProcessorProducesConstant() {
-        val outcome = runFlow("test/flow-step-test.yaml", argument("x", "ignored-by-replace"))
+        val outcome = runFlow("test/flow/flow-step-test.yaml", argument("x", "ignored-by-replace"))
         assertEquals("Z", assertIs<Outcome.Success>(outcome).value.find(TupleComponentName("out")))
     }
 
 
     @Test
     fun streamSourceDrivesIterationsToLastValue() {
-        val outcome = runFlow("test/flow-stream-test.yaml")
+        val outcome = runFlow("test/flow/flow-stream-test.yaml")
         assertEquals(3, assertIs<Outcome.Success>(outcome).value.find(TupleComponentName("last")))
     }
 
 
     @Test
     fun vertexErrorFailsTheRun() {
-        val outcome = runFlow("test/flow-error-test.yaml", argument("n", 6))
+        val outcome = runFlow("test/flow/flow-error-test.yaml", argument("n", 6))
         assertIs<Outcome.Failed>(outcome)
     }
 
@@ -86,7 +86,7 @@ class FlowNotationTest {
         // The same divide-by-zero vertex, but with pause-on-error on: instead of failing the run it parks the
         // run Suspended(Error) at the failed vertex (a regular in-line vertex runs on the root node, so the root
         // parks) for inspect / fix + resume.
-        val engine = engineFor("test/flow-error-test.yaml", argument("n", 6))
+        val engine = engineFor("test/flow/flow-error-test.yaml", argument("n", 6))
         try {
             engine.pauseOnError(true)
             engine.resume()
@@ -96,7 +96,7 @@ class FlowNotationTest {
             assertEquals(PauseReason.Error, assertIs<NodeStatus.Suspended>(status).reason)
 
             // The client-visible trace carries the error — this is what turns the vertex's card red.
-            val traced = assertNotNull(tracedVertex(engine, "test/flow-error-test.yaml", "FerrDivide"))
+            val traced = assertNotNull(tracedVertex(engine, "test/flow/flow-error-test.yaml", "FerrDivide"))
             assertNotNull(traced.error)
         }
         finally {
@@ -111,7 +111,7 @@ class FlowNotationTest {
         // resume re-runs the recoverable block. Success must clear the error (FlowRun.clearStaleError) —
         // nothing else ever does, so without it the card would stay red for the rest of the run.
         FlakyProcessorVertex.reset()
-        val engine = engineFor("test/flow-flaky-test.yaml", argument("x", 5))
+        val engine = engineFor("test/flow/flow-flaky-test.yaml", argument("x", 5))
         try {
             engine.pauseOnError(true)
             engine.resume()
@@ -121,7 +121,7 @@ class FlowNotationTest {
                 PauseReason.Error,
                 assertIs<NodeStatus.Suspended>(engine.snapshot().root.status).reason)
             assertNotNull(
-                assertNotNull(tracedVertex(engine, "test/flow-flaky-test.yaml", "FflkFlaky")).error)
+                assertNotNull(tracedVertex(engine, "test/flow/flow-flaky-test.yaml", "FflkFlaky")).error)
 
             val outcome = runBlocking {
                 engine.resume()
@@ -130,7 +130,7 @@ class FlowNotationTest {
 
             assertEquals(5, assertIs<Outcome.Success>(outcome).value.find(TupleComponentName("out")))
             assertNull(
-                assertNotNull(tracedVertex(engine, "test/flow-flaky-test.yaml", "FflkFlaky")).error)
+                assertNotNull(tracedVertex(engine, "test/flow/flow-flaky-test.yaml", "FflkFlaky")).error)
         }
         finally {
             engine.close()
@@ -143,7 +143,7 @@ class FlowNotationTest {
         // AppendText declares two OptionalInputs; only `suffix` is wired (the FlowInput sits above
         // its column). Its "possibly one" contract holds: the vertex runs with `prefix` empty and
         // emits the suffix text alone.
-        val outcome = runFlow("test/flow-optional-input-test.yaml", argument("x", "hello"))
+        val outcome = runFlow("test/flow/flow-optional-input-test.yaml", argument("x", "hello"))
         assertEquals("hello", assertIs<Outcome.Success>(outcome).value.find(TupleComponentName("out")))
     }
 
@@ -154,7 +154,7 @@ class FlowNotationTest {
         // per iteration only one branch may produce (the filter drops odd values). An empty
         // wired optional must not gate readiness — SelectLast runs every iteration with
         // whichever branch produced (1 -> 1, 2 -> "Even", 3 -> 3; the loop keeps the last).
-        val outcome = runFlow("test/flow-select-last-test.yaml")
+        val outcome = runFlow("test/flow/flow-select-last-test.yaml")
         assertEquals(3, assertIs<Outcome.Success>(outcome).value.find(TupleComponentName("last")))
     }
 
@@ -162,7 +162,7 @@ class FlowNotationTest {
     @Test
     fun unwiredRequiredInputRefusesToCompile() {
         val failure = assertFailsWith<LogicFailure> {
-            engineFor("test/flow-invalid-unwired-required-test.yaml")
+            engineFor("test/flow/flow-invalid-unwired-required-test.yaml")
         }
         assertTrue(failure.message!!.contains("Required input 'input' of 'FinvOutput'"))
     }
@@ -171,7 +171,7 @@ class FlowNotationTest {
     @Test
     fun duplicateParameterNameRefusesToCompile() {
         val failure = assertFailsWith<LogicFailure> {
-            engineFor("test/flow-invalid-duplicate-parameter-test.yaml")
+            engineFor("test/flow/flow-invalid-duplicate-parameter-test.yaml")
         }
         assertTrue(failure.message!!.contains("Duplicate input parameter name: 'x'"))
     }
@@ -183,7 +183,7 @@ class FlowNotationTest {
         // message is bound to the callee's first parameter (`number`), and the callee's result becomes the
         // vertex message — exercising FlowRun.runChildVertex's Execution.host + cross-flavour LogicCompiler
         // dispatch (a Flow hosting a Script).
-        val outcome = runFlow("test/flow-run-test.yaml", argument("x", 6))
+        val outcome = runFlow("test/flow/flow-run-test.yaml", argument("x", 6))
         assertEquals(7, assertIs<Outcome.Success>(outcome).value.find(TupleComponentName("out")))
     }
 
@@ -193,7 +193,7 @@ class FlowNotationTest {
         // The host's wired inputs bind the callee's leading parameters in declared-input order, so the
         // second column's message reaches the second parameter rather than being dropped.
         val outcome = runFlow(
-            "test/flow-run-two-param-test.yaml",
+            "test/flow/flow-run-two-param-test.yaml",
             TupleValue(listOf(
                 TupleComponentValue(TupleComponentName("x"), 6),
                 TupleComponentValue(TupleComponentName("y"), "!"))))
@@ -204,7 +204,7 @@ class FlowNotationTest {
     @Test
     fun runLogicArgumentsLiteralBindsNamedParameter() {
         // The single wired input takes `number` by position; the `arguments` literal takes `label` by name.
-        val outcome = runFlow("test/flow-run-arguments-test.yaml", argument("x", 6))
+        val outcome = runFlow("test/flow/flow-run-arguments-test.yaml", argument("x", 6))
         assertEquals("6!", assertIs<Outcome.Success>(outcome).value.find(TupleComponentName("out")))
     }
 
@@ -212,7 +212,7 @@ class FlowNotationTest {
     @Test
     fun unknownArgumentNameRefusesToCompile() {
         val failure = assertFailsWith<LogicFailure> {
-            engineFor("test/flow-run-bad-argument-test.yaml")
+            engineFor("test/flow/flow-run-bad-argument-test.yaml")
         }
         assertTrue(failure.message!!.contains("does not match a parameter"))
     }
@@ -224,7 +224,7 @@ class FlowNotationTest {
         // is rendered via toString instead of failing the run, even though inspection runs outside
         // pause-on-error's reach.
         val widget = ArbitraryMessage(7)
-        val engine = engineFor("test/flow-execution-test.yaml", argument("x", widget))
+        val engine = engineFor("test/flow/flow-execution-test.yaml", argument("x", widget))
         try {
             val outcome = runBlocking {
                 engine.resume()
@@ -234,7 +234,7 @@ class FlowNotationTest {
 
             // History retains every frame (the run-end flush clears the latest live message), so the input
             // vertex's toString rendering is present.
-            val rendered = tracedMessages(engine, "test/flow-execution-test.yaml", "FxAlpha")
+            val rendered = tracedMessages(engine, "test/flow/flow-execution-test.yaml", "FxAlpha")
             assertTrue(rendered.contains(widget.toString()), "traced messages: $rendered")
         }
         finally {
@@ -247,13 +247,13 @@ class FlowNotationTest {
     fun streamSinkFinalStateTracedAtRunEnd() {
         // The run-end force-flush must re-emit every vertex's final frame even when throttling dropped
         // intermediate ones: the AccumulateSink's traced state holds the whole accumulation after the run.
-        val engine = engineFor("test/flow-accumulate-test.yaml")
+        val engine = engineFor("test/flow/flow-accumulate-test.yaml")
         try {
             runBlocking {
                 engine.resume()
                 engine.await()
             }
-            val sink = assertNotNull(tracedVertex(engine, "test/flow-accumulate-test.yaml", "FaccSink"))
+            val sink = assertNotNull(tracedVertex(engine, "test/flow/flow-accumulate-test.yaml", "FaccSink"))
             assertEquals(listOf("1", "2", "3"), assertNotNull(sink.state).get())
         }
         finally {
@@ -268,7 +268,7 @@ class FlowNotationTest {
         // generous bound — wall-clock stays linear in the item count rather than paying a graph build per
         // vertex execution.
         val startNanos = System.nanoTime()
-        val outcome = runFlow("test/flow-benchmark-test.yaml")
+        val outcome = runFlow("test/flow/flow-benchmark-test.yaml")
         val elapsedMillis = (System.nanoTime() - startNanos) / 1_000_000
         assertIs<Outcome.Success>(outcome)
         assertTrue(elapsedMillis < 10_000, "stream of 2000 took ${elapsedMillis}ms")

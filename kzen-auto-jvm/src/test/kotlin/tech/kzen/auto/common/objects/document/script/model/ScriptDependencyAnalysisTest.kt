@@ -10,7 +10,7 @@ import kotlin.test.assertTrue
 
 class ScriptDependencyAnalysisTest {
     //-----------------------------------------------------------------------------------------------------------------
-    private val documentPath = DocumentPath.parse("test/code-reference-rename-test.yaml")
+    private val documentPath = DocumentPath.parse("test/script/structure/code-reference-rename-test.yaml")
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -53,7 +53,7 @@ class ScriptDependencyAnalysisTest {
 
     @Test
     fun detectsLoopItemReferencedByBodyStepAsCrossBranchEdge() {
-        val loopPath = DocumentPath.parse("test/foreach-item-binding-test.yaml")
+        val loopPath = DocumentPath.parse("test/script/control/foreach-item-binding-test.yaml")
         val graphNotation = AutoTestUtils.readNotation()
         val graphDefinitionAttempt = AutoTestUtils.graphDefinitionAttempt(graphNotation)
 
@@ -77,7 +77,7 @@ class ScriptDependencyAnalysisTest {
 
     @Test
     fun aForEachItemsExpressionIsAnEdgeIntoTheLoop() {
-        val loopPath = DocumentPath.parse("test/foreach-item-binding-test.yaml")
+        val loopPath = DocumentPath.parse("test/script/control/foreach-item-binding-test.yaml")
         val graphNotation = AutoTestUtils.readNotation()
         val graphDefinitionAttempt = AutoTestUtils.graphDefinitionAttempt(graphNotation)
 
@@ -98,7 +98,7 @@ class ScriptDependencyAnalysisTest {
 
     @Test
     fun namesCollidingOnOneIdentifierAllBecomeSources() {
-        val collisionPath = DocumentPath.parse("test/script-name-collision-test.yaml")
+        val collisionPath = DocumentPath.parse("test/script/structure/script-name-collision-test.yaml")
         val graphNotation = AutoTestUtils.readNotation()
         val graphDefinitionAttempt = AutoTestUtils.graphDefinitionAttempt(graphNotation)
 
@@ -123,7 +123,7 @@ class ScriptDependencyAnalysisTest {
 
     @Test
     fun anIfBranchConditionIsACrossBranchEdgeIntoTheBranchGroup() {
-        val collisionPath = DocumentPath.parse("test/script-name-collision-test.yaml")
+        val collisionPath = DocumentPath.parse("test/script/structure/script-name-collision-test.yaml")
         val graphNotation = AutoTestUtils.readNotation()
         val graphDefinitionAttempt = AutoTestUtils.graphDefinitionAttempt(graphNotation)
 

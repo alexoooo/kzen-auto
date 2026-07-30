@@ -38,7 +38,7 @@ import kotlin.test.assertTrue
  */
 class JobExternalBridgeTest {
     //-----------------------------------------------------------------------------------------------------------------
-    private val documentPath = DocumentPath.parse("test/job-bridge-test.yaml")
+    private val documentPath = DocumentPath.parse("test/job/channel/job-bridge-test.yaml")
     private val jobLocation = ObjectLocation(documentPath, ObjectPath.parse("main"))
     private val previewWorkerLocation = ObjectLocation(documentPath, ObjectPath.parse("main.workers/preview"))
     private val inputDir = Path.of("build/job-bridge")

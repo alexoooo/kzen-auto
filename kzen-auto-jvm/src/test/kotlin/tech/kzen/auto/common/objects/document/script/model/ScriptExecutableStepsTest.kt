@@ -18,7 +18,7 @@ class ScriptExecutableStepsTest {
     //-----------------------------------------------------------------------------------------------------------------
     @Test
     fun loopItemBindingIsNotAnExecutableStep() {
-        val documentPath = DocumentPath.parse("test/foreach-item-binding-test.yaml")
+        val documentPath = DocumentPath.parse("test/script/control/foreach-item-binding-test.yaml")
 
         assertEquals(
             listOf(
@@ -33,7 +33,7 @@ class ScriptExecutableStepsTest {
 
     @Test
     fun scriptParameterIsNotAnExecutableStep() {
-        val documentPath = DocumentPath.parse("test/code-reference-rename-test.yaml")
+        val documentPath = DocumentPath.parse("test/script/structure/code-reference-rename-test.yaml")
 
         assertEquals(
             listOf(
@@ -50,7 +50,7 @@ class ScriptExecutableStepsTest {
 
     @Test
     fun branchesOfAnUnknownStepTypeAreDiscoveredFromMetadata() {
-        val documentPath = DocumentPath.parse("test/script-branch-discovery-test.yaml")
+        val documentPath = DocumentPath.parse("test/script/structure/script-branch-discovery-test.yaml")
 
         // Notation-driven: TestSwitchStep has no backing class and no entry in any kzen dispatch, so its two
         // branches are reached purely through `is: List, of: ScriptStep`. Each container precedes its own body.

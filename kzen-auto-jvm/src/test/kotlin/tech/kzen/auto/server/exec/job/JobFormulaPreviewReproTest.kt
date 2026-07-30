@@ -32,7 +32,7 @@ import kotlin.test.fail
  * Preview's [JobConventions.workerProgressPath] must carry the live sample.
  */
 class JobFormulaPreviewReproTest {
-    private val documentPath = DocumentPath.parse("test/job-formula-preview-repro-test.yaml")
+    private val documentPath = DocumentPath.parse("test/job/report/job-formula-preview-repro-test.yaml")
     private val jobLocation = ObjectLocation(documentPath, ObjectPath.parse("main"))
     private val previewLocation = ObjectLocation(documentPath, ObjectPath.parse("main.workers/Preview"))
 

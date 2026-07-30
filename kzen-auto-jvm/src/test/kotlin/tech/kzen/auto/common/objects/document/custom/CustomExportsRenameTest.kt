@@ -25,8 +25,8 @@ import kotlin.test.assertEquals
  */
 class CustomExportsRenameTest {
     //-----------------------------------------------------------------------------------------------------------------
-    private val customPath = DocumentPath.parse("test/custom-exports-rename-test.yaml")
-    private val callerPath = DocumentPath.parse("test/custom-exports-rename-caller-test.yaml")
+    private val customPath = DocumentPath.parse("test/custom/custom-exports-rename-test.yaml")
+    private val callerPath = DocumentPath.parse("test/custom/custom-exports-rename-caller-test.yaml")
 
     private val exportedPath = ObjectPath.parse("main.objects/Exported")
     private val renamedPath = ObjectPath.parse("main.objects/Renamed")

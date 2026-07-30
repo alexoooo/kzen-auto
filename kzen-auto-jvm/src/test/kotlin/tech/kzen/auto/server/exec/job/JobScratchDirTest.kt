@@ -35,7 +35,7 @@ import kotlin.test.assertNotEquals
  */
 class JobScratchDirTest {
     //-----------------------------------------------------------------------------------------------------------------
-    private val documentPath = DocumentPath.parse("test/job-scratch-dir-test.yaml")
+    private val documentPath = DocumentPath.parse("test/job/report/job-scratch-dir-test.yaml")
     private val jobLocation = ObjectLocation(documentPath, ObjectPath.parse("main"))
 
     private lateinit var context: KzenAutoContext

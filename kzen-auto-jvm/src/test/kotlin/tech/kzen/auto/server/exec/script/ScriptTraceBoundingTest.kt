@@ -47,7 +47,7 @@ class ScriptTraceBoundingTest {
     //-------------------------------------------------------------------------------------- referenced-aware collection
     @Test
     fun unreferencedLoopCollectsNothing() {
-        runScript("test/script-loop-collection-test.yaml") { engine, documentPath ->
+        runScript("test/script/loop/script-loop-collection-test.yaml") { engine, documentPath ->
             assertEquals(
                 "[]",
                 displayOf(engine, documentPath, "main.steps/Loop"),
@@ -60,7 +60,7 @@ class ScriptTraceBoundingTest {
     fun referencedLoopStillCollects() {
         // The same shape, except `Total` reads `Loop.sum()` — the guard that the elision is scoped to loops
         // whose value is genuinely unread.
-        runScript("test/script-engine-foreach-test.yaml") { engine, documentPath ->
+        runScript("test/script/control/script-engine-foreach-test.yaml") { engine, documentPath ->
             assertEquals(
                 "[2, 4, 6]",
                 displayOf(engine, documentPath, "main.steps/Loop"),
@@ -71,7 +71,7 @@ class ScriptTraceBoundingTest {
 
     @Test
     fun branchTerminalLoopCollectsButRootTerminalLoopDoesNot() {
-        runScript("test/script-loop-collection-nested-test.yaml") { engine, documentPath ->
+        runScript("test/script/loop/script-loop-collection-nested-test.yaml") { engine, documentPath ->
             // `Inner` terminates `Outer`'s body branch, so its value IS read — it is what `Outer` would collect.
             // (Its live trace is the last outer iteration's, per the per-iteration trace reset: Outer Item = 2.)
             assertEquals(
@@ -90,7 +90,7 @@ class ScriptTraceBoundingTest {
     //------------------------------------------------------------------------------------------------ history bounding
     @Test
     fun longLoopAppendsNothingToHistory() {
-        runScript("test/script-loop-history-test.yaml") { engine, documentPath ->
+        runScript("test/script/loop/script-loop-history-test.yaml") { engine, documentPath ->
             // The headline: Script's step traces are transient, so a 10k-iteration loop — which would previously
             // have retained ~40k events — appends nothing. The film strip (log-style events, null address) is
             // unaffected; this script simply produces none, so history is empty outright.
@@ -107,7 +107,7 @@ class ScriptTraceBoundingTest {
     //--------------------------------------------------------------------------------------------- display truncation
     @Test
     fun bigValueDisplayIsTruncatedWhileTheValueItselfIsNot() {
-        runScript("test/script-display-truncation-test.yaml") { engine, documentPath, outcome ->
+        runScript("test/script/engine/script-display-truncation-test.yaml") { engine, documentPath, outcome ->
             // The value graph is untouched: `Result` reads Big.length and sees the whole 10000 chars.
             assertEquals(10_000, assertIs<Outcome.Success>(outcome).value.mainComponentValue())
 
@@ -128,7 +128,7 @@ class ScriptTraceBoundingTest {
     fun unreferencedLoopStillJournalsItsValues() {
         // The counterpart to [unreferencedLoopCollectsNothing]: the loop collects no VALUES, but the display
         // journal is kept regardless, so the card can still show what each iteration produced.
-        runScript("test/script-loop-collection-test.yaml") { engine, documentPath ->
+        runScript("test/script/loop/script-loop-collection-test.yaml") { engine, documentPath ->
             val progress = progressOf(engine, documentPath, "main.steps/Loop")
 
             assertEquals(3, progress.producedCount)
@@ -147,7 +147,7 @@ class ScriptTraceBoundingTest {
 
     @Test
     fun longLoopJournalIsCapped() {
-        runScript("test/script-loop-history-test.yaml") { engine, documentPath ->
+        runScript("test/script/loop/script-loop-history-test.yaml") { engine, documentPath ->
             val progress = progressOf(engine, documentPath, "main.steps/Loop")
 
             assertEquals(10_000, progress.producedCount, "the total is untruncated")

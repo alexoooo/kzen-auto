@@ -16,7 +16,7 @@ class ScriptTreeTest {
         val graphNotation = AutoTestUtils.readNotation()
         val graphDefinitionAttempt = AutoTestUtils.graphDefinitionAttempt(graphNotation)
 
-        val documentPath = DocumentPath.parse("test/script-tree-test.yaml")
+        val documentPath = DocumentPath.parse("test/script/structure/script-tree-test.yaml")
 
         val tree = ScriptTree.read(documentPath, graphDefinitionAttempt.successful())
 
@@ -66,7 +66,7 @@ class ScriptTreeTest {
         val graphNotation = AutoTestUtils.readNotation()
         val graphDefinitionAttempt = AutoTestUtils.graphDefinitionAttempt(graphNotation)
 
-        val documentPath = DocumentPath.parse("test/script-nesting-test.yaml")
+        val documentPath = DocumentPath.parse("test/script/structure/script-nesting-test.yaml")
         val tree = ScriptTree.read(documentPath, graphDefinitionAttempt.successful())
 
         // The root steps preceding TopIf — everything a step or condition inside ANY of its branches may read.

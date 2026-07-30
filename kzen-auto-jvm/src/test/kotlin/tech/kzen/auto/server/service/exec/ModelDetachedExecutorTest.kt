@@ -27,7 +27,7 @@ import kotlin.test.assertTrue
  * excludes the `test/` nesting - an action declared in test notation never reaches the executor.
  */
 class ModelDetachedExecutorTest {
-    private val runParent = DocumentPath.parse("test/script-engine-run-test.yaml")
+    private val runParent = DocumentPath.parse("test/script/engine/script-engine-run-test.yaml")
 
 
     @Test

@@ -44,7 +44,7 @@ class JobValidatorTest {
     //-----------------------------------------------------------------------------------------------------------------
     @Test
     fun typedPayloadChainInfersEveryLane() {
-        val validation = validate("test/job-payload-formula-test.yaml")
+        val validation = validate("test/job/message/job-payload-formula-test.yaml")
 
         // Source: (1..3) infers IntRange — an Iterable type, so the lane streams its element type.
         assertEquals(TypeMetadata.int, typeOf(validation, "main.workers/source"))
@@ -62,7 +62,7 @@ class JobValidatorTest {
 
     @Test
     fun brokenExpressionIsValidationErrorNotCrash() {
-        val validation = validate("test/job-validator-error-test.yaml")
+        val validation = validate("test/job/job-validator-error-test.yaml")
 
         val source = validation.workerValidations[ObjectPath.parse("main.workers/source")]
         assertNotNull(source, "the broken Worker gets an entry")
@@ -77,7 +77,7 @@ class JobValidatorTest {
 
     @Test
     fun runWorkerTypedByScriptCalleeDeclaredResult() {
-        val validation = validate("test/job-run-host-test.yaml")
+        val validation = validate("test/job/run/job-run-host-test.yaml")
 
         // The child Script (script-engine-child-test) declares `results: main: kotlin.Int`.
         assertEquals(TypeMetadata.int, typeOf(validation, "main.workers/run"))
@@ -90,7 +90,7 @@ class JobValidatorTest {
     fun undeclaredResultComponentIsSinkValidationError() {
         // Strict Script parity: a ResultSink whose component (blank -> main) is not declared in the Job's
         // `results` signature map errors on ITS card; the well-formed source stays clean.
-        val validation = validate("test/job-result-undeclared-test.yaml")
+        val validation = validate("test/job/signature/job-result-undeclared-test.yaml")
 
         val collect = validation.workerValidations[ObjectPath.parse("main.workers/collect")]
         assertNotNull(collect)
@@ -106,7 +106,7 @@ class JobValidatorTest {
     fun declaredResultTypeMismatchIsSinkValidationError() {
         // The static assignability check: the source streams Int but the document declares `main` as String —
         // the sink's probe compile fails and the mismatch errors on ITS card before running.
-        val validation = validate("test/job-result-type-mismatch-test.yaml")
+        val validation = validate("test/job/signature/job-result-type-mismatch-test.yaml")
 
         val collect = validation.workerValidations[ObjectPath.parse("main.workers/collect")]
         assertNotNull(collect)
@@ -122,7 +122,7 @@ class JobValidatorTest {
     fun declaredSupertypeResultValidatesClean() {
         // TRUE assignability, not class-name equality: an Int stream into a declared Number result is fine
         // (Kotlin's own subtyping via the probe compile).
-        val validation = validate("test/job-result-subtype-test.yaml")
+        val validation = validate("test/job/signature/job-result-subtype-test.yaml")
 
         assertEquals(TypeMetadata.int, typeOf(validation, "main.workers/collect"))
         assertEquals(
@@ -135,7 +135,7 @@ class JobValidatorTest {
     fun nullableLaneIntoNonNullableResultIsSinkValidationError() {
         // Nullability is part of assignability: a String? lane (nullable parameter source) into a declared
         // NON-nullable String result is rejected statically, consistent with the empty-stream run contract.
-        val validation = validate("test/job-result-nullability-test.yaml")
+        val validation = validate("test/job/signature/job-result-nullability-test.yaml")
 
         val collect = validation.workerValidations[ObjectPath.parse("main.workers/collect")]
         assertNotNull(collect)
@@ -149,7 +149,7 @@ class JobValidatorTest {
         // derivation contributes no connections: every lane is unknown, so the Filter's `where` over runtime
         // CSV columns is only parsed — `amount.number > 2` references columns that cannot resolve here, and
         // must NOT be reported. No payload type shows either.
-        val validation = validate("test/job-filter-expression-test.yaml")
+        val validation = validate("test/job/report/job-filter-expression-test.yaml")
 
         for ((path, entry) in validation.workerValidations) {
             assertNull(entry.errorMessage, "no false static error on $path")
@@ -162,7 +162,7 @@ class JobValidatorTest {
     fun malformedExpressionOnCsvLaneIsStillCaught() {
         // The counterpart: a CSV lane's columns are unknown, but malformed source could not compile under any
         // header, so it must surface on the card rather than crashing the run on the first record.
-        val validation = validate("test/job-syntax-unknown-columns-test.yaml")
+        val validation = validate("test/job/job-syntax-unknown-columns-test.yaml")
 
         val formula = validation.workerValidations[ObjectPath.parse("main.workers/formula")]
         assertNotNull(formula, "the broken Worker gets an entry")

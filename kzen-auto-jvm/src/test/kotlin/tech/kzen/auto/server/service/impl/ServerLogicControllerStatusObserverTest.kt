@@ -32,7 +32,7 @@ import kotlin.test.fail
 class ServerLogicControllerStatusObserverTest {
     //-----------------------------------------------------------------------------------------------------------------
     // A Script whose leaf is a Pause step, so the run reliably settles instead of racing to terminal.
-    private val scriptPath = DocumentPath.parse("test/nested-depth-test.yaml")
+    private val scriptPath = DocumentPath.parse("test/script/engine/nested-depth-test.yaml")
     private val scriptMain = ObjectLocation(scriptPath, ObjectPath.parse("main"))
 
     private lateinit var context: KzenAutoContext

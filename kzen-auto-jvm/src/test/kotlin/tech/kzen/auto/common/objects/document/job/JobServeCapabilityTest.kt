@@ -20,7 +20,7 @@ import kotlin.test.assertNull
  */
 class JobServeCapabilityTest {
     companion object {
-        private val documentPath = DocumentPath.parse("test/job-serve-capability-test.yaml")
+        private val documentPath = DocumentPath.parse("test/job/job-serve-capability-test.yaml")
 
         private val graphStructure: GraphStructure by lazy {
             val graphNotation = AutoTestUtils.readNotation()

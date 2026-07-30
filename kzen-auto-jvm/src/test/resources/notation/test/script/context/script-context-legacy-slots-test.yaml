@@ -1,0 +1,17 @@
+# A retired `context.slots` declaration (ScriptContextValidationTest). The key is inert: ownership is offered
+# by the provider, never claimed from above, so this document captures nothing and the hosted provide stays
+# private to the document that made it. Both findings are therefore correct — a deprecation warning on `main`,
+# and the ordinary unsatisfied-requires error on the consumer, which names the providing document.
+
+main:
+  is: Script
+  context:
+    slots:
+      - TestSutContext
+
+main.steps/Run:
+  is: RunStep
+  instructions: "test/script/context/script-context-private-child-test.yaml#main"
+
+main.steps/Read:
+  is: RequireContextTestStep

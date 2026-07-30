@@ -29,8 +29,8 @@ import kotlin.test.fail
  */
 class SubScriptTraceScopingTest {
     //-----------------------------------------------------------------------------------------------------------------
-    private val rootPath = DocumentPath.parse("test/script-engine-run-loop-test.yaml")
-    private val childPath = DocumentPath.parse("test/step-nav-child-test.yaml")
+    private val rootPath = DocumentPath.parse("test/script/engine/script-engine-run-loop-test.yaml")
+    private val childPath = DocumentPath.parse("test/script/navigation/step-nav-child-test.yaml")
 
     private val mainLocation = ObjectLocation(rootPath, ObjectPath.parse("main"))
     private val callLocation = ObjectLocation(rootPath, ObjectPath.parse("main.steps/Loop.steps/Call"))

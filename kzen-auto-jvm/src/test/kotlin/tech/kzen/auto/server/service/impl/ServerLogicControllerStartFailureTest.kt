@@ -27,7 +27,7 @@ class ServerLogicControllerStartFailureTest {
         ObjectPath.parse("CacheNamed"))
 
     private val runnable = ObjectLocation(
-        DocumentPath.parse("test/nested-depth-test.yaml"),
+        DocumentPath.parse("test/script/engine/nested-depth-test.yaml"),
         ObjectPath.parse("main"))
 
     private lateinit var context: KzenAutoContext

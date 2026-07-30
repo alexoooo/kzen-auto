@@ -39,10 +39,10 @@ import kotlin.test.fail
  */
 class StepNavigationTest {
     //-----------------------------------------------------------------------------------------------------------------
-    private val rootPath = DocumentPath.parse("test/step-nav-test.yaml")
-    private val childPath = DocumentPath.parse("test/step-nav-child-test.yaml")
-    private val runFirstPath = DocumentPath.parse("test/step-nav-runfirst-test.yaml")
-    private val foreachPath = DocumentPath.parse("test/script-engine-foreach-test.yaml")
+    private val rootPath = DocumentPath.parse("test/script/navigation/step-nav-test.yaml")
+    private val childPath = DocumentPath.parse("test/script/navigation/step-nav-child-test.yaml")
+    private val runFirstPath = DocumentPath.parse("test/script/navigation/step-nav-runfirst-test.yaml")
+    private val foreachPath = DocumentPath.parse("test/script/control/script-engine-foreach-test.yaml")
 
     private val mainLocation = ObjectLocation(rootPath, ObjectPath.parse("main"))
     private val runLocation = ObjectLocation(rootPath, ObjectPath.parse("main.steps/Run"))

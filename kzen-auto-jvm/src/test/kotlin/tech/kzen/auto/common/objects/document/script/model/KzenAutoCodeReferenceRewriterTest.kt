@@ -15,9 +15,9 @@ import kotlin.test.assertTrue
 
 class KzenAutoCodeReferenceRewriterTest {
     //-----------------------------------------------------------------------------------------------------------------
-    private val documentPath = DocumentPath.parse("test/code-reference-rename-test.yaml")
-    private val ifDocumentPath = DocumentPath.parse("test/code-reference-rename-if-test.yaml")
-    private val forEachDocumentPath = DocumentPath.parse("test/code-reference-rename-foreach-test.yaml")
+    private val documentPath = DocumentPath.parse("test/script/structure/code-reference-rename-test.yaml")
+    private val ifDocumentPath = DocumentPath.parse("test/script/structure/code-reference-rename-if-test.yaml")
+    private val forEachDocumentPath = DocumentPath.parse("test/script/structure/code-reference-rename-foreach-test.yaml")
 
 
     //-----------------------------------------------------------------------------------------------------------------

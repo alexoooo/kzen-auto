@@ -48,9 +48,9 @@ import kotlin.test.fail
  */
 class ServerLogicControllerLoopTraceResetTest {
     //-----------------------------------------------------------------------------------------------------------------
-    private val inlineDocumentPath = DocumentPath.parse("test/script-loop-migration-test.yaml")
-    private val hostedDocumentPath = DocumentPath.parse("test/script-loop-trace-reset-test.yaml")
-    private val hostedChildDocumentPath = DocumentPath.parse("test/script-loop-trace-reset-child-test.yaml")
+    private val inlineDocumentPath = DocumentPath.parse("test/script/loop/script-loop-migration-test.yaml")
+    private val hostedDocumentPath = DocumentPath.parse("test/script/loop/script-loop-trace-reset-test.yaml")
+    private val hostedChildDocumentPath = DocumentPath.parse("test/script/loop/script-loop-trace-reset-child-test.yaml")
 
     private lateinit var context: KzenAutoContext
 

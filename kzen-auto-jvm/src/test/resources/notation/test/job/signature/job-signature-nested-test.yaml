@@ -1,0 +1,21 @@
+# Job -> RunWorker -> Job nesting (J2 JobSignatureTest.runWorkerHostsParameterizedJobPerElement): a FormulaSource
+# emits 1..3 into a RunWorker that hosts the parameterized SCALAR child Job
+# (job-signature-scalar-child-test.yaml#main) once per element — each Int is bound to the child's first parameter
+# `item` (single-positional convention), single-emitted (scalar-typed declaration under strict-static dispatch),
+# kept by the child's ResultSink, and yielded back as `main`, which the RunWorker emits downstream to a
+# RecordingSinkWorker. Recorded {1, 2, 3} proves the parameterized Job round-tripped per element. All Worker
+# channel ports are BLANK -> JobChannelSynthesis derives the two channels from document order. RecordingSinkWorker
+# archetype lives in job-run-worker-archetypes.yaml.
+main:
+  is: Job
+
+main.workers/source:
+  is: FormulaSourceWorker
+  code: "(1..3)"
+
+main.workers/run:
+  is: RunWorker
+  instructions: "test/job/signature/job-signature-scalar-child-test.yaml#main"
+
+main.workers/sink:
+  is: RecordingSinkWorker

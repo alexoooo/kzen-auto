@@ -24,7 +24,7 @@ import kotlin.test.assertTrue
  */
 class JobSignatureCapabilityTest {
     companion object {
-        private val documentPath = DocumentPath.parse("test/job-signature-capability-test.yaml")
+        private val documentPath = DocumentPath.parse("test/job/signature/job-signature-capability-test.yaml")
         private val jobMainLocation = ObjectLocation(documentPath, ObjectPath.parse("main"))
 
         private val graphStructure: GraphStructure by lazy {
@@ -115,7 +115,7 @@ class JobSignatureCapabilityTest {
     @Test
     fun nonJobDocumentYieldsEmptySignature() {
         val scriptLocation = ObjectLocation(
-            DocumentPath.parse("test/job-signature-script-test.yaml"), ObjectPath.parse("main"))
+            DocumentPath.parse("test/job/signature/job-signature-script-test.yaml"), ObjectPath.parse("main"))
         val signature = JobSignatureCapability.signature(graphStructure, scriptLocation)
         assertEquals(0, signature.inputs.components.size)
         assertEquals(0, signature.outputs.components.size)

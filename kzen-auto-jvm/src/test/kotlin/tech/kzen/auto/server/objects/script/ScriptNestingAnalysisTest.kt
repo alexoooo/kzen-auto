@@ -17,7 +17,7 @@ import kotlin.test.assertEquals
  */
 class ScriptNestingAnalysisTest {
     //-----------------------------------------------------------------------------------------------------------------
-    private val documentPath = DocumentPath.parse("test/script-nesting-test.yaml")
+    private val documentPath = DocumentPath.parse("test/script/structure/script-nesting-test.yaml")
 
 
     private fun enclosingLoops(targetPath: String): List<ObjectLocation> {
