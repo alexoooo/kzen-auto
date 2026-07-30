@@ -41,6 +41,7 @@ main.steps/Click 5:
 main.steps/Write 2:
   is: BrowserWriteStep
   text: Int
+  overwrite: true
 
 main.steps/Enter:
   is: BrowserEnterStep
