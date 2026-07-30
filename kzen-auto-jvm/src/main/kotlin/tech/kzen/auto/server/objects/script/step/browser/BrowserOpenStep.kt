@@ -51,9 +51,9 @@ class BrowserOpenStep(
         }
 
         // Provide the browser as this step's declared BrowserContext: shared with the action steps (and any
-        // hosted child Script), owned by the nearest enclosing document declaring a BrowserContext slot —
-        // falling back to this document — and disposed per closePolicy at that owner's settle (or by an
-        // explicit Close step).
+        // hosted child Script), owned by the furthest document on the BrowserContext export chain — this one
+        // when it exports nothing — and disposed per closePolicy at that owner's settle (or by an explicit
+        // Close step).
         execution.provideContext(driver, closePolicy) {
             WebDriverSupport.quitQuietly(driver)
         }

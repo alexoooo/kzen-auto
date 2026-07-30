@@ -59,7 +59,7 @@ class StartKzenAutoStep(
         KzenAutoSubprocessRegistry.put(name, process, tempDir)
 
         // Provide the SUT as this step's declared SutContext, qualified by name — the engine key is
-        //  "sut:$name", so one `sut` slot owns every named SUT independently. The engine auto-disposes it
+        //  "sut:$name", so one `sut` export carries every named SUT independently. The engine auto-disposes it
         //  (killing the process and deleting its temp dir via the registry) at the OWNING document's settle,
         //  per closePolicy. A matching Stop step tears it down eagerly and releases the key, so this closer
         //  does not double-fire. The registered VALUE is the handle, so a later step can resolve this SUT's

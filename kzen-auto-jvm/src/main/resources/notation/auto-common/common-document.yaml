@@ -44,14 +44,15 @@ Logic:
 # collisions impossible but would break that interop, so the aliasing risk is carried instead and surfaced
 # as a validation warning (duplicate keys are reported graph-wide).
 #
-# A key may be QUALIFIED at run time as "<key>:<qualifier>" (a SUT addressed by name): the slot owns the
-# whole family, and each qualifier is an independent registration.
+# A key may be QUALIFIED at run time as "<key>:<qualifier>" (a SUT addressed by name): each qualifier is an
+# independent registration, and an export carries the whole family.
 #
 # A concrete Context declares `abstract: true` — the standard never-instantiated-archetype pattern
 # (ResourceClosePolicy, TypeMetadata, IfBranch): its `class:` carries the type a provider registers without
 # GraphCreator ever constructing it. Attributes that NAME a Context (`provides:` / `requires:` / `releases:` /
-# `context.slots`) are declared `by: Nominal` (weak references), so a dangling entry degrades to a validation
-# message instead of failing the referring object's definition, and renaming a Context propagates into them.
+# `context.exports` / `context.requires`) are declared `by: Nominal` (weak references), so a dangling entry
+# degrades to a validation message instead of failing the referring object's definition, and renaming a
+# Context propagates into them.
 Context:
   abstract: true
   key: ""
@@ -128,10 +129,13 @@ Script:
   icon: "material-symbols:playlist-play"
   results: {}
   # The document's context declarations, read from notation by LogicContextConventions:
-  #   slots:    Contexts this document OWNS. A step anywhere below (including in a hosted sub-Script) that
-  #             provides one of these binds HERE, so disposal follows this document's settle.
-  #   requires: Contexts a CALLER must already have provided. Asserts an outer owner the local analysis
-  #             cannot see, and seeds this document's own availability so its steps do not amber.
+  #   exports:  Contexts this document OFFERS to its caller, which then owns them — and passes them further up
+  #             in turn if it exports them too. A Context one of this document's steps provides but this
+  #             document does not export is PRIVATE: it binds here and is disposed at this document's settle,
+  #             per the providing step's closePolicy. Ownership is offered, never claimed from above.
+  #   requires: Contexts a CALLER must already have provided. Asserts an outer provider the local analysis
+  #             cannot see, and seeds this document's own availability so its steps validate; a document
+  #             declaring one fails immediately when run directly, since nobody supplied it.
   context: {}
   meta:
     steps:

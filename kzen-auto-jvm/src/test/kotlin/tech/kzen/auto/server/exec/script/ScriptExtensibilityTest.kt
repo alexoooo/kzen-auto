@@ -35,16 +35,17 @@ import kotlin.test.assertIs
  *   disposes each resource per its [ResourceClosePolicy][tech.kzen.lib.common.exec.logic.ResourceClosePolicy] when
  *   the run settles: Auto always, Manual never (auto), KeepOnFailure only when the run did not fail.
  *
- * - [slotOwnedResourceOutlivesOpenerAndDisposesAtSlotOwner] / [rootDeclaredSlotOwnsAResourceOpenedTwoLevelsDown]
- *   check slot ownership (logic-spec §6): a resource a child sub-Script opens is owned by the nearest ANCESTOR
- *   document declaring a `context.slots` entry for its key, so it outlives the opener's own settle and disposes
- *   only when that ancestor settles. Both fixtures open through the RAW string API, which pins the interop
- *   half too: the slot is declared with a typed `Context` whose `key` is the same plain string.
+ * - [exportedResourceOutlivesOpenerAndDisposesAtItsRestingFrame] / [aTwoHopExportChainRestsAtTheRoot] check
+ *   export-chain ownership (logic-spec §6): a resource a child sub-Script opens climbs one frame per
+ *   `context.exports` declaration and rests at the first frame that does not export it, so it outlives the
+ *   opener's own settle and disposes only when that frame settles. Both fixtures open through the RAW string
+ *   API, which pins the interop half too: the export names a typed `Context` whose `key` is that same plain
+ *   string.
  *
- * - [openResourceSurvivesLiveEditMigration] checks the live-edit barrier (logic-spec §5 "open resources"):
- *   a resource opened before a [RunEngine.migrate] is NOT disposed by the teardown — its registration is
- *   lifted and re-adopted by the rebuilt node — and its handle is still readable afterward (the
- *   "edit-while-paused quits the browser" regression case).
+ * - [openResourceSurvivesLiveEditMigration] / [exportedResourceSurvivesMigrationOnItsRestingFrame] check the
+ *   live-edit barrier (logic-spec §5 "open resources"): a resource opened before a [RunEngine.migrate] is NOT
+ *   disposed by the teardown — its registration is lifted keyed by its OWNER's stable id and re-adopted there —
+ *   and its handle is still readable afterward (the "edit-while-paused quits the browser" regression case).
  *
  * The tests share the process-global [ResourceDisposalLog] and reset it per run, so they rely on the suite's
  * sequential execution (as the other static-fixture engine tests do).
@@ -87,11 +88,11 @@ class ScriptExtensibilityTest {
 
 
     @Test
-    fun slotOwnedResourceOutlivesOpenerAndDisposesAtSlotOwner() {
-        // The parent declares a TestSutContext slot (key `sut`); a child sub-Script opens `sut` and declares
-        // none. The parent's AssertDisposedStep (which runs after the child settled) would throw if `sut` were
-        // already disposed, so a Success proves it outlived the opener, and the disposal set proves it was
-        // disposed when the SLOT OWNER settled.
+    fun exportedResourceOutlivesOpenerAndDisposesAtItsRestingFrame() {
+        // A child sub-Script opens `sut` and exports the TestSutContext whose key that is; the parent exports
+        // nothing, so the chain stops there. The parent's AssertDisposedStep (which runs after the child
+        // settled) would throw if `sut` were already disposed, so a Success proves it outlived the opener, and
+        // the disposal set proves it was disposed when the frame it rests on settled.
         val outcome = runScript("test/script-resource-parent-scope-test.yaml")
         assertIs<Outcome.Success>(outcome)
         assertEquals(setOf("sut"), ResourceDisposalLog.disposed())
@@ -99,11 +100,11 @@ class ScriptExtensibilityTest {
 
 
     @Test
-    fun rootDeclaredSlotOwnsAResourceOpenedTwoLevelsDown() {
-        // root (declares the slot) → mid → leaf (opens `sut`). AssertDisposedStep in both mid (after the leaf
-        // settled) and root (after mid settled) would throw if it had been disposed early, so a Success proves
-        // ownership walked past both undeclared documents, and the disposal set proves it was disposed at the
-        // root settle.
+    fun aTwoHopExportChainRestsAtTheRoot() {
+        // root → mid → leaf (opens `sut`); the leaf and the mid both export, the root does not.
+        // AssertDisposedStep in both mid (after the leaf settled) and root (after mid settled) would throw if it
+        // had been disposed early, so a Success proves each declaration carried ownership one frame further, and
+        // the disposal set proves it was disposed at the root settle.
         val outcome = runScript("test/script-resource-run-scope-test.yaml")
         assertIs<Outcome.Success>(outcome)
         assertEquals(setOf("sut"), ResourceDisposalLog.disposed())
@@ -112,19 +113,48 @@ class ScriptExtensibilityTest {
 
     @Test
     fun openResourceSurvivesLiveEditMigration() {
-        // Park the run at the boundary AFTER the opening step (resource live), then drive the live-edit
-        // barrier — RunEngine.migrate with a recompiled Logic — and resume. The rebuilt run replays the
-        // completed opening step without re-executing it, so the ReadResourceStep would throw if the barrier
-        // had disposed the handle (the pre-fix behaviour); Success proves the lifted registration was
-        // re-adopted with its value, and the disposal set proves the closer still fired (exactly once) when
-        // the run settled.
+        // The rebuilt run replays the completed opening step without re-executing it, so the ReadResourceStep
+        // would throw if the barrier had disposed the handle; Success proves the lifted registration was
+        // re-adopted with its value, and the disposal set proves the closer still fired (exactly once) when the
+        // run settled.
+        val outcome = migrateAtBarrier("test/script-resource-migration-test.yaml", stepsToBarrier = 2)
+
+        assertIs<Outcome.Success>(outcome)
+        assertEquals(setOf("sut"), ResourceDisposalLog.disposed(),
+            "the surviving resource is disposed exactly once, at the run's settle")
+    }
+
+
+    @Test
+    fun exportedResourceSurvivesMigrationOnItsRestingFrame() {
+        // Same barrier, but the child that opened the resource has already settled when it is reached: the
+        // export moved ownership to the root, so the lift keys the registration by the ROOT's stable id.
+        // Success proves the root re-adopted it (the Read there finds the live handle), and the disposal set
+        // proves it disposes at that resting frame and nowhere else.
+        val outcome = migrateAtBarrier("test/script-resource-export-migration-test.yaml", stepsToBarrier = 3)
+
+        assertIs<Outcome.Success>(outcome)
+        assertEquals(setOf("sut"), ResourceDisposalLog.disposed(),
+            "the exported resource is disposed exactly once, at its resting frame's settle")
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    /**
+     * Park the run at a boundary where an opened resource is still live, drive the live-edit barrier
+     * ([RunEngine.migrate] with a recompiled Logic), then resume to a terminal outcome. [stepsToBarrier] counts
+     * boundaries rather than steps: the first [RunEngine.step] parks BEFORE the first step, so it is one more
+     * than the number of steps that must have run — and a RunStep contributes a boundary inside the document it
+     * hosts.
+     */
+    private fun migrateAtBarrier(documentPathString: String, stepsToBarrier: Int): Outcome {
         ScriptStepTestModule.register()
         ResourceDisposalLog.reset()
 
         context = KzenAutoContext.forTest()
 
         val scriptLocation = ObjectLocation(
-            DocumentPath.parse("test/script-resource-migration-test.yaml"),
+            DocumentPath.parse(documentPathString),
             ObjectPath.parse("main"))
 
         val graphNotation = AutoTestUtils.readNotation()
@@ -135,21 +165,16 @@ class ScriptExtensibilityTest {
 
         val engine = RunEngine(
             compile(), context.objectStableMapper.objectStableId(scriptLocation), TupleValue.empty)
-        try {
-            // First step parks before the opening step; second runs it (resource opens) and parks before Read.
-            engine.step()
-            engine.awaitQuiescent()
-            engine.step()
-            engine.awaitQuiescent()
+        return try {
+            repeat(stepsToBarrier) {
+                engine.step()
+                engine.awaitQuiescent()
+            }
             assertEquals(emptySet<String>(), ResourceDisposalLog.disposed(),
                 "the resource is open and undisposed at the migration barrier")
 
             engine.migrate(compile(), paused = false)
-            val outcome = runBlocking { engine.await() }
-
-            assertIs<Outcome.Success>(outcome)
-            assertEquals(setOf("sut"), ResourceDisposalLog.disposed(),
-                "the surviving resource is disposed exactly once, at the run's settle")
+            runBlocking { engine.await() }
         }
         finally {
             engine.close()
@@ -157,7 +182,6 @@ class ScriptExtensibilityTest {
     }
 
 
-    //-----------------------------------------------------------------------------------------------------------------
     private fun runScript(documentPathString: String, inputs: TupleValue = TupleValue.empty): Outcome {
         ScriptStepTestModule.register()
         ResourceDisposalLog.reset()

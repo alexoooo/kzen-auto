@@ -1,0 +1,14 @@
+# Manual reach is modelled ONE level deep, root of three documents (ScriptContextValidationTest): the leaf
+# provides with `closePolicy: manual`, the mid document it runs declares nothing, and the manual hand-up
+# repeats at each settle — so the resource does arrive here at run time, while the analysis reads only the
+# document it directly runs and errors. Accepted: an export chain is the declaration this shape wants anyway.
+
+main:
+  is: Script
+
+main.steps/Run:
+  is: RunStep
+  instructions: "test/script-context-manual-mid-test.yaml#main"
+
+main.steps/Read:
+  is: RequireContextTestStep

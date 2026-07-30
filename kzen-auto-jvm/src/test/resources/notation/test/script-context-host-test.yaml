@@ -1,13 +1,11 @@
-# Typed provide / consume across a RunStep (ScriptContextRuntimeTest), caller side: THIS document declares
-# the slot, a hosted sub-Script provides into it, and a step back here reads it — proving the typed API
-# resolves through the engine's slot ownership exactly as the raw string API does, and that a provide made
-# inside a hosted document survives that document's settle when an enclosing slot owns it.
+# Typed provide / consume across a RunStep (ScriptContextValidationTest, ScriptContextRuntimeTest), caller
+# side: a hosted sub-Script provides the Context and exports it, this document declares NOTHING and therefore
+# receives it, and a step back here reads it. The typed API resolves through the engine's export chain exactly
+# as the raw string API does, and the provide survives the hosted document's settle because ownership climbed
+# to this frame.
 
 main:
   is: Script
-  context:
-    slots:
-      - TestSutContext
 
 main.steps/Run:
   is: RunStep

@@ -1,6 +1,6 @@
 # A pure aggregator: it hosts only sub-scripts, but every one of them declares `requires: [BrowserContext]`,
 # so this document cannot run standalone either — and saying so is what keeps its RunSteps clean and lets the
-# analysis check the requirement at ITS caller (FizzBuzz.yaml, which owns the slot) instead.
+# analysis check the requirement at ITS caller (FizzBuzz.yaml, which owns the browser) instead.
 main:
   is: Script
   context:

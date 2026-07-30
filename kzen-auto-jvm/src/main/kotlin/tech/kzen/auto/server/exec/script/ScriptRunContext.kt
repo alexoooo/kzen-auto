@@ -269,9 +269,9 @@ class ScriptRunContext(
 
     //------------------------------------------------------------------------------------------- StepExecution: context
     // The typed layer over the raw resource API below: a step names a Context object (or, declaring exactly
-    // one, names nothing) and this resolves it to the engine key. Ownership is the engine's — the nearest
-    // enclosing document that declared a slot for the key, else the providing document (see
-    // [Execution.resource]); nothing here reaches up on the opener's behalf.
+    // one, names nothing) and this resolves it to the engine key. Ownership is the engine's — the furthest
+    // document on the key's export chain, else the providing document (see [Execution.resource]); nothing here
+    // reaches up on the opener's behalf.
     override fun declaredContexts(): List<ContextDescriptor> {
         val stepLocation = currentStepLocation
             ?: return listOf()
@@ -344,7 +344,7 @@ class ScriptRunContext(
 
 
     // A Context's engine key, family-qualified when a qualifier addresses one member (a SUT by name) —
-    // matching the "<family>:<qualifier>" form the engine's slot matching and family check both read.
+    // matching the "<family>:<qualifier>" form the engine's export matching and family check both read.
     private fun resourceKeyOf(descriptor: ContextDescriptor, qualifier: String?): String {
         return when {
             qualifier.isNullOrEmpty() -> descriptor.key

@@ -59,7 +59,7 @@ object ContextConventions {
 
 
     /**
-     * Resolve a notated reference (a `provides:` scalar, a `context.slots` list entry) to its Context.
+     * Resolve a notated reference (a `provides:` scalar, a `context.exports` list entry) to its Context.
      * [host] is the referring object, so a project-local Context resolves by bare name exactly as any other
      * reference does. Null when the reference names nothing, or names something that is not a Context — both
      * are reported by [LogicContextAnalysis] as a dangling reference.

@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.exec.script
 
 import tech.kzen.auto.common.objects.document.logic.context.LogicContextAnalysis
+import tech.kzen.auto.common.objects.document.logic.context.LogicContextFindings
 import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -13,91 +14,155 @@ import kotlin.test.assertTrue
 
 
 /**
- * The editor-side half of the context feature (logic-spec §6): which steps ask for a run-scoped Context
- * nothing upstream provides, plus the three neighbouring authoring mistakes the same notation walk can see.
+ * The editor-side half of the context feature (logic-spec §6): which steps ask for a run-scoped Context nothing
+ * upstream provides, plus the neighbouring authoring mistakes the same notation walk can see.
  *
- * Everything asserted here is a WARNING. That distinction is the feature's stance and worth restating: a
- * document whose requirement nothing local satisfies may be entirely correct once a caller provides it, and
- * the editor cannot see the caller — so it flags rather than refuses, and Run is never blocked.
+ * Severity is the feature's stance, so every test below asserts which channel a finding lands in. An
+ * unsatisfied requirement is an ERROR that disables Run: availability is decidable from declarations alone, so
+ * a requirement nothing satisfies could never have succeeded. The converse gets nothing at all — a resource
+ * provided and never consumed is a legitimate pattern, and keeping one private is the default. What remains is
+ * advisory: a dangling reference, a shared resource key, an export nothing can back, a retired `context.slots`.
  *
- * Four of these fixtures pin corrections that an earlier draft of the design got wrong, so none is optional:
- * [unslottedCrossDocumentProvideWarnsAndIsNotAvailable] (the soundness fix — the analysis must agree with the
- * engine's Self fallback or it certifies exactly the configuration that fails at run time),
- * [manualProvideEscapesWithoutASlot] (the second escape mechanism, which the FormulaError self-test ships),
- * [consumerAfterAReleaseWarns] (what the third marker buys), and [hostedRequiresWarnsOnTheCallersRunStep]
- * (where a deleted slot actually surfaces).
+ * Four of these fixtures pin decisions that are easy to get subtly wrong, so none is optional:
+ * [anUnexportedHostedProvideIsSilentAndItsConsumerErrors] (the soundness fix — the analysis must agree with the
+ * engine's export chain or it certifies exactly the configuration that fails at run time),
+ * [manualProvideReachesTheCallerWithoutAnExport] (the escape hatch orthogonal to the chain, which the
+ * FormulaError self-test ships), [consumerAfterAReleaseErrors] (what the third marker buys), and
+ * [hostedRequiresErrorsOnTheCallersRunStep] (where a deleted export surfaces).
  */
 class ScriptContextValidationTest {
     //-----------------------------------------------------------------------------------------------------------------
     @Test
-    fun unsatisfiedRequiresWarns() {
-        val warnings = analyze("test/script-context-warn-unsatisfied-test.yaml")
+    fun unsatisfiedRequiresErrors() {
+        val findings = analyze("test/script-context-unsatisfied-test.yaml")
 
-        assertEquals(setOf(ObjectPath.parse("main.steps/Read")), warnings.keys)
-        assertContains(warnings.getValue(ObjectPath.parse("main.steps/Read")), "Requires Test SUT")
+        assertEquals(setOf(ObjectPath.parse("main.steps/Read")), findings.errors.keys)
+        assertContains(findings.errors.getValue(ObjectPath.parse("main.steps/Read")), "Requires Test SUT")
     }
 
 
     @Test
     fun documentRequiresSeedsAvailabilityAndSilencesItsOwnSteps() {
         // The author asserting "a caller provides this" is the legitimate escape hatch, and it is why a
-        // requiring sub-script never ambers in its own document view.
-        assertEquals(mapOf(), analyze("test/script-context-warn-satisfied-test.yaml"))
+        // requiring sub-script is clean in its own document view.
+        assertEquals(LogicContextFindings.empty, analyze("test/script-context-satisfied-test.yaml"))
     }
 
 
     @Test
-    fun unslottedCrossDocumentProvideWarnsAndIsNotAvailable() {
-        val warnings = analyze("test/script-context-warn-unslotted-provide-test.yaml")
+    fun anUnexportedHostedProvideIsSilentAndItsConsumerErrors() {
+        val findings = analyze("test/script-context-private-provide-test.yaml")
+        val runPath = ObjectPath.parse("main.steps/Run")
 
-        val runWarning = warnings[ObjectPath.parse("main.steps/Run")]
-        assertTrue(runWarning != null, "the escaping provide must be reported on the RunStep")
-        assertContains(runWarning, "no enclosing slot owns it")
+        assertTrue(runPath !in findings.errors && runPath !in findings.warnings,
+            "a private provide is the default and usually the intent, so the RunStep reports nothing")
 
-        assertTrue(warnings[ObjectPath.parse("main.steps/Read")] != null,
-            "the hosted provide must NOT count as available — it dies at the hosted document's settle")
+        val readError = findings.errors[ObjectPath.parse("main.steps/Read")]
+        assertTrue(readError != null,
+            "an unexported provide dies at its own document's settle, so it is not available here")
+        assertContains(readError, "script-context-private-child-test.yaml provides it but does not export it")
     }
 
 
     @Test
-    fun aCallerDeclaredSlotSilencesBothWarnings() {
-        // The inverse of the fixture above, differing only by the caller's `context.slots` declaration.
-        assertEquals(mapOf(), analyze("test/script-context-host-test.yaml"))
+    fun aHostedDocumentsExportSatisfiesItsCaller() {
+        // The inverse of the fixture above, differing only by the callee's `context.exports` declaration — which
+        // both makes the Context available here and hands this frame the ownership that keeps it alive.
+        assertEquals(LogicContextFindings.empty, analyze("test/script-context-host-test.yaml"))
     }
 
 
     @Test
-    fun manualProvideEscapesWithoutASlot() {
-        // Structurally identical to the unslotted case — no slot anywhere — but the hosted provide is
+    fun anExportIsAvailableAfterItsRunStepAndNotBefore() {
+        val findings = analyze("test/script-context-export-positional-test.yaml")
+
+        assertEquals(setOf(ObjectPath.parse("main.steps/Read Before")), findings.errors.keys,
+            "availability accumulates in document order — the same consumer is satisfied below the call")
+    }
+
+
+    @Test
+    fun anExportChainCarriesAContextAcrossTwoDocuments() {
+        assertEquals(LogicContextFindings.empty, analyze("test/script-context-export-chain-test.yaml"),
+            "the root receives what the leaf offers, because every frame in between re-exports it")
+        assertEquals(LogicContextFindings.empty, analyze("test/script-context-export-chain-mid-test.yaml"),
+            "the middle document's export is backed by the leaf it runs, not only by a step of its own")
+    }
+
+
+    @Test
+    fun anExportNothingInTheDocumentCanProvideWarns() {
+        val findings = analyze("test/script-context-unbacked-export-test.yaml")
+
+        assertEquals(mapOf(), findings.errors, "an unkeepable promise breaks nobody's run")
+        val warning = findings.warnings[ObjectPath.parse("main")]
+        assertTrue(warning != null, "an export the document cannot deliver is reported nowhere else")
+        assertContains(warning, "Exports Test SUT, which nothing in this document can provide")
+    }
+
+
+    @Test
+    fun legacyContextSlotsIsDeprecatedAndOwnsNothing() {
+        val findings = analyze("test/script-context-legacy-slots-test.yaml")
+
+        val warning = findings.warnings[ObjectPath.parse("main")]
+        assertTrue(warning != null, "an inert declaration must be visible rather than silently ignored")
+        assertContains(warning, "Context slots has no effect")
+
+        val readError = findings.errors[ObjectPath.parse("main.steps/Read")]
+        assertTrue(readError != null,
+            "the retired key captures nothing — the hosted provide stays private to the document that made it")
+        assertContains(readError, "does not export it")
+    }
+
+
+    @Test
+    fun manualProvideReachesTheCallerWithoutAnExport() {
+        // Structurally identical to the unexported case — nothing exported anywhere — but the hosted provide is
         // `manual`, so the engine's hand-up carries it to this document at the hosted one's settle.
-        assertEquals(mapOf(), analyze("test/script-context-warn-manual-escape-test.yaml"))
+        assertEquals(LogicContextFindings.empty, analyze("test/script-context-manual-escape-test.yaml"))
     }
 
 
     @Test
-    fun hostedRequiresWarnsOnTheCallersRunStep() {
-        val warnings = analyze("test/script-context-warn-hosted-requires-test.yaml")
+    fun manualReachIsModelledOneLevelDeepOnly() {
+        // The hand-up repeats at every settle, so this resource does arrive at run time; the analysis reads only
+        // the document each RunStep names, so two levels down it errors. The remedy is the export chain, which
+        // is the declaration this shape wants anyway.
+        val findings = analyze("test/script-context-manual-two-level-test.yaml")
 
-        val runWarning = warnings[ObjectPath.parse("main.steps/Run")]
-        assertTrue(runWarning != null, "the callee's unmet requirement must surface at the call site")
-        assertContains(runWarning, "requires Test SUT")
+        val readError = findings.errors[ObjectPath.parse("main.steps/Read")]
+        assertTrue(readError != null, "a Manual provide two documents down is not modelled")
+        assertContains(readError, "Requires Test SUT")
+        assertTrue("does not export it" !in readError,
+            "the provider is two documents down, so the one-level scan cannot name it")
     }
 
 
     @Test
-    fun consumerAfterAReleaseWarns() {
-        val warnings = analyze("test/script-context-warn-after-release-test.yaml")
+    fun hostedRequiresErrorsOnTheCallersRunStep() {
+        val findings = analyze("test/script-context-hosted-requires-test.yaml")
 
-        assertEquals(setOf(ObjectPath.parse("main.steps/Read After")), warnings.keys,
-            "only the consumer placed after the closer warns — the one before it is satisfied")
+        val runError = findings.errors[ObjectPath.parse("main.steps/Run")]
+        assertTrue(runError != null, "the callee's unmet requirement must surface at the call site")
+        assertContains(runError, "requires Test SUT")
+    }
+
+
+    @Test
+    fun consumerAfterAReleaseErrors() {
+        val findings = analyze("test/script-context-after-release-test.yaml")
+
+        assertEquals(setOf(ObjectPath.parse("main.steps/Read After")), findings.errors.keys,
+            "only the consumer placed after the closer errors — the one before it is satisfied")
     }
 
 
     @Test
     fun danglingContextReferenceWarns() {
-        val warnings = analyze("test/script-context-warn-dangling-test.yaml")
+        val findings = analyze("test/script-context-dangling-test.yaml")
 
-        val warning = warnings[ObjectPath.parse("main.steps/Read")]
+        val warning = findings.warnings[ObjectPath.parse("main.steps/Read")]
         assertTrue(warning != null, "a declaration naming nothing is reported nowhere else")
         assertContains(warning, "'NoSuchContext', which is not a context")
     }
@@ -107,11 +172,11 @@ class ScriptContextValidationTest {
     fun danglingRequiresDoesNotFailTheStepsDefinition() {
         // The declarations are weak references (by: Nominal): a dangling entry warns (above), but must never
         // prune the step — WeakAttributeDefiner emits the reference without resolving it, and weak edges are
-        // invisible to transitiveSuccessful. This is the definition-layer half of the "warn, never block" stance.
+        // invisible to transitiveSuccessful. A dangling entry is an authoring mistake, not a broken document.
         val attempt = AutoTestUtils.graphDefinitionAttempt(graphNotation)
 
         val step = ObjectLocation(
-            DocumentPath.parse("test/script-context-warn-dangling-test.yaml"),
+            DocumentPath.parse("test/script-context-dangling-test.yaml"),
             ObjectPath.parse("main.steps/Read"))
 
         assertTrue(attempt.failures[step] == null,
@@ -123,9 +188,9 @@ class ScriptContextValidationTest {
 
     @Test
     fun contextsSharingOneKeyAreReportedGraphWide() {
-        val warnings = analyze("test/script-context-warn-alias-test.yaml")
+        val findings = analyze("test/script-context-alias-test.yaml")
 
-        val warning = warnings[ObjectPath.parse("main.steps/Read")]
+        val warning = findings.warnings[ObjectPath.parse("main.steps/Read")]
         assertTrue(warning != null, "two Contexts naming one key are one registration at run time")
         assertContains(warning, "shares the resource key 'probe'")
         assertContains(warning, "Probe Two")
@@ -138,7 +203,7 @@ class ScriptContextValidationTest {
     }
 
 
-    private fun analyze(documentPathString: String): Map<ObjectPath, String> {
+    private fun analyze(documentPathString: String): LogicContextFindings {
         return LogicContextAnalysis.analyze(graphNotation, DocumentPath.parse(documentPathString))
     }
 }

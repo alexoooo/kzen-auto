@@ -36,10 +36,15 @@ import kotlin.test.assertIs
  * - [providerReadsBackItsOwnProvidesArgumentFree] — an argument-free read resolves against `provides` ∪
  *   `requires` ∪ `releases`, not `requires` alone: a provider declares no `requires` (the gate would fail it
  *   before it could provide), yet its replace-existing path must still read.
- * - [qualifiedMembersOfOneFamilyAreIndependent] — `sut:a` and `sut:b` are separate registrations under one
- *   family slot.
- * - [typedProvideInsideHostedDocumentReachesTheCallersSlot] — the typed API resolves through the engine's
- *   slot ownership exactly as the raw string API does.
+ * - [qualifiedMembersOfOneFamilyAreIndependent] — `sut:a` and `sut:b` are separate registrations within one
+ *   Context family.
+ * - [typedProvideExportedByAHostedDocumentReachesTheCaller] /
+ *   [anUnexportedProvideIsDisposedAtItsProvidersSettle] — the two halves of the export chain, on documents
+ *   that differ by nothing but the callee's `context.exports`: an exported provide climbs to the caller, an
+ *   unexported one is private to the document that made it. The typed API resolves ownership exactly as the
+ *   raw string API does.
+ * - [documentRequiresGateFailsTheRunBeforeAnyStep] — a document declaring `context.requires` asserts a caller
+ *   that supplies it, so running it directly fails at run start rather than at its first requiring step.
  *
  * Shares the process-global [ContextProbeLog] and resets it per run, so it relies on the suite's sequential
  * execution (as the other static-fixture engine tests do).
@@ -121,15 +126,15 @@ class ScriptContextRuntimeTest {
                 "release saw alpha",
                 "release saw beta"),
             ContextProbeLog.entries(),
-            "`sut:a` and `sut:b` are independent registrations under one family slot")
+            "`sut:a` and `sut:b` are independent registrations within one Context family")
     }
 
 
     @Test
-    fun typedProvideInsideHostedDocumentReachesTheCallersSlot() {
-        // The caller declares the slot; the hosted sub-Script provides and declares none, so ownership walks
-        // up. Without the slot the provide would bind to the sub-Script and die at its settle, and the
-        // caller's Read would be gated out — so the Success here IS the assertion that ownership crossed.
+    fun typedProvideExportedByAHostedDocumentReachesTheCaller() {
+        // The hosted sub-Script provides and EXPORTS; the caller declares nothing, which is how it receives —
+        // it is the first frame that does not export the Context, so ownership rests there. The caller's Read
+        // runs after that sub-Script settled, so the Success here IS the assertion that ownership climbed.
         val outcome = runScript("test/script-context-host-test.yaml")
 
         assertIs<Outcome.Success>(outcome)
@@ -139,7 +144,33 @@ class ScriptContextRuntimeTest {
                 "require saw hosted",
                 "disposed[hosted]"),
             ContextProbeLog.entries(),
-            "a typed provide inside a hosted document survives that document's settle when a caller owns it")
+            "an exported provide outlives the settle of the document that made it, and disposes at its owner's")
+    }
+
+
+    @Test
+    fun anUnexportedProvideIsDisposedAtItsProvidersSettle() {
+        val outcome = runScript("test/script-context-private-provide-test.yaml")
+
+        val failed = assertIs<Outcome.Failed>(outcome)
+        assertContains(failed.message, "Requires Test SUT: not provided")
+        assertEquals(
+            listOf(
+                "provide[private] saw nothing",
+                "disposed[private]"),
+            ContextProbeLog.entries(),
+            "a provide nothing exports is private to its own frame — the caller's consumer is gated out")
+    }
+
+
+    @Test
+    fun documentRequiresGateFailsTheRunBeforeAnyStep() {
+        val outcome = runScript("test/script-context-satisfied-test.yaml")
+
+        val failed = assertIs<Outcome.Failed>(outcome)
+        assertContains(failed.message, "Requires Test SUT: not provided by caller")
+        assertEquals(listOf(), ContextProbeLog.entries(),
+            "a document asserting a caller cannot run standalone, and says so at run start")
     }
 
 

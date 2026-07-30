@@ -1,9 +1,14 @@
-# Hosted side of script-context-host-test.yaml: provides the context and declares no slot of its own, so
-# ownership walks up to the caller. `requires:` here is what tells the static analysis (and a reader) that
-# this document cannot stand alone — it is deliberately absent, because this document is the PROVIDER.
+# Hosted side of script-context-host-test.yaml (also the exporting leaf of script-context-export-chain-test.yaml
+# and script-context-export-positional-test.yaml): provides the Context and EXPORTS it, offering ownership
+# upward. Its caller does not export it in turn, so the registration rests there and outlives this document's
+# settle. `context.requires` is deliberately absent — this document is the PROVIDER, it needs nothing from a
+# caller.
 
 main:
   is: Script
+  context:
+    exports:
+      - TestSutContext
 
 main.steps/Provide:
   is: ProvideContextTestStep

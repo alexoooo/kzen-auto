@@ -46,9 +46,9 @@ external interface StepHeaderProps: Props {
     var typeMetadata: String?
     var validationError: String?
 
-    // Advisory validation message (an unsatisfied context requirement) — rendered as an amber icon beside the
-    // red-orange error one. Never blocks Run, so it is deliberately a second, differently-coloured indicator
-    // rather than a severity applied to the same icon.
+    // Advisory validation message (a dangling context reference, a shared resource key) — rendered as an amber
+    // icon beside the red-orange error one. Never blocks Run, so it is deliberately a second,
+    // differently-coloured indicator rather than a severity applied to the same icon.
     var validationWarning: String?
 
     // The run-scoped Contexts this step declares, read off notation by the host display
@@ -57,9 +57,14 @@ external interface StepHeaderProps: Props {
     // The provider's `closePolicy` wire value (`auto` / `manual` / `keepOnFailure`), phrased into the badge's
     // tooltip; null when the step inherits no policy.
     var providesClosePolicy: String?
-    // True when the step's OWN document declares a slot for the provided Context. False means no local slot
-    // owns it, so it binds to whichever document called this one — the distinction the tooltip spells out.
-    var providesBoundToDocument: Boolean?
+    // True when the step's OWN document lists the provided Context in `context.exports`, so the caller takes
+    // ownership of it. False means the resource is private to this document and dies at its settle — the
+    // distinction the tooltip spells out, and one this document's own signature settles outright.
+    var providesExported: Boolean?
+    // For a RunStep: what the hosted document exports (this document takes ownership of each), and the subset
+    // this document exports onward rather than owning.
+    var hostedExports: List<ContextDescriptor>?
+    var hostedExportsContinuingUp: List<ContextDescriptor>?
     var requiresContexts: List<ContextDescriptor>?
     var releasesContext: ContextDescriptor?
 
@@ -417,22 +422,21 @@ class StepHeader(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    // The step's run-scoped Context declarations, as three badges that must read as three DIFFERENT things —
-    // a step that opens a resource, one that merely reads it, and one that closes it are not interchangeable,
-    // and an identical chip for each would say they are. The role is carried by the chip's own skin (filled
-    // blue / plain outline / dashed muted), the identity by the Context's own icon + label, and the semantics
-    // (close policy, ownership, why a closer is never gated) by the tooltip.
+    // The step's run-scoped Context declarations, as badges that must read as DIFFERENT things — a step that
+    // opens a resource, one that receives a hosted document's export, one that merely reads it, and one that
+    // closes it are not interchangeable, and an identical chip for each would say they are. The role is carried
+    // by the chip's own skin (filled blue solid / filled blue dotted / plain outline / dashed muted), the
+    // identity by the Context's own icon + label, and the semantics (close policy, where ownership rests, why a
+    // closer is never gated) by the tooltip.
     private fun ChildrenBuilder.renderContextDeclarations() {
         props.providesContext?.let { provided ->
-            val binding =
-                if (props.providesBoundToDocument == true) {
-                    "bound to: this document"
+            val scope =
+                if (props.providesExported == true) {
+                    "exported: the calling document takes ownership, and passes it further up if it exports " +
+                            "it too"
                 }
                 else {
-                    // The owner is the nearest ENCLOSING document declaring a slot for it; with none here,
-                    // that is somewhere up the call chain — which is what makes the distinction worth stating,
-                    // since it decides when the resource is disposed.
-                    "bound to: a calling document"
+                    "private to this document: disposed when it settles"
                 }
 
             contextBadge(
@@ -440,18 +444,36 @@ class StepHeader(
                 listOfNotNull(
                     "Provides ${provided.label()}",
                     closePolicyPhrase(props.providesClosePolicy),
-                    binding
+                    scope
                 ).joinToString(" — "),
                 fill = providesFillColour,
                 accent = providesAccentColour,
                 borderLine = LineStyle.solid)
         }
 
+        props.hostedExports?.forEach { hosted ->
+            val continuingUp = props.hostedExportsContinuingUp?.any { it.location == hosted.location } == true
+
+            contextBadge(
+                hosted,
+                if (continuingUp) {
+                    "The hosted document exports ${hosted.label()}, and this document exports it onward — " +
+                            "so a caller of this one owns it"
+                }
+                else {
+                    "The hosted document exports ${hosted.label()} — this document takes ownership, and " +
+                            "disposes it when it settles"
+                },
+                fill = providesFillColour,
+                accent = providesAccentColour,
+                borderLine = LineStyle.dotted)
+        }
+
         props.requiresContexts?.forEach { required ->
             contextBadge(
                 required,
-                "Requires ${required.label()} — a step before this one must provide it, " +
-                        "or this document's context requires must declare that a caller does",
+                "Requires ${required.label()} — a step before this one must provide it, a document it runs " +
+                        "must export it, or this document's context requires must declare that a caller does",
                 fill = null,
                 accent = requiresAccentColour,
                 borderLine = LineStyle.solid)

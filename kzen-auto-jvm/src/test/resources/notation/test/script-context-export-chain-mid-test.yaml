@@ -1,0 +1,13 @@
+# Middle document of script-context-export-chain-test.yaml: provides nothing itself and exports the Context it
+# receives from the leaf it runs, passing the offer on to its own caller. An export declaration is a contract,
+# not a walk — it is honoured whether this document opens the resource or re-exports a callee's.
+
+main:
+  is: Script
+  context:
+    exports:
+      - TestSutContext
+
+main.steps/Run:
+  is: RunStep
+  instructions: "test/script-context-host-child-test.yaml#main"

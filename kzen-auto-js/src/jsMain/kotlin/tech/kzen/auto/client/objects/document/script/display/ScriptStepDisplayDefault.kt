@@ -15,6 +15,7 @@ import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.logic.context.ContextDescriptor
 import tech.kzen.auto.common.objects.document.logic.context.LogicContextConventions
+import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.objects.document.script.model.StepTrace
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.exec.*
@@ -58,7 +59,9 @@ external interface ScriptStepDisplayDefaultState: ScriptStepDisplayBaseState {
     // that keeps a fresh-list-per-publish from defeating StepHeader's RPureComponent prop check.
     var providesContext: ContextDescriptor?
     var providesClosePolicy: String?
-    var providesBoundToDocument: Boolean?
+    var providesExported: Boolean?
+    var hostedExports: List<ContextDescriptor>?
+    var hostedExportsContinuingUp: List<ContextDescriptor>?
     var requiresContexts: List<ContextDescriptor>?
     var releasesContext: ContextDescriptor?
 }
@@ -265,13 +268,29 @@ class ScriptStepDisplayDefault(
                 ?.value
         }
 
-        // Where the provided resource actually lives: this document's own slot, or (no local slot) whichever
-        // caller owns it. The badge's tooltip says which, because that is exactly the distinction a migration
-        // from the old reach-up close policies gets wrong (see LogicContextAnalysis.analyzeRunStep).
-        val providesBoundToDocument = providesContext?.let { provided ->
-            LogicContextConventions
-                .documentSlots(graphNotation, stepLocation.documentPath)
-                .any { it.location == provided.location }
+        val documentExports = LogicContextConventions.documentExports(graphNotation, stepLocation.documentPath)
+
+        // Whether the provided resource leaves this document: exported means the caller takes ownership,
+        // un-exported means it is private and dies at this document's settle. Both are legitimate, and the
+        // badge's tooltip says which — a verified claim about THIS document's own signature, not a guess about
+        // a caller the editor cannot see.
+        val providesExported = providesContext?.let { provided ->
+            documentExports.any { it.location == provided.location }
+        }
+
+        // A RunStep's counterpart: what the hosted document hands up, and which of those this document passes
+        // further up rather than owning. One notation read each, no graph walk.
+        val hostedPath = when {
+            ScriptConventions.isRunStep(graphNotation, stepLocation) ->
+                ScriptConventions.hostedDocumentPath(graphNotation, stepLocation)
+
+            else -> null
+        }
+
+        val hostedExports = hostedPath?.let { LogicContextConventions.documentExports(graphNotation, it) }
+
+        val hostedExportsContinuingUp = hostedExports?.filter { hosted ->
+            documentExports.any { it.location == hosted.location }
         }
 
         // NB: value compare (==) — summaryAttributeNames and the two context lists are freshly built each call
@@ -282,7 +301,9 @@ class ScriptStepDisplayDefault(
             state.hasFieldDefinitionError == hasFieldDefinitionError &&
             state.providesContext == providesContext &&
             state.providesClosePolicy == providesClosePolicy &&
-            state.providesBoundToDocument == providesBoundToDocument &&
+            state.providesExported == providesExported &&
+            state.hostedExports == hostedExports &&
+            state.hostedExportsContinuingUp == hostedExportsContinuingUp &&
             state.requiresContexts == requiresContexts &&
             state.releasesContext == releasesContext
         ) {
@@ -295,7 +316,9 @@ class ScriptStepDisplayDefault(
             this.hasFieldDefinitionError = hasFieldDefinitionError
             this.providesContext = providesContext
             this.providesClosePolicy = providesClosePolicy
-            this.providesBoundToDocument = providesBoundToDocument
+            this.providesExported = providesExported
+            this.hostedExports = hostedExports
+            this.hostedExportsContinuingUp = hostedExportsContinuingUp
             this.requiresContexts = requiresContexts
             this.releasesContext = releasesContext
         }
@@ -395,7 +418,9 @@ class ScriptStepDisplayDefault(
                 validationWarning = state.stepValidation?.warningMessage
                 providesContext = state.providesContext
                 providesClosePolicy = state.providesClosePolicy
-                providesBoundToDocument = state.providesBoundToDocument
+                providesExported = state.providesExported
+                hostedExports = state.hostedExports
+                hostedExportsContinuingUp = state.hostedExportsContinuingUp
                 requiresContexts = state.requiresContexts
                 releasesContext = state.releasesContext
                 skipped = traceState == StepTrace.State.Skipped

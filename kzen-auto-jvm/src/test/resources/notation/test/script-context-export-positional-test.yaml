@@ -1,0 +1,16 @@
+# An export is available AFTER its RunStep, not before (ScriptContextValidationTest). Availability accumulates
+# in document order, so the same consumer errors above the call and is satisfied below it — a hosted document's
+# export contract says nothing about what preceded the call.
+
+main:
+  is: Script
+
+main.steps/Read Before:
+  is: RequireContextTestStep
+
+main.steps/Run:
+  is: RunStep
+  instructions: "test/script-context-host-child-test.yaml#main"
+
+main.steps/Read After:
+  is: RequireContextTestStep

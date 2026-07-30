@@ -5,12 +5,16 @@ import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.attribute.AttributeSegment
+import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.model.location.ObjectReference
+import tech.kzen.lib.common.model.location.ObjectReferenceHost
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.structure.notation.DocumentNotation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
+import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.platform.collect.persistentListOf
 
@@ -199,6 +203,35 @@ object ScriptConventions {
             .directNestedObjectPaths(
                 containingLocation.objectPath, attributeLocation.attributePath.attribute)
             .map { ObjectLocation(containingLocation.documentPath, it) }
+    }
+
+
+    /** Whether [stepLocation] is a RunStep — by inheritance chain, so a subtype or a plugin's RunStep matches. */
+    fun isRunStep(graphNotation: GraphNotation, stepLocation: ObjectLocation): Boolean {
+        if (stepLocation !in graphNotation.coalesce) {
+            return false
+        }
+        return graphNotation
+            .inheritanceChain(stepLocation)
+            .any { it.objectPath.name == runStepObjectName }
+    }
+
+
+    /**
+     * The document a RunStep hosts, resolved from its `instructions` reference; null when it names nothing or
+     * nothing resolvable. Callers that reason about the caller/callee pair (the context analysis, the step
+     * badges) all need this one resolution.
+     */
+    fun hostedDocumentPath(graphNotation: GraphNotation, stepLocation: ObjectLocation): DocumentPath? {
+        val instructions = (graphNotation.firstAttribute(stepLocation, instructionsAttributePath)
+                as? ScalarAttributeNotation)
+            ?.value
+            ?.takeIf { it.isNotEmpty() }
+            ?: return null
+
+        return graphNotation.coalesce
+            .locateOptional(ObjectReference.parse(instructions), ObjectReferenceHost.ofLocation(stepLocation))
+            ?.documentPath
     }
 
 

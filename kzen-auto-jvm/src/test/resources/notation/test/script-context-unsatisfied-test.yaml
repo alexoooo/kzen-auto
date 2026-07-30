@@ -1,5 +1,5 @@
 # Unsatisfied requires (ScriptContextValidationTest): nothing before the step provides its Context, and this
-# document asserts no caller either, so the editor ambers it.
+# document asserts no caller either, so the requirement could never be met — an ERROR, which disables Run.
 
 main:
   is: Script

@@ -1,9 +1,12 @@
 # Intermediate document for script-resource-run-scope-test.yaml: runs the leaf that opens the resource, then
-# asserts it survived the leaf's settle. This document declares NO slot, so it does not own the resource — the
-# root two levels up does.
+# asserts it survived the leaf's settle. It re-exports the Context, passing the offer on, so it does not own the
+# resource — the root one frame further up does, being the first frame that declares no export for it.
 
 main:
   is: Script
+  context:
+    exports:
+      - TestSutContext
 
 main.steps/Run:
   is: RunStep

@@ -13,11 +13,11 @@ import tech.kzen.lib.common.model.location.ObjectLocation
  * registration, which is exactly what lets a typed step and a raw one interoperate. Two Contexts may therefore
  * alias; [LogicContextAnalysis] reports that graph-wide as a warning rather than preventing it.
  *
- * A key may be qualified at run time as `"<key>:<qualifier>"` (a SUT addressed by name). The slot owns the
+ * A key may be qualified at run time as `"<key>:<qualifier>"` (a SUT addressed by name). An export covers the
  * whole family; each qualifier is an independent registration.
  */
 data class ContextDescriptor(
-    /** The Context object itself — the identity `provides:` / `requires:` / `releases:` / `slots:` reference. */
+    /** The Context object itself — the identity a `provides` / `requires` / `releases` / `exports` entry names. */
     val location: ObjectLocation,
 
     /** The engine resource key (family), e.g. `browser` or `sut`. */

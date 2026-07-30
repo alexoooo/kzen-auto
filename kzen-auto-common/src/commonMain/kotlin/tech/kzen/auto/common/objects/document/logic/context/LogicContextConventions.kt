@@ -5,8 +5,10 @@ import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.model.structure.notation.AttributeNotation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
+import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.service.notation.NotationConventions
 
@@ -14,8 +16,10 @@ import tech.kzen.lib.common.service.notation.NotationConventions
 /**
  * The context declarations a Logic document and its steps carry, read straight off notation:
  *
- * - a DOCUMENT declares `context: { slots: [...], requires: [...] }` — the Contexts it owns, and the ones a
- *   caller must already have provided;
+ * - a DOCUMENT declares `context: { exports: [...], requires: [...] }` — the Contexts it offers upward to its
+ *   caller, and the ones a caller must already have provided. A provide the document does not export is
+ *   private to it: ownership is offered by the provider, never claimed by an ancestor (logic-spec §6). The
+ *   retired `context.slots` key is read only to warn about it — see [legacyDocumentSlotReferences];
  * - a STEP declares `provides: <Context>` (it opens the resource), `requires: [<Context>]` (it reads one),
  *   or `releases: <Context>` (it is a closer).
  *
@@ -37,11 +41,18 @@ object LogicContextConventions {
     val contextAttributeName = AttributeName("context")
     val contextAttributePath = AttributePath.ofName(contextAttributeName)
 
-    val slotsSegment = AttributeSegment.ofKey("slots")
+    val exportsSegment = AttributeSegment.ofKey("exports")
     val requiresSegment = AttributeSegment.ofKey("requires")
 
-    val slotsAttributePath = contextAttributePath.nest(slotsSegment)
+    val documentExportsAttributePath = contextAttributePath.nest(exportsSegment)
     val documentRequiresAttributePath = contextAttributePath.nest(requiresSegment)
+
+    // The retired `context.slots` key has no effect. Read solely so the analysis and the signature editor can
+    // WARN that a declaration still on disk is inert — deliberately not auto-migrated to `exports`, which sits
+    // on the opposite document (`slots` claimed ownership on the consumer, `exports` offers it on the provider),
+    // so a mechanical rewrite would move the wrong thing.
+    val legacySlotsSegment = AttributeSegment.ofKey("slots")
+    val legacySlotsAttributePath = contextAttributePath.nest(legacySlotsSegment)
 
     val providesAttributeName = AttributeName("provides")
     val providesAttributePath = AttributePath.ofName(providesAttributeName)
@@ -67,9 +78,14 @@ object LogicContextConventions {
 
 
     //-------------------------------------------------------------------------------------------------- document level
-    /** The Contexts [documentPath]'s `main` object declares it OWNS — the slots a descendant's provide binds into. */
-    fun documentSlots(graphNotation: GraphNotation, documentPath: DocumentPath): List<ContextDescriptor> {
-        return documentContexts(graphNotation, documentPath, slotsAttributePath)
+    /**
+     * The Contexts [documentPath]'s `main` object declares it EXPORTS — offered upward, so a provide of one of
+     * them climbs past this document's frame to its caller (and onward while each caller exports it too). A
+     * Context absent here is private to this document, disposed at its settle. The engine half is
+     * `Execution.declareExport`, called once per entry at `Logic.run` start.
+     */
+    fun documentExports(graphNotation: GraphNotation, documentPath: DocumentPath): List<ContextDescriptor> {
+        return documentContexts(graphNotation, documentPath, documentExportsAttributePath)
     }
 
 
@@ -80,8 +96,37 @@ object LogicContextConventions {
 
 
     /**
+     * The whole `context` map as notation, so an editor that upserts the map wholesale can carry through keys
+     * it does not recognize instead of eating them. Reads through inheritance like every other declaration, so
+     * a document with no local `context` yields the `Script` archetype's empty map rather than inventing one.
+     */
+    fun documentContextEntries(
+        graphNotation: GraphNotation,
+        documentPath: DocumentPath
+    ): Map<AttributeSegment, AttributeNotation> {
+        val mainLocation = ObjectLocation(documentPath, NotationConventions.mainObjectPath)
+        if (mainLocation !in graphNotation.coalesce) {
+            return mapOf()
+        }
+        return (graphNotation.firstAttribute(mainLocation, contextAttributePath) as? MapAttributeNotation)
+            ?.map
+            ?: mapOf()
+    }
+
+
+    /**
+     * The raw reference strings of a retired `context.slots` declaration, non-empty only for notation written
+     * against CTX. Raw rather than resolved because the warning needs to fire even when the entries dangle —
+     * and because nothing consumes them: the key has no effect. See [legacySlotsAttributePath].
+     */
+    fun legacyDocumentSlotReferences(graphNotation: GraphNotation, documentPath: DocumentPath): List<String> {
+        return documentContextReferences(graphNotation, documentPath, legacySlotsAttributePath)
+    }
+
+
+    /**
      * The raw (unresolved) reference strings of a document-level declaration, so the analysis can tell a
-     * dangling entry from an absent one — [documentSlots] / [documentRequires] silently drop what does not
+     * dangling entry from an absent one — [documentExports] / [documentRequires] silently drop what does not
      * resolve.
      */
     fun documentContextReferences(
@@ -189,9 +234,9 @@ object LogicContextConventions {
 
     /**
      * A declaration read as reference strings. Tolerates both notation shapes — a list (`requires: [A, B]`)
-     * and a bare scalar (`provides: A`) — so `provides` / `releases` / `requires` / `slots` share one reader.
+     * and a bare scalar (`provides: A`) — so `provides` / `releases` / `requires` / `exports` share one reader.
      * The blessed shapes are scalar for the single-valued declarations (`provides` / `releases`) and list for
-     * the multi-valued ones (`requires` / `context.slots` / `context.requires`), matching the archetypes'
+     * the multi-valued ones (`requires` / `context.exports` / `context.requires`), matching the archetypes'
      * `by: Nominal` meta declarations; either shape is safe (WeakAttributeDefiner handles both, and
      * kzen-lib's inferMetadata no longer promotes scalars naming abstract objects).
      *

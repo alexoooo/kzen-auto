@@ -1,9 +1,9 @@
 
 # A running kzen-auto system-under-test subprocess. The engine key is FAMILY-qualified per SUT name —
-# `sut:main`, `sut:other` — matching KzenAutoSubprocessRegistry.resourceKey(name), so one `sut` slot owns
-# every named SUT independently. Because a qualifier is a step parameter and may be computed, the runtime
-# requires gate and the static analysis both reason at the family level: they answer "is SOME SUT started",
-# and a name mismatch surfaces at read with the step's own diagnostic.
+# `sut:main`, `sut:other` — matching KzenAutoSubprocessRegistry.resourceKey(name), so a `sut` export carries
+# every named SUT as an independent registration. Because a qualifier is a step parameter and may be
+# computed, the runtime requires gate and the static analysis both reason at the family level: they answer
+# "is SOME SUT started", and a name mismatch surfaces at read with the step's own diagnostic.
 SutContext:
   abstract: true
   is: Context

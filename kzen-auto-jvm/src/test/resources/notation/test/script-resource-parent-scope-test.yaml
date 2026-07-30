@@ -1,13 +1,11 @@
-# Slot-owned resource fixture (ScriptExtensibilityTest): this parent Script DECLARES a TestSutContext slot,
-# then runs a child Script that opens a resource under `sut`. The child declares no slot, so the nearest
-# declaring ancestor — this document — owns it, and it is STILL open after the child has settled (an
-# unslotted open would already be disposed here). The engine disposes it when this parent Script settles.
+# Export-chain resource fixture (ScriptExtensibilityTest): this parent Script runs a child that opens a
+# resource under `sut` and exports it. Receiving takes no declaration at all — this document is simply the
+# first frame that does not export the Context, so ownership rests here and the resource is STILL open after
+# the child has settled (an unexported open would already be disposed here). The engine disposes it when this
+# parent Script settles.
 
 main:
   is: Script
-  context:
-    slots:
-      - TestSutContext
 
 main.steps/Run:
   is: RunStep

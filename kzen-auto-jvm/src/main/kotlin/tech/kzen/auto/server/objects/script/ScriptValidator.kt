@@ -99,12 +99,22 @@ class ScriptValidator(
                     survivor, StepValidation(null, "Unresolved: circular or unavailable dependency"))
             }
 
-            // Context warnings (logic-spec §6) merge in LAST — after the type fixpoint and after the survivor
+            // Context findings (logic-spec §6) merge in LAST — after the type fixpoint and after the survivor
             // pass — because the analysis reads notation only and depends on neither. Two cases, both real:
-            // a step that already has an entry keeps its type and error and gains the warning; a step with NO
-            // entry (its `definition()` returned null, so the iteration `continue`d past it) needs a fresh
-            // one. The `?: StepValidation(null, null)` covers both without a branch.
-            for ((objectPath, warning) in LogicContextAnalysis.analyze(graphNotation, documentPath)) {
+            // a step that already has an entry keeps its type and gains the finding; a step with NO entry (its
+            // `definition()` returned null, so the iteration `continue`d past it) needs a fresh one. The
+            // `?: StepValidation(null, null)` covers both without a branch.
+            val contextFindings = LogicContextAnalysis.analyze(graphNotation, documentPath)
+
+            // Errors are JOINED onto any compile error already present rather than replacing it: both are real
+            // reasons the step cannot run, and the client lifts every non-null errorMessage into its Run gate.
+            for ((objectPath, error) in contextFindings.errors) {
+                val existing = stepValidationBuffer[objectPath] ?: StepValidation(null, null)
+                stepValidationBuffer[objectPath] = existing.copy(
+                    errorMessage = listOfNotNull(existing.errorMessage, error).joinToString(" "))
+            }
+
+            for ((objectPath, warning) in contextFindings.warnings) {
                 stepValidationBuffer[objectPath] =
                     (stepValidationBuffer[objectPath] ?: StepValidation(null, null))
                         .copy(warningMessage = warning)

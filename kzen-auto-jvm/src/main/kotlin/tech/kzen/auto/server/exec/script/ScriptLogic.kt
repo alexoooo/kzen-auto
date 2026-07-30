@@ -55,13 +55,23 @@ class ScriptLogic(
     override suspend fun run(execution: Execution): TupleValue {
         val context = ScriptRunContext(execution, structure)
 
-        // Context slots this document OWNS (logic-spec §6): declared BEFORE any step runs and before any
-        // child is hosted, so a provide anywhere below binds here and its disposal follows this document's
-        // settle. Every Script's own Logic does this — root and hosted alike — which is why hosting needs no
-        // knowledge of the child's notation. A migrate rebuild re-runs `run`, so re-declaration is free.
-        for (slot in LogicContextConventions.documentSlots(
+        // Contexts this document EXPORTS (logic-spec §6): declared BEFORE any step runs and before any child is
+        // hosted, so a provide anywhere below climbs through this frame when it is on an export chain. Every
+        // Script's own Logic does this — root and hosted alike — which is why hosting needs no knowledge of the
+        // child's notation. A migrate rebuild re-runs `run`, so re-declaration is free.
+        for (export in LogicContextConventions.documentExports(
                 structure.graphNotation, structure.scriptLocation.documentPath)) {
-            execution.declareSlot(slot.key)
+            execution.declareExport(export.key)
+        }
+
+        // A document declaring `context.requires` cannot work without a caller that supplies it, so fail at run
+        // start rather than three steps in. Family-granular, and sound for the Script spine because a caller's
+        // provides always precede its RunStep positionally.
+        for (required in LogicContextConventions.documentRequires(
+                structure.graphNotation, structure.scriptLocation.documentPath)) {
+            check(execution.hasResourceInFamily(required.key)) {
+                "Requires ${required.label()}: not provided by caller"
+            }
         }
 
         // Live-edit migration (logic-spec §5): adopt the predecessor run's completed work (read once at start) so

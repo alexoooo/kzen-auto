@@ -17,12 +17,12 @@ import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
  * per-document maps (Script's ScriptValidation, Job's JobValidation).
  *
  * Error vs warning is a hard distinction, not a severity gradient: an error means the step cannot run and the
- * client's Run gate blocks on it; a warning is ADVISORY and never blocks. The context analysis emits only
- * warnings, because a document whose requirement nothing local satisfies may still be perfectly valid when a
- * caller provides it — the editor cannot see the caller, so it says so rather than refusing.
+ * client's Run gate blocks on it; a warning is ADVISORY and never blocks. The context analysis emits both — an
+ * unsatisfiable requirement is an error, while a dangling reference or an unbackable export is a warning — and
+ * a step can carry one of each, an expression compile failure joined with a context error.
  *
- * [warningMessage] is currently produced only by the Script flavour's context analysis; it simply stays null
- * for Job, which shares this type.
+ * [warningMessage] is produced only by the Script flavour's context analysis; it simply stays null for Job,
+ * which shares this type.
  */
 data class StepValidation(
     val typeMetadata: TypeMetadata?,

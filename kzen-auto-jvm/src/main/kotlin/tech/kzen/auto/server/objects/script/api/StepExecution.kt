@@ -161,9 +161,11 @@ interface StepExecution {
 
     /**
      * Open the resource this step's `provides:` Context names: register [value] and its disposal with the
-     * engine per [closePolicy]. Ownership is the nearest enclosing document declaring a `context.slots` entry
-     * for that Context, falling back to this document — so a sub-script may open a browser the root owns, but
-     * only because the root said so. [qualifier] addresses one member of a Context family (a SUT by name).
+     * engine per [closePolicy]. Ownership climbs the *export chain*: past this document if it declares that
+     * Context in `context.exports`, onward while each caller in turn exports it too, resting at the first that
+     * does not. A Context this document does not export is PRIVATE to it, disposed at its own settle — so a
+     * sub-script may open a browser the root owns, but only because the sub-script offered it up.
+     * [qualifier] addresses one member of a Context family (a SUT by name).
      *
      * Later [contextValue] reads see the handle from any step of this run and from any document it hosts
      * (Script, Flow, or Job — the engine reads along the host chain). The registration survives a live edit

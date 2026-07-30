@@ -12,9 +12,10 @@ ScriptValidator:
 # dropdown by SelectValuesEditor from the `values:` map below (keys are the enum's wire values).
 # Bound here at the type level so any `is: ResourceClosePolicy` attribute inherits both.
 #
-# The OWNER is not chosen here: it is the nearest enclosing document declaring a `context.slots` entry for
-# the provided Context, falling back to the providing document when none does. So "when the owning Script
-# finishes" may mean several documents up — the ancestor's own declaration, never the opener's reach-up.
+# The OWNER is not chosen here: it is the furthest document reachable from the providing document along an
+# unbroken chain of `context.exports` declarations, falling back to the providing document when that exports
+# nothing. So "when the owning Script finishes" may mean several documents up — one hop per export
+# declaration, resting at the first document that does not export the Context onward.
 ResourceClosePolicy:
   abstract: true
   class: tech.kzen.lib.common.exec.logic.ResourceClosePolicy

@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test
 import tech.kzen.auto.common.objects.document.logic.context.LogicContextAnalysis
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.document.DocumentPathMap
+import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.model.structure.notation.DocumentNotation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.service.parse.YamlNotationParser
@@ -15,7 +16,8 @@ import tech.kzen.lib.server.notation.ClasspathNotationMedia
 
 /**
  * The self-test suite's own notation, checked against the context analysis (logic-spec §6): every document
- * under `main/` must declare what it owns and what it needs, so opening the suite in the editor is clean.
+ * under `main/` must declare what it exports and what it needs, so the suite carries no finding at all —
+ * opening it in the editor is clean and every document's Run stays enabled.
  *
  * This is a plain unit test, NOT part of the opt-in browser-driven `selfTest` suite — it reads notation off
  * the classpath and runs the analysis directly, so it costs nothing and runs on every `build`. That matters:
@@ -24,34 +26,41 @@ import tech.kzen.lib.server.notation.ClasspathNotationMedia
  */
 class SelfTestContextDeclarationsTest {
     //-----------------------------------------------------------------------------------------------------------------
-    companion object {
-        // The one warning the suite is SUPPOSED to carry. `main/Script.yaml` is a bare harness that runs the
-        // shared `Insert Last` library script and provides no browser, so it genuinely cannot run standalone
-        // — the warning states a true fact about it. Silencing it would mean weakening the analysis or lying
-        // in the notation; leaving it is the documented resolution.
-        private val expectedWarningDocuments = setOf("main/Script.yaml")
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     @Test
     fun selfTestDocumentsCarryTheirContextDeclarations() {
         val graphNotation = readClasspathNotation()
 
-        val documentsWithWarnings = graphNotation
+        val findings = graphNotation
             .documents
             .map
             .keys
             .filter { it.asString().startsWith("main/") }
-            .filter { LogicContextAnalysis.analyze(graphNotation, it).isNotEmpty() }
-            .map { it.asString() }
-            .toSortedSet()
+            .sortedBy { it.asString() }
+            .flatMap { findingLines(graphNotation, it) }
 
         assertEquals(
-            expectedWarningDocuments.toSortedSet(),
-            documentsWithWarnings,
-            "self-test documents with unexpected context warnings — each either consumes a Context without " +
-                    "declaring `context.requires`, or hosts a document whose provide escapes into no slot")
+            listOf<String>(),
+            findings,
+            "context findings in the self-test suite's own notation — an ERROR means that document's Run is " +
+                    "disabled (a step or a hosted document requires a Context nothing supplies), a WARNING " +
+                    "is advisory (a declaration nothing backs, a dangling name, an aliased resource key)")
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    // One line per finding, severity first: a failure names the document, the object and the reason, and an
+    // error is distinguishable at a glance from an advisory warning.
+    private fun findingLines(graphNotation: GraphNotation, documentPath: DocumentPath): List<String> {
+        val findings = LogicContextAnalysis.analyze(graphNotation, documentPath)
+
+        fun lines(severity: String, messages: Map<ObjectPath, String>): List<String> {
+            return messages
+                .entries
+                .sortedBy { it.key.asString() }
+                .map { "$severity ${documentPath.asString()}#${it.key.asString()}: ${it.value}" }
+        }
+
+        return lines("ERROR", findings.errors) + lines("WARNING", findings.warnings)
     }
 
 

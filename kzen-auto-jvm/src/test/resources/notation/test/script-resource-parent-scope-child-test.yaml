@@ -1,10 +1,14 @@
-# Child Script for script-resource-parent-scope-test.yaml: opens a run-scoped resource under `sut`. Ownership
-# is the PARENT document's, because that document declares a `sut` slot — this child declares none, so the
-# resource binds there and must outlive this child's own settle. Deliberately opened through the raw string
-# API (OpenResourceTestStep), which pins the interop half: same key => same registration, typed or not.
+# Child Script for script-resource-parent-scope-test.yaml and script-resource-export-migration-test.yaml: opens
+# a run-scoped resource under `sut` and EXPORTS the Context whose key that is, offering ownership to its caller.
+# Neither caller exports it in turn, so the chain stops one frame up and the resource outlives this child's own
+# settle. Deliberately opened through the raw string API (OpenResourceTestStep), which pins the interop half:
+# same key => same registration, typed or not — the export names a typed Context, the open is a plain string.
 
 main:
   is: Script
+  context:
+    exports:
+      - TestSutContext
 
 main.steps/OpenSut:
   is: OpenResourceTestStep

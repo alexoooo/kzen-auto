@@ -1,0 +1,11 @@
+# Hosted side of script-context-private-provide-test.yaml and script-context-legacy-slots-test.yaml: provides
+# the Context and exports nothing, so the registration is PRIVATE to this document — it binds to this frame
+# and is disposed when this document settles, whatever the caller declares. A value only moves out if it is
+# exported.
+
+main:
+  is: Script
+
+main.steps/Provide:
+  is: ProvideContextTestStep
+  value: private

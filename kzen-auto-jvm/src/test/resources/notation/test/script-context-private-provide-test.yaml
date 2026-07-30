@@ -1,0 +1,17 @@
+# Private by default, from the caller's side (ScriptContextValidationTest, ScriptContextRuntimeTest). This
+# document hosts a sub-Script that PROVIDES the Context and does not export it, so the registration rests on
+# that sub-Script's own frame and is disposed the moment it settles.
+#
+# The RunStep itself is silent: keeping a resource private is the default and usually the intent, so it earns
+# no diagnostic. The later step is the ERROR, and it names the providing document plus the one-line fix. The
+# inverse fixture is script-context-host-test.yaml, where the callee exports and both go silent.
+
+main:
+  is: Script
+
+main.steps/Run:
+  is: RunStep
+  instructions: "test/script-context-private-child-test.yaml#main"
+
+main.steps/Read:
+  is: RequireContextTestStep

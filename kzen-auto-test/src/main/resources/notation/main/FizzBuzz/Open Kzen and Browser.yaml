@@ -1,5 +1,13 @@
+# Offers both resources it opens to its caller: the SUT (`auto`) and the browser (`keepOnFailure`). Without
+# these exports each would be private to this script and disposed at its settle, leaving every later
+# sub-script of the run with nothing.
+
 main:
   is: Script
+  context:
+    exports:
+      - SutContext
+      - BrowserContext
 
 main.steps/Start SUT:
   is: StartKzenAutoStep

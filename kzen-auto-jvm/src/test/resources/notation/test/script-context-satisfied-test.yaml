@@ -1,0 +1,16 @@
+# The same document as script-context-unsatisfied-test.yaml, with the author's assertion added: a caller
+# provides the Context. That assertion seeds the local analysis, so the step reports nothing — which is why a
+# sub-script declaring `context.requires` is clean in its own document view, and why the breakage surfaces at
+# the CALLER's RunStep instead.
+#
+# The same assertion makes the document non-runnable on its own, which ScriptContextRuntimeTest drives: the
+# spine gates `context.requires` at run start, and nobody supplied it.
+
+main:
+  is: Script
+  context:
+    requires:
+      - TestSutContext
+
+main.steps/Read:
+  is: RequireContextTestStep

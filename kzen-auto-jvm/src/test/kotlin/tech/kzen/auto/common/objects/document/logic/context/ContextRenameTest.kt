@@ -16,10 +16,11 @@ import kotlin.test.assertEquals
 
 /**
  * Renaming a Context rewrites the declarations that name it — the behaviour the `by: Nominal` meta
- * declarations buy (weak references are walked by the refactor's reference scan; the previous
- * inert-by-omission design left every declaration dangling after a rename). One fixture document covers all
- * three declaration shapes: the `context.slots` map-of-lists on `main`, a step's scalar `provides`, and a
- * step's list `requires`.
+ * declarations buy: weak references are walked by the refactor's reference scan, so a declaration keeps
+ * naming the Context it named rather than dangling. One fixture document covers all three declaration
+ * shapes: the `context.exports` map-of-lists on `main`, a step's scalar `provides`, and a step's list
+ * `requires`. The document-level shape is the load-bearing one — the `context` map's meta is open-keyed, so
+ * every signature key rides on that one declaration and none is enumerated anywhere.
  *
  * Scope note: the scan rewrites references held by DEFINED objects. An `abstract: true` archetype (e.g.
  * `RequireContextTestStep` itself) has no definition, so a rename does not reach the archetype's own
@@ -50,7 +51,7 @@ class ContextRenameTest {
                     main:
                       is: Script
                       context:
-                        slots:
+                        exports:
                           - TestSutContext
 
                     main.steps/Provide:
@@ -72,7 +73,7 @@ class ContextRenameTest {
         val notation = notation()
 
         assertEquals(listOf(originalContext),
-            LogicContextConventions.documentSlots(notation, documentPath).map { it.location })
+            LogicContextConventions.documentExports(notation, documentPath).map { it.location })
         assertEquals(originalContext,
             LogicContextConventions.stepProvides(notation, provideLocation)?.location)
         assertEquals(listOf(originalContext),
@@ -81,7 +82,7 @@ class ContextRenameTest {
 
 
     @Test
-    fun renamingAContextRewritesSlotsProvidesAndRequires() {
+    fun renamingAContextRewritesExportsProvidesAndRequires() {
         val notation = notation()
 
         val renamed = NotationReducer()
@@ -91,8 +92,8 @@ class ContextRenameTest {
             .graphNotation
 
         assertEquals(listOf(renamedContext),
-            LogicContextConventions.documentSlots(renamed, documentPath).map { it.location },
-            "context.slots (map-of-lists shape) must follow the rename")
+            LogicContextConventions.documentExports(renamed, documentPath).map { it.location },
+            "context.exports (map-of-lists shape) must follow the rename")
         assertEquals(renamedContext,
             LogicContextConventions.stepProvides(renamed, provideLocation)?.location,
             "scalar provides must follow the rename")

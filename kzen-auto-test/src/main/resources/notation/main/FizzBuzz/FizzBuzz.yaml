@@ -1,11 +1,10 @@
-# This document OWNS the SUT and the browser: the sub-script below opens both, and without these slots each
-# would bind to that sub-script and be disposed at its settle, leaving every later sub-script with nothing.
+# The receiving end of an export chain, and the whole ownership rule in one document: the sub-script below
+# declares `context.exports` for the SUT and the browser, so both climb out of it and rest HERE — the first
+# document that does not export them onward. The provider offers; the receiver takes ownership by saying
+# nothing. Both are therefore disposed at THIS document's settle, and the browser's `keepOnFailure` keys off
+# this run's outcome.
 main:
   is: Script
-  context:
-    slots:
-      - SutContext
-      - BrowserContext
 
 main.steps/Open Kzen and Browser:
   is: RunStep

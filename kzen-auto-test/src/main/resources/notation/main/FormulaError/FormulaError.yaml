@@ -1,12 +1,9 @@
-# Owns the SUT: the sub-script below starts it with `closePolicy: auto`, which without this slot would bind
-# it to that sub-script and kill the subprocess at its settle. The BROWSER needs no slot — it is opened
-# `manual` there, and a Manual registration hands up one level at its owner's settle, which reproduces the
-# reach this suite had before slots existed.
+# Receives the SUT by saying nothing: the sub-script below exports it, this document does not, so it rests
+# here and the subprocess is killed at this document's settle. The browser arrives by the OTHER mechanism —
+# that script keeps it private and opens it `manual`, so it outlives that script's settle and hands up one
+# level to here. The asymmetry is deliberate: it keeps both routes to a caller under the smoke suite.
 main:
   is: Script
-  context:
-    slots:
-      - SutContext
 
 main.steps/Open Kzen and Browser:
   is: RunStep

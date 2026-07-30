@@ -1,5 +1,11 @@
+# Offers only the SUT to its caller. The browser is deliberately NOT exported: it is opened `manual`, so it
+# stays private to this script yet survives its settle and hands up one level anyway — the escape hatch that
+# is orthogonal to the export chain, kept covered here so the suite exercises both routes to a caller.
 main:
   is: Script
+  context:
+    exports:
+      - SutContext
 
 # Distinct name from the FizzBuzz SUT ("main") so the two smoke tests never collide when they share one
 # tester JVM; the port needs no coordination, since each SUT takes a free one. The fixture preloads

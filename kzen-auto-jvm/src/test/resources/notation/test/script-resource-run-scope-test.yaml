@@ -1,13 +1,10 @@
-# Root-slot resource fixture (ScriptExtensibilityTest), root document: root → mid → leaf. THIS document
-# declares the `sut` slot; the leaf opens the resource and neither it nor the mid document declares one, so
-# ownership walks up two levels to here. After the mid child has settled, the resource must still be open
-# (checked here); the engine disposes it only when this root settles.
+# Two-hop export chain (ScriptExtensibilityTest), root document: root → mid → leaf. The leaf opens the resource
+# and exports it, the mid re-exports it, and THIS document declares nothing — so each declaration carries
+# ownership one frame further and it rests here. After the mid child has settled, the resource must still be
+# open (checked here); the engine disposes it only when this root settles.
 
 main:
   is: Script
-  context:
-    slots:
-      - TestSutContext
 
 main.steps/Run:
   is: RunStep
