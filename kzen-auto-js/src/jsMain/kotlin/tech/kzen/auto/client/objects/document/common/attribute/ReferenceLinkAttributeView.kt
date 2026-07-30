@@ -6,10 +6,10 @@ import react.ChildrenBuilder
 import react.State
 import react.dom.html.ReactHTML.a
 import react.dom.html.ReactHTML.span
+import tech.kzen.auto.client.objects.document.common.scope.ObjectScopedComponent
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.util.NavigationRoute
-import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
@@ -40,8 +40,7 @@ external interface ReferenceLinkAttributeViewState: State {
 class ReferenceLinkAttributeView(
     props: AttributeViewProps
 ):
-    RPureComponent<AttributeViewProps, ReferenceLinkAttributeViewState>(props),
-    ClientStateGlobal.Observer
+    ObjectScopedComponent<AttributeViewProps, ReferenceLinkAttributeViewState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
@@ -61,24 +60,8 @@ class ReferenceLinkAttributeView(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun componentDidMount() {
-        props.clientStateGlobal.observe(this)
-    }
-
-
-    override fun componentWillUnmount() {
-        props.clientStateGlobal.unobserve(this)
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     override fun onClientState(clientState: ClientState) {
         val graphNotation = clientState.graphStructure().graphNotation
-
-        if (props.objectLocation !in graphNotation.coalesce) {
-            // NB: containing step was renamed or deleted; parent re-render will swap props.objectLocation shortly
-            return
-        }
 
         val reference = graphNotation
             .firstAttribute(props.objectLocation, AttributePath.ofName(props.attributeName))

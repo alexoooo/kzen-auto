@@ -26,7 +26,7 @@ class ReportStore(
     val clientStateGlobal: ClientStateGlobal,
     val mirroredGraphStore: MirroredGraphStore,
     val restClient: ClientRestApi
-): ClientStateGlobal.Observer {
+): ClientStateGlobal.DocumentScopedObserver {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         const val debounceMillis = 1_500

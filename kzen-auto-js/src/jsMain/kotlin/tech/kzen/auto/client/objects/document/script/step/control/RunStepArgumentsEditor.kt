@@ -22,6 +22,7 @@ import tech.kzen.auto.client.objects.document.script.model.ScriptState
 import tech.kzen.auto.client.objects.document.script.model.ScriptStepReferenceStoreKey
 import tech.kzen.auto.client.objects.document.script.model.ScriptStore
 import tech.kzen.auto.client.objects.document.script.model.ScriptStoreKey
+import tech.kzen.auto.client.objects.document.common.scope.ObjectScopedComponent
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.util.async
@@ -86,9 +87,8 @@ external interface RunStepArgumentsEditorState: State {
 class RunStepArgumentsEditor(
     props: AttributeEditorProps
 ):
-    RPureComponent<AttributeEditorProps, RunStepArgumentsEditorState>(props),
+    ObjectScopedComponent<AttributeEditorProps, RunStepArgumentsEditorState>(props),
     LocalGraphStore.Observer,
-    ClientStateGlobal.Observer,
     ScriptStore.Observer,
     ScriptStepReferenceStore.Observer
 {
@@ -159,7 +159,7 @@ class RunStepArgumentsEditor(
 
 
     override fun componentDidMount() {
-        props.clientStateGlobal.observe(this)
+        super.componentDidMount()
         contextValue<DocumentBridge?>()?.lookup(ScriptStoreKey)?.observe(this)
         referenceStore()?.observe(this)
         async {
@@ -177,7 +177,7 @@ class RunStepArgumentsEditor(
 
         props.mirroredGraphStore.unobserve(this)
         contextValue<DocumentBridge?>()?.lookup(ScriptStoreKey)?.unobserve(this)
-        props.clientStateGlobal.unobserve(this)
+        super.componentWillUnmount()
     }
 
 
@@ -196,11 +196,6 @@ class RunStepArgumentsEditor(
 
     override fun onClientState(clientState: ClientState) {
         val graphNotation = clientState.graphStructure().graphNotation
-
-        if (props.objectLocation !in graphNotation.coalesce) {
-            // NB: containing step deleted or renamed and this objectLocation is stale
-            return
-        }
 
         val objectReferenceHost = ObjectReferenceHost.ofLocation(props.objectLocation)
 

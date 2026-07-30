@@ -21,6 +21,7 @@ import tech.kzen.auto.client.objects.document.script.model.ScriptState
 import tech.kzen.auto.client.objects.document.script.model.ScriptStore
 import tech.kzen.auto.client.objects.document.script.model.ScriptStoreKey
 import tech.kzen.auto.client.objects.document.script.model.ScriptStepReferenceStoreKey
+import tech.kzen.auto.client.objects.document.common.scope.ObjectScopedComponent
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.logic.LogicValidationGlobal
@@ -86,8 +87,7 @@ external interface KotlinExpressionEditorState: State {
 class KotlinExpressionEditor(
     props: KotlinExpressionEditorProps
 ):
-    RPureComponent<KotlinExpressionEditorProps, KotlinExpressionEditorState>(props),
-    ClientStateGlobal.Observer,
+    ObjectScopedComponent<KotlinExpressionEditorProps, KotlinExpressionEditorState>(props),
     ScriptStore.Observer,
     ScriptStepReferenceStore.Observer
 {
@@ -147,7 +147,7 @@ class KotlinExpressionEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
-        props.clientStateGlobal.observe(this)
+        super.componentDidMount()
         scriptStore()?.observe(this)
         referenceStore()?.observe(this)
     }
@@ -161,7 +161,7 @@ class KotlinExpressionEditor(
         referenceStore?.end(editorLocation())
 
         scriptStore()?.unobserve(this)
-        props.clientStateGlobal.unobserve(this)
+        super.componentWillUnmount()
 
         // Flush (not cancel) so a pending debounced edit is committed rather than lost.
         committer.flush()
@@ -188,11 +188,6 @@ class KotlinExpressionEditor(
     //-----------------------------------------------------------------------------------------------------------------
     override fun onClientState(clientState: ClientState) {
         val graphNotation = clientState.graphStructure().graphNotation
-
-        if (props.objectLocation !in graphNotation.coalesce) {
-            // NB: containing step deleted/renamed and this objectLocation is stale.
-            return
-        }
 
         val attributeNotation = graphNotation.mergeAttribute(
             props.objectLocation, AttributePath.ofName(props.attributeName))

@@ -134,13 +134,49 @@ deleted* (the parent hasn't yet handed it the new location). Two consequences:
   [kzen-lib stable identity](../../kzen-lib/docs/architecture.md#stable-identity-objectstablemapper)).
 - **Notation lookups throw.** `GraphNotation.inheritanceChain` / `firstAttribute` /
   `inheritanceParents` raise `IllegalArgumentException("Missing: <location>")` for a location absent from
-  `coalesce`. So any observer callback that does a notation lookup on its *own* `objectLocation` must
-  guard first — `if (objectLocation !in graphNotation.coalesce) return` (or fall back to the location
-  unchanged). `RunStepArgumentsEditor` and `RunStepDisplay` both do this. Symptom when missed:
-  `Observer error in ScriptStore: Missing: …` on rename/delete. This is also why per-RunStep
-  representative-screenshot resolution lives in `ScriptProgressStore` (which derives each RunStep's
-  owned executions from the run's execution tree and keys results by stable id), not in
-  the thumbnail's observer keyed off a possibly-stale `props.objectLocation`.
+  `coalesce`. Symptom when unhandled: `Observer error in <Component>: Missing: …` on rename/delete. This
+  is also why per-RunStep representative-screenshot resolution lives in `ScriptProgressStore` (which
+  derives each RunStep's owned executions from the run's execution tree and keys results by stable id),
+  not in the thumbnail's observer keyed off a possibly-stale `props.objectLocation`.
+
+Note that mount order rules out fixing this at the parent: React calls `componentDidMount` child-first,
+so a step's attribute editors are always registered ahead of the `AttributeEditorManager` /
+`ScriptBranchDisplay` that would unmount them — the stale child is always notified first. And deferring
+the broadcast is circular, since the broadcast is what triggers the re-render. Enforcement therefore has
+to live at the subscription boundary.
+
+#### `ClientStateGlobal`: declare the scope, don't guard the body
+
+`ClientStateGlobal.Observer.observedObjectLocation()` is **abstract on purpose** — there is no default to
+inherit silently, so every observer must answer "which object am I reading?" before it compiles.
+`ClientStateGlobal.deliver` then skips the callback outright when the declared location is absent from
+`coalesce`, and the body never guards. Both delivery sites filter: the broadcast in `publishIfReady`
+*and* the replay in `observe()`, which can hand an already-stale state to a mounting component.
+
+Three ways to satisfy it, in order of preference:
+
+| | how | who |
+|---|---|---|
+| Object-scoped React component | extend `ObjectScopedComponent<P: ObjectScopedProps, S>` — declares the scope `final` and owns the observe/unobserve pair | 17 editors, views, managers and fields |
+| Object-scoped, can't extend it | implement `Observer` and declare the scope by hand | `ScriptBranchDisplay` (keyed on `attributeLocation`), `StepPickingSelectEditorBase` (extends `SelectReferenceEditorBase`) |
+| Document-scoped | implement `ClientStateGlobal.DocumentScopedObserver` | 18 controllers and stores |
+
+`ObjectScopedProps` (`objectLocation` + `clientStateGlobal`) is the shared parent of `AttributeEditorProps`,
+`AttributeViewProps` and the signature/manager/field props that each used to re-declare the pair.
+Subclasses observing further stores override the lifecycle hooks and call `super`.
+
+This replaced 16 hand-copied `if (props.objectLocation !in graphNotation.coalesce) return` blocks; the
+missing 17th (`TargetSpecEditor`) is what motivated the change.
+
+Two things the contract deliberately does **not** cover, both of which still guard by hand:
+
+- **Other stores' observers.** `onScriptState` and friends are separate interfaces with no such filter —
+  `SelectEnclosingLoopEditor.recomputeCandidates` is reachable from both callbacks and keeps its guard.
+- **Commit paths that read notation off a timer.** `AttributeCommitter`'s debounce, flushed from
+  `componentWillUnmount`, runs outside any observer. `TargetSpecEditor.pendingNotation` guards and
+  returns null rather than committing: it merges keys it doesn't own (`policy:`, `index:`) out of the
+  stored `ClientState`, so writing a map it couldn't read back would silently drop `policy:` and turn a
+  strict target loose.
 
 ### RunStep screenshot detail = the trace timeline, not per-step latest
 

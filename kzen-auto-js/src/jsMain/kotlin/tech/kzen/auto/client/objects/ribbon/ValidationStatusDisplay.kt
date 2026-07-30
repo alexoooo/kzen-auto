@@ -42,7 +42,7 @@ class ValidationStatusDisplay(
     props: ValidationStatusDisplayProps
 ):
     RPureComponent<ValidationStatusDisplayProps, ValidationStatusDisplayState>(props),
-    ClientStateGlobal.Observer,
+    ClientStateGlobal.DocumentScopedObserver,
     LogicValidationGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------

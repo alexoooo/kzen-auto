@@ -18,7 +18,7 @@ class CustomStore(
     override val notationParser: NotationParser,
     val restClient: ClientRestApi,
     val clientRestTaskRepository: ClientRestTaskRepository
-): ClientStateGlobal.Observer, DocumentRawHost {
+): ClientStateGlobal.DocumentScopedObserver, DocumentRawHost {
     //-----------------------------------------------------------------------------------------------------------------
     interface Observer {
         fun onCustomState(customState: CustomState)

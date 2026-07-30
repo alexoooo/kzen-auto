@@ -41,7 +41,7 @@ class DataFormatController(
     props: DataFormatControllerProps
 ):
     RComponent<DataFormatControllerProps, DataFormatControllerState>(props),
-    ClientStateGlobal.Observer
+    ClientStateGlobal.DocumentScopedObserver
 {
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect

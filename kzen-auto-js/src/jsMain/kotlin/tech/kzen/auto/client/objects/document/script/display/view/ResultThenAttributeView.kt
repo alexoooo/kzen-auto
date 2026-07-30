@@ -7,9 +7,9 @@ import react.State
 import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeView
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeViewProps
+import tech.kzen.auto.client.objects.document.common.scope.ObjectScopedComponent
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
-import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.model.attribute.AttributePath
@@ -33,8 +33,7 @@ external interface ResultThenAttributeViewState: State {
 class ResultThenAttributeView(
     props: AttributeViewProps
 ):
-    RPureComponent<AttributeViewProps, ResultThenAttributeViewState>(props),
-    ClientStateGlobal.Observer
+    ObjectScopedComponent<AttributeViewProps, ResultThenAttributeViewState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
@@ -60,23 +59,8 @@ class ResultThenAttributeView(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun componentDidMount() {
-        props.clientStateGlobal.observe(this)
-    }
-
-
-    override fun componentWillUnmount() {
-        props.clientStateGlobal.unobserve(this)
-    }
-
-
     override fun onClientState(clientState: ClientState) {
         val graphNotation = clientState.graphStructure().graphNotation
-
-        if (props.objectLocation !in graphNotation.coalesce) {
-            // NB: containing step was renamed or deleted; parent re-render will swap props.objectLocation shortly
-            return
-        }
 
         val endScript = graphNotation
             .firstAttribute(props.objectLocation, AttributePath.ofName(props.attributeName))

@@ -64,7 +64,7 @@ class PreviewWorkerDisplay(
     props: PreviewWorkerDisplayProps
 ):
     RPureComponent<PreviewWorkerDisplayProps, PreviewWorkerDisplayState>(props),
-    ClientStateGlobal.Observer
+    ClientStateGlobal.DocumentScopedObserver
 {
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect

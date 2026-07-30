@@ -81,7 +81,7 @@ class HeaderRunController (
     props: HeaderRunControllerProps
 ):
     RPureComponent<HeaderRunControllerProps, HeaderRunControllerState>(props),
-    ClientStateGlobal.Observer,
+    ClientStateGlobal.DocumentScopedObserver,
     LogicValidationGlobal.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------

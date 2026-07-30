@@ -51,7 +51,7 @@ class ScriptDependencyOverlay(
     props: ScriptDependencyOverlayProps
 ):
     RPureComponent<ScriptDependencyOverlayProps, ScriptDependencyOverlayState>(props),
-    ClientStateGlobal.Observer
+    ClientStateGlobal.DocumentScopedObserver
 {
     //-----------------------------------------------------------------------------------------------------------------
     private val rootRef = createRef<HTMLDivElement>()

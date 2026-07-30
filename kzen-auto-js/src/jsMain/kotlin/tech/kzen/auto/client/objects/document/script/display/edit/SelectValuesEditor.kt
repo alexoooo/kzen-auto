@@ -7,10 +7,10 @@ import react.State
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorProps
 import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
+import tech.kzen.auto.client.objects.document.common.scope.ObjectScopedComponent
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.select.SelectOption
 import tech.kzen.auto.client.wrap.select.muiAutocompleteField
@@ -41,8 +41,7 @@ external interface SelectValuesEditorState: State {
 class SelectValuesEditor(
     props: AttributeEditorProps
 ):
-    RPureComponent<AttributeEditorProps, SelectValuesEditorState>(props),
-    ClientStateGlobal.Observer
+    ObjectScopedComponent<AttributeEditorProps, SelectValuesEditorState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
@@ -70,23 +69,8 @@ class SelectValuesEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun componentDidMount() {
-        props.clientStateGlobal.observe(this)
-    }
-
-
-    override fun componentWillUnmount() {
-        props.clientStateGlobal.unobserve(this)
-    }
-
-
     override fun onClientState(clientState: ClientState) {
         val graphStructure = clientState.graphStructure()
-
-        if (props.objectLocation !in graphStructure.graphNotation.coalesce) {
-            // NB: containing step was renamed or deleted; parent re-render will swap props.objectLocation shortly
-            return
-        }
 
         val valuesNotation = graphStructure
             .graphMetadata

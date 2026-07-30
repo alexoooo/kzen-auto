@@ -127,7 +127,7 @@ class JobController(
     props: JobControllerProps
 ):
     RPureComponent<JobControllerProps, JobControllerState>(props),
-    ClientStateGlobal.Observer,
+    ClientStateGlobal.DocumentScopedObserver,
     InsertionGlobal.Subscriber
 {
     //-----------------------------------------------------------------------------------------------------------------

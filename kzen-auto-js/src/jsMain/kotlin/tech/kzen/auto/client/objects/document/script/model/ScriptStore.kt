@@ -30,7 +30,7 @@ class ScriptStore(
     override val notationParser: NotationParser,
     override val mirroredGraphStore: MirroredGraphStore,
     val objectStableMapper: ObjectStableMapper
-): ClientStateGlobal.Observer, DocumentRawHost {
+): ClientStateGlobal.DocumentScopedObserver, DocumentRawHost {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         // NB: yields the event loop so cascading onClientState → updateIfChanged → onScriptState

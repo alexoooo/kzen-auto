@@ -65,6 +65,12 @@ abstract class StepPickingSelectEditorBase(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    // Declared here so both subclasses inherit it — their onClientState overrides read notation at this
+    // location and would otherwise have to guard each one by hand.
+    final override fun observedObjectLocation() = props.objectLocation
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     override fun onMount() {
         props.clientStateGlobal.observe(this)
         scriptStore()?.observe(this)

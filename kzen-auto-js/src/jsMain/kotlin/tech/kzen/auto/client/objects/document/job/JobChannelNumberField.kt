@@ -11,9 +11,10 @@ import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
 import tech.kzen.auto.client.objects.document.common.edit.DebouncedSubmitter
 import tech.kzen.auto.client.objects.document.common.edit.documentEditActivity
+import tech.kzen.auto.client.objects.document.common.scope.ObjectScopedComponent
+import tech.kzen.auto.client.objects.document.common.scope.ObjectScopedProps
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
-import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.installContextType
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.model.attribute.AttributePath
@@ -32,12 +33,10 @@ import web.html.HTMLInputElement
 
 
 //---------------------------------------------------------------------------------------------------------------------
-external interface JobChannelNumberFieldProps: Props {
+// NB: `objectLocation` (from ObjectScopedProps) is the object holding the attribute — always an existing
+// object: `main` for the Job-wide defaults panel, or the upstream Worker for a per-channel config field.
+external interface JobChannelNumberFieldProps: ObjectScopedProps {
     var label: String
-
-    // The object holding the attribute — always an existing object: `main` for the Job-wide defaults panel, or
-    // the upstream Worker for a per-channel config field.
-    var objectLocation: ObjectLocation
 
     // The path to the value: a top-level name (`main.batchSize`, the Job-wide default) OR a nested path
     // (`channels.<port>.batchSize` on a Worker). The path SHAPE also picks the semantics: a nested leaf can be
@@ -49,7 +48,6 @@ external interface JobChannelNumberFieldProps: Props {
     // placeholder for a nested (inheritable) field, or as the displayed value for a top-level one.
     var fallbackValue: String
 
-    var clientStateGlobal: ClientStateGlobal
     var mirroredGraphStore: MirroredGraphStore
 }
 
@@ -79,8 +77,7 @@ external interface JobChannelNumberFieldState: State {
 class JobChannelNumberField(
     props: JobChannelNumberFieldProps
 ):
-    RPureComponent<JobChannelNumberFieldProps, JobChannelNumberFieldState>(props),
-    ClientStateGlobal.Observer
+    ObjectScopedComponent<JobChannelNumberFieldProps, JobChannelNumberFieldState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     override fun JobChannelNumberFieldState.init(props: JobChannelNumberFieldProps) {
@@ -96,13 +93,8 @@ class JobChannelNumberField(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun componentDidMount() {
-        props.clientStateGlobal.observe(this)
-    }
-
-
     override fun componentWillUnmount() {
-        props.clientStateGlobal.unobserve(this)
+        super.componentWillUnmount()
         submitter.flush()
     }
 
@@ -134,13 +126,7 @@ class JobChannelNumberField(
     override fun onClientState(clientState: ClientState) {
         val graphNotation = clientState.graphStructure().graphNotation
 
-        val own: AttributeNotation? =
-            if (props.objectLocation in graphNotation.coalesce) {
-                readOwnNotation(graphNotation)
-            }
-            else {
-                null
-            }
+        val own: AttributeNotation? = readOwnNotation(graphNotation)
 
         // Gate on the observed own value (not every publish) so mid-edit typing isn't clobbered.
         if (state.ownNotation == own) {

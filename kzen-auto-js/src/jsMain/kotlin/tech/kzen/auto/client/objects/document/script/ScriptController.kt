@@ -94,7 +94,7 @@ external interface ScriptControllerState: State {
 class ScriptController:
     RPureComponent<ScriptControllerProps, ScriptControllerState>(),
     ScriptStore.Observer,
-    ClientStateGlobal.Observer,
+    ClientStateGlobal.DocumentScopedObserver,
     ViewModeGlobal.Subscriber
 {
     //-----------------------------------------------------------------------------------------------------------------

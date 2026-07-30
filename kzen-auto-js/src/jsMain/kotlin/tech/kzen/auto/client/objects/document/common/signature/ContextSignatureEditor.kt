@@ -17,10 +17,11 @@ import react.create
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.objects.document.StageErrorIndicator
+import tech.kzen.auto.client.objects.document.common.scope.ObjectScopedComponent
+import tech.kzen.auto.client.objects.document.common.scope.ObjectScopedProps
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.select.SelectOption
 import tech.kzen.auto.client.wrap.select.muiAutocompleteField
@@ -45,10 +46,7 @@ import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------
-external interface ContextSignatureEditorProps: Props {
-    var objectLocation: ObjectLocation
-
-    var clientStateGlobal: ClientStateGlobal
+external interface ContextSignatureEditorProps: ObjectScopedProps {
     var mirroredGraphStore: MirroredGraphStore
 }
 
@@ -98,8 +96,7 @@ external interface ContextSignatureEditorState: State {
  * this editor does not recognize is carried through verbatim, so a whole-map upsert never destroys one.
  */
 class ContextSignatureEditor:
-    RPureComponent<ContextSignatureEditorProps, ContextSignatureEditorState>(),
-    ClientStateGlobal.Observer
+    ObjectScopedComponent<ContextSignatureEditorProps, ContextSignatureEditorState>()
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -139,23 +136,9 @@ class ContextSignatureEditor:
     }
 
 
-    override fun componentDidMount() {
-        props.clientStateGlobal.observe(this)
-    }
-
-
-    override fun componentWillUnmount() {
-        props.clientStateGlobal.unobserve(this)
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     override fun onClientState(clientState: ClientState) {
         val graphNotation = clientState.graphDefinitionAttempt.graphStructure.graphNotation
-        if (props.objectLocation !in graphNotation.coalesce) {
-            // NB: deleted or renamed (this is a stale objectLocation)
-            return
-        }
 
         val documentPath = props.objectLocation.documentPath
         val newExports = LogicContextConventions.documentExports(graphNotation, documentPath)

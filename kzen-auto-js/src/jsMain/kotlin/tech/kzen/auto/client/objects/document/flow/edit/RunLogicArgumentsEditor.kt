@@ -16,9 +16,9 @@ import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorProps
 import tech.kzen.auto.client.objects.document.common.edit.AttributeCommitter
 import tech.kzen.auto.client.objects.document.common.edit.documentEditActivity
+import tech.kzen.auto.client.objects.document.common.scope.ObjectScopedComponent
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
-import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.installContextType
 import tech.kzen.auto.client.wrap.react
@@ -72,8 +72,7 @@ external interface RunLogicArgumentsEditorState: State {
 class RunLogicArgumentsEditor(
     props: AttributeEditorProps
 ):
-    RPureComponent<AttributeEditorProps, RunLogicArgumentsEditorState>(props),
-    ClientStateGlobal.Observer
+    ObjectScopedComponent<AttributeEditorProps, RunLogicArgumentsEditorState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
@@ -119,13 +118,8 @@ class RunLogicArgumentsEditor(
     }
 
 
-    override fun componentDidMount() {
-        props.clientStateGlobal.observe(this)
-    }
-
-
     override fun componentWillUnmount() {
-        props.clientStateGlobal.unobserve(this)
+        super.componentWillUnmount()
         committer.flush()
     }
 
@@ -133,11 +127,6 @@ class RunLogicArgumentsEditor(
     //-----------------------------------------------------------------------------------------------------------------
     override fun onClientState(clientState: ClientState) {
         val graphNotation = clientState.graphStructure().graphNotation
-
-        if (props.objectLocation !in graphNotation.coalesce) {
-            // NB: containing vertex deleted or renamed and this objectLocation is stale
-            return
-        }
 
         val calleeLocation = RunStepInstructions.instructionsLocation(graphNotation, props.objectLocation)
 

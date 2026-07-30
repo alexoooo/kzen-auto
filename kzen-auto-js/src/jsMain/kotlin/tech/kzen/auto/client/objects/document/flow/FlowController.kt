@@ -103,7 +103,7 @@ class FlowController(
 ):
     RPureComponent<FlowControllerProps, FlowControllerState>(props),
     InsertionGlobal.Subscriber,
-    ClientStateGlobal.Observer
+    ClientStateGlobal.DocumentScopedObserver
 {
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect

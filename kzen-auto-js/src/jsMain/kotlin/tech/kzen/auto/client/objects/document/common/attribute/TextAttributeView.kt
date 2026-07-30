@@ -4,9 +4,9 @@ import emotion.react.css
 import react.ChildrenBuilder
 import react.State
 import react.dom.html.ReactHTML.div
+import tech.kzen.auto.client.objects.document.common.scope.ObjectScopedComponent
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
-import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.model.attribute.AttributePath
@@ -27,8 +27,7 @@ external interface TextAttributeViewState: State {
 class TextAttributeView(
     props: AttributeViewProps
 ):
-    RPureComponent<AttributeViewProps, TextAttributeViewState>(props),
-    ClientStateGlobal.Observer
+    ObjectScopedComponent<AttributeViewProps, TextAttributeViewState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
@@ -48,23 +47,8 @@ class TextAttributeView(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun componentDidMount() {
-        props.clientStateGlobal.observe(this)
-    }
-
-
-    override fun componentWillUnmount() {
-        props.clientStateGlobal.unobserve(this)
-    }
-
-
     override fun onClientState(clientState: ClientState) {
         val graphStructure = clientState.graphStructure()
-
-        if (props.objectLocation !in graphStructure.graphNotation.coalesce) {
-            // NB: containing step was renamed or deleted; parent re-render will swap props.objectLocation shortly
-            return
-        }
 
         val text = graphStructure
             .graphNotation

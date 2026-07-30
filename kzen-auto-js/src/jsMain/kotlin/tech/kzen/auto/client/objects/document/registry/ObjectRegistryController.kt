@@ -51,7 +51,7 @@ class ObjectRegistryController(
     props: ObjectRegistryControllerProps
 ):
     RPureComponent<ObjectRegistryControllerProps, ObjectRegistryControllerState>(props),
-    ClientStateGlobal.Observer
+    ClientStateGlobal.DocumentScopedObserver
 {
     //-----------------------------------------------------------------------------------------------------------------
     override fun ObjectRegistryControllerState.init(props: ObjectRegistryControllerProps) {

@@ -12,6 +12,7 @@ import tech.kzen.auto.client.objects.document.common.edit.AttributeCommitter
 import tech.kzen.auto.client.objects.document.common.edit.documentEditActivity
 import tech.kzen.auto.client.objects.document.script.display.target.TargetTypeDisplay
 import tech.kzen.auto.client.objects.document.script.display.target.TargetValueEditorContext
+import tech.kzen.auto.client.objects.document.common.scope.ObjectScopedComponent
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.global.NavigationGlobal
@@ -72,9 +73,8 @@ external interface TargetSpecEditorState: State {
 class TargetSpecEditor(
     props: TargetSpecEditorProps
 ):
-    RPureComponent<TargetSpecEditorProps, TargetSpecEditorState>(props),
-    LocalGraphStore.Observer,
-    ClientStateGlobal.Observer
+    ObjectScopedComponent<TargetSpecEditorProps, TargetSpecEditorState>(props),
+    LocalGraphStore.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
@@ -123,9 +123,9 @@ class TargetSpecEditor(
 
 
     override fun onClientState(clientState: ClientState) {
-        val attributeNotation = clientState
-            .graphStructure()
-            .graphNotation
+        val graphNotation = clientState.graphStructure().graphNotation
+
+        val attributeNotation = graphNotation
             .firstAttribute(props.objectLocation, props.attributeName)
                 as? MapAttributeNotation
             ?: return
@@ -195,7 +195,7 @@ class TargetSpecEditor(
 
 
     override fun componentDidMount() {
-        props.clientStateGlobal.observe(this)
+        super.componentDidMount()
         async {
             props.mirroredGraphStore.observe(this)
         }
@@ -204,7 +204,7 @@ class TargetSpecEditor(
 
     override fun componentWillUnmount() {
         props.mirroredGraphStore.unobserve(this)
-        props.clientStateGlobal.unobserve(this)
+        super.componentWillUnmount()
         committer.flush()
     }
 
@@ -270,11 +270,21 @@ class TargetSpecEditor(
                     ScalarAttributeNotation(it)
         }
 
-        // Preserve keys this editor doesn't own (e.g. `policy:`) across a rewrite
-        val currentNotation = state.clientState
+        // Preserve keys this editor doesn't own (e.g. `policy:`) across a rewrite. The stored clientState can
+        // predate a rename of our own host (onClientState skips a broadcast carrying a stale objectLocation, so
+        // it never refreshes), and reading it would then throw. Bail rather than commit — writing a map we
+        // couldn't read back would silently drop `policy:`, turning a strict target loose.
+        val graphNotation = state.clientState
             ?.graphStructure()
             ?.graphNotation
-            ?.firstAttribute(props.objectLocation, props.attributeName)
+            ?: return null
+
+        if (props.objectLocation !in graphNotation.coalesce) {
+            return null
+        }
+
+        val currentNotation = graphNotation
+            .firstAttribute(props.objectLocation, props.attributeName)
             as? MapAttributeNotation
 
         currentNotation?.map?.forEach { (segment, notation) ->

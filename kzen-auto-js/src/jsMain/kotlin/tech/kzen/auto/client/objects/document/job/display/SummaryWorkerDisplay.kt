@@ -62,7 +62,7 @@ class SummaryWorkerDisplay(
     props: SummaryWorkerDisplayProps
 ):
     RPureComponent<SummaryWorkerDisplayProps, State>(props),
-    ClientStateGlobal.Observer
+    ClientStateGlobal.DocumentScopedObserver
 {
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect

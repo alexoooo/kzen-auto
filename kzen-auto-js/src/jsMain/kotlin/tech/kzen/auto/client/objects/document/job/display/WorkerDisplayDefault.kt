@@ -72,7 +72,7 @@ class WorkerDisplayDefault(
     props: WorkerDisplayDefaultProps
 ):
     RPureComponent<WorkerDisplayDefaultProps, WorkerDisplayDefaultState>(props),
-    ClientStateGlobal.Observer
+    ClientStateGlobal.DocumentScopedObserver
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {

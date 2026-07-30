@@ -8,9 +8,9 @@ import tech.kzen.auto.client.objects.document.common.edit.BooleanAttributeEditor
 import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
 import tech.kzen.auto.client.objects.document.common.edit.MultiTextAttributeEditor
 import tech.kzen.auto.client.objects.document.common.edit.TextAttributeEditor
+import tech.kzen.auto.client.objects.document.common.scope.ObjectScopedComponent
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
-import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.model.attribute.AttributePath
@@ -40,8 +40,7 @@ external interface DefaultAttributeEditorState: State {
 class DefaultAttributeEditor(
     props: AttributeEditorProps
 ):
-    RPureComponent<AttributeEditorProps, DefaultAttributeEditorState>(props),
-    ClientStateGlobal.Observer
+    ObjectScopedComponent<AttributeEditorProps, DefaultAttributeEditorState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -71,23 +70,8 @@ class DefaultAttributeEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun componentDidMount() {
-        props.clientStateGlobal.observe(this)
-    }
-
-
-    override fun componentWillUnmount() {
-        props.clientStateGlobal.unobserve(this)
-    }
-
-
     override fun onClientState(clientState: ClientState) {
         val graphStructure = clientState.graphStructure()
-
-        if (props.objectLocation !in graphStructure.graphNotation.coalesce) {
-            // NB: containing step was deleted, but its parent component hasn't re-rendered yet
-            return
-        }
 
         val attributeMetadata: AttributeMetadata? = graphStructure
             .graphMetadata

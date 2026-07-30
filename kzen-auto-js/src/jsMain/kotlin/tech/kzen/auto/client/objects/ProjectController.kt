@@ -95,7 +95,7 @@ class ProjectController(
     RPureComponent<ProjectControllerProps, ProjectControllerState>(props),
     LocalGraphStore.Observer,
     NavigationGlobal.Observer,
-    ClientStateGlobal.Observer
+    ClientStateGlobal.DocumentScopedObserver
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {

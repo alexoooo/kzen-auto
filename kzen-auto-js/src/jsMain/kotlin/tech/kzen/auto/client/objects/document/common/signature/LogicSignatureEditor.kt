@@ -21,6 +21,8 @@ import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.objects.document.common.dragdrop.dragHandle
 import tech.kzen.auto.client.objects.document.common.dragdrop.dropIndicator
 import tech.kzen.auto.client.objects.document.common.dragdrop.dropMarkerFor
+import tech.kzen.auto.client.objects.document.common.scope.ObjectScopedComponent
+import tech.kzen.auto.client.objects.document.common.scope.ObjectScopedProps
 import tech.kzen.auto.client.objects.document.objectLocationMarker
 import tech.kzen.auto.client.objects.document.script.display.dependency.StepDependencyEdges
 import tech.kzen.auto.client.objects.document.script.display.dependency.scriptGutterRow
@@ -31,7 +33,6 @@ import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.util.ClientInputUtils
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.installContextType
 import tech.kzen.auto.client.wrap.select.SelectOption
@@ -65,10 +66,7 @@ import web.html.HTMLInputElement
 
 
 //---------------------------------------------------------------------------------------------------------------------
-external interface LogicSignatureEditorProps: Props {
-    var objectLocation: ObjectLocation
-
-    var clientStateGlobal: ClientStateGlobal
+external interface LogicSignatureEditorProps: ObjectScopedProps {
     var mirroredGraphStore: MirroredGraphStore
 
     // The latest run's trace snapshot, fetched by the HOST controller — each flavour already polls it with
@@ -117,8 +115,7 @@ external interface LogicSignatureEditorState: State {
  * handle to reorder. Generic type arguments are preserved across edits but are not yet editable here.
  */
 class LogicSignatureEditor:
-    RPureComponent<LogicSignatureEditorProps, LogicSignatureEditorState>(),
-    ClientStateGlobal.Observer
+    ObjectScopedComponent<LogicSignatureEditorProps, LogicSignatureEditorState>()
 {
     //-----------------------------------------------------------------------------------------------------------------
     data class ParameterRow(
@@ -176,24 +173,10 @@ class LogicSignatureEditor:
     }
 
 
-    override fun componentDidMount() {
-        props.clientStateGlobal.observe(this)
-    }
-
-
-    override fun componentWillUnmount() {
-        props.clientStateGlobal.unobserve(this)
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     override fun onClientState(clientState: ClientState) {
         val graphStructure = clientState.graphDefinitionAttempt.graphStructure
         val graphNotation = graphStructure.graphNotation
-        if (props.objectLocation !in graphNotation.coalesce) {
-            // NB: deleted or renamed (this is a stale objectLocation)
-            return
-        }
 
         val documentNotation = graphNotation.documents[props.objectLocation.documentPath]
             ?: return

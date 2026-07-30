@@ -60,7 +60,7 @@ abstract class ScriptStepDisplayBase<P: ScriptStepDisplayBaseProps, S: ScriptSte
     props: P
 ):
     RPureComponent<P, S>(props),
-    ClientStateGlobal.Observer,
+    ClientStateGlobal.DocumentScopedObserver,
     ScriptStore.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------

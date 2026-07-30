@@ -256,13 +256,11 @@ class ScriptBranchDisplay(
         document.querySelector("[data-stage-scroll]")
 
 
+    override fun observedObjectLocation() = props.attributeLocation.objectLocation
+
+
     override fun onClientState(clientState: ClientState) {
         val graphStructure: GraphStructure = clientState.graphDefinitionAttempt.graphStructure
-
-        if (props.attributeLocation.objectLocation !in graphStructure.graphNotation.coalesce) {
-            // NB: deleted or renamed (this is a stale objectLocation)
-            return
-        }
 
         val stepLocations = ScriptController.stepLocations(
             graphStructure, props.attributeLocation)

@@ -103,7 +103,7 @@ class ScriptExecutionMargin(
     props: ScriptExecutionMarginProps
 ):
     RPureComponent<ScriptExecutionMarginProps, ScriptExecutionMarginState>(props),
-    ClientStateGlobal.Observer
+    ClientStateGlobal.DocumentScopedObserver
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {

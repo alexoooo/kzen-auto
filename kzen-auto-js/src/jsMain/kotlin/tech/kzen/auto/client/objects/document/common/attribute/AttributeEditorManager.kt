@@ -6,9 +6,10 @@ import react.Props
 import react.State
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.api.ReactWrapper
+import tech.kzen.auto.client.objects.document.common.scope.ObjectScopedComponent
+import tech.kzen.auto.client.objects.document.common.scope.ObjectScopedProps
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
-import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.lib.common.model.attribute.AttributeName
@@ -27,11 +28,9 @@ import web.cssom.px
 // NB: the manager's own dispatch contract, not a subtype of AttributeEditorProps - hosts set only the two
 // addressing fields, and the Wrapper supplies the rest. Inheriting the editor contract dragged in a
 // mirroredGraphStore that nothing ever set.
-external interface AttributeEditorManagerProps: Props {
-    var objectLocation: ObjectLocation
+external interface AttributeEditorManagerProps: ObjectScopedProps {
     var attributeName: AttributeName
 
-    var clientStateGlobal: ClientStateGlobal
     var attributeEditors: List<AttributeEditor>
 }
 
@@ -50,8 +49,7 @@ external interface AttributeEditorManagerState: State {
 class AttributeEditorManager(
     props: AttributeEditorManagerProps
 ):
-    RPureComponent<AttributeEditorManagerProps, AttributeEditorManagerState>(props),
-    ClientStateGlobal.Observer
+    ObjectScopedComponent<AttributeEditorManagerProps, AttributeEditorManagerState>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -80,16 +78,6 @@ class AttributeEditorManager(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun componentDidMount() {
-        props.clientStateGlobal.observe(this)
-    }
-
-
-    override fun componentWillUnmount() {
-        props.clientStateGlobal.unobserve(this)
-    }
-
-
     override fun onClientState(clientState: ClientState) {
         // Resolve the editor once — an attribute's `editor:` metadata is stable across store updates.
         if (state.attributeEditor == null) {

@@ -50,7 +50,7 @@ class PluginController(
     props: PluginControllerProps
 ):
     RPureComponent<PluginControllerProps, PluginControllerState>(props),
-    ClientStateGlobal.Observer
+    ClientStateGlobal.DocumentScopedObserver
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {

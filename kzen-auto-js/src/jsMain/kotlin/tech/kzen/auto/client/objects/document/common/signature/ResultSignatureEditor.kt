@@ -12,11 +12,12 @@ import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.objects.document.StageErrorIndicator
+import tech.kzen.auto.client.objects.document.common.scope.ObjectScopedComponent
+import tech.kzen.auto.client.objects.document.common.scope.ObjectScopedProps
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.util.ClientInputUtils
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.select.SelectOption
 import tech.kzen.auto.client.wrap.select.muiAutocompleteField
@@ -34,10 +35,7 @@ import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------
-external interface ResultSignatureEditorProps: Props {
-    var objectLocation: ObjectLocation
-
-    var clientStateGlobal: ClientStateGlobal
+external interface ResultSignatureEditorProps: ObjectScopedProps {
     var mirroredGraphStore: MirroredGraphStore
 }
 
@@ -63,8 +61,7 @@ external interface ResultSignatureEditorState: State {
  * only the `main` result is wired today (the map shape leaves room for more named results).
  */
 class ResultSignatureEditor:
-    RPureComponent<ResultSignatureEditorProps, ResultSignatureEditorState>(),
-    ClientStateGlobal.Observer
+    ObjectScopedComponent<ResultSignatureEditorProps, ResultSignatureEditorState>()
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -85,23 +82,9 @@ class ResultSignatureEditor:
     }
 
 
-    override fun componentDidMount() {
-        props.clientStateGlobal.observe(this)
-    }
-
-
-    override fun componentWillUnmount() {
-        props.clientStateGlobal.unobserve(this)
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     override fun onClientState(clientState: ClientState) {
         val graphNotation = clientState.graphDefinitionAttempt.graphStructure.graphNotation
-        if (props.objectLocation !in graphNotation.coalesce) {
-            // NB: deleted or renamed (this is a stale objectLocation)
-            return
-        }
 
         val resultsNotation = graphNotation.firstAttribute(
             props.objectLocation, LogicConventions.resultsAttributePath) as? MapAttributeNotation
