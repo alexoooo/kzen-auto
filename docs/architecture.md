@@ -222,7 +222,10 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > Logic ignores the target and rebuilds at its existing frontier). `ScriptRunContext.restore` performs
 > **outcome-set surgery** computed by the notation-driven `ScriptJumpAnalysis` (kzen-auto-common, layered on
 > `ScriptNestingAnalysis`): the target and everything at/after it drop from the carried capture (so a jump to
-> a loop step restarts it at iteration 0), the value-less pre-target steps become a **skip set**
+> a loop step restarts it at iteration 0) **and the child invocations those dropped steps hosted are discarded**
+> (`Execution.discardCaptured` — a dropped RunStep re-runs, so its pre-jump sub-Script is abandoned and its
+> capture must not be adopted by the fresh invocation, which would otherwise replay-short-circuit and hand back
+> stale values), the value-less pre-target steps become a **skip set**
 > (short-circuited with no value and a new `StepTrace.State.Skipped`; a later reference to one error-parks via
 > the existing `referencedValue` "No value produced" backstop), and the descend **ancestors** (an enclosing
 > `IfStep`; a branch GROUP node on the path is filtered out — it is not an executed step) run — re-evaluating

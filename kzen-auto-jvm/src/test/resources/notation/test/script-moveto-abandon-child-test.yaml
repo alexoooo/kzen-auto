@@ -1,0 +1,8 @@
+# The sub-Script hosted by script-moveto-abandon-test.yaml's RunStep: a single side-effect CountingStep, so a
+# re-hosted invocation that replay-adopts its predecessor's capture (rather than re-executing) is directly
+# observable as a count that does not advance.
+main:
+  is: Script
+
+main.steps/Inner:
+  is: CountingStep

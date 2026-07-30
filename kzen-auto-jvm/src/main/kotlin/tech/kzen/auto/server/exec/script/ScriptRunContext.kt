@@ -51,7 +51,8 @@ import tech.kzen.lib.common.util.ExceptionUtils
  *
  * MOVE-TO (Set Next Statement, execution-control phase 2): a migration may carry a jump target
  * ([Execution.moveTarget]); [restore] then performs outcome-set surgery instead of a plain restore (drop the
- * target and everything at/after it, mark the pre-target skips value-less, run the descend ancestors with their
+ * target and everything at/after it — discarding the captures of any child invocations those dropped steps
+ * hosted, which the re-run abandons — mark the pre-target skips value-less, run the descend ancestors with their
  * checkpoint suppressed), so the rebuilt paused spine re-runs from / skips to the target and parks there. The
  * surgery is computed by the notation-driven [ScriptJumpAnalysis]; the jump shares the migrate barrier, so an
  * edit-then-jump takes both in one rebuild.
@@ -584,7 +585,9 @@ class ScriptRunContext(
      * Steps the walk visits before the target but keeps no outcome for become [skippedSteps] (value-less),
      * UNLESS one was mid-flight and offers a partial value ([ScriptStep.partialOutcome] — a loop's collected
      * iterations), which is committed as a restored outcome instead; the ancestors become [descendSteps] (run,
-     * checkpoint suppressed). An unsupported / unresolvable [moveTarget]
+     * checkpoint suppressed). A dropped step's hosted child invocations are additionally discarded
+     * ([Execution.discardCaptured]) — the step re-runs, so its pre-jump sub-execution is abandoned and must not
+     * be adopted by the fresh one. An unsupported / unresolvable [moveTarget]
      * falls back to a full restore — the engine ignore-contract (the controller's `canMoveTo` gate normally
      * makes that unreachable). The carried [result] is kept (decision 11); a Result at/after the target re-runs.
      */
@@ -608,6 +611,20 @@ class ScriptRunContext(
         val dropStableIds = plan.dropSet.mapTo(HashSet()) {
             objectStableMapper.objectStableId(ObjectLocation(documentPath, it))
         }
+
+        // A dropped step RE-RUNS, so any child invocation it hosted (a RunStep's sub-Script) is abandoned: its
+        // capture must not be adopted by the fresh invocation the re-run launches. This is the same
+        // invocation-identity signal a re-running loop sends via [dropReplay] (logic-spec §5) — and it is
+        // required here for the same reason: [Execution.restored] is delivered on (stableId, callSite), both of
+        // which a re-hosted child still matches, so without the discard the sub-Script adopts its pre-jump
+        // outcomes, replay-short-circuits every step, and appears to re-run instantaneously while handing back
+        // its stale values. Must precede the hosting, which it does — [restore] runs at [ScriptLogic.run] start.
+        //
+        // Deliberately scoped to the DROP set, not the skip set: a step the walk skips over never runs in the
+        // rebuilt spine, so it never re-hosts and nothing can adopt its child's capture — that capture is simply
+        // unclaimed, and the engine's orphan sweep disposes it at the next barrier like any other (see
+        // [RunEngine.sweepOrphans]: "an orphaned detached resource lingers at most one edit cycle").
+        execution.discardCaptured(dropStableIds)
 
         for ((stableId, value) in carriedOutcomes) {
             if (stableId !in dropStableIds) {

@@ -26,11 +26,12 @@ import kotlin.test.fail
 /**
  * End-to-end move-to (Set Next Statement) coverage (execution-control phase XC2) driven through the real
  * [ServerLogicController] + [tech.kzen.lib.server.exec.engine.RunEngine]: backward re-run, forward skip (and the
- * value backstop), the no-op frontier jump, jump after terminal, a loop-step restart, a loop-body rejection, and
+ * value backstop), the no-op frontier jump, jump after terminal, a loop-step restart, a loop-body rejection,
  * an If-branch descend (both into the first branch and into a later one, whose path crosses a structural branch
- * group node). Each fixture uses the test-only [CountingStep] so re-execution is observable via the
- * process-global count; the suite resets it per test and relies on sequential execution (as the sibling
- * static-fixture engine tests do).
+ * group node), and a backward jump past a completed RunStep, which must ABANDON the sub-Script invocation it
+ * hosted rather than let the re-hosted one adopt its capture. Each fixture uses the test-only [CountingStep] so
+ * re-execution is observable via the process-global count; the suite resets it per test and relies on sequential
+ * execution (as the sibling static-fixture engine tests do).
  */
 class ScriptMoveToTest {
     //-----------------------------------------------------------------------------------------------------------------
@@ -39,6 +40,7 @@ class ScriptMoveToTest {
     private val loopPath = DocumentPath.parse("test/script-moveto-loop-test.yaml")
     private val ifPath = DocumentPath.parse("test/script-moveto-if-test.yaml")
     private val elseIfPath = DocumentPath.parse("test/script-moveto-elseif-test.yaml")
+    private val abandonPath = DocumentPath.parse("test/script-moveto-abandon-test.yaml")
 
     private lateinit var context: KzenAutoContext
 
@@ -241,6 +243,33 @@ class ScriptMoveToTest {
         resume(runId)
         awaitDone()
         assertEquals(3, CountingStep.count.get())  // only B2 re-ran; B1 (kept) and A1 (not taken) did not
+    }
+
+
+    @Test
+    fun backwardJumpPastACompletedRunStepAbandonsItsChildInvocation() {
+        val runId = startPaused(abandonPath)     // before Before
+        step(runId)                              // Before, before Call
+        stepOver(runId)                          // Call ran to completion (hosting the child), before After
+        assertEquals(2, CountingStep.count.get(), "Before, plus the child's Inner")
+
+        // Backward PAST the completed RunStep: its outcome is in the drop set, so the rebuilt spine re-runs it
+        // and re-hosts the child. The child's pre-jump invocation is ABANDONED — its migration capture must be
+        // discarded, or the fresh invocation adopts it, replay-short-circuits every step, and the sub-Script
+        // "re-runs" instantaneously while returning its pre-jump values.
+        assertEquals(LogicRunResponse.Submitted, moveTo(runId, abandonPath, "main.steps/Before"))
+        awaitState(LogicRunState.Paused)
+        assertNextToRun(runId, ObjectLocation(abandonPath, ObjectPath.parse("main.steps/Before")))
+        assertEquals(2, CountingStep.count.get(), "the jump itself runs nothing")
+
+        resume(runId)
+        awaitDone()
+
+        // Before re-runs (3), the re-hosted child's Inner re-runs (4), After runs (5). Without the discard the
+        // child replay-adopts instead of executing and the count stops at 4.
+        assertEquals(
+            5, CountingStep.count.get(),
+            "the re-hosted sub-Script must EXECUTE its steps, not replay-adopt the abandoned invocation's capture")
     }
 
 
