@@ -14,6 +14,7 @@ import tech.kzen.auto.common.paradigm.logic.LogicConventions
 import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.exec.ExecutionSuccess
 import tech.kzen.lib.common.exec.engine.StepMode
+import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunResponse
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunState
@@ -697,15 +698,16 @@ class ClientLogicGlobal(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    // Move-to (Set Next Statement): reposition the paused run to [target] without executing the intervening steps
-    // (backward = re-run from there, forward = skip over). Unlike step / pause, [target] is supplied by the caller
-    // (the draggable next-to-run arrow / "Set next step here" action — phase 3), not read from status. A Rejected
-    // response (unsupported / structurally-invalid target) is surfaced distinctly from other control failures.
-    fun moveToAsync(target: ObjectLocation) {
+    // Move-to (Set Next Statement): reposition the frame [executionId] names to [target] without executing the
+    // intervening steps (backward = re-run from there, forward = skip over). Unlike step / pause, both are
+    // supplied by the caller (the draggable next-to-run arrow of whichever document is being viewed), not read
+    // from status. A Rejected response (a structurally-invalid target, or a frame the server can't reposition)
+    // is surfaced distinctly from other control failures.
+    fun moveToAsync(target: ObjectLocation, executionId: LogicExecutionId) {
         controlAsync(
             "Unable to move", ClientLogicState.Pending.Step, "Can't move to this step"
         ) {
-            restClient.logicMoveTo(it, target)
+            restClient.logicMoveTo(it, target, executionId)
         }
     }
 

@@ -13,6 +13,7 @@ import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionResult
 import tech.kzen.lib.common.exec.engine.Logic
+import tech.kzen.lib.common.exec.engine.MoveTarget
 import tech.kzen.lib.common.exec.engine.Node
 import tech.kzen.lib.common.exec.engine.NodeId
 import tech.kzen.lib.common.exec.engine.NodeStatus
@@ -675,18 +676,29 @@ class ServerLogicController(
     /**
      * Move-to (Set Next Statement): reposition a settled run's pointer to [target] without executing the
      * intervening steps — backward = re-run from the target, forward = skip over. Realised as a self-migration
-     * carrying the target through the engine barrier (execution-control phase 2); only a [Repositionable] root
-     * Logic whose structure resolves the target honours it. Unlike step / resume, a jump ALWAYS recompiles from
-     * the current notation (a jump is itself a migrate — it shares the barrier with any concurrent edit, so an
-     * edit-then-jump takes both in one rebuild) and is refusable: an unsupported / structurally-invalid target,
-     * or a recompile failure, returns [LogicRunResponse.Rejected] with the run left untouched. Allowed while
-     * paused OR error-parked (jumping PAST a failing step is a headline use case); rejected while running.
+     * carrying the request through the engine barrier (execution-control phase 2).
+     *
+     * [executionId] names the FRAME the request addresses — null = the run's root frame, which is the whole
+     * behaviour when nothing is nested. The frame's chain of call-sites is resolved from the engine's live node
+     * tree and travels with the target as a [MoveTarget], so a move inside a hosted sub-Logic reaches that one
+     * invocation: under recursion the same target id is live in several frames at once, and only the addressed
+     * one may move. Every frame on the path must be [Repositionable] and able to honour its own role — each
+     * transit hop [descending][Repositionable.canDescendThrough] through the call-site of the hop below it, and
+     * the addressed frame [moving][Repositionable.canMoveTo] to the target.
+     *
+     * Unlike step / resume, a jump ALWAYS recompiles from the current notation (a jump is itself a migrate — it
+     * shares the barrier with any concurrent edit, so an edit-then-jump takes both in one rebuild) and is
+     * refusable: an unknown or already-settled frame, a hop that cannot carry its role, an unsupported /
+     * structurally-invalid target, or a recompile failure returns [LogicRunResponse.Rejected] with the run left
+     * untouched. Allowed while paused OR error-parked (jumping PAST a failing step is a headline use case);
+     * rejected while running.
      */
     @Synchronized
     fun moveTo(
         runId: LogicRunId,
         target: ObjectLocation,
-        snapshotGraphDefinitionAttempt: GraphDefinitionAttempt? = null
+        snapshotGraphDefinitionAttempt: GraphDefinitionAttempt? = null,
+        executionId: LogicExecutionId? = null
     ): LogicRunResponse {
         // A settled (terminal-retained) run is not-found for control — it exists only for trace review.
         val state = stateOrNull?.takeIf { !it.settled }
@@ -702,34 +714,44 @@ class ServerLogicController(
 
         val targetId = objectStableMapper.objectStableId(target)
 
-        // No-op guard: already parked at the target — a rebuild is not free and is lossy (the coalescing note).
-        val rootNode = state.engine.snapshot().root
-        if (rootNode.status is NodeStatus.Suspended && rootNode.position == targetId) {
+        val framePath = framePathTo(state.engine.snapshot().root, executionId)
+            ?: return LogicRunResponse.Rejected
+        val addressedNode = framePath.last()
+
+        // [nodeToFrame] prunes terminal children from the wire tree but the engine snapshot keeps them, so a
+        // client poll that raced the frame's settle can still name it. Nothing would honour the request: the
+        // migrate would rebuild and the move would be a silent no-op.
+        if (addressedNode.status is NodeStatus.Terminal) {
+            return LogicRunResponse.Rejected
+        }
+
+        // No-op guard: the ADDRESSED frame is already parked at the target — a rebuild is not free and is lossy
+        // (the coalescing note). Read off that frame and never the root: while a run is parked inside a child,
+        // the root node is Running (it is blocked in `host`; only a park sets Suspended), so a root-read guard
+        // could never fire for a nested move.
+        if (addressedNode.status is NodeStatus.Suspended && addressedNode.position == targetId) {
             return submitted()
         }
 
         // A jump ALWAYS recompiles from the current notation (decision 10), updating the closure baseline like
         // pendingMigration — so an edit-then-jump takes both in one rebuild. A recompile failure is refusable
         // (unlike pendingMigration's keep-running fallback): return Rejected, run untouched (nothing torn down).
-        val logic = try {
+        val (attempt, logic) = try {
             val attempt = graphDefinitionAttempt(snapshotGraphDefinitionAttempt)
             val editedDigest = LinkedLogicDocuments.transitiveDigest(
                 attempt.transitiveSuccessful, attempt.graphStructure, state.rootLocation.documentPath)
             val compiled = compileLogic(state.rootLocation, attempt, state.runExecutionId)
             state.baselineClosureDigest = editedDigest
             editDirty = false
-            compiled
+            attempt to compiled
         }
         catch (e: Throwable) {
             logger.warn("Unable to recompile for move-to, keeping prior definition: {}", state.rootLocation, e)
             return LogicRunResponse.Rejected
         }
 
-        // Capability gate: reject an unsupported flavour or a structurally-invalid target (loop body / binding /
-        // unknown id) BEFORE the executor tears anything down — the run keeps its current state.
-        if (logic !is Repositionable || !logic.canMoveTo(targetId)) {
-            return LogicRunResponse.Rejected
-        }
+        val moveTarget = repositionRequest(framePath, logic, attempt, state.runExecutionId, targetId)
+            ?: return LogicRunResponse.Rejected
 
         val removedStableIds = objectStableMapper.drainRemovedIds()
 
@@ -739,7 +761,7 @@ class ServerLogicController(
         executor.execute {
             state.engine.awaitQuiescent()
             state.engine.migrate(
-                logic, paused = true, moveTarget = targetId, removedStableIds = removedStableIds)
+                logic, paused = true, moveTarget = moveTarget, removedStableIds = removedStableIds)
             state.engine.awaitQuiescent()
             synchronized(this@ServerLogicController) {
                 settleAfterDrive(state)
@@ -747,6 +769,87 @@ class ServerLogicController(
         }
 
         return submitted()
+    }
+
+
+    // The chain of nodes root -> the frame [executionId] names, collected on the way DOWN: [Node] has no parent
+    // pointer, parentage is the [Node.children] nesting alone. A null [executionId] addresses the root frame, so
+    // the chain is that node by itself. Null when no node carries the id — node ids are monotone and never
+    // reused, so a stale id from a client poll resolves to nothing instead of to some unrelated later frame.
+    private fun framePathTo(node: Node, executionId: LogicExecutionId?): List<Node>? {
+        if (executionId == null || node.id.value == executionId.value) {
+            return listOf(node)
+        }
+        for (child in node.children) {
+            val childPath = framePathTo(child, executionId)
+            if (childPath != null) {
+                return listOf(node) + childPath
+            }
+        }
+        return null
+    }
+
+
+    // The per-hop capability gate for a repositioning request (logic-spec §4): the request to carry across the
+    // barrier, or null to refuse it. Every frame on [framePath] must be [Repositionable] and able to honour its
+    // own role — a transit hop descends through the call-site the NEXT hop was opened from, the addressed frame
+    // moves to [targetId] — so a move no frame on the path can carry out is rejected before anything is torn
+    // down, and the run keeps its current state.
+    //
+    // Capability-based and flavour-blind, which is the whole point of asking each frame about its own structure:
+    // today only a Script answers yes, so a Flow or Job hop refuses cleanly instead of silently parking at the
+    // element that hosts the destination.
+    private fun repositionRequest(
+        framePath: List<Node>,
+        rootLogic: Logic,
+        attempt: GraphDefinitionAttempt,
+        runExecutionId: LogicRunExecutionId,
+        targetId: ObjectStableId
+    ): MoveTarget? {
+        val callSitePath = mutableListOf<ObjectStableId>()
+
+        for ((index, node) in framePath.withIndex()) {
+            val hopLogic =
+                if (index == 0) {
+                    // The root's Logic is the one just recompiled for this barrier; compiling it again would
+                    // build a second definition of the same document only to throw it away.
+                    rootLogic
+                }
+                else {
+                    val hopLocation = objectStableMapper.objectLocationOrNull(node.stableId)
+                        ?: return null
+                    try {
+                        compileLogic(hopLocation, attempt, runExecutionId)
+                    }
+                    catch (e: Throwable) {
+                        logger.warn("Unable to compile frame for move-to: {}", hopLocation, e)
+                        return null
+                    }
+                }
+
+            if (hopLogic !is Repositionable) {
+                return null
+            }
+
+            val hostedHop = framePath.getOrNull(index + 1)
+            if (hostedHop == null) {
+                if (!hopLogic.canMoveTo(targetId)) {
+                    return null
+                }
+            }
+            else {
+                // Addressability: null is not a wildcard. A host that names no distinct call-site matches no
+                // hop of a path, so the frame it opened cannot be path-addressed at all.
+                val callSite = hostedHop.callerStableId
+                    ?: return null
+                if (!hopLogic.canDescendThrough(callSite)) {
+                    return null
+                }
+                callSitePath.add(callSite)
+            }
+        }
+
+        return MoveTarget(targetId, callSitePath)
     }
 
 

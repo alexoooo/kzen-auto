@@ -1,0 +1,11 @@
+# The deepest frame of the script-moveto-chain-test.yaml chain, hosted by B. Two CountingSteps give the run
+# somewhere to park BELOW the addressed frame, and make the abandoned invocation observable: when B's jump
+# re-hosts C, C1 and C2 must EXECUTE again rather than replay-adopt the abandoned invocation's capture.
+main:
+  is: Script
+
+main.steps/C1:
+  is: CountingStep
+
+main.steps/C2:
+  is: CountingStep

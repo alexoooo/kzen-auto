@@ -1,0 +1,45 @@
+# Self-hosting Script (ScriptNestedMoveToTest): SelfCall's `instructions` name THIS document, bounded by `depth`
+# so the recursion stops after one level — the root runs at depth 0, the nested frame at depth 1, where More is
+# false and the gate closes. Two live frames of the SAME document is precisely the shape a stable id alone
+# cannot tell apart, so it is what proves such a frame is ADDRESSABLE at all: the two invocations are separately
+# nameable, and a jump addressed to the deeper one clears every gate on a recursive path. Which frame then moves
+# is undefined — the migration capture register is keyed by stable id alone, so two simultaneously live frames
+# collide with no defined winner (kzen-lib logic-spec §5, the "Undefined" note) — so R1 / R2 being CountingSteps
+# records execution for diagnosis, not for an assertion.
+main:
+  is: Script
+
+main.parameters/depth:
+  is: ParameterBinding
+  type:
+    class: kotlin.Int
+    generics: []
+    nullable: false
+  default: 0
+
+main.steps/R1:
+  is: CountingStep
+
+main.steps/Next:
+  is: FormulaStep
+  code: "depth + 1"
+
+main.steps/More:
+  is: FormulaStep
+  code: "depth < 1"
+
+main.steps/Gate:
+  is: IfStep
+
+main.steps/Gate.branches/Branch:
+  is: IfBranch
+  condition: More
+
+main.steps/Gate.branches/Branch.steps/SelfCall:
+  is: RunStep
+  instructions: "test/script/navigation/script-moveto-recursive-test.yaml#main"
+  arguments:
+    depth: main.steps/Next
+
+main.steps/R2:
+  is: CountingStep

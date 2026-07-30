@@ -1,0 +1,31 @@
+# The Flow that sits between two Scripts in the move-to transit chain (script-moveto-transit-test.yaml hosts
+# this document; the RunLogic vertex hosts script-moveto-transit-child-test.yaml). A Flow is not Repositionable,
+# so it neither honours a move target nor forwards the descend signal to the frame below it — a move-to whose
+# path routes through this frame must be refused outright rather than silently parking. FmtCall is also the
+# frame that hosts WITHOUT a call-site id (FlowRun's Execution.host takes no callerStableId), which is the other
+# half of what makes the path unaddressable.
+main:
+  is: Flow
+  vertices:
+  - FmtInput
+  - FmtCall
+  - FmtOutput
+  edges: []
+
+FmtInput:
+  is: FlowInput
+  parameter: "x"
+  row: 0
+  column: 0
+
+FmtCall:
+  is: RunLogic
+  instructions: "test/script/navigation/script-moveto-transit-child-test.yaml#main"
+  row: 1
+  column: 0
+
+FmtOutput:
+  is: FlowOutput
+  result: "out"
+  row: 2
+  column: 0

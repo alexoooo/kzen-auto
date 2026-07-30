@@ -25,6 +25,7 @@ import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.objects.document.script.model.ScriptJumpAnalysis
 import tech.kzen.auto.common.objects.document.script.model.ScriptNestingAnalysis
 import tech.kzen.auto.common.objects.document.script.model.ScriptTree
+import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -70,9 +71,10 @@ external interface ScriptExecutionMarginState: State {
     // bands: breakpoints render with no run at all.
     var arrowLocation: ObjectLocation?
 
-    // True only while the run is settled (a stepped boundary, ExplicitPaused or ErrorPaused) AND its ROOT
-    // frame is this document, matching the server move-to gate (a nested sub-script frame shows the glyph but
-    // can't be dragged v1).
+    // True only while the run is settled (a stepped boundary, ExplicitPaused or ErrorPaused) AND this document
+    // has a live frame — the arrow is draggable in whichever frame is being viewed, nested or root. The server
+    // then refuses the moves it can't carry out (a loop-hosted frame, a non-repositionable hop), which the
+    // client surfaces as the move rejection message.
     var draggable: Boolean
 
     var dragging: Boolean
@@ -160,7 +162,10 @@ class ScriptExecutionMargin(
     private var executableStepsPath: DocumentPath? = null
     private var executableStepsCached: List<ObjectLocation> = listOf()
 
-    // Drag session, precomputed once at pointer-down (the step structure is static while paused).
+    // Drag session, precomputed once at pointer-down (the step structure is static while paused). The addressed
+    // frame is part of that snapshot: a status refresh landing mid-drag would otherwise retarget the move at
+    // whichever invocation is live by pointer-up.
+    private var dragExecutionId: LogicExecutionId? = null
     private var dragNextToRun: ObjectLocation? = null
     private var dragHitRows: List<ObjectLocation> = listOf()
     private var dragValidTargets: Set<ObjectLocation> = setOf()
@@ -303,14 +308,15 @@ class ScriptExecutionMargin(
         }
 
         val frame = clientState.clientLogicState.logicStatus?.active?.frame
-        val nextToRun = LogicRunFrames.frameForDocument(frame, documentPath)?.position
+        val documentFrame = LogicRunFrames.frameForDocument(frame, documentPath)
+        val nextToRun = documentFrame?.position
 
         // Draggable while the run is SETTLED (paused at any boundary — a manual step settle, a Pause step,
-        // or error-park) and this document is the run root — the same "!running && !stepping" gate the
-        // server's moveTo enforces. isHaltPaused() would be too strict (it excludes a plain stepped Paused).
+        // or error-park) — the same "!running && !stepping" gate the server's moveTo enforces; isHaltPaused()
+        // would be too strict (it excludes a plain stepped Paused). Any document with a live frame qualifies:
+        // whether that frame can actually be repositioned is the server's call, answered per drop.
         val logicState = clientState.clientLogicState
-        val canDrag = logicState.isActive() && !logicState.isExecuting() &&
-                frame?.objectLocation?.documentPath == documentPath
+        val canDrag = logicState.isActive() && !logicState.isExecuting() && documentFrame != null
 
         update(newRows, nextToRun, canDrag)
     }
@@ -390,7 +396,9 @@ class ScriptExecutionMargin(
         val documentPath = clientState.navigationRoute.documentPath
             ?: return
         val frame = clientState.clientLogicState.logicStatus?.active?.frame
-        val nextToRun = LogicRunFrames.frameForDocument(frame, documentPath)?.position
+        val documentFrame = LogicRunFrames.frameForDocument(frame, documentPath)
+            ?: return
+        val nextToRun = documentFrame.position
             ?: return
         val registry = stepRowRefRegistry()
             ?: return
@@ -427,6 +435,7 @@ class ScriptExecutionMargin(
             }
             .toSet()
 
+        dragExecutionId = documentFrame.executionId
         dragNextToRun = nextToRun
         dragHitRows = hitRows
         dragValidTargets = validTargets
@@ -501,8 +510,10 @@ class ScriptExecutionMargin(
         val target = state.candidate
         val valid = state.candidateValid
         val nextToRun = dragNextToRun
+        val executionId = dragExecutionId
         val moved = dragMoved
 
+        dragExecutionId = null
         dragNextToRun = null
         dragHitRows = listOf()
         dragValidTargets = setOf()
@@ -528,8 +539,8 @@ class ScriptExecutionMargin(
             return
         }
 
-        if (target != null && valid && target != nextToRun) {
-            props.clientLogicGlobal.moveToAsync(target)
+        if (target != null && valid && target != nextToRun && executionId != null) {
+            props.clientLogicGlobal.moveToAsync(target, executionId)
         }
     }
 

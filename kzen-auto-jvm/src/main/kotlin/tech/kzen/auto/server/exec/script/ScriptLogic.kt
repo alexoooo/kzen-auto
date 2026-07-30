@@ -52,6 +52,26 @@ class ScriptLogic(
     }
 
 
+    /**
+     * A call-site this Script hosts the addressed frame from is descendable iff it resolves to a step in this
+     * Script's own document that [ScriptJumpAnalysis] can re-establish the walk at — so the rebuilt spine runs
+     * to that RunStep with its boundary suppressed and hosts it, instead of parking there short of the frame
+     * the move addresses. Notably rejects a call-site inside a loop body: the loop would have to resume at its
+     * current iteration rather than restart at 0. Static structural check only, gated by the controller before
+     * the barrier, exactly like [canMoveTo].
+     */
+    override fun canDescendThrough(callSite: ObjectStableId): Boolean {
+        val callSiteLocation = structure.objectStableMapper.objectLocationOrNull(callSite)
+            ?: return false
+        if (callSiteLocation.documentPath != structure.scriptLocation.documentPath) {
+            return false
+        }
+        return ScriptJumpAnalysis.isDescendableCallSite(
+            structure.graphNotation, callSiteLocation.documentPath, structure.scriptTree,
+            callSiteLocation.objectPath)
+    }
+
+
     override suspend fun run(execution: Execution): TupleValue {
         val context = ScriptRunContext(execution, structure)
 
@@ -76,10 +96,18 @@ class ScriptLogic(
 
         // Live-edit migration (logic-spec §5): adopt the predecessor run's completed work (read once at start) so
         // the spine replays-short-circuits completed steps, and register the capture so a later edit carries this
-        // run's completed work forward. Null on a fresh run -> nothing to adopt, everything runs live. A migration
-        // may also carry a move-to target (Set Next Statement); restore applies the jump surgery when it does.
-        execution.restoredAs<ScriptMigrationState>()?.let {
-            context.restore(it, execution.moveTarget, execution.removedStableIds)
+        // run's completed work forward. Null on a fresh run -> nothing to adopt, everything runs live.
+        //
+        // A migration may also carry a repositioning request (Set Next Statement, logic-spec §4) in one of its
+        // two roles: this frame is the one it ADDRESSES (a move target — restore applies the jump surgery), or a
+        // TRANSIT frame on the way there (a call-site to descend through). The descend obligation alone is
+        // enough to need a restore: a transit frame that carried no capture still owes the descent, and skipping
+        // it would park the rebuild at the hosting RunStep instead.
+        val migrationState = execution.restoredAs<ScriptMigrationState>()
+        val moveDescendCallSite = execution.moveDescendCallSite
+        if (migrationState != null || moveDescendCallSite != null) {
+            context.restore(
+                migrationState, execution.moveTarget, moveDescendCallSite, execution.removedStableIds)
         }
         execution.onCapture { context.captureState() }
 

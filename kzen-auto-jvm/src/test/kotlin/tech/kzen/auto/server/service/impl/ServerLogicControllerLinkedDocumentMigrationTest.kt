@@ -7,6 +7,7 @@ import org.junit.Test
 import tech.kzen.auto.common.objects.document.script.model.StepTrace
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.util.AutoTestUtils
+import tech.kzen.lib.common.exec.logic.run.model.LogicRunFrameInfo
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunState
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
@@ -43,6 +44,12 @@ import kotlin.test.fail
  * re-creates the sub-Script's frame; the engine has to carry the settled frame across the barrier itself
  * (logic-spec §5 "settled frames survive the rebuild"), or every trace query — all of which project the node
  * tree — reports the finished sub-document as having no execution state at all.
+ *
+ * The third test covers the remaining case, the RunStep MID-FLIGHT: the run is parked inside the sub-Script's
+ * own frame when the edit lands. It records that the edit-migrate pops the position out to the caller's
+ * RunStep and leaves no live child frame — the paused rebuild replays the caller's completed prefix, parks at
+ * the mid-flight RunStep's own boundary (it holds no outcome to replay-adopt), and so never re-hosts the
+ * callee; the callee's mid-flight capture goes unclaimed and is swept as an orphan.
  */
 class ServerLogicControllerLinkedDocumentMigrationTest {
     //-----------------------------------------------------------------------------------------------------------------
@@ -172,7 +179,56 @@ class ServerLogicControllerLinkedDocumentMigrationTest {
     }
 
 
+    @Test
+    fun editingWhileParkedInsideTheSubScriptPopsThePositionOutToTheRunStep() {
+        val controller = context.serverLogicController
+
+        val baseNotation = AutoTestUtils.readNotation()
+        val base = AutoTestUtils.graphDefinitionAttempt(baseNotation)
+
+        val runId = controller.start(scriptLocation, base)
+            ?: fail("Unable to start run")
+
+        // Stepping is StepMode.Into, so it descends: a live child frame under the root means the run is parked
+        // inside the sub-Script, with the hosting RunStep mid-flight — neither completed nor replayable.
+        var guard = 0
+        while (liveChildFrames().isEmpty() && guard < 50) {
+            controller.step(runId, base)
+            awaitState(LogicRunState.Paused)
+            guard += 1
+        }
+        assertEquals(
+            listOf(childScriptLocation), liveChildFrames().map { it.objectLocation },
+            "the run should be parked inside the sub-Script's own frame before the edit")
+        assertFalse(isDone(runId, callLocation), "the hosting RunStep must still be mid-flight")
+
+        val edited = AutoTestUtils.graphDefinitionAttempt(
+            edit(baseNotation, childPlusLocation, "code", "number + 100"))
+        runBlocking { controller.onStoreRefresh(edited) }
+
+        controller.step(runId, edited)
+        awaitState(LogicRunState.Paused)
+
+        val rootFrame = controller.status().active?.frame
+            ?: fail("the run must still be active after the edit")
+        assertEquals(
+            callLocation, rootFrame.position,
+            "the paused rebuild replays the completed prefix and parks at the mid-flight RunStep itself, " +
+                "so the position pops out of the sub-Script up to its caller")
+        assertTrue(
+            rootFrame.dependencies.isEmpty(),
+            "parking at the RunStep's own boundary happens BEFORE it hosts, so the rebuilt run has no live " +
+                "sub-Script frame — the mid-flight callee invocation is abandoned by the edit")
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
+    private fun liveChildFrames(): List<LogicRunFrameInfo> {
+        return context.serverLogicController.status().active?.frame?.dependencies
+            ?: listOf()
+    }
+
+
     private fun edit(
         notation: GraphNotation,
         location: ObjectLocation,

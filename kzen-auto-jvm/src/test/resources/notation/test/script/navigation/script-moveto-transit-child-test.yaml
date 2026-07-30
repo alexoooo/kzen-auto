@@ -1,0 +1,30 @@
+# The deepest frame of the Script -> Flow -> Script transit chain, hosted by the RunLogic vertex of
+# test/flow/flow-moveto-transit-test.yaml. Deep and Deeper are the move-to targets a test addresses across the
+# Flow hop; both are CountingSteps, so a refusal that leaked through and repositioned anyway is visible as an
+# advanced count. `n` is where the Flow's wired input lands (RunLogic binds it positionally to the callee's
+# first declared parameter), and the declared Int result becomes the hosting vertex's emitted message.
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.Int
+      generics: []
+      nullable: false
+
+main.parameters/n:
+  is: ParameterBinding
+  type:
+    class: kotlin.Int
+    generics: []
+    nullable: false
+  default: 0
+
+main.steps/Deep:
+  is: CountingStep
+
+main.steps/Deeper:
+  is: CountingStep
+
+main.steps/Out:
+  is: ResultStep
+  code: Deeper

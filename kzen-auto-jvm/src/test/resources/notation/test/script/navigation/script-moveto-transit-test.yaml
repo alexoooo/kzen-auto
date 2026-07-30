@@ -1,0 +1,23 @@
+# Root of the Script -> Flow -> Script move-to transit chain (ScriptMoveToTest): Call hosts a Flow
+# (test/flow/flow-moveto-transit-test.yaml), whose RunLogic vertex in turn hosts a Script holding a CountingStep.
+# A jump addressed to that deepest Script has to route through the Flow frame, which is not Repositionable — the
+# refusal is what this fixture exists to observe. Before / After are CountingSteps so "the run was left
+# untouched" after the refusal is a count assertion, not just a state read; Seed feeds the Flow's `x` parameter.
+main:
+  is: Script
+
+main.steps/Before:
+  is: CountingStep
+
+main.steps/Seed:
+  is: FormulaStep
+  code: "1"
+
+main.steps/Call:
+  is: RunStep
+  instructions: "test/flow/flow-moveto-transit-test.yaml#main"
+  arguments:
+    x: main.steps/Seed
+
+main.steps/After:
+  is: CountingStep

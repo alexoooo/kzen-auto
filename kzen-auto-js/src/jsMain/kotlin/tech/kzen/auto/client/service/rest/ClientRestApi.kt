@@ -793,13 +793,15 @@ class ClientRestApi(
 
     suspend fun logicMoveTo(
         runId: LogicRunId,
-        target: ObjectLocation
+        target: ObjectLocation,
+        executionId: LogicExecutionId
     ): LogicRunResponse {
         val response = getOrPut(
             CommonRestApi.logicMoveTo,
             CommonRestApi.paramRunId to runId.value,
             CommonRestApi.paramDocumentPath to target.documentPath.asString(),
-            CommonRestApi.paramObjectPath to target.objectPath.asString())
+            CommonRestApi.paramObjectPath to target.objectPath.asString(),
+            CommonRestApi.paramExecutionId to executionId.value)
 
         return LogicRunResponse.valueOf(response)
     }

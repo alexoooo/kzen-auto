@@ -49,13 +49,22 @@ import tech.kzen.lib.common.util.ExceptionUtils
  * [restoredCarries], via [recordCarry] / [restoredCarry]) so it can resume where it left off — a loop at its
  * current iteration. See [ScriptMigrationState] for the carried shape and its bounds.
  *
- * MOVE-TO (Set Next Statement, execution-control phase 2): a migration may carry a jump target
- * ([Execution.moveTarget]); [restore] then performs outcome-set surgery instead of a plain restore (drop the
- * target and everything at/after it — discarding the captures of any child invocations those dropped steps
- * hosted, which the re-run abandons — mark the pre-target skips value-less, run the descend ancestors with their
- * checkpoint suppressed), so the rebuilt paused spine re-runs from / skips to the target and parks there. The
- * surgery is computed by the notation-driven [ScriptJumpAnalysis]; the jump shares the migrate barrier, so an
- * edit-then-jump takes both in one rebuild.
+ * MOVE-TO (Set Next Statement, execution-control phase 2): a migration may carry a repositioning request, which
+ * addresses ONE frame by call-site path (logic-spec §4), so [restore] has a role-specific path for each of the
+ * two ways this frame can be named.
+ *
+ * As the ADDRESSED frame it carries a jump target ([Execution.moveTarget]) and [restore] performs outcome-set
+ * surgery instead of a plain restore (drop the target and everything at/after it — discarding the captures of
+ * any child invocations those dropped steps hosted, which the re-run abandons — mark the pre-target skips
+ * value-less, run the descend ancestors with their checkpoint suppressed), so the rebuilt paused spine re-runs
+ * from / skips to the target and parks there.
+ *
+ * As a TRANSIT frame it carries only the call-site it must descend through ([Execution.moveDescendCallSite]),
+ * and [restore] is an ordinary restore plus that call-site and its containers in [descendSteps] — the rebuilt
+ * spine reaches the hosting RunStep without parking at it and hosts the frame the move really addresses.
+ *
+ * Either way the surgery is computed by the notation-driven [ScriptJumpAnalysis], and the jump shares the
+ * migrate barrier, so an edit-then-jump takes both in one rebuild.
  *
  * CONTROL FLOW: a step may raise a [ScriptControlSignal] (continue / break / return) via [raiseControlSignal];
  * the spine ([runSteps]) short-circuits on it and a loop ([consumeLoopSignal]) or the root
@@ -88,11 +97,12 @@ class ScriptRunContext(
     // replay-short-circuit and pruned by a re-running loop ([dropReplay]). Empty on a fresh (non-migration) run.
     private val restoredOutcomes = HashMap<ObjectStableId, Any?>()
 
-    // Move-to (Set Next Statement) surgery, seeded by [restore] when the migration carried a jump target: steps
-    // the rebuilt spine short-circuits with NO value ([skippedSteps] — forward-skipped over; a later reference
-    // to one error-parks via [referencedValue]) and the jump target's ancestor containers, which the spine runs
-    // (re-evaluating an If's condition) but does NOT park at ([descendSteps]), so the paused rebuild parks at the
-    // target rather than the ancestor's boundary. Both empty on an ordinary run / edit-migrate.
+    // Move-to (Set Next Statement) surgery, seeded by [restore] when the migration named this frame: steps the
+    // rebuilt spine short-circuits with NO value ([skippedSteps] — forward-skipped over; a later reference to
+    // one error-parks via [referencedValue]) and steps the spine runs (re-evaluating an If's condition) but
+    // does NOT park at ([descendSteps]), so the paused rebuild settles past them — at the jump target inside
+    // its branch on the addressed frame, or inside the hosted frame beyond the call-site on a transit frame.
+    // Both empty on an ordinary run / edit-migrate.
     private val skippedSteps = HashSet<ObjectStableId>()
     private val descendSteps = HashSet<ObjectStableId>()
 
@@ -578,6 +588,9 @@ class ScriptRunContext(
      * having never run. The same filter drops an id that resolves to nothing at all, which is that removal
      * seen from a run whose barrier could not report it (a deleted document).
      *
+     * A [state] of null means nothing was carried (a fresh frame, or a predecessor that captured nothing) — the
+     * restore then does only what the repositioning arguments below ask of it.
+     *
      * When the migration barrier carried a move-to [moveTarget] (Set Next Statement) that resolves to a valid
      * jump in the current [ScriptTree] ([jumpPlanFor]), apply outcome-set surgery instead of a plain restore:
      * drop the target and everything at/after it in document order, plus the descend ancestors (an enclosing
@@ -590,20 +603,34 @@ class ScriptRunContext(
      * be adopted by the fresh one. An unsupported / unresolvable [moveTarget]
      * falls back to a full restore — the engine ignore-contract (the controller's `canMoveTo` gate normally
      * makes that unreachable). The carried [result] is kept (decision 11); a Result at/after the target re-runs.
+     *
+     * When the barrier instead named this frame a TRANSIT frame on the path to the addressed one, it carries a
+     * [moveDescendCallSite] and no target of its own: the restore is plain, PLUS the call-site (and its
+     * enclosing containers) joins [descendSteps] so the spine runs to the hosting RunStep with its boundary
+     * suppressed and descends into the frame the move really addresses. The two roles are mutually exclusive —
+     * the engine surfaces at most one of the two arguments to any one frame.
      */
     fun restore(
-        state: ScriptMigrationState,
+        state: ScriptMigrationState?,
         moveTarget: ObjectStableId?,
+        moveDescendCallSite: ObjectStableId?,
         removedStableIds: Set<ObjectStableId>
     ) {
-        val carriedOutcomes = state.completedOutcomes.filterKeys { survivesEdit(it, removedStableIds) }
-        val carriedCarries = state.stepCarry.filterKeys { survivesEdit(it, removedStableIds) }
+        val carriedOutcomes = state?.completedOutcomes.orEmpty().filterKeys { survivesEdit(it, removedStableIds) }
+        val carriedCarries = state?.stepCarry.orEmpty().filterKeys { survivesEdit(it, removedStableIds) }
 
         val plan = moveTarget?.let { jumpPlanFor(it) }
         if (plan == null) {
             restoredOutcomes.putAll(carriedOutcomes)
             restoredCarries.putAll(carriedCarries)
-            resultValue = state.result
+            resultValue = state?.result
+
+            // The transit role's ONLY seeding point. A transit frame reads a null [moveTarget] — hence a null
+            // [plan] — so it lands here, on the plain-restore path; seeding it in the surgery below (which this
+            // frame never reaches) or after the early return (which it never falls through) leaves the descend
+            // set empty, and the rebuild then parks at the hosting RunStep instead of descending. Nothing fails:
+            // the run looks migrated and the nested jump silently does not happen.
+            seedDescendThrough(moveDescendCallSite)
             return
         }
 
@@ -638,7 +665,7 @@ class ScriptRunContext(
                 restoredCarries[stableId] = carry
             }
         }
-        resultValue = state.result
+        resultValue = state?.result
 
         for (ancestor in plan.ancestors) {
             descendSteps.add(objectStableMapper.objectStableId(ObjectLocation(documentPath, ancestor)))
@@ -673,6 +700,38 @@ class ScriptRunContext(
         // from the spine when the walk reaches them; the target repaints Running at its checkpoint.)
         for (stableId in dropStableIds) {
             emitStepTrace(stableId, StepTrace.State.Idle, NullExecutionValue)
+        }
+    }
+
+
+    // Seed the descend set for a TRANSIT frame: the call-site it hosts the addressed frame from, plus the
+    // containers enclosing it ([ScriptJumpAnalysis.descendAncestors]) — all run with their boundary suppressed,
+    // so the paused rebuild reaches the hosting RunStep and descends instead of parking at it.
+    //
+    // A transit frame is by construction blocked in [Execution.host] at the barrier, so every step BEFORE the
+    // call-site completed and replay-adopts: the rebuild cannot park short of the RunStep. The exception is an
+    // ENCLOSING container (an If) — mid-flight, holding no outcome, hence re-run rather than adopted — which is
+    // precisely why the ancestors join the set too.
+    //
+    // The id is resolved leniently and ignored when it is not this document's: the engine addresses frames
+    // precisely, but a Logic handed a request it cannot place must ignore it (logic-spec §4) rather than throw.
+    private fun seedDescendThrough(moveDescendCallSite: ObjectStableId?) {
+        val callSiteLocation = moveDescendCallSite
+            ?.let { objectStableMapper.objectLocationOrNull(it) }
+            ?: return
+        if (callSiteLocation.documentPath != structure.scriptLocation.documentPath) {
+            return
+        }
+
+        val ancestors = ScriptJumpAnalysis.descendAncestors(
+            structure.graphNotation, callSiteLocation.documentPath, structure.scriptTree,
+            callSiteLocation.objectPath)
+            ?: return
+
+        descendSteps.add(objectStableMapper.objectStableId(callSiteLocation))
+        for (ancestor in ancestors) {
+            descendSteps.add(
+                objectStableMapper.objectStableId(ObjectLocation(callSiteLocation.documentPath, ancestor)))
         }
     }
 

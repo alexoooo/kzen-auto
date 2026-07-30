@@ -1,0 +1,17 @@
+# Three-level call chain, frame A (ScriptMoveToTest): A hosts B (script-moveto-chain-b-test.yaml), which hosts
+# C. Parked deep in C, a jump addressed to the MIDDLE frame B must abandon C's invocation — C is re-hosted fresh
+# on resume rather than replay-adopting the capture its predecessor left behind. Every step is a CountingStep so
+# a replay-adopting C (which returns its pre-jump values instantly) reads as a count that never advances, and a
+# target that leaked to the root shows as A1 / A2 moving when only B and C should.
+main:
+  is: Script
+
+main.steps/A1:
+  is: CountingStep
+
+main.steps/CallB:
+  is: RunStep
+  instructions: "test/script/navigation/script-moveto-chain-b-test.yaml#main"
+
+main.steps/A2:
+  is: CountingStep

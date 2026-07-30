@@ -216,10 +216,21 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > **Script move-to / Set Next Statement.** A settled (paused or **error-parked**) Script run
 > can be repositioned to a target step **without executing the intervening steps** — backward = re-run from
 > the target, forward = skip over — via `ServerLogicController.moveTo` / `/logic/moveTo`. It is realised as a
-> **self-migration**: the engine carries the target as an opaque one-shot `Execution.moveTarget` through the
+> **self-migration**: the engine carries the request as a one-shot `MoveTarget` through the
 > `RunEngine.migrate` barrier (kzen-lib `Repositionable`), and Script interprets
 > it at restore time where the outcome maps live — **no engine `when` over flavours** (a non-`Repositionable`
-> Logic ignores the target and rebuilds at its existing frontier). `ScriptRunContext.restore` performs
+> Logic ignores the target and rebuilds at its existing frontier). **Any live frame is a destination, not just
+> the run root:** a `MoveTarget` names the frame it addresses by **call-site path** (root → that frame, one
+> entry per hop), so the target reaches exactly one frame — which is what makes a jump inside a sub-Script
+> possible, and what keeps a recursive document's other frames, in which the same id also resolves, from
+> jumping too. Each **transit** frame on the path reads `Execution.moveDescendCallSite` instead and descends
+> through its hosting RunStep with that boundary suppressed, so the paused rebuild reaches the addressed frame
+> rather than parking at the step that hosts it. The client sends the frame it grabbed the arrow in
+> (`LogicRunFrameInfo.executionId`), and the controller refuses — `LogicRunResponse.Rejected`, run untouched —
+> a frame that is absent or settled, a hop that names no call-site, or any hop whose Logic cannot answer for its
+> role (`canDescendThrough` for a transit hop, `canMoveTo` for the addressed frame). That gate is
+> **capability-based and names no flavour**, so a Flow or Job hop refuses cleanly instead of silently parking.
+> `ScriptRunContext.restore` performs
 > **outcome-set surgery** computed by the notation-driven `ScriptJumpAnalysis` (kzen-auto-common, layered on
 > `ScriptNestingAnalysis`): the target and everything at/after it drop from the carried capture (so a jump to
 > a loop step restarts it at iteration 0) **and the child invocations those dropped steps hosted are discarded**
@@ -231,9 +242,11 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > `IfStep`; a branch GROUP node on the path is filtered out — it is not an executed step) run — re-evaluating
 > their conditions — with their `checkpoint` suppressed, so the paused rebuild
 > parks at the target rather than the ancestor's boundary. A jump always recompiles from the current notation
-> and shares the migrate barrier (an edit-then-jump takes both in one rebuild). **Loop bodies are out of scope
-> v1**: a target inside a `rerun` branch is rejected (`canMoveTo` → `LogicRunResponse.Rejected`); a jump to
-> the loop step itself is allowed.
+> and shares the migrate barrier (an edit-then-jump takes both in one rebuild). **Loop bodies remain out of
+> scope**: a target inside a `rerun` branch is rejected (`canMoveTo` → `LogicRunResponse.Rejected`), and so is a
+> path that would descend through a RunStep inside one (`canDescendThrough`) — the loop would have to resume at
+> its current iteration rather than restart, which is the parked `LoopCursor` extension. A jump to the loop step
+> itself is allowed.
 > **Client affordance:** both move-to and breakpoints live in the Script's **execution margin** —
 > an IDE/VBA-style gutter column reserved by `ScriptController`'s `paddingLeft` and painted by
 > `ScriptExecutionMargin` (kzen-auto-js), which anchors a breakpoint band and the draggable next-to-run arrow on
@@ -292,7 +305,7 @@ Routes are declared in `KzenAutoMain.kt` — one `route*` function per group, al
 | Notation commands | `/command/...` | `/command/document/create`, `/command/object/add`, `/command/attribute/upsert`, `/command/refactor/rename`, `/command/resource/add` | CQRS commands against the notation graph |
 | Detached | `/action/...` | `/action/detached`, `/action/download` | Detached-paradigm one-shot actions; `/action/download` returns a file body with `Content-Disposition` |
 | Task | `/task/...` | `/task/submit`, `/task/query`, `/task/cancel`, `/task/lookup` | Long-running background jobs (Task paradigm — no built-in document uses it; see § 1) |
-| Logic | `/logic/...` | `/logic/status`, `/logic/events`, `/logic/startRun`, `/logic/startStep`, `/logic/run`, `/logic/step`, `/logic/stepOver`, `/logic/stepOut`, `/logic/moveTo`, `/logic/pause`, `/logic/cancel`, `/logic/request`, `/logic/breakpoints`, `/logic/setPauseOnError`, `/logic/trace-binary` | Step / step-over / step-out / move-to / pause / resume of a logic run (**all four flavours** — Script, Flow, Job, Report); `/logic/setPauseOnError` toggles error-parking mid-run; `/logic/events` is the **SSE push stream** of the same `LogicStatus` payload `/logic/status` returns (see the push gotcha below); `/logic/breakpoints` replace-sets the run's breakpoint elements (repeated `breakpoint` params, each a full `ObjectLocation`; the same params ride `/logic/startRun` / `/logic/startStep` so start-time breakpoints can't miss early steps); a refused start answers **400 with the reason as the plain-text body** (`LogicStartAttempt.Failed` — an in-progress run, or a compile failure naming the root and its cause), which the client renders above the document rather than swallowing; `/logic/moveTo` (Script only) repositions a settled run's pointer to a target step (`path` + `object`) without executing the intervening steps — see the Script move-to note in § 1 — returning `Rejected` for an unsupported target; `/logic/trace-binary?run=&hash=` is the **only raw-bytes route on this surface** — a screenshot blob addressed by content hash (`application/octet-stream`, `Cache-Control: public, immutable`, 404 when the run isn't retained or the hash is unknown) — see the trace-binary-by-handle note below |
+| Logic | `/logic/...` | `/logic/status`, `/logic/events`, `/logic/startRun`, `/logic/startStep`, `/logic/run`, `/logic/step`, `/logic/stepOver`, `/logic/stepOut`, `/logic/moveTo`, `/logic/pause`, `/logic/cancel`, `/logic/request`, `/logic/breakpoints`, `/logic/setPauseOnError`, `/logic/trace-binary` | Step / step-over / step-out / move-to / pause / resume of a logic run (**all four flavours** — Script, Flow, Job, Report); `/logic/setPauseOnError` toggles error-parking mid-run; `/logic/events` is the **SSE push stream** of the same `LogicStatus` payload `/logic/status` returns (see the push gotcha below); `/logic/breakpoints` replace-sets the run's breakpoint elements (repeated `breakpoint` params, each a full `ObjectLocation`; the same params ride `/logic/startRun` / `/logic/startStep` so start-time breakpoints can't miss early steps); a refused start answers **400 with the reason as the plain-text body** (`LogicStartAttempt.Failed` — an in-progress run, or a compile failure naming the root and its cause), which the client renders above the document rather than swallowing; `/logic/moveTo` (Script only) repositions a settled run's pointer to a target step (`path` + `object`) without executing the intervening steps, in the frame named by the optional `execution` param (absent = the run root) — see the Script move-to note in § 1 — returning `Rejected` for an unsupported target or an unreachable frame; `/logic/trace-binary?run=&hash=` is the **only raw-bytes route on this surface** — a screenshot blob addressed by content hash (`application/octet-stream`, `Cache-Control: public, immutable`, 404 when the run isn't retained or the hash is unknown) — see the trace-binary-by-handle note below |
 | Stable identity | `/object-stable/...` | `/object-stable/snapshot` | The server's whole `ObjectLocation ↔ ObjectStableId` bimap, fetched once at client connect to `seed()` the client-side mapper (§ 4) |
 | File listing | `/file-listing` | `/file-listing?directory=&filter=` | Server-side filesystem browse, backing the Report input picker |
 | Storage | `/storage/...` | `/storage/summary`, `/storage/bundles`, `/storage/delete` | Managed on-disk areas — see § 6 |

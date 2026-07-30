@@ -268,8 +268,14 @@ class LogicHandler(
             CommonRestApi.paramObjectPath, ObjectPath::parse)
         val target = ObjectLocation(documentPath, objectPath)
 
+        // The frame to reposition — the run root when absent, so a caller that only ever moves within the
+        // root document doesn't have to name it.
+        val executionId: LogicExecutionId? = parameters.getParamOrNull(CommonRestApi.paramExecutionId) {
+            value -> LogicExecutionId(value)
+        }
+
         val response = runBlocking {
-            serverLogicController.moveTo(runId, target)
+            serverLogicController.moveTo(runId, target, executionId = executionId)
         }
 
         return response.name

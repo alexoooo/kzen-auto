@@ -1,0 +1,30 @@
+# The sub-Script hosted by script-moveto-nested-test.yaml, carrying three move-to targets inside a HOSTED
+# frame: C1 (backward), C3 (forward), and G1 inside the If branch (frame descent composed with the existing
+# in-frame descend — Gate re-runs its condition, the target parks). Every executable step is a CountingStep, so
+# what re-ran, what was adopted and what was skipped is read off the process-global count; On is the branch
+# condition and produces no count of its own.
+main:
+  is: Script
+
+main.steps/C1:
+  is: CountingStep
+
+main.steps/C2:
+  is: CountingStep
+
+main.steps/On:
+  is: FormulaStep
+  code: "true"
+
+main.steps/Gate:
+  is: IfStep
+
+main.steps/Gate.branches/Branch:
+  is: IfBranch
+  condition: On
+
+main.steps/Gate.branches/Branch.steps/G1:
+  is: CountingStep
+
+main.steps/C3:
+  is: CountingStep

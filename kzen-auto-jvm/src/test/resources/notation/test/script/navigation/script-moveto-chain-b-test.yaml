@@ -1,0 +1,15 @@
+# The middle frame of the script-moveto-chain-test.yaml chain: hosted by A, hosting C. This is the frame the
+# jump addresses, so B1 / B2 record what the rebuilt middle frame re-ran while CallB's re-execution is what
+# re-hosts C.
+main:
+  is: Script
+
+main.steps/B1:
+  is: CountingStep
+
+main.steps/CallC:
+  is: RunStep
+  instructions: "test/script/navigation/script-moveto-chain-c-test.yaml#main"
+
+main.steps/B2:
+  is: CountingStep

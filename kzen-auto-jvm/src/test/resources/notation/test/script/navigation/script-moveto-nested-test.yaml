@@ -1,0 +1,17 @@
+# Nested-frame move-to parent (ScriptMoveToTest): a CountingStep, a RunStep hosting a sub-Script, a trailing
+# CountingStep. The jumps this fixture serves all address the CHILD frame, so what the parent proves is what
+# must NOT move — it stays parked at Call while the child repositions, and its Before / After counts stay put.
+# Both steps are CountingSteps so a target that leaked to the root frame (re-running Before, or skipping to
+# After) shows up as a count the child's own jumps cannot explain.
+main:
+  is: Script
+
+main.steps/Before:
+  is: CountingStep
+
+main.steps/Call:
+  is: RunStep
+  instructions: "test/script/navigation/script-moveto-nested-child-test.yaml#main"
+
+main.steps/After:
+  is: CountingStep
