@@ -1,0 +1,22 @@
+# DoWhile-hosted transit fixture (ScriptNestedMoveToTest): the ForEach fixture's shape over the other loop
+# archetype, whose carry is a plain completed-iteration count rather than a cursor. Tick runs BEFORE the
+# call-site, so it is the in-flight iteration's completed body prefix: a descent that re-entered the loop
+# without its carry would reset and re-run Tick (and park there, short of Call) instead of replay-adopting it.
+# The condition is driven off Tick, so a clean run is 3 iterations (counts 1..3) plus After.
+
+main:
+  is: Script
+
+main.steps/Loop:
+  is: DoWhileStep
+  condition: "Tick < 3"
+
+main.steps/Loop.steps/Tick:
+  is: CountingStep
+
+main.steps/Loop.steps/Call:
+  is: RunStep
+  instructions: "test/script/navigation/script-moveto-dowhile-transit-child-test.yaml#main"
+
+main.steps/After:
+  is: CountingStep

@@ -32,10 +32,15 @@ import kotlin.test.fail
  * backward re-run and forward skip inside a hosted sub-Script, an If-branch descend composed with the frame
  * descent (the transit frame suppresses the hosting RunStep's boundary, the addressed frame additionally
  * suppresses its own IfStep's), a middle-frame jump that must ABANDON the deeper invocation, a deepest-frame
- * jump whose call-site path claims two transit hops, and the four
- * refusal gates — a target whose document holds no live frame, a frame that has already settled, a transit hop
- * whose call-site sits inside a loop body, and a transit hop whose Logic is not
- * [tech.kzen.lib.common.exec.engine.Repositionable].
+ * jump whose call-site path claims two transit hops, LOOP-HOSTED transit through each loop archetype and
+ * through two nested loops at once, and the three
+ * refusal gates — a target whose document holds no live frame, a frame that has already settled, and a transit
+ * hop whose Logic is not [tech.kzen.lib.common.exec.engine.Repositionable].
+ *
+ * The loop-hosted cases are what separates the two repositioning roles: a loop body is not a legal jump TARGET
+ * ([ScriptMoveToTest.loopBodyTargetIsRejected]) yet a call-site inside one carries a descent, because the
+ * rebuilt loop re-enters at its carried cursor and the descent rides that resumed iteration rather than a
+ * position the analysis had to invent.
  *
  * Every positive case also pins the position of each TRANSIT frame it passes through, because a descent reaches
  * its call-site with the boundary suppressed — and a named boundary is the only thing that ever writes a frame's
@@ -68,10 +73,15 @@ class ScriptNestedMoveToTest {
         DocumentPath.parse("test/script/navigation/script-moveto-transit-child-test.yaml")
     private val recursivePath = DocumentPath.parse("test/script/navigation/script-moveto-recursive-test.yaml")
 
-    // A RunStep hosting a sub-Script from INSIDE a ForEach body — the loop-hosted call-site the descent gate
-    // refuses. Shared with the engine coverage that owns it; it already carries exactly this shape.
-    private val runLoopPath = DocumentPath.parse("test/script/engine/script-engine-run-loop-test.yaml")
-    private val stepNavChildPath = DocumentPath.parse("test/script/navigation/step-nav-child-test.yaml")
+    private val loopTransitPath = DocumentPath.parse("test/script/navigation/script-moveto-loop-transit-test.yaml")
+    private val loopTransitChildPath =
+        DocumentPath.parse("test/script/navigation/script-moveto-loop-transit-child-test.yaml")
+    private val doWhileTransitPath =
+        DocumentPath.parse("test/script/navigation/script-moveto-dowhile-transit-test.yaml")
+    private val doWhileTransitChildPath =
+        DocumentPath.parse("test/script/navigation/script-moveto-dowhile-transit-child-test.yaml")
+    private val nestedLoopTransitPath =
+        DocumentPath.parse("test/script/navigation/script-moveto-nested-loop-transit-test.yaml")
 
     private lateinit var context: KzenAutoContext
 
@@ -326,20 +336,96 @@ class ScriptNestedMoveToTest {
 
 
     @Test
-    fun loopHostedTransitHopIsRejected() {
-        val runId = startPaused(runLoopPath)     // before Range
-        step(runId)                              // Range, before Loop
-        step(runId)                              // into the loop, before Call (iteration 1)
-        step(runId)                              // into the child, before ChildA
+    fun loopHostedTransitHopDescendsIntoTheResumedIteration() {
+        val runId = startPaused(loopTransitPath)
+        // Park right after the 3rd Count: iteration 0's child invocation completed (counts 1-2) and iteration
+        // 1's is mid-flight at C2 — so the loop and the child it hosts are both in flight.
+        stepUntilCount(runId, 3)
 
-        // The root frame would have to descend through a call-site inside its ForEach body, which means resuming
-        // the loop at its current iteration rather than restarting it at 0. The refusal is definitive, not
-        // best-effort: honouring it halfway would restart the loop under the user's repositioned child.
+        // The root frame descends through a call-site INSIDE its ForEach body. The loop re-enters at its
+        // carried cursor (item 2), its completed body prefix replay-adopts, and the one-shot descend claim
+        // rides exactly that resumed iteration.
         assertEquals(
-            LogicRunResponse.Rejected,
-            moveTo(runId, stepNavChildPath, "main.steps/ChildB", frameFor(stepNavChildPath)))
-        assertFrameNextToRun(stepNavChildPath, "main.steps/ChildA")
-        assertFrameNextToRun(runLoopPath, "main.steps/Loop.steps/Call")
+            LogicRunResponse.Submitted,
+            moveTo(runId, loopTransitChildPath, "main.steps/C1", frameFor(loopTransitChildPath)))
+        awaitState(LogicRunState.Paused)
+        assertFrameNextToRun(loopTransitChildPath, "main.steps/C1")
+        assertFrameNextToRun(loopTransitPath, "main.steps/Loop.steps/Call")
+        assertEquals(3, CountingStep.count.get(), "the jump itself runs nothing")
+
+        resume(runId)
+        awaitDone()
+
+        // The repositioned invocation re-ran C1 + C2 (4, 5), iteration 2's fresh invocation ran its own
+        // (6, 7), and After closed the run (8). A loop restarted at iteration 0 would have re-hosted items 1
+        // and 2 as well, reaching 10.
+        assertEquals(
+            8, CountingStep.count.get(),
+            "only the repositioned iteration re-ran — the loop did not restart at iteration 0")
+        assertEquals(
+            "60", stepDisplay(runId, loopTransitPath, "main.steps/Total"),
+            "each iteration kept its own item: [10, 20, 30]")
+    }
+
+
+    @Test
+    fun doWhileHostedTransitHopDescendsIntoTheResumedIteration() {
+        val runId = startPaused(doWhileTransitPath)
+        stepUntilCount(runId, 2)                 // iteration 2's Tick, before Call
+        step(runId)                              // into the child, before D1
+        step(runId)                              // D1, before D2
+
+        // The other loop archetype, whose carry is a plain completed-iteration count rather than a cursor: the
+        // resume rule is the same, so Tick — this iteration's completed body prefix — replay-adopts.
+        assertEquals(
+            LogicRunResponse.Submitted,
+            moveTo(runId, doWhileTransitChildPath, "main.steps/D1", frameFor(doWhileTransitChildPath)))
+        awaitState(LogicRunState.Paused)
+        assertFrameNextToRun(doWhileTransitChildPath, "main.steps/D1")
+        assertFrameNextToRun(doWhileTransitPath, "main.steps/Loop.steps/Call")
+        assertEquals(2, CountingStep.count.get(), "the jump itself runs nothing")
+        assertEquals(
+            "2", stepDisplay(runId, doWhileTransitPath, "main.steps/Loop.steps/Tick"),
+            "the in-flight iteration's Tick was adopted; a loop re-entered without its carry would have reset " +
+                "it, re-run it, and parked there short of the call-site")
+
+        resume(runId)
+        awaitDone()
+
+        assertEquals(
+            4, CountingStep.count.get(),
+            "the resumed iteration finished without re-running Tick, one more iteration ran (3), the " +
+                "condition ended the loop, and After closed the run (4)")
+    }
+
+
+    @Test
+    fun nestedLoopTransitHopDescendsThroughBothLoops() {
+        val runId = startPaused(nestedLoopTransitPath)
+        // Park right after the 7th Count: the LAST child invocation (outer item 2, inner item 2) is mid-flight
+        // at C2, so both loops are in flight and both must re-enter at their own cursor.
+        stepUntilCount(runId, 7)
+
+        // One frame, three descend entries claimed on a single rebuild: Outer, Inner, and the call-site.
+        assertEquals(
+            LogicRunResponse.Submitted,
+            moveTo(runId, loopTransitChildPath, "main.steps/C1", frameFor(loopTransitChildPath)))
+        awaitState(LogicRunState.Paused)
+        assertFrameNextToRun(loopTransitChildPath, "main.steps/C1")
+        assertFrameNextToRun(nestedLoopTransitPath, "main.steps/Outer.steps/Inner.steps/Call")
+        assertEquals(7, CountingStep.count.get(), "the jump itself runs nothing")
+
+        resume(runId)
+        awaitDone()
+
+        // Only the repositioned invocation re-ran (C1, C2 -> 8, 9) before After closed the run (10). An inner
+        // loop that replayed from its first item would have re-hosted one more invocation, reaching 12.
+        assertEquals(
+            10, CountingStep.count.get(),
+            "both loops re-entered at their carried cursors")
+        assertEquals(
+            "60", stepDisplay(runId, nestedLoopTransitPath, "main.steps/Total"),
+            "every invocation kept its own inner item: [[10, 20], [10, 20]]")
     }
 
 
@@ -384,6 +470,20 @@ class ScriptNestedMoveToTest {
     private fun step(runId: LogicRunId) {
         context.serverLogicController.step(runId, snapshot)
         awaitState(LogicRunState.Paused)
+    }
+
+
+    // Step one boundary at a time until [CountingStep] has run [target] times: the park right after the Nth
+    // Count is at the next boundary of that same invocation, which is what leaves both the hosting loop and
+    // the child it hosts mid-flight. Boundary counts differ per fixture, hence a target rather than a
+    // hand-counted step list.
+    private fun stepUntilCount(runId: LogicRunId, target: Int) {
+        var guard = 0
+        while (CountingStep.count.get() < target && guard < 200) {
+            step(runId)
+            guard += 1
+        }
+        assertEquals(target, CountingStep.count.get(), "expected to park right after Count invocation $target")
     }
 
 

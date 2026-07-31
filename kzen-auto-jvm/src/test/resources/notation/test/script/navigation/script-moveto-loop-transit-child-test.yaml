@@ -1,0 +1,34 @@
+# Sub-Script hosted from inside a loop body (ScriptNestedMoveToTest, shared by the single- and nested-loop
+# transit fixtures): two CountingSteps so a re-run of either is visible in the process-global count, and an
+# item-dependent result (`number * 10`) so an invocation that adopted a DIFFERENT iteration's capture shows up
+# as a wrong value in the hosting loop's collected output rather than only as a count.
+
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.Int
+      generics: []
+      nullable: false
+
+main.parameters/number:
+  is: ParameterBinding
+  type:
+    class: kotlin.Int
+    generics: []
+    nullable: false
+  default: 0
+
+main.steps/C1:
+  is: CountingStep
+
+main.steps/C2:
+  is: CountingStep
+
+main.steps/Val:
+  is: FormulaStep
+  code: "number * 10"
+
+main.steps/Result:
+  is: ResultStep
+  code: "Val"

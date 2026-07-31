@@ -2,6 +2,7 @@ package tech.kzen.auto.client.service.rest
 
 import tech.kzen.auto.client.util.*
 import tech.kzen.auto.common.api.CommonRestApi
+import tech.kzen.auto.common.paradigm.logic.LogicControlReply
 import tech.kzen.auto.common.util.data.DataLocationInfo
 import tech.kzen.auto.common.util.scan.NotationScanDocument
 import tech.kzen.auto.common.util.storage.StorageAreaInfo
@@ -791,11 +792,13 @@ class ClientRestApi(
     }
 
 
+    // Alone among the control verbs this carries the server's reason when it refuses, so a move the user
+    // cannot make can say why (see LogicControlReply).
     suspend fun logicMoveTo(
         runId: LogicRunId,
         target: ObjectLocation,
         executionId: LogicExecutionId
-    ): LogicRunResponse {
+    ): LogicControlReply {
         val response = getOrPut(
             CommonRestApi.logicMoveTo,
             CommonRestApi.paramRunId to runId.value,
@@ -803,7 +806,7 @@ class ClientRestApi(
             CommonRestApi.paramObjectPath to target.objectPath.asString(),
             CommonRestApi.paramExecutionId to executionId.value)
 
-        return LogicRunResponse.valueOf(response)
+        return LogicControlReply.parse(response)
     }
 
 

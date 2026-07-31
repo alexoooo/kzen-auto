@@ -11,6 +11,7 @@ import tech.kzen.auto.client.wrap.FunctionWithDebounce
 import tech.kzen.auto.client.wrap.lodash
 import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.paradigm.logic.LogicConventions
+import tech.kzen.auto.common.paradigm.logic.LogicControlReply
 import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.exec.ExecutionSuccess
 import tech.kzen.lib.common.exec.engine.StepMode
@@ -80,6 +81,10 @@ class ClientLogicGlobal(
         // all documents), so a failure reads the same wherever it was triggered from.
         private const val startLabel = "Unable to start"
         private const val clearTraceLabel = "Unable to clear the trace"
+
+        // Shared by a move the SERVER refuses and one the client rules out before asking, so a refused move
+        // reads the same however it was caught.
+        private const val moveRejectedLabel = "Can't move to this step"
     }
 
 
@@ -500,14 +505,20 @@ class ClientLogicGlobal(
     // Every control verb acting on the active run shares this shape: publish the pending state, issue the
     // request, then settle `pending` back and surface any failure as a [ControlError].
     //
+    // [documentPath] is the document the verb was aimed at, and therefore the only one its failure is shown on
+    // — a run-wide verb passes [runDocumentPath], a verb aimed at one document passes that document. Getting it
+    // wrong hides the failure entirely (the stage renders a control error only on the document it names), so it
+    // is asked for per call rather than guessed from the run.
+    //
     // The catch is load-bearing: the REST call throws on a non-2xx (carrying the server's reason), and an
     // uncaught throw inside [async] is a rejected promise nobody observes — the failure vanishes and the
     // controls stay stuck mid-action.
     private fun controlAsync(
         label: String,
         pending: ClientLogicState.Pending,
+        documentPath: DocumentPath?,
         rejectedLabel: String = label,
-        request: suspend (LogicRunId) -> LogicRunResponse
+        request: suspend (LogicRunId) -> LogicControlReply
     ) {
         cancelSlowLoop()
         val logicRunId = clientLogicState.logicStatus?.active?.id
@@ -523,17 +534,19 @@ class ClientLogicGlobal(
 
             val error =
                 try {
-                    when (val response = request(logicRunId)) {
+                    val reply = request(logicRunId)
+                    when (reply.response) {
                         LogicRunResponse.Submitted -> null
 
-                        // The server understood and refused (an invalid target), which has its own wording.
-                        LogicRunResponse.Rejected -> controlError(rejectedLabel, null)
+                        // The server understood and refused (an invalid target), which has its own wording;
+                        // the reason it names is the detail.
+                        LogicRunResponse.Rejected -> ControlError(rejectedLabel, reply.reason, documentPath)
 
-                        else -> controlError(label, response.name)
+                        else -> ControlError(label, reply.response.name, documentPath)
                     }
                 }
                 catch (t: Throwable) {
-                    controlError(label, failureDetail(t))
+                    ControlError(label, failureDetail(t), documentPath)
                 }
 
             clientLogicState = clientLogicState.copy(
@@ -584,10 +597,11 @@ class ClientLogicGlobal(
     }
 
 
-    // Scoped to the running document, so an error doesn't follow the user to an unrelated one.
-    private fun controlError(label: String, detail: String?): ControlError {
-        return ControlError(
-            label, detail, clientLogicState.logicStatus?.active?.frame?.objectLocation?.documentPath)
+    // The document a RUN-WIDE verb (pause / continue / step / stop) belongs to: the run's root frame's. Scoping
+    // its failure there keeps the error off an unrelated document the user navigates to afterwards. A verb aimed
+    // at one document — move-to — names that document instead, and would be invisible under this scope.
+    private fun runDocumentPath(): DocumentPath? {
+        return clientLogicState.logicStatus?.active?.frame?.objectLocation?.documentPath
     }
 
 
@@ -598,16 +612,16 @@ class ClientLogicGlobal(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun pauseAsync() {
-        controlAsync("Unable to pause", ClientLogicState.Pending.Pause) {
-            restClient.logicPause(it)
+        controlAsync("Unable to pause", ClientLogicState.Pending.Pause, runDocumentPath()) {
+            LogicControlReply(restClient.logicPause(it))
         }
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     fun continueRunAsync() {
-        controlAsync("Unable to continue", ClientLogicState.Pending.Pause) {
-            restClient.logicContinueRun(it)
+        controlAsync("Unable to continue", ClientLogicState.Pending.Pause, runDocumentPath()) {
+            LogicControlReply(restClient.logicContinueRun(it))
         }
     }
 
@@ -671,8 +685,8 @@ class ClientLogicGlobal(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun stepAsync() {
-        controlAsync("Unable to step", ClientLogicState.Pending.Step) {
-            restClient.logicStep(it)
+        controlAsync("Unable to step", ClientLogicState.Pending.Step, runDocumentPath()) {
+            LogicControlReply(restClient.logicStep(it))
         }
     }
 
@@ -681,8 +695,8 @@ class ClientLogicGlobal(
     // Step Over: like Step, but the server runs any sub-document (RunStep child) entered on this tick to
     // completion instead of descending into it, pausing at the next step of the current frame.
     fun stepOverAsync() {
-        controlAsync("Unable to step over", ClientLogicState.Pending.Step) {
-            restClient.logicStepOver(it)
+        controlAsync("Unable to step over", ClientLogicState.Pending.Step, runDocumentPath()) {
+            LogicControlReply(restClient.logicStepOver(it))
         }
     }
 
@@ -691,8 +705,8 @@ class ClientLogicGlobal(
     // Step Out: run the deepest currently-paused frame (the current document) to completion, then pause
     // at the caller's next step — or, if at the run root, run to the end.
     fun stepOutAsync() {
-        controlAsync("Unable to step out", ClientLogicState.Pending.Step) {
-            restClient.logicStepOut(it)
+        controlAsync("Unable to step out", ClientLogicState.Pending.Step, runDocumentPath()) {
+            LogicControlReply(restClient.logicStepOut(it))
         }
     }
 
@@ -702,13 +716,28 @@ class ClientLogicGlobal(
     // intervening steps (backward = re-run from there, forward = skip over). Unlike step / pause, both are
     // supplied by the caller (the draggable next-to-run arrow of whichever document is being viewed), not read
     // from status. A Rejected response (a structurally-invalid target, or a frame the server can't reposition)
-    // is surfaced distinctly from other control failures.
+    // is surfaced distinctly from other control failures, carrying the server's reason as the detail.
+    //
+    // Scoped to the TARGET's document, not the run's root: the user drags the marker in whichever document they
+    // are viewing, and in a nested frame that is not the root — scoping to the root would show the refusal on a
+    // document the user isn't looking at, and hide it on the one they acted in.
     fun moveToAsync(target: ObjectLocation, executionId: LogicExecutionId) {
         controlAsync(
-            "Unable to move", ClientLogicState.Pending.Step, "Can't move to this step"
+            "Unable to move", ClientLogicState.Pending.Step, target.documentPath, moveRejectedLabel
         ) {
             restClient.logicMoveTo(it, target, executionId)
         }
+    }
+
+
+    // A move the CLIENT ruled out without asking (the drag handle knows the frame spine can't carry it — see
+    // ScriptExecutionMargin.spineRefusal). Surfaced through the same label, panel and document scoping as a
+    // server refusal, so the two are one error surface: a refusal the client caught early must still say why,
+    // or the user is back to a drop that does nothing for no stated reason.
+    fun refuseMove(documentPath: DocumentPath, reason: String) {
+        clientLogicState = clientLogicState.copy(
+            controlError = ControlError(moveRejectedLabel, reason, documentPath))
+        publish()
     }
 
 
@@ -891,8 +920,8 @@ class ClientLogicGlobal(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun stopAsync() {
-        controlAsync("Unable to stop", ClientLogicState.Pending.Cancel) {
-            restClient.logicCancel(it)
+        controlAsync("Unable to stop", ClientLogicState.Pending.Cancel, runDocumentPath()) {
+            LogicControlReply(restClient.logicCancel(it))
         }
     }
 

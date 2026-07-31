@@ -16,9 +16,10 @@ import tech.kzen.lib.common.model.structure.notation.GraphNotation
  * the frame it addresses ([isValidTarget], [plan]) and a frame that merely hosts the addressed one
  * ([isDescendableCallSite], [descendAncestors]).
  *
- * Layered on [ScriptNestingAnalysis]: reuses its `rerun`-flag detection (a loop body is a v1-invalid target,
- * execution-control decision 3) and its ancestor-path enumeration ([ScriptNestingAnalysis.enclosingPath]); adds
- * only the jump-specific set computations. Notation-driven throughout — no hardcoded step types.
+ * Layered on [ScriptNestingAnalysis]: reuses its `rerun`-flag detection (a loop body is a v1-invalid jump
+ * TARGET, execution-control decision 3 — transit THROUGH a call site inside one is supported, see
+ * [isDescendableCallSite]) and its ancestor-path enumeration ([ScriptNestingAnalysis.enclosingPath]); adds only
+ * the jump-specific set computations. Notation-driven throughout — no hardcoded step types.
  */
 object ScriptJumpAnalysis {
     /**
@@ -49,12 +50,14 @@ object ScriptJumpAnalysis {
 
     /**
      * Compute the [ScriptJumpPlan] for jumping to [target] in [scriptTree] (the root tree of [documentPath]),
-     * against the current [graphNotation]. Valid iff [target] resolves to a jumpable step: it exists in the
-     * tree, it lives in an executable step-list branch (not a `parameters` / `item` binding — both are
-     * `is: ScriptStep` archetypes, so the hosting branch, not the inheritance chain, is what distinguishes a
-     * step from a binding — and not a `group: true` branch, whose children are structural branch groups), and
-     * it is not inside a `rerun`-flagged loop body (a jump TO a loop step itself is valid — the loop restarts
-     * at iteration 0).
+     * against the current [graphNotation]. Valid iff [target] is an element the spine walks ([walkedElement])
+     * AND is not inside a `rerun`-flagged loop body.
+     *
+     * That loop clause is the jump's alone — a DESCENT through a call site in the same body is supported, see
+     * [isDescendableCallSite]. Re-pointing the walk INTO a body would have to decide which iteration the
+     * target lands in and re-point the loop's own cursor at it, and no such surgery exists: a loop resumes the
+     * iteration it was already on, it cannot be sent to a different one. A jump TO the loop step itself is
+     * valid — its whole subtree drops, so it restarts at iteration 0.
      */
     fun plan(
         graphNotation: GraphNotation,
@@ -62,32 +65,19 @@ object ScriptJumpAnalysis {
         scriptTree: ScriptTree,
         target: ObjectPath
     ): ScriptJumpPlan {
-        val ordered = scriptTree.orderedDescendantObjectPaths()
-        val targetIndex = ordered.indexOf(target)
-        if (targetIndex < 0) {
-            return ScriptJumpPlan.invalid("Not a step in this Script")
-        }
-
-        val path = ScriptNestingAnalysis.enclosingPath(scriptTree, target)
-            ?: return ScriptJumpPlan.invalid("Not a step in this Script")
-
-        // The branch [target] directly lives in. A binding (loop item / script parameter) is a ScriptStep
-        // archetype but is not walked by the spine, so it is not a jumpable target.
-        val (hostingContainer, hostingAttribute) = path.last()
-        if (hostingAttribute == ScriptConventions.itemAttributeName ||
-                hostingAttribute == ScriptConventions.parametersAttributeName) {
-            return ScriptJumpPlan.invalid("Not a step (binding)")
-        }
-
-        // Likewise a structural GROUP child (an IfBranch): notation object, never executed, so nothing can park
-        // at it. Notation-driven via the `group: true` marker — no step type named here.
-        if (isGroupAttribute(graphNotation, documentPath, hostingContainer, hostingAttribute)) {
-            return ScriptJumpPlan.invalid("Not a step (branch)")
+        val path = when (val walked = walkedElement(graphNotation, documentPath, scriptTree, target)) {
+            is WalkedElement.NotWalked -> return ScriptJumpPlan.invalid(walked.reason)
+            is WalkedElement.Walked -> walked.path
         }
 
         if (ScriptNestingAnalysis.enclosingLoops(graphNotation, documentPath, scriptTree, target).isNotEmpty()) {
             return ScriptJumpPlan.invalid("Inside a loop body (not supported)")
         }
+
+        val ordered = scriptTree.orderedDescendantObjectPaths()
+        // Non-negative: [walkedElement] resolved an enclosing path, so [target] is in the tree, and both
+        // enumerations cover the same nodes.
+        val targetIndex = ordered.indexOf(target)
 
         // Group paths left in [dropSet] are harmless — no outcome ever exists for one — so they are not worth
         // filtering there the way [containerAncestors] filters them here.
@@ -106,14 +96,15 @@ object ScriptJumpAnalysis {
 
 
     /**
-     * The CONTAINER STEPS the rebuilt spine runs (re-evaluating an IfStep's condition) but must not park at, to
-     * reach [element]: the ancestors on the path root -> [element], with the root `main` and the structural
-     * branch GROUP nodes filtered out — neither is a step the spine can run. Null when [element] is not in
-     * [scriptTree].
+     * The CONTAINER STEPS the rebuilt spine runs (re-evaluating an IfStep's condition, re-entering a loop at
+     * its carried cursor) but must not park at, to reach [element]: the ancestors on the path root -> [element],
+     * with the root `main` and the structural branch GROUP nodes filtered out — neither is a step the spine can
+     * run. Null when [element] is not in [scriptTree].
      *
      * Both repositioning roles need exactly this — the addressed frame around its jump target (as
-     * [ScriptJumpPlan.ancestors]), a transit frame around the call-site it hosts the addressed frame from, which
-     * needs none of the plan's drop / preceding sets, having nothing of its own to re-run or skip.
+     * [ScriptJumpPlan.ancestors], where a loop ancestor cannot arise because [plan] refuses a loop-body target),
+     * a transit frame around the call-site it hosts the addressed frame from, which needs none of the plan's
+     * drop / preceding sets, having nothing of its own to re-run or skip.
      */
     fun descendAncestors(
         graphNotation: GraphNotation,
@@ -124,6 +115,50 @@ object ScriptJumpAnalysis {
         val path = ScriptNestingAnalysis.enclosingPath(scriptTree, element)
             ?: return null
         return containerAncestors(graphNotation, documentPath, path)
+    }
+
+
+    /**
+     * The structural verdict both repositioning roles need of an element, and everything the transit role needs
+     * ([isDescendableCallSite]): [WalkedElement.Walked] with its enclosing path when the spine walks it, else
+     * [WalkedElement.NotWalked] naming why it does not.
+     */
+    private sealed class WalkedElement {
+        class Walked(val path: List<Pair<ObjectPath, AttributeName>>): WalkedElement()
+        class NotWalked(val reason: String): WalkedElement()
+    }
+
+
+    /**
+     * Whether the spine walks [element] at all: it is in [scriptTree], and the branch DIRECTLY hosting it is an
+     * executable step list. Two hosting branches are not, and both hold `is: ScriptStep` archetypes — so the
+     * hosting branch, not the inheritance chain, is what tells a step from a non-step:
+     *
+     * - a value BINDING (a loop `item`, a Script `parameters`), which the spine never visits;
+     * - a `group: true` branch, whose children are structural branch groups (an IfStep's IfBranch) — notation
+     *   objects that are never executed, so nothing can park at one or descend through it. Notation-driven via
+     *   the `group: true` marker; no step type is named here.
+     */
+    private fun walkedElement(
+        graphNotation: GraphNotation,
+        documentPath: DocumentPath,
+        scriptTree: ScriptTree,
+        element: ObjectPath
+    ): WalkedElement {
+        val path = ScriptNestingAnalysis.enclosingPath(scriptTree, element)
+            ?: return WalkedElement.NotWalked("Not a step in this Script")
+
+        val (hostingContainer, hostingAttribute) = path.last()
+        if (hostingAttribute == ScriptConventions.itemAttributeName ||
+                hostingAttribute == ScriptConventions.parametersAttributeName) {
+            return WalkedElement.NotWalked("Not a step (binding)")
+        }
+
+        if (isGroupAttribute(graphNotation, documentPath, hostingContainer, hostingAttribute)) {
+            return WalkedElement.NotWalked("Not a step (branch)")
+        }
+
+        return WalkedElement.Walked(path)
     }
 
 
@@ -160,8 +195,9 @@ object ScriptJumpAnalysis {
 
 
     /**
-     * Static structural validity of [target] as a move-to destination (existence + is-a-step + not a loop body;
-     * NOT a reachability guarantee) — backs `Repositionable.canMoveTo` on the addressed frame's Logic.
+     * Static structural validity of [target] as a move-to destination (walked element + not inside a loop body;
+     * NOT a reachability guarantee) — backs `Repositionable.canMoveTo` on the addressed frame's Logic. The loop
+     * clause is what makes this STRICTER than [isDescendableCallSite]; [plan] says why it is the jump's alone.
      */
     fun isValidTarget(
         graphNotation: GraphNotation,
@@ -178,12 +214,19 @@ object ScriptJumpAnalysis {
      * `Repositionable.canDescendThrough` on a transit frame's Logic, which must reach [callSite] with its own
      * boundary suppressed and then host the frame beyond it.
      *
-     * One predicate serves both questions because a descent has to re-establish the walk's position at
-     * [callSite] exactly as a jump re-establishes it at a target, so the same three structural facts decide it:
-     * the element is in the tree, it is a real executable step (not a binding, not a branch group), and it is
-     * not inside a `rerun`-flagged loop body. The loop clause is what makes them coincide rather than merely
-     * resemble each other — resuming a descent into a loop-hosted invocation would need the loop to continue at
-     * its current iteration instead of restarting at 0.
+     * A transit frame repositions NOTHING of its own, so being walked at all ([walkedElement]) is the whole
+     * requirement — no drop set, no skip set, and in particular no loop clause. A call site inside a
+     * `rerun`-flagged body is descendable because the walk that reaches it is the loop's ordinary mid-flight
+     * resume, not a new position the analysis has to invent:
+     *
+     * - the loop re-records its cursor at the start of EVERY iteration (`ForEachStep`'s live iterator plus the
+     *   in-flight item, `DoWhileStep`'s completed-iteration count), and `ScriptRunContext.restore` keeps the
+     *   carries wholesale on the transit path, so the rebuilt loop re-enters at the iteration it was on;
+     * - that resumed iteration deliberately SKIPS its `StepExecution.dropReplay` reset, so its completed body
+     *   prefix — everything before [callSite] — replay-adopts instead of re-running;
+     * - the descend claim is one-shot (`ScriptRunContext.descendSteps` is claimed by removal, and the engine
+     *   clears the call-site hop at the hosting that consumes it), so exactly that iteration's invocation is
+     *   hosted with the boundary suppressed and every later iteration takes its ordinary boundary.
      */
     fun isDescendableCallSite(
         graphNotation: GraphNotation,
@@ -191,6 +234,6 @@ object ScriptJumpAnalysis {
         scriptTree: ScriptTree,
         callSite: ObjectPath
     ): Boolean {
-        return plan(graphNotation, documentPath, scriptTree, callSite).valid
+        return walkedElement(graphNotation, documentPath, scriptTree, callSite) is WalkedElement.Walked
     }
 }

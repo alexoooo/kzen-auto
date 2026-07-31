@@ -710,8 +710,15 @@ class ScriptRunContext(
     //
     // A transit frame is by construction blocked in [Execution.host] at the barrier, so every step BEFORE the
     // call-site completed and replay-adopts: the rebuild cannot park short of the RunStep. The exception is an
-    // ENCLOSING container (an If) — mid-flight, holding no outcome, hence re-run rather than adopted — which is
-    // precisely why the ancestors join the set too.
+    // ENCLOSING container — mid-flight, holding no outcome, hence re-run rather than adopted — which is
+    // precisely why the ancestors join the set too. An If re-evaluates its condition; a LOOP re-enters at the
+    // cursor [restoredCarries] carried and the iteration it resumes skips its own [dropReplay] reset, so the
+    // call-site is reached inside the very iteration that was in flight, with that iteration's item bound.
+    //
+    // A claim left unconsumed is inert. Were the rebuilt loop to restart at iteration 0 instead of resuming
+    // (its cursor did not survive the edit — see [survivesEdit]), the descent would ride that fresh iteration,
+    // whose [dropReplay] discards the call-site's captures first; the re-hosted child then holds neither a
+    // capture nor a descend obligation, so it never reads the move target — the jump is dropped, not misapplied.
     //
     // The id is resolved leniently and ignored when it is not this document's: the engine addresses frames
     // precisely, but a Logic handed a request it cannot place must ignore it (logic-spec §4) rather than throw.

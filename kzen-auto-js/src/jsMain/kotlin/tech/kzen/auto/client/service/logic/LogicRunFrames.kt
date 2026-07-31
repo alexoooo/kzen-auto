@@ -42,24 +42,33 @@ object LogicRunFrames {
     // in the run, so the caller falls back to the most-recent (post-run) invocation. Used to fetch a
     // document's trace by THAT invocation's execution id, so sibling / sequential invocations don't merge.
     fun frameForDocument(frame: LogicRunFrameInfo?, documentPath: DocumentPath): LogicRunFrameInfo? {
+        return spineForDocument(frame, documentPath)?.last()
+    }
+
+
+    // The whole chain root -> [frameForDocument]'s frame, or null when the document isn't live in the run. The
+    // entries before the last are the TRANSIT frames a control request aimed at that frame travels through, so
+    // a caller can ask what each of them would have to do to carry it.
+    fun spineForDocument(frame: LogicRunFrameInfo?, documentPath: DocumentPath): List<LogicRunFrameInfo>? {
         if (frame == null) {
             return null
         }
 
-        var best: LogicRunFrameInfo? = null
+        var best: List<LogicRunFrameInfo>? = null
         var bestDepth = -1
 
-        fun visit(node: LogicRunFrameInfo, depth: Int) {
+        fun visit(node: LogicRunFrameInfo, ancestors: List<LogicRunFrameInfo>, depth: Int) {
+            val spine = ancestors + node
             if (node.objectLocation.documentPath == documentPath && depth > bestDepth) {
                 bestDepth = depth
-                best = node
+                best = spine
             }
             for (dependency in node.dependencies) {
-                visit(dependency, depth + 1)
+                visit(dependency, spine, depth + 1)
             }
         }
 
-        visit(frame, 0)
+        visit(frame, listOf(), 0)
         return best
     }
 

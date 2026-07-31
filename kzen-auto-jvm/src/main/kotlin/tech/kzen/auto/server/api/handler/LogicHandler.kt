@@ -274,10 +274,12 @@ class LogicHandler(
             value -> LogicExecutionId(value)
         }
 
-        val response = runBlocking {
-            serverLogicController.moveTo(runId, target, executionId = executionId)
+        // Alone among the control verbs this answers a reason alongside the response — a refused move is a
+        // structural verdict the user has to be told, not just a control that didn't land.
+        val reply = runBlocking {
+            serverLogicController.moveToAttempt(runId, target, executionId = executionId)
         }
 
-        return response.name
+        return reply.asString()
     }
 }

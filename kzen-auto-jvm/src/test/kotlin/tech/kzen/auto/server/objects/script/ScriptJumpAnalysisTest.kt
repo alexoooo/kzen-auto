@@ -5,6 +5,7 @@ import tech.kzen.auto.common.objects.document.script.model.ScriptTree
 import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.obj.ObjectPath
+import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -16,18 +17,34 @@ import kotlin.test.assertTrue
  * validity (step vs binding vs branch group vs loop-body), the descend/ancestor set, the preceding-on-path skip
  * candidates, and the drop set. Reuses the ScriptNestingAnalysis fixture (ForEach -> DoWhile -> If, plus a
  * root-level two-branch If).
+ *
+ * Also locks where [ScriptJumpAnalysis.isDescendableCallSite] — the transit role's predicate — agrees with the
+ * plan and where it deliberately does not, which is the loop-body clause alone.
  */
 class ScriptJumpAnalysisTest {
     //-----------------------------------------------------------------------------------------------------------------
     private val documentPath = DocumentPath.parse("test/script/structure/script-nesting-test.yaml")
 
 
-    private fun plan(targetPath: String): ScriptJumpAnalysis.ScriptJumpPlan {
+    private fun <R> withScript(block: (GraphNotation, ScriptTree) -> R): R {
         val graphNotation = AutoTestUtils.readNotation()
         val graphDefinition = AutoTestUtils.graphDefinitionAttempt(graphNotation).successful()
-        val scriptTree = ScriptTree.read(documentPath, graphDefinition)
-        return ScriptJumpAnalysis.plan(
-            graphNotation, documentPath, scriptTree, ObjectPath.parse(targetPath))
+        return block(graphNotation, ScriptTree.read(documentPath, graphDefinition))
+    }
+
+
+    private fun plan(targetPath: String): ScriptJumpAnalysis.ScriptJumpPlan {
+        return withScript { graphNotation, scriptTree ->
+            ScriptJumpAnalysis.plan(graphNotation, documentPath, scriptTree, ObjectPath.parse(targetPath))
+        }
+    }
+
+
+    private fun isDescendableCallSite(callSitePath: String): Boolean {
+        return withScript { graphNotation, scriptTree ->
+            ScriptJumpAnalysis.isDescendableCallSite(
+                graphNotation, documentPath, scriptTree, ObjectPath.parse(callSitePath))
+        }
     }
 
 
@@ -117,5 +134,30 @@ class ScriptJumpAnalysisTest {
     @Test
     fun unknownTargetIsInvalid() {
         assertFalse(plan("main.steps/DoesNotExist").valid)
+    }
+
+
+    @Test
+    fun aLoopBodyCallSiteIsDescendableThoughNoJumpMayTargetIt() {
+        // The only element class on which the two repositioning roles disagree. A jump INTO a loop body has no
+        // defined iteration to land in ([loopBodyStepIsInvalid]); a call-site there carries a descent, because
+        // the rebuilt loop re-enters at its carried cursor and the resumed iteration reaches it unaided.
+        val deepStep = "main.steps/OuterLoop.steps/InnerLoop.steps/Branch.branches/Branch.steps/DeepStep"
+        assertFalse(plan(deepStep).valid)
+        assertTrue(isDescendableCallSite(deepStep))
+    }
+
+
+    @Test
+    fun anElementTheSpineNeverWalksIsNeitherTargetNorDescendable() {
+        // Everything the two roles do share: being walked at all is the descent's whole requirement, so a value
+        // binding, a structural branch group and an absent path are refused by both.
+        for (element in listOf(
+                "main.steps/OuterLoop.item/OuterItem",
+                "main.steps/TopIf.branches/Branch 2",
+                "main.steps/DoesNotExist")) {
+            assertFalse(plan(element).valid, element)
+            assertFalse(isDescendableCallSite(element), element)
+        }
     }
 }

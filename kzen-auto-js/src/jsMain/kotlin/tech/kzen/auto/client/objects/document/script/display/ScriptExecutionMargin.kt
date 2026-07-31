@@ -23,9 +23,12 @@ import tech.kzen.auto.client.wrap.installContextType
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.objects.document.script.model.ScriptJumpAnalysis
+import tech.kzen.auto.common.objects.document.script.model.ScriptJumpRefusal
 import tech.kzen.auto.common.objects.document.script.model.ScriptNestingAnalysis
 import tech.kzen.auto.common.objects.document.script.model.ScriptTree
+import tech.kzen.auto.common.paradigm.logic.MoveToRefusal
 import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
+import tech.kzen.lib.common.exec.logic.run.model.LogicRunFrameInfo
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -43,7 +46,8 @@ external interface ScriptExecutionMarginProps: Props {
     var clientStateGlobal: ClientStateGlobal
 
     // Action sink only — the margin reads all run/graph/breakpoint state from ClientState (via
-    // clientStateGlobal), and calls moveToAsync / toggleBreakpointAsync. Never used to READ run state.
+    // clientStateGlobal), and calls moveToAsync / refuseMove / toggleBreakpointAsync. Never used to READ run
+    // state.
     var clientLogicGlobal: ClientLogicGlobal
 
     // Resolves the run's stable-id-keyed breakpoint set back to current locations (rename-tracked, so a dot
@@ -72,9 +76,9 @@ external interface ScriptExecutionMarginState: State {
     var arrowLocation: ObjectLocation?
 
     // True only while the run is settled (a stepped boundary, ExplicitPaused or ErrorPaused) AND this document
-    // has a live frame — the arrow is draggable in whichever frame is being viewed, nested or root. The server
-    // then refuses the moves it can't carry out (a loop-hosted frame, a non-repositionable hop), which the
-    // client surfaces as the move rejection message.
+    // has a live frame — the arrow is draggable in whichever frame is being viewed, nested or root. Which
+    // targets that frame can reach is settled per drag (see spineRefusal); a move the client can't rule out and
+    // the server still refuses comes back as the rejection message with its reason.
     var draggable: Boolean
 
     var dragging: Boolean
@@ -170,6 +174,8 @@ class ScriptExecutionMargin(
     private var dragHitRows: List<ObjectLocation> = listOf()
     private var dragValidTargets: Set<ObjectLocation> = setOf()
     private var dragWarnTargets: Set<ObjectLocation> = setOf()
+    private var dragSpineRefusal: String? = null
+    private var dragTargetRefusals: Map<ObjectLocation, String> = mapOf()
     private var dragOriginY: Double = 0.0
     private var dragMoved: Boolean = false
 
@@ -313,8 +319,8 @@ class ScriptExecutionMargin(
 
         // Draggable while the run is SETTLED (paused at any boundary — a manual step settle, a Pause step,
         // or error-park) — the same "!running && !stepping" gate the server's moveTo enforces; isHaltPaused()
-        // would be too strict (it excludes a plain stepped Paused). Any document with a live frame qualifies:
-        // whether that frame can actually be repositioned is the server's call, answered per drop.
+        // would be too strict (it excludes a plain stepped Paused). Any document with a live frame qualifies;
+        // which targets that frame can reach is resolved at pointer-down, not per publish.
         val logicState = clientState.clientLogicState
         val canDrag = logicState.isActive() && !logicState.isExecuting() && documentFrame != null
 
@@ -396,8 +402,9 @@ class ScriptExecutionMargin(
         val documentPath = clientState.navigationRoute.documentPath
             ?: return
         val frame = clientState.clientLogicState.logicStatus?.active?.frame
-        val documentFrame = LogicRunFrames.frameForDocument(frame, documentPath)
+        val spine = LogicRunFrames.spineForDocument(frame, documentPath)
             ?: return
+        val documentFrame = spine.last()
         val nextToRun = documentFrame.position
             ?: return
         val registry = stepRowRefRegistry()
@@ -412,9 +419,34 @@ class ScriptExecutionMargin(
 
         val hitRows = ordered.filter { registry.get(it) != null }
 
-        val validTargets = hitRows
-            .filter { ScriptJumpAnalysis.isValidTarget(notation, documentPath, tree, it.objectPath) }
-            .toSet()
+        // A move addressed at a nested frame is carried by every frame above it, and a spine that can't carry
+        // it refuses EVERY target here — so the whole document paints invalid rather than offering drops the
+        // server will always refuse.
+        val spineRefusal = spineRefusal(clientState, spine)
+
+        val validTargets =
+            if (spineRefusal != null) {
+                setOf()
+            }
+            else {
+                hitRows
+                    .filter { ScriptJumpAnalysis.isValidTarget(notation, documentPath, tree, it.objectPath) }
+                    .toSet()
+            }
+
+        // Why each greyed band is greyed, resolved with the rest of the drag snapshot and shown if the user
+        // drops on one (see onSurfacePointerUp). Grey says no; it can't say that a loop won't re-enter at a
+        // chosen iteration, or that the frame at fault is up the call chain where nothing on screen shows it.
+        // Skipped entirely under a spine refusal, which already answers for every target.
+        val targetRefusals =
+            if (spineRefusal != null) {
+                mapOf()
+            }
+            else {
+                hitRows
+                    .filterNot { it in validTargets }
+                    .associateWith { ScriptJumpRefusal.reason(notation, documentPath, tree, it.objectPath) }
+            }
 
         // Trace-free advisory (decision 2): warn for a FORWARD jump that would skip a producer a step
         // running at/after the target still depends on — the source is a path-predecessor of the target
@@ -440,6 +472,8 @@ class ScriptExecutionMargin(
         dragHitRows = hitRows
         dragValidTargets = validTargets
         dragWarnTargets = warnTargets
+        dragSpineRefusal = spineRefusal
+        dragTargetRefusals = targetRefusals
         dragOriginY = event.clientY
         dragMoved = false
 
@@ -451,6 +485,46 @@ class ScriptExecutionMargin(
             candidateTopPx = null
             candidateHeightPx = null
         }
+    }
+
+
+    // Why a TRANSIT frame of [spine] (root .. the viewed frame, exclusive of it) can't carry a move addressed at
+    // the viewed frame, or null when the whole spine can — the client's mirror of the server's per-hop gate, so
+    // a nested frame the spine can never deliver to isn't painted as droppable. The reason travels with the
+    // verdict rather than being recomposed at the drop, so the colouring and the message can't disagree.
+    //
+    // Each hop's call-site is the frame's own position: a Script checkpoints a step before running it, so a
+    // frame parked in `host` reports the hosting step, and a rebuild that descends re-establishes exactly that.
+    //
+    // Only a Script can carry a descent, which mirrors the server's capability model (a Logic that is not
+    // Repositionable is refused there) rather than restating a rule of its own — so if another flavour ever
+    // becomes repositionable, this predicate has to be widened alongside it or its frames paint falsely invalid.
+    private fun spineRefusal(clientState: ClientState, spine: List<LogicRunFrameInfo>): String? {
+        val notation = clientState.graphStructure().graphNotation
+
+        for (hop in spine.dropLast(1)) {
+            val hopDocumentPath = hop.objectLocation.documentPath
+            val hopName = hopDocumentPath.name.value
+
+            val hopNotation = notation.documents[hopDocumentPath]
+                ?: return MoveToRefusal.frameDocumentMissing()
+
+            if (!ScriptConventions.isScript(hopNotation)) {
+                return MoveToRefusal.frameCannotReposition(hopName)
+            }
+
+            val callSite = hop.position
+                ?.takeIf { it.documentPath == hopDocumentPath }
+                ?: return MoveToRefusal.frameCallSiteUnknown(hopName)
+
+            val hopTree = ScriptTree.read(hopDocumentPath, clientState.graphDefinitionAttempt.successful())
+            if (!ScriptJumpAnalysis.isDescendableCallSite(
+                    notation, hopDocumentPath, hopTree, callSite.objectPath)) {
+                return MoveToRefusal.frameCannotResume(hopName, callSite.objectPath.name.value)
+            }
+        }
+
+        return null
     }
 
 
@@ -511,6 +585,8 @@ class ScriptExecutionMargin(
         val valid = state.candidateValid
         val nextToRun = dragNextToRun
         val executionId = dragExecutionId
+        val spineRefusal = dragSpineRefusal
+        val targetRefusals = dragTargetRefusals
         val moved = dragMoved
 
         dragExecutionId = null
@@ -518,6 +594,8 @@ class ScriptExecutionMargin(
         dragHitRows = listOf()
         dragValidTargets = setOf()
         dragWarnTargets = setOf()
+        dragSpineRefusal = null
+        dragTargetRefusals = mapOf()
         dragMoved = false
 
         setState {
@@ -539,8 +617,23 @@ class ScriptExecutionMargin(
             return
         }
 
-        if (target != null && valid && target != nextToRun && executionId != null) {
-            props.clientLogicGlobal.moveToAsync(target, executionId)
+        if (target == null || target == nextToRun) {
+            return
+        }
+
+        if (valid) {
+            if (executionId != null) {
+                props.clientLogicGlobal.moveToAsync(target, executionId)
+            }
+            return
+        }
+
+        // A drop on a band painted invalid. Explained only on the ATTEMPT — hovering a document whose steps are
+        // mostly loop bodies would otherwise nag continuously — and the spine's verdict wins, since it refuses
+        // every target here regardless of what the target itself would say.
+        val refusal = spineRefusal ?: targetRefusals[target]
+        if (refusal != null) {
+            props.clientLogicGlobal.refuseMove(target.documentPath, refusal)
         }
     }
 

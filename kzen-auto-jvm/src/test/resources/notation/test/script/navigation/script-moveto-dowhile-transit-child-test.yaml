@@ -1,0 +1,23 @@
+# Sub-Script hosted from inside a DoWhile body (ScriptNestedMoveToTest): two plain FormulaSteps, so the run's
+# CountingStep total counts the HOSTING loop's iterations alone — the do-while's condition is driven off that
+# same counter, and a child that contributed to it would make the loop's length depend on the jump.
+
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.Int
+      generics: []
+      nullable: false
+
+main.steps/D1:
+  is: FormulaStep
+  code: "1"
+
+main.steps/D2:
+  is: FormulaStep
+  code: "2"
+
+main.steps/Result:
+  is: ResultStep
+  code: "D1 + D2"

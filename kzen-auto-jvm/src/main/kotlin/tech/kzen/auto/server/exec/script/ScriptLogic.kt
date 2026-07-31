@@ -2,8 +2,11 @@ package tech.kzen.auto.server.exec.script
 
 import tech.kzen.auto.common.objects.document.logic.context.LogicContextConventions
 import tech.kzen.auto.common.objects.document.script.model.ScriptJumpAnalysis
+import tech.kzen.auto.common.objects.document.script.model.ScriptJumpRefusal
+import tech.kzen.auto.common.paradigm.logic.MoveToRefusal
 import tech.kzen.auto.server.exec.LogicParameter
 import tech.kzen.auto.server.exec.LogicParameterTrace
+import tech.kzen.auto.server.exec.RepositionDiagnostic
 import tech.kzen.lib.common.exec.engine.Execution
 import tech.kzen.lib.common.exec.engine.Logic
 import tech.kzen.lib.common.exec.engine.LogicSignature
@@ -29,7 +32,7 @@ class ScriptLogic(
     private val parameters: List<LogicParameter>,
     private val structure: ScriptRunStructure,
     private val logicSignature: LogicSignature
-): Logic, Repositionable {
+): Logic, Repositionable, RepositionDiagnostic {
     override fun signature(): LogicSignature {
         return logicSignature
     }
@@ -54,11 +57,12 @@ class ScriptLogic(
 
     /**
      * A call-site this Script hosts the addressed frame from is descendable iff it resolves to a step in this
-     * Script's own document that [ScriptJumpAnalysis] can re-establish the walk at — so the rebuilt spine runs
-     * to that RunStep with its boundary suppressed and hosts it, instead of parking there short of the frame
-     * the move addresses. Notably rejects a call-site inside a loop body: the loop would have to resume at its
-     * current iteration rather than restart at 0. Static structural check only, gated by the controller before
-     * the barrier, exactly like [canMoveTo].
+     * Script's own document that the spine walks ([ScriptJumpAnalysis.isDescendableCallSite]) — so the rebuilt
+     * spine runs to that RunStep with its boundary suppressed and hosts it, instead of parking there short of
+     * the frame the move addresses. Deliberately laxer than [canMoveTo]: a transit frame repositions nothing of
+     * its own, so a call-site inside a loop body qualifies — the loop re-enters at its carried cursor and the
+     * descent rides that resumed iteration. Static structural check only, gated by the controller before the
+     * barrier, exactly like [canMoveTo].
      */
     override fun canDescendThrough(callSite: ObjectStableId): Boolean {
         val callSiteLocation = structure.objectStableMapper.objectLocationOrNull(callSite)
@@ -69,6 +73,41 @@ class ScriptLogic(
         return ScriptJumpAnalysis.isDescendableCallSite(
             structure.graphNotation, callSiteLocation.documentPath, structure.scriptTree,
             callSiteLocation.objectPath)
+    }
+
+
+    override fun moveToRefusal(target: ObjectStableId): String? {
+        if (canMoveTo(target)) {
+            return null
+        }
+
+        val targetLocation = structure.objectStableMapper
+            .objectLocationOrNull(target)
+            ?.takeIf { it.documentPath == structure.scriptLocation.documentPath }
+            ?: return MoveToRefusal.targetNotJumpable()
+
+        return ScriptJumpRefusal.reason(
+            structure.graphNotation, targetLocation.documentPath, structure.scriptTree,
+            targetLocation.objectPath)
+    }
+
+
+    override fun descendRefusal(callSite: ObjectStableId): String? {
+        if (canDescendThrough(callSite)) {
+            return null
+        }
+
+        val callSiteLocation = structure.objectStableMapper
+            .objectLocationOrNull(callSite)
+            ?.takeIf { it.documentPath == structure.scriptLocation.documentPath }
+            ?: return MoveToRefusal.frameCallSiteUnknown(documentName())
+
+        return MoveToRefusal.frameCannotResume(documentName(), callSiteLocation.objectPath.name.value)
+    }
+
+
+    private fun documentName(): String {
+        return structure.scriptLocation.documentPath.name.value
     }
 
 

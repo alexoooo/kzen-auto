@@ -1,0 +1,33 @@
+# Loop-hosted transit fixture (ScriptNestedMoveToTest): a ForEach over 1..3 whose body hosts a sub-Script per
+# item. The jumps it serves address the CHILD frame, so this document is a TRANSIT frame — it must reach the
+# loop-body RunStep with that boundary suppressed while the loop re-enters at the iteration it was on (its
+# carried LoopCursor) rather than restarting at 0. A restart shows up twice over: as extra CountingStep
+# invocations in the child, and — had an iteration adopted another one's capture — as a wrong Total, which
+# sums the loop's per-iteration child results (`[10, 20, 30].sum()` = 60).
+
+main:
+  is: Script
+
+main.steps/Items:
+  is: FormulaStep
+  code: "1..3"
+
+main.steps/Loop:
+  is: ForEachStep
+  items: Items
+
+main.steps/Loop.item/Item:
+  is: ForEachItemBinding
+
+main.steps/Loop.steps/Call:
+  is: RunStep
+  instructions: "test/script/navigation/script-moveto-loop-transit-child-test.yaml#main"
+  arguments:
+    number: main.steps/Loop.item/Item
+
+main.steps/Total:
+  is: FormulaStep
+  code: "Loop.sum()"
+
+main.steps/After:
+  is: CountingStep

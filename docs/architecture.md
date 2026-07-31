@@ -230,6 +230,12 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > a frame that is absent or settled, a hop that names no call-site, or any hop whose Logic cannot answer for its
 > role (`canDescendThrough` for a transit hop, `canMoveTo` for the addressed frame). That gate is
 > **capability-based and names no flavour**, so a Flow or Job hop refuses cleanly instead of silently parking.
+> A refusal carries a **reason**: `/logic/moveTo` answers with `LogicControlReply` (kzen-auto-common) — the bare
+> enum name, or `"<Name>: <reason>"` — so the wire stays byte-identical when there is nothing to say, and only
+> `moveTo` ever says anything. The wording is sourced by capability too: a hop's Logic supplies it through
+> `RepositionDiagnostic` (kzen-auto-jvm), and a hop implementing neither that nor `Repositionable` still gets an
+> honest sentence naming its document rather than a fabricated cause. Server and client read one source of
+> wording (`MoveToRefusal`, kzen-auto-common), so a refusal caught either side reads identically.
 > `ScriptRunContext.restore` performs
 > **outcome-set surgery** computed by the notation-driven `ScriptJumpAnalysis` (kzen-auto-common, layered on
 > `ScriptNestingAnalysis`): the target and everything at/after it drop from the carried capture (so a jump to
@@ -242,11 +248,17 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > `IfStep`; a branch GROUP node on the path is filtered out — it is not an executed step) run — re-evaluating
 > their conditions — with their `checkpoint` suppressed, so the paused rebuild
 > parks at the target rather than the ancestor's boundary. A jump always recompiles from the current notation
-> and shares the migrate barrier (an edit-then-jump takes both in one rebuild). **Loop bodies remain out of
-> scope**: a target inside a `rerun` branch is rejected (`canMoveTo` → `LogicRunResponse.Rejected`), and so is a
-> path that would descend through a RunStep inside one (`canDescendThrough`) — the loop would have to resume at
-> its current iteration rather than restart, which is the parked `LoopCursor` extension. A jump to the loop step
-> itself is allowed.
+> and shares the migrate barrier (an edit-then-jump takes both in one rebuild). **Loop bodies are out of scope as
+> TARGETS, not as transit** — the two repositioning roles answer differently for the same element. A target
+> inside a `rerun` branch is rejected (`canMoveTo` → `LogicRunResponse.Rejected`): re-pointing the walk into a
+> body would have to decide which iteration it lands in and re-point the loop's own cursor at it, and no such
+> surgery exists. A jump to the loop STEP is allowed instead, and restarts it at iteration 0. A **call-site**
+> inside a `rerun` branch is descendable (`canDescendThrough`), which is what makes the flagship
+> `notation/main/FizzBuzz/FizzBuzz Script Loop.yaml` repositionable: the rebuilt loop re-enters at its carried
+> `LoopCursor`, the resumed iteration skips its `dropReplay` reset so its completed body prefix replay-adopts,
+> and the one-shot descend claim rides exactly that iteration. `ScriptJumpAnalysis` therefore keeps the
+> `rerun` clause on `isValidTarget` alone; `isDescendableCallSite` requires only that the spine walks the
+> element. Pinned by `ScriptNestedMoveToTest`'s ForEach / DoWhile / nested-loop transit cases.
 > **Client affordance:** both move-to and breakpoints live in the Script's **execution margin** —
 > an IDE/VBA-style gutter column reserved by `ScriptController`'s `paddingLeft` and painted by
 > `ScriptExecutionMargin` (kzen-auto-js), which anchors a breakpoint band and the draggable next-to-run arrow on
@@ -254,7 +266,20 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > here" header action is gone), and breakpoints are set by clicking the margin — step headers carry no execution
 > control at all. Bands cover every *executable* step (`ScriptNestingAnalysis.orderedExecutableStepPaths`,
 > kzen-auto-common), so `If` / `ForEach` / `DoWhile` headers are breakpointable and binding rows
-> (`parameters`, `item`) are not.
+> (`parameters`, `item`) are not. The margin validates the whole **frame spine**, not just the viewed document:
+> `LogicRunFrames.spineForDocument` yields root → viewed frame and `ScriptExecutionMargin.spineRefusal` asks
+> `isDescendableCallSite` of each transit hop, reading `LogicRunFrameInfo.position` as the call-site proxy —
+> sound only because kzen-lib's `RunEngine.host` re-establishes a transit frame's position on a claimed descent
+> hop, since the wire frame carries no `callerStableId`. A spine that cannot carry the move greys every band, so
+> the affordance never offers what the server would refuse. Non-Script hops count as unable to carry: a
+> deliberate **mirror of the server's capability model** that must widen with it if another flavour ever becomes
+> `Repositionable`, or its frames paint falsely invalid. **Every refusal explains itself on drop** (never on
+> hover) — `ClientLogicGlobal.refuseMove` publishes the reason into the same `ControlError` panel with no
+> round-trip, and in-document invalid targets are classified by `ScriptJumpRefusal` (kzen-auto-common) from the
+> two public predicates rather than by matching `ScriptJumpPlan.invalidReason` prose. Control errors are
+> attributed to the document the action was **aimed at** — `controlAsync` takes an explicit `documentPath` and
+> `moveTo` passes the target's; the run-root attribution that predated nested move-to rendered a rejection
+> inside a sub-Script on the PARENT document, which is to say nowhere the user was looking.
 
 ## 2. Client-server graph synchronization
 

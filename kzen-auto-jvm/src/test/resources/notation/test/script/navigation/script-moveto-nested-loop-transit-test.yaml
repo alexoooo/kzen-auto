@@ -1,0 +1,36 @@
+# Nested-loop transit fixture (ScriptNestedMoveToTest): two ForEach levels, the inner one hosting a sub-Script
+# per item. A jump addressed to the child claims THREE descend entries in this one frame — Outer, Inner and the
+# call-site — so both loops must re-enter at their carried cursors on the same rebuild. The inner cursor is the
+# fragile half: an outer iteration that restarted would drop it (the iteration reset prunes nested carries), so
+# the inner loop would replay from item 1 and Total would still read 60 while the count ran away.
+# Total is `[[10, 20], [10, 20]]` flattened and summed = 60.
+
+main:
+  is: Script
+
+main.steps/Outer:
+  is: ForEachStep
+  items: "1..2"
+
+main.steps/Outer.item/OuterItem:
+  is: ForEachItemBinding
+
+main.steps/Outer.steps/Inner:
+  is: ForEachStep
+  items: "1..2"
+
+main.steps/Outer.steps/Inner.item/InnerItem:
+  is: ForEachItemBinding
+
+main.steps/Outer.steps/Inner.steps/Call:
+  is: RunStep
+  instructions: "test/script/navigation/script-moveto-loop-transit-child-test.yaml#main"
+  arguments:
+    number: main.steps/Outer.steps/Inner.item/InnerItem
+
+main.steps/Total:
+  is: FormulaStep
+  code: "Outer.flatten().sum()"
+
+main.steps/After:
+  is: CountingStep

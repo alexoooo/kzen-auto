@@ -1,6 +1,7 @@
 # Move-to loop fixture (ScriptMoveToTest): a ForEach over 1..3 whose body is a side-effect CountingStep. A jump
 # TO the loop step restarts it at iteration 0 (its body outcomes drop); a jump INTO the loop body is rejected
-# (execution-control decision 3 — loop bodies are out of scope for v1 move-to).
+# (execution-control decision 3 — a loop body is out of scope as a jump TARGET; a call-site inside one is still
+# descendable, which script-moveto-loop-transit-test.yaml covers).
 main:
   is: Script
 
