@@ -80,8 +80,12 @@ interface StepExecution {
     /**
      * Record a value for downstream reference WITHOUT a step-trace entry — a binding (loop item) that is
      * resolved by reference but is not itself a step in the spine.
+     *
+     * Named for what it does to the VALUE GRAPH, not for the ambient scope: the notation verb `binds:` and the
+     * engine's `bind` both name putting a value in ambient scope under a Context, which is a different
+     * operation on a type this same object implements.
      */
-    fun bind(location: ObjectLocation, value: Any?)
+    fun recordValue(location: ObjectLocation, value: Any?)
 
     /** Capture the Script's result (last Result step wins). */
     fun setResult(value: TupleValue)
@@ -260,15 +264,15 @@ interface StepExecution {
 
 
 /**
- * The unique Context this step declares whose `class:` is [T]. That is what disambiguates a step declaring
- * several — `BrowserGetSutStep` requires both a browser and a SUT, and each is addressed by its value type
- * rather than by name.
+ * The unique Context this step declares whose value contract names [T]. That is what disambiguates a step
+ * declaring several — `BrowserGetSutStep` requires both a browser and a SUT, and each is addressed by its
+ * value type rather than by name. Matched on the declared class exactly, so a subtype does not resolve here.
  *
  * Fails when no declared Context names [T], or when several do (name the Context explicitly then).
  */
 inline fun <reified T: Any> StepExecution.contextDescriptor(): ContextDescriptor {
     val className = T::class.qualifiedName
-    val matching = declaredContexts().filter { it.valueClass == className }
+    val matching = declaredContexts().filter { it.type.className.asString() == className }
 
     return when {
         matching.isEmpty() ->

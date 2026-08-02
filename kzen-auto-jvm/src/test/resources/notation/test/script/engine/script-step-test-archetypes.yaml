@@ -25,9 +25,11 @@ ShoutStep:
 # A pure data object with no `meta:`, so it does not drag a JS-only editor reference into the JVM-only test
 # graph (see the OpenResourceTestStep KDoc for the trap it would otherwise hit).
 TestSutContext:
-  abstract: true
   is: Context
-  class: kotlin.String
+  type:
+    class: kotlin.String
+    generics: []
+    nullable: false
   key: sut
   icon: "material-symbols:lock-open"
   title: "Test SUT"

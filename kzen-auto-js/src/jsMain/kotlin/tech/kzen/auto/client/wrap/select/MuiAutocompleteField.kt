@@ -1,5 +1,6 @@
 package tech.kzen.auto.client.wrap.select
 
+import emotion.react.css
 import js.array.ReadonlyArray
 import mui.base.AutocompleteCloseReason
 import mui.material.Autocomplete
@@ -11,7 +12,16 @@ import react.ChildrenBuilder
 import react.FC
 import react.ReactNode
 import react.create
+import react.dom.html.ReactHTML
+import react.dom.html.ReactHTML.div
+import web.cssom.Color
+import web.cssom.Display
+import web.cssom.FlexDirection
 import web.cssom.NamedColor
+import web.cssom.Overflow
+import web.cssom.TextOverflow
+import web.cssom.WhiteSpace
+import web.cssom.em
 import web.cssom.px
 
 
@@ -20,6 +30,37 @@ import web.cssom.px
 // top-level function so the js(...) Object.assign call is legal (js() is rejected inside inline lambdas).
 private fun objectAssign(target: Any, source: Any) {
     js("Object.assign(target, source)")
+}
+
+
+private fun ChildrenBuilder.optionRow(option: SelectOption) {
+    val detail = option.detail
+    if (detail == null) {
+        +option.label
+        return
+    }
+
+    div {
+        css {
+            display = Display.flex
+            flexDirection = FlexDirection.column
+            overflow = Overflow.hidden
+        }
+
+        +option.label
+
+        div {
+            option.detailTitle?.let { this.title = it }
+            css {
+                fontSize = 0.8.em
+                color = Color("rgba(0, 0, 0, 0.55)")
+                whiteSpace = WhiteSpace.nowrap
+                overflow = Overflow.hidden
+                textOverflow = TextOverflow.ellipsis
+            }
+            +detail
+        }
+    }
 }
 
 
@@ -120,6 +161,20 @@ fun ChildrenBuilder.muiAutocompleteField(
                 val expanded = event.target.asDynamic().getAttribute("aria-expanded") == "true"
                 if (!expanded) {
                     onClosedKeyDown(event)
+                }
+            }
+        }
+
+        // Two-line option rows, assigned only when some option actually carries a detail so every other field
+        // keeps MUI's own single-line row verbatim. Set through asDynamic() to stay off the typed prop's
+        // arity (MUI passes props/option/state/ownerState; a Kotlin lambda taking the first two is called
+        // with the rest ignored). The props argument MUST be spread onto the <li> — it carries the listbox's
+        // click, highlight and aria wiring, and the row's React key.
+        if (options.any { it.detail != null }) {
+            this.asDynamic().renderOption = { optionProps: Any, option: SelectOption ->
+                ReactHTML.li.create {
+                    objectAssign(this, optionProps)
+                    optionRow(option)
                 }
             }
         }

@@ -312,9 +312,11 @@ ControlStep:
 # action step. `key: browser` is the engine resource key — the same plain string WebDriverSupport.resourceKey
 # names, so a raw-string step and a typed one share one registration.
 BrowserContext:
-  abstract: true
   is: Context
-  class: org.openqa.selenium.remote.RemoteWebDriver
+  type:
+    class: org.openqa.selenium.remote.RemoteWebDriver
+    generics: []
+    nullable: false
   key: browser
   icon: "material-symbols:open-in-new"
   title: "Browser"

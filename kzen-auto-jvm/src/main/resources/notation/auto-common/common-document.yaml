@@ -32,34 +32,45 @@ Logic:
 
 ###########################################################
 
-# A named kind of run-scoped resource a Logic can provide, require, or release — the browser a Script opens,
-# a system-under-test process, a database session a plugin manages. First-class notation, so a third party
-# introduces one with zero framework changes: declare `is: Context` and the editor, the validation and the
-# runtime pick it up.
+# A named slot in the ambient scope a Logic runs against — the browser a Script opens, a system-under-test
+# process, a database session a plugin manages, a plain String a report header uses. First-class notation, so
+# a third party introduces one with zero framework changes: declare `is: Context` and the editor, the
+# validation and the runtime pick it up.
 #
-# `key` is the ENGINE resource key this Context names, and it is a GLOBAL NAMESPACE: two Context objects
-# declaring the same key share one registration. That is deliberate — the raw-string resource API
-# (`StepExecution.openResource`) names keys as plain strings, and "same key => same registration" is what
-# lets a typed step and a raw one interoperate. Deriving the key from the object's location would make
-# collisions impossible but would break that interop, so the aliasing risk is carried instead and surfaced
-# as a validation warning (duplicate keys are reported graph-wide).
+# Three layers, deliberately separate:
+#   type       the VALUE CONTRACT — what may be bound here (class, generics, nullability). Filters editors and
+#              drives the conformance checks; it is not a lookup key.
+#   qualifier  names ONE member of a family statically (`primary` / `reporting`), so each statically distinct
+#              member is its own pickable declaration rather than a string typed at a use site. A declared
+#              qualifier resolves EXACTLY; a computed one is legal only against an unqualified declaration.
+#   key        an explicit ENGINE family, replacing the one derived from `type`. It is a GLOBAL NAMESPACE and
+#              a deliberate interop alias: the raw-string resource API (`StepExecution.openResource`) names
+#              plain strings, and "same key => same registration" is what lets a typed step and a raw one
+#              interoperate. Omit it and the address derives from the canonical full type, so ordinary
+#              notation types no key at all. Two declarations resolving to the same EXACT key are reported
+#              graph-wide as an alias rather than prevented.
 #
-# A key may be QUALIFIED at run time as "<key>:<qualifier>" (a SUT addressed by name): each qualifier is an
-# independent registration, and an export carries the whole family.
-#
-# A concrete Context declares `abstract: true` — the standard never-instantiated-archetype pattern
-# (ResourceClosePolicy, TypeMetadata, IfBranch): its `class:` carries the type a provider registers without
-# GraphCreator ever constructing it. Attributes that NAME a Context (`provides:` / `requires:` / `releases:` /
+# A declaration is a CONCRETE object (the archetype below carries the class the graph builds, and the value
+# type lives in `type:`), so it gets rename-refactor, reordering and per-entry editing from the same machinery
+# a ParameterBinding uses. Attributes that NAME a Context (`provides:` / `requires:` / `releases:` /
 # `context.exports` / `context.requires`) are declared `by: Nominal` (weak references), so a dangling entry
 # degrades to a validation message instead of failing the referring object's definition, and renaming a
 # Context propagates into them.
 Context:
   abstract: true
+  class: tech.kzen.auto.common.objects.document.logic.context.ContextDeclaration
+  type:
+    class: kotlin.Any
+    generics: []
+    nullable: false
+  qualifier: ""
   key: ""
   title: ""
   icon: ""
   description: ""
   meta:
+    type: TypeMetadata
+    qualifier: String
     key: String
     title: String
     icon: String

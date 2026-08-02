@@ -122,6 +122,24 @@ object LogicContextAnalysis {
     }
 
 
+    /**
+     * The Contexts a step of [documentPath] provides and this document keeps: bound on its own frame, readable
+     * by its descendants, disposed at its settle. Private is the DEFAULT — a document keeps what it opens by
+     * writing no declaration at all — so these have no notation of their own, and the signature editor is the
+     * only place the author can see them beside the exports they are the counterpart of.
+     */
+    fun privateProvides(graphNotation: GraphNotation, documentPath: DocumentPath): List<ContextDescriptor> {
+        val exported = LogicContextConventions
+            .documentExports(graphNotation, documentPath)
+            .map { it.location }
+            .toSet()
+
+        return ownStepProvides(graphNotation, documentPath)
+            .map { it.first }
+            .filter { it.location !in exported }
+    }
+
+
     /** The `context.exports` entries [canProvide] cannot back — the declaration is an unkeepable promise. */
     fun unbackedExports(graphNotation: GraphNotation, documentPath: DocumentPath): List<ContextDescriptor> {
         val canProvide = canProvide(graphNotation, documentPath)
@@ -390,9 +408,12 @@ object LogicContextAnalysis {
         documentPath: DocumentPath,
         warn: (ObjectPath, String) -> Unit
     ) {
+        // Grouped by the EXACT derived key, not by the `key` alias: two declarations sharing a family with
+        // different declared qualifiers are two independent registrations and entirely legitimate, so
+        // reporting them would amber the very shape §4.3 recommends for two databases.
         val aliasedKeys = ContextConventions
             .allContexts(graphNotation)
-            .groupBy { it.key }
+            .groupBy { ContextAddressing.keyOf(it) }
             .filterValues { it.size > 1 }
 
         fun check(objectPath: ObjectPath, attributePath: AttributePath, label: String) {
@@ -407,9 +428,10 @@ object LogicContextAnalysis {
                     continue
                 }
 
-                aliasedKeys[descriptor.key]?.let { aliases ->
+                val exactKey = ContextAddressing.keyOf(descriptor)
+                aliasedKeys[exactKey]?.let { aliases ->
                     warn(objectPath,
-                        "${descriptor.label()} shares the resource key '${descriptor.key}' with " +
+                        "${descriptor.label()} shares the address '${exactKey.asString()}' with " +
                                 aliases.filter { it.location != descriptor.location }
                                     .joinToString { it.label() } +
                                 " — they are the same registration at run time.")

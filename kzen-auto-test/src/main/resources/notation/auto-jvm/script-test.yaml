@@ -5,9 +5,11 @@
 # computed, the runtime requires gate and the static analysis both reason at the family level: they answer
 # "is SOME SUT started", and a name mismatch surfaces at read with the step's own diagnostic.
 SutContext:
-  abstract: true
   is: Context
-  class: tech.kzen.auto.test.server.process.SutHandle
+  type:
+    class: tech.kzen.auto.test.server.process.SutHandle
+    generics: []
+    nullable: false
   key: sut
   icon: PlayCircle
   title: "SUT"

@@ -5,6 +5,7 @@ import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.obj.ObjectPath
+import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.model.structure.notation.DocumentNotation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.RenameObjectRefactorCommand
@@ -32,6 +33,7 @@ class ContextRenameTest {
     private val yamlParser = YamlNotationParser()
 
     private val documentPath = DocumentPath.parse("test/context-rename-test.yaml")
+    private val declarationPath = DocumentPath.parse("test/context-declaration-test.yaml")
 
     private val archetypesPath = DocumentPath.parse("test/script/engine/script-step-test-archetypes.yaml")
     private val originalContext = ObjectLocation(archetypesPath, ObjectPath.parse("TestSutContext"))
@@ -103,5 +105,45 @@ class ContextRenameTest {
 
         // sanity: nothing resolves to the old name any more from this document
         assertEquals(null, ContextConventions.resolveOrNull(renamed, "TestSutContext", mainLocation))
+    }
+
+
+    @Test
+    fun aDeclarationReadsItsValueContractAndAddressFromNotation() {
+        // The declaration's three layers, read off raw notation on both platforms: `type:` is the value
+        // contract, `key:` the explicit interop family, and the derived address is what the engine registers
+        // under. `TestSutContext` deliberately shares `key: sut` with the raw-string fixtures, which is the
+        // interop the alias is for.
+        val descriptor = ContextConventions.descriptorOrNull(notation(), originalContext)
+
+        assertEquals(TypeMetadata.string, descriptor?.type, "the value class moved into `type:`")
+        assertEquals("sut", descriptor?.key)
+        assertEquals("", descriptor?.qualifier)
+        assertEquals("sut", descriptor?.let { ContextAddressing.keyOf(it).asString() })
+    }
+
+
+    @Test
+    fun aDeclarationWithNoExplicitKeyDerivesItsAddressFromItsType() {
+        val notation = notation().withNewDocument(
+            declarationPath,
+            DocumentNotation(yamlParser.parseDocumentObjects("""
+                Greeting:
+                  is: Context
+                  type:
+                    class: kotlin.String
+                    generics: []
+                    nullable: false
+                  qualifier: greeting
+                  title: "Greeting"
+            """.trimIndent()), null))
+
+        val descriptor = ContextConventions.descriptorOrNull(
+            notation, ObjectLocation(declarationPath, ObjectPath.parse("Greeting")))
+
+        assertEquals(TypeMetadata.string, descriptor?.type)
+        assertEquals(
+            "kotlin.String:greeting", descriptor?.let { ContextAddressing.keyOf(it).asString() },
+            "an ordinary notation type needs no key at all — the address derives from the canonical type")
     }
 }

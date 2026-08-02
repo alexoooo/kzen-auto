@@ -180,7 +180,7 @@ class ForEachStep(
             lastIndex = index
             traceProgress(execution, itemDisplay, index, size, journal, producedCount)
 
-            execution.bind(itemBinding, item)
+            execution.recordValue(itemBinding, item)
             val bodyValue = execution.runSteps(bodySteps)
 
             // Control flow (see [ScriptControlSignal]): Skip -> this iteration contributes nothing, continue;

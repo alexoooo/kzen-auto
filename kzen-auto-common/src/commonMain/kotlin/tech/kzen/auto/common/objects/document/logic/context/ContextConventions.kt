@@ -1,11 +1,13 @@
 package tech.kzen.auto.common.objects.document.logic.context
 
+import tech.kzen.auto.common.objects.document.logic.TypeMetadataDefiner
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.location.ObjectReference
 import tech.kzen.lib.common.model.location.ObjectReferenceHost
 import tech.kzen.lib.common.model.obj.ObjectName
+import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 
@@ -24,21 +26,28 @@ object ContextConventions {
     //-----------------------------------------------------------------------------------------------------------------
     val contextObjectName = ObjectName("Context")
 
+    val typeAttributeName = AttributeName("type")
+    val qualifierAttributeName = AttributeName("qualifier")
     val keyAttributeName = AttributeName("key")
-    val classAttributeName = AttributeName("class")
     val titleAttributeName = AttributeName("title")
     val iconAttributeName = AttributeName("icon")
     val descriptionAttributeName = AttributeName("description")
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    /** Does [objectLocation] inherit the `Context` archetype? Stale-location tolerant (see the guard). */
+    /**
+     * Does [objectLocation] inherit the `Context` archetype from a PROPER ancestor? The archetype itself
+     * declares no resource kind, so it is not a Context — and `inheritanceChain` starts with the object itself
+     * (index 0), so a whole-chain test would match `Context` against its own filter and offer the abstract base
+     * in every picker and duplicate-key check. Stale-location tolerant (see the guard).
+     */
     fun isContext(graphNotation: GraphNotation, objectLocation: ObjectLocation): Boolean {
         if (objectLocation !in graphNotation.coalesce) {
             return false
         }
         return graphNotation
             .inheritanceChain(objectLocation)
+            .drop(1)
             .any { it.objectPath.name == contextObjectName }
     }
 
@@ -50,8 +59,9 @@ object ContextConventions {
         }
         return ContextDescriptor(
             objectLocation,
+            type = typeOrAny(graphNotation, objectLocation),
+            qualifier = scalarOrEmpty(graphNotation, objectLocation, qualifierAttributeName),
             key = scalarOrEmpty(graphNotation, objectLocation, keyAttributeName),
-            valueClass = scalarOrEmpty(graphNotation, objectLocation, classAttributeName),
             title = scalarOrEmpty(graphNotation, objectLocation, titleAttributeName),
             icon = scalarOrEmpty(graphNotation, objectLocation, iconAttributeName),
             description = scalarOrEmpty(graphNotation, objectLocation, descriptionAttributeName))
@@ -90,6 +100,19 @@ object ContextConventions {
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    // Read from raw notation rather than from a definition: this answers on both platforms, for the picker and
+    // the analysis, long before anything is defined or instantiated. An unparseable or absent `type` degrades
+    // to Any rather than dropping the declaration — a Context with a broken type is still a nominal symbol
+    // its references should keep resolving to, and the value contract is checked where a value is actually
+    // bound.
+    private fun typeOrAny(graphNotation: GraphNotation, objectLocation: ObjectLocation): TypeMetadata {
+        val notation = graphNotation.firstAttribute(
+            objectLocation, AttributePath.ofName(typeAttributeName))
+            ?: return TypeMetadata.any
+        return TypeMetadataDefiner.parse(notation) ?: TypeMetadata.any
+    }
+
+
     // The nullable AttributePath overload of firstAttribute, deliberately: the AttributeName overload THROWS
     // when the attribute is absent, and every Context attribute is optional.
     private fun scalarOrEmpty(

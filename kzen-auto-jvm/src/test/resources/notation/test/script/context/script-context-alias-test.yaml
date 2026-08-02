@@ -7,16 +7,20 @@
 # only finding left on the step is the alias itself.
 
 AliasContextOne:
-  abstract: true
   is: Context
-  class: kotlin.String
+  type:
+    class: kotlin.String
+    generics: []
+    nullable: false
   key: probe
   title: "Probe One"
 
 AliasContextTwo:
-  abstract: true
   is: Context
-  class: kotlin.String
+  type:
+    class: kotlin.String
+    generics: []
+    nullable: false
   key: probe
   title: "Probe Two"
 

@@ -14,6 +14,7 @@ import tech.kzen.auto.client.objects.document.common.raw.DocumentRaw
 import tech.kzen.auto.client.objects.document.common.raw.DocumentRawState
 import tech.kzen.auto.client.objects.document.common.raw.DocumentViewMode
 import tech.kzen.auto.client.objects.document.common.signature.ContextSignatureEditor
+import tech.kzen.auto.client.objects.document.common.signature.ContextSignatureRole
 import tech.kzen.auto.client.objects.document.common.signature.LogicSignatureEditor
 import tech.kzen.auto.client.objects.document.common.signature.ResultSignatureEditor
 import tech.kzen.auto.client.objects.document.script.command.ScriptCommander
@@ -401,14 +402,22 @@ class ScriptController:
             mirroredGraphStore = props.mirroredGraphStore
         }
 
-        // NB: emitted UNCONDITIONALLY, like its two siblings above — this whole block sits before the
-        //     always-present error slot and MultiStepDisplay below, and a conditional element here would
-        //     index-shift them (see the error slot's comment in render). Its own footprint is zero: the
+        // NB: both rows emitted UNCONDITIONALLY, like their two siblings above — this whole block sits before
+        //     the always-present error slot and MultiStepDisplay below, and a conditional element here would
+        //     index-shift them (see the error slot's comment in render). Their own footprint is zero: each
         //     panel is an absolute float in the stage's top-right stack.
         ContextSignatureEditor::class.react {
             objectLocation = mainObjectLocation
             clientStateGlobal = props.clientStateGlobal
             mirroredGraphStore = props.mirroredGraphStore
+            role = ContextSignatureRole.Requires
+        }
+
+        ContextSignatureEditor::class.react {
+            objectLocation = mainObjectLocation
+            clientStateGlobal = props.clientStateGlobal
+            mirroredGraphStore = props.mirroredGraphStore
+            role = ContextSignatureRole.Provides
         }
     }
 

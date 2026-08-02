@@ -187,12 +187,14 @@ class ScriptContextValidationTest {
 
 
     @Test
-    fun contextsSharingOneKeyAreReportedGraphWide() {
+    fun contextsSharingOneExactAddressAreReportedGraphWide() {
+        // Grouped by the DERIVED exact address, so two declarations sharing a family with different declared
+        // qualifiers stay silent — that shape is how two databases are meant to be written.
         val findings = analyze("test/script/context/script-context-alias-test.yaml")
 
         val warning = findings.warnings[ObjectPath.parse("main.steps/Read")]
-        assertTrue(warning != null, "two Contexts naming one key are one registration at run time")
-        assertContains(warning, "shares the resource key 'probe'")
+        assertTrue(warning != null, "two Contexts resolving to one address are one registration at run time")
+        assertContains(warning, "shares the address 'probe'")
         assertContains(warning, "Probe Two")
     }
 

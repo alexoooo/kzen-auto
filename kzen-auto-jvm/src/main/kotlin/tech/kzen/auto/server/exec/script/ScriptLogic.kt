@@ -1,5 +1,7 @@
 package tech.kzen.auto.server.exec.script
 
+import tech.kzen.auto.common.objects.document.logic.context.ContextAddressing
+import tech.kzen.auto.common.objects.document.logic.context.ContextDescriptor
 import tech.kzen.auto.common.objects.document.logic.context.LogicContextConventions
 import tech.kzen.auto.common.objects.document.script.model.ScriptJumpAnalysis
 import tech.kzen.auto.common.objects.document.script.model.ScriptJumpRefusal
@@ -11,6 +13,7 @@ import tech.kzen.lib.common.exec.engine.Execution
 import tech.kzen.lib.common.exec.engine.Logic
 import tech.kzen.lib.common.exec.engine.LogicSignature
 import tech.kzen.lib.common.exec.engine.Repositionable
+import tech.kzen.lib.common.exec.engine.context.ExportSelector
 import tech.kzen.lib.common.exec.engine.restoredAs
 import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -118,17 +121,29 @@ class ScriptLogic(
         // hosted, so a provide anywhere below climbs through this frame when it is on an export chain. Every
         // Script's own Logic does this — root and hosted alike — which is why hosting needs no knowledge of the
         // child's notation. A migrate rebuild re-runs `run`, so re-declaration is free.
+        // A DECLARED qualifier exports exactly the member it names; an unqualified declaration exports the
+        // whole family, because a computed qualifier is the only thing it could otherwise mean. Collapsing the
+        // first onto the second would carry a sibling nobody offered upward.
         for (export in LogicContextConventions.documentExports(
                 structure.graphNotation, structure.scriptLocation.documentPath)) {
-            execution.declareExport(export.key)
+            execution.declareExport(exportSelectorOf(export))
         }
 
         // A document declaring `context.requires` cannot work without a caller that supplies it, so fail at run
-        // start rather than three steps in. Family-granular, and sound for the Script spine because a caller's
-        // provides always precede its RunStep positionally.
+        // start rather than three steps in. Sound for the Script spine because a caller's provides always
+        // precede its RunStep positionally.
         for (required in LogicContextConventions.documentRequires(
                 structure.graphNotation, structure.scriptLocation.documentPath)) {
-            check(execution.hasResourceInFamily(required.key)) {
+            val key = ContextAddressing.keyOf(required)
+            val open =
+                if (key.qualifier != null) {
+                    execution.hasBinding(key)
+                }
+                else {
+                    execution.hasBindingInFamily(key.family)
+                }
+
+            check(open) {
                 "Requires ${required.label()}: not provided by caller"
             }
         }
@@ -164,5 +179,14 @@ class ScriptLogic(
 
         return context.result()
             ?: TupleValue.empty
+    }
+
+
+    private fun exportSelectorOf(descriptor: ContextDescriptor): ExportSelector {
+        val key = ContextAddressing.keyOf(descriptor)
+        return when (key.qualifier) {
+            null -> ExportSelector.Family(key.family)
+            else -> ExportSelector.Exact(key)
+        }
     }
 }

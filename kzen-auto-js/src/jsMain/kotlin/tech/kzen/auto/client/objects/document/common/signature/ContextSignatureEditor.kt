@@ -46,19 +46,39 @@ import web.cssom.*
 
 
 //---------------------------------------------------------------------------------------------------------------------
+/**
+ * Which half of the context signature one editor instance owns. The two are separate floating rows rather than
+ * one row with a role selector, because the question each answers is different — what a caller must already
+ * have set up, versus what running this document sets up — and a single row made the reader choose the role
+ * before it could show them anything.
+ */
+enum class ContextSignatureRole {
+    Requires,
+    Provides
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
 external interface ContextSignatureEditorProps: ObjectScopedProps {
     var mirroredGraphStore: MirroredGraphStore
+    var role: ContextSignatureRole
 }
 
 
 external interface ContextSignatureEditorState: State {
-    // The document's own `context.exports` / `context.requires`, resolved. Null until the first client state.
+    // The document's own `context.exports` / `context.requires`, resolved. BOTH roles are held whichever row
+    // this is: a Context belongs to one role or the other, so adding into this row must drop it from the
+    // other, and the picker must not offer what the other row already declares. Null until the first client
+    // state.
     var exports: List<ContextDescriptor>?
     var requires: List<ContextDescriptor>?
 
-    // The two document-level warnings, computed locally from notation: which declared exports nothing in the
-    // document can back, and whether a retired `context.slots` declaration is still present. Document-level
-    // warnings have no other rendering surface — the validation channel carries document-level ERRORS only.
+    // Provides-row only, all three notation-derived and left empty on the Requires row rather than computed
+    // and ignored: the Contexts this document's own steps bind and keep (rendered read-only beside the
+    // exports), which declared exports nothing in the document can back, and whether a retired
+    // `context.slots` declaration is still present. Document-level warnings have no other rendering surface —
+    // the validation channel carries document-level ERRORS only.
+    var privateProvides: List<ContextDescriptor>?
     var unbackedExports: List<ContextDescriptor>?
     var legacySlots: Boolean
 
@@ -68,41 +88,41 @@ external interface ContextSignatureEditorState: State {
     // user sees only while adding.
     var pickerOptions: List<ContextDescriptor>?
 
-    // The collapsed chip row expands into the two-field picker when true.
+    // The collapsed chip row expands into the picker when true.
     var adding: Boolean
-    // Which role the picker will add into: true = a Context this document exports, false = one a caller supplies.
-    var addingExports: Boolean
 }
 
 
 //---------------------------------------------------------------------------------------------------------------------
 /**
- * Edits a Logic document's run-scoped **Context** signature: the `context.exports` it offers upward (a step
- * provide of one climbs past this document's frame to its caller; anything not listed is private to this
- * document and disposed at its settle) and the `context.requires` it asserts a CALLER has already provided.
- * `context` is data declared `by: Nominal` (weak references, never constructor-injected) and has no generic
- * attribute editor, so this reads and writes it directly.
+ * One row of a Logic document's run-scoped **Context** signature, selected by [ContextSignatureEditorProps.role]:
+ * the `context.requires` it asserts a CALLER has already provided, or the `context.exports` it offers upward (a
+ * step provide of one climbs past this document's frame to its caller; anything not listed is private to this
+ * document and disposed at its settle). `context` is data declared `by: Nominal` (weak references, never
+ * constructor-injected) and has no generic attribute editor, so this reads and writes it directly.
  *
- * Floated at the top-right of the stage, third in the stack beneath Parameters and Result, and therefore with
- * ZERO flow footprint: a document that declares no Context costs no vertical space, and — the load-bearing
- * part — the component is emitted UNCONDITIONALLY from `ScriptController.renderSignature`, so the step
- * subtree's child index never shifts (see the comment on the document-level error slot there).
+ * The Provides row also shows what this document opens and KEEPS — derived from its steps, so read-only, and
+ * the only surface on which a private open is visible at all. Exported and private carry a worded badge rather
+ * than only a fill, so the distinction survives a reader who cannot separate the two colours.
+ *
+ * Floated at the top-right of the stage beneath Parameters and Result, and therefore with ZERO flow footprint:
+ * a document that declares no Context costs no vertical space, and — the load-bearing part — both instances are
+ * emitted UNCONDITIONALLY from `ScriptController.renderSignature`, so the step subtree's child index never
+ * shifts (see the comment on the document-level error slot there).
  *
  * Writes upsert the WHOLE `context` map (mirroring [ResultSignatureEditor]'s whole-`results` upsert) rather
  * than inserting into one key. That is necessary, not merely simpler: `context` is inherited from the `Script`
  * archetype (`context: {}`) and does not exist on a document's own `main` until the first edit, so a
- * list-insert command would have no local attribute to land in. Entries are written as LIST items, matching
- * the archetype's `is: Map, of: [String, {is: List, of: ObjectLocation}]` meta declaration; any `context` key
- * this editor does not recognize is carried through verbatim, so a whole-map upsert never destroys one.
+ * list-insert command would have no local attribute to land in. Both roles are re-read from notation on every
+ * write, so the sibling row's entries survive this row's edit; entries are written as LIST items, matching the
+ * archetype's `is: Map, of: [String, {is: List, of: ObjectLocation}]` meta declaration; any `context` key
+ * neither row recognizes is carried through verbatim, so a whole-map upsert never destroys one.
  */
 class ContextSignatureEditor:
     ObjectScopedComponent<ContextSignatureEditorProps, ContextSignatureEditorState>()
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        private const val exportsRoleValue = "exports"
-        private const val requiresRoleValue = "requires"
-
         // Same skin language as the step badges (StepHeader.renderContextDeclarations): a filled blue chip for
         // "this document hands the resource upward", a plain neutral outline for "something else provides it".
         // Reusing the two accents across the document and step levels is what lets an Exports chip and the
@@ -112,15 +132,10 @@ class ContextSignatureEditor:
         private val requiresAccentColour = Color("rgba(0, 0, 0, 0.55)")
         private val warningAccentColour = Color("#b26a00")
 
-        private val roleOptions: Array<SelectOption> = arrayOf(
-            unsafeJso {
-                value = exportsRoleValue
-                label = "Exports"
-            },
-            unsafeJso {
-                value = requiresRoleValue
-                label = "Needs"
-            })
+        // Vertical rhythm of the stage's top-right float stack, shared with Parameters (0.5em) and Result
+        // (2.75em) above.
+        private const val requiresRowEm = 5.0
+        private const val providesRowEm = 7.25
     }
 
 
@@ -128,15 +143,20 @@ class ContextSignatureEditor:
     override fun ContextSignatureEditorState.init(props: ContextSignatureEditorProps) {
         exports = null
         requires = null
+        privateProvides = null
         unbackedExports = null
         legacySlots = false
         pickerOptions = null
         adding = false
-        addingExports = true
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private fun provides(): Boolean {
+        return props.role == ContextSignatureRole.Provides
+    }
+
+
     override fun onClientState(clientState: ClientState) {
         val graphNotation = clientState.graphDefinitionAttempt.graphStructure.graphNotation
 
@@ -144,15 +164,21 @@ class ContextSignatureEditor:
         val newExports = LogicContextConventions.documentExports(graphNotation, documentPath)
         val newRequires = LogicContextConventions.documentRequires(graphNotation, documentPath)
 
-        // Both warnings are notation-only and scoped to this document, so they cost one scan of its own objects
-        // per publish — no graph walk, no memo.
-        val newUnbacked = LogicContextAnalysis.unbackedExports(graphNotation, documentPath)
-        val newLegacySlots = LogicContextAnalysis.legacySlotReferences(graphNotation, documentPath).isNotEmpty()
+        // All three are notation-only and scoped to this document, so they cost a scan of its own objects per
+        // publish — no graph walk, no memo — and the Requires row, which renders none of them, pays nothing.
+        val provides = provides()
+        val newPrivate = if (provides) LogicContextAnalysis.privateProvides(graphNotation, documentPath)
+            else listOf()
+        val newUnbacked = if (provides) LogicContextAnalysis.unbackedExports(graphNotation, documentPath)
+            else listOf()
+        val newLegacySlots = provides &&
+                LogicContextAnalysis.legacySlotReferences(graphNotation, documentPath).isNotEmpty()
 
-        // All three lists are freshly built Lists of data classes each fire — guard by value (==) so
-        // RPureComponent's shallow state comparison doesn't re-render on unchanged content.
+        // Every list is freshly built of data classes each fire — guard by value (==) so RPureComponent's
+        // shallow state comparison doesn't re-render on unchanged content.
         if (newExports == state.exports &&
                 newRequires == state.requires &&
+                newPrivate == state.privateProvides &&
                 newUnbacked == state.unbackedExports &&
                 newLegacySlots == state.legacySlots) {
             return
@@ -161,6 +187,7 @@ class ContextSignatureEditor:
         setState {
             exports = newExports
             requires = newRequires
+            privateProvides = newPrivate
             unbackedExports = newUnbacked
             legacySlots = newLegacySlots
         }
@@ -173,13 +200,12 @@ class ContextSignatureEditor:
     }
 
 
-    private fun onStartAdding(exports: Boolean) {
+    private fun onStartAdding() {
         val graphNotation = graphNotation()
         val options = graphNotation?.let { ContextConventions.allContexts(it) } ?: listOf()
 
         setState {
             adding = true
-            addingExports = exports
             pickerOptions = options
         }
     }
@@ -193,7 +219,7 @@ class ContextSignatureEditor:
 
 
     private fun onPick(descriptor: ContextDescriptor) {
-        val intoExports = state.addingExports
+        val intoExports = provides()
         val graphNotation = graphNotation()
 
         setState {
@@ -223,7 +249,7 @@ class ContextSignatureEditor:
     }
 
 
-    private fun onRemove(descriptor: ContextDescriptor, fromExports: Boolean) {
+    private fun onRemove(descriptor: ContextDescriptor) {
         val graphNotation = graphNotation()
             ?: return
 
@@ -232,7 +258,7 @@ class ContextSignatureEditor:
         val requires = rawReferences(
             graphNotation, LogicContextConventions.documentRequiresAttributePath).toMutableList()
 
-        val target = if (fromExports) exports else requires
+        val target = if (provides()) exports else requires
         target.removeAll { resolvesTo(graphNotation, it, descriptor) }
 
         writeContext(exports, requires)
@@ -286,7 +312,7 @@ class ContextSignatureEditor:
         }
 
         // Anything under `context` that is not one of the two roles above is carried through untouched. The
-        // upsert replaces the whole map, so without this a key the editor cannot render — a retired `slots`
+        // upsert replaces the whole map, so without this a key neither row can render — a retired `slots`
         // awaiting hand cleanup, or a signature key added after this component — would be destroyed by an
         // unrelated chip edit. Tested against the ROLE segments rather than the entries built so far, because an
         // emptied role is deliberately absent from those and must not be resurrected from notation.
@@ -321,17 +347,14 @@ class ContextSignatureEditor:
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
-        val exports = state.exports ?: listOf()
-        val requires = state.requires ?: listOf()
-
         div {
             css {
-                // Third float in the stage's top-right stack — below Parameters (0.5em) and Result (2.75em),
-                // on the same 2.25em rhythm, and below the reserved error-chip row (StageErrorIndicator).
-                // Absolute, so an undeclared document costs no vertical space and the step list still starts
-                // at the top.
+                // Third and fourth floats in the stage's top-right stack — below Parameters (0.5em) and Result
+                // (2.75em), on the same 2.25em rhythm, and below the reserved error-chip row
+                // (StageErrorIndicator). Absolute, so an undeclared document costs no vertical space and the
+                // step list still starts at the top.
                 position = Position.absolute
-                top = (5.0 + StageErrorIndicator.reservedRowEm).em
+                top = ((if (provides()) providesRowEm else requiresRowEm) + StageErrorIndicator.reservedRowEm).em
                 right = 0.5.em
                 display = Display.flex
                 alignItems = AlignItems.center
@@ -343,28 +366,58 @@ class ContextSignatureEditor:
                 renderPicker()
             }
             else {
-                renderDeclarations(exports, requires)
+                renderDeclarations()
             }
         }
     }
 
 
-    private fun ChildrenBuilder.renderDeclarations(
-        exports: List<ContextDescriptor>,
-        requires: List<ContextDescriptor>
-    ) {
+    private fun ChildrenBuilder.renderDeclarations() {
         span {
             css {
                 fontSize = 0.8.em
                 color = Color("gray")
                 marginRight = 0.25.em
             }
-            +"Context"
+            +(if (provides()) "Provides" else "Requires")
         }
 
+        if (provides()) {
+            renderProvides()
+        }
+        else {
+            renderRequires()
+        }
+
+        IconButton {
+            title = if (provides()) "Declare a context this document provides"
+                else "Declare a context a caller must provide"
+            size = Size.small
+            onClick = { onStartAdding() }
+            icon("material-symbols:add-circle-outline") {}
+        }
+    }
+
+
+    private fun ChildrenBuilder.renderRequires() {
+        for (required in state.requires ?: listOf()) {
+            renderChip(
+                required,
+                "Needs ${required.label()} — a caller must already have provided it, so running this " +
+                        "document directly fails immediately. This assertion also seeds this document's own " +
+                        "analysis, so its steps do not report it",
+                badge = null,
+                fill = null,
+                accent = requiresAccentColour,
+                onDeleteChip = { onRemove(required) })
+        }
+    }
+
+
+    private fun ChildrenBuilder.renderProvides() {
         val unbacked = (state.unbackedExports ?: listOf()).map { it.location }.toSet()
 
-        for (export in exports) {
+        for (export in state.exports ?: listOf()) {
             val unbackedHere = export.location in unbacked
 
             renderChip(
@@ -377,31 +430,28 @@ class ContextSignatureEditor:
                     "Exports ${export.label()} — the calling document takes ownership of it, and passes it " +
                             "further up if it exports it too"
                 },
+                badge = "Exported",
                 fill = if (unbackedHere) null else exportsFillColour,
                 accent = if (unbackedHere) warningAccentColour else exportsAccentColour,
-                onDeleteChip = { onRemove(export, fromExports = true) })
+                onDeleteChip = { onRemove(export) })
         }
 
-        for (required in requires) {
+        // Read-only: a private open is what a step of this document does, so there is no declaration to delete.
+        // Exporting it is how it stops being private, and the picker above is where that is done.
+        for (private in state.privateProvides ?: listOf()) {
             renderChip(
-                required,
-                "Needs ${required.label()} — a caller must already have provided it, so running this " +
-                        "document directly fails immediately. This assertion also seeds this document's own " +
-                        "analysis, so its steps do not report it",
+                private,
+                "A step of this document provides ${private.label()} and this document keeps it — it is " +
+                        "readable here and below, and disposed when this document settles. Declare it as " +
+                        "provided to hand it to the caller instead",
+                badge = "Private",
                 fill = null,
                 accent = requiresAccentColour,
-                onDeleteChip = { onRemove(required, fromExports = false) })
+                onDeleteChip = null)
         }
 
         if (state.legacySlots) {
             renderLegacySlotsWarning()
-        }
-
-        IconButton {
-            title = "Declare a context"
-            size = Size.small
-            onClick = { onStartAdding(exports = true) }
-            icon("material-symbols:add-circle-outline") {}
         }
     }
 
@@ -433,9 +483,10 @@ class ContextSignatureEditor:
     private fun ChildrenBuilder.renderChip(
         descriptor: ContextDescriptor,
         tooltipText: String,
+        badge: String?,
         fill: Color?,
         accent: Color,
-        onDeleteChip: () -> Unit
+        onDeleteChip: (() -> Unit)?
     ) {
         Tooltip {
             title = ReactNode(tooltipText)
@@ -451,7 +502,12 @@ class ContextSignatureEditor:
                 Chip {
                     size = Size.small
                     variant = ChipVariant.outlined
-                    label = ReactNode(descriptor.label())
+                    label = Fragment.create {
+                        +descriptor.label()
+                        if (badge != null) {
+                            renderBadge(badge, accent)
+                        }
+                    }
                     icon = Fragment.create {
                         icon(descriptor.icon) {
                             style = unsafeJso {
@@ -459,7 +515,9 @@ class ContextSignatureEditor:
                             }
                         }
                     }
-                    onDelete = { onDeleteChip() }
+                    if (onDeleteChip != null) {
+                        onDelete = { onDeleteChip() }
+                    }
                     sx {
                         color = accent
                         borderColor = accent
@@ -473,14 +531,34 @@ class ContextSignatureEditor:
     }
 
 
-    // Two fields: the ROLE (does this document hand the Context up to its caller, or need a caller to have
-    // provided it?) and the Context itself. Picking a Context commits and collapses — there is nothing else to
-    // confirm, matching the live-apply behaviour of the sibling Result editor.
+    // Worded, because fill alone cannot carry "handed to the caller" versus "kept here" — the two chips differ
+    // by a background tint a reader may not perceive, and the tooltip is hover-only.
+    private fun ChildrenBuilder.renderBadge(badge: String, accent: Color) {
+        span {
+            css {
+                marginLeft = 0.4.em
+                paddingLeft = 0.3.em
+                paddingRight = 0.3.em
+                fontSize = 0.65.em
+                letterSpacing = 0.05.em
+                textTransform = TextTransform.uppercase
+                borderRadius = 0.25.em
+                borderStyle = LineStyle.solid
+                borderWidth = 1.px
+                borderColor = accent
+            }
+            +badge
+        }
+    }
+
+
+    // One field: the Context this row declares. Picking commits and collapses — the role is the row, so there
+    // is nothing else to confirm, matching the live-apply behaviour of the sibling Result editor.
     private fun ChildrenBuilder.renderPicker() {
         val options = state.pickerOptions ?: listOf()
 
-        // Already-declared Contexts are filtered out: a document exports one or needs one, and re-picking a
-        // declared Context in the other role is done by removing its chip first, which reads unambiguously.
+        // Already-declared Contexts are filtered out: a document provides one or requires one, and re-picking a
+        // declared Context in the other row is done by removing its chip first, which reads unambiguously.
         val declared = ((state.exports ?: listOf()) + (state.requires ?: listOf()))
             .map { it.location }
             .toSet()
@@ -491,6 +569,8 @@ class ContextSignatureEditor:
                 val option: SelectOption = unsafeJso {
                     value = descriptor.location.asString()
                     label = descriptor.label()
+                    detail = optionDetailOf(descriptor)
+                    detailTitle = descriptor.type.className.asString()
                 }
                 option
             }
@@ -499,30 +579,12 @@ class ContextSignatureEditor:
         span {
             css {
                 display = Display.inlineBlock
-                width = 7.em
-                marginRight = 0.5.em
-            }
-
-            muiAutocompleteField(
-                label = "Role",
-                options = roleOptions,
-                selectedOption = roleOptions.find {
-                    it.value == (if (state.addingExports) exportsRoleValue else requiresRoleValue)
-                },
-                onSelect = { picked -> setState { addingExports = picked.value == exportsRoleValue } },
-                disableClearable = true,
-                opaqueBackground = true)
-        }
-
-        span {
-            css {
-                display = Display.inlineBlock
-                width = 11.em
+                width = 15.em
                 marginRight = 0.25.em
             }
 
             muiAutocompleteField(
-                label = "Context",
+                label = if (provides()) "Provides" else "Requires",
                 options = contextOptions,
                 selectedOption = null,
                 onSelect = { picked ->
@@ -539,5 +601,16 @@ class ContextSignatureEditor:
             onClick = { onCancelAdding() }
             icon("material-symbols:cancel") {}
         }
+    }
+
+
+    // The value contract and the description are both read from the Context's own notation and are what tell
+    // two similarly-named declarations apart; the row shows the type unqualified, with the qualified class on
+    // hover.
+    private fun optionDetailOf(descriptor: ContextDescriptor): String? {
+        val parts = listOfNotNull(
+            descriptor.typeLabel().ifEmpty { null },
+            descriptor.description.ifEmpty { null })
+        return parts.joinToString(" — ").ifEmpty { null }
     }
 }

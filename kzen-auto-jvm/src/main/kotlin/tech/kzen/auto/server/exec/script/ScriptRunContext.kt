@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.exec.script
 
+import tech.kzen.auto.common.objects.document.logic.context.ContextAddressing
 import tech.kzen.auto.common.objects.document.logic.context.ContextConventions
 import tech.kzen.auto.common.objects.document.logic.context.ContextDescriptor
 import tech.kzen.auto.common.objects.document.logic.context.LogicContextConventions
@@ -20,14 +21,19 @@ import tech.kzen.lib.common.exec.engine.ClosePolicy
 import tech.kzen.lib.common.exec.engine.Execution
 import tech.kzen.lib.common.exec.engine.Logic
 import tech.kzen.lib.common.exec.engine.PauseReason
+import tech.kzen.lib.common.exec.engine.context.BindingLookup
+import tech.kzen.lib.common.exec.engine.context.ContextKey
+import tech.kzen.lib.common.exec.engine.disposal.FrameDisposal
 import tech.kzen.lib.common.exec.logic.ResourceClosePolicy
 import tech.kzen.lib.common.exec.tuple.TupleComponentName
 import tech.kzen.lib.common.exec.tuple.TupleDefinition
 import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.service.store.normal.ObjectStableId
 import tech.kzen.lib.common.util.ExceptionUtils
+import kotlin.reflect.KClass
 
 
 /**
@@ -191,7 +197,7 @@ class ScriptRunContext(
     }
 
 
-    override fun bind(location: ObjectLocation, value: Any?) {
+    override fun recordValue(location: ObjectLocation, value: Any?) {
         recordValue(objectStableMapper.objectStableId(location), value)
     }
 
@@ -302,26 +308,92 @@ class ScriptRunContext(
             ?: error("No step is running")
         val descriptor = LogicContextConventions.stepProvides(graphNotation, stepLocation)
             ?: error("Step declares no `provides` context: $stepLocation")
-        execution.resource(resourceKeyOf(descriptor, qualifier), closePolicy.toEngine(), value, closer)
+        checkBindConformance(descriptor, value)
+        execution.bind(
+            resourceKeyOf(descriptor, qualifier),
+            value,
+            FrameDisposal(closePolicy.toEngine(), closer))
     }
 
 
     override fun contextValue(context: ObjectLocation?, qualifier: String?): Any {
         val descriptor = resolveDeclaredContext(context)
-        return execution.resourceValue(resourceKeyOf(descriptor, qualifier))
-            ?: error(missingContextMessage(descriptor, qualifier))
+        val lookup = execution.binding(resourceKeyOf(descriptor, qualifier))
+        return when (lookup) {
+            BindingLookup.Missing -> error(missingContextMessage(descriptor, qualifier))
+            is BindingLookup.Present -> lookup.value
+                ?: error(missingContextMessage(descriptor, qualifier))
+        }
     }
 
 
     override fun contextValueOrNull(context: ObjectLocation?, qualifier: String?): Any? {
         val descriptor = resolveDeclaredContext(context)
-        return execution.resourceValue(resourceKeyOf(descriptor, qualifier))
+        return execution.binding(resourceKeyOf(descriptor, qualifier)).valueOrNull()
     }
 
 
     override fun releaseContext(context: ObjectLocation?, qualifier: String?) {
         val descriptor = resolveDeclaredContext(context)
-        execution.releaseResource(resourceKeyOf(descriptor, qualifier))
+        // Deregisters WITHOUT disposing: this is the path a step that already tore its own resource down
+        // takes, so the auto-disposer must not fire afterwards.
+        @Suppress("DEPRECATION")
+        execution.releaseResource(resourceKeyOf(descriptor, qualifier).asString())
+    }
+
+
+    /**
+     * The typed bind check, centralized here rather than left to each binder: a `String` bound to a Context
+     * whose contract is `RemoteWebDriver` otherwise surfaces as a `ClassCastException` inside a browser step
+     * several steps away from the mistake that caused it.
+     *
+     * Runtime checking is **raw class plus nullability only**. JVM erasure means an arbitrary `List<*>` cannot
+     * prove its element types by inspection, so this deliberately makes no claim about nested generics — full
+     * generic conformance comes from source metadata, where a source type exists to compare. The raw
+     * [Execution.bind] surface below stays the unchecked escape hatch.
+     */
+    private fun checkBindConformance(descriptor: ContextDescriptor, value: Any?) {
+        if (value == null) {
+            check(descriptor.type.nullable) {
+                "${descriptor.label()} holds ${descriptor.type.toSimple()}, which is not nullable"
+            }
+            return
+        }
+
+        val declaredClassName = descriptor.type.className.asString()
+        if (declaredClassName == TypeMetadata.any.className.asString()) {
+            return
+        }
+
+        check(conformsToRawClass(value, declaredClassName)) {
+            "${descriptor.label()} holds ${descriptor.type.toSimple()}, " +
+                    "but ${value::class.qualifiedName} was bound"
+        }
+    }
+
+
+    // Walks the VALUE's own Kotlin supertype names rather than loading the declared class: TypeMetadata carries
+    // Kotlin names (`kotlin.String`, not `java.lang.String`), and the two namespaces do not line up for the
+    // mapped built-ins. A hierarchy reflection cannot walk (a synthetic or proxy class) answers TRUE — an
+    // unverifiable type must not fail a bind that would otherwise have worked.
+    private fun conformsToRawClass(value: Any, declaredClassName: String): Boolean {
+        return runCatching {
+            val seen = HashSet<KClass<*>>()
+            val frontier = ArrayDeque<KClass<*>>()
+            frontier.add(value::class)
+
+            while (frontier.isNotEmpty()) {
+                val current = frontier.removeFirst()
+                if (! seen.add(current)) {
+                    continue
+                }
+                if (current.qualifiedName == declaredClassName) {
+                    return@runCatching true
+                }
+                current.supertypes.mapNotNullTo(frontier) { it.classifier as? KClass<*> }
+            }
+            false
+        }.getOrDefault(true)
     }
 
 
@@ -354,13 +426,11 @@ class ScriptRunContext(
     }
 
 
-    // A Context's engine key, family-qualified when a qualifier addresses one member (a SUT by name) —
-    // matching the "<family>:<qualifier>" form the engine's export matching and family check both read.
-    private fun resourceKeyOf(descriptor: ContextDescriptor, qualifier: String?): String {
-        return when {
-            qualifier.isNullOrEmpty() -> descriptor.key
-            else -> "${descriptor.key}:$qualifier"
-        }
+    // A Context's engine address: its declared family (an explicit `key:` alias, else the canonical rendering
+    // of its whole `type:`) plus a qualifier naming one member. A DECLARED qualifier resolves exactly and
+    // combining it with a computed one is refused — see [ContextAddressing.keyOf].
+    private fun resourceKeyOf(descriptor: ContextDescriptor, qualifier: String?): ContextKey {
+        return ContextAddressing.keyOf(descriptor, qualifier)
     }
 
 
@@ -488,17 +558,28 @@ class ScriptRunContext(
      * failure gets the standard framing for free — an Error trace, a pause-on-error park, and a re-check when
      * the run resumes (so providing the context and resuming lets the step proceed).
      *
-     * FAMILY-granular by design (see [Execution.hasResourceInFamily]): a qualifier is a step parameter and may
-     * be computed, so this answers "is SOME SUT started", never "is `sut:other` started". A qualifier mismatch
-     * therefore passes the gate and surfaces at read, with the step's own diagnostic. Steps declaring
-     * `releases` are deliberately NOT gated: a closer's job is to make the absence true.
+     * Granularity follows the DECLARATION: a declared qualifier is a static fact, so the gate asks the exact
+     * question; only an unqualified declaration — the one that admits a computed qualifier — falls back to
+     * "is SOME SUT started", because a qualifier computed at run time is unknowable here. A computed-qualifier
+     * mismatch therefore still passes the gate and surfaces at read, with the step's own diagnostic. Steps
+     * declaring `releases` are deliberately NOT gated: a closer's job is to make the absence true.
      */
     private fun checkRequiredContexts(stepLocation: ObjectLocation) {
         val required = requiredContextsCache.getOrPut(stepLocation) {
             LogicContextConventions.stepRequires(graphNotation, stepLocation)
         }
         for (descriptor in required) {
-            if (! execution.hasResourceInFamily(descriptor.key)) {
+            val key = ContextAddressing.keyOf(descriptor)
+            val open =
+                if (key.qualifier != null) {
+                    // A DECLARED qualifier is a static fact, so the gate can answer the exact question.
+                    execution.hasBinding(key)
+                }
+                else {
+                    execution.hasBindingInFamily(key.family)
+                }
+
+            if (! open) {
                 error("Requires ${descriptor.label()}: not provided")
             }
         }
