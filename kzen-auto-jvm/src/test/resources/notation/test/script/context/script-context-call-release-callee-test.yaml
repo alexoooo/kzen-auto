@@ -1,0 +1,21 @@
+# A callee that RELEASES what it was lent (CX7b): it reads the slot, then releases it.
+#
+# The release finds the borrow — the nearest binding, on this child's own frame — and unbinds it. Nothing is
+# closed, because a borrow carries no disposal, and the caller's own registration is a different key on a
+# different frame and is not touched. "Stop borrowing" is exactly what the absence of a disposal already means
+# everywhere else; here it is what lets the caller lend the same subject again on the next call.
+
+main:
+  is: Script
+  context:
+    requires:
+      - CalleeSutSlot
+
+main.steps/Read:
+  is: RequireContextTestStep
+  uses:
+    - CalleeSutSlot
+
+main.steps/Release:
+  is: ReleaseContextTestStep
+  releases: CalleeSutSlot

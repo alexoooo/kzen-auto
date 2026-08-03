@@ -178,6 +178,7 @@ RunLogic:
   description: "Invoke another Logic (e.g. a Script), passing the input as its first parameter and emitting its result; 'arguments' binds literal text to further parameters by name"
   instructions: ""
   arguments: {}
+  contexts: {}
   meta:
     instructions:
       is: ObjectLocation
@@ -190,6 +191,26 @@ RunLogic:
         - String
         - String
       editor: RunLogicArgumentsEditor
+    # Call-site context binding: callee slot -> the declaration in THIS document that supplies it, so one
+    # unedited callee runs against different subjects per call site. Identical in shape and meaning to
+    # RunStep.contexts (script-jvm.yaml) and read by the same conventions — hence the same editor.
+    #
+    # NOTATION-ONLY, never constructor-injected: a dangling weak reference fails the whole host object at
+    # creation, so this is read via LogicContextConventions.stepCallContexts rather than added to the
+    # FlowLogicHost interface beside `arguments`. The value generic is nullable because a half-written row
+    # (slot picked, source not yet) is a reachable on-disk state and must still define.
+    #
+    # Only the SOURCE side is rename-tracked. A notation map KEY is a raw string at every layer of kzen-lib
+    # and no command renames one, so a renamed callee slot goes stale silently in the map — surfaced as the
+    # ordinary unsatisfied-requires error on this vertex plus a dangling warning, never a silent mis-wire.
+    contexts:
+      is: Map
+      of:
+        - String
+        - is: ObjectLocation
+          nullable: true
+      by: Nominal
+      editor: RunStepContextsEditor
     input:
       is: RequiredInput
       by: FlowWiring
@@ -207,6 +228,7 @@ RunLogic2:
   description: "Invoke another Logic, passing the two inputs as its first two parameters and emitting its result; 'arguments' binds literal text to further parameters by name"
   instructions: ""
   arguments: {}
+  contexts: {}
   meta:
     instructions:
       is: ObjectLocation
@@ -219,6 +241,15 @@ RunLogic2:
         - String
         - String
       editor: RunLogicArgumentsEditor
+    # Call-site context binding — see RunLogic above for the full rationale.
+    contexts:
+      is: Map
+      of:
+        - String
+        - is: ObjectLocation
+          nullable: true
+      by: Nominal
+      editor: RunStepContextsEditor
     first:
       is: RequiredInput
       by: FlowWiring

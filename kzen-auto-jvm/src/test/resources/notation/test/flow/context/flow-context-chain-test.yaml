@@ -1,0 +1,22 @@
+# The outer caller of the Flow context chain (CX9). Binds a subject, then runs a FLOW and supplies the Flow's
+# own declared requirement from that binding — the same `contexts:` map a RunStep uses for a Script callee,
+# now aimed at a Flow.
+#
+# The chain this heads is Script -> Flow -> Script, and every hop is a different mechanism:
+#   this RunStep's map      supplies the FLOW's `context.requires`
+#   the Flow's host vertex  supplies the inner callee's `context.requires`
+#   the inner callee        reads it argument-free, unedited, and knows about none of the above
+
+main:
+  is: Script
+
+main.steps/Open:
+  is: ProvideContextTestStep
+  binds: CallerSutA
+  value: subject-a
+
+main.steps/Drive:
+  is: RunStep
+  instructions: "test/flow/context/flow-context-callee-test.yaml#main"
+  contexts:
+    CalleeDriverSlot: CallerSutA

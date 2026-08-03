@@ -19,6 +19,8 @@ import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
 import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.objects.document.bridge.InsertionKey
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
+import tech.kzen.auto.client.objects.document.common.signature.ContextSignatureEditor
+import tech.kzen.auto.client.objects.document.common.signature.ContextSignatureRole
 import tech.kzen.auto.client.objects.ribbon.RibbonController
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
@@ -401,7 +403,18 @@ class FlowController(
         val documentNotation = documentNotation()
             ?: return
 
-        renderGraph(documentNotation)
+        // Positioning context for the context-signature panels below, which are absolute floats in the stage's
+        // top-right stack (the same shape ScriptController and JobController give them). Without a relative
+        // ancestor they resolve against the viewport instead of the stage. Layout-neutral otherwise: a bare
+        // block wrapper around content whose own padding is unchanged, and ALWAYS emitted, so nothing below
+        // it shifts child index.
+        div {
+            css {
+                position = Position.relative
+            }
+
+            renderGraph(documentNotation)
+        }
     }
 
 
@@ -414,6 +427,7 @@ class FlowController(
             state.graphStructure!!, verticesNotation, edgesNotation)
 
         renderStructureFindings()
+        renderContextSignature()
 
         if (flowMatrix.isEmpty()) {
             div {
@@ -446,6 +460,36 @@ class FlowController(
                     visualFlowModel,
                     flowMatrix)
             }
+        }
+    }
+
+
+    // The document's context signature — what this Flow REQUIRES of its caller and what it EXPORTS upward.
+    //
+    // A Flow declares no per-vertex `binds` / `uses`, so unlike a Script its signature is entirely about what
+    // crosses its boundary: `requires` is supplied by whoever hosts it (a RunStep's or a host vertex's
+    // `contexts:` map) and gates the run at start; `exports` lets a Context that a hosted child offers upward
+    // climb PAST this frame rather than resting on it.
+    //
+    // NB: both rows emitted UNCONDITIONALLY, like the findings container above — each panel is an absolute
+    //     float with zero layout footprint, and a conditional element here would index-shift the grid below.
+    private fun ChildrenBuilder.renderContextSignature() {
+        val documentPath = state.documentPath
+            ?: return
+        val mainObjectLocation = ObjectLocation(documentPath, NotationConventions.mainObjectPath)
+
+        ContextSignatureEditor::class.react {
+            objectLocation = mainObjectLocation
+            clientStateGlobal = props.clientStateGlobal
+            mirroredGraphStore = props.mirroredGraphStore
+            role = ContextSignatureRole.Requires
+        }
+
+        ContextSignatureEditor::class.react {
+            objectLocation = mainObjectLocation
+            clientStateGlobal = props.clientStateGlobal
+            mirroredGraphStore = props.mirroredGraphStore
+            role = ContextSignatureRole.Provides
         }
     }
 

@@ -149,6 +149,11 @@ RunStepArgumentsEditor:
   class: tech.kzen.auto.client.objects.document.script.step.control.RunStepArgumentsEditor$Wrapper
 
 
+RunStepContextsEditor:
+  is: AttributeEditor
+  class: tech.kzen.auto.client.objects.document.script.step.control.RunStepContextsEditor$Wrapper
+
+
 TargetSpecEditor:
   is: AttributeEditor
   class: tech.kzen.auto.client.objects.document.script.display.edit.TargetSpecEditor$Wrapper

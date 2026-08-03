@@ -64,7 +64,7 @@ Override the kzen-auto jar (e.g. point at a CI-cached jar to skip the local `:kz
 - **selfTest tester — ephemeral.** `SelfTestBase` takes a `FreePort.next()` port and prints it (`[selfTest] tester port: 50402`). Pin it with `-PtesterPort=<n>` when you want to open the *self-test's own* tester in a browser mid-run.
 - **SUT — ephemeral.** `StartKzenAutoStep`'s `port: 0` (the notation default) means "pick a free one". Navigate to it with **`BrowserGetSutStep`**, which addresses the SUT by `name` and reads the run-time port off the `SutHandle` that Start registered as an engine resource. A literal `port:` still works if you want a predictable URL to attach to.
 
-The mechanism that makes port-free YAML possible is the **engine resource seam**: `StepExecution.resource(key)` walks the host chain (the same way `BrowserGetStep` reaches the WebDriver its host opened), so `BrowserGetSutStep` reads the run-time port from the `SutHandle` instead of a hardcoded URL literal.
+The mechanism that makes port-free YAML possible is the **engine context seam**: `StepExecution.contextValue` walks the host chain (the same way `BrowserGetStep` reaches the WebDriver its host opened), so `BrowserGetSutStep` reads the run-time port from the `SutHandle` instead of a hardcoded URL literal. These steps are on the typed Context API — `StartKzenAutoStep` calls `bindContext`, `StopKzenAutoStep` calls `releaseContext` — not the raw string hatch.
 
 **An occupied port fails loudly.** `KzenAutoProcess.isAvailable` accepts *any* HTTP 200 on the port — it cannot tell our child from a stale kzen-auto instance, which would silently serve the whole suite (old classes, old notation, meaningless green). Two guards prevent that, and `FreePortTest` pins the semantics they rest on:
 

@@ -1,5 +1,7 @@
 package tech.kzen.auto.server.exec.flow
 
+import tech.kzen.auto.common.objects.document.logic.context.ContextCallBinding
+import tech.kzen.auto.common.objects.document.logic.context.LogicContextConventions
 import tech.kzen.auto.common.paradigm.flow.api.FlowLogicHost
 import tech.kzen.auto.common.paradigm.flow.api.FlowRunInput
 import tech.kzen.auto.common.paradigm.flow.api.FlowRunOutput
@@ -15,11 +17,13 @@ import tech.kzen.auto.common.paradigm.flow.model.structure.FlowDag
 import tech.kzen.auto.common.paradigm.flow.model.structure.FlowMatrix
 import tech.kzen.auto.common.paradigm.flow.util.FlowUtils
 import tech.kzen.auto.common.util.TraceDisplay
+import tech.kzen.auto.server.exec.ContextCallSite
 import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.NullExecutionValue
 import tech.kzen.lib.common.exec.engine.Address
 import tech.kzen.lib.common.exec.engine.Execution
 import tech.kzen.lib.common.exec.engine.LogicFailure
+import tech.kzen.lib.common.exec.engine.context.InitialBinding
 import tech.kzen.lib.common.exec.engine.restoredAs
 import tech.kzen.lib.common.exec.tuple.TupleComponentName
 import tech.kzen.lib.common.exec.tuple.TupleComponentValue
@@ -84,6 +88,10 @@ class FlowRun(
     // Per-vertex runtime, keyed by stable id so it survives renames; output vertices' harvested values.
     private val activeVertices = mutableMapOf<ObjectStableId, ActiveVertexModel>()
     private val outputAccumulator = mutableMapOf<TupleComponentName, Any?>()
+
+    // Per-vertex call-site context declarations, read from notation once per location — a host vertex inside a
+    // stream/batch loop is re-visited every iteration. Confined to the run coroutine.
+    private val callContextsCache = HashMap<ObjectLocation, List<ContextCallBinding>>()
 
     // Wall-clock nanos of each vertex's last emitted trace, for throttling hot free-running loops.
     private val lastTraceNanos = mutableMapOf<ObjectStableId, Long>()
@@ -218,11 +226,40 @@ class FlowRun(
             activeVertexModel.error = ExceptionUtils.message(t)
             traceVertex(stableId, instance, running = false, force = true)
         }) {
-            execution.host(childLogic.childStableId, childLogic.logic, inputs)
+            // The hosting VERTEX is the child's call-site, in both senses the engine cares about. As
+            // `callerStableId` it attributes the child's frame to THIS vertex, so two host vertices pointing at
+            // the same document stop sharing one frame identity (they did until now — the call passed neither
+            // argument). As the source of `initialBindings` it supplies the callee's declared `context.requires`
+            // per call, which is what lets one unedited callee run against a different subject from each vertex.
+            execution.host(
+                childLogic.childStableId, childLogic.logic, inputs, stableId,
+                initialBindings = callSiteBindings(vertexLocation))
         }
 
         activeVertexModel.message = result.mainComponentValue()
         activeVertexModel.epoch++
+    }
+
+
+    /**
+     * The hosting vertex's `contexts:` map, resolved against the scope as it stands right now — what this call
+     * supplies to the child and no longer.
+     *
+     * Read from the vertex's NOTATION rather than off the [FlowLogicHost] instance beside `arguments`, because
+     * a context declaration is a weak reference and constructor-injecting one that dangles fails the whole
+     * vertex object at creation. It also means a live edit needs nothing: the rebuilt run re-reads this and
+     * re-supplies from whatever its sources hold NOW, which is exactly the contract a bootstrap value has.
+     *
+     * Memoized per vertex for the run's life. A Flow re-visits a host vertex once per iteration of an enclosing
+     * stream/batch loop, and the map is notation — it cannot change without a migrate rebuilding this FlowRun.
+     */
+    private fun callSiteBindings(vertexLocation: ObjectLocation): List<InitialBinding> {
+        val callBindings = callContextsCache.getOrPut(vertexLocation) {
+            LogicContextConventions.stepCallContexts(
+                graphDefinition.graphStructure.graphNotation, vertexLocation)
+        }
+
+        return ContextCallSite.initialBindings(execution, callBindings)
     }
 
 

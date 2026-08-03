@@ -157,6 +157,7 @@ RunStep:
   title: "Run"
   instructions: ""
   arguments: {}
+  contexts: {}
   meta:
     instructions:
       is: ObjectLocation
@@ -170,6 +171,33 @@ RunStep:
         - ObjectLocation
       by: Nominal
       editor: RunStepArgumentsEditor
+    # What this call SUPPLIES to the document it runs: `{<callee's slot>: <a Context this caller holds>}`,
+    # installed on the child's frame before its first instruction and gone when the call returns. It is the
+    # `with(…)` shape — the callee declares `context.requires` and is run twice against two different values
+    # without being edited — and the two sides are deliberately different namespaces, so a caller holding
+    # `Browser A` and `Browser B` can drive a callee that declares one unqualified `Browser` slot.
+    #
+    # A borrow, never a handover: no close policy appears here because the value's owner is whatever bound it
+    # on the caller's side, and that frame outlives the sequential child by construction.
+    #
+    # Read from notation only, never constructor-injected (the `Logic.context` pattern, NOT the `arguments`
+    # one above): a weak reference that dangles fails its whole host object at creation, and a mis-picked
+    # Context must degrade to a validation finding rather than take the RunStep with it.
+    #
+    # The value generic is `nullable: true` for the same reason `ContextBinder.binds` is: it lets an EMPTY
+    # reference define. A row is authored target-first (a map entry is keyed by its target, so a row with no
+    # target has no notation representation at all), which means the instant between picking the slot and
+    # picking the source is a real, reachable state — and without `nullable` the weak definer answers
+    # `Empty object reference` for it, failing the whole RunStep's definition mid-edit.
+    contexts:
+      is: Map
+      of:
+        - String
+        - is: ObjectLocation
+          nullable: true
+      by: Nominal
+      editor: RunStepContextsEditor
+    selfLocation: SelfLocation
 
 
 WaitStep:

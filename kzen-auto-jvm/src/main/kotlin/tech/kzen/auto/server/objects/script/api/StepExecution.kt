@@ -239,9 +239,12 @@ interface StepExecution {
 
 
     //------------------------------------------------------------------------------------------ StepExecution: resources
-    // The raw string-keyed escape hatch beneath the typed Context API above. Keys are a global namespace, so
-    // a raw caller and a typed one that name the same key share one registration — which is the point: a
-    // plugin (or a test fixture) can interoperate with a first-party Context without declaring one.
+    // The raw string-keyed layer beneath the typed Context API above, mirroring kzen-lib's own supported raw
+    // interop surface. Keys are a global namespace, so a raw caller and a typed one that name the same key
+    // share one registration — which is the point: a plugin (or a test fixture) can interoperate with a
+    // first-party Context without declaring one. What a step gives up by coming here is DECLARATION, not
+    // correctness — nothing raw is visible to the static analysis, so a raw open leaves a downstream typed
+    // `uses` unsatisfiable. Reach for it only when the key genuinely is not known at authoring time.
     /**
      * Open a run-scoped resource (e.g. a browser) under [key]: register [value] and its disposal with the
      * engine per [closePolicy], so later [resource] reads see the handle from any step of this run — and any
@@ -259,7 +262,8 @@ interface StepExecution {
 
     /**
      * Dispose-and-forget the resource under [key] because an explicit closing step tore it down itself, so the
-     * engine's auto-disposer won't fire a second time.
+     * engine's auto-disposer won't fire a second time. Not the raw spelling of [releaseContext], which removes
+     * the name AND runs the teardown attached to it — these are two different operations.
      */
     fun releaseResource(key: String)
 

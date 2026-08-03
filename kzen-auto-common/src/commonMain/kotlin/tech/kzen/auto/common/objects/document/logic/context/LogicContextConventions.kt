@@ -21,7 +21,9 @@ import tech.kzen.lib.common.service.notation.NotationConventions
  *   private to it: ownership is offered by the binder, never claimed by an ancestor (logic-spec §6). The
  *   retired `context.slots` key is read only to warn about it — see [legacyDocumentSlotReferences];
  * - a STEP declares `binds: <Context>` (it puts a value in scope), `uses: [<Context>]` (it reads one),
- *   or `releases: <Context>` (it is a closer).
+ *   or `releases: <Context>` (it is a closer);
+ * - a HOSTING step declares `contexts: {<callee slot>: <caller declaration>}` — what it supplies to the
+ *   document it runs, for that call only. See [stepCallContexts].
  *
  * THE TWO LEVELS DELIBERATELY DO NOT SHARE VOCABULARY. A document's `context.requires` is an assertion about
  * a *caller* — "supply this before running me" — while a step's `uses` is a read of what is already in scope
@@ -71,6 +73,13 @@ object LogicContextConventions {
     val releasesAttributeName = AttributeName("releases")
     val releasesAttributePath = AttributePath.ofName(releasesAttributeName)
 
+    // Call level — a RunStep's `contexts:` map, the only one of these that names Contexts in TWO namespaces at
+    // once (see [stepCallContexts]). Plural because it is a map of them, against the singular step verbs above;
+    // it does not collide with the Contexts DOCUMENT's `contexts` nested-list branch, which lives on a Document
+    // and is never read through here.
+    val contextsAttributeName = AttributeName("contexts")
+    val contextsAttributePath = AttributePath.ofName(contextsAttributeName)
+
 
     /**
      * True for the meta-declared context declaration attributes, so the step-body editor can skip them —
@@ -81,7 +90,8 @@ object LogicContextConventions {
         return attributeName == bindsAttributeName ||
                 attributeName == usesAttributeName ||
                 attributeName == releasesAttributeName ||
-                attributeName == contextAttributeName
+                attributeName == contextAttributeName ||
+                attributeName == contextsAttributeName
     }
 
 
@@ -198,6 +208,55 @@ object LogicContextConventions {
             return listOf()
         }
         return referenceList(graphNotation, stepLocation, attributePath)
+    }
+
+
+    //------------------------------------------------------------------------------------------------------ call level
+    /**
+     * The `contexts:` map of a hosting step (a RunStep): each entry wires one of the CALLER's Context
+     * declarations into a slot the CALLEE declares, for that call only. See [ContextCallBinding] for why the
+     * two sides are separate namespaces and why a bad entry is kept rather than dropped.
+     *
+     * **Both sides resolve against [stepLocation]**, the step that wrote them — not against the callee's
+     * document, even for the callee-side key. Resolution is relative to the referring document, and the
+     * reference here was written by the caller's editor, which mints exactly the form that resolves from the
+     * caller ([ContextConventions.resolveOrNull] with the step as host; see `SelectContextEditor.wireValue`).
+     * Resolving the key from the callee instead would accept a bare name the caller's own picker can never
+     * write, and would make one map entry answer differently depending on which reader asked.
+     *
+     * Notation-only, like every other Context declaration: nothing named `contexts` is a constructor parameter,
+     * so a dangling entry is a validation finding rather than an `ObjectCreationFailure` that would take the
+     * whole RunStep with it (which is what a constructor-injected weak reference does when it cannot resolve —
+     * `RunStep.arguments` carries exactly that exposure today).
+     */
+    fun stepCallContexts(
+        graphNotation: GraphNotation,
+        stepLocation: ObjectLocation
+    ): List<ContextCallBinding> {
+        if (stepLocation !in graphNotation.coalesce) {
+            return listOf()
+        }
+
+        val notation = graphNotation.firstAttribute(stepLocation, contextsAttributePath) as? MapAttributeNotation
+            ?: return listOf()
+
+        return notation.map.mapNotNull { (segment, valueNotation) ->
+            val targetReference = segment.asKey()
+            val sourceReference = (valueNotation as? ScalarAttributeNotation)?.value ?: ""
+
+            // An entry with an empty side is half-written, not wrong — the editor creates a row before the
+            // author has picked into it. Skipping it silently is what keeps a fresh row from reporting an
+            // error the author is in the middle of fixing.
+            if (targetReference.isEmpty() || sourceReference.isEmpty()) {
+                return@mapNotNull null
+            }
+
+            ContextCallBinding(
+                targetReference,
+                ContextConventions.resolveOrNull(graphNotation, targetReference, stepLocation),
+                sourceReference,
+                ContextConventions.resolveOrNull(graphNotation, sourceReference, stepLocation))
+        }
     }
 
 

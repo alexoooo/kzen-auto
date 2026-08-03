@@ -1,0 +1,20 @@
+# A callee slot naming nothing — the shape a RENAME leaves behind, because the map KEY sits in notation key
+# position and kzen-lib's refactor rewrites reference VALUES only.
+#
+# Two findings, and together they are what keeps that from being silent: a WARNING naming the string still on
+# disk, and the ordinary unsatisfied-requires ERROR, since a mapping that resolves to nothing satisfies
+# nothing. Both land on this RunStep, which is the step the author has to re-point.
+
+main:
+  is: Script
+
+main.steps/Start:
+  is: ProvideContextTestStep
+  binds: CallerSutA
+  value: subject-a
+
+main.steps/Run:
+  is: RunStep
+  instructions: "test/script/context/script-context-call-callee-test.yaml#main"
+  contexts:
+    NoSuchContext: CallerSutA

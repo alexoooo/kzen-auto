@@ -1,0 +1,15 @@
+# The opener at the bottom of the export chain: binds the Context and offers ownership upward.
+#
+# A Script, because only a Script has step-level `binds` — which is precisely why the Flow above it can be a
+# relay and nothing more.
+
+main:
+  is: Script
+  context:
+    exports:
+      - CalleeSutSlot
+
+main.steps/Open:
+  is: ProvideContextTestStep
+  binds: CalleeSutSlot
+  value: relayed

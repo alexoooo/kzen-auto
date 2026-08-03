@@ -1,0 +1,13 @@
+# A mapping whose SOURCE nothing bound. Both halves of the feature report it, and both attribute it to this
+# RunStep: the analysis errors here rather than on the callee, and the run fails here rather than several steps
+# into a document that is not at fault. Surfacing it inside the callee as "uses …: not bound" is precisely the
+# misattribution the map exists to remove.
+
+main:
+  is: Script
+
+main.steps/Run:
+  is: RunStep
+  instructions: "test/script/context/script-context-call-callee-test.yaml#main"
+  contexts:
+    CalleeSutSlot: CallerSutA

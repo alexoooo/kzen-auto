@@ -1,0 +1,31 @@
+# Two subjects, one unedited test (CX7b §4.2): the caller holds two declarations of one family, separated by
+# their qualifiers, and runs the SAME callee document twice — once wired to each.
+#
+# The read inside the callee is EXACT on `call-sut`, and neither caller registration answers to that key
+# (they are `call-sut:a` and `call-sut:b`), so a "require saw …" line can only come from the borrow this map
+# installed. Nothing here is satisfied by the ambient walk.
+
+main:
+  is: Script
+
+main.steps/Start A:
+  is: ProvideContextTestStep
+  binds: CallerSutA
+  value: subject-a
+
+main.steps/Start B:
+  is: ProvideContextTestStep
+  binds: CallerSutB
+  value: subject-b
+
+main.steps/Test A:
+  is: RunStep
+  instructions: "test/script/context/script-context-call-callee-test.yaml#main"
+  contexts:
+    CalleeSutSlot: CallerSutA
+
+main.steps/Test B:
+  is: RunStep
+  instructions: "test/script/context/script-context-call-callee-test.yaml#main"
+  contexts:
+    CalleeSutSlot: CallerSutB

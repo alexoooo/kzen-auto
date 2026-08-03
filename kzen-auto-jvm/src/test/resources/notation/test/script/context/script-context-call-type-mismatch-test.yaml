@@ -1,0 +1,19 @@
+# An Int wired into a String slot: rejected STATICALLY, at the call that wired it.
+#
+# Both sides are DECLARED types here, which is why the check is unconditional — no `Any` escape applies, the
+# way it must for BindStep's inferred expression type. Its own document, because a step whose definition
+# carries a validation error publishes no type metadata and would poison every later expression step's verdict.
+
+main:
+  is: Script
+
+main.steps/Count:
+  is: ProvideContextTestStep
+  binds: CallerCountContext
+  value: "7"
+
+main.steps/Run:
+  is: RunStep
+  instructions: "test/script/context/script-context-call-callee-test.yaml#main"
+  contexts:
+    CalleeSutSlot: CallerCountContext

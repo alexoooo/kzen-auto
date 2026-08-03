@@ -1,0 +1,23 @@
+# A row mid-authoring: the callee's slot is picked, its source is not.
+#
+# This is a REACHABLE state, not a hypothetical — a map entry is keyed by its target, so the editor can only
+# materialize a row once the target exists, and the instant before the source is picked looks exactly like
+# this on disk. The `contexts:` value generic is `nullable: true` so it still DEFINES; without that the weak
+# definer answers "Empty object reference" and the whole RunStep fails definition in the middle of an edit.
+#
+# The reader skips the half-written entry, so it satisfies nothing and the ordinary unsatisfied-requires error
+# stands — which is the honest report: the author has not finished saying what to supply.
+
+main:
+  is: Script
+
+main.steps/Start:
+  is: ProvideContextTestStep
+  binds: CallerSutA
+  value: subject-a
+
+main.steps/Run:
+  is: RunStep
+  instructions: "test/script/context/script-context-call-callee-test.yaml#main"
+  contexts:
+    CalleeSutSlot: ""

@@ -1,0 +1,25 @@
+# A borrow transfers no ownership (CX7b): ONE subject, lent to a callee that releases it, twice.
+#
+# If the callee's release had reached the caller's registration the second call would find nothing and fail —
+# and a `disposed[…]` would appear in the middle of the log rather than once at the end, where the caller's own
+# frame settles. Both are the assertion.
+
+main:
+  is: Script
+
+main.steps/Start:
+  is: ProvideContextTestStep
+  binds: CallerSutA
+  value: lent
+
+main.steps/Lend Once:
+  is: RunStep
+  instructions: "test/script/context/script-context-call-release-callee-test.yaml#main"
+  contexts:
+    CalleeSutSlot: CallerSutA
+
+main.steps/Lend Again:
+  is: RunStep
+  instructions: "test/script/context/script-context-call-release-callee-test.yaml#main"
+  contexts:
+    CalleeSutSlot: CallerSutA

@@ -1,0 +1,17 @@
+# The UNEDITED callee of the call-site binding fixtures (CX7b §4.2). It declares one slot, reads it
+# argument-free, and knows nothing whatever about who runs it or how many subjects exist — which is the entire
+# claim: it is run twice against two different values without being touched.
+#
+# It cannot run standalone (the spine gates `context.requires` at run start), and that is the point of the
+# declaration rather than a limitation of it.
+
+main:
+  is: Script
+  context:
+    requires:
+      - CalleeSutSlot
+
+main.steps/Read:
+  is: RequireContextTestStep
+  uses:
+    - CalleeSutSlot

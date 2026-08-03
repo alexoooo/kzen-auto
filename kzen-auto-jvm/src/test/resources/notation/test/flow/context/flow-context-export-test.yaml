@@ -1,0 +1,20 @@
+# A Flow on an EXPORT chain (CX9): the caller reads, AFTER the Flow has settled, a Context that a document two
+# levels down opened.
+#
+# This is the half of the signature that has nothing to do with call sites. The inner Script offers its binding
+# upward; the Flow passes the offer on; so the registration climbs past the Flow frame and comes to rest on
+# this caller, which is what lets the `Check` step below see it at all. Delete the Flow's `context.exports` and
+# this fixture fails — the offer stops at the Flow frame and is disposed at its settle. A Flow is an export
+# BARRIER by default, exactly like any other frame that declares nothing.
+
+main:
+  is: Script
+
+main.steps/Produce:
+  is: RunStep
+  instructions: "test/flow/context/flow-context-export-flow-test.yaml#main"
+
+main.steps/Check:
+  is: RequireContextTestStep
+  uses:
+    - CalleeSutSlot

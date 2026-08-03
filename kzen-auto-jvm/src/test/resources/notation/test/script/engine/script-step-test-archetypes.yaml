@@ -52,6 +52,77 @@ TestValueContext:
   description: "An ambient String for the generic context-step fixtures"
 
 
+# The call-site binding cast (RunStep `contexts:`, CX7b). Two QUALIFIED declarations the caller holds at once
+# and two UNQUALIFIED slots a callee declares — the shapes a `contexts:` map maps between, kept separate from
+# the two Contexts above so a call-site fixture cannot satisfy itself by accident.
+#
+# Read the four `key:` values together, because the fixtures' whole point is in them. The two callers share
+# family `call-sut` and differ only by qualifier, so `call-sut:a` and `call-sut:b` are separate registrations
+# (§4.3's shape). CalleeSutSlot is that SAME family unqualified, i.e. exact key `call-sut` — which none of the
+# caller's registrations answer to, so a callee reading it can only be seeing the borrow. CalleeDriverSlot goes
+# further and shares no family with anything: it is the §4.7 case, where source and target keys have nothing in
+# common and the map is the only thing bridging them. Every exact key here is distinct, so none of this draws
+# an alias warning.
+CallerSutA:
+  is: Context
+  type:
+    class: kotlin.String
+    generics: []
+    nullable: false
+  key: call-sut
+  qualifier: a
+  title: "Caller SUT A"
+  description: "One of two subjects a caller holds at once, for the call-site binding fixtures"
+
+
+CallerSutB:
+  is: Context
+  type:
+    class: kotlin.String
+    generics: []
+    nullable: false
+  key: call-sut
+  qualifier: b
+  title: "Caller SUT B"
+  description: "The second of two subjects a caller holds at once"
+
+
+CalleeSutSlot:
+  is: Context
+  type:
+    class: kotlin.String
+    generics: []
+    nullable: false
+  key: call-sut
+  title: "Callee SUT slot"
+  description: "The unqualified slot an unedited callee declares and reads argument-free"
+
+
+CalleeDriverSlot:
+  is: Context
+  type:
+    class: kotlin.String
+    generics: []
+    nullable: false
+  key: call-driver
+  title: "Callee driver slot"
+  description: "A callee slot sharing no family with its caller's declarations — the asymmetric §4.7 case"
+
+
+# An Int-typed caller declaration, so a fixture can wire something the target's String contract cannot accept
+# and pin RunStep's STATIC assignability check. Both sides being declared types is what makes that check
+# unconditional here, where BindStep must skip its class comparison for an inferred `Any`.
+CallerCountContext:
+  is: Context
+  type:
+    class: kotlin.Int
+    generics: []
+    nullable: false
+  key: call-count
+  title: "Caller count"
+  description: "An Int the String-contracted callee slots must refuse"
+
+
 # Opens a run-scoped resource under `key` with the named `closePolicy` (a plain String parsed in the step),
 # recording its disposal into the ResourceDisposalLog sink.
 OpenResourceTestStep:

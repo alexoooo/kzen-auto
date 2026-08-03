@@ -1,0 +1,37 @@
+# The same Flow signature with nobody to satisfy it: run this document DIRECTLY and the requires gate fails at
+# run start, before any vertex executes.
+#
+# That failure is the declaration working, not a limitation of it — it is the assertion that makes a Flow
+# usable as a callee at all, and the reason a host vertex's `contexts:` map has something to satisfy.
+
+main:
+  is: Flow
+  context:
+    requires:
+      - CalleeDriverSlot
+  vertices:
+  - FunsupInput
+  - FunsupCall
+  - FunsupOutput
+  edges: []
+
+FunsupInput:
+  is: IntRangeSource
+  from: 1
+  to: 1
+  row: 0
+  column: 0
+
+FunsupCall:
+  is: RunLogic
+  instructions: "test/script/context/script-context-call-callee-test.yaml#main"
+  contexts:
+    CalleeSutSlot: CalleeDriverSlot
+  row: 1
+  column: 0
+
+FunsupOutput:
+  is: FlowOutput
+  result: "out"
+  row: 2
+  column: 0

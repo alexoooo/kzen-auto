@@ -1,0 +1,35 @@
+# The middle hop of the export chain: a Flow that opens nothing itself and passes an offer on.
+#
+# `context.exports` here is a pure relay — the Flow neither binds the Context nor reads it. That is the honest
+# shape for a Flow, which has no per-vertex `binds`: it can only ever be a relay or a requirer, never an
+# opener. One hop per declaration, and every hop is something someone wrote.
+
+main:
+  is: Flow
+  context:
+    exports:
+      - CalleeSutSlot
+  vertices:
+  - FexpInput
+  - FexpCall
+  - FexpOutput
+  edges: []
+
+FexpInput:
+  is: IntRangeSource
+  from: 1
+  to: 1
+  row: 0
+  column: 0
+
+FexpCall:
+  is: RunLogic
+  instructions: "test/flow/context/flow-context-export-child-test.yaml#main"
+  row: 1
+  column: 0
+
+FexpOutput:
+  is: FlowOutput
+  result: "out"
+  row: 2
+  column: 0

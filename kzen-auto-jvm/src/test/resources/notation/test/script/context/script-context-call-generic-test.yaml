@@ -1,0 +1,14 @@
+# The GENERIC callee of the asymmetric fixture (CX7b §4.7): one unqualified slot in a family of its own, read
+# argument-free. It never learns that a qualifier existed, which is what keeps it reusable against a
+# single-subject caller with no `contexts:` entry at all.
+
+main:
+  is: Script
+  context:
+    requires:
+      - CalleeDriverSlot
+
+main.steps/Go:
+  is: RequireContextTestStep
+  uses:
+    - CalleeDriverSlot

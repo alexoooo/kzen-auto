@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.exec.script
 
 import tech.kzen.auto.common.objects.document.logic.context.ContextAddressing
+import tech.kzen.auto.common.objects.document.logic.context.ContextCallBinding
 import tech.kzen.auto.common.objects.document.logic.context.ContextConventions
 import tech.kzen.auto.common.objects.document.logic.context.ContextDescriptor
 import tech.kzen.auto.common.objects.document.logic.context.LogicContextConventions
@@ -9,6 +10,7 @@ import tech.kzen.auto.common.objects.document.script.model.ScriptTree
 import tech.kzen.auto.common.objects.document.script.model.ScriptValidation
 import tech.kzen.auto.common.objects.document.script.model.StepTrace
 import tech.kzen.auto.common.util.TraceDisplay
+import tech.kzen.auto.server.exec.ContextCallSite
 import tech.kzen.auto.server.exec.LogicCompiler
 import tech.kzen.auto.server.objects.script.api.ScriptControlSignal
 import tech.kzen.auto.server.objects.script.api.ScriptStep
@@ -22,6 +24,7 @@ import tech.kzen.lib.common.exec.engine.Logic
 import tech.kzen.lib.common.exec.engine.PauseReason
 import tech.kzen.lib.common.exec.engine.context.BindingLookup
 import tech.kzen.lib.common.exec.engine.context.ContextKey
+import tech.kzen.lib.common.exec.engine.context.InitialBinding
 import tech.kzen.lib.common.exec.engine.disposal.FrameDisposal
 import tech.kzen.lib.common.exec.engine.disposal.SettleDisposalPolicy
 import tech.kzen.lib.common.exec.logic.ResourceClosePolicy
@@ -29,11 +32,9 @@ import tech.kzen.lib.common.exec.tuple.TupleComponentName
 import tech.kzen.lib.common.exec.tuple.TupleDefinition
 import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.service.store.normal.ObjectStableId
 import tech.kzen.lib.common.util.ExceptionUtils
-import kotlin.reflect.KClass
 
 
 /**
@@ -155,6 +156,7 @@ class ScriptRunContext(
     // them before EVERY step, including a loop body's on every iteration. Confined to the run coroutine.
     private val declaredContextsCache = HashMap<ObjectLocation, List<ContextDescriptor>>()
     private val usedContextsCache = HashMap<ObjectLocation, List<ContextDescriptor>>()
+    private val callContextsCache = HashMap<ObjectLocation, List<ContextCallBinding>>()
 
 
     //----------------------------------------------------------------------------------------- StepExecution: control
@@ -362,58 +364,11 @@ class ScriptRunContext(
     }
 
 
-    /**
-     * The typed bind check, centralized here rather than left to each binder: a `String` bound to a Context
-     * whose contract is `RemoteWebDriver` otherwise surfaces as a `ClassCastException` inside a browser step
-     * several steps away from the mistake that caused it.
-     *
-     * Runtime checking is **raw class plus nullability only**. JVM erasure means an arbitrary `List<*>` cannot
-     * prove its element types by inspection, so this deliberately makes no claim about nested generics — full
-     * generic conformance comes from source metadata, where a source type exists to compare. The raw
-     * [Execution.bind] surface below stays the unchecked escape hatch.
-     */
+    // Delegated to [ContextCallSite] so the Script spine and a Flow's logic-host vertex cannot drift on what a
+    // bind admits: both resolve the same declarations against the same engine surface, and the check is the
+    // definitive one on either path.
     private fun checkBindConformance(descriptor: ContextDescriptor, value: Any?) {
-        if (value == null) {
-            check(descriptor.type.nullable) {
-                "${descriptor.label()} holds ${descriptor.type.toSimple()}, which is not nullable"
-            }
-            return
-        }
-
-        val declaredClassName = descriptor.type.className.asString()
-        if (declaredClassName == TypeMetadata.any.className.asString()) {
-            return
-        }
-
-        check(conformsToRawClass(value, declaredClassName)) {
-            "${descriptor.label()} holds ${descriptor.type.toSimple()}, " +
-                    "but ${value::class.qualifiedName} was bound"
-        }
-    }
-
-
-    // Walks the VALUE's own Kotlin supertype names rather than loading the declared class: TypeMetadata carries
-    // Kotlin names (`kotlin.String`, not `java.lang.String`), and the two namespaces do not line up for the
-    // mapped built-ins. A hierarchy reflection cannot walk (a synthetic or proxy class) answers TRUE — an
-    // unverifiable type must not fail a bind that would otherwise have worked.
-    private fun conformsToRawClass(value: Any, declaredClassName: String): Boolean {
-        return runCatching {
-            val seen = HashSet<KClass<*>>()
-            val frontier = ArrayDeque<KClass<*>>()
-            frontier.add(value::class)
-
-            while (frontier.isNotEmpty()) {
-                val current = frontier.removeFirst()
-                if (! seen.add(current)) {
-                    continue
-                }
-                if (current.qualifiedName == declaredClassName) {
-                    return@runCatching true
-                }
-                current.supertypes.mapNotNullTo(frontier) { it.classifier as? KClass<*> }
-            }
-            false
-        }.getOrDefault(true)
+        ContextCallSite.checkBindConformance(descriptor, value)
     }
 
 
@@ -470,23 +425,21 @@ class ScriptRunContext(
     // ancestor chain (so a hosted child — Script, Flow, or Job — borrows the handle its host opened), and the
     // registration survives a live edit with its owning frame's stable identity (logic-spec §5/§6).
     //
-    // Deliberately still on the engine's PERMISSIVE string surface rather than the typed one: a plugin-supplied
-    // key is arbitrary text, and the typed parse is strict — routing these through it would turn "addresses
-    // nothing, so answer null / no-op" into "throws" for a malformed key. Whether the raw hatch keeps that
-    // tolerance, or goes away entirely, is a decision of its own.
-    @Suppress("DEPRECATION")
+    // On the engine's raw string interop layer rather than the typed one, and that is a supported layer now
+    // rather than deprecated debt: a plugin-supplied key is arbitrary text known only at run time, which is the
+    // case the layer exists for. It inherits the layer's strict-to-write / permissive-to-address split —
+    // opening under a string no key could be spelled as throws, while reading or releasing one addresses
+    // nothing and answers null / no-op.
     override fun openResource(key: String, value: Any?, closePolicy: ResourceClosePolicy, closer: () -> Unit) {
         execution.resource(key, closePolicy.toEngine(), value, closer)
     }
 
 
-    @Suppress("DEPRECATION")
     override fun resource(key: String): Any? {
         return execution.resourceValue(key)
     }
 
 
-    @Suppress("DEPRECATION")
     override fun releaseResource(key: String) {
         execution.releaseResource(key)
     }
@@ -651,7 +604,36 @@ class ScriptRunContext(
         // THIS RunStep, so its screenshot strip scopes to the invocations it spawned (distinguishing two
         // RunSteps that host the same sub-Script document).
         return execution.host(
-            objectStableMapper.objectStableId(instructions), child, arguments, currentStableId)
+            objectStableMapper.objectStableId(instructions), child, arguments, currentStableId,
+            initialBindings = callSiteBindings())
+    }
+
+
+    /**
+     * The hosting step's `contexts:` map, resolved against the scope as it stands right now — what the caller
+     * supplies to the child for this call and no longer.
+     *
+     * Read from the CURRENT step's notation rather than passed in by [tech.kzen.auto.server.objects.script.step.control.RunStep],
+     * the same way [bindDeclared] reads its `binds`: a context declaration is notation the running step
+     * carries, and routing it through the [StepExecution] signature would make every hosting step re-plumb
+     * what the runtime can already see. It also means a live edit needs nothing — the rebuilt caller re-runs
+     * this and re-supplies from whatever its sources hold NOW, which is precisely the contract
+     * [tech.kzen.lib.common.exec.engine.Execution.host] documents for a bootstrap value.
+     *
+     * **Every failure here is attributed to the hosting step**, which is the point of resolving before the
+     * child exists: a source nothing bound is a mistake in the CALL, and surfacing it inside the callee — as
+     * "uses X: not bound", several steps into a document that is not even the one at fault — is exactly the
+     * misattribution the map is supposed to remove.
+     */
+    private fun callSiteBindings(): List<InitialBinding> {
+        val stepLocation = currentStepLocation
+            ?: return listOf()
+
+        val callBindings = callContextsCache.getOrPut(stepLocation) {
+            LogicContextConventions.stepCallContexts(graphNotation, stepLocation)
+        }
+
+        return ContextCallSite.initialBindings(execution, callBindings)
     }
 
 

@@ -253,10 +253,30 @@ Flow:
   icon: "material-symbols:device-hub"
   vertices: []
   edges: []
+  # Same document-level context signature as Script, with the same meaning — see the Script archetype above for
+  # what `exports` / `requires` each assert. Declared per-flavour rather than hoisted onto the `Logic` marker
+  # deliberately (CX doc §3 J): the four flavours do NOT all carry this contract. A Report is a leaf that never
+  # hosts and never exports, and a Job's values live in its Workers — nested objects that never see their own
+  # Execution — so a signature on the shared marker would read as a promise three of four flavours do not keep.
+  #
+  # What a Flow does with it differs from Script in ONE way worth knowing here: a Flow declares no per-vertex
+  # `binds` / `uses` / `releases`, so a Flow REQUIRES Contexts and passes them to the Logic its host vertices
+  # run, rather than binding any itself. That is why there is no availability analysis over the DAG — there is
+  # nothing vertex-local to order (CX doc §8, Phase 9).
+  context: {}
   meta:
     vertices:
       is: List
       of: FlowVertex
+    # Weak references (by: Nominal): data for the validator/runtime/editor — never constructor-injected,
+    # never pruned when an entry dangles or names an abstract Context; renames propagate.
+    context:
+      is: Map
+      of:
+        - String
+        - is: List
+          of: ObjectLocation
+      by: Nominal
     edges:
       is: List
       of: EdgeDescriptor

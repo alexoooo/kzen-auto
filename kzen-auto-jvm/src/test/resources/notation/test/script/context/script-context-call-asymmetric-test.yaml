@@ -1,0 +1,32 @@
+# The asymmetric mapping (CX7b §4.7), and the case that proves `contexts:` maps between NAMESPACES rather than
+# sharing a name: the caller's two declarations live in family `call-sut` (qualified `a` / `b`) and the callee's
+# single slot lives in `call-driver`, which shares nothing with them.
+#
+# So the source is read by the caller's key and installed under the callee's, and the two keys have no
+# relationship at all — there is no walk, no family match and no qualifier coincidence that could produce a
+# passing read here. Contrast script-context-call-two-subjects-test.yaml, where the families at least agree.
+
+main:
+  is: Script
+
+main.steps/Open A:
+  is: ProvideContextTestStep
+  binds: CallerSutA
+  value: driver-a
+
+main.steps/Open B:
+  is: ProvideContextTestStep
+  binds: CallerSutB
+  value: driver-b
+
+main.steps/Drive A:
+  is: RunStep
+  instructions: "test/script/context/script-context-call-generic-test.yaml#main"
+  contexts:
+    CalleeDriverSlot: CallerSutA
+
+main.steps/Drive B:
+  is: RunStep
+  instructions: "test/script/context/script-context-call-generic-test.yaml#main"
+  contexts:
+    CalleeDriverSlot: CallerSutB

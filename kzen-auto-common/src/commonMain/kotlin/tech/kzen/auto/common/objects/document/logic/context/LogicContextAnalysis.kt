@@ -256,6 +256,14 @@ object LogicContextAnalysis {
      * the call, since only what precedes a RunStep can satisfy it. This is where a deleted binding actually
      * surfaces: H's own steps stay clean, because H's `context.requires` seeds H's local analysis.
      *
+     * **Or supplied by the call.** A `contexts:` entry naming that requirement satisfies it a second way, by
+     * handing it the value of a DIFFERENT Context the caller holds — which is the whole point of a
+     * parameterized call site, and which availability alone can never express, since the caller may hold
+     * `Browser A` where H asks for `Browser`. What then has to be available is the entry's SOURCE. The two
+     * routes are not ranked: an entry is checked even when H's own Context happens to be available too,
+     * because the borrow shadows it on the child's frame at run time and an unusable mapping must fail rather
+     * than silently fall back to a value the author did not name.
+     *
      * **What the call makes available.** H's `context.exports` — its declared contract, so no recursion is
      * needed: if H exports X, H asserts it delivers X, whether from a step of its own or a re-export of its
      * own callee. Plus any Context some step of H binds with `closePolicy: manual`, which reaches this
@@ -284,7 +292,37 @@ object LogicContextAnalysis {
             return
         }
 
+        val callBindings = LogicContextConventions.stepCallContexts(graphNotation, stepLocation)
+
         for (hostedRequired in LogicContextConventions.documentRequires(graphNotation, hostedPath)) {
+            val supplied = callBindings.firstOrNull { it.target?.location == hostedRequired.location }
+
+            // A `contexts:` entry is the SECOND way to satisfy a requirement, and it satisfies a different
+            // one than availability does: availability says the caller has this very Context in scope, while
+            // a mapping says the caller has SOME context whose value it is handing to that slot. Without this
+            // branch every parameterized call site would light up red for doing exactly what it was built for.
+            if (supplied != null) {
+                // Checked even when the Context is ALSO ambiently available, and the mapping is not a
+                // fallback for it: at run time the borrow lands on the child's own frame and shadows whatever
+                // the caller holds, so an unusable mapping fails the call rather than quietly deferring to the
+                // ambient value the author did not ask for.
+                val source = supplied.source
+
+                if (source == null) {
+                    error(stepObjectPath,
+                        "${hostedPath.asString()} requires ${hostedRequired.label()}, which this step maps " +
+                                "to '${supplied.sourceReference}' — not a context.")
+                }
+                else if (source.location !in available) {
+                    error(stepObjectPath,
+                        "${hostedPath.asString()} requires ${hostedRequired.label()}, which this step maps " +
+                                "to ${source.label()} — and nothing before this step binds that. " +
+                                remedyFor(source, unexportedBindings))
+                }
+
+                continue
+            }
+
             if (hostedRequired.location !in available) {
                 error(stepObjectPath,
                     "${hostedPath.asString()} requires ${hostedRequired.label()}, " +
@@ -421,6 +459,17 @@ object LogicContextAnalysis {
             .groupBy { ContextAddressing.keyOf(it) }
             .filterValues { it.size > 1 }
 
+        fun checkAlias(objectPath: ObjectPath, descriptor: ContextDescriptor) {
+            val exactKey = ContextAddressing.keyOf(descriptor)
+            aliasedKeys[exactKey]?.let { aliases ->
+                warn(objectPath,
+                    "${descriptor.label()} shares the address '${exactKey.asString()}' with " +
+                            aliases.filter { it.location != descriptor.location }
+                                .joinToString { it.label() } +
+                            " — they are the same registration at run time.")
+            }
+        }
+
         fun check(objectPath: ObjectPath, attributePath: AttributePath, label: String) {
             val objectLocation = ObjectLocation(documentPath, objectPath)
             val references = LogicContextConventions
@@ -433,13 +482,38 @@ object LogicContextAnalysis {
                     continue
                 }
 
-                val exactKey = ContextAddressing.keyOf(descriptor)
-                aliasedKeys[exactKey]?.let { aliases ->
+                checkAlias(objectPath, descriptor)
+            }
+        }
+
+        /**
+         * A `contexts:` map's two sides, which the scalar/list [check] above cannot read. The callee side is
+         * the one worth having here: it is a notation map KEY, so a rename does not rewrite it (see
+         * [ContextCallBinding]), and this warning plus the unsatisfied-requires error [analyzeRunStep] already
+         * raises are together what keep that from being silent.
+         */
+        fun checkCallBindings(objectPath: ObjectPath) {
+            val objectLocation = ObjectLocation(documentPath, objectPath)
+
+            for (callBinding in LogicContextConventions.stepCallContexts(graphNotation, objectLocation)) {
+                val target = callBinding.target
+                if (target == null) {
                     warn(objectPath,
-                        "${descriptor.label()} shares the address '${exactKey.asString()}' with " +
-                                aliases.filter { it.location != descriptor.location }
-                                    .joinToString { it.label() } +
-                                " — they are the same registration at run time.")
+                        "Context binding supplies '${callBinding.targetReference}', which is not a context.")
+                }
+                else {
+                    checkAlias(objectPath, target)
+                }
+
+                val source = callBinding.source
+                if (source == null) {
+                    val targetLabel = target?.label() ?: "'${callBinding.targetReference}'"
+                    warn(objectPath,
+                        "Context binding maps $targetLabel to '${callBinding.sourceReference}', " +
+                                "which is not a context.")
+                }
+                else {
+                    checkAlias(objectPath, source)
                 }
             }
         }
@@ -457,6 +531,7 @@ object LogicContextAnalysis {
             check(objectPath, LogicContextConventions.bindsAttributePath, "Binds")
             check(objectPath, LogicContextConventions.usesAttributePath, "Uses")
             check(objectPath, LogicContextConventions.releasesAttributePath, "Releases")
+            checkCallBindings(objectPath)
         }
     }
 }

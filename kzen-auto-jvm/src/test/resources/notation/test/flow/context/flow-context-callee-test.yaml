@@ -1,0 +1,45 @@
+# A Flow as a CALLEE with a context signature (CX9): it requires a Context of whoever hosts it, and hands that
+# Context on to the Logic its host vertex runs — under a DIFFERENT name.
+#
+# The rename across the hop is the point. This Flow holds `call-driver` and the inner callee reads exact
+# `call-sut`; the two families share nothing, so a passing read inside the callee cannot have come from the
+# ambient ancestor walk. It can only be the borrow this vertex's `contexts:` map installed.
+#
+# Note what this Flow does NOT do: it binds nothing of its own. A Flow has no per-vertex `binds` / `uses`, so
+# its whole context story is what crosses its boundary — which is why it needs no availability analysis over
+# the DAG (CX doc §3 J verdict).
+
+main:
+  is: Flow
+  context:
+    requires:
+      - CalleeDriverSlot
+  vertices:
+  - FctxInput
+  - FctxCall
+  - FctxOutput
+  edges: []
+
+# A self-starting source rather than a FlowInput: the caller supplies this Flow's CONTEXT, not its data, and a
+# FlowInput left unbound would stall the DAG before the host vertex ever ran — which is a fixture that passes
+# by never testing anything. One item, so the callee runs exactly once.
+FctxInput:
+  is: IntRangeSource
+  from: 1
+  to: 1
+  row: 0
+  column: 0
+
+FctxCall:
+  is: RunLogic
+  instructions: "test/script/context/script-context-call-callee-test.yaml#main"
+  contexts:
+    CalleeSutSlot: CalleeDriverSlot
+  row: 1
+  column: 0
+
+FctxOutput:
+  is: FlowOutput
+  result: "out"
+  row: 2
+  column: 0
