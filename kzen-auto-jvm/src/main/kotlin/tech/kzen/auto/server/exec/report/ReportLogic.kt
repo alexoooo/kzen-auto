@@ -15,9 +15,26 @@ import tech.kzen.lib.common.exec.tuple.TupleValue
  * A Report document as a [Logic] on the new engine (the fourth kzen-auto paradigm to run on it, beside Script,
  * Flow and Job) — the coroutine-shaped successor to [tech.kzen.auto.server.objects.report.ReportDocument]'s old
  * `Logic.execute` factory. Thin and immutable: [ReportLogicCompiler] resolves the [reportRunContext] and report
- * services once, and each [run] makes a fresh [ReportRun] that drives that call's disruptor record pipeline. A
- * Report is always top-level (never hosted), so the signature mirrors
- * [tech.kzen.auto.server.objects.report.ReportDocument.define] (no declared inputs).
+ * services once, and each [run] makes a fresh [ReportRun] that drives that call's disruptor record pipeline.
+ *
+ * The signature mirrors [tech.kzen.auto.server.objects.report.ReportDocument.define] — **no declared inputs**,
+ * because a Report is configured entirely from its own notation (its input selection, formulas and output
+ * spec), not from an argument tuple. A caller therefore passes it nothing; it still returns a `main` component.
+ *
+ * **A Report IS hostable**, like every other [tech.kzen.auto.common.paradigm.logic.LogicDocument] — a `RunStep`
+ * or a Flow's `RunLogic` vertex can target one, and [tech.kzen.auto.server.exec.LogicCompiler] reaches it by the
+ * same polymorphic dispatch as any other flavour. (This KDoc previously claimed a Report "is always top-level
+ * (never hosted)" and derived the empty input signature from that. The empty inputs are real; the reason was
+ * not, and nothing anywhere enforced the restriction — corrected 2026-08-03, ledger row 44, pinned by
+ * [ReportHostedTest].)
+ *
+ * ⚠ Two things are still **top-level-shaped** when a Report is hosted, and neither fails loudly:
+ * [ReportRun] registers its preview / summary handler on its OWN node via `Execution.onRequest`, while the
+ * client addresses the run's ROOT frame — so a hosted Report's online output info silently answers nothing
+ * even though the pipeline itself runs to completion; and the run dir is stamped with the compiling run's
+ * [LogicRunExecutionId], which for a hosted Report is the HOST's run identity rather than its own, so the
+ * offline progress correlation points at the wrong frame. Execution is unaffected; only the UI feedback path
+ * is. See ledger row 45.
  */
 class ReportLogic(
     private val reportRunContext: ReportRunContext,

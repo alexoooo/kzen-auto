@@ -1,0 +1,25 @@
+# Script -> RunStep -> Report (ledger row 44, ReportHostedTest): the caller that proves a Report is an ordinary
+# hostable Logic document, like every other flavour.
+#
+# Two KDoc comments used to claim the opposite ("a Report is always top-level (never hosted)"), but no
+# executable layer ever enforced it — LogicCompiler has no flavour dispatch at all, dispatching polymorphically
+# through LogicDocument.toLogic, and SelectLogicEditor has always OFFERED Reports in this dropdown because
+# AutoConventions.isLogic matches the Logic marker a Report carries. This fixture is what makes the uniform
+# nesting a tested property rather than an unstated one.
+#
+# `arguments:` is absent deliberately: ReportLogicCompiler declares TupleDefinition.empty inputs, so a Report
+# takes none.
+#
+# There is deliberately NO ResultStep and no `results:` block either, and that is a finding rather than a
+# simplification. ReportRun.run() returns TupleValue.empty on success while ReportLogicCompiler declares its
+# output as TupleDefinition.ofMain(LogicType.string) — so a hosted Report's `main` component is null, and a
+# caller declaring `nullable: false` fails the cast AFTER the report has run correctly to completion. That
+# mismatch is pre-existing and unrelated to hosting (nothing reads the ROOT frame's main value, which is why it
+# has never surfaced); it is filed as ledger row 45 rather than worked around here. A Report's real output is
+# its materialized table, which is what the test asserts on.
+main:
+  is: Script
+
+main.steps/RunReport:
+  is: RunStep
+  instructions: "test/report/report-hosted-test.yaml#main"

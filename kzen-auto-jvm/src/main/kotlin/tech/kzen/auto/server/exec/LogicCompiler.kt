@@ -18,7 +18,11 @@ import tech.kzen.lib.common.service.context.GraphCreator
  * This is the single entry point the [tech.kzen.auto.server.service.impl.ServerLogicController] starts a run
  * through, and the seam a nested [RunStep][tech.kzen.auto.server.objects.script.step.control.RunStep] /
  * [RunLogicVertex][tech.kzen.auto.server.objects.flow.vertex.RunLogicVertex] compiles its child through — so the
- * flavours nest each other uniformly (Report excepted: it is top-level only).
+ * flavours nest each other uniformly, **Report included**. There is no top-level-only flavour and no exception
+ * to the uniformity: any document whose `main` is a [LogicDocument] is hostable, which is what makes the absent
+ * flavour `when` above a design point rather than an oversight. (This sentence used to carve out Report as
+ * "top-level only". It was never true of any executable layer — corrected 2026-08-03, ledger row 44, and pinned
+ * by [ReportHostedTest][tech.kzen.auto.server.exec.report.ReportHostedTest].)
  *
  * The archetype is instantiated from a graph filtered to [location] alone: its nested children (a Job's Workers,
  * a Script's steps, a Flow's vertices) are weak `NestedList` references, so they are excluded and never

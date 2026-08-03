@@ -57,7 +57,14 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > Channels** (`server/objects/job/`, engine side `server/exec/job/`), as opposed to Script's sequential
 > steps and Flow's synchronous DAG. `JobLogic` is thin and immutable — `JobLogicCompiler` compiles the
 > structure once, and each `run` builds a fresh `JobRun` with that call's instance graph, so one Job can
-> be hosted more than once (e.g. nested in a Script). Channels are **auto-managed**: order drives wiring
+> be hosted more than once (e.g. nested in a Script). **Worker frames are hosted with kzen-lib's
+> `Execution.host(contextBarrier = true)`** — because they run simultaneously, and the engine's ambient-context
+> model is specified for a sequential host chain (kzen-lib spec §6): without it, two Workers binding one
+> exported key would collapse onto a single slot on the Job frame, the second bind closing the first's live
+> resource underneath it in whatever order the scheduler chose. The barrier is opaque to outward writes and
+> transparent to inward reads, so a Worker still inherits everything the Job frame bound but can publish
+> nothing upward — deliberate, and the reason a Worker-level context vocabulary is foreclosed rather than
+> merely unbuilt. Channels are **auto-managed**: order drives wiring
 > and the channel objects are synthesized in memory rather than written to YAML, which is why the
 > archetype must be built from a `filterTransitive`-narrowed graph (a Worker's saved ports are blank
 > until synthesis runs). The wiring invariants: adjacent workers auto-connect when the upper has exactly
@@ -93,6 +100,17 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > `TupleValue` or a thrown failure instead of a `LogicResult`; progress is written through
 > `ExecutionLogicTraceHandle` (literal trace paths bridged onto `Execution.emit`) instead of a
 > framework-supplied trace handle; and the online preview handler registers via `Execution.onRequest`.
+> **A Report is hostable like any other Logic document** — a `RunStep` or a Flow `RunLogic` vertex can target
+> one, and `LogicCompiler`'s flavour-blind dispatch reaches it the same way it reaches the other three
+> (`ReportHostedTest`). Two KDocs used to assert a Report was "always top-level (never hosted)"; nothing ever
+> enforced it and the claim was simply wrong (corrected 2026-08-03).
+> ⚠ **But three things still assume the root frame when it is hosted, all failing quietly** (ledger row 45):
+> that `Execution.onRequest` handler is registered on the Report's OWN node while the client addresses the run
+> ROOT, so online output info silently answers nothing; the run dir is stamped with the *compiling* run's
+> `LogicRunExecutionId`, which when hosted is the host's; and `ReportLogicCompiler` declares an output of
+> `ofMain(LogicType.string)` while `ReportRun.run` returns `TupleValue.empty`, so a caller declaring a
+> non-nullable result fails the cast *after* the report has run correctly. Execution itself is unaffected in
+> all three.
 > **Known parity gap:** `ReportLogic` registers no `Execution.onCapture`, so a live edit cleanly
 > *restarts* the report on the edited definition rather than migrating it — the safe default
 > (`logic-spec.md` §5), and the same first-port state Flow and Job began in.

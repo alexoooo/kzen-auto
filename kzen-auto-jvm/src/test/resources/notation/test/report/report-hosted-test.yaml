@@ -1,0 +1,31 @@
+# A Report reached as a RUNSTEP TARGET rather than as the run root (ledger row 44, ReportHostedTest).
+#
+# Structurally identical to test/report-engine-test.yaml — the point of the fixture is the CALLER, not this
+# document, and a Report that had to be written differently to be hostable would prove the opposite of what is
+# being claimed. Only the paths differ, because ReportWorkPool keys its run dir off the run-context signature
+# and sharing `work:` with report-engine-test.yaml would put two tests in one directory.
+#
+# The input CSV is written at runtime by the test (see ReportHostedTest), not checked in: `datasetInfo()` reads
+# real headers off the file, so it must exist before the hosting Script's RunStep compiles this document.
+main:
+  is: Report
+  input:
+    browser:
+      directory: "."
+      filter: ""
+    selection:
+      dataType: tech.kzen.auto.plugin.model.record.FlatFileRecord
+      groupBy: ""
+      locations:
+        - location: "build/report-hosted-test/input.csv"
+          coordinate: CSV
+  output:
+    type: Explore
+    explore:
+      start: 1
+      count: 50
+    export:
+      format: csv
+      compression: none
+      path: "build/report-hosted-test/export/${report}_${group}_${time}.${extension}"
+    work: "build/report-hosted-test/work"

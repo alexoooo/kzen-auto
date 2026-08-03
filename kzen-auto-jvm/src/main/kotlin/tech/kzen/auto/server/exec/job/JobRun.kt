@@ -252,7 +252,17 @@ class JobRun(
                                         worker, childLogicHost, objectStableMapper,
                                         workerScratchDir, workerOutputDir,
                                         execution.inputs, jobParameters, jobResults,
-                                        inputPayloadType, resultCollector))
+                                        inputPayloadType, resultCollector),
+                                    // These frames are live SIMULTANEOUSLY, which is the one shape the engine's
+                                    // ambient-context model is not specified for (logic-spec §6): two Workers
+                                    // binding one exported key would collapse onto a single slot on this Job
+                                    // frame, where the second bind displaces the first, claims its disposal and
+                                    // runs the closer while that Worker is still using what it just closed. The
+                                    // engine lock makes that safe, not meaningful — the winner is whichever
+                                    // coroutine arrived second. The barrier removes the shared slot instead of
+                                    // policing it, so there is no order for the outcome to depend on. Reads are
+                                    // unaffected: a Worker still inherits everything this frame bound.
+                                    contextBarrier = true)
                             }
                             finally {
                                 activeWorkers.decrementAndGet()
