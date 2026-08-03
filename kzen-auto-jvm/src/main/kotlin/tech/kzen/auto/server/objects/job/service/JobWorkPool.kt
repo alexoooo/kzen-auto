@@ -25,8 +25,8 @@ import java.nio.file.Path
  *    resolves the path up front but does not touch the disk), so a run whose Workers never need one leaves nothing
  *    behind. Cleanup is layered: each stateful Worker's `onClose` closes-then-deletes its own store (an H2 file
  *    holds a Windows lock, so close must precede delete), [JobRun] registers a run-root
- *    [tech.kzen.lib.common.exec.engine.ClosePolicy.Auto] resource that sweeps the whole run dir when the run
- *    settles, and this pool's boot-time sweep clears any tree a hard-killed prior process leaked.
+ *    [tech.kzen.lib.common.exec.engine.disposal.SettleDisposalPolicy.Auto] cleanup that sweeps the whole run dir
+ *    when the run settles, and this pool's boot-time sweep clears any tree a hard-killed prior process leaked.
  *
  * 2. **Persistent output** (`<work>/job-output/<worker-digest>`) — the RESULT a persisting sink accumulates (an
  *    Explore [tech.kzen.auto.server.objects.report.exec.output.flat.IndexedCsvTable]), which must OUTLIVE the run

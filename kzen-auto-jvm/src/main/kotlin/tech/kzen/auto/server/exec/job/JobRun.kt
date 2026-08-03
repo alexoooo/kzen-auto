@@ -18,9 +18,9 @@ import tech.kzen.auto.server.objects.job.channel.DuplexJobChannel
 import tech.kzen.auto.server.objects.job.channel.JobChannel
 import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionResult
-import tech.kzen.lib.common.exec.engine.ClosePolicy
 import tech.kzen.lib.common.exec.engine.Execution
 import tech.kzen.lib.common.exec.engine.LogicFailure
+import tech.kzen.lib.common.exec.engine.disposal.SettleDisposalPolicy
 import tech.kzen.lib.common.exec.engine.restoredAs
 import tech.kzen.lib.common.exec.tuple.TupleDefinition
 import tech.kzen.lib.common.exec.tuple.TupleValue
@@ -171,7 +171,9 @@ class JobRun(
         // Sweep this run's whole scratch tree (every file-backed Worker's on-disk store) when the run settles —
         // a run-root belt-and-suspenders over each stateful Worker's own close-then-delete onClose, keyed on the
         // migrate-stable run id (a boot sweep covers a hard kill). Auto = fires on success / failure / cancel.
-        execution.resource("job-scratch", ClosePolicy.Auto) {
+        // Anonymous and frame-local: there is no handle to hand anyone and nothing ever looks this up, so it
+        // carries no name — the run id it closes over is the only identity the sweep needs.
+        execution.onSettle(SettleDisposalPolicy.Auto) {
             jobWorkPool.deleteRun(runId)
         }
 

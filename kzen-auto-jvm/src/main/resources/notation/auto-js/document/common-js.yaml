@@ -25,6 +25,11 @@ SelectObjectEditor:
   class: tech.kzen.auto.client.objects.document.common.edit.SelectObjectEditor$Wrapper
 
 
+SelectContextEditor:
+  is: AttributeEditor
+  class: tech.kzen.auto.client.objects.document.common.edit.SelectContextEditor$Wrapper
+
+
 ################################################################
 
 

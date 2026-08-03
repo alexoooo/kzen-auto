@@ -1,0 +1,23 @@
+# A disposal-free binding degenerates to unbind on release (ContextStepRuntimeTest). Bind attaches NO disposal,
+# so Release has nothing to run and only removes the name — after which a step declaring `uses` is gated out at
+# the spine. The bind expression records into ContextProbeLog so the log is exhaustive rather than vacuously
+# empty: the single "bound" entry is the whole run's disposal-related output, where the managed binding of
+# ScriptContextRuntimeTest.qualifiedMembersOfOneFamilyAreIndependent adds a "disposed[…]" on every release.
+
+main:
+  is: Script
+
+main.steps/Bind:
+  is: BindStep
+  binds: TestValueContext
+  value: |
+    tech.kzen.auto.server.exec.script.test.ContextProbeLog.record("bound")
+    "plain"
+
+main.steps/Release:
+  is: ReleaseStep
+  releases: TestValueContext
+
+main.steps/Read:
+  is: UseContextStep
+  uses: TestValueContext

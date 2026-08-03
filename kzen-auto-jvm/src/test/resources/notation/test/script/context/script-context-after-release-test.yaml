@@ -1,6 +1,6 @@
 # `releases:` removes availability (ScriptContextValidationTest): a consumer placed AFTER a closer errors,
 # while the one before it is satisfied. One of the three jobs the third marker does that a
-# `requires`-with-exemptions could not.
+# `uses`-with-exemptions could not.
 
 main:
   is: Script

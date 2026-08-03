@@ -2,9 +2,11 @@ package tech.kzen.auto.client.objects.document.common.signature
 
 
 /**
- * The selectable simple types for a Script's signature pickers (matches FormulaStep's inferrable class set).
- * Generic element types default to Any until a nested-type picker exists; registered object types are a
- * follow-up. Shared by [LogicSignatureEditor] (parameters) and [ResultSignatureEditor] (result).
+ * The selectable simple types for the type pickers (matches FormulaStep's inferrable class set). Generic
+ * element types default to Any until a nested-type picker exists; registered object types are a follow-up.
+ * Shared by [LogicSignatureEditor] (parameters), [ResultSignatureEditor] (result) and the Contexts document's
+ * declaration editor (a Context's `type:` value contract) — the same `TypeMetadata` notation shape in all
+ * three, so all three must offer the same set.
  */
 object LogicTypeOptions {
     // (qualified class name -> simple label)

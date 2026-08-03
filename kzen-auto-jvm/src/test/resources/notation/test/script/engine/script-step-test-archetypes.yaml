@@ -36,6 +36,22 @@ TestSutContext:
   description: "Stand-in for a system-under-test resource, for the resource-ownership fixtures"
 
 
+# The Context the GENERIC context steps (BindStep / UseContextStep / ReleaseStep) are exercised against. Same
+# String contract as TestSutContext above, and deliberately a different `key:` — a shared key would make the two
+# one registration graph-wide, so the generic-step fixtures would collide with the resource-ownership ones and
+# LogicContextAnalysis would report both as aliases everywhere.
+TestValueContext:
+  is: Context
+  type:
+    class: kotlin.String
+    generics: []
+    nullable: false
+  key: generic
+  icon: "material-symbols:add-link"
+  title: "Test Value"
+  description: "An ambient String for the generic context-step fixtures"
+
+
 # Opens a run-scoped resource under `key` with the named `closePolicy` (a plain String parsed in the step),
 # recording its disposal into the ResourceDisposalLog sink.
 OpenResourceTestStep:
@@ -119,23 +135,24 @@ BinaryDetailStep:
   title: "Binary detail (test)"
 
 
-# The typed context trio, mirroring the three declaration kinds a production step uses. `provides` /
-# `requires` / `releases` are weak references (by: Nominal, declared on the ScriptStep/ContextProvider
+# The typed context trio, mirroring the three declaration kinds a production step uses. `binds` /
+# `uses` / `releases` are weak references (by: Nominal, declared on the ScriptStep/ContextBinder
 # archetypes), so declaring them here is safe in the JVM-only test graph; `closePolicy` stays a plain
-# String for the reason OpenResourceTestStep documents. NB: not `is: ContextProvider` (whose `provides`
-# meta would also apply) — this fixture carries its own `provides` meta so the trio stays self-contained.
+# String for the reason OpenResourceTestStep documents. NB: neither `is: ContextBinder` (whose `binds`
+# meta would also apply) nor `is: ResourceOwner` (whose `closePolicy` would become the typed enum) — this
+# fixture carries its own `binds` meta so the trio stays self-contained.
 ProvideContextTestStep:
   abstract: true
   is: ScriptStep
   class: tech.kzen.auto.server.exec.script.test.ProvideContextTestStep
   icon: "material-symbols:lock-open"
   title: "Provide context (test)"
-  provides: TestSutContext
+  binds: TestSutContext
   value: ""
   qualifier: ""
   closePolicy: auto
   meta:
-    provides:
+    binds:
       is: ObjectLocation
       nullable: true
       by: Nominal
@@ -153,7 +170,7 @@ RequireContextTestStep:
   class: tech.kzen.auto.server.exec.script.test.RequireContextTestStep
   icon: "material-symbols:visibility"
   title: "Require context (test)"
-  requires:
+  uses:
     - TestSutContext
 
 

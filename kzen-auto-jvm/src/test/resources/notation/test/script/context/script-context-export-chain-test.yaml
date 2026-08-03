@@ -1,4 +1,4 @@
-# A re-export chain, root of three documents (ScriptContextValidationTest): the leaf provides and exports, the
+# A re-export chain, root of three documents (ScriptContextValidationTest): the leaf binds and exports, the
 # mid document re-exports what it receives, and this root declares nothing — so the Context climbs two frames
 # and rests here, where the consumer reads it. Ownership travels exactly as far as the unbroken chain of
 # `exports` declarations carries it.

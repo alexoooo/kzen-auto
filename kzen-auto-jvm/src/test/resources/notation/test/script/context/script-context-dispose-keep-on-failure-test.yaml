@@ -1,0 +1,15 @@
+# The second wire spelling of SettleDisposalPolicy (ContextStepRuntimeTest). `disposal: keepOnFailure` must
+# reach the step as the enum — the only path through SettleDisposalPolicyDefiner that `auto` does not already
+# cover — and a failed frame then leaves the side effect undone for inspection.
+
+main:
+  is: Script
+
+main.steps/Cleanup:
+  is: DisposeAtSettleStep
+  label: "kept on failure"
+  disposal: keepOnFailure
+  code: tech.kzen.auto.server.exec.script.test.ContextProbeLog.record("cleanup")
+
+main.steps/Boom:
+  is: FailStep

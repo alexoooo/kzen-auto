@@ -1,0 +1,11 @@
+# Static bind conformance (ContextStepValidationTest): an Int expression against a String Context. One failing
+# Bind per document, because a step whose definition yields no type stalls the validator's fixpoint for every
+# expression step after it — a second scenario here would report "Unresolved" instead of its own verdict.
+
+main:
+  is: Script
+
+main.steps/Bind:
+  is: BindStep
+  binds: TestValueContext
+  value: "42"

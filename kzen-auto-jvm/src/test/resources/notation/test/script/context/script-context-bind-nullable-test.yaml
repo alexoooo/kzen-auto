@@ -1,0 +1,10 @@
+# Static bind conformance, nullability half (ContextStepValidationTest): a String? expression against a
+# non-nullable String Context. Separate document for the reason script-context-bind-mismatch-test.yaml gives.
+
+main:
+  is: Script
+
+main.steps/Bind:
+  is: BindStep
+  binds: TestValueContext
+  value: 'null as String?'

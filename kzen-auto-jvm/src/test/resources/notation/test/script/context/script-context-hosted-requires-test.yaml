@@ -1,5 +1,5 @@
 # RunStep hosted-requires (ScriptContextValidationTest): the hosted document declares
-# `context.requires: [TestSutContext]`, and nothing here provides it, so the call cannot work. The ERROR lands
+# `context.requires: [TestSutContext]`, and nothing here binds it, so the call cannot work. The ERROR lands
 # on the RunStep, because that is the only place the mismatch is visible — the callee's own steps stay clean,
 # its `context.requires` having seeded its local analysis.
 

@@ -57,12 +57,12 @@ external interface ScriptStepDisplayDefaultState: ScriptStepDisplayBaseState {
     // The run-scoped Context declarations this step carries, badged by the header. Derived HERE rather than in
     // StepHeader because this component already owns the ClientState subscription and the value-equality guard
     // that keeps a fresh-list-per-publish from defeating StepHeader's RPureComponent prop check.
-    var providesContext: ContextDescriptor?
-    var providesClosePolicy: String?
-    var providesExported: Boolean?
+    var bindsContext: ContextDescriptor?
+    var closePolicy: String?
+    var bindsExported: Boolean?
     var hostedExports: List<ContextDescriptor>?
     var hostedExportsContinuingUp: List<ContextDescriptor>?
-    var requiresContexts: List<ContextDescriptor>?
+    var usesContexts: List<ContextDescriptor>?
     var releasesContext: ContextDescriptor?
 }
 
@@ -109,8 +109,8 @@ class ScriptStepDisplayDefault(
         const val statusBorderWidthPx = 4
         val statusBorderWidth = statusBorderWidthPx.px
 
-        // Read straight off notation for the provides badge's tooltip. The nullable AttributePath overload,
-        // because a step that provides nothing has no such attribute (the AttributeName overload throws).
+        // Read straight off notation for the binds badge's tooltip. The nullable AttributePath overload,
+        // because a step that owns no resource has no such attribute (the AttributeName overload throws).
         private val closePolicyAttributePath = AttributePath.ofName(AttributeName("closePolicy"))
 
         fun statusBorderColor(
@@ -259,23 +259,27 @@ class ScriptStepDisplayDefault(
         val graphNotation = graphStructure.graphNotation
         val stepLocation = props.common.objectLocation
 
-        val providesContext = LogicContextConventions.stepProvides(graphNotation, stepLocation)
-        val requiresContexts = LogicContextConventions.stepRequires(graphNotation, stepLocation)
+        val bindsContext = LogicContextConventions.stepBinds(graphNotation, stepLocation)
+        val usesContexts = LogicContextConventions.stepUses(graphNotation, stepLocation)
         val releasesContext = LogicContextConventions.stepReleases(graphNotation, stepLocation)
 
-        val providesClosePolicy = providesContext?.let {
+        // Read unconditionally — binding a Context and owning a resource are independent declarations
+        // (ContextBinder carries `binds`, ResourceOwner carries `closePolicy`), so a step may own a resource
+        // without binding a Context, and vice versa. Absence is tolerated at both levels: the nullable
+        // AttributePath overload returns null when the attribute isn't declared, and the cast covers a
+        // non-scalar notation.
+        val closePolicy =
             (graphNotation.firstAttribute(stepLocation, closePolicyAttributePath) as? ScalarAttributeNotation)
                 ?.value
-        }
 
         val documentExports = LogicContextConventions.documentExports(graphNotation, stepLocation.documentPath)
 
-        // Whether the provided resource leaves this document: exported means the caller takes ownership,
+        // Whether the bound value leaves this document: exported means the caller takes ownership,
         // un-exported means it is private and dies at this document's settle. Both are legitimate, and the
         // badge's tooltip says which — a verified claim about THIS document's own signature, not a guess about
         // a caller the editor cannot see.
-        val providesExported = providesContext?.let { provided ->
-            documentExports.any { it.location == provided.location }
+        val bindsExported = bindsContext?.let { bound ->
+            documentExports.any { it.location == bound.location }
         }
 
         // A RunStep's counterpart: what the hosted document hands up, and which of those this document passes
@@ -299,12 +303,12 @@ class ScriptStepDisplayDefault(
         if (state.objectMetadata == objectMetadata &&
             state.summaryAttributeNames == summaryAttributeNames &&
             state.hasFieldDefinitionError == hasFieldDefinitionError &&
-            state.providesContext == providesContext &&
-            state.providesClosePolicy == providesClosePolicy &&
-            state.providesExported == providesExported &&
+            state.bindsContext == bindsContext &&
+            state.closePolicy == closePolicy &&
+            state.bindsExported == bindsExported &&
             state.hostedExports == hostedExports &&
             state.hostedExportsContinuingUp == hostedExportsContinuingUp &&
-            state.requiresContexts == requiresContexts &&
+            state.usesContexts == usesContexts &&
             state.releasesContext == releasesContext
         ) {
             return
@@ -314,12 +318,12 @@ class ScriptStepDisplayDefault(
             this.objectMetadata = objectMetadata
             this.summaryAttributeNames = summaryAttributeNames
             this.hasFieldDefinitionError = hasFieldDefinitionError
-            this.providesContext = providesContext
-            this.providesClosePolicy = providesClosePolicy
-            this.providesExported = providesExported
+            this.bindsContext = bindsContext
+            this.closePolicy = closePolicy
+            this.bindsExported = bindsExported
             this.hostedExports = hostedExports
             this.hostedExportsContinuingUp = hostedExportsContinuingUp
-            this.requiresContexts = requiresContexts
+            this.usesContexts = usesContexts
             this.releasesContext = releasesContext
         }
     }
@@ -416,12 +420,12 @@ class ScriptStepDisplayDefault(
                 typeMetadata = state.stepValidation?.typeMetadata?.toSimple()
                 validationError = state.stepValidation?.errorMessage
                 validationWarning = state.stepValidation?.warningMessage
-                providesContext = state.providesContext
-                providesClosePolicy = state.providesClosePolicy
-                providesExported = state.providesExported
+                bindsContext = state.bindsContext
+                closePolicy = state.closePolicy
+                bindsExported = state.bindsExported
                 hostedExports = state.hostedExports
                 hostedExportsContinuingUp = state.hostedExportsContinuingUp
-                requiresContexts = state.requiresContexts
+                usesContexts = state.usesContexts
                 releasesContext = state.releasesContext
                 skipped = traceState == StepTrace.State.Skipped
                 expanded = state.expanded
@@ -478,9 +482,15 @@ class ScriptStepDisplayDefault(
                 continue
             }
 
-            // Context declarations (provides/requires/releases) are meta-declared (by: Nominal) and so appear
-            //  here, but they are managed by the header badges + ContextSignatureEditor, not body-edited.
-            if (LogicContextConventions.isContextDeclaration(e.key)) {
+            // A context declaration (binds/uses/releases) is meta-declared `by: Nominal` and so appears here,
+            // but whether the USER may pick its Context is the archetype's call, stated by naming an `editor:`.
+            // Unnamed means the archetype owns the value — a typed step binds a Context that is a constant of
+            // what it does, surfaced by the header badges rather than edited — while the generic steps, whose
+            // whole point is that the Context is chosen, opt in.
+            if (LogicContextConventions.isContextDeclaration(e.key) &&
+                    AttributeWrapperLookup.wrapperName(
+                        e.value, AttributeWrapperLookup.editorAttributePath) == null
+            ) {
                 continue
             }
 

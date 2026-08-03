@@ -1,0 +1,37 @@
+# Computed qualifiers on the generic steps (ContextStepRuntimeTest): two members of one Context family, bound
+# and released by name. Releasing `a` must leave `b` alone — were the release family-wide, the Use below would
+# be gated out instead of returning "beta".
+
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.String
+      generics: []
+      nullable: false
+
+main.steps/BindA:
+  is: BindStep
+  binds: TestValueContext
+  qualifier: a
+  value: '"alpha"'
+
+main.steps/BindB:
+  is: BindStep
+  binds: TestValueContext
+  qualifier: b
+  value: '"beta"'
+
+main.steps/ReleaseA:
+  is: ReleaseStep
+  releases: TestValueContext
+  qualifier: a
+
+main.steps/UseB:
+  is: UseContextStep
+  uses: TestValueContext
+  qualifier: b
+
+main.steps/Result:
+  is: ResultStep
+  code: UseB

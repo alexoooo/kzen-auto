@@ -17,13 +17,13 @@ import tech.kzen.lib.common.exec.BinaryExecutionValue
 import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.NullExecutionValue
 import tech.kzen.lib.common.exec.engine.Address
-import tech.kzen.lib.common.exec.engine.ClosePolicy
 import tech.kzen.lib.common.exec.engine.Execution
 import tech.kzen.lib.common.exec.engine.Logic
 import tech.kzen.lib.common.exec.engine.PauseReason
 import tech.kzen.lib.common.exec.engine.context.BindingLookup
 import tech.kzen.lib.common.exec.engine.context.ContextKey
 import tech.kzen.lib.common.exec.engine.disposal.FrameDisposal
+import tech.kzen.lib.common.exec.engine.disposal.SettleDisposalPolicy
 import tech.kzen.lib.common.exec.logic.ResourceClosePolicy
 import tech.kzen.lib.common.exec.tuple.TupleComponentName
 import tech.kzen.lib.common.exec.tuple.TupleDefinition
@@ -147,14 +147,14 @@ class ScriptRunContext(
     private var currentNote: String? = null
 
     // The running step's own location, tracked alongside [currentStableId] (and saved / restored the same
-    // way): the typed context API resolves the step's `provides` / `requires` / `releases` from NOTATION, and
+    // way): the typed context API resolves the step's `binds` / `uses` / `releases` from NOTATION, and
     // the stable id alone cannot address it.
     private var currentStepLocation: ObjectLocation? = null
 
-    // Per-step context declarations, read from notation once per location: the spine's requires gate consults
+    // Per-step context declarations, read from notation once per location: the spine's uses gate consults
     // them before EVERY step, including a loop body's on every iteration. Confined to the run coroutine.
     private val declaredContextsCache = HashMap<ObjectLocation, List<ContextDescriptor>>()
-    private val requiredContextsCache = HashMap<ObjectLocation, List<ContextDescriptor>>()
+    private val usedContextsCache = HashMap<ObjectLocation, List<ContextDescriptor>>()
 
 
     //----------------------------------------------------------------------------------------- StepExecution: control
@@ -287,7 +287,7 @@ class ScriptRunContext(
     //------------------------------------------------------------------------------------------- StepExecution: context
     // The typed layer over the raw resource API below: a step names a Context object (or, declaring exactly
     // one, names nothing) and this resolves it to the engine key. Ownership is the engine's — the furthest
-    // document on the key's export chain, else the providing document (see [Execution.resource]); nothing here
+    // document on the key's export chain, else the binding document (see [Execution.bind]); nothing here
     // reaches up on the opener's behalf.
     override fun declaredContexts(): List<ContextDescriptor> {
         val stepLocation = currentStepLocation
@@ -298,21 +298,40 @@ class ScriptRunContext(
     }
 
 
-    override fun provideContext(
+    override fun bindContext(value: Any?, qualifier: String?) {
+        // Disposal is genuinely absent, not defaulted to a no-op closer: a null disposal is what makes the
+        // engine's settle skip this binding entirely, and what makes a later release degenerate to unbinding.
+        bindDeclared(value, qualifier, disposal = null)
+    }
+
+
+    override fun bindContext(
         value: Any?,
         closePolicy: ResourceClosePolicy,
         qualifier: String?,
         closer: () -> Unit
     ) {
+        bindDeclared(value, qualifier, FrameDisposal(closePolicy.toEngine(), closer))
+    }
+
+
+    // Both binds resolve, conform and address identically — they differ only in whether a disposal rides along,
+    // which is exactly the ContextBinder / ResourceOwner split expressed at the runtime boundary.
+    private fun bindDeclared(value: Any?, qualifier: String?, disposal: FrameDisposal?) {
         val stepLocation = currentStepLocation
             ?: error("No step is running")
-        val descriptor = LogicContextConventions.stepProvides(graphNotation, stepLocation)
-            ?: error("Step declares no `provides` context: $stepLocation")
+        val descriptor = LogicContextConventions.stepBinds(graphNotation, stepLocation)
+            ?: error("Step declares no `binds` context: $stepLocation")
         checkBindConformance(descriptor, value)
-        execution.bind(
-            resourceKeyOf(descriptor, qualifier),
-            value,
-            FrameDisposal(closePolicy.toEngine(), closer))
+        execution.bind(resourceKeyOf(descriptor, qualifier), value, disposal)
+    }
+
+
+    override fun disposeAtSettle(policy: SettleDisposalPolicy, closer: () -> Unit) {
+        // No key, no conformance check and no step-declaration lookup — there is nothing to name. The
+        // registration belongs to the frame, not to the step, so it outlives the step that made it and is
+        // invisible to every context read.
+        execution.onSettle(policy, closer)
     }
 
 
@@ -335,10 +354,11 @@ class ScriptRunContext(
 
     override fun releaseContext(context: ObjectLocation?, qualifier: String?) {
         val descriptor = resolveDeclaredContext(context)
-        // Deregisters WITHOUT disposing: this is the path a step that already tore its own resource down
-        // takes, so the auto-disposer must not fire afterwards.
-        @Suppress("DEPRECATION")
-        execution.releaseResource(resourceKeyOf(descriptor, qualifier).asString())
+        // Removes the binding AND runs the disposal its binder attached, at most once — so a closing step
+        // names what it releases and the engine performs the teardown, rather than each closer duplicating
+        // the binder's knowledge of how its own handle dies. Tolerant of nothing being bound: releasing an
+        // absent Context is a no-op, which is what makes a closer's "already gone is success" contract hold.
+        execution.releaseBinding(resourceKeyOf(descriptor, qualifier))
     }
 
 
@@ -397,15 +417,15 @@ class ScriptRunContext(
     }
 
 
-    // The Context an argument-free call means: the step's SOLE declaration across `provides` / `requires` /
-    // `releases`. All three kinds count — a provider declares no `requires` yet still reads back on its
+    // The Context an argument-free call means: the step's SOLE declaration across `binds` / `uses` /
+    // `releases`. All three kinds count — a binder declares no `uses` yet still reads back on its
     // replace-existing path, and a closer declares only `releases` yet must resolve something.
     private fun resolveDeclaredContext(context: ObjectLocation?): ContextDescriptor {
         val declared = declaredContexts()
 
         if (context != null) {
             // Naming a Context explicitly does not require declaring it — a step may read one it did not
-            // declare (at the cost of the spine's requires gate not covering it).
+            // declare (at the cost of the spine's uses gate not covering it).
             return declared.firstOrNull { it.location == context }
                 ?: ContextConventions.descriptorOrNull(graphNotation, context)
                 ?: error("Not a context: $context")
@@ -413,7 +433,7 @@ class ScriptRunContext(
 
         return when {
             declared.isEmpty() ->
-                error("Step declares no context — declare one as `provides` / `requires` / `releases`, " +
+                error("Step declares no context — declare one as `binds` / `uses` / `releases`, " +
                         "or name the context to use")
 
             declared.size > 1 ->
@@ -434,11 +454,13 @@ class ScriptRunContext(
     }
 
 
+    // Deliberately the same framing the spine's uses gate produces ([checkUsedContexts]), so a typed read that
+    // outruns its binder and a declaration the gate caught read alike.
     private fun missingContextMessage(descriptor: ContextDescriptor, qualifier: String?): String {
         val label = descriptor.label()
         return when {
-            qualifier.isNullOrEmpty() -> "Requires $label: not provided"
-            else -> "Requires $label '$qualifier': not provided"
+            qualifier.isNullOrEmpty() -> "Uses $label: not bound"
+            else -> "Uses $label '$qualifier': not bound"
         }
     }
 
@@ -447,16 +469,24 @@ class ScriptRunContext(
     // Delegated wholly to the engine, which stores the live handle with the registration: reading walks the
     // ancestor chain (so a hosted child — Script, Flow, or Job — borrows the handle its host opened), and the
     // registration survives a live edit with its owning frame's stable identity (logic-spec §5/§6).
+    //
+    // Deliberately still on the engine's PERMISSIVE string surface rather than the typed one: a plugin-supplied
+    // key is arbitrary text, and the typed parse is strict — routing these through it would turn "addresses
+    // nothing, so answer null / no-op" into "throws" for a malformed key. Whether the raw hatch keeps that
+    // tolerance, or goes away entirely, is a decision of its own.
+    @Suppress("DEPRECATION")
     override fun openResource(key: String, value: Any?, closePolicy: ResourceClosePolicy, closer: () -> Unit) {
         execution.resource(key, closePolicy.toEngine(), value, closer)
     }
 
 
+    @Suppress("DEPRECATION")
     override fun resource(key: String): Any? {
         return execution.resourceValue(key)
     }
 
 
+    @Suppress("DEPRECATION")
     override fun releaseResource(key: String) {
         execution.releaseResource(key)
     }
@@ -521,7 +551,7 @@ class ScriptRunContext(
                     currentDetail = NullExecutionValue
                     currentNote = null
                     emitStepTrace(stableId, StepTrace.State.Running, NullExecutionValue, currentDetail)
-                    checkRequiredContexts(stepLocation)
+                    checkUsedContexts(stepLocation)
                     step.run(this)
                 }
 
@@ -553,22 +583,23 @@ class ScriptRunContext(
 
 
     /**
-     * The uniform requires gate: a step whose declared `requires` are not open fails HERE rather than at
-     * whatever ad-hoc read it happens to reach. Called inside the [Execution.recoverable] unit, so the
-     * failure gets the standard framing for free — an Error trace, a pause-on-error park, and a re-check when
-     * the run resumes (so providing the context and resuming lets the step proceed).
+     * The uniform uses gate: a step whose declared `uses` are not bound fails HERE rather than at whatever
+     * ad-hoc read it happens to reach. Called inside the [Execution.recoverable] unit, so the failure gets the
+     * standard framing for free — an Error trace, a pause-on-error park, and a re-check when the run resumes
+     * (so binding the context and resuming lets the step proceed).
      *
      * Granularity follows the DECLARATION: a declared qualifier is a static fact, so the gate asks the exact
      * question; only an unqualified declaration — the one that admits a computed qualifier — falls back to
      * "is SOME SUT started", because a qualifier computed at run time is unknowable here. A computed-qualifier
      * mismatch therefore still passes the gate and surfaces at read, with the step's own diagnostic. Steps
-     * declaring `releases` are deliberately NOT gated: a closer's job is to make the absence true.
+     * declaring `releases` are deliberately NOT gated: a closer's job is to make the absence true, so an
+     * already-absent Context is the outcome it was asked for rather than a precondition it failed.
      */
-    private fun checkRequiredContexts(stepLocation: ObjectLocation) {
-        val required = requiredContextsCache.getOrPut(stepLocation) {
-            LogicContextConventions.stepRequires(graphNotation, stepLocation)
+    private fun checkUsedContexts(stepLocation: ObjectLocation) {
+        val used = usedContextsCache.getOrPut(stepLocation) {
+            LogicContextConventions.stepUses(graphNotation, stepLocation)
         }
-        for (descriptor in required) {
+        for (descriptor in used) {
             val key = ContextAddressing.keyOf(descriptor)
             val open =
                 if (key.qualifier != null) {
@@ -580,7 +611,7 @@ class ScriptRunContext(
                 }
 
             if (! open) {
-                error("Requires ${descriptor.label()}: not provided")
+                error("Uses ${descriptor.label()}: not bound")
             }
         }
     }
@@ -627,8 +658,9 @@ class ScriptRunContext(
     //----------------------------------------------------------------------------------- run-internal (for ScriptLogic)
     /**
      * Record a parameter / binding value by stable id in the live value graph, with NO trace emit (see the
-     * [bind][tech.kzen.auto.server.objects.script.api.StepExecution.bind] contract — a loop-item binding is
-     * re-bound every iteration and nothing reads its address). A parameter's display value is surfaced
+     * [tech.kzen.auto.server.objects.script.api.StepExecution.recordValue] contract — a loop-item binding is
+     * re-bound every iteration and nothing reads its address; this is the VALUE GRAPH, not the ambient scope
+     * [tech.kzen.auto.server.objects.script.api.StepExecution.bindContext] writes to). A parameter's display value is surfaced
      * separately, once at run start, by [ScriptLogic] via [tech.kzen.auto.server.exec.LogicParameterTrace].
      */
     fun recordValue(stableId: ObjectStableId, value: Any?) {

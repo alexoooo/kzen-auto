@@ -1,4 +1,4 @@
-# The uniform requires gate (ScriptContextRuntimeTest): a step declaring `requires:` with nothing provided
+# The uniform `uses` gate (ScriptContextRuntimeTest): a step declaring `uses:` with nothing bound
 # fails at the SPINE, with one framing, before its body runs — instead of at whatever ad-hoc read it happens
 # to reach.
 

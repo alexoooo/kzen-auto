@@ -7,9 +7,9 @@ import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
 
 
 /**
- * A test-only consumer: declares `requires` and reads the live value argument-free. It never checks for
+ * A test-only consumer: declares `uses` and reads the live value argument-free. It never checks for
  * absence itself — the point is that the spine's uniform gate fails it BEFORE [run] is entered when the
- * context is not provided, so this body only ever sees a live value.
+ * context is not bound, so this body only ever sees a live value.
  */
 class RequireContextTestStep:
     ScriptStep

@@ -53,19 +53,19 @@ external interface StepHeaderProps: Props {
 
     // The run-scoped Contexts this step declares, read off notation by the host display
     // (LogicContextConventions) and badged in the right cluster. Null / empty when it declares none.
-    var providesContext: ContextDescriptor?
-    // The provider's `closePolicy` wire value (`auto` / `manual` / `keepOnFailure`), phrased into the badge's
-    // tooltip; null when the step inherits no policy.
-    var providesClosePolicy: String?
-    // True when the step's OWN document lists the provided Context in `context.exports`, so the caller takes
-    // ownership of it. False means the resource is private to this document and dies at its settle — the
-    // distinction the tooltip spells out, and one this document's own signature settles outright.
-    var providesExported: Boolean?
+    var bindsContext: ContextDescriptor?
+    // The step's `closePolicy` wire value (`auto` / `manual` / `keepOnFailure`), phrased into the badge's
+    // tooltip; null when the step owns no resource, so declares no policy.
+    var closePolicy: String?
+    // True when the step's OWN document lists the bound Context in `context.exports`, so the caller takes
+    // ownership of it. False means it is private to this document and dies at its settle — the distinction
+    // the tooltip spells out, and one this document's own signature settles outright.
+    var bindsExported: Boolean?
     // For a RunStep: what the hosted document exports (this document takes ownership of each), and the subset
     // this document exports onward rather than owning.
     var hostedExports: List<ContextDescriptor>?
     var hostedExportsContinuingUp: List<ContextDescriptor>?
-    var requiresContexts: List<ContextDescriptor>?
+    var usesContexts: List<ContextDescriptor>?
     var releasesContext: ContextDescriptor?
 
     // True when this step was short-circuited (value-less) by a forward move-to jump — renders a small
@@ -109,14 +109,14 @@ class StepHeader(
         private val validationErrorColour = Color("#d84315")
         private val validationWarningColour = Color("#f9a825")
 
-        // The provides badge's accent: a blue that appears nowhere in the run-status palette (gold / green /
-        // red / grey / white), so "this step opens a resource" can never be misread as a run outcome.
-        private val providesAccentColour = Color("#1565c0")
-        private val providesFillColour = Color("rgba(21, 101, 192, 0.10)")
+        // The binds badge's accent: a blue that appears nowhere in the run-status palette (gold / green /
+        // red / grey / white), so "this step binds a value into scope" can never be misread as a run outcome.
+        private val bindsAccentColour = Color("#1565c0")
+        private val bindsFillColour = Color("rgba(21, 101, 192, 0.10)")
 
-        // requires reads as an ordinary neutral outline (it merely consumes); releases is muted and dashed —
+        // uses reads as an ordinary neutral outline (it merely consumes); releases is muted and dashed —
         // a closer is never gated and never ambered, so it must not compete with the two consumer states.
-        private val requiresAccentColour = Color("rgba(0, 0, 0, 0.55)")
+        private val usesAccentColour = Color("rgba(0, 0, 0, 0.55)")
         private val releasesAccentColour = Color("rgba(0, 0, 0, 0.40)")
 
 
@@ -322,7 +322,7 @@ class StepHeader(
 
             // Validation warning: the advisory sibling of the block above — a different icon AND a different
             // colour, so it can never be mistaken for an error. Both can be present at once (a step may fail
-            // to compile AND ask for a Context nothing provides), and they read left-to-right worst-first.
+            // to compile AND ask for a Context nothing binds), and they read left-to-right worst-first.
             val validationWarning = props.validationWarning
             if (validationWarning != null) {
                 Tooltip {
@@ -423,15 +423,15 @@ class StepHeader(
 
     //-----------------------------------------------------------------------------------------------------------------
     // The step's run-scoped Context declarations, as badges that must read as DIFFERENT things — a step that
-    // opens a resource, one that receives a hosted document's export, one that merely reads it, and one that
-    // closes it are not interchangeable, and an identical chip for each would say they are. The role is carried
+    // binds a value into scope, one that receives a hosted document's export, one that merely reads it, and one
+    // that closes it are not interchangeable, and an identical chip for each would say they are. The role is carried
     // by the chip's own skin (filled blue solid / filled blue dotted / plain outline / dashed muted), the
     // identity by the Context's own icon + label, and the semantics (close policy, where ownership rests, why a
     // closer is never gated) by the tooltip.
     private fun ChildrenBuilder.renderContextDeclarations() {
-        props.providesContext?.let { provided ->
+        props.bindsContext?.let { bound ->
             val scope =
-                if (props.providesExported == true) {
+                if (props.bindsExported == true) {
                     "exported: the calling document takes ownership, and passes it further up if it exports " +
                             "it too"
                 }
@@ -440,14 +440,14 @@ class StepHeader(
                 }
 
             contextBadge(
-                provided,
+                bound,
                 listOfNotNull(
-                    "Provides ${provided.label()}",
-                    closePolicyPhrase(props.providesClosePolicy),
+                    "Binds ${bound.label()}",
+                    closePolicyPhrase(props.closePolicy),
                     scope
                 ).joinToString(" — "),
-                fill = providesFillColour,
-                accent = providesAccentColour,
+                fill = bindsFillColour,
+                accent = bindsAccentColour,
                 borderLine = LineStyle.solid)
         }
 
@@ -464,18 +464,18 @@ class StepHeader(
                     "The hosted document exports ${hosted.label()} — this document takes ownership, and " +
                             "disposes it when it settles"
                 },
-                fill = providesFillColour,
-                accent = providesAccentColour,
+                fill = bindsFillColour,
+                accent = bindsAccentColour,
                 borderLine = LineStyle.dotted)
         }
 
-        props.requiresContexts?.forEach { required ->
+        props.usesContexts?.forEach { used ->
             contextBadge(
-                required,
-                "Requires ${required.label()} — a step before this one must provide it, a document it runs " +
+                used,
+                "Uses ${used.label()} — a step before this one must bind it, a document it runs " +
                         "must export it, or this document's context requires must declare that a caller does",
                 fill = null,
-                accent = requiresAccentColour,
+                accent = usesAccentColour,
                 borderLine = LineStyle.solid)
         }
 

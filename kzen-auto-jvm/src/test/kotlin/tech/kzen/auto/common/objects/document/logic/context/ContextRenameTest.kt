@@ -19,8 +19,8 @@ import kotlin.test.assertEquals
  * Renaming a Context rewrites the declarations that name it — the behaviour the `by: Nominal` meta
  * declarations buy: weak references are walked by the refactor's reference scan, so a declaration keeps
  * naming the Context it named rather than dangling. One fixture document covers all three declaration
- * shapes: the `context.exports` map-of-lists on `main`, a step's scalar `provides`, and a step's list
- * `requires`. The document-level shape is the load-bearing one — the `context` map's meta is open-keyed, so
+ * shapes: the `context.exports` map-of-lists on `main`, a step's scalar `binds`, and a step's list
+ * `uses`. The document-level shape is the load-bearing one — the `context` map's meta is open-keyed, so
  * every signature key rides on that one declaration and none is enumerated anywhere.
  *
  * Scope note: the scan rewrites references held by DEFINED objects. An `abstract: true` archetype (e.g.
@@ -58,12 +58,12 @@ class ContextRenameTest {
 
                     main.steps/Provide:
                       is: ProvideContextTestStep
-                      provides: TestSutContext
+                      binds: TestSutContext
                       value: "probe"
 
                     main.steps/Read:
                       is: RequireContextTestStep
-                      requires:
+                      uses:
                         - TestSutContext
                 """.trimIndent()), null))
     }
@@ -77,14 +77,14 @@ class ContextRenameTest {
         assertEquals(listOf(originalContext),
             LogicContextConventions.documentExports(notation, documentPath).map { it.location })
         assertEquals(originalContext,
-            LogicContextConventions.stepProvides(notation, provideLocation)?.location)
+            LogicContextConventions.stepBinds(notation, provideLocation)?.location)
         assertEquals(listOf(originalContext),
-            LogicContextConventions.stepRequires(notation, readLocation).map { it.location })
+            LogicContextConventions.stepUses(notation, readLocation).map { it.location })
     }
 
 
     @Test
-    fun renamingAContextRewritesExportsProvidesAndRequires() {
+    fun renamingAContextRewritesExportsBindsAndUses() {
         val notation = notation()
 
         val renamed = NotationReducer()
@@ -97,11 +97,11 @@ class ContextRenameTest {
             LogicContextConventions.documentExports(renamed, documentPath).map { it.location },
             "context.exports (map-of-lists shape) must follow the rename")
         assertEquals(renamedContext,
-            LogicContextConventions.stepProvides(renamed, provideLocation)?.location,
-            "scalar provides must follow the rename")
+            LogicContextConventions.stepBinds(renamed, provideLocation)?.location,
+            "scalar binds must follow the rename")
         assertEquals(listOf(renamedContext),
-            LogicContextConventions.stepRequires(renamed, readLocation).map { it.location },
-            "list requires must follow the rename")
+            LogicContextConventions.stepUses(renamed, readLocation).map { it.location },
+            "list uses must follow the rename")
 
         // sanity: nothing resolves to the old name any more from this document
         assertEquals(null, ContextConventions.resolveOrNull(renamed, "TestSutContext", mainLocation))

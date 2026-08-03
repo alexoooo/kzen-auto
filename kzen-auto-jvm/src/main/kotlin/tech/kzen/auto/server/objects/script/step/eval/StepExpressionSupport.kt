@@ -109,6 +109,26 @@ object StepExpressionSupport {
         infer: Boolean = false,
         instanceCache: (signature: String, factory: () -> StepExpression) -> StepExpression = { _, factory -> factory() }
     ): Any? {
+        return prepare(
+            selfLocation, returnType, code, nonUnitTypes, valueResolver, compiler, infer, instanceCache)()
+    }
+
+
+    // [evaluate] split at its last dependency on the live run: compiling, loading and — crucially — resolving
+    // every in-scope value through [valueResolver] all happen here, so the returned thunk holds nothing but the
+    // loaded expression instance and a SNAPSHOT of those values. That is what lets a caller defer the
+    // invocation past the end of the run: a settle-time closer (DisposeAtSettleStep) fires when there is no
+    // run left to resolve a reference against, so it must already hold what it needs.
+    fun prepare(
+        selfLocation: ObjectLocation,
+        returnType: String,
+        code: String,
+        nonUnitTypes: Map<ObjectPath, TypeMetadata>,
+        valueResolver: (ObjectLocation) -> Any?,
+        compiler: CachedKotlinCompiler,
+        infer: Boolean = false,
+        instanceCache: (signature: String, factory: () -> StepExpression) -> StepExpression = { _, factory -> factory() }
+    ): () -> Any? {
         val classLoader = ClassLoaderUtils.dynamicParentClassLoader()
         val generatedCode =
             if (infer) {
@@ -140,6 +160,6 @@ object StepExpressionSupport {
             valueResolver(objectLocation)
         }
 
-        return instance.evaluate(predecessorValues)
+        return { instance.evaluate(predecessorValues) }
     }
 }

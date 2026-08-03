@@ -8,8 +8,10 @@ import tech.kzen.lib.common.model.location.ObjectReference
 import tech.kzen.lib.common.model.location.ObjectReferenceHost
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
+import tech.kzen.lib.common.model.structure.notation.DocumentNotation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
+import tech.kzen.lib.common.service.notation.NotationConventions
 
 
 /**
@@ -17,10 +19,11 @@ import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
  * Script steps, and nothing enumerates the known Contexts — a plugin's own Context is found by the same
  * inheritance-chain filter as `BrowserContext`.
  *
- * A Context is data, never instantiated (`abstract: true`); the attributes that NAME one are declared
+ * A Context is read as data here, never through a definition; the attributes that NAME one are declared
  * `by: Nominal` (weak references), so a reference to a Context that does not resolve degrades to a
  * validation message rather than failing the referring object's definition. That is why every read here is
- * nullable-tolerant.
+ * nullable-tolerant. (The `Context` archetype is `abstract: true`, but a declaration under it is a concrete
+ * object — that is what gives it an ObjectLocation, and with it rename-refactor and picker discovery.)
  */
 object ContextConventions {
     //-----------------------------------------------------------------------------------------------------------------
@@ -32,6 +35,30 @@ object ContextConventions {
     val titleAttributeName = AttributeName("title")
     val iconAttributeName = AttributeName("icon")
     val descriptionAttributeName = AttributeName("description")
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    // The document archetype a user authors declarations in, and the `by: NestedList` branch they nest under
+    // (`main.contexts/<Name>`). Deliberately here rather than in a `ContextsConventions` of its own: the
+    // hosting document is part of this domain, and two conventions objects one letter apart in one package is
+    // the kind of collision that costs a debugging session. Nothing in the reads below consults these — the
+    // document is AN authoring surface, not the home, and discovery stays graph-wide (see [allContexts]).
+    val contextsDocumentObjectName = ObjectName("Contexts")
+
+    val contextsAttributeName = AttributeName("contexts")
+    val contextsAttributePath = AttributePath.ofName(contextsAttributeName)
+
+
+    /** Is [documentNotation] a Contexts document — i.e. does its `main` declare `is: Contexts`? */
+    fun isContextsDocument(documentNotation: DocumentNotation): Boolean {
+        val mainObjectNotation = documentNotation.objects.notations[NotationConventions.mainObjectPath]
+            ?: return false
+
+        val mainObjectIs = mainObjectNotation.get(NotationConventions.isAttributeName)?.asString()
+            ?: return false
+
+        return mainObjectIs == contextsDocumentObjectName.value
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -69,7 +96,7 @@ object ContextConventions {
 
 
     /**
-     * Resolve a notated reference (a `provides:` scalar, a `context.exports` list entry) to its Context.
+     * Resolve a notated reference (a `binds:` scalar, a `context.exports` list entry) to its Context.
      * [host] is the referring object, so a project-local Context resolves by bare name exactly as any other
      * reference does. Null when the reference names nothing, or names something that is not a Context — both
      * are reported by [LogicContextAnalysis] as a dangling reference.

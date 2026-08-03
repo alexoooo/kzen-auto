@@ -1,8 +1,8 @@
 # Hosted side of script-context-host-test.yaml (also the exporting leaf of script-context-export-chain-test.yaml
-# and script-context-export-positional-test.yaml): provides the Context and EXPORTS it, offering ownership
+# and script-context-export-positional-test.yaml): binds the Context and EXPORTS it, offering ownership
 # upward. Its caller does not export it in turn, so the registration rests there and outlives this document's
-# settle. `context.requires` is deliberately absent — this document is the PROVIDER, it needs nothing from a
-# caller.
+# settle. `context.requires` is deliberately absent — this document is where the Context is BOUND, it needs
+# nothing from a caller.
 
 main:
   is: Script

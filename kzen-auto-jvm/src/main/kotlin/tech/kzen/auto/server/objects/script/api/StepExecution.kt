@@ -4,6 +4,7 @@ import tech.kzen.auto.common.objects.document.logic.context.ContextDescriptor
 import tech.kzen.auto.common.objects.document.script.model.ScriptTree
 import tech.kzen.auto.common.objects.document.script.model.ScriptValidation
 import tech.kzen.lib.common.exec.ExecutionValue
+import tech.kzen.lib.common.exec.engine.disposal.SettleDisposalPolicy
 import tech.kzen.lib.common.exec.logic.ResourceClosePolicy
 import tech.kzen.lib.common.exec.tuple.TupleComponentName
 import tech.kzen.lib.common.exec.tuple.TupleDefinition
@@ -157,50 +158,82 @@ interface StepExecution {
 
     //------------------------------------------------------------------------------------------- StepExecution: context
     /**
-     * The Contexts the currently-running step DECLARES, in any role — its `provides`, its `requires`, and its
+     * The Contexts the currently-running step DECLARES, in any role — its `binds`, its `uses`, and its
      * `releases`, deduplicated. This is what the argument-free forms below resolve against: a step declaring
      * exactly one Context names nothing; a step declaring several passes the one it means.
      */
     fun declaredContexts(): List<ContextDescriptor>
 
     /**
-     * Open the resource this step's `provides:` Context names: register [value] and its disposal with the
-     * engine per [closePolicy]. Ownership climbs the *export chain*: past this document if it declares that
-     * Context in `context.exports`, onward while each caller in turn exports it too, resting at the first that
-     * does not. A Context this document does not export is PRIVATE to it, disposed at its own settle — so a
-     * sub-script may open a browser the root owns, but only because the sub-script offered it up.
-     * [qualifier] addresses one member of a Context family (a SUT by name).
+     * Publish [value] into the run's ambient scope under this step's `binds:` Context, owning nothing: the
+     * binding carries **no disposal**, so nothing is ever torn down on its account. This is the form for an
+     * ambient value — a String, a config object, a handle someone else owns — and it is the reason binding and
+     * owning are separate mix-ins (`ContextBinder` versus `ResourceOwner`): saying what a name means says
+     * nothing about who ends it. A later [releaseContext] simply removes the name.
+     *
+     * Ownership-climbing, supersession and visibility are exactly as the managed overload below describes;
+     * only the teardown is absent. [qualifier] addresses one member of a Context family.
+     */
+    fun bindContext(value: Any?, qualifier: String? = null)
+
+    /**
+     * Publish [value] under this step's `binds:` Context **and** attach the disposal that ends it, per
+     * [closePolicy] — the managed form, for a resource this step opened and therefore owns. Ownership climbs
+     * the *export chain*: past this document if it declares that Context in `context.exports`, onward while
+     * each caller in turn exports it too, resting at the first that does not. A Context this document does not
+     * export is PRIVATE to it, disposed at its own settle — so a sub-script may open a browser the root owns,
+     * but only because the sub-script offered it up. [qualifier] addresses one member of a Context family
+     * (a SUT by name).
      *
      * Later [contextValue] reads see the handle from any step of this run and from any document it hosts
      * (Script, Flow, or Job — the engine reads along the host chain). The registration survives a live edit
      * with its owning frame (logic-spec §5 "open resources").
      *
-     * Re-providing the same Context + [qualifier] **supersedes**: the displaced registration's closer runs, so
+     * Re-binding the same Context + [qualifier] **supersedes**: the displaced registration's closer runs, so
      * a step that re-opens in a loop does not leak. [closer] must therefore dispose the handle it CAPTURED and
      * never re-resolve its target by name — it runs after the replacement is already registered (the closer
-     * contract on [tech.kzen.lib.common.exec.engine.Execution.resource]). A step that deliberately replaces an
-     * existing resource should instead read it via [contextValueOrNull], tear it down, and [releaseContext] it
-     * before providing the new one, so nothing is disposed out from under a live handle.
+     * contract on [tech.kzen.lib.common.exec.engine.Execution.bind]). A step that deliberately replaces an
+     * existing resource should instead [releaseContext] it first, so the old handle is torn down while it is
+     * still what the name resolves to rather than after the replacement has taken its place.
      */
-    fun provideContext(
+    fun bindContext(
         value: Any?,
         closePolicy: ResourceClosePolicy,
         qualifier: String? = null,
         closer: () -> Unit)
 
     /**
+     * Register frame cleanup with NO value and NO name: run [closer] when the document that owns this step
+     * settles, per [policy]. The disposal half of [bindContext] without the binding half — "delete this file",
+     * "kill this helper" — for work that has nothing anyone would want to read, and therefore needs no Context
+     * invented to give it a `finally`.
+     *
+     * [policy] has two values, not the three a managed binding has, and the missing one is not an oversight:
+     * `manual` is a *promotion* — it hands a registration one frame up so a later step can still find it and
+     * close it — and an anonymous registration has no name for anything to find it by
+     * (see [tech.kzen.lib.common.exec.engine.disposal.SettleDisposalPolicy]).
+     *
+     * [closer] runs on the calling thread at settle, so anything genuinely blocking belongs behind the same
+     * [blocking] treatment a step body would give it.
+     */
+    fun disposeAtSettle(policy: SettleDisposalPolicy, closer: () -> Unit)
+
+    /**
      * The live handle held for [context] (defaulting to this step's sole declared Context), failing uniformly
-     * when nothing is open — the same framing the spine's requires gate produces, so a typed read and a
+     * when nothing is open — the same framing the spine's uses gate produces, so a typed read and a
      * missing declaration read alike.
      */
     fun contextValue(context: ObjectLocation? = null, qualifier: String? = null): Any
 
-    /** [contextValue] without the failure: null when nothing is open. What a closer and a replace-existing path use. */
+    /** [contextValue] without the failure: null when nothing is open. What a step with its own diagnostic uses. */
     fun contextValueOrNull(context: ObjectLocation? = null, qualifier: String? = null): Any?
 
     /**
-     * Dispose-and-forget the resource held for [context] because this step tore it down itself, so the
-     * engine's auto-disposer won't fire a second time. Tolerant: releasing what is not open is a no-op.
+     * Release the resource held for [context]: the binding goes, and the disposal the step that opened it
+     * attached runs, at most once. That split is what a closing step is FOR — it names what ends, while how
+     * the handle dies stays with the [bindContext] that knows, so no closer duplicates it and nothing is
+     * torn down twice. Tolerant: releasing what is not open is a no-op. A binding made by the disposal-free
+     * [bindContext] has nothing attached, so releasing it degenerates safely to removing the name.
      */
     fun releaseContext(context: ObjectLocation? = null, qualifier: String? = null)
 
@@ -216,7 +249,7 @@ interface StepExecution {
      * when the owning document settles. The registration survives a live edit with its owning frame
      * (logic-spec §5 "open resources"). Re-opening the same key **supersedes**: the displaced registration's
      * closer runs, so [closer] must dispose the handle it CAPTURED rather than re-resolving its target by
-     * name — see [provideContext] and the closer contract on
+     * name — see [bindContext] and the closer contract on
      * [tech.kzen.lib.common.exec.engine.Execution.resource].
      */
     fun openResource(key: String, value: Any?, closePolicy: ResourceClosePolicy, closer: () -> Unit)
@@ -276,7 +309,7 @@ inline fun <reified T: Any> StepExecution.contextDescriptor(): ContextDescriptor
 
     return when {
         matching.isEmpty() ->
-            error("No declared context of type $className — declare one as `provides` / `requires` / `releases`")
+            error("No declared context of type $className — declare one as `binds` / `uses` / `releases`")
 
         matching.size > 1 ->
             error("Several declared contexts of type $className " +
@@ -290,7 +323,7 @@ inline fun <reified T: Any> StepExecution.contextDescriptor(): ContextDescriptor
 
 /**
  * The typed read: the live handle of this step's declared [T]-valued Context, failing uniformly when nothing
- * is open for it. The ordinary form for a step that declares the Context as a `requires` — the spine's gate
+ * is open for it. The ordinary form for a step that declares the Context as a `uses` — the spine's gate
  * already covered the family, so this only fails on a qualifier the gate cannot see.
  */
 inline fun <reified T: Any> StepExecution.context(qualifier: String? = null): T {

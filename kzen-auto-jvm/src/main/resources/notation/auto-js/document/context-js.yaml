@@ -1,0 +1,6 @@
+
+
+ContextsController:
+  is: DocumentController
+  class: tech.kzen.auto.client.objects.document.context.ContextsController$Wrapper
+  archetype: Contexts

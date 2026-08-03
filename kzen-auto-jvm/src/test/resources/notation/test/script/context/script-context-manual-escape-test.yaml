@@ -1,5 +1,5 @@
 # The Manual escape (ScriptContextValidationTest): structurally identical to
-# script-context-private-provide-test.yaml — nothing exported anywhere — but the hosted document provides with
+# script-context-private-provide-test.yaml — nothing exported anywhere — but the hosted document binds with
 # `closePolicy: manual`, so the engine hands the registration up at that document's settle and it really does
 # reach this frame. No finding of either severity is therefore correct. Without the manual branch in the
 # analysis this fixture shows a false error, on exactly the configuration the FormulaError self-test ships.

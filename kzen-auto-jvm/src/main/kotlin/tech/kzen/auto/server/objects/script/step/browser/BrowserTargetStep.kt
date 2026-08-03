@@ -35,8 +35,8 @@ abstract class BrowserTargetStep(
 
     //-----------------------------------------------------------------------------------------------------------------
     final override suspend fun run(execution: StepExecution): Any? {
-        // The spine's uniform requires gate already failed this step if no browser is open (every concrete
-        // subclass declares `requires: [BrowserContext]`), so this read cannot be null.
+        // The spine's uniform uses gate already failed this step if no browser is open (every concrete
+        // subclass declares `uses: [BrowserContext]`), so this read cannot be null.
         val driver = execution.context<RemoteWebDriver>()
 
         val match = targetLocator.locateElement(target, driver)

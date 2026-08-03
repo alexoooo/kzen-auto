@@ -1,0 +1,19 @@
+# A freshly-inserted generic context step (ContextStepValidationTest): the archetype's empty-string declaration
+# default is what a palette insert writes, so `Bind` and `Read` below carry `binds: ""` / `uses: ""` implicitly.
+# Two things must hold at once — the empty scalar DEFINES, so the step is a live object rather than one pruned
+# out of the graph, and it asks the author to choose a Context rather than reporting a broken name.
+# `Read Dangling` is the other half: a name that resolves to nothing reads differently, because the fix differs.
+
+main:
+  is: Script
+
+main.steps/Bind:
+  is: BindStep
+  value: '"unused"'
+
+main.steps/Read:
+  is: UseContextStep
+
+main.steps/Read Dangling:
+  is: UseContextStep
+  uses: NoSuchContext

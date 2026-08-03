@@ -15,7 +15,7 @@ import kotlin.test.assertTrue
 
 /**
  * The editor-side half of the context feature (logic-spec §6): which steps ask for a run-scoped Context nothing
- * upstream provides, plus the neighbouring authoring mistakes the same notation walk can see.
+ * upstream binds, plus the neighbouring authoring mistakes the same notation walk can see.
  *
  * Severity is the feature's stance, so every test below asserts which channel a finding lands in. An
  * unsatisfied requirement is an ERROR that disables Run: availability is decidable from declarations alone, so
@@ -24,20 +24,20 @@ import kotlin.test.assertTrue
  * advisory: a dangling reference, a shared resource key, an export nothing can back, a retired `context.slots`.
  *
  * Four of these fixtures pin decisions that are easy to get subtly wrong, so none is optional:
- * [anUnexportedHostedProvideIsSilentAndItsConsumerErrors] (the soundness fix — the analysis must agree with the
+ * [anUnexportedHostedBindIsSilentAndItsConsumerErrors] (the soundness fix — the analysis must agree with the
  * engine's export chain or it certifies exactly the configuration that fails at run time),
- * [manualProvideReachesTheCallerWithoutAnExport] (the escape hatch orthogonal to the chain, which the
+ * [manualBindReachesTheCallerWithoutAnExport] (the escape hatch orthogonal to the chain, which the
  * FormulaError self-test ships), [consumerAfterAReleaseErrors] (what the third marker buys), and
  * [hostedRequiresErrorsOnTheCallersRunStep] (where a deleted export surfaces).
  */
 class ScriptContextValidationTest {
     //-----------------------------------------------------------------------------------------------------------------
     @Test
-    fun unsatisfiedRequiresErrors() {
+    fun unsatisfiedUsesErrors() {
         val findings = analyze("test/script/context/script-context-unsatisfied-test.yaml")
 
         assertEquals(setOf(ObjectPath.parse("main.steps/Read")), findings.errors.keys)
-        assertContains(findings.errors.getValue(ObjectPath.parse("main.steps/Read")), "Requires Test SUT")
+        assertContains(findings.errors.getValue(ObjectPath.parse("main.steps/Read")), "Uses Test SUT")
     }
 
 
@@ -50,17 +50,17 @@ class ScriptContextValidationTest {
 
 
     @Test
-    fun anUnexportedHostedProvideIsSilentAndItsConsumerErrors() {
+    fun anUnexportedHostedBindIsSilentAndItsConsumerErrors() {
         val findings = analyze("test/script/context/script-context-private-provide-test.yaml")
         val runPath = ObjectPath.parse("main.steps/Run")
 
         assertTrue(runPath !in findings.errors && runPath !in findings.warnings,
-            "a private provide is the default and usually the intent, so the RunStep reports nothing")
+            "a private bind is the default and usually the intent, so the RunStep reports nothing")
 
         val readError = findings.errors[ObjectPath.parse("main.steps/Read")]
         assertTrue(readError != null,
-            "an unexported provide dies at its own document's settle, so it is not available here")
-        assertContains(readError, "script-context-private-child-test.yaml provides it but does not export it")
+            "an unexported bind dies at its own document's settle, so it is not available here")
+        assertContains(readError, "script-context-private-child-test.yaml binds it but does not export it")
     }
 
 
@@ -111,14 +111,14 @@ class ScriptContextValidationTest {
 
         val readError = findings.errors[ObjectPath.parse("main.steps/Read")]
         assertTrue(readError != null,
-            "the retired key captures nothing — the hosted provide stays private to the document that made it")
+            "the retired key captures nothing — the hosted bind stays private to the document that made it")
         assertContains(readError, "does not export it")
     }
 
 
     @Test
-    fun manualProvideReachesTheCallerWithoutAnExport() {
-        // Structurally identical to the unexported case — nothing exported anywhere — but the hosted provide is
+    fun manualBindReachesTheCallerWithoutAnExport() {
+        // Structurally identical to the unexported case — nothing exported anywhere — but the hosted bind is
         // `manual`, so the engine's hand-up carries it to this document at the hosted one's settle.
         assertEquals(LogicContextFindings.empty, analyze("test/script/context/script-context-manual-escape-test.yaml"))
     }
@@ -132,10 +132,10 @@ class ScriptContextValidationTest {
         val findings = analyze("test/script/context/script-context-manual-two-level-test.yaml")
 
         val readError = findings.errors[ObjectPath.parse("main.steps/Read")]
-        assertTrue(readError != null, "a Manual provide two documents down is not modelled")
-        assertContains(readError, "Requires Test SUT")
+        assertTrue(readError != null, "a Manual bind two documents down is not modelled")
+        assertContains(readError, "Uses Test SUT")
         assertTrue("does not export it" !in readError,
-            "the provider is two documents down, so the one-level scan cannot name it")
+            "the binder is two documents down, so the one-level scan cannot name it")
     }
 
 
@@ -169,7 +169,7 @@ class ScriptContextValidationTest {
 
 
     @Test
-    fun danglingRequiresDoesNotFailTheStepsDefinition() {
+    fun danglingUsesDoesNotFailTheStepsDefinition() {
         // The declarations are weak references (by: Nominal): a dangling entry warns (above), but must never
         // prune the step — WeakAttributeDefiner emits the reference without resolving it, and weak edges are
         // invisible to transitiveSuccessful. A dangling entry is an authoring mistake, not a broken document.

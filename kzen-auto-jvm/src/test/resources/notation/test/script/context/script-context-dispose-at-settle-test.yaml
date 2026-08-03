@@ -1,0 +1,17 @@
+# Anonymous frame cleanup (ContextStepRuntimeTest): the registered expression runs when the owning Script
+# settles, AFTER the last step of the run — not where the registering step sits. The document declares no
+# Context and no step declares one, which is the point: a `finally` needs no name invented for it.
+
+main:
+  is: Script
+
+main.steps/Cleanup:
+  is: DisposeAtSettleStep
+  label: "test cleanup"
+  code: tech.kzen.auto.server.exec.script.test.ContextProbeLog.record("cleanup")
+
+main.steps/Last:
+  is: FormulaStep
+  code: |
+    tech.kzen.auto.server.exec.script.test.ContextProbeLog.record("last step")
+    "done"

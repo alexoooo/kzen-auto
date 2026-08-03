@@ -295,6 +295,42 @@ ControlTool:
 
 ################################################################
 
+# The flavour-neutral Context steps get their own group rather than joining Input / Output: those tools move
+# values along the step spine, while these operate on the run's ambient scope — a different mechanism with
+# its own vocabulary (bind / use / release), and the one place a user goes to work with any Context, whether
+# first-party or contributed by a plugin.
+ScriptGroup_Context:
+  is: RibbonGroup
+  title: "Context"
+  archetype: Script
+
+
+BindStepTool:
+  is: RibbonTool
+  parent: ScriptGroup_Context
+  delegate: BindStep
+
+
+UseContextStepTool:
+  is: RibbonTool
+  parent: ScriptGroup_Context
+  delegate: UseContextStep
+
+
+ReleaseStepTool:
+  is: RibbonTool
+  parent: ScriptGroup_Context
+  delegate: ReleaseStep
+
+
+DisposeAtSettleStepTool:
+  is: RibbonTool
+  parent: ScriptGroup_Context
+  delegate: DisposeAtSettleStep
+
+
+################################################################
+
 ScriptGroup_Browser:
   is: RibbonGroup
   title: "Browser"

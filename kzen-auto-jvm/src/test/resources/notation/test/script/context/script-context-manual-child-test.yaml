@@ -1,6 +1,6 @@
-# Hosted side of script-context-manual-escape-test.yaml: provides with `closePolicy: manual` and exports
+# Hosted side of script-context-manual-escape-test.yaml: binds with `closePolicy: manual` and exports
 # nothing. Manual is the escape hatch orthogonal to the export chain — at this document's settle the engine
-# hands the registration one level up — so the provide reaches the caller without being exported. This is the
+# hands the registration one level up — so the binding reaches the caller without being exported. This is the
 # shape the FormulaError self-test uses for its browser.
 
 main:

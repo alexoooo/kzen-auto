@@ -8,7 +8,7 @@ import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
 
 /**
  * A test-only closer, shaped exactly like the production ones: it declares `releases:` rather than
- * `requires:`, resolves its context argument-free off that declaration, and TOLERATES an already-absent
+ * `uses:`, resolves its context argument-free off that declaration, and TOLERATES an already-absent
  * resource — a closer's job is to make the absence true, so "already absent" is success. It is therefore
  * never gated by the spine, which is what this step pins.
  */

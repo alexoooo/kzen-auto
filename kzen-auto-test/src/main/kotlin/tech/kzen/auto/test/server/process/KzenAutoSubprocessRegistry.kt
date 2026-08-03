@@ -19,27 +19,14 @@ object KzenAutoSubprocessRegistry {
     }
 
 
-    fun remove(name: String): Entry? {
-        return entries.remove(name)
-    }
-
-
     fun resourceKey(name: String): String {
         return "sut:$name"
     }
 
 
-    fun removeAndClose(name: String): Boolean {
-        val entry = remove(name)
-            ?: return false
-        closeQuietly(entry)
-        return true
-    }
-
-
     /**
      * Close [name]'s entry only while it still holds [process] — the identity-checked form an engine resource
-     * closer must use (see [tech.kzen.lib.common.exec.engine.Execution.resource]'s closer contract). Two SUTs
+     * closer must use (see [tech.kzen.lib.common.exec.engine.Execution.bind]'s closer contract). Two SUTs
      * sharing one name is a real shape (a Script re-running its Start step), and [put] already closes the
      * predecessor; a name-only close from the superseded registration's closer would then tear down the
      * REPLACEMENT, which is live. Returns false when the entry is gone or has already moved on.

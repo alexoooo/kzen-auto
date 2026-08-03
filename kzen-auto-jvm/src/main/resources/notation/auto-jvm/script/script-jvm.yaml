@@ -31,26 +31,58 @@ ResourceClosePolicy:
 ResourceClosePolicyDefiner:
   class: tech.kzen.auto.common.objects.document.script.ResourceClosePolicyDefiner
 
-# Mix-in for any step that PROVIDES a Context (opens the run-scoped resource it names): contributes the
-# `provides` declaration plus the `closePolicy` attribute (default `auto`) bound to ResourceClosePolicy.
-# Combined via multiple inheritance — e.g. `is: [ScriptStep, ContextProvider]` — so it is not pinned to the
-# script-step lineage.
+
+# Disposal rule for an ANONYMOUS frame-scoped cleanup (kzen-lib enum) — the registration DisposeAtSettleStep
+# makes, which has no value and no name. Two values where ResourceClosePolicy above has three, and the
+# missing one is not an oversight: `manual` is a promotion, handing a registration one frame up so a later
+# step can still find it and close it, and an anonymous registration has no name for anything to find it by.
+SettleDisposalPolicy:
+  abstract: true
+  class: tech.kzen.lib.common.exec.engine.disposal.SettleDisposalPolicy
+  meta:
+    ref:
+      by: SettleDisposalPolicyDefiner
+      editor: SelectValuesEditor
+      values:
+        auto: "Auto — run when the owning Script finishes (success, failure, or cancel)"
+        keepOnFailure: "Keep on failure — run on the owner's success/cancel, skip on failure to inspect"
+
+SettleDisposalPolicyDefiner:
+  class: tech.kzen.auto.common.objects.document.script.SettleDisposalPolicyDefiner
+
+# Mix-in for any step that BINDS a Context: it publishes a value into the run's scope under the Context it
+# names, and carries the `binds` declaration — nothing else.
 #
-# `provides` is a weak reference (by: Nominal, like every context declaration): data for the
+# `binds` is a weak reference (by: Nominal, like every context declaration): data for the
 # validator/runtime/editor, never constructor-injected, and a dangling or abstract-targeted entry degrades
 # to a validation message instead of failing the object's definition; renaming a Context propagates into it.
-# `nullable` lets the empty default define. `closePolicy` stays meta-declared with a real definer because it
-# IS a constructor param and needs the dropdown.
-ContextProvider:
+# `nullable` lets the empty default define.
+ContextBinder:
   abstract: true
-  provides: ""
-  closePolicy: auto
+  binds: ""
   meta:
-    closePolicy: ResourceClosePolicy
-    provides:
+    binds:
       is: ObjectLocation
       nullable: true
       by: Nominal
+
+# Mix-in for any step that OWNS a disposable run-scoped resource: carries the `closePolicy` attribute
+# (default `auto`) bound to ResourceClosePolicy, which is what decides when the engine disposes whatever the
+# step opened. Unlike the context declarations, `closePolicy` IS a real constructor param, so it stays
+# meta-declared with a real definer and needs the dropdown.
+#
+# Deliberately SEPARATE from ContextBinder, because binding a value into scope and owning a disposable
+# resource are independent: a step that binds a computed String owns nothing to close, and a step that
+# deletes a temp file at settle owns a resource while binding nothing. Every step today happens to do both,
+# so it takes both halves — but the split is what lets a later one bind without owning.
+#
+# Both combine via multiple inheritance — e.g. `is: [ScriptStep, ContextBinder, ResourceOwner]` — so neither
+# is pinned to the script-step lineage.
+ResourceOwner:
+  abstract: true
+  closePolicy: auto
+  meta:
+    closePolicy: ResourceClosePolicy
 
 
 #######################################################################################################################
@@ -308,6 +340,131 @@ ControlStep:
 
 #######################################################################################################################
 
+# The flavour-neutral Context steps: bind a value into the run's ambient scope, read one back out, end one,
+# and register anonymous frame cleanup. The Browser steps below are the same four operations written for one
+# particular Context; these work against any Context a user or a plugin declares.
+
+
+# `is: [ScriptStep, ContextBinder]` and deliberately NOT ResourceOwner. Binding a value says nothing about
+# disposing it, so a Bind of a String shows no close-policy control — not because an editor hides it, but
+# because this archetype declares no such attribute for anything to render. That is what the ContextBinder /
+# ResourceOwner split buys: a step that also OWNS what it binds takes both mix-ins (BrowserOpenStep).
+BindStep:
+  abstract: true
+  is:
+    - ScriptStep
+    - ContextBinder
+  class: tech.kzen.auto.server.objects.script.step.context.BindStep
+  icon: "material-symbols:add-link"
+  title: "Bind"
+  description: "Publish a Kotlin expression's value into the run's scope under a Context"
+  value: ""
+  qualifier: ""
+  binds: ""
+  meta:
+    value:
+      is: String
+      multiline: true
+      editor: KotlinExpressionEditor
+      summary: TextAttributeView
+    qualifier:
+      is: String
+      summary: TextAttributeView
+    # Restated IN FULL rather than inherited from ContextBinder: attribute metadata resolves by
+    # `firstAttribute`, so the closest declaration REPLACES the inherited one instead of merging with it.
+    # Dropping `is` / `nullable` / `by` here would lose the weak-reference contract and the empty default
+    # would stop defining. `editor:` is the addition — the opt-in that makes the Context picker render, since
+    # a context declaration is otherwise suppressed from the step body.
+    binds:
+      is: ObjectLocation
+      nullable: true
+      by: Nominal
+      editor: SelectContextEditor
+    selfLocation: SelfLocation
+
+
+# Reads a Context into the value graph, so the ordinary value steps (Formula, Display) can consume it by
+# reference without knowing Contexts exist.
+UseContextStep:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.server.objects.script.step.context.UseContextStep
+  icon: "material-symbols:input"
+  title: "Use"
+  description: "Read a Context into this Script's values"
+  qualifier: ""
+  uses: ""
+  meta:
+    qualifier:
+      is: String
+      summary: TextAttributeView
+    # Narrowed from the inherited LIST form to a single nullable reference (restatement rule: see
+    # BindStep.meta.binds). This step publishes ONE value, the editor writes one reference, and the list form
+    # costs the empty default its definition — WeakAttributeDefiner resolves an empty reference against
+    # `nullable`, which a List type is not. Reading is unaffected: LogicContextConventions.referenceList
+    # accepts either shape, so `stepUses` still yields a one-element list here.
+    uses:
+      is: ObjectLocation
+      nullable: true
+      by: Nominal
+      editor: SelectContextEditor
+    selfLocation: SelfLocation
+
+
+# `releases:`, not `uses:` — a closer's job is to make the absence true, so it is never gated by the runtime
+# `uses` check and "nothing was bound" is success. The declaration also supplies the descriptor that lets the
+# step resolve argument-free, and drops the Context from the static analysis's availability, so a step reading
+# it after this one warns.
+ReleaseStep:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.server.objects.script.step.context.ReleaseStep
+  icon: "material-symbols:link-off"
+  title: "Release"
+  description: "End a Context: unbind it and run the disposal its binder attached"
+  qualifier: ""
+  releases: ""
+  meta:
+    qualifier:
+      is: String
+      summary: TextAttributeView
+    # Restatement rule: see BindStep.meta.binds.
+    releases:
+      is: ObjectLocation
+      nullable: true
+      by: Nominal
+      editor: SelectContextEditor
+
+
+# Frame cleanup with no value and no name — the disposal half of a binding without the binding half. It
+# declares no Context because there is nothing anyone would want to read; inventing one purely to obtain a
+# `finally` is exactly what this step exists to avoid. `label` is a display string for the trace, NOT a key:
+# it introduces no namespace and nothing resolves it.
+DisposeAtSettleStep:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.server.objects.script.step.context.DisposeAtSettleStep
+  icon: "material-symbols:auto-delete"
+  title: "Dispose at finish"
+  description: "Run a Kotlin expression for its effect when the owning Script finishes"
+  code: ""
+  label: ""
+  disposal: auto
+  meta:
+    code:
+      is: String
+      multiline: true
+      editor: KotlinExpressionEditor
+      summary: TextAttributeView
+    label:
+      is: String
+      summary: TextAttributeView
+    disposal: SettleDisposalPolicy
+    selfLocation: SelfLocation
+
+
+#######################################################################################################################
+
 # The browser a Script drives: one RemoteWebDriver, opened by BrowserOpenStep and read by every browser
 # action step. `key: browser` is the engine resource key — the same plain string WebDriverSupport.resourceKey
 # names, so a raw-string step and a typed one share one registration.
@@ -327,16 +484,17 @@ BrowserOpenStep:
   abstract: true
   is:
     - ScriptStep
-    - ContextProvider
+    - ContextBinder
+    - ResourceOwner
   class: tech.kzen.auto.server.objects.script.step.browser.BrowserOpenStep
   icon: "material-symbols:open-in-new"
   title: "Open browser"
   description: "Open a new browser window (existing one will be closed)"
-  provides: BrowserContext
+  binds: BrowserContext
 
 
-# `releases:`, not `requires:` — a closer's job is to make the absence true, so "already absent" is success,
-# not an error. It is therefore never gated by the runtime requires check and never ambers; it does supply
+# `releases:`, not `uses:` — a closer's job is to make the absence true, so "already absent" is success,
+# not an error. It is therefore never gated by the runtime `uses` check and never ambers; it does supply
 # the descriptor that lets `contextValueOrNull()` / `releaseContext()` resolve argument-free, and it removes
 # the Context from the static analysis's availability so a browser step placed AFTER a Close warns.
 BrowserCloseStep:
@@ -358,7 +516,7 @@ BrowserGetStep:
   description: "Navigate to a new URL"
   location: "https://www.google.com/"
   screenshotDelayMilliseconds: 0
-  requires:
+  uses:
     - BrowserContext
   meta:
     location:
@@ -376,7 +534,7 @@ BrowserClickStep:
   target:
     type: Focus
   delaySeconds: 0
-  requires:
+  uses:
     - BrowserContext
   meta:
     target:
@@ -396,7 +554,7 @@ BrowserReadStep:
     type: Focus
   attribute: ""
   delaySeconds: 0
-  requires:
+  uses:
     - BrowserContext
   meta:
     target:
@@ -420,7 +578,7 @@ BrowserWriteStep:
     type: Focus
   overwrite: false
   delaySeconds: 0
-  requires:
+  uses:
     - BrowserContext
   meta:
     text:
@@ -445,7 +603,7 @@ BrowserSubmitStep:
   target:
     type: Focus
   delaySeconds: 0
-  requires:
+  uses:
     - BrowserContext
   meta:
     target:
@@ -460,7 +618,7 @@ BrowserEscapeStep:
   class: tech.kzen.auto.server.objects.script.step.browser.BrowserEscapeStep
   icon: "material-symbols:cancel-presentation"
   title: "Escape"
-  requires:
+  uses:
     - BrowserContext
 
 
@@ -470,7 +628,7 @@ BrowserEnterStep:
   class: tech.kzen.auto.server.objects.script.step.browser.BrowserEnterStep
   icon: "material-symbols:keyboard-return"
   title: "Enter"
-  requires:
+  uses:
     - BrowserContext
 
 

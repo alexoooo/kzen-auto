@@ -70,7 +70,7 @@ class StartKzenAutoStep(
         //  Execution.resource): re-running this step under the same name supersedes the prior registration,
         //  and its closer runs after `put` above already installed the replacement — a name-only close would
         //  kill the SUT that just started.
-        execution.provideContext(handle, closePolicy, qualifier = name) {
+        execution.bindContext(handle, closePolicy, qualifier = name) {
             KzenAutoSubprocessRegistry.removeAndClose(name, process)
         }
 

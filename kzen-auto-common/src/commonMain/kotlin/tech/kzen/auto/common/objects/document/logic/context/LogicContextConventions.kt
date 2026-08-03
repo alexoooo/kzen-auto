@@ -17,23 +17,28 @@ import tech.kzen.lib.common.service.notation.NotationConventions
  * The context declarations a Logic document and its steps carry, read straight off notation:
  *
  * - a DOCUMENT declares `context: { exports: [...], requires: [...] }` — the Contexts it offers upward to its
- *   caller, and the ones a caller must already have provided. A provide the document does not export is
- *   private to it: ownership is offered by the provider, never claimed by an ancestor (logic-spec §6). The
+ *   caller, and the ones a caller must already have bound. A binding the document does not export is
+ *   private to it: ownership is offered by the binder, never claimed by an ancestor (logic-spec §6). The
  *   retired `context.slots` key is read only to warn about it — see [legacyDocumentSlotReferences];
- * - a STEP declares `provides: <Context>` (it opens the resource), `requires: [<Context>]` (it reads one),
+ * - a STEP declares `binds: <Context>` (it puts a value in scope), `uses: [<Context>]` (it reads one),
  *   or `releases: <Context>` (it is a closer).
  *
- * All four are declared `by: Nominal` in their archetypes' `meta:` (weak references — the standard mechanism
- * for object-naming data attributes, like `Custom.exports` and `RunStep.instructions`): never
+ * THE TWO LEVELS DELIBERATELY DO NOT SHARE VOCABULARY. A document's `context.requires` is an assertion about
+ * a *caller* — "supply this before running me" — while a step's `uses` is a read of what is already in scope
+ * here. Spelling both `requires` (as they were until CX6) made one reader look like the other's; the segment
+ * constants below now differ in name AND in string, so a mistaken cross-level read cannot compile.
+ *
+ * All of them are declared `by: Nominal` in their archetypes' `meta:` (weak references — the standard
+ * mechanism for object-naming data attributes, like `Custom.exports` and `RunStep.instructions`): never
  * constructor-injected, a dangling or abstract-targeted entry is a validation message rather than a
  * definition failure, and renaming a Context propagates into the declarations. Body rendering is suppressed
  * via [isContextDeclaration].
  *
  * INHERITANCE COMES FREE. [GraphNotation.firstAttribute] walks the *linearized* inheritance chain and returns
  * the closest ancestor's value, so a user's step object `is: BrowserClickStep` reads the archetype's
- * `requires` with no manual walk. Note what "closest wins" implies: a concrete archetype declaring its own
- * `requires` REPLACES an inherited list rather than extending it. That is the intended rule — no first-party
- * case needs merging — but a plugin author combining two requiring mix-ins gets only one, so it is stated
+ * `uses` with no manual walk. Note what "closest wins" implies: a concrete archetype declaring its own
+ * `uses` REPLACES an inherited list rather than extending it. That is the intended rule — no first-party
+ * case needs merging — but a plugin author combining two using mix-ins gets only one, so it is stated
  * rather than discovered.
  */
 object LogicContextConventions {
@@ -54,11 +59,14 @@ object LogicContextConventions {
     val legacySlotsSegment = AttributeSegment.ofKey("slots")
     val legacySlotsAttributePath = contextAttributePath.nest(legacySlotsSegment)
 
-    val providesAttributeName = AttributeName("provides")
-    val providesAttributePath = AttributePath.ofName(providesAttributeName)
+    // Step level. Distinct from the document-level [requiresSegment] above in both name and string: `binds` is
+    // an action this step performs, `uses` is a read it performs, and `context.requires` is a claim about the
+    // caller. `releases` is unchanged — it was already unambiguous.
+    val bindsAttributeName = AttributeName("binds")
+    val bindsAttributePath = AttributePath.ofName(bindsAttributeName)
 
-    val requiresAttributeName = AttributeName("requires")
-    val requiresAttributePath = AttributePath.ofName(requiresAttributeName)
+    val usesAttributeName = AttributeName("uses")
+    val usesAttributePath = AttributePath.ofName(usesAttributeName)
 
     val releasesAttributeName = AttributeName("releases")
     val releasesAttributePath = AttributePath.ofName(releasesAttributeName)
@@ -70,8 +78,8 @@ object LogicContextConventions {
      * (ObjectLocation / List / Map) have no generic editor anyway.
      */
     fun isContextDeclaration(attributeName: AttributeName): Boolean {
-        return attributeName == providesAttributeName ||
-                attributeName == requiresAttributeName ||
+        return attributeName == bindsAttributeName ||
+                attributeName == usesAttributeName ||
                 attributeName == releasesAttributeName ||
                 attributeName == contextAttributeName
     }
@@ -79,7 +87,7 @@ object LogicContextConventions {
 
     //-------------------------------------------------------------------------------------------------- document level
     /**
-     * The Contexts [documentPath]'s `main` object declares it EXPORTS — offered upward, so a provide of one of
+     * The Contexts [documentPath]'s `main` object declares it EXPORTS — offered upward, so a binding of one of
      * them climbs past this document's frame to its caller (and onward while each caller exports it too). A
      * Context absent here is private to this document, disposed at its settle. The engine half is
      * `Execution.declareExport`, called once per entry at `Logic.run` start.
@@ -89,7 +97,7 @@ object LogicContextConventions {
     }
 
 
-    /** The Contexts [documentPath]'s `main` object declares a CALLER must already have provided. */
+    /** The Contexts [documentPath]'s `main` object declares a CALLER must already have bound. */
     fun documentRequires(graphNotation: GraphNotation, documentPath: DocumentPath): List<ContextDescriptor> {
         return documentContexts(graphNotation, documentPath, documentRequiresAttributePath)
     }
@@ -143,15 +151,15 @@ object LogicContextConventions {
 
 
     //------------------------------------------------------------------------------------------------------ step level
-    /** The Context [stepLocation] provides (opens), or null when it provides none. */
-    fun stepProvides(graphNotation: GraphNotation, stepLocation: ObjectLocation): ContextDescriptor? {
-        return singleContext(graphNotation, stepLocation, providesAttributePath)
+    /** The Context [stepLocation] binds (puts in scope), or null when it binds none. */
+    fun stepBinds(graphNotation: GraphNotation, stepLocation: ObjectLocation): ContextDescriptor? {
+        return singleContext(graphNotation, stepLocation, bindsAttributePath)
     }
 
 
     /** The Contexts [stepLocation] reads — the ones the runtime gate gates on and the analysis ambers on. */
-    fun stepRequires(graphNotation: GraphNotation, stepLocation: ObjectLocation): List<ContextDescriptor> {
-        return stepContexts(graphNotation, stepLocation, requiresAttributePath)
+    fun stepUses(graphNotation: GraphNotation, stepLocation: ObjectLocation): List<ContextDescriptor> {
+        return stepContexts(graphNotation, stepLocation, usesAttributePath)
     }
 
 
@@ -167,14 +175,14 @@ object LogicContextConventions {
 
 
     /**
-     * Every Context [stepLocation] declares in any role — `provides` ∪ `requires` ∪ `releases`. This is the
+     * Every Context [stepLocation] declares in any role — `binds` ∪ `uses` ∪ `releases`. This is the
      * set the runtime resolves an argument-free typed read against: a step declaring exactly one resolves
      * without naming it, zero or several is an error the caller fixes by passing the Context explicitly.
      */
     fun stepDeclaredContexts(graphNotation: GraphNotation, stepLocation: ObjectLocation): List<ContextDescriptor> {
         val result = LinkedHashMap<ObjectLocation, ContextDescriptor>()
-        stepProvides(graphNotation, stepLocation)?.let { result[it.location] = it }
-        stepRequires(graphNotation, stepLocation).forEach { result[it.location] = it }
+        stepBinds(graphNotation, stepLocation)?.let { result[it.location] = it }
+        stepUses(graphNotation, stepLocation).forEach { result[it.location] = it }
         stepReleases(graphNotation, stepLocation)?.let { result[it.location] = it }
         return result.values.toList()
     }
@@ -233,10 +241,10 @@ object LogicContextConventions {
 
 
     /**
-     * A declaration read as reference strings. Tolerates both notation shapes — a list (`requires: [A, B]`)
-     * and a bare scalar (`provides: A`) — so `provides` / `releases` / `requires` / `exports` share one reader.
-     * The blessed shapes are scalar for the single-valued declarations (`provides` / `releases`) and list for
-     * the multi-valued ones (`requires` / `context.exports` / `context.requires`), matching the archetypes'
+     * A declaration read as reference strings. Tolerates both notation shapes — a list (`uses: [A, B]`)
+     * and a bare scalar (`binds: A`) — so `binds` / `releases` / `uses` / `exports` share one reader.
+     * The blessed shapes are scalar for the single-valued declarations (`binds` / `releases`) and list for
+     * the multi-valued ones (`uses` / `context.exports` / `context.requires`), matching the archetypes'
      * `by: Nominal` meta declarations; either shape is safe (WeakAttributeDefiner handles both, and
      * kzen-lib's inferMetadata no longer promotes scalars naming abstract objects).
      *

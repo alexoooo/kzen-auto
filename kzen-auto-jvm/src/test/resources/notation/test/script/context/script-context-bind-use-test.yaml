@@ -1,0 +1,29 @@
+# The plain ambient round trip (ContextStepRuntimeTest): Bind publishes a String into the run's scope, Use reads
+# it back into the value graph, and an ordinary expression step consumes THAT by name. `Use + " value"` only
+# compiles because Use publishes the Context's DECLARED type — an `Any` would fail the concatenation — so the
+# Success here is what proves the declared TypeMetadata reaches a downstream expression.
+
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.String
+      generics: []
+      nullable: false
+
+main.steps/Bind:
+  is: BindStep
+  binds: TestValueContext
+  value: '"ambient"'
+
+main.steps/Use:
+  is: UseContextStep
+  uses: TestValueContext
+
+main.steps/Echo:
+  is: FormulaStep
+  code: 'Use + " value"'
+
+main.steps/Result:
+  is: ResultStep
+  code: Echo

@@ -1,6 +1,7 @@
 # Qualified round trip (ScriptContextRuntimeTest): one Context family, two independent members addressed by
-# qualifier (`sut:a` / `sut:b`). Each provide sees nothing before it — they do not overwrite one another —
-# and each release finds its own. This is the shape a SUT-per-name uses.
+# qualifier (`sut:a` / `sut:b`). Each bind sees nothing before it — they do not overwrite one another — and
+# each release finds its own, running that member's disposal and no sibling's. This is the shape a
+# SUT-per-name uses.
 
 main:
   is: Script

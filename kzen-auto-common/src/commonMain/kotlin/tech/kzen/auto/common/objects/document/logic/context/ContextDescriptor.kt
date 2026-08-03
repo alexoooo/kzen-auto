@@ -22,7 +22,7 @@ import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
  *   escape hatch, reported graph-wide by [LogicContextAnalysis] as an alias rather than prevented.
  */
 data class ContextDescriptor(
-    /** The Context object itself — the identity a `provides` / `requires` / `releases` / `exports` entry names. */
+    /** The Context object itself — the identity a `binds` / `uses` / `releases` / `exports` entry names. */
     val location: ObjectLocation,
 
     /** What may be bound here. */

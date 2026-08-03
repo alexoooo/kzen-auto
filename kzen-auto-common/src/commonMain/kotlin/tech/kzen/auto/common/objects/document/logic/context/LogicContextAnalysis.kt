@@ -14,19 +14,19 @@ import tech.kzen.lib.common.service.notation.NotationConventions
 
 
 /**
- * Which steps of a Script document ask for a run-scoped Context nothing upstream provides — and the
- * neighbouring declaration mistakes the same walk can see. Pure notation: it reads declarations only, so it
- * needs no type inference, no definition and no instantiation, and it answers for the document open in the
- * editor with no knowledge of who calls it.
+ * Which steps of a Script document use a run-scoped Context nothing upstream binds — and the neighbouring
+ * declaration mistakes the same walk can see. Pure notation: it reads declarations only, so it needs no type
+ * inference, no definition and no instantiation, and it answers for the document open in the editor with no
+ * knowledge of who calls it.
  *
- * **An unsatisfied requirement is an ERROR, not advice.** Availability is decidable from declarations alone,
+ * **An unsatisfied `uses` is an ERROR, not advice.** Availability is decidable from declarations alone,
  * because the only way a caller can supply a Context is for this document to name it in its own
- * `context.requires` — so a requirement nothing satisfies could never have succeeded, and Run is disabled.
- * The converse costs nothing and gets no finding: a resource provided and never consumed is a legitimate
+ * `context.requires` — so a read nothing satisfies could never have succeeded, and Run is disabled.
+ * The converse costs nothing and gets no finding: a Context bound and never used is a legitimate
  * pattern. The remaining findings are advisory warnings — a dangling reference, a shared resource key, an
  * export nothing in the document can back, a retired `context.slots` declaration.
  *
- * **Conditionals resolve in the direction that suppresses findings.** A `provides` inside an If/loop branch
+ * **Conditionals resolve in the direction that suppresses findings.** A `binds` inside an If/loop branch
  * counts as available for everything after it, and a `releases` inside one does NOT remove availability. A
  * false error would block a Run that works, so a missed one is the cheaper mistake.
  *
@@ -40,6 +40,11 @@ import tech.kzen.lib.common.service.notation.NotationConventions
  */
 object LogicContextAnalysis {
     //-----------------------------------------------------------------------------------------------------------------
+    // `closePolicy` belongs to the `ResourceOwner` mix-in, not to the binding declaration — a step says what
+    // it binds, and separately, only when the bound value is a resource it owns, says when that resource
+    // closes. Read straight from notation here rather than through LogicContextConventions for that reason:
+    // it is not a context declaration, it is the flag that decides whether an unexported binding still
+    // reaches the caller at settle.
     private val closePolicyAttributeName = AttributeName("closePolicy")
     private val closePolicyAttributePath = AttributePath.ofName(closePolicyAttributeName)
 
@@ -63,19 +68,19 @@ object LogicContextAnalysis {
         danglingAndAliasWarnings(graphNotation, documentPath, ::warn)
         signatureWarnings(graphNotation, documentPath, ::warn)
 
-        // Seeded from the document's own `context.requires`: the author asserting that a caller provides
-        // these. That assertion is the legitimate escape hatch for a sub-script — and it is why a requiring
-        // sub-script's own steps never error in its own document view; the breakage surfaces at the CALLER's
-        // RunStep instead.
+        // Seeded from the document's own `context.requires`: the author asserting that a caller has already
+        // bound these. That assertion is the legitimate escape hatch for a sub-script — and it is why a
+        // requiring sub-script's own steps never error in its own document view; the breakage surfaces at the
+        // CALLER's RunStep instead.
         val available = LogicContextConventions
             .documentRequires(graphNotation, documentPath)
             .map { it.location }
             .toMutableSet()
 
-        val unexportedProvides = mutableMapOf<ObjectLocation, DocumentPath>()
+        val unexportedBindings = mutableMapOf<ObjectLocation, DocumentPath>()
 
         val tree = ScriptTree.read(documentPath, graphNotation)
-        walk(graphNotation, documentPath, tree, available, unexportedProvides, nested = false, error = ::error)
+        walk(graphNotation, documentPath, tree, available, unexportedBindings, nested = false, error = ::error)
 
         return LogicContextFindings(
             errors.mapValues { it.value.joinToString(" ") },
@@ -100,7 +105,7 @@ object LogicContextAnalysis {
 
         val result = mutableSetOf<ObjectLocation>()
 
-        for ((descriptor, _) in ownStepProvides(graphNotation, documentPath)) {
+        for ((descriptor, _) in ownStepBinds(graphNotation, documentPath)) {
             result.add(descriptor.location)
         }
 
@@ -123,8 +128,8 @@ object LogicContextAnalysis {
 
 
     /**
-     * The Contexts a step of [documentPath] provides and this document keeps: bound on its own frame, readable
-     * by its descendants, disposed at its settle. Private is the DEFAULT — a document keeps what it opens by
+     * The Contexts a step of [documentPath] binds and this document keeps: bound on its own frame, readable
+     * by its descendants, disposed at its settle. Private is the DEFAULT — a document keeps what it binds by
      * writing no declaration at all — so these have no notation of their own, and the signature editor is the
      * only place the author can see them beside the exports they are the counterpart of.
      */
@@ -134,7 +139,7 @@ object LogicContextAnalysis {
             .map { it.location }
             .toSet()
 
-        return ownStepProvides(graphNotation, documentPath)
+        return ownStepBinds(graphNotation, documentPath)
             .map { it.first }
             .filter { it.location !in exported }
     }
@@ -161,7 +166,7 @@ object LogicContextAnalysis {
         documentPath: DocumentPath,
         node: ScriptTree,
         available: MutableSet<ObjectLocation>,
-        unexportedProvides: MutableMap<ObjectLocation, DocumentPath>,
+        unexportedBindings: MutableMap<ObjectLocation, DocumentPath>,
         nested: Boolean,
         error: (ObjectPath, String) -> Unit
     ) {
@@ -179,13 +184,13 @@ object LogicContextAnalysis {
                 // contents are conditional, so they enter the finding-suppressing nested mode.
                 in groupBranches ->
                     for (childTree in childTrees) {
-                        walk(graphNotation, documentPath, childTree, available, unexportedProvides,
+                        walk(graphNotation, documentPath, childTree, available, unexportedBindings,
                             nested = true, error = error)
                     }
 
                 in stepBranches ->
                     for (childTree in childTrees) {
-                        visitStep(graphNotation, documentPath, childTree, available, unexportedProvides,
+                        visitStep(graphNotation, documentPath, childTree, available, unexportedBindings,
                             nested, error)
                     }
 
@@ -202,28 +207,28 @@ object LogicContextAnalysis {
         documentPath: DocumentPath,
         node: ScriptTree,
         available: MutableSet<ObjectLocation>,
-        unexportedProvides: MutableMap<ObjectLocation, DocumentPath>,
+        unexportedBindings: MutableMap<ObjectLocation, DocumentPath>,
         nested: Boolean,
         error: (ObjectPath, String) -> Unit
     ) {
         val stepLocation = ObjectLocation(documentPath, node.objectPath)
 
-        for (required in LogicContextConventions.stepRequires(graphNotation, stepLocation)) {
-            if (required.location !in available) {
+        for (used in LogicContextConventions.stepUses(graphNotation, stepLocation)) {
+            if (used.location !in available) {
                 error(node.objectPath,
-                    "Requires ${required.label()}, which nothing before it provides. " +
-                            remedyFor(required, unexportedProvides))
+                    "Uses ${used.label()}, which nothing before it binds. " +
+                            remedyFor(used, unexportedBindings))
             }
         }
 
         if (ScriptConventions.isRunStep(graphNotation, stepLocation)) {
             analyzeRunStep(
-                graphNotation, documentPath, node.objectPath, stepLocation, available, unexportedProvides, error)
+                graphNotation, documentPath, node.objectPath, stepLocation, available, unexportedBindings, error)
         }
 
-        // A step's own provide is available for the rest of this document whether or not the document exports
+        // A step's own binding is available for the rest of this document whether or not the document exports
         // it: an exported registration rests on an ancestor frame, and resource reads walk self → root.
-        LogicContextConventions.stepProvides(graphNotation, stepLocation)?.let {
+        LogicContextConventions.stepBinds(graphNotation, stepLocation)?.let {
             available.add(it.location)
         }
 
@@ -237,8 +242,8 @@ object LogicContextAnalysis {
         }
 
         // Nested branches run after the step's own declarations are applied — a loop's body sees what the
-        // loop step itself provided.
-        walk(graphNotation, documentPath, node, available, unexportedProvides, nested = true, error = error)
+        // loop step itself bound.
+        walk(graphNotation, documentPath, node, available, unexportedBindings, nested = true, error = error)
     }
 
 
@@ -248,17 +253,17 @@ object LogicContextAnalysis {
      *
      * **Hosted requires.** Each Context the hosted document H declares in its own `context.requires` must be
      * available at this call site, or the call cannot work — checked against availability as it stands BEFORE
-     * the call, since only what precedes a RunStep can satisfy it. This is where a deleted provide actually
+     * the call, since only what precedes a RunStep can satisfy it. This is where a deleted binding actually
      * surfaces: H's own steps stay clean, because H's `context.requires` seeds H's local analysis.
      *
      * **What the call makes available.** H's `context.exports` — its declared contract, so no recursion is
      * needed: if H exports X, H asserts it delivers X, whether from a step of its own or a re-export of its
-     * own callee. Plus any Context some step of H provides with `closePolicy: manual`, which reaches this
+     * own callee. Plus any Context some step of H binds with `closePolicy: manual`, which reaches this
      * frame through the engine's hand-up at H's settle rather than through the export chain. That manual rule
      * is deliberately ONE level deep — a Manual resource opened two levels down with nothing exported is not
      * modelled, and the remedy is `context.exports`, which the error names.
      *
-     * A Context H provides but neither exports nor opens as Manual is **private to H** and correctly absent
+     * A Context H binds but neither exports nor opens as Manual is **private to H** and correctly absent
      * from availability. That is not a finding in itself — privacy is the default and usually the intent — but
      * it is recorded, so a later error for the same Context can name H and the one-line fix.
      */
@@ -268,7 +273,7 @@ object LogicContextAnalysis {
         stepObjectPath: ObjectPath,
         stepLocation: ObjectLocation,
         available: MutableSet<ObjectLocation>,
-        unexportedProvides: MutableMap<ObjectLocation, DocumentPath>,
+        unexportedBindings: MutableMap<ObjectLocation, DocumentPath>,
         error: (ObjectPath, String) -> Unit
     ) {
         val hostedPath = ScriptConventions.hostedDocumentPath(graphNotation, stepLocation)
@@ -283,8 +288,8 @@ object LogicContextAnalysis {
             if (hostedRequired.location !in available) {
                 error(stepObjectPath,
                     "${hostedPath.asString()} requires ${hostedRequired.label()}, " +
-                            "which nothing before this step provides. " +
-                            remedyFor(hostedRequired, unexportedProvides))
+                            "which nothing before this step binds. " +
+                            remedyFor(hostedRequired, unexportedBindings))
             }
         }
 
@@ -295,7 +300,7 @@ object LogicContextAnalysis {
 
         available.addAll(hostedExports)
 
-        for ((descriptor, anyManual) in ownStepProvides(graphNotation, hostedPath)) {
+        for ((descriptor, anyManual) in ownStepBinds(graphNotation, hostedPath)) {
             if (descriptor.location in hostedExports) {
                 continue
             }
@@ -304,40 +309,40 @@ object LogicContextAnalysis {
                 available.add(descriptor.location)
             }
             else {
-                unexportedProvides[descriptor.location] = hostedPath
+                unexportedBindings[descriptor.location] = hostedPath
             }
         }
     }
 
 
     /**
-     * How to make an unsatisfied [descriptor] satisfiable. When an earlier callee provides it privately the fix
+     * How to make an unsatisfied [descriptor] satisfiable. When an earlier callee binds it privately the fix
      * is exact and worth naming — that document's `context.exports` — which is the whole diagnostic value a
-     * standing "this provide escapes into nothing" warning would carry, delivered at the point of failure
-     * instead of as noise on every legitimate private provide. Otherwise all three real remedies are listed,
-     * because the analysis genuinely cannot tell which one the author wants: nothing it can see provides the
+     * standing "this binding escapes into nothing" warning would carry, delivered at the point of failure
+     * instead of as noise on every legitimate private binding. Otherwise all three real remedies are listed,
+     * because the analysis genuinely cannot tell which one the author wants: nothing it can see binds the
      * Context, including anything a callee opens more than one level down.
      */
     private fun remedyFor(
         descriptor: ContextDescriptor,
-        unexportedProvides: Map<ObjectLocation, DocumentPath>
+        unexportedBindings: Map<ObjectLocation, DocumentPath>
     ): String {
-        val providing = unexportedProvides[descriptor.location]
-            ?: return "Add a step that provides it, add it to the context exports of a document this one " +
+        val binding = unexportedBindings[descriptor.location]
+            ?: return "Add a step that binds it, add it to the context exports of a document this one " +
                     "runs, or declare it in this document's context requires so a caller supplies it."
 
-        return "${providing.asString()} provides it but does not export it — add ${descriptor.label()} to " +
+        return "${binding.asString()} binds it but does not export it — add ${descriptor.label()} to " +
                 "that document's context exports."
     }
 
 
     /**
-     * Every Context a step of the document at [documentPath] provides, paired with whether ANY of its
-     * providing steps declares `closePolicy: manual` — the flag that decides whether the provide reaches the
-     * caller without being exported. Collected over the whole document rather than in execution order: the
-     * question is only whether the document provides it at all.
+     * Every Context a step of the document at [documentPath] binds, paired with whether ANY of its binding
+     * steps declares `closePolicy: manual` — the flag that decides whether the binding reaches the caller
+     * without being exported. Collected over the whole document rather than in execution order: the question
+     * is only whether the document binds it at all.
      */
-    private fun ownStepProvides(
+    private fun ownStepBinds(
         graphNotation: GraphNotation,
         documentPath: DocumentPath
     ): List<Pair<ContextDescriptor, Boolean>> {
@@ -348,12 +353,12 @@ object LogicContextAnalysis {
 
         for (objectPath in documentNotation.objects.notations.map.keys) {
             val objectLocation = ObjectLocation(documentPath, objectPath)
-            val provides = LogicContextConventions.stepProvides(graphNotation, objectLocation)
+            val binds = LogicContextConventions.stepBinds(graphNotation, objectLocation)
                 ?: continue
 
             val manual = closePolicyOf(graphNotation, objectLocation) == ResourceClosePolicy.Manual
-            val existing = result[provides.location]
-            result[provides.location] = provides to ((existing?.second ?: false) || manual)
+            val existing = result[binds.location]
+            result[binds.location] = binds to ((existing?.second ?: false) || manual)
         }
 
         return result.values.toList()
@@ -379,7 +384,7 @@ object LogicContextAnalysis {
         for (descriptor in unbackedExports(graphNotation, documentPath)) {
             warn(NotationConventions.mainObjectPath,
                 "Exports ${descriptor.label()}, which nothing in this document can provide — " +
-                        "no step provides it and no document it runs exports it.")
+                        "no step binds it and no document it runs exports it.")
         }
 
         if (legacySlotReferences(graphNotation, documentPath).isNotEmpty()) {
@@ -449,8 +454,8 @@ object LogicContextAnalysis {
                 continue
             }
 
-            check(objectPath, LogicContextConventions.providesAttributePath, "Provides")
-            check(objectPath, LogicContextConventions.requiresAttributePath, "Requires")
+            check(objectPath, LogicContextConventions.bindsAttributePath, "Binds")
+            check(objectPath, LogicContextConventions.usesAttributePath, "Uses")
             check(objectPath, LogicContextConventions.releasesAttributePath, "Releases")
         }
     }

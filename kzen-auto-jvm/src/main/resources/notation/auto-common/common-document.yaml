@@ -79,6 +79,37 @@ Context:
 
 ###########################################################
 
+# A place a USER can declare Contexts, and a form to write them with. Discovery is graph-wide and by
+# inheritance (ContextConventions.allContexts scans every object for an `is: Context` ancestor), so this
+# document is AN authoring surface, never the home: shipped Contexts stay in script-jvm.yaml, a plugin's stay
+# in the plugin's own notation, and all of them reach the picker identically. Nothing registers here.
+#
+# The declarations are NESTED OBJECTS (`by: NestedList`), the same shape a Script's `parameters` branch uses —
+# each entry is a real notation object at `main.contexts/<Name>` with its own ObjectLocation. That is not a
+# style choice: a Context is a nominal symbol other documents NAME, and ObjectLocation is that identity.
+# `by: Nominal` references resolve through the coalesced OBJECT map, renameObjectRefactor asserts its target
+# is in that map, and allContexts iterates it — so a spec-payload list attribute (the shape ObjectRegistry's
+# `classes` uses, whose entries are AttributeNotations with no location) would reach none of it.
+#
+# There is no `contexts: []` default: a NestedList branch is DERIVED from object paths and is never stored,
+# so an empty document is just `main: {is: Contexts}` (contrast ObjectRegistry, whose `classes` is a real
+# attribute and therefore must declare one).
+Contexts:
+  abstract: true
+  is: Document
+  class: tech.kzen.auto.server.objects.context.ContextsDocument
+  title: "Contexts"
+  icon: "material-symbols:extension"
+  group: "Customize"
+  meta:
+    contexts:
+      is: List
+      of: Context
+      by: NestedList
+
+
+###########################################################
+
 # Typed parameter declarations, shared by every Logic flavour with a `parameters` branch (Script and Job).
 # Moved here from script-jvm.yaml when the Job document gained the same branch.
 
@@ -186,7 +217,7 @@ ScriptStep:
   class: tech.kzen.auto.server.objects.script.api.ScriptStep
   description: "Script step"
   display: ScriptStepDisplayDefault
-  requires: []
+  uses: []
   releases: ""
   meta:
     icon: String
@@ -195,9 +226,11 @@ ScriptStep:
     display: String
     # Context declarations — weak references (by: Nominal): data for the validator/runtime/editor, never
     # constructor-injected, never pruned when an entry dangles or names an abstract Context; renames
-    # propagate. `nullable` on `releases` lets the empty default define; `of:` is mandatory on the list.
+    # propagate. `uses` names the Contexts this step reads, `releases` the one it disposes (`binds`, the
+    # third kind, lives on the ContextBinder mix-in). `nullable` on `releases` lets the empty default
+    # define; `of:` is mandatory on the `uses` list.
     # (Suppressed from the step-body editor by LogicContextConventions.isContextDeclaration.)
-    requires:
+    uses:
       is: List
       of: ObjectLocation
       by: Nominal

@@ -8,5 +8,5 @@ main:
 
 main.steps/Read:
   is: RequireContextTestStep
-  requires:
+  uses:
     - NoSuchContext

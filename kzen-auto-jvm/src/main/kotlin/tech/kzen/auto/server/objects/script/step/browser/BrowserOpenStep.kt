@@ -26,14 +26,15 @@ class BrowserOpenStep(
 
 
     override suspend fun run(execution: StepExecution): Any? {
-        // "Open a new browser window (existing one will be closed)": dispose any browser still open in this
-        // step's declared context. Argument-free: BrowserContext is this step's sole declaration (its
-        // `provides`) — a provider declares no `requires`, or the spine's gate would fail it before it could
-        // ever open one.
-        (execution.contextValueOrNull() as? RemoteWebDriver)?.let {
-            execution.blocking { WebDriverSupport.quitQuietly(it) }
-            execution.releaseContext()
-        }
+        // "Open a new browser window (existing one will be closed)": release any browser still bound to this
+        // step's declared context BEFORE binding the new one, so the old driver is quit while it is still the
+        // thing the name resolves to — rather than left to supersession, whose closer runs after the
+        // replacement is already bound. Release runs the disposal attached below, so nothing here quits the
+        // driver itself; a no-op when nothing is bound, which is the ordinary first-open case. Argument-free:
+        // BrowserContext is this step's sole declaration (its `binds`) — a binder declares no `uses`, or the
+        // spine's gate would fail it before it could ever open one. Offloaded because the disposal it triggers
+        // is a blocking Selenium quit.
+        execution.blocking { execution.releaseContext() }
 
         // Driver-manager setup (download / discovery) and the Chrome process launch are long blocking calls —
         // offload them off the engine dispatcher so a concurrent run's threads aren't starved and pause / cancel
@@ -54,7 +55,7 @@ class BrowserOpenStep(
         // hosted child Script), owned by the furthest document on the BrowserContext export chain — this one
         // when it exports nothing — and disposed per closePolicy at that owner's settle (or by an explicit
         // Close step).
-        execution.provideContext(driver, closePolicy) {
+        execution.bindContext(driver, closePolicy) {
             WebDriverSupport.quitQuietly(driver)
         }
 

@@ -1,6 +1,6 @@
-# Argument-free read off `provides` (ScriptContextRuntimeTest): a provider declares no `requires` — the
-# spine's uniform gate would fail it before it could ever provide one — so the replace-existing read it does
-# at the top of its own body can only resolve against its `provides` declaration. Two providers in a row plus
+# Argument-free read off `binds` (ScriptContextRuntimeTest): a binder declares no `uses` — the
+# spine's uniform gate would fail it before it could ever bind one — so the replace-existing read it does
+# at the top of its own body can only resolve against its `binds` declaration. Two binders in a row plus
 # a consumer prove the whole loop: the first sees nothing, the second sees the first's value, the consumer
 # sees the second's.
 

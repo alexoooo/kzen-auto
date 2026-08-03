@@ -6,6 +6,7 @@ import mui.material.Chip
 import mui.material.ChipVariant
 import mui.material.IconButton
 import mui.material.Size
+import mui.material.TextField
 import mui.material.Tooltip
 import mui.system.sx
 import react.ChildrenBuilder
@@ -16,33 +17,46 @@ import react.State
 import react.create
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
+import react.dom.onChange
 import tech.kzen.auto.client.objects.document.StageErrorIndicator
 import tech.kzen.auto.client.objects.document.common.scope.ObjectScopedComponent
 import tech.kzen.auto.client.objects.document.common.scope.ObjectScopedProps
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
+import tech.kzen.auto.client.util.ClientInputUtils
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.select.SelectOption
 import tech.kzen.auto.client.wrap.select.muiAutocompleteField
 import tech.kzen.auto.client.wrap.setState
+import tech.kzen.auto.common.objects.document.DocumentCreator
 import tech.kzen.auto.common.objects.document.logic.context.ContextConventions
 import tech.kzen.auto.common.objects.document.logic.context.ContextDescriptor
 import tech.kzen.auto.common.objects.document.logic.context.LogicContextAnalysis
 import tech.kzen.auto.common.objects.document.logic.context.LogicContextConventions
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.attribute.AttributeSegment
+import tech.kzen.lib.common.model.document.DocumentName
+import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.model.location.ObjectReference
+import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.structure.notation.AttributeNotation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
+import tech.kzen.lib.common.model.structure.notation.ObjectNotation
+import tech.kzen.lib.common.model.structure.notation.PositionRelation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
+import tech.kzen.lib.common.model.structure.notation.cqrs.AddObjectCommand
+import tech.kzen.lib.common.model.structure.notation.cqrs.CreateDocumentCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.UpsertAttributeCommand
+import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.common.service.store.MirroredGraphStore
 import tech.kzen.lib.platform.collect.toPersistentList
 import tech.kzen.lib.platform.collect.toPersistentMap
 import web.cssom.*
+import web.html.HTMLInputElement
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -90,6 +104,13 @@ external interface ContextSignatureEditorState: State {
 
     // The collapsed chip row expands into the picker when true.
     var adding: Boolean
+
+    // The picker's "New context..." option swaps it for a name field: the set of Contexts is open in
+    // principle, and this is the only affordance that makes it open in practice — without it a user must know
+    // to create a Contexts document, by hand, before the picker can ever show them their own declaration.
+    var namingNew: Boolean
+    var newContextName: String
+    var newContextError: String?
 }
 
 
@@ -136,6 +157,16 @@ class ContextSignatureEditor:
         // (2.75em) above.
         private const val requiresRowEm = 5.0
         private const val providesRowEm = 7.25
+
+        // Not an ObjectLocation, so it can never collide with a real option's value (those are
+        // `ObjectLocation.asString()`), and the select's own equality is by value string.
+        private const val newContextSentinel = " new-context"
+
+        // Where a declaration created from the picker lands when the project has no Contexts document yet.
+        // An EXISTING one is always preferred (see targetContextsDocument) — this is the seed, not a
+        // well-known path anything looks up.
+        private val defaultContextsDocumentPath = DocumentPath(
+            DocumentName("Contexts"), NotationConventions.mainDocumentNesting, false)
     }
 
 
@@ -148,6 +179,9 @@ class ContextSignatureEditor:
         legacySlots = false
         pickerOptions = null
         adding = false
+        namingNew = false
+        newContextName = ""
+        newContextError = null
     }
 
 
@@ -214,6 +248,123 @@ class ContextSignatureEditor:
     private fun onCancelAdding() {
         setState {
             adding = false
+            namingNew = false
+            newContextName = ""
+            newContextError = null
+        }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun onStartNamingNew() {
+        setState {
+            namingNew = true
+            newContextName = ""
+            newContextError = null
+        }
+    }
+
+
+    // An existing Contexts document is always preferred over creating another: a user who named theirs
+    // `main/Fixtures.yaml` should not silently acquire a second one. Ties broken by path so the choice is
+    // stable across sessions rather than dependent on map iteration order.
+    private fun targetContextsDocument(graphNotation: GraphNotation): DocumentPath? {
+        return graphNotation
+            .documents
+            .map
+            .entries
+            .filter { ContextConventions.isContextsDocument(it.value) }
+            .minByOrNull { it.key.asString() }
+            ?.key
+    }
+
+
+    /**
+     * Create the declaration the user just named, then reference it from this row. Three steps, sequenced
+     * rather than batched because each depends on the last: the document must exist before an object can be
+     * added into it, and the object must exist before [referenceNameOf] can decide whether a bare name
+     * resolves to it. `apply` suspends until the local mirror has the change, so reading the graph again
+     * between steps sees it.
+     */
+    private fun onCreateContext() {
+        val name = state.newContextName.trim()
+        if (name.isEmpty()) {
+            return
+        }
+
+        val graphNotation = graphNotation()
+            ?: return
+
+        val archetypeLocation = graphNotation.coalesce.locateOptional(
+            ObjectReference.ofRootName(ContextConventions.contextsDocumentObjectName))
+
+        if (archetypeLocation == null) {
+            setState {
+                newContextError = "Contexts document type is unavailable"
+            }
+            return
+        }
+
+        val existingDocument = targetContextsDocument(graphNotation)
+        val documentPath = existingDocument ?: defaultContextsDocumentPath
+
+        // The seed path could already be taken by a document of another type. Creating over it is rejected by
+        // the reducer ("Already exists"), and the add that follows would then fail a second time against a
+        // document that never appeared — so say what is actually wrong instead.
+        if (existingDocument == null && graphNotation.documents[documentPath] != null) {
+            setState {
+                newContextError = "${documentPath.asString()} exists and is not a Contexts document"
+            }
+            return
+        }
+
+        val mainObjectPath = documentPath.toMainObjectLocation().objectPath
+        val declarationLocation = ObjectLocation(
+            documentPath,
+            mainObjectPath.nest(ContextConventions.contextsAttributePath, ObjectName(name)))
+
+        // The add would be rejected by the reducer well after this form has closed; say so in place instead.
+        val alreadyTaken = graphNotation
+            .documents[documentPath]
+            ?.objects
+            ?.notations
+            ?.map
+            ?.containsKey(declarationLocation.objectPath)
+            ?: false
+
+        if (alreadyTaken) {
+            setState {
+                newContextError = "'$name' already exists in ${documentPath.asString()}"
+            }
+            return
+        }
+
+        setState {
+            adding = false
+            namingNew = false
+            newContextName = ""
+            newContextError = null
+        }
+
+        async {
+            if (existingDocument == null) {
+                props.mirroredGraphStore.apply(CreateDocumentCommand(
+                    documentPath, DocumentCreator.newDocument(archetypeLocation)))
+            }
+
+            props.mirroredGraphStore.apply(AddObjectCommand(
+                declarationLocation,
+                PositionRelation.afterLast,
+                ObjectNotation.ofParent(ContextConventions.contextObjectName)))
+
+            // Re-read: the declaration only became referenceable on the line above, and referenceNameOf
+            // decides bare-vs-qualified by resolving against the live graph.
+            val refreshed = graphNotation()
+                ?: return@async
+            val descriptor = ContextConventions.descriptorOrNull(refreshed, declarationLocation)
+                ?: return@async
+
+            onPick(descriptor)
         }
     }
 
@@ -555,6 +706,11 @@ class ContextSignatureEditor:
     // One field: the Context this row declares. Picking commits and collapses — the role is the row, so there
     // is nothing else to confirm, matching the live-apply behaviour of the sibling Result editor.
     private fun ChildrenBuilder.renderPicker() {
+        if (state.namingNew) {
+            renderNewContextForm()
+            return
+        }
+
         val options = state.pickerOptions ?: listOf()
 
         // Already-declared Contexts are filtered out: a document provides one or requires one, and re-picking a
@@ -563,7 +719,17 @@ class ContextSignatureEditor:
             .map { it.location }
             .toSet()
 
-        val contextOptions = options
+        // The create affordance TRAILS the real options, and that position is load-bearing:
+        // muiAutocompleteField defaults to autoHighlight, so the first option is what Enter takes on open.
+        // Leading with it would turn the habitual open-and-Enter into "start creating a document" rather
+        // than "pick the first Context". The list is a handful of entries, so trailing costs no visibility.
+        val newOption: SelectOption = unsafeJso {
+            value = newContextSentinel
+            label = "New context..."
+            detail = "Declare one in this project's Contexts document"
+        }
+
+        val contextOptions = (options
             .filter { it.location !in declared }
             .map { descriptor ->
                 val option: SelectOption = unsafeJso {
@@ -573,7 +739,7 @@ class ContextSignatureEditor:
                     detailTitle = descriptor.type.className.asString()
                 }
                 option
-            }
+            } + listOf(newOption))
             .toTypedArray()
 
         span {
@@ -588,7 +754,14 @@ class ContextSignatureEditor:
                 options = contextOptions,
                 selectedOption = null,
                 onSelect = { picked ->
-                    options.find { it.location.asString() == picked.value }?.let { onPick(it) }
+                    // The sentinel must be handled BEFORE the lookup below — that `?.let` silently swallows
+                    // any option whose value is not an existing ObjectLocation string.
+                    if (picked.value == newContextSentinel) {
+                        onStartNamingNew()
+                    }
+                    else {
+                        options.find { it.location.asString() == picked.value }?.let { onPick(it) }
+                    }
                 },
                 autoFocus = true,
                 openOnFocus = true,
@@ -600,6 +773,63 @@ class ContextSignatureEditor:
             size = Size.small
             onClick = { onCancelAdding() }
             icon("material-symbols:cancel") {}
+        }
+    }
+
+
+    // Name only. The declaration lands with the archetype's defaults (type Any, no qualifier, no key) and is
+    // refined in the Contexts document, which is where the full form lives — asking for all of it here would
+    // put a second, competing editor inside a chip row.
+    private fun ChildrenBuilder.renderNewContextForm() {
+        span {
+            css {
+                display = Display.inlineBlock
+                width = 12.em
+                marginRight = 0.25.em
+            }
+
+            TextField {
+                size = Size.small
+                autoFocus = true
+                fullWidth = true
+                placeholder = "new context name"
+                value = state.newContextName
+                onChange = {
+                    val text = (it.target as HTMLInputElement).value
+                    setState {
+                        newContextName = text
+                        newContextError = null
+                    }
+                }
+                onKeyDown = { event ->
+                    ClientInputUtils.handleEnterAndEscape(event, { onCreateContext() }, ::onCancelAdding)
+                }
+            }
+        }
+
+        IconButton {
+            title = "Create (Enter)"
+            size = Size.small
+            onClick = { onCreateContext() }
+            icon("material-symbols:check") {}
+        }
+
+        IconButton {
+            title = "Cancel (Escape)"
+            size = Size.small
+            onClick = { onCancelAdding() }
+            icon("material-symbols:cancel") {}
+        }
+
+        state.newContextError?.let { message ->
+            span {
+                css {
+                    marginLeft = 0.5.em
+                    fontSize = 0.85.em
+                    color = NamedColor.darkred
+                }
+                +message
+            }
         }
     }
 
