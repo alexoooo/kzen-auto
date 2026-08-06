@@ -2,6 +2,7 @@ package tech.kzen.auto.server.exec.script
 
 import tech.kzen.auto.common.objects.document.logic.ResultSignatureDefiner
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
+import tech.kzen.auto.common.objects.document.script.model.ScriptResultAnalysis
 import tech.kzen.auto.common.objects.document.script.model.ScriptTree
 import tech.kzen.auto.server.exec.LogicCompilerServices
 import tech.kzen.auto.server.exec.LogicParameter
@@ -44,7 +45,8 @@ object ScriptLogicCompiler {
         val scriptTree = ScriptTree.read(documentPath, graphDefinition)
         val scriptValidation = services.scriptValidationCache.scriptValidation(documentPath, graphDefinition) {
             ScriptValidator.validate(
-                documentPath, graphNotation, graphDefinition, graphInstance, scriptTree)
+                documentPath, graphNotation, graphDefinition, graphInstance,
+                services.cachedKotlinCompiler, scriptTree)
         }
         val resultSignature = ResultSignatureDefiner.parse(
             graphNotation.firstAttribute(scriptLocation, ScriptConventions.resultsAttributePath))
@@ -52,11 +54,14 @@ object ScriptLogicCompiler {
         val rootStepLocations = ScriptConventions.orderedDirectChildLocations(
             graphNotation, AttributeLocation(scriptLocation, ScriptConventions.stepsAttributePath))
 
+        val resultAnalysis = ScriptResultAnalysis.analyze(graphNotation, documentPath)
+
         // Which step values anything actually reads — one document-wide static scan per compile (so once per run,
         // and once per hosted-child document via ScriptRunContext's childLogics cache). Lets a collecting step skip
         // the work when nothing will look; see [ScriptValueReferences] for why it is compile-time and conservative.
         val valueReferencedSteps = ScriptValueReferences.analyze(
-            documentPath, graphDefinition, graphInstance, rootStepLocations)
+            documentPath, graphDefinition, graphInstance, rootStepLocations,
+            resultAnalysis.implicitResultStep)
 
         val structure = ScriptRunStructure(
             scriptLocation, graphNotation, graphDefinition, graphInstance,

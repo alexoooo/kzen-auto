@@ -1,0 +1,30 @@
+# A Result step nested in an If branch is a CONDITIONAL early return, so it exempts nothing: when the branch is
+# not taken the Script falls through to its trailing Display step, which produces no value — an error, even
+# though a Result step exists somewhere in the document.
+
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.Int
+      generics: []
+      nullable: false
+
+main.steps/Flag:
+  is: FormulaStep
+  code: "true"
+
+main.steps/Branch:
+  is: IfStep
+
+main.steps/Branch.branches/Branch:
+  is: IfBranch
+  condition: Flag
+
+main.steps/Branch.branches/Branch.steps/Early:
+  is: ResultStep
+  code: 5
+
+main.steps/Show:
+  is: DisplayValueStep
+  text: main.steps/Flag

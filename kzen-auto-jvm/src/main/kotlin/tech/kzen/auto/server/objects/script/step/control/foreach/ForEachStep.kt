@@ -105,10 +105,10 @@ class ForEachStep(
         val cursor = execution.restoredCarry(selfLocation) as? LoopCursor
 
         // Collect each iteration's value only if something reads this loop's own value. Nothing does when the
-        // loop is (say) the Script's last root step — [ScriptLogic] discards the root sequence's value — and
-        // collecting then costs a list that pins every iteration's terminal object for the run's lifetime. The
-        // loop still returns a well-typed (empty) List, which is what its declared type promises and all any
-        // in-scope expression step needs, since those resolve every in-scope value regardless of use.
+        // loop is (say) the last root step of a void Script, and collecting then costs a list that pins every
+        // iteration's terminal object for the run's lifetime. The loop still returns a well-typed (empty) List,
+        // which is what its declared type promises and all any in-scope expression step needs, since those
+        // resolve every in-scope value regardless of use.
         val collecting = execution.isValueReferenced(selfLocation)
 
         val iterator: Iterator<*>

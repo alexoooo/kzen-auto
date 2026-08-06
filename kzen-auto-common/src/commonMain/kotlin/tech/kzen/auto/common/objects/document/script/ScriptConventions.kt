@@ -26,6 +26,7 @@ object ScriptConventions {
     val objectName = ObjectName("Script")
     val stepObjectName = ObjectName("ScriptStep")
     val runStepObjectName = ObjectName("RunStep")
+    val resultStepObjectName = ObjectName("ResultStep")
 
     val stepsAttributeName = AttributeName("steps")
     val stepsAttributePath = AttributePath.ofName(stepsAttributeName)
@@ -214,6 +215,17 @@ object ScriptConventions {
         return graphNotation
             .inheritanceChain(stepLocation)
             .any { it.objectPath.name == runStepObjectName }
+    }
+
+
+    /** Whether [stepLocation] is a Result step — by inheritance chain, so a subtype matches. */
+    fun isResultStep(graphNotation: GraphNotation, stepLocation: ObjectLocation): Boolean {
+        if (stepLocation !in graphNotation.coalesce) {
+            return false
+        }
+        return graphNotation
+            .inheritanceChain(stepLocation)
+            .any { it.objectPath.name == resultStepObjectName }
     }
 
 

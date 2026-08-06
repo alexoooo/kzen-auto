@@ -20,6 +20,9 @@ data class ScriptState(
     val documentNotation: DocumentNotation,
     val scriptTree: ScriptTree,
 
+    // The root step whose value becomes the Script's result when no Result step supplies one.
+    val implicitResultStep: ObjectLocation?,
+
     // Raw (YAML) view of the document's objects — edited/saved via DocumentRawStore. editorModified is
     // cached (computed against documentNotation.objects) rather than recomputed per read, mirroring Custom.
     val raw: DocumentRawState,
@@ -58,6 +61,7 @@ data class ScriptState(
             mainLocation: ObjectLocation,
             documentNotation: DocumentNotation,
             scriptTree: ScriptTree,
+            implicitResultStep: ObjectLocation?,
             notationParser: NotationParser,
             viewMode: DocumentViewMode = DocumentViewMode.View
         ): ScriptState {
@@ -67,6 +71,7 @@ data class ScriptState(
                 mainLocation = mainLocation,
                 documentNotation = documentNotation,
                 scriptTree = scriptTree,
+                implicitResultStep = implicitResultStep,
                 raw = DocumentRawState(editorValue = editorValue),
                 editorModified = DocumentRawModified.compute(editorValue, objects, notationParser),
                 viewMode = viewMode)
@@ -144,12 +149,13 @@ data class ScriptState(
     }
 
 
-    // Apply a fresh server notation (and its derived scriptTree). When the editor has no unsaved
-    // changes, follow the server by re-seeding editorValue; otherwise keep the user's edits and just
+    // Apply a fresh server notation (and its derived scriptTree / implicitResultStep). When the editor has no
+    // unsaved changes, follow the server by re-seeding editorValue; otherwise keep the user's edits and just
     // recompute the modified flag against the new objects. Mirrors CustomStore.onClientState's branches.
     fun withDocumentNotation(
         documentNotation: DocumentNotation,
         scriptTree: ScriptTree,
+        implicitResultStep: ObjectLocation?,
         notationParser: NotationParser
     ): ScriptState {
         val objects = documentNotation.objects
@@ -161,6 +167,7 @@ data class ScriptState(
             copy(
                 documentNotation = documentNotation,
                 scriptTree = nextTree,
+                implicitResultStep = implicitResultStep,
                 raw = raw.copy(editorValue = freshEditor),
                 editorModified = DocumentRawModified.compute(freshEditor, objects, notationParser))
         }
@@ -168,6 +175,7 @@ data class ScriptState(
             copy(
                 documentNotation = documentNotation,
                 scriptTree = nextTree,
+                implicitResultStep = implicitResultStep,
                 editorModified = DocumentRawModified.compute(raw.editorValue, objects, notationParser))
         }
     }

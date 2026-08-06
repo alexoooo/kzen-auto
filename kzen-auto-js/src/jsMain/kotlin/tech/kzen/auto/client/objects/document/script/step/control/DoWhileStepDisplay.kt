@@ -108,7 +108,8 @@ class DoWhileStepDisplay(
             mirroredGraphStore = props.mirroredGraphStore,
             typeMetadata = state.stepValidation?.typeMetadata?.toSimple(),
             validationError = state.stepValidation?.errorMessage,
-            validationWarning = state.stepValidation?.warningMessage)
+            validationWarning = state.stepValidation?.warningMessage,
+            isResult = state.isResult ?: false)
     }
 
 

@@ -15,15 +15,16 @@ import tech.kzen.lib.common.exec.engine.LogicSignature
 import tech.kzen.lib.common.exec.engine.Repositionable
 import tech.kzen.lib.common.exec.engine.context.ExportSelector
 import tech.kzen.lib.common.exec.engine.restoredAs
+import tech.kzen.lib.common.exec.tuple.TupleComponentName
 import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.service.store.normal.ObjectStableId
 
 
 /**
- * A Script as a [Logic]: run the root step sequence to completion and return the captured result, or void when
- * no [ResultStep][tech.kzen.auto.server.objects.script.step.eval.ResultStep] ran (there is no last-step
- * fallback — matching the established Script result contract).
+ * A Script as a [Logic]: run the root step sequence to completion and return its result — the value a
+ * [ResultStep][tech.kzen.auto.server.objects.script.step.eval.ResultStep] captured, or else the last root step's
+ * value. A Script declaring no `main` result is void, and its steps' values are discarded.
  *
  * The steps themselves are the `@Reflect` notation archetypes resolved from [ScriptRunStructure.graphInstance];
  * this class only seeds the parameters and the live-edit carry-over, then drives the spine
@@ -171,14 +172,26 @@ class ScriptLogic(
             LogicParameterTrace.emit(execution, parameter.stableId, value)
         }
 
-        context.runSteps(rootStepLocations)
+        val lastStepValue = context.runSteps(rootStepLocations)
 
         // Control flow: an End Script signal (return) that unwound to the root is consumed here; a Skip / Finish
         // reaching the root is a mistargeted control step and fails the run (validation should prevent it).
         context.consumeRootSignalOrFail()
 
+        // A Result step's captured value wins — including one raised from a nested branch, which sets the result
+        // before ending the Script. Otherwise the last root step's value IS the result, mirroring the way a
+        // ForEachStep collects its body's terminal value.
         return context.result()
-            ?: TupleValue.empty
+            ?: implicitResult(lastStepValue)
+    }
+
+
+    /** A Script declaring no `main` result is void, so there is nothing for the last root step's value to fill. */
+    private fun implicitResult(lastStepValue: Any?): TupleValue {
+        return when (structure.resultSignature.find(TupleComponentName.main)) {
+            null -> TupleValue.empty
+            else -> TupleValue.ofMain(lastStepValue)
+        }
     }
 
 

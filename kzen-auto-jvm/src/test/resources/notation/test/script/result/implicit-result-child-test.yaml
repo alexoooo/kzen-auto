@@ -1,0 +1,18 @@
+# Child sub-Script that ends implicitly: with no Result step its last root step's value (3 + 4 = 7) is what
+# the hosting RunStep reads.
+
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.Int
+      generics: []
+      nullable: false
+
+main.steps/Base:
+  is: FormulaStep
+  code: 3
+
+main.steps/ChildTail:
+  is: FormulaStep
+  code: Base + 4

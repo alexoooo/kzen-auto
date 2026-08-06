@@ -176,6 +176,7 @@ class ForEachStepDisplay(
             typeMetadata = state.stepValidation?.typeMetadata?.toSimple(),
             validationError = state.stepValidation?.errorMessage,
             validationWarning = state.stepValidation?.warningMessage,
+            isResult = state.isResult ?: false,
             partial = progress?.partial ?: false
         ) {
             // Vertical breathing room the slab's own body padding does not give (it is zero top/bottom):

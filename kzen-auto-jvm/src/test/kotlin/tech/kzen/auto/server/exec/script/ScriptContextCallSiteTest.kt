@@ -230,7 +230,7 @@ class ScriptContextCallSiteTest {
         val graphInstance = GraphCreator.createGraph(stepGraphDefinition, context.graphEnvironment)
 
         val validation: ScriptValidation = ScriptValidator.validate(
-            documentPath, graphNotation, stepGraphDefinition, graphInstance)
+            documentPath, graphNotation, stepGraphDefinition, graphInstance, context.cachedKotlinCompiler)
 
         return validation.stepValidations[ObjectPath.parse(stepObjectPath)]?.errorMessage
     }

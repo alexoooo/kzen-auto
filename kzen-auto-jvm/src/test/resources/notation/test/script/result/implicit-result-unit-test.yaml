@@ -1,0 +1,18 @@
+# A declared Int result and a trailing Display step, which produces no value: nothing delivers the declared
+# result, so the error lands on the trailing step — not on the earlier step that did produce a value.
+
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.Int
+      generics: []
+      nullable: false
+
+main.steps/Value:
+  is: FormulaStep
+  code: 42
+
+main.steps/Show:
+  is: DisplayValueStep
+  text: main.steps/Value

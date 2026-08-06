@@ -1,5 +1,5 @@
-# Child sub-Script whose ResultStep ends it early with `then: endScript` (returns 5). Its ChildTail (a
-# CountingStep) never runs, proving End Script ends only this document (a signal never crosses a host() boundary).
+# Child sub-Script whose ResultStep ends it early, returning 5. Its ChildTail (a CountingStep) never runs,
+# proving End Script ends only this document (a signal never crosses a host() boundary).
 main:
   is: Script
   results:
@@ -11,7 +11,6 @@ main:
 main.steps/ChildEarly:
   is: ResultStep
   code: "5"
-  then: endScript
 
 main.steps/ChildTail:
   is: CountingStep

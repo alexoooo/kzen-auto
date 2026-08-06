@@ -1,0 +1,23 @@
+# Root steps placed after a root-level Result step: the Result ends the Script, so each trailing step never
+# runs. Dead code is advisory — a warning on every one of them, and no error, since the declared Int is
+# delivered by the Result step itself.
+
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.Int
+      generics: []
+      nullable: false
+
+main.steps/Answer:
+  is: ResultStep
+  code: 42
+
+main.steps/Tail:
+  is: FormulaStep
+  code: 1
+
+main.steps/Tail 2:
+  is: FormulaStep
+  code: 2

@@ -427,6 +427,7 @@ class ScriptStepDisplayDefault(
                 hostedExportsContinuingUp = state.hostedExportsContinuingUp
                 usesContexts = state.usesContexts
                 releasesContext = state.releasesContext
+                isResult = state.isResult
                 skipped = traceState == StepTrace.State.Skipped
                 expanded = state.expanded
                 onToggleExpanded = ::onToggleExpanded

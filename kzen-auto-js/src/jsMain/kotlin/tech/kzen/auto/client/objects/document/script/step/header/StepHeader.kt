@@ -68,6 +68,10 @@ external interface StepHeaderProps: Props {
     var usesContexts: List<ContextDescriptor>?
     var releasesContext: ContextDescriptor?
 
+    // True when this step's value is the Script's own result, supplied implicitly because no Result step
+    // names one — the chip is the only place that fact is visible in the editor.
+    var isResult: Boolean?
+
     // True when this step was short-circuited (value-less) by a forward move-to jump — renders a small
     // "Skipped" chip so the grey status bar reads clearly.
     var skipped: Boolean?
@@ -342,6 +346,19 @@ class StepHeader(
                             }
                         }
                     }
+                }
+            }
+
+            // Result chip: this step's value is what the Script yields. An identity marker rather than a run
+            // outcome, so it leads the chips — but still follows the two validation icons.
+            if (props.isResult == true) {
+                Chip {
+                    sx {
+                        marginRight = 0.5.em
+                    }
+                    size = Size.small
+                    label = ReactNode("Result")
+                    variant = ChipVariant.outlined
                 }
             }
 

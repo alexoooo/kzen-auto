@@ -1,0 +1,14 @@
+# A declared Int result delivered implicitly by the last root step, whose value is a String: the Script cannot
+# satisfy its own signature, so the mismatch is an error on that trailing step.
+
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.Int
+      generics: []
+      nullable: false
+
+main.steps/Tail:
+  is: FormulaStep
+  code: '"text"'

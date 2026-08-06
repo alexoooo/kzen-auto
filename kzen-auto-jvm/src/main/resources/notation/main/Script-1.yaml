@@ -24,7 +24,6 @@ main.steps/ForEach.steps/If.branches/Branch:
 main.steps/ForEach.steps/If.branches/Branch.steps/Result:
   is: ResultStep
   code: Item
-  then: endScript
 
 main.steps/ForEach.steps/If.else/Formula 2:
   is: FormulaStep
@@ -36,3 +35,7 @@ main.steps/ForEach.item/Item:
 main.steps/Display:
   is: DisplayValueStep
   text: main.steps/ForEach
+
+main.steps/Result 2:
+  is: ResultStep
+  code: '"not found"'

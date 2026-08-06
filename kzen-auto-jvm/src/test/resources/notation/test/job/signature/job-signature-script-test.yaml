@@ -1,8 +1,7 @@
 # Script -> RunStep -> Job round trip (J2 JobSignatureTest.scriptRunStepBindsArgumentsIntoHostedJob): a FormulaStep
 # produces listOf(1, 2, 3); a RunStep hosts the parameterized child Job (job-signature-child-test.yaml#main),
-# binding the list to the Job's `items` parameter; a ResultStep surfaces the RunStep's value as the Script result
-# (there is no last-step fallback — a Script returns its ResultStep's value). The Job streams the list and its
-# sink keeps the LAST element, so the Script result is 3.
+# binding the list to the Job's `items` parameter; a ResultStep ends the Script with the RunStep's value as the
+# result. The Job streams the list and its sink keeps the LAST element, so the Script result is 3.
 main:
   is: Script
   results:

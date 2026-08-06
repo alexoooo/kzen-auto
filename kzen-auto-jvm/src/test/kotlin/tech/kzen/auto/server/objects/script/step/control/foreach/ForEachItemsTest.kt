@@ -232,7 +232,8 @@ class ForEachItemsTest {
 
         val graphInstance = GraphCreator.createGraph(stepGraphDefinition, context.graphEnvironment)
 
-        return ScriptValidator.validate(documentPath, graphNotation, stepGraphDefinition, graphInstance)
+        return ScriptValidator.validate(
+            documentPath, graphNotation, stepGraphDefinition, graphInstance, context.cachedKotlinCompiler)
     }
 
 

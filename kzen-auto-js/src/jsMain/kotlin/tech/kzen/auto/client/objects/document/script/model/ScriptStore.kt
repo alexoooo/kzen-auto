@@ -12,6 +12,7 @@ import tech.kzen.auto.client.service.logic.LogicValidationGlobal
 import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.common.objects.document.script.model.ScriptDependencyAnalysis
+import tech.kzen.auto.common.objects.document.script.model.ScriptResultAnalysis
 import tech.kzen.auto.common.objects.document.script.model.ScriptTree
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -114,10 +115,13 @@ class ScriptStore(
             previousState == null || mainLocation != previousState.mainLocation -> {
                 val scriptTree = ScriptTree.read(
                     mainLocation.documentPath, clientState.graphDefinitionAttempt.successful())
+                val implicitResultStep = ScriptResultAnalysis.analyze(
+                    clientState.graphStructure().graphNotation, mainLocation.documentPath).implicitResultStep
                 ScriptState.initial(
                     mainLocation,
                     documentNotation,
                     scriptTree,
+                    implicitResultStep,
                     notationParser,
                     previousState?.viewMode ?: DocumentViewMode.View)
             }
@@ -125,7 +129,10 @@ class ScriptStore(
             documentNotation != previousState.documentNotation -> {
                 val scriptTree = ScriptTree.read(
                     mainLocation.documentPath, clientState.graphDefinitionAttempt.successful())
-                previousState.withDocumentNotation(documentNotation, scriptTree, notationParser)
+                val implicitResultStep = ScriptResultAnalysis.analyze(
+                    clientState.graphStructure().graphNotation, mainLocation.documentPath).implicitResultStep
+                previousState.withDocumentNotation(
+                    documentNotation, scriptTree, implicitResultStep, notationParser)
             }
 
             else ->

@@ -1,0 +1,29 @@
+# A Result step that ran ANYWHERE wins over the implicit last-root-step value: the Result nested in the taken
+# branch ends the Script with 5, so the trailing Tail never runs and its 0 is not the result.
+
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.Int
+      generics: []
+      nullable: false
+
+main.steps/Flag:
+  is: FormulaStep
+  code: "true"
+
+main.steps/Branch:
+  is: IfStep
+
+main.steps/Branch.branches/Branch:
+  is: IfBranch
+  condition: Flag
+
+main.steps/Branch.branches/Branch.steps/Early:
+  is: ResultStep
+  code: 5
+
+main.steps/Tail:
+  is: FormulaStep
+  code: 0

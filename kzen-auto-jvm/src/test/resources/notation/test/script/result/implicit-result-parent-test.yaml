@@ -1,0 +1,18 @@
+# Parent Script hosting the implicit-result child: the RunStep's value is the child's implicit result (7), and
+# the parent ends implicitly too, so its own last root step gives Call + 1 = 8.
+
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.Int
+      generics: []
+      nullable: false
+
+main.steps/Call:
+  is: RunStep
+  instructions: "test/script/result/implicit-result-child-test.yaml#main"
+
+main.steps/Sum:
+  is: FormulaStep
+  code: "Call + 1"

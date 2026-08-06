@@ -189,11 +189,6 @@ ControlSummaryAttributeView:
   class: tech.kzen.auto.client.objects.document.script.display.view.ControlSummaryAttributeView$Wrapper
 
 
-ResultThenAttributeView:
-  is: AttributeView
-  class: tech.kzen.auto.client.objects.document.script.display.view.ResultThenAttributeView$Wrapper
-
-
 # Per-target-type client fragments (dropdown label, value row, collapsed summary), autowired into
 # the TargetSpecEditor / TargetAttributeView hosts and matched by the `type:` notation value — a
 # new target type contributes its UI by registering an `is: TargetTypeDisplay` object (the

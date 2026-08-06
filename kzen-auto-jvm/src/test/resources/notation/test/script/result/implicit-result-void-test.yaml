@@ -1,0 +1,9 @@
+# A Script with NO declared result: it is void, so its last root step's value is discarded rather than becoming
+# an implicit result, and the run yields the empty tuple.
+
+main:
+  is: Script
+
+main.steps/Tail:
+  is: FormulaStep
+  code: 7

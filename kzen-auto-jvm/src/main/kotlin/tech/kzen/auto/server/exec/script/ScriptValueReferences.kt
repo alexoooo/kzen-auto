@@ -18,9 +18,10 @@ import tech.kzen.lib.common.model.location.ObjectLocation
  *
  * 1. **Branch terminals.** A branch's last step becomes its container's value (`IfStep` returns it; `ForEachStep`
  *    collects it), but that is structural containment, which the analysis deliberately excludes from its data-dep
- *    edges. The ROOT step list is the exception and the reason this pays: `ScriptLogic.run` DISCARDS
- *    `runSteps(rootStepLocations)`'s value (the result comes from a `ResultStep` — there is no last-step
- *    fallback), so a trailing top-level loop is genuinely unread.
+ *    edges. The ROOT step list needs the same seeding whenever the Script takes its result implicitly — its
+ *    terminal's value is then the Script's own — which is what [analyze]'s `implicitResultStep` supplies. That is
+ *    null for a void Script or one ending in a `ResultStep`, and there a trailing top-level loop is genuinely
+ *    unread: the reason this pays.
  * 2. **A completeness check.** The analysis discovers branches from attribute metadata (`is: List, of: ScriptStep`),
  *    so a step type whose branch metadata is missing or undeclared — a raw-YAML power edit, a plugin authoring
  *    mistake — is invisible to it and its edges silently vanish. For the client's overlay that costs a missing
@@ -37,12 +38,14 @@ object ScriptValueReferences {
         documentPath: DocumentPath,
         graphDefinition: GraphDefinition,
         graphInstance: GraphInstance,
-        rootStepLocations: List<ObjectLocation>
+        rootStepLocations: List<ObjectLocation>,
+        implicitResultStep: ObjectLocation?
     ): Set<ObjectLocation> {
         val analysis = ScriptDependencyAnalysis.analyze(graphDefinition, documentPath)
         val graphNotation = graphDefinition.graphStructure.graphNotation
 
         val referenced = analysis.valueReferencedSources().toMutableSet()
+        implicitResultStep?.let { referenced.add(it) }
         val allSteps = mutableSetOf<ObjectLocation>()
         var complete = true
 

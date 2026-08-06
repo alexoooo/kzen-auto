@@ -1,0 +1,18 @@
+# A declared Int result and no Result step: the Script yields its LAST root step's value, so Doubled's
+# Base * 2 = 42 is the result (the implicit result), not Base's 21.
+
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.Int
+      generics: []
+      nullable: false
+
+main.steps/Base:
+  is: FormulaStep
+  code: 21
+
+main.steps/Doubled:
+  is: FormulaStep
+  code: Base * 2

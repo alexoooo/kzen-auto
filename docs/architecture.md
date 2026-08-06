@@ -135,11 +135,10 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > its binding would be circular whenever the body references the item. `ForEachItemsExpression` owns the
 > derivation for both, and because `CachedKotlinCompiler` is keyed by content signature and both callers
 > pass the ForEach's location, the second derivation is a cache hit rather than a second compile. The
-> result signature is **ResultStep-only**: the
-> `results` map (`ResultSignatureDefiner`) types the output tuple, and the Script's value is the
-> last invoked `ResultStep`'s (VB-style), or void when none ran — there is no last-step fallback,
-> so a Script consumed via `RunStep` / `ForEachStep` returns void until a ResultStep is added. Two
-> notation-wiring traps recur here: a `by:` in `meta` needs a sibling `is:`
+> result signature is typed by the `results` map (`ResultSignatureDefiner`), and the Script's value is
+> its `ResultStep`'s — a Result step returns, ending the document — or, with no ResultStep, its LAST
+> ROOT STEP's, mirroring the way a `ForEachStep` takes its body's terminal and an `IfStep` its taken
+> branch's. Two notation-wiring traps recur here: a `by:` in `meta` needs a sibling `is:`
 > (`meta: { default: { is: Object, by: ParameterDefaultDefiner } }` — a `ref`/`by` indirection
 > silently falls back to `StructuralAttributeDefiner`), and
 > `GraphNotation.firstAttribute(loc, AttributeName)` throws when absent — use the nullable
@@ -192,9 +191,9 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > (error-parked under pause-on-error); a signal instead is a pending field on `ScriptRunContext` that
 > the spine (`runSteps`) short-circuits on and a targeted consumer clears — **zero kzen-lib change**,
 > `logic-spec.md` untouched. A new **ControlStep** (`action: skipIteration | finishLoop`, targeting an
-> enclosing loop via `loop:`) raises Skip/Finish; **ResultStep** gained `then: keepRunning | endScript`
-> (default `keepRunning` = today's last-Result-wins; `endScript` raises `EndScript` after capturing the
-> result). A loop (`ForEachStep` / `DoWhileStep`) consumes a signal targeting itself via
+> enclosing loop via `loop:`) raises Skip/Finish; a **ResultStep** raises `EndScript` after capturing the
+> result, so root steps following a root-level ResultStep are unreachable. A loop (`ForEachStep` /
+> `DoWhileStep`) consumes a signal targeting itself via
 > `StepExecution.consumeLoopSignal`; a signal for an outer loop / the root propagates (the enclosing
 > spine traces the passed-through container as Done-with-no-outcome and short-circuits). `EndScript`
 > unwinds to `ScriptLogic.run` and never crosses a `host()` boundary (a hosted child runs in its own

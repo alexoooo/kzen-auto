@@ -1,6 +1,6 @@
-# A Script with a declared Int result and a Result step whose expression evaluates to that type. The run's
-# main value is the Result step's value (Base + 21 = 42), NOT the last body step's value ("ignored tail") —
-# the trailing FormulaStep runs but does not change the Script result (no last-step fallback).
+# A Script with a declared Int result and a Result step whose expression evaluates to that type. The Result
+# step ends the Script with Base + 21 = 42, so the trailing FormulaStep ("ignored tail") is unreachable and
+# never runs.
 
 main:
   is: Script

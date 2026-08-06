@@ -1,9 +1,17 @@
 main:
   is: Script
+  context:
+    requires:
+      - main.contexts/My Context
 
 main.steps/Formula:
   is: FormulaStep
   code: ' 1.. 5'
+
+main.steps/Bind:
+  is: BindStep
+  value: Formula
+  binds: main.contexts/My Context
 
 main.steps/Display:
   is: DisplayValueStep

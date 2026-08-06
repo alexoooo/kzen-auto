@@ -1,0 +1,10 @@
+# A declared Int result with no steps at all: there is no step that could deliver it, so the error belongs to
+# the Script's main object rather than to any step.
+
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.Int
+      generics: []
+      nullable: false

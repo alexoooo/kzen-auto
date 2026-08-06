@@ -22,7 +22,7 @@ import kotlin.test.assertTrue
 
 /**
  * End-to-end control-flow semantics (execution-control phase XC4): Skip Iteration (continue) / Finish Loop
- * (break) via ControlStep, and ResultStep `then: endScript` (return) — modelled as completion signals, run on
+ * (break) via ControlStep, and a Result step ending the Script (return) — modelled as completion signals, run on
  * the real [RunEngine]. Each Script drives the production control steps plus the test-only [CountingStep] to
  * make execution observable. The counter is process-global, so tests reset it per run and rely on the suite's
  * sequential execution (as the other static-fixture engine tests do).
@@ -97,8 +97,17 @@ class ScriptControlFlowTest {
 
 
     @Test
+    fun resultStepAlwaysEndsTheScript() {
+        // Two root Result steps: the FIRST one to run ends the Script, so Second (2) is unreachable and the
+        // result is First's 1.
+        val outcome = runScript("test/script/result/result-step-first-ends-test.yaml")
+        assertEquals(1, assertIs<Outcome.Success>(outcome).value.mainComponentValue())
+    }
+
+
+    @Test
     fun endScriptInAHostedSubScriptReturnsAndTheCallerContinues() {
-        // The child ends itself with `then: endScript` (returns 5); its ChildTail never runs (count stays 0),
+        // The child's Result step ends it (returning 5); its ChildTail never runs (count stays 0),
         // and the caller continues past the RunStep to compute Call + 1 = 6 — proving End Script never crosses
         // the host() boundary.
         val outcome = runScript("test/script/control/script-control-endscript-parent-test.yaml")

@@ -170,6 +170,7 @@ class ContextStepValidationTest {
             documentPath,
             graphNotation,
             stepGraphDefinition,
-            graphInstance)
+            graphInstance,
+            context.cachedKotlinCompiler)
     }
 }

@@ -385,7 +385,8 @@ class IfStepDisplay(
             mirroredGraphStore = props.mirroredGraphStore,
             typeMetadata = state.stepValidation?.typeMetadata?.toSimple(),
             validationError = state.stepValidation?.errorMessage,
-            validationWarning = state.stepValidation?.warningMessage)
+            validationWarning = state.stepValidation?.warningMessage,
+            isResult = state.isResult ?: false)
 
         val branchLocations = state.branchLocations ?: listOf()
         for ((index, branchLocation) in branchLocations.withIndex()) {

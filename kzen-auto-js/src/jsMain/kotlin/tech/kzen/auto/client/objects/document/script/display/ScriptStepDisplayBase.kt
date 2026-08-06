@@ -38,6 +38,10 @@ external interface ScriptStepDisplayBaseState: State {
     var stepTrace: StepTrace?
     var isNextToRun: Boolean?
     var stepValidation: StepValidation?
+
+    // True when this step is the one supplying the Script's result implicitly. Derived here rather than per
+    // display: the analysis is over the whole document, and every step display shares this one subscription.
+    var isResult: Boolean?
 }
 
 
@@ -133,17 +137,22 @@ abstract class ScriptStepDisplayBase<P: ScriptStepDisplayBaseProps, S: ScriptSte
             ?.stepValidations
             ?.get(props.common.objectLocation.objectPath)
 
+        // implicitResultStep is only ever a root step, so a nested step compares false without a depth check.
+        val isResult = scriptState.implicitResultStep == props.common.objectLocation
+
         // NB: value compare (==), not === - computeStepTraceInfo rebuilds a fresh StepTrace each call (its
         //     fields come from the stable trace map, so it is value-equal but not identical), and a reference
         //     guard would therefore never bail.
         if (state.stepTrace != info.trace ||
             state.isNextToRun != info.isNextToRun ||
-            state.stepValidation != stepValidation
+            state.stepValidation != stepValidation ||
+            state.isResult != isResult
         ) {
             setState {
                 this.stepTrace = info.trace
                 this.isNextToRun = info.isNextToRun
                 this.stepValidation = stepValidation
+                this.isResult = isResult
             }
         }
 

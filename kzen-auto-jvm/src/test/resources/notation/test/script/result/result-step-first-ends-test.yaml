@@ -1,4 +1,4 @@
-# Two Result steps run in document order; the Script returns the value of the LAST one invoked (VB-style).
+# Two root Result steps: the FIRST ends the Script, so the result is 1 and Second is unreachable.
 
 main:
   is: Script

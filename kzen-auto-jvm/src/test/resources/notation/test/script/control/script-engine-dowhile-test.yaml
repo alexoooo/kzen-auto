@@ -1,3 +1,6 @@
+# A Result nested in a loop body ends the Script: the DoWhile body runs once even with a false condition, so the
+# result is 7. The trailing root Result covers the fall-through path where the nested Result never fires — a
+# result of -1 means the nested Result failed to end the Script.
 main:
   is: Script
   results:
@@ -13,3 +16,7 @@ main.steps/Loop:
 main.steps/Loop.steps/Inner:
   is: ResultStep
   code: "7"
+
+main.steps/Result:
+  is: ResultStep
+  code: "-1"

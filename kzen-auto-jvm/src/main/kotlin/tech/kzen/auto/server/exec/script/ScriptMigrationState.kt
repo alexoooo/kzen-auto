@@ -10,7 +10,7 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableId
  * rebuilt run by the root's stable identity (its [tech.kzen.lib.common.exec.engine.Execution.restored]). It is
  * the Script's "completed work so far": the outcome each step that finished produced (keyed by the step's
  * rename-stable id, in completion order), each mid-flight step's opaque carry sub-state (see below), plus the
- * last Result value.
+ * captured Result value.
  *
  * On the rebuilt run the [ScriptRunContext.runSteps] spine replays against this state:
  * a step whose id is present re-adopts its outcome WITHOUT re-executing (no checkpoint, no work), so resume

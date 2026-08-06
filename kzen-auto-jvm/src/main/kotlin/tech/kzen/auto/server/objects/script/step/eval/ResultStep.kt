@@ -18,21 +18,18 @@ import tech.kzen.lib.common.reflect.Service
 
 
 /**
- * Sets the Script's return value: a body step holding a Kotlin expression that must evaluate to the
- * Script's declared `main` result type (the result signature at the top of the stage). The last Result
- * step executed wins (Visual-Basic style) — its value is captured via [StepExecution.setResult] and
- * returned by the Script once it completes. With no declared result signature the Script is void, so a
- * Result step is a validation error; a type mismatch surfaces as the step's compile error like [FormulaStep].
+ * The Script's `return`: a body step holding a Kotlin expression that must evaluate to the Script's declared
+ * `main` result type (the result signature at the top of the stage). Its value is captured via
+ * [StepExecution.setResult], then the step raises [ScriptControlSignal.EndScript] to end the current Script
+ * document — in a hosted sub-Script the sub-Script returns and the caller's RunStep continues, since a signal
+ * never crosses a `host()` boundary. A Script with no Result step yields its last root step's value instead.
  *
- * [then] adds `return` semantics: `keepRunning` (default, back-compatible — last Result wins and the walk
- * continues) or `endScript`, which raises [ScriptControlSignal.EndScript] after capturing the result, ending the
- * current Script document (in a hosted sub-Script the sub-Script returns and the caller's RunStep continues — a
- * signal never crosses a `host()` boundary).
+ * With no declared result signature the Script is void, so a Result step is a validation error; a type
+ * mismatch surfaces as the step's compile error like [FormulaStep].
  */
 @Reflect
 class ResultStep(
     private val code: String,
-    private val then: String,
     private val selfLocation: ObjectLocation,
     @Service private val cachedKotlinCompiler: CachedKotlinCompiler
 ):
@@ -41,14 +38,12 @@ class ResultStep(
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private const val noResultDeclared = "No result type declared in the Script signature"
-        const val keepRunning = "keepRunning"
-        const val endScript = "endScript"
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    // Evaluate the expression as the Script's declared `main` result type and capture it as the result (last
-    // Result step wins). Like [FormulaStep] the step compiles its own expression with its injected compiler.
+    // Evaluate the expression as the Script's declared `main` result type, capture it as the result, and end the
+    // Script. Like [FormulaStep] the step compiles its own expression with its injected compiler.
     override suspend fun run(execution: StepExecution): Any? {
         val declaredType = declaredMainType(execution.resultSignature)
             ?: error("Result step with no declared result type: $selfLocation")
@@ -65,10 +60,9 @@ class ResultStep(
 
         execution.setResult(TupleValue.ofMain(value))
 
-        // `return` semantics: end the current Script document after capturing the result (see [ScriptControlSignal]).
-        if (then == endScript) {
-            execution.raiseControlSignal(ScriptControlSignal.EndScript)
-        }
+        // `return` semantics: end the current Script document (see [ScriptControlSignal]). Must stay the
+        // terminal action of the run — see [StepExecution.raiseControlSignal].
+        execution.raiseControlSignal(ScriptControlSignal.EndScript)
 
         return value
     }
@@ -76,10 +70,6 @@ class ResultStep(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun definition(scriptDefinitionContext: ScriptDefinitionContext): ScriptStepDefinition? {
-        if (then != keepRunning && then != endScript) {
-            return ScriptStepDefinition(null, "Invalid result step 'then': $then")
-        }
-
         val declaredType = declaredMainType(scriptDefinitionContext.resultSignature)
             ?: return ScriptStepDefinition(null, noResultDeclared)
 

@@ -151,6 +151,7 @@ class FormulaStepTest {
             documentPath,
             graphNotation,
             stepGraphDefinition,
-            graphInstance)
+            graphInstance,
+            context.cachedKotlinCompiler)
     }
 }

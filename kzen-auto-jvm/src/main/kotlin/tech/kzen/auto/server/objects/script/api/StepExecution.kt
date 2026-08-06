@@ -88,7 +88,7 @@ interface StepExecution {
      */
     fun recordValue(location: ObjectLocation, value: Any?)
 
-    /** Capture the Script's result (last Result step wins). */
+    /** Capture the Script's result; the Result step then raises [ScriptControlSignal.EndScript]. */
     fun setResult(value: TupleValue)
 
 

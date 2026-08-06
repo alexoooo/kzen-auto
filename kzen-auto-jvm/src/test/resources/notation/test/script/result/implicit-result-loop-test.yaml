@@ -1,0 +1,29 @@
+# A trailing root ForEachStep as the implicit result: the loop's collected output IS the Script's value, so
+# the loop must collect (a loop nothing reads returns an empty List — see StepExecution.isValueReferenced) and
+# the result is [2, 4, 6].
+
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.collections.List
+      generics:
+        - class: kotlin.Int
+          generics: []
+          nullable: false
+      nullable: false
+
+main.steps/Range:
+  is: FormulaStep
+  code: "1..3"
+
+main.steps/Loop:
+  is: ForEachStep
+  items: Range
+
+main.steps/Loop.item/Item:
+  is: ForEachItemBinding
+
+main.steps/Loop.steps/Doubled:
+  is: FormulaStep
+  code: Item * 2

@@ -30,6 +30,7 @@ fun ChildrenBuilder.branchHeaderSlab(
     typeMetadata: String? = null,
     validationError: String? = null,
     validationWarning: String? = null,
+    isResult: Boolean = false,
     partial: Boolean = false,
     body: (ChildrenBuilder.() -> Unit)? = null
 ) {
@@ -77,6 +78,7 @@ fun ChildrenBuilder.branchHeaderSlab(
                 this.typeMetadata = typeMetadata
                 this.validationError = validationError
                 this.validationWarning = validationWarning
+                this.isResult = isResult
                 this.skipped = traceState == StepTrace.State.Skipped
                 this.partial = partial
                 this.mirroredGraphStore = mirroredGraphStore

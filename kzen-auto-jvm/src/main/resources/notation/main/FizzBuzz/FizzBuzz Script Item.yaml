@@ -44,11 +44,3 @@ main.steps/FizzBuzz.branches/Branch 3.steps/Formula 5:
 main.steps/FizzBuzz.else/Formula 2:
   is: FormulaStep
   code: "number.toString()"
-
-main.steps/Display:
-  is: DisplayValueStep
-  text: main.steps/FizzBuzz
-
-main.steps/Result:
-  is: ResultStep
-  code: "FizzBuzz"
