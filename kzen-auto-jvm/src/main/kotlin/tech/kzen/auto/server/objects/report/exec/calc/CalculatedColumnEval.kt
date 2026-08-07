@@ -56,8 +56,8 @@ class CalculatedColumnEval(
         }
 
         val code = generate(calculatedColumnName, calculatedColumnFormula, columnNames, modelType, parameters)
-        val errorMessage = cachedKotlinCompiler.tryCompile(code, classLoader)
-        return errorMessage?.let { cleanupErrorMessage(it) }
+        val compileError = cachedKotlinCompiler.tryCompile(code, classLoader)
+        return compileError?.let { cleanupErrorMessage(it.error) }
     }
 
 
@@ -103,7 +103,8 @@ class CalculatedColumnEval(
 
         val error = cachedKotlinCompiler.tryCompile(code, classLoader)
         check(error == null) {
-            "Unable to compile: $error - $calculatedColumnName - $calculatedColumnFormula - ${columnNames.render()}"
+            "Unable to compile: ${error?.error} - $calculatedColumnName - $calculatedColumnFormula - " +
+                    columnNames.render()
         }
 
         val clazz = cachedKotlinCompiler.tryLoad(code, classLoader)

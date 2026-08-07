@@ -179,10 +179,62 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > resolves per-expression scope via `ScriptTree.predecessors + inScopeBindingPaths` — the same
 > scoping codegen uses — so same-named objects in sibling branches don't cross-rewrite, and it is
 > wired at both construction sites (server `KzenAutoContext` and client `ClientContext`) so the two
-> sides' digests stay equal. Syntax/type validation runs server-side (`KotlinSyntaxValidator`,
-> `server/service/compile/`) and surfaces client-side through `ExpressionValidationIndicator`
-> (`objects/document/common/valid/`), used by the shared expression editors
-> (`KotlinExpressionEditor`, `FormulaMapEditor`).
+> sides' digests stay equal. All of that is derived from **one** scan, `tokens(code)` — a contiguous
+> stream covering exactly `0 until code.length` — which the browser also paints from, so the colours,
+> the dependency edges and a rename can never disagree about what an identifier is. Validation runs
+> server-side (a real compile through `CachedKotlinCompiler` for Script expressions;
+> `KotlinSyntaxValidator`'s scope-free parse pre-check for report formula columns, `server/service/compile/`)
+> and surfaces client-side through `ExpressionValidationIndicator` (`objects/document/common/valid/`),
+> used by the shared expression editors — `KotlinExpressionEditor`, whose field is the syntax-colouring
+> `KotlinCodeArea` ([`js-architecture.md` § 8](js-architecture.md#8-kotlincodearea--the-syntax-highlighted-expression-field)),
+> and `FormulaMapEditor`.
+
+> **Expression error positions — user-relative, end to end.** A Script expression's validation error carries a
+> **character offset into the user's own text**, so the field marks the offending token instead of printing an
+> undifferentiated message under the card. The chain:
+> `ScriptDiagnostic.location` (1-based line and column over the generated source; `absolutePos` is never
+> populated, so `ScriptKotlinCompiler` builds its own line-start index) → minus
+> `KotlinCode.userCodeRegion.offset` → `KotlinCompilerError.userCodeOffset` → the durable `err.txt`'s optional
+> `#kzen-offset:<n>` first line → `ScriptStepDefinition.errorOffset` → `ScriptValidator` →
+> `StepValidation.errorOffset` (a fourth wire key on the detached-validation payload, decoded **leniently** —
+> absent means null, so a payload written by a peer predating the field still decodes) → `KotlinExpressionEditor`
+> → the `KotlinCodeArea` marker. `StepExpressionCompiler` **states** where it put the code rather than leaving a
+> reader to find it: it assembles `header + code + footer` and reports `UserCodeRegion(header.length, code.length)`,
+> where an `indexOf(code)` would be wrong for an empty expression and for code that also occurs in an accessor name.
+>
+> Two invariants keep it honest. **The offset is user-relative the moment it leaves the compiler** — the code
+> cache is keyed by a digest of the generated `sourceText`, which fully determines the region, so a cached offset
+> stays valid for every later hit on that signature and no consumer downstream ever needs the generated source.
+> (The `err.txt` header is optional and an entry lacking one decodes as "no position", which is what keeps every
+> already-written entry usable: `work/code-cache/` is user state, not a build artifact, and invalidating it would
+> silently recompile the world.) And **a position that does not land inside the user's region is dropped, not
+> clamped** — K2 routinely emits a cascade artefact against the generated wrapper (an uninferrable type parameter
+> on the wrapping lambda) *ahead* of the real cause, and aiming a caret at the author's text for it would be a
+> lie, so such a diagnostic is reported as a message with no position. Correspondingly the diagnostic **selected**
+> is the first one landing inside the region, falling back to the last when none is attributable
+> (`KotlinSyntaxValidator` clamps instead, because its probe cannot error outside the expression; here it can).
+> The region test is inclusive at the top, since a parse error legitimately points one past the last character.
+> First-in-region rather than last is a real behaviour change that is inert on real documents: swept over the
+> whole notation, every multi-diagnostic case has the out-of-region artefact first and the real error last, so
+> the two selections coincide.
+>
+> `userCodeRegion` is **null everywhere else**, and that is what keeps the seam quiet. `CalculatedColumnEval`
+> (report / Job formula columns) and `TypeAssignability` build `KotlinCode` without one, and the selector
+> short-circuits on null — so those paths' error selection and their `err.txt` format are byte-for-byte what they
+> were. Only `StepExpressionCompiler` ever sets a region.
+>
+> **`IfBranch.condition` is the one gap.** `IfStep` compiles its *branches'* conditions and reports
+> `"Branch N: …"` against **itself**, while a branch is a separate object with its own editor — so it passes no
+> offset, a position there being an index into a different object's text. Re-attributing across objects would
+> need an `errorObjectPath` on `ScriptStepDefinition` and a validation fixpoint that can write a neighbour's entry
+> (`validationIteration` writes one `builder[objectPath]` per step); deliberately not attempted. Highlighting and
+> completion work in that field like anywhere else — only the caret is absent.
+>
+> The message moved with the caret: an expanded card suppresses its own copy of the step's validation line when
+> one of the step's attributes is edited as a Kotlin expression, since the field below says the same thing more
+> specifically. Detection is by attribute metadata (`AttributeWrapperLookup` finding `KotlinExpressionEditor` on
+> the attribute's `editor:`), not a step-type list, so a plugin step declaring that editor is covered with no
+> edit; a collapsed card mounts no editor and keeps showing the line.
 
 > **Script control flow.** The Script flavour has structured control flow —
 > `continue` / `break` / `return` — as **completion signals, not exceptions** (`ScriptControlSignal`:

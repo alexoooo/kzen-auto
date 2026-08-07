@@ -24,7 +24,9 @@ import kotlin.test.assertTrue
 /**
  * Covers the storage coordination of [CachedKotlinCompiler]: a loaded entry's jar must be physically
  * deletable (the loader's jar file handle blocks deletion on Windows until closed), already-handed-out
- * classes must survive the deletion, and LRU eviction must respect budget and recency.
+ * classes must survive the deletion, LRU eviction must respect budget and recency, and a persisted compile
+ * error must come back out of the durable cache exactly as it went in — including the entries written before
+ * the error file carried a position at all.
  *
  * Uses a fake [KotlinCompiler] that assembles a jar of empty classes with the JDK ClassFile API, so no
  * real Kotlin compilation runs.
@@ -70,6 +72,24 @@ class CachedKotlinCompilerStorageTest {
     }
 
 
+    private class FailingFakeCompiler(
+        private val error: KotlinCompilerError
+    ): KotlinCompiler {
+        var compileCount = 0
+
+        override fun compile(
+            kotlinCode: KotlinCode,
+            outputJarFile: Path,
+            classpathLocations: List<Path>,
+            classLoader: ClassLoader
+        ): KotlinCompilerResult {
+            compileCount++
+            Files.createDirectories(outputJarFile.parent)
+            return error
+        }
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private val workUtils = WorkUtils.temporary("cached-kotlin-compiler-storage-test")
 
@@ -85,11 +105,20 @@ class CachedKotlinCompilerStorageTest {
     }
 
 
-    private fun successFile(kotlinCode: KotlinCode): Path {
+    private fun codeDir(kotlinCode: KotlinCode): Path {
         return workUtils.base()
             .resolve("code-cache")
             .resolve(kotlinCode.signature())
-            .resolve("success.txt")
+    }
+
+
+    private fun successFile(kotlinCode: KotlinCode): Path {
+        return codeDir(kotlinCode).resolve("success.txt")
+    }
+
+
+    private fun errorFile(kotlinCode: KotlinCode): Path {
+        return codeDir(kotlinCode).resolve("err.txt")
     }
 
 
@@ -151,6 +180,59 @@ class CachedKotlinCompilerStorageTest {
 
         val refreshed = Files.getLastModifiedTime(successFile(kotlinCode)).toMillis()
         assertTrue(refreshed > staleMillis, "expected refreshed mtime, got $refreshed")
+    }
+
+
+    @Test
+    fun persistedErrorReplaysWithItsOffset() {
+        // Multi-line because compiler messages are, and the offset header must survive being read back with
+        // one alongside it.
+        val compilerError = KotlinCompilerError("Expecting an element\n1.. 5x\n      ^", 6)
+
+        val fakeCompiler = FailingFakeCompiler(compilerError)
+        val compiler = CachedKotlinCompiler(fakeCompiler, workUtils)
+        val kotlinCode = code("PositionedError")
+        val classLoader = javaClass.classLoader
+
+        assertEquals(compilerError, compiler.tryCompile(kotlinCode, classLoader))
+
+        // The second call must come out of err.txt, not out of the compiler.
+        assertEquals(compilerError, compiler.tryCompile(kotlinCode, classLoader))
+        assertEquals(1, fakeCompiler.compileCount)
+    }
+
+
+    @Test
+    fun persistedErrorWithoutPositionWritesNoHeader() {
+        val compilerError = KotlinCompilerError("Unable to resolve something")
+
+        val fakeCompiler = FailingFakeCompiler(compilerError)
+        val compiler = CachedKotlinCompiler(fakeCompiler, workUtils)
+        val kotlinCode = code("UnpositionedError")
+        val classLoader = javaClass.classLoader
+
+        assertEquals(compilerError, compiler.tryCompile(kotlinCode, classLoader))
+        assertEquals(compilerError.error, Files.readString(errorFile(kotlinCode)))
+
+        assertEquals(compilerError, compiler.tryCompile(kotlinCode, classLoader))
+        assertEquals(1, fakeCompiler.compileCount)
+    }
+
+
+    @Test
+    fun errorFileWithoutHeaderDecodesAsPositionless() {
+        // The shape every entry already on disk has: no header line, message from the first byte. Rejecting or
+        // ignoring one would silently recompile a user's entire cache.
+        val compiler = CachedKotlinCompiler(JarWritingFakeCompiler(), workUtils)
+        val kotlinCode = code("HeaderlessError")
+        val message = "Expecting an element\n1.. 5x\n      ^"
+
+        Files.createDirectories(codeDir(kotlinCode))
+        Files.writeString(errorFile(kotlinCode), message)
+
+        assertEquals(
+            KotlinCompilerError(message),
+            compiler.tryCompile(kotlinCode, javaClass.classLoader))
     }
 
 

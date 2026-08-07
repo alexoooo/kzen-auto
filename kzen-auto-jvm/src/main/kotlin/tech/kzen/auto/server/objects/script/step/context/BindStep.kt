@@ -64,7 +64,7 @@ class BindStep(
         // A compile error means the user's expression itself is broken; it becomes this step's validation error.
         val compileError = cachedKotlinCompiler.tryCompile(generatedCode, classLoader)
         if (compileError != null) {
-            return ScriptStepDefinition(null, compileError)
+            return ScriptStepDefinition(null, compileError.error, compileError.userCodeOffset)
         }
 
         val clazz = cachedKotlinCompiler.tryLoad(generatedCode, classLoader)

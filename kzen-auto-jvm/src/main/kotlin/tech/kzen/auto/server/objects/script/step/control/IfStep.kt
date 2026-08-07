@@ -188,7 +188,9 @@ class IfStep(
                 generatedCode, ClassLoaderUtils.dynamicParentClassLoader())
 
             if (compileError != null) {
-                return ScriptStepDefinition(null, "Branch ${index + 1}: $compileError")
+                // No offset: the condition belongs to the BRANCH's own editor, and this definition is the
+                // If step's — a position here would point into a different object's text.
+                return ScriptStepDefinition(null, "Branch ${index + 1}: ${compileError.error}")
             }
         }
 

@@ -89,7 +89,8 @@ class ResultStep(
 
         return ScriptStepDefinition(
             TupleDefinition.ofMain(LogicType(declaredType)),
-            compileError)
+            compileError?.error,
+            compileError?.userCodeOffset)
     }
 
 

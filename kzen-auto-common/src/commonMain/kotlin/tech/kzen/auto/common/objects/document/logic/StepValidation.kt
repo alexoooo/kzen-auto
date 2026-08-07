@@ -5,6 +5,7 @@ package tech.kzen.auto.common.objects.document.logic
 import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.MapExecutionValue
 import tech.kzen.lib.common.exec.NullExecutionValue
+import tech.kzen.lib.common.exec.NumberExecutionValue
 import tech.kzen.lib.common.exec.TextExecutionValue
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 
@@ -23,17 +24,24 @@ import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
  *
  * [warningMessage] is produced only by the Script flavour's context analysis; it simply stays null for Job,
  * which shares this type.
+ *
+ * [errorOffset] locates [errorMessage] within the object's own expression text — a character offset the
+ * editor marks — and is absent whenever the error has no position there. When several findings are joined
+ * into one [errorMessage] the compile error is joined FIRST, so the offset describes the leading part; the
+ * rest of a joined message has no position by nature.
  */
 data class StepValidation(
     val typeMetadata: TypeMetadata?,
     val errorMessage: String?,
-    val warningMessage: String? = null
+    val warningMessage: String? = null,
+    val errorOffset: Int? = null
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private const val typeMetadataKey = "type"
         private const val errorMessageKey = "error"
         private const val warningMessageKey = "warning"
+        private const val errorOffsetKey = "errorOffset"
 
         fun ofMapExecutionValue(executionValue: MapExecutionValue): StepValidation {
             val typeExecutionValue = executionValue[typeMetadataKey]
@@ -77,7 +85,20 @@ data class StepValidation(
                     warningExecutionValue.value
                 }
 
-            return StepValidation(typeMetadata, errorMessage, warningMessage)
+            // Lenient for the same reason as `warning` above.
+            val errorOffsetExecutionValue = executionValue[errorOffsetKey]
+
+            val errorOffset =
+                if (errorOffsetExecutionValue == null || errorOffsetExecutionValue == NullExecutionValue) {
+                    null
+                }
+                else {
+                    (errorOffsetExecutionValue as? NumberExecutionValue)
+                        ?: throw IllegalArgumentException("'$errorOffsetKey' number expected: $executionValue")
+                    errorOffsetExecutionValue.value.toInt()
+                }
+
+            return StepValidation(typeMetadata, errorMessage, warningMessage, errorOffset)
         }
     }
 
@@ -89,7 +110,8 @@ data class StepValidation(
         return MapExecutionValue(mapOf(
             typeMetadataKey to metadataExecutionValue,
             errorMessageKey to ExecutionValue.of(errorMessage),
-            warningMessageKey to ExecutionValue.of(warningMessage)
+            warningMessageKey to ExecutionValue.of(warningMessage),
+            errorOffsetKey to ExecutionValue.of(errorOffset)
         ))
     }
 }

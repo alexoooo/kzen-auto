@@ -3,7 +3,7 @@ package tech.kzen.auto.common.util
 
 /**
  * Platform-agnostic lexical analysis of a Kotlin expression, used to find the in-scope identifiers an
- * expression references and to rewrite a single identifier in place.
+ * expression references, to rewrite a single identifier in place, and to paint the expression in the browser.
  *
  * This is a *lexer*, not a type-resolver: it scans the source respecting Kotlin's lexical grammar — line
  * comments, (nestable) block comments, string literals (normal and raw triple-quoted), char literals,
@@ -16,8 +16,15 @@ package tech.kzen.auto.common.util
  * `foo` or `` `foo` `` reduces to the same key. Map a step name to its content with
  * `ExpressionUtils.identifierContent(ExpressionUtils.escapeKotlinVariableName(name))`.
  *
- * Both [referencedIdentifiers] (the dependency gutter) and [renameIdentifier] (rename refactoring) build on
- * the single [identifierReferences] scan, so they agree by construction.
+ * There are three consumers, and they share **one** scan so their views can never drift apart:
+ * [referencedIdentifiers] (the dependency gutter) and [renameIdentifier] (rename refactoring) build on
+ * [identifierReferences], itself the [TokenKind.Identifier] slice of [tokens]; the client's `KotlinCodeArea`
+ * consumes [tokens] directly, to colour each span and to decide whether the caret sits at a completable
+ * identifier. Adding a fourth view means deriving it from [tokens] too — never writing a second scanner.
+ *
+ * [tokens] guarantees a **contiguous** stream: ascending, non-empty, covering exactly `0 until code.length`.
+ * That is what lets the renderer concatenate the spans and reproduce the input verbatim, so it is a hard
+ * contract, asserted by a property test over every fixture rather than left to inspection.
  */
 object KotlinExpressionAnalyzer {
     //-----------------------------------------------------------------------------------------------------------------
@@ -25,6 +32,32 @@ object KotlinExpressionAnalyzer {
         val start: Int,
         val endExclusive: Int,
         val content: String
+    )
+
+
+    enum class TokenKind {
+        Whitespace,
+        Comment,
+        StringLiteral,
+        CharLiteral,
+        Number,
+        Keyword,
+
+        // A name resolved against the enclosing scope — the only kind identifierReferences reports.
+        Identifier,
+
+        // The selected name of a member access (the `b` of `a.b`, `a?.b`, `a::b`), which names a member of the
+        // receiver rather than anything in scope.
+        Member,
+
+        Operator
+    }
+
+
+    data class Token(
+        val start: Int,
+        val endExclusive: Int,
+        val kind: TokenKind
     )
 
 
@@ -68,17 +101,40 @@ object KotlinExpressionAnalyzer {
 
 
     fun identifierReferences(code: String): List<IdentifierReference> {
-        val results = mutableListOf<IdentifierReference>()
-        scanCode(code, 0, code.length, results)
-        // scan order is already ascending by start; sort defensively so renameIdentifier's single pass is safe
-        results.sortBy { it.start }
-        return results
+        // ascending and non-overlapping by the tokens contract, which renameIdentifier's single pass relies on
+        return tokens(code)
+            .filter { it.kind == TokenKind.Identifier }
+            .map { IdentifierReference(it.start, it.endExclusive, identifierContent(code, it)) }
+    }
+
+
+    /**
+     * Every lexical token of [code], in ascending order, gap-free and covering exactly `0 until code.length` —
+     * a syntax-highlighting backdrop paints one span per token and concatenates them, so a gap or an overlap
+     * would corrupt the text it renders. A string template is chunked rather than emitted whole: the literal
+     * runs up to and including the `$` or `${`, the interpolated code contributes its own tokens, then the
+     * literal resumes.
+     */
+    fun tokens(code: String): List<Token> {
+        val sink = mutableListOf<Token>()
+        scanCode(code, 0, code.length, sink)
+        return sink
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    // Scans code[from until to] in code mode, appending identifier references. Re-entered for `${ … }` templates.
-    private fun scanCode(code: String, from: Int, to: Int, results: MutableList<IdentifierReference>) {
+    // A back-ticked identifier's token spans the back-ticks (so a rename replaces them) while its content drops
+    // them, reducing `foo` and `` `foo` `` to the same key.
+    private fun identifierContent(code: String, token: Token): String {
+        return when (code[token.start]) {
+            '`' -> code.substring(token.start + 1, token.endExclusive - 1)
+            else -> code.substring(token.start, token.endExclusive)
+        }
+    }
+
+
+    // Scans code[from until to] in code mode, appending tokens. Re-entered for `${ … }` templates.
+    private fun scanCode(code: String, from: Int, to: Int, sink: MutableList<Token>) {
         var i = from
         // true when the previous significant token was `.` or `::`, i.e. the next identifier is a member selector
         var afterMemberSelector = false
@@ -86,30 +142,42 @@ object KotlinExpressionAnalyzer {
         while (i < to) {
             val c = code[i]
             when {
-                c.isWhitespace() ->
-                    i++  // whitespace does not break a member-access chain (a . b)
+                c.isWhitespace() -> {
+                    var j = i + 1
+                    while (j < to && code[j].isWhitespace()) {
+                        j++
+                    }
+                    sink.add(Token(i, j, TokenKind.Whitespace))
+                    i = j  // whitespace does not break a member-access chain (a . b)
+                }
 
-                c == '/' && i + 1 < to && code[i + 1] == '/' ->
-                    i = skipLineComment(code, i, to)
+                c == '/' && i + 1 < to && code[i + 1] == '/' -> {
+                    val end = skipLineComment(code, i, to)
+                    sink.add(Token(i, end, TokenKind.Comment))
+                    i = end
+                }
 
-                c == '/' && i + 1 < to && code[i + 1] == '*' ->
-                    i = skipBlockComment(code, i, to)
+                c == '/' && i + 1 < to && code[i + 1] == '*' -> {
+                    val end = skipBlockComment(code, i, to)
+                    sink.add(Token(i, end, TokenKind.Comment))
+                    i = end
+                }
 
                 c == '"' -> {
-                    i = scanString(code, i, to, results)
+                    i = scanString(code, i, to, sink)
                     afterMemberSelector = false
                 }
 
                 c == '\'' -> {
-                    i = skipCharLiteral(code, i, to)
+                    val end = skipCharLiteral(code, i, to)
+                    sink.add(Token(i, end, TokenKind.CharLiteral))
+                    i = end
                     afterMemberSelector = false
                 }
 
                 c == '`' -> {
                     val end = backtickEnd(code, i, to)
-                    if (!afterMemberSelector) {
-                        results.add(IdentifierReference(i, end, code.substring(i + 1, end - 1)))
-                    }
+                    sink.add(Token(i, end, if (afterMemberSelector) TokenKind.Member else TokenKind.Identifier))
                     i = end
                     afterMemberSelector = false
                 }
@@ -119,16 +187,20 @@ object KotlinExpressionAnalyzer {
                     while (j < to && isIdentifierPart(code[j])) {
                         j++
                     }
-                    val content = code.substring(i, j)
-                    if (!afterMemberSelector && content !in hardKeywords) {
-                        results.add(IdentifierReference(i, j, content))
+                    val kind = when {
+                        code.substring(i, j) in hardKeywords -> TokenKind.Keyword
+                        afterMemberSelector -> TokenKind.Member
+                        else -> TokenKind.Identifier
                     }
+                    sink.add(Token(i, j, kind))
                     i = j
                     afterMemberSelector = false
                 }
 
-                c.isDigit() -> {
-                    i = skipNumber(code, i, to)
+                isDigit(c) -> {
+                    val end = skipNumber(code, i, to)
+                    sink.add(Token(i, end, TokenKind.Number))
+                    i = end
                     afterMemberSelector = false
                 }
 
@@ -138,21 +210,25 @@ object KotlinExpressionAnalyzer {
                 // dependency edge and leave the expression silently un-rewritten by a rename of `Count`.
                 // The trailing `<` of `..<` falls through to the catch-all below, which is a no-op here.
                 c == '.' && i + 1 < to && code[i + 1] == '.' -> {
+                    sink.add(Token(i, i + 2, TokenKind.Operator))
                     afterMemberSelector = false
                     i += 2
                 }
 
                 c == '.' -> {
+                    sink.add(Token(i, i + 1, TokenKind.Operator))
                     afterMemberSelector = true
                     i++
                 }
 
                 c == ':' && i + 1 < to && code[i + 1] == ':' -> {
+                    sink.add(Token(i, i + 2, TokenKind.Operator))
                     afterMemberSelector = true
                     i += 2
                 }
 
                 else -> {
+                    sink.add(Token(i, i + 1, TokenKind.Operator))
                     afterMemberSelector = false
                     i++
                 }
@@ -161,10 +237,12 @@ object KotlinExpressionAnalyzer {
     }
 
 
-    // Scans a string literal starting at the opening `"` (single or triple), collecting references from its
-    // template interpolations. Returns the index past the closing quote(s).
-    private fun scanString(code: String, start: Int, to: Int, results: MutableList<IdentifierReference>): Int {
+    // Scans a string literal starting at the opening `"` (single or triple), emitting it as chunks split around
+    // its template interpolations, whose contents are scanned as code. Returns the index past the closing
+    // quote(s).
+    private fun scanString(code: String, start: Int, to: Int, sink: MutableList<Token>): Int {
         val triple = start + 2 < to && code[start + 1] == '"' && code[start + 2] == '"'
+        var chunkStart = start
         var i = if (triple) start + 3 else start + 1
 
         while (i < to) {
@@ -172,6 +250,7 @@ object KotlinExpressionAnalyzer {
 
             if (triple) {
                 if (c == '"' && i + 2 < to && code[i + 1] == '"' && code[i + 2] == '"') {
+                    sink.add(Token(chunkStart, i + 3, TokenKind.StringLiteral))
                     return i + 3
                 }
             }
@@ -181,9 +260,11 @@ object KotlinExpressionAnalyzer {
                     continue
                 }
                 if (c == '"') {
+                    sink.add(Token(chunkStart, i + 1, TokenKind.StringLiteral))
                     return i + 1
                 }
                 if (c == '\n') {
+                    sink.add(Token(chunkStart, i + 1, TokenKind.StringLiteral))
                     return i + 1  // unterminated single-line string; bail
                 }
             }
@@ -191,20 +272,23 @@ object KotlinExpressionAnalyzer {
             if (c == '$' && i + 1 < to) {
                 val next = code[i + 1]
                 if (next == '{') {
+                    sink.add(Token(chunkStart, i + 2, TokenKind.StringLiteral))
                     val innerEnd = templateBraceEnd(code, i + 2, to)
-                    scanCode(code, i + 2, innerEnd, results)
+                    scanCode(code, i + 2, innerEnd, sink)
+                    chunkStart = innerEnd  // the closing `}` opens the next literal chunk
                     i = if (innerEnd < to) innerEnd + 1 else to
                     continue
                 }
                 if (isIdentifierStart(next)) {
+                    sink.add(Token(chunkStart, i + 1, TokenKind.StringLiteral))
                     var j = i + 2
                     while (j < to && isIdentifierPart(code[j])) {
                         j++
                     }
                     val content = code.substring(i + 1, j)
-                    if (content !in hardKeywords) {
-                        results.add(IdentifierReference(i + 1, j, content))
-                    }
+                    val kind = if (content in hardKeywords) TokenKind.Keyword else TokenKind.Identifier
+                    sink.add(Token(i + 1, j, kind))
+                    chunkStart = j
                     i = j
                     continue
                 }
@@ -213,6 +297,10 @@ object KotlinExpressionAnalyzer {
             i++
         }
 
+        // the trailing chunk is empty when an unterminated `${` ran its interpolated code to the end
+        if (chunkStart < to) {
+            sink.add(Token(chunkStart, to, TokenKind.StringLiteral))
+        }
         return to
     }
 
@@ -367,7 +455,7 @@ object KotlinExpressionAnalyzer {
             if (isIdentifierPart(c)) {
                 i++
             }
-            else if (c == '.' && i + 1 < to && code[i + 1].isDigit()) {
+            else if (c == '.' && i + 1 < to && isDigit(code[i + 1])) {
                 i++
             }
             else {
@@ -384,6 +472,17 @@ object KotlinExpressionAnalyzer {
 
 
     private fun isIdentifierPart(c: Char): Boolean {
-        return isIdentifierStart(c) || c in '0'..'9'
+        return isIdentifierStart(c) || isDigit(c)
+    }
+
+
+    // ASCII-only, deliberately NOT Char.isDigit(), which is Unicode-aware and accepts every Nd-category digit
+    // (Arabic-Indic `١`, Devanagari `१`, fullwidth `１`, …). Kotlin's own number literals are ASCII, and this
+    // lexer's identifier model is ASCII, so a Unicode-aware digit test here would disagree with isIdentifierPart:
+    // scanCode would enter the number branch on a character skipNumber then refuses to consume, emitting a
+    // zero-width token and never advancing — an infinite loop that hangs the browser tab, since the editor
+    // re-lexes on every keystroke. Keeping the one notion of "digit" makes that unrepresentable.
+    private fun isDigit(c: Char): Boolean {
+        return c in '0'..'9'
     }
 }

@@ -140,7 +140,7 @@ object StepExpressionSupport {
 
         val error = compiler.tryCompile(generatedCode, classLoader)
         check(error == null) {
-            "Unable to compile: $error - $generatedCode"
+            "Unable to compile: ${error?.error} - $generatedCode"
         }
 
         val clazz = compiler.tryLoad(generatedCode, classLoader)

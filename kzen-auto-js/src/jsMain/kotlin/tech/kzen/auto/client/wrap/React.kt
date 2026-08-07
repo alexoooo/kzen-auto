@@ -7,6 +7,8 @@ import mui.material.InputBaseProps
 import mui.material.InputLabelProps
 import mui.material.TextFieldProps
 import react.*
+import react.dom.html.HTMLAttributes
+import web.html.HTMLElement
 import kotlin.reflect.KClass
 
 
@@ -116,6 +118,18 @@ inline var TextFieldProps.inputLabelSlotProps: InputLabelProps
     set(value) {
         val slotProps = asDynamic().slotProps ?: unsafeJso()
         slotProps.inputLabel = value
+        asDynamic().slotProps = slotProps
+    }
+
+
+// The `htmlInput` slot is the <input>/<textarea> element itself, one level below `input` (which is the
+// InputBase wrapping it). It is the only route to a plain HTML attribute that MUI exposes no prop of its
+// own for — `spellcheck`, `autocomplete` — now that MUI 9 has removed the legacy `inputProps`.
+inline var TextFieldProps.htmlInputSlotProps: HTMLAttributes<HTMLElement>
+    get() = TODO("Prop is write-only!")
+    set(value) {
+        val slotProps = asDynamic().slotProps ?: unsafeJso()
+        slotProps.htmlInput = value
         asDynamic().slotProps = slotProps
     }
 

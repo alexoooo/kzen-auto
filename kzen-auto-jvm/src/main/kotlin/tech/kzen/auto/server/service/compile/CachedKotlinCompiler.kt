@@ -29,6 +29,13 @@ class CachedKotlinCompiler(
         private const val errorFile = "err.txt"
         private const val successFile = "success.txt"
 
+        // Optional FIRST line of [errorFile], written only when the error carries a position: the rest of the
+        // file is the message verbatim. A header line rather than a suffix or a sidecar because compiler
+        // messages are themselves multi-line, so only the first line can be safely reserved. An entry without
+        // it decodes as "no position", which is what keeps every already-written cache entry usable — this is
+        // a user work directory, and invalidating it would silently recompile everything.
+        private const val errorOffsetHeaderPrefix = "#kzen-offset:"
+
         // Upper bound on hot loaded expression classes held in memory (see [loadedClasses]). The working set of
         // distinct expressions live at once is the target; over a long-lived process this stays far below the
         // total distinct expressions ever compiled.
@@ -93,19 +100,41 @@ class CachedKotlinCompiler(
     }
 
 
-    private fun writeErrorFile(codeDir: Path, errorMessage: String) {
-        Files.write(errorFile(codeDir), errorMessage.toByteArray())
+    private fun writeErrorFile(codeDir: Path, error: KotlinCompilerError) {
+        val content = when (val userCodeOffset = error.userCodeOffset) {
+            null -> error.error
+            else -> "$errorOffsetHeaderPrefix$userCodeOffset\n${error.error}"
+        }
+        Files.write(errorFile(codeDir), content.toByteArray())
     }
 
 
-    private fun readErrorFile(codeDir: Path): String? {
+    private fun readErrorFile(codeDir: Path): KotlinCompilerError? {
         val errorFile = errorFile(codeDir)
 
         if (!Files.exists(errorFile)) {
             return null
         }
 
-        return Files.readString(errorFile, Charsets.UTF_8)
+        val content = Files.readString(errorFile, Charsets.UTF_8)
+
+        if (!content.startsWith(errorOffsetHeaderPrefix)) {
+            return KotlinCompilerError(content)
+        }
+
+        val headerEndIndex = content.indexOf('\n')
+        if (headerEndIndex == -1) {
+            return KotlinCompilerError(content)
+        }
+
+        // Only a well-formed header is consumed; anything else is a message that merely happens to start with
+        // the prefix, and must survive intact.
+        val userCodeOffset = content
+            .substring(errorOffsetHeaderPrefix.length, headerEndIndex)
+            .toIntOrNull()
+            ?: return KotlinCompilerError(content)
+
+        return KotlinCompilerError(content.substring(headerEndIndex + 1), userCodeOffset)
     }
 
 
@@ -197,13 +226,13 @@ class CachedKotlinCompiler(
     fun tryCompile(
         kotlinCode: KotlinCode,
         classLoader: ClassLoader
-    ): String? {
+    ): KotlinCompilerError? {
         val signature = kotlinCode.signature()
 
         val lock = compileLocks.get(signature)
 
         var compiledNew = false
-        val error: String?
+        val error: KotlinCompilerError?
 
         lock.lock()
         try {
@@ -246,7 +275,7 @@ class CachedKotlinCompiler(
         kotlinCode: KotlinCode,
         codeDir: Path,
         classLoader: ClassLoader
-    ): String? {
+    ): KotlinCompilerError? {
         val outputJar = outputJar(codeDir, kotlinCode.mainClassName)
 
         val result = kotlinCompiler.compile(
@@ -267,11 +296,11 @@ class CachedKotlinCompiler(
             // failures. Persisting one would poison this signature's DURABLE cache entry, replaying the phantom
             // error on every later compile of the same source. Leave the dir partial (no err/success marker)
             // instead: the next request takes the recompile-partial branch and re-derives the truth.
-            return result.error
+            return result
         }
 
-        writeErrorFile(codeDir, result.error)
-        return result.error
+        writeErrorFile(codeDir, result)
+        return result
     }
 
 

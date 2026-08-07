@@ -123,7 +123,7 @@ class DoWhileStep(
         val code = generateConditionCode(scope)
         val error = cachedKotlinCompiler.tryCompile(code, ClassLoaderUtils.dynamicParentClassLoader())
         if (error != null) {
-            return ScriptStepDefinition(null, error)
+            return ScriptStepDefinition(null, error.error, error.userCodeOffset)
         }
 
         return ScriptStepDefinition.of(TupleDefinition.empty)

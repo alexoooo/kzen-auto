@@ -290,7 +290,7 @@ class ForEachStep(
                 return null
 
             is ForEachItemsExpression.Attempt.Invalid ->
-                return ScriptStepDefinition(null, attempt.error)
+                return ScriptStepDefinition(null, attempt.error, attempt.errorOffset)
 
             is ForEachItemsExpression.Attempt.Valid ->
                 Unit

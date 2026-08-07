@@ -76,11 +76,18 @@ object StepExpressionCompiler {
                 "}"
             }
 
-        val body =
-            if (probe) {
-                """
+        // The user's code is concatenated between an explicit header and footer rather than interpolated into
+        // one template, so the generated source states WHERE the code went: [KotlinCode.UserCodeRegion] is
+        // computed from the header's length, which is what lets a compiler diagnostic's position be mapped
+        // back to an offset in the user's own text. Searching for the code instead would be wrong for an
+        // empty expression and for one that also occurs in an accessor name.
+        val bodyHeader: String
+        val bodyFooter: String
+        if (probe) {
+            bodyHeader = """
     val $probePropertyName = { run {
-$code
+"""
+            bodyFooter = """
     } }
 
     override fun evaluate(predecessorValues: List<Any?>): $evaluateReturnType {
@@ -88,31 +95,36 @@ $code
         return $probePropertyName()
     }
 """
-            }
-            else {
-                """
+        }
+        else {
+            bodyHeader = """
     override fun evaluate(predecessorValues: List<Any?>): $evaluateReturnType {
         this.predecessorValues = predecessorValues
         return run {
-$code
+"""
+            bodyFooter = """
         }
     }
 """
-            }
+        }
 
-        val generatedCode = """
+        val header = """
 $imports
 
 class $mainClassName: ${ StepExpression::class.java.simpleName } {
     private var predecessorValues: List<Any?> = listOf()
 
     ${accessors.joinToString("\n")}
-$body
+""" + bodyHeader
+
+        val footer = bodyFooter + """
 }
 """
+
         return KotlinCode(
             mainClassName,
-            generatedCode)
+            header + code + footer,
+            KotlinCode.UserCodeRegion(header.length, code.length))
     }
 
 

@@ -58,7 +58,7 @@ class DisposeAtSettleStep(
             generatedCode, ClassLoaderUtils.dynamicParentClassLoader())
 
         if (compileError != null) {
-            return ScriptStepDefinition(null, compileError)
+            return ScriptStepDefinition(null, compileError.error, compileError.userCodeOffset)
         }
 
         return ScriptStepDefinition.empty

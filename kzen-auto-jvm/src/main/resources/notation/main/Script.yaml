@@ -6,7 +6,7 @@ main:
 
 main.steps/Formula:
   is: FormulaStep
-  code: ' 1.. 5'
+  code: listOf(1, 2, 3, 4, 5)
 
 main.steps/Bind:
   is: BindStep

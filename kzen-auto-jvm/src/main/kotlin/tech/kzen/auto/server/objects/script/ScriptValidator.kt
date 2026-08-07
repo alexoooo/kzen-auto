@@ -252,7 +252,8 @@ class ScriptValidator(
                         }
 
                     builder[objectPath] = StepValidation(
-                        typeMetadata, valueDefinition.validationError)
+                        typeMetadata, valueDefinition.validationError,
+                        errorOffset = valueDefinition.errorOffset)
                 }
             }
             return builder

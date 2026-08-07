@@ -408,7 +408,164 @@ Debounced attribute submits go through the shared `DebouncedSubmitter` (`objects
 - **No `.pending()` on a lodash debounce.** The bundled lodash's debounced function has no `.pending()` — it throws, and inside a `util.async` Promise the throw is swallowed, presenting as a stuck-busy indicator. `DebouncedSubmitter` detects a keystroke-re-armed-mid-commit with an explicit `scheduleSequence` counter instead; the `pending()` binding was removed from `wrap/Lodash.kt` as dead + broken. Don't reintroduce it.
 - **Lossy round-trips compare semantically, and never overwrite user input.** Where the source of truth is a parsed model and deparse is lossy (the raw-YAML editor: `unparseDocument` drops comments/whitespace/key order), the "modified" check must be `parse(editorValue) != serverNotation` — not text equality — and the controller must never write a regenerated text form back into the editor, even on save success. Unparseable input counts as modified; external updates refresh the editor only when the user has no pending edits.
 
-## 8. Critical files to read first
+## 8. `KotlinCodeArea` — the syntax-highlighted expression field
+
+`objects/document/common/edit/KotlinCodeArea.kt` is the editing surface behind a Script's Kotlin expression
+attributes: syntax colouring, a solid marker under the token a compile error points at, and caret-anchored
+completion over the in-scope step names. It is **presentational** — no store coupling, everything in and out
+through props — and `KotlinExpressionEditor` (`document/script/display/edit/`) is its only consumer today; the
+Report / Job formula editors can adopt it unchanged. The server half of the error position it marks is in
+[`architecture.md` § 1](architecture.md#1-paradigm-system) (the expression-error-positions note).
+
+### A transparent textarea over a painted backdrop
+
+```
+div (position: relative)
+  pre.backdrop     aria-hidden, pointer-events: none — the coloured spans + the caret anchor
+  TextField        MUI outlined multiline; its textarea has transparent text and a visible caret
+  pre              the validation message, pre-wrap monospace (compiler messages are already multi-line)
+  completion list  absolute, placed off the caret anchor, inside a ClickAwayListener
+```
+
+The field is MUI's ordinary outlined multiline `TextField` with its native `<textarea>` given
+`color: transparent` and a visible `caretColor`, over a `<pre>` backdrop that paints the coloured spans in
+exactly the same metrics. The textarea stays the sole focusable and accessible control and the backdrop is
+`aria-hidden` with no pointer events, so caret, selection, `TextareaAutosize` growth, the floating label and
+the error outline all remain MUI's — there is no custom editing model to keep correct, which is the whole
+argument for the technique. (A `contenteditable` would have made caret, selection, IME and undo this
+component's problem instead of the platform's.)
+
+The spans come from `KotlinExpressionAnalyzer.tokens(value)` in **kzen-auto-common** — the same single scan
+the dependency gutter and rename refactoring read (`architecture.md` § 1), so what the field paints cannot
+disagree with what a reference *means*. An identifier naming something in scope gets a distinct
+resolved-reference colour; an unknown name is left undecorated and never flagged, because `val x = 1; x + 1`
+is a perfectly good expression whose `x` resolves to nothing the client can see. The decoration is a hint,
+never a claim.
+
+**No editor library.** CodeMirror 6 would have given a gutter, lint tooltips and a completion widget for
+free, and was rejected on four grounds: ~6 npm packages into a tree that declares six in total and carries a
+documented supply-chain-pin burden (umbrella `AGENTS.md` § *npm supply-chain alerts*); a set of Kotlin/JS
+`external` declarations to write and re-validate on every wrappers bump (§5's 2026.x catalogue is the
+precedent); `useCommonJs()` is load-bearing and constrains the module format; and **no official CM6 Kotlin
+mode exists** — it would run the legacy `clike` mode, strictly worse than the exact lexer already sitting in
+commonMain. The overlay costs one component and no dependencies.
+
+### Alignment is measured, never restated
+
+`componentDidMount` / `componentDidUpdate` and a `ResizeObserver` on the textarea copy `font-family`,
+`font-size`, `font-weight`, `line-height`, `letter-spacing`, `tab-size`, `white-space`, `word-break`,
+`overflow-wrap` and `padding` off `getComputedStyle(textarea)` onto the backdrop, then set its `left`/`top`
+from `getBoundingClientRect()` deltas and its `width`/`height` from the textarea's `clientWidth`/`clientHeight`
+(its padding box, which the backdrop matches by being border-less and `border-box` sized).
+
+Measured because **MUI owns both halves of that geometry and moves them between versions** — the input font is
+set through `sx`, the padding through the theme — so a hardcoded padding table would misalign silently on the
+next bump. That is the same churn the MUI 9 slotProps migration forced on props, which `wrap/React.kt`'s
+`inputSlotProps` bridge absorbs (§5); here it is absorbed by never naming a length the browser could be asked
+for instead.
+
+Two details inside the measurement:
+
+- **Rect deltas, not `offsetLeft`/`offsetTop`.** The textarea's own offsets are relative to *its*
+  offsetParent (MUI's `.MuiInputBase-root`), which is not the backdrop's containing block. The origin is
+  therefore `textAreaRect − containingBlockRect − containingBlock.clientLeft/clientTop`, all read in one
+  frame — the `client*` terms reducing the containing block's border box to the padding box that `left`/`top`
+  resolve against. Exact wherever the theme puts either wrapper.
+- **The `ResizeObserver` is not redundant with `componentDidUpdate`.** `TextareaAutosize` grows the field
+  from its own measurement pass, which does not re-render this component, so lifecycle alone leaves the
+  backdrop at the previous line count's height. It must observe the **visible** textarea — MUI's `inputRef`,
+  threaded in as the `textAreaRef` prop — and not `TextareaAutosize`'s hidden `aria-hidden` shadow sibling,
+  which is why the ref is threaded rather than the element queried.
+
+### Five things that otherwise look broken
+
+The first three are inherent to the technique; the last two are MUI/React specifics the implementation found.
+
+1. **Selection.** A textarea's selection highlight paints *over* the backdrop, hiding the coloured text — so
+   `::selection` on the input gets a semi-transparent background and the colours show through it.
+2. **Trailing newline.** `<pre>` gives a trailing `\n` no line box of its own, so the last (empty) line goes
+   unpainted and the caret sits past the end of the backdrop. A zero-width sentinel closes the painted text;
+   it shifts nothing when the text does not end in a newline.
+3. **Scroll.** MUI multiline autosizes and so normally never scrolls, but `scrollTop`/`scrollLeft` are
+   mirrored anyway — it is the difference between "usually fine" and correct. Through the **native**
+   `onscroll` handler on the element, not React's `onScroll`, which does not bubble and so cannot be caught
+   on the `TextField`. It could go on the element's own React props through `htmlInputSlotProps`, but the
+   component already holds the element imperatively for the `ResizeObserver` below, so the handler is set
+   in the same place rather than through a second mechanism.
+4. **Paint order.** The backdrop must render **before** the `TextField`, not after. The caret and the
+   selection highlight are drawn by the textarea, and an overlay painted after it covers both.
+5. **`-webkit-text-fill-color`.** MUI fills a *disabled* input through that property, which overrides
+   `color` — so without zeroing it too, a disabled field prints a second, grey copy of the text on top of the
+   backdrop. (Relatedly, the transparent text is set via `sx { "& .MuiInputBase-input" { … } }` rather than
+   `inputSlotProps`: `slotProps.input` is the `InputBase`, not the native element.)
+
+### The backdrop does double duty as the caret mirror
+
+The completion list is placed by rendering a **zero-width `<span>` at the caret index inside the backdrop**
+and measuring it. The backdrop already renders the same glyphs in the same metrics *by construction*, so a
+position read out of it cannot drift from what the user sees — no second mirror div to keep in step, no
+dependency, and no arithmetic over line lengths. The list's `left`/`top` are written straight to the element
+during the commit phase rather than through state, so it is positioned in the frame it first paints; when the
+anchor has no layout box the inline overrides come off and the stylesheet's below-the-field fallback applies.
+
+The anchor is a **childless** inline element, not one holding a zero-width character: U+200B offers a
+soft-wrap opportunity and U+2060 removes one, either of which could wrap the backdrop where the textarea does
+not. An empty inline box adds no break opportunity at all, so the painted text is identical whether or not
+the list is open.
+
+The list itself takes **no focus** — plain non-focusable rows, driven entirely from the textarea's own
+keyboard handlers, wrapped in `ClickAwayListener` with `mouseEvent = onMouseDown` for the layout-shift-on-blur
+reason `StepReferenceController.renderPopover` documents (import the wrapper from
+`wrap/material/clickAwayListener.kt`, §5). A `MenuList` would take the caret out of the field, stopping the
+user typing mid-completion and fighting the caret restore an accept performs.
+
+### The end-of-text gap bites twice
+
+`KotlinExpressionAnalyzer.tokens` covers exactly `0 until code.length`, contiguously — a hard contract it
+asserts by property test, and what lets the backdrop concatenate the spans and reproduce the input verbatim.
+The consequence is easy to miss: **index `length` belongs to no span.** That is exactly where the caret sits
+in an empty field, and exactly where a parse error lands — `1.. 5x` reports column 7 of a 6-character line,
+i.e. the newline.
+
+So the error marker *and* the caret anchor each need an explicit end-of-text branch, rendered after the last
+token span: a blank-advance glyph carrying the underline, and the anchor. **It bit both times.** Without the
+marker branch the feature's own headline case (`1.. 5x`) drew nothing at all; without the anchor branch the
+completion list silently fell back to below-the-field whenever the caret sat at the end of the text, which for
+a short expression is most of the time. (Correspondingly there is no
+"single character" fallback for an offset with no containing token — the only in-range offset without one *is*
+`length`, so that case and end-of-text are one branch.)
+
+Otherwise the marked span is the error offset extended to the end of the token containing it, underlined with
+a solid 2px rule in MUI's `error.main`, offset 2px clear of the baseline and with `textDecorationSkipInk:
+none` — without which the rule breaks around descenders and reads as a rendering fault rather than a marker.
+The marked range and the caret anchor each begin at an arbitrary index, so a token is split into runs painted
+the same colour.
+
+**Solid, not wavy, and the textarea carries `spellcheck="false"` — the two are the same finding.** A red wavy
+underline is what every browser draws under a misspelled word, so as a compiler marker it reads as "not in the
+dictionary". Worse, the browser was drawing its own: *the textarea's glyphs are transparent, but the spelling
+squiggle under them is not*, so every identifier the dictionary doesn't know — `listOf`, and most step names —
+wore a red wavy underline of exactly the marker's colour and style, in a field whose content is code. Killing
+the spellcheck removes the impostor; going solid keeps the real marker from being read as one. The attribute
+goes on through `slotProps.htmlInput` (`wrap/React.kt`'s `htmlInputSlotProps`) — the `htmlInput` slot is the
+element itself, one level below `input`, which is the InputBase wrapping it.
+
+**The marker is withheld whenever the offset could describe different text.** `errorRange` is passed down only
+when the buffer equals the last server value **and** the validation pass has settled. Buffer equality alone is
+not enough: `ScriptValidationStore.refresh` clears `loaded` but leaves `scriptValidation` standing, and
+`ScriptStore.onClientState` publishes the new notation — so `serverValue` catches up — before the refresh
+returns, leaving a whole round trip in which `value == serverValue` while the offset still describes the
+previous text. The message stays on screen throughout; only the caret goes, because a caret under the wrong
+token is worse than none (the `ExpressionValidationIndicator` pulse covers the transient).
+
+### Cost model: expression scale, deliberately
+
+Every keystroke re-lexes the whole value and re-renders every span — the backdrop is a second full render of
+the text. That is free at expression scale (tens to hundreds of characters) and would not be at file scale,
+which is why this is **not** offered as a general-purpose editor: the raw-YAML surface in the same package
+(`YamlEditor`) stays a plain textarea with a synced line-number gutter.
+
+## 9. Critical files to read first
 
 If you're starting work on the JS client cold:
 

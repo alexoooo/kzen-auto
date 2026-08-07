@@ -50,8 +50,11 @@ object ForEachItemsExpression {
          * The expression cannot be used. [ForEachStep] reports [error] as its validation error (it owns the
          * editor the user must fix); [ForEachItemBinding] reports NO error but still publishes a type, so
          * the body keeps validating and showing its own problems instead of a cascade of "Unresolved".
+         *
+         * [errorOffset] is the compiler's position within the user's expression, absent for a finding this
+         * object derives itself (an unset or non-iterable expression is about the whole of it).
          */
-        data class Invalid(val error: String): Attempt
+        data class Invalid(val error: String, val errorOffset: Int? = null): Attempt
 
         /** Usable; [elementType] is the loop variable's type. */
         data class Valid(val elementType: TypeMetadata): Attempt
@@ -97,7 +100,7 @@ object ForEachItemsExpression {
 
         val compileError = cachedKotlinCompiler.tryCompile(generatedCode, classLoader)
         if (compileError != null) {
-            return Attempt.Invalid(compileError)
+            return Attempt.Invalid(compileError.error, compileError.userCodeOffset)
         }
 
         val clazz = cachedKotlinCompiler.tryLoad(generatedCode, classLoader)

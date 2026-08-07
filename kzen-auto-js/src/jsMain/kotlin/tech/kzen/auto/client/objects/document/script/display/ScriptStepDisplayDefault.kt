@@ -22,6 +22,7 @@ import tech.kzen.lib.common.exec.*
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.structure.metadata.ObjectMetadata
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.reflect.Reflect
@@ -53,6 +54,10 @@ external interface ScriptStepDisplayDefaultState: ScriptStepDisplayBaseState {
     // True when this step's object has attribute-level definition failures — surfaced per-field by the attribute
     // editors — so the (redundant, less specific) step-level validation message is suppressed in the body.
     var hasFieldDefinitionError: Boolean?
+
+    // True when one of this step's attributes is edited as a Kotlin expression, which prints the step's
+    // validation message under itself and marks the offending token — so the body suppresses its own copy.
+    var hasExpressionField: Boolean?
 
     // The run-scoped Context declarations this step carries, badged by the header. Derived HERE rather than in
     // StepHeader because this component already owns the ClientState subscription and the value-equality guard
@@ -112,6 +117,11 @@ class ScriptStepDisplayDefault(
         // Read straight off notation for the binds badge's tooltip. The nullable AttributePath overload,
         // because a step that owns no resource has no such attribute (the AttributeName overload throws).
         private val closePolicyAttributePath = AttributePath.ofName(AttributeName("closePolicy"))
+
+        // The Script flavour's Kotlin-expression field editor, named by an attribute's `editor:` metadata.
+        // Self-reference within the Script display: this card and that editor are the two halves of one
+        // decision — the field renders a step's validation message inline, so the card must not repeat it.
+        private val expressionEditorName = ObjectName("KotlinExpressionEditor")
 
         fun statusBorderColor(
             traceState: StepTrace.State,
@@ -256,6 +266,13 @@ class ScriptStepDisplayDefault(
             .failures.map[props.common.objectLocation]
             ?.attributeErrors?.isNotEmpty() == true
 
+        // Attribute-definition inspection, not a step-type list: any object whose notation names the
+        // expression editor on an attribute gets the field-level message, including one a plugin declares.
+        val hasExpressionField = objectMetadata.attributes.map.values.any {
+            AttributeWrapperLookup.wrapperName(it, AttributeWrapperLookup.editorAttributePath) ==
+                    expressionEditorName
+        }
+
         val graphNotation = graphStructure.graphNotation
         val stepLocation = props.common.objectLocation
 
@@ -303,6 +320,7 @@ class ScriptStepDisplayDefault(
         if (state.objectMetadata == objectMetadata &&
             state.summaryAttributeNames == summaryAttributeNames &&
             state.hasFieldDefinitionError == hasFieldDefinitionError &&
+            state.hasExpressionField == hasExpressionField &&
             state.bindsContext == bindsContext &&
             state.closePolicy == closePolicy &&
             state.bindsExported == bindsExported &&
@@ -318,6 +336,7 @@ class ScriptStepDisplayDefault(
             this.objectMetadata = objectMetadata
             this.summaryAttributeNames = summaryAttributeNames
             this.hasFieldDefinitionError = hasFieldDefinitionError
+            this.hasExpressionField = hasExpressionField
             this.bindsContext = bindsContext
             this.closePolicy = closePolicy
             this.bindsExported = bindsExported
@@ -617,10 +636,13 @@ class ScriptStepDisplayDefault(
     }
 
 
+    // NB: reached from the EXPANDED branch only — a collapsed card mounts no editor, so nothing below it can
+    // be saying the same thing and the suppressions never apply there.
     private fun ChildrenBuilder.renderValidation() {
-        // Suppressed when the attribute editors are already showing this step's definition failure(s) per-field:
-        // the step-level message (e.g. "Not found") is the same root cause, less specifically.
-        if (state.hasFieldDefinitionError == true) {
+        // Suppressed when a field below already says this, more specifically: the attribute editors surface a
+        // definition failure per-field (the step-level "Not found" is the same root cause), and a Kotlin
+        // expression field prints the step's validation message under itself, marked at the offending token.
+        if (state.hasFieldDefinitionError == true || state.hasExpressionField == true) {
             return
         }
 
