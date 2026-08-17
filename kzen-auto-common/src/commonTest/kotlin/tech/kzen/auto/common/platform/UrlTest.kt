@@ -164,4 +164,51 @@ class UrlTest {
         val map = mutableMapOf(Url.of("https://example.com/k") to "v")
         assertEquals("v", map[Url.of("https://example.com/k")], "Map<Url, _> lookup missed an equal key")
     }
+
+
+    @Test
+    fun parentDropsOnePathSegment() {
+        assertEquals(Url.of("https://example.com/a"), Url.of("https://example.com/a/b").parent())
+        assertEquals(Url.of("https://example.com"), Url.of("https://example.com/a").parent())
+    }
+
+
+    @Test
+    fun parentIgnoresATrailingSeparator() {
+        assertEquals(Url.of("https://example.com"), Url.of("https://example.com/a/").parent())
+    }
+
+
+    @Test
+    fun parentIsNullWithNothingToClimb() {
+        assertNull(Url.of("https://example.com").parent())
+        assertNull(Url.of("mailto:user@example.com").parent())
+    }
+
+
+    @Test
+    fun parentClimbsAnOpaquePathThatHasSeparators() {
+        assertEquals(Url.of("jdbc:h2:file:./work"), Url.of("jdbc:h2:file:./work/foo").parent())
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    @Test
+    fun fileNameIsTheLastSegment() {
+        assertEquals("data.csv", Url.of("https://example.com/a/data.csv").fileName())
+        assertEquals("foo", Url.of("jdbc:h2:file:./work/foo").fileName())
+    }
+
+
+    @Test
+    fun fileNameWithNoSeparatorIsTheWholeLocation() {
+        assertEquals("mailto:user@example.com", Url.of("mailto:user@example.com").fileName())
+    }
+
+
+    @Test
+    fun fileNameKeepsAQueryAttached() {
+        // Documented limitation, not an oversight — narrowing it would reclassify query-bearing urls.
+        assertEquals("data.csv?v=2", Url.of("https://example.com/a/data.csv?v=2").fileName())
+    }
 }

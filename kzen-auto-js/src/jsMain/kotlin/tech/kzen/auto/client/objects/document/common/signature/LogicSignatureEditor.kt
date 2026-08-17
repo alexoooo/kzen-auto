@@ -1,13 +1,10 @@
 package tech.kzen.auto.client.objects.document.common.signature
 
 import emotion.react.css
-import js.objects.unsafeJso
 import mui.material.IconButton
 import mui.material.Size
 import mui.material.Switch
 import mui.material.TextField
-import mui.material.ToggleButton
-import mui.system.sx
 import react.ChildrenBuilder
 import react.Props
 import react.ReactNode
@@ -16,7 +13,8 @@ import react.dom.events.DragEvent
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
 import react.dom.onChange
-import tech.kzen.auto.client.objects.document.StageErrorIndicator
+import tech.kzen.auto.client.objects.document.StageFloatStack
+import tech.kzen.auto.client.objects.document.stageFloatRow
 import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.objects.document.common.dragdrop.dragHandle
 import tech.kzen.auto.client.objects.document.common.dragdrop.dropIndicator
@@ -35,9 +33,9 @@ import tech.kzen.auto.client.util.ClientInputUtils
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.installContextType
-import tech.kzen.auto.client.wrap.select.SelectOption
-import tech.kzen.auto.client.wrap.select.muiAutocompleteField
 import tech.kzen.auto.client.wrap.setState
+import tech.kzen.auto.common.objects.document.common.dragdrop.ObjectTreeReorder
+import tech.kzen.auto.common.objects.document.logic.TypeMetadataDefiner
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.ListExecutionValue
@@ -132,16 +130,11 @@ class LogicSignatureEditor:
         private val typeAttributeName = AttributeName("type")
         private val defaultAttributeName = AttributeName("default")
         private val defaultAttributePath = AttributePath.ofName(defaultAttributeName)
-        private const val classKey = "class"
-        private const val genericsKey = "generics"
-        private const val nullableKey = "nullable"
 
         private const val parameterBindingArchetype = "ParameterBinding"
         private const val defaultClassName = "kotlin.Any"
 
         private val dragHandleColor = Color("rgba(0, 0, 0, 0.45)")
-
-        // The selectable simple types + their labels are shared with ResultSignatureEditor (see LogicTypeOptions).
 
         // Default values are only editable for scalar types the definer can coerce (String/Int/Long/Double/
         // Boolean). List/Set/Any have no default input — they resolve to null when no argument is supplied.
@@ -194,9 +187,9 @@ class LogicSignatureEditor:
             ParameterRow(
                 location = location,
                 name = location.objectPath.name.value,
-                className = typeNotation?.get(classKey)?.asString() ?: defaultClassName,
-                nullable = typeNotation?.get(nullableKey)?.asString()?.toBoolean() ?: false,
-                generics = typeNotation?.get(genericsKey) as? ListAttributeNotation,
+                className = typeNotation?.get(TypeMetadataDefiner.classKey)?.asString() ?: defaultClassName,
+                nullable = typeNotation?.get(TypeMetadataDefiner.nullableKey)?.asString()?.toBoolean() ?: false,
+                generics = typeNotation?.get(TypeMetadataDefiner.genericsKey) as? ListAttributeNotation,
                 defaultText = defaultText)
         }
 
@@ -308,9 +301,11 @@ class LogicSignatureEditor:
 
     private fun onTypeChange(row: ParameterRow, className: String, nullable: Boolean) {
         val typeNotation = MapAttributeNotation(persistentMapOf(
-            AttributeSegment.ofKey(classKey) to ScalarAttributeNotation(className),
-            AttributeSegment.ofKey(genericsKey) to (row.generics ?: ListAttributeNotation.empty),
-            AttributeSegment.ofKey(nullableKey) to ScalarAttributeNotation(nullable.toString())))
+            AttributeSegment.ofKey(TypeMetadataDefiner.classKey) to ScalarAttributeNotation(className),
+            AttributeSegment.ofKey(TypeMetadataDefiner.genericsKey) to
+                    (row.generics ?: ListAttributeNotation.empty),
+            AttributeSegment.ofKey(TypeMetadataDefiner.nullableKey) to
+                    ScalarAttributeNotation(nullable.toString())))
 
         async {
             props.mirroredGraphStore.apply(UpsertAttributeCommand(
@@ -385,14 +380,6 @@ class LogicSignatureEditor:
             return
         }
 
-        // insertionIndex is the gap (0..size) the cursor points at; dropping at the dragged row's own two
-        // edges is a no-op. Otherwise account for the row leaving its slot when it sits above the target.
-        val insertionIndex = target + (if (after) 1 else 0)
-        if (insertionIndex == source || insertionIndex == source + 1) {
-            return
-        }
-        val newIndex = if (insertionIndex > source) insertionIndex - 1 else insertionIndex
-
         val documentNotation = props.clientStateGlobal.current()
             ?.graphStructure()
             ?.graphNotation
@@ -400,35 +387,20 @@ class LogicSignatureEditor:
             ?.get(props.objectLocation.documentPath)
             ?: return
 
-        val draggedLocation = parameters[source].location
-        val draggedRoot = draggedLocation.objectPath
+        // The gap (0..size) the cursor points at, counted before the dragged row leaves its slot.
+        val insertionIndex = target + (if (after) 1 else 0)
 
-        // Document order with the dragged subtree removed — the frame the shift index resolves against.
-        val remainingPaths = documentNotation.objects.notations.map.keys.filter {
-            it != draggedRoot && !it.startsWith(draggedRoot)
-        }
-
-        val siblings = parameters
-            .filterIndexed { i, _ -> i != source }
-            .map { it.location }
-        if (siblings.isEmpty()) {
-            return
-        }
-
-        val anchor = siblings.getOrNull(newIndex)?.objectPath
-        val targetDocumentIndex =
-            if (anchor != null) {
-                remainingPaths.indexOf(anchor)
-            }
-            else {
-                val lastSibling = siblings.last().objectPath
-                remainingPaths.indexOfLast { it == lastSibling || it.startsWith(lastSibling) } + 1
-            }
+        val position = ObjectTreeReorder.reorderPosition(
+            documentNotation.objects.notations.map.keys.toList(),
+            parameters.map { it.location.objectPath },
+            source,
+            insertionIndex)
+            ?: return
 
         async {
             props.mirroredGraphStore.apply(ShiftObjectTreeCommand(
-                draggedLocation,
-                PositionRelation.at(targetDocumentIndex)))
+                parameters[source].location,
+                position))
         }
     }
 
@@ -469,15 +441,9 @@ class LogicSignatureEditor:
     private fun ChildrenBuilder.renderControls() {
         div {
             css {
-                position = Position.absolute
-                // First float in the stage's top-right stack, below the reserved error-chip row (see
-                // StageErrorIndicator.reservedRowEm for why that space is reserved unconditionally).
-                top = (0.5 + StageErrorIndicator.reservedRowEm).em
-                right = 0.5.em
+                stageFloatRow(StageFloatStack.parametersRow)
                 display = Display.flex
                 alignItems = AlignItems.center
-                // above the step cards (which are positioned but auto z-index) so it stays clickable.
-                zIndex = integer(2)
             }
 
             if (state.adding) {
@@ -755,57 +721,16 @@ class LogicSignatureEditor:
                 }
             }
 
-            span {
-                css {
-                    display = Display.inlineBlock
-                    width = 8.em
-                    marginRight = 0.5.em
-                }
-
-                val typeOptions = LogicTypeOptions.classOptions
-                    .map { (value, simpleLabel) ->
-                        val option: SelectOption = unsafeJso {
-                            this.value = value
-                            this.label = simpleLabel
-                        }
-                        option
-                    }
-                    .toTypedArray()
-
-                muiAutocompleteField(
-                    label = "Type",
-                    options = typeOptions,
-                    selectedOption = typeOptions.find { it.value == parameter.className },
-                    onSelect = { onTypeChange(parameter, it.value, parameter.nullable) },
-                    disableClearable = true,
-                    // Once the dropdown is closed, Enter/Escape commit/cancel the edit like the sibling
-                    // Parameter and Default text fields (the first Enter/Escape still picks/closes the list).
-                    onClosedKeyDown = { event ->
-                        ClientInputUtils.handleEnterAndEscape(
-                            event, { onCommitEdit(parameter) }, ::onCancelEdit)
-                    })
-            }
-
-            // Nullable as a compact toggle (`?`) rather than a switch + text label — the pressed state IS
-            // the meaning, and it reclaims horizontal room on the single editor row.
-            ToggleButton {
-                value = "nullable"
-                selected = parameter.nullable
-                size = Size.small
-                sx {
-                    height = 28.px
-                    marginRight = 0.5.em
-                }
-                title =
-                    if (parameter.nullable) {
-                        "Nullable (click to require non-null)"
-                    }
-                    else {
-                        "Allow null"
-                    }
-                onChange = { _, _ -> onTypeChange(parameter, parameter.className, !parameter.nullable) }
-                icon("material-symbols:question-mark") {}
-            }
+            logicTypePicker(
+                className = parameter.className,
+                nullable = parameter.nullable,
+                onTypeChange = { className, nullable -> onTypeChange(parameter, className, nullable) },
+                // Once the dropdown is closed, Enter/Escape commit/cancel the edit like the sibling Parameter
+                // and Default text fields (the first Enter/Escape still picks/closes the list).
+                onClosedKeyDown = { event ->
+                    ClientInputUtils.handleEnterAndEscape(
+                        event, { onCommitEdit(parameter) }, ::onCancelEdit)
+                })
 
             renderDefaultInput(parameter)
 

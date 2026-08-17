@@ -3,24 +3,19 @@ package tech.kzen.auto.client.objects.document.job.edit
 import emotion.react.css
 import mui.material.IconButton
 import mui.material.InputLabel
-import mui.material.Size
-import mui.material.TextField
 import mui.system.sx
 import react.ChildrenBuilder
 import react.Key
-import react.ReactNode
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.table
 import react.dom.html.ReactHTML.tbody
 import react.dom.html.ReactHTML.td
 import react.dom.html.ReactHTML.tr
-import react.dom.onChange
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorProps
 import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
 import tech.kzen.auto.client.service.global.ClientStateGlobal
-import tech.kzen.auto.client.util.ClientInputUtils
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RComponent
 import tech.kzen.auto.client.wrap.iconify.icon
@@ -40,10 +35,8 @@ import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.common.service.store.MirroredGraphStore
-import web.cssom.Display
 import web.cssom.VerticalAlign
 import web.cssom.em
-import web.html.HTMLInputElement
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -51,10 +44,6 @@ external interface SortSpecEditorState: State {
     // The Worker's committed sort keys, in PRIORITY order (the notation map's insertion order). Value-compared
     // on refresh so an unrelated command elsewhere doesn't re-render the rows.
     var columns: List<SortColumnSpec>?
-
-    // Transient add-column form (ephemeral UI, like FormulaMapAdd's local state — not persisted).
-    var adding: Boolean
-    var addName: String
 }
 
 
@@ -101,8 +90,6 @@ class SortSpecEditor(
     override fun SortSpecEditorState.init(props: AttributeEditorProps) {
         val graphNotation = props.clientStateGlobal.current()!!.graphStructure().graphNotation
         columns = readColumns(graphNotation)
-        adding = false
-        addName = ""
     }
 
 
@@ -116,14 +103,22 @@ class SortSpecEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private var mounted = false
+
+
     override fun componentDidMount() {
+        mounted = true
         async {
-            props.mirroredGraphStore.observe(this)
+            // Unobserve runs synchronously on unmount, so registering after it would leak this observer.
+            if (mounted) {
+                props.mirroredGraphStore.observe(this)
+            }
         }
     }
 
 
     override fun componentWillUnmount() {
+        mounted = false
         props.mirroredGraphStore.unobserve(this)
     }
 
@@ -186,59 +181,6 @@ class SortSpecEditor(
             props.mirroredGraphStore.apply(
                 SortSpec.removeCommand(props.objectLocation, column))
         }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    private fun onAddClick() {
-        setState {
-            adding = true
-            addName = ""
-        }
-    }
-
-
-    private fun onAddCancel() {
-        setState {
-            adding = false
-            addName = ""
-        }
-    }
-
-
-    private fun onAddSubmit() {
-        val trimmed = state.addName.trim()
-        if (trimmed.isEmpty() || isDuplicate(trimmed)) {
-            return
-        }
-
-        applyAdd(HeaderLabel(trimmed, 0))
-
-        setState {
-            adding = false
-            addName = ""
-        }
-    }
-
-
-    private fun onAddNameChange(newName: String) {
-        setState {
-            addName = newName
-        }
-    }
-
-
-    private fun handleEnterAndEscape(event: react.dom.events.KeyboardEvent<*>) {
-        ClientInputUtils.handleEnterAndEscape(
-            event, ::onAddSubmit, ::onAddCancel)
-    }
-
-
-    // Free-text add can only create an occurrence-0 label, so a name already present at occurrence 0 is a
-    // duplicate (an InsertMapEntryInAttributeCommand on an existing key would fail).
-    private fun isDuplicate(name: String): Boolean {
-        val candidate = HeaderLabel(name, 0)
-        return state.columns?.any { it.column == candidate } ?: false
     }
 
 
@@ -325,90 +267,12 @@ class SortSpecEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    // The "add sort key" affordance: a button that expands to a column-name field with confirm / cancel. Mirrors
-    // FormulaMapAdd, inlined here because a sort row (unlike a formula row) has no local text state to protect
-    // from the parent's re-render.
     private fun ChildrenBuilder.renderAdd(columns: List<SortColumnSpec>) {
-        div {
-            if (state.adding) {
-                renderAddName(columns)
-                renderAddConfirm()
-            }
-            else {
-                renderAddButton()
-            }
-        }
-    }
-
-
-    private fun ChildrenBuilder.renderAddButton() {
-        div {
-            title = "Add sort key"
-            css {
-                display = Display.inlineBlock
-            }
-
-            IconButton {
-                onClick = {
-                    onAddClick()
-                }
-                icon("material-symbols:add-circle-outline") {}
-            }
-        }
-    }
-
-
-    private fun ChildrenBuilder.renderAddName(columns: List<SortColumnSpec>) {
-        val trimmed = state.addName.trim()
-        val duplicate = trimmed.isNotEmpty() && columns.any { it.column == HeaderLabel(trimmed, 0) }
-
-        div {
-            css {
-                display = Display.inlineBlock
-                width = 15.em
-            }
-
-            TextField {
-                label = ReactNode("Sort column name")
-                fullWidth = true
-                size = Size.small
-
-                onChange = {
-                    val target = it.target as HTMLInputElement
-                    onAddNameChange(target.value)
-                }
-
-                error = duplicate
-
-                onKeyDown = { e ->
-                    handleEnterAndEscape(e)
-                }
-            }
-        }
-    }
-
-
-    private fun ChildrenBuilder.renderAddConfirm() {
-        div {
-            css {
-                display = Display.inlineBlock
-            }
-
-            IconButton {
-                title = "Add sort key"
-                onClick = {
-                    onAddSubmit()
-                }
-                icon("material-symbols:add-circle-outline") {}
-            }
-
-            IconButton {
-                title = "Cancel adding sort key"
-                onClick = {
-                    onAddCancel()
-                }
-                icon("material-symbols:cancel") {}
-            }
+        AddNameForm::class.react {
+            entityLabel = "sort key"
+            fieldLabel = "Sort column name"
+            isDuplicate = { name -> columns.any { it.column == HeaderLabel(name, 0) } }
+            onAdd = { name -> applyAdd(HeaderLabel(name, 0)) }
         }
     }
 }

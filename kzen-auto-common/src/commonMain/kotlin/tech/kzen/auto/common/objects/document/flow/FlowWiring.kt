@@ -11,101 +11,41 @@ import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.definition.ValueAttributeDefinition
 import tech.kzen.lib.common.model.instance.GraphInstance
 import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.structure.GraphStructure
-import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
-import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.reflect.Reflect
-import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.platform.ClassName
 import tech.kzen.lib.platform.ClassNames
 
 
-@Suppress("MemberVisibilityCanBePrivate")
+/**
+ * Mints the live channel object behind a flow vertex's input/output attribute, chosen from the channel marker
+ * the attribute's metadata declares. Structural queries about which attributes ARE channels belong to the
+ * paradigm rather than here — see `FlowStructureConventions`.
+ */
 @Reflect
 class FlowWiring: AttributeDefiner {
     companion object {
-        val objectName = ObjectName("FlowWiring")
-        val optionalInputName = ObjectName("OptionalInput")
-        val requiredInputName = ObjectName("RequiredInput")
-
-
-        fun isInput(attributeMetadataMap: MapAttributeNotation): Boolean {
-            val isSegment = attributeMetadataMap[NotationConventions.isAttributeSegment]
-                as? ScalarAttributeNotation
-                ?: return false
-
-            return isSegment.value == optionalInputName.value ||
-                isSegment.value == requiredInputName.value
-        }
-
-
-        fun isRequiredInput(attributeMetadataMap: MapAttributeNotation): Boolean {
-            val isSegment = attributeMetadataMap[NotationConventions.isAttributeSegment]
-                as? ScalarAttributeNotation
-                ?: return false
-
-            return isSegment.value == requiredInputName.value
-        }
-
-
-        fun findInputs(
-            vertexLocation: ObjectLocation,
-            graphStructure: GraphStructure
-        ): List<AttributeName> {
-            return findInputs(vertexLocation, graphStructure) {
-                isInput(it)
-            }
-        }
-
-
-        fun findRequiredInputs(
-            vertexLocation: ObjectLocation,
-            graphStructure: GraphStructure
-        ): List<AttributeName> {
-            return findInputs(vertexLocation, graphStructure) {
-                isRequiredInput(it)
-            }
-        }
-
-
-        private fun findInputs(
-            vertexLocation: ObjectLocation,
-            graphStructure: GraphStructure,
-            predicate: (MapAttributeNotation) -> Boolean
-        ): List<AttributeName> {
-            val cellMetadata = graphStructure.graphMetadata.objectMetadata[vertexLocation]!!
-
-            return cellMetadata
-                .attributes
-                .map
-                .filter {
-                    predicate(it.value.attributeMetadataNotation)
-                }
-                .map {
-                    it.key
-                }
-        }
-
-
+        // KEEP IN SYNC with the matching `class:` lines in notation/auto-common/common-flow.yaml. These are
+        // compared as strings against the channel marker's declared type, so the pair only has to AGREE — which
+        // is why both sides silently carried the pre-`input`/`output`-subpackage names for as long as they did.
         private val optionalOutputClass = ClassName(
-                "tech.kzen.auto.common.paradigm.flow.api.OptionalOutput")
+                "tech.kzen.auto.common.paradigm.flow.api.output.OptionalOutput")
 
         private val requiredOutputClass = ClassName(
-                "tech.kzen.auto.common.paradigm.flow.api.RequiredOutput")
+                "tech.kzen.auto.common.paradigm.flow.api.output.RequiredOutput")
 
         private val batchOutputClass = ClassName(
-                "tech.kzen.auto.common.paradigm.flow.api.BatchOutput")
+                "tech.kzen.auto.common.paradigm.flow.api.output.BatchOutput")
 
         private val streamOutputClass = ClassName(
-                "tech.kzen.auto.common.paradigm.flow.api.StreamOutput")
+                "tech.kzen.auto.common.paradigm.flow.api.output.StreamOutput")
 
 
         private val optionalInputClass = ClassName(
-                "tech.kzen.auto.common.paradigm.flow.api.OptionalInput")
+                "tech.kzen.auto.common.paradigm.flow.api.input.OptionalInput")
 
         private val requiredInputClass = ClassName(
-                "tech.kzen.auto.common.paradigm.flow.api.RequiredInput")
+                "tech.kzen.auto.common.paradigm.flow.api.input.RequiredInput")
     }
 
 
@@ -116,7 +56,6 @@ class FlowWiring: AttributeDefiner {
             partialGraphDefinition: GraphDefinition,
             partialGraphInstance: GraphInstance
     ): AttributeDefinitionAttempt {
-//        @Suppress("MoveVariableDeclarationIntoWhen")
         val attributeClass: ClassName = graphStructure
                 .graphMetadata
                 .get(objectLocation)!!

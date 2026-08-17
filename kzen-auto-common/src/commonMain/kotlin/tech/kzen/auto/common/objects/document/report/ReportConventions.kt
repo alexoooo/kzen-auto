@@ -1,5 +1,6 @@
 package tech.kzen.auto.common.objects.document.report
 
+import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
 import tech.kzen.lib.common.model.attribute.AttributeName
@@ -7,7 +8,6 @@ import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.structure.notation.DocumentNotation
-import tech.kzen.lib.common.service.notation.NotationConventions
 
 
 @Suppress("ConstPropertyName")
@@ -66,14 +66,6 @@ object ReportConventions {
 
 
     fun isReport(documentNotation: DocumentNotation): Boolean {
-        val mainObjectNotation =
-            documentNotation.objects.notations[NotationConventions.mainObjectPath]
-                ?: return false
-
-        val mainObjectIs =
-            mainObjectNotation.get(NotationConventions.isAttributeName)?.asString()
-                ?: return false
-
-        return mainObjectIs == objectName.value
+        return AutoConventions.isMainArchetype(documentNotation, objectName)
     }
 }

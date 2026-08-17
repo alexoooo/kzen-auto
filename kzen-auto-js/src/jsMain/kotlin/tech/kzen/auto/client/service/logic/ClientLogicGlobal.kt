@@ -33,32 +33,12 @@ class ClientLogicGlobal(
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        // Status-poll cadence while the push stream is NOT proven to be delivering. Unchanged from the
-        // pre-push behaviour on purpose: it is the floor this transport degrades to, so a broken or buffered
-        // stream can never leave the UI slower than it was before push existed.
+        // The push-vs-poll cadences, the SSE probe/staleness windows and the publish throttle are all
+        // specified in architecture.md § 3 (REST API surface) — the canonical home for why each is what it is.
         private const val debounceMillis = 1_500
-
-        // Status-poll cadence while the push stream IS proven healthy. Not zero: a relaxed safety net that
-        // re-syncs if a push is ever missed, cheap enough to be irrelevant.
         private const val pushDebounceMillis = 10_000
-
-        // Ceiling on how often an arriving status may fan out to observers, for statuses that carry ONLY a
-        // new trace sequence (see publishStatus). A structure change ignores this and publishes at once.
-        //
-        // Sized by what a human can use, not by what the engine can produce: a full-speed run is a blur at
-        // any cadence, and each publish costs ~4 REST round trips downstream. Measured pre-throttle, a 48s
-        // FizzBuzz run pushed ~165 statuses (~3.4/s) and cost 433 requests; at 1s that is ~200. Stepping is
-        // unaffected — every step boundary is a state change, hence a structure change.
         private const val statusPublishThrottleMillis = 1_000
-
-        // A just-opened stream must DELIVER within this or it isn't trusted. Deliberately not keyed off
-        // onopen: an intermediary that buffers the response opens the stream perfectly well and then delivers
-        // nothing, which looks identical to a healthy idle stream. The server sends the current status
-        // immediately on connect precisely so this probe has something to wait for.
         private const val sseProbeMillis = 3_000
-
-        // Nothing at all (not even a heartbeat) for this long ⇒ the stream is dead-but-open; drop back to
-        // polling and reconnect. 3x the server's 15s heartbeat, so it tolerates two lost beats.
         private const val sseStaleMillis = 45_000
 
         // "Slow motion" auto-step pacing: the visible dwell between auto-issued steps, and the cadence /
@@ -66,10 +46,9 @@ class ClientLogicGlobal(
         private const val slowPacingMillis = 750
 
         // How often awaitStepSettled re-checks for settle: BOTH the push-healthy local-state re-check
-        // granularity AND the poll floor when push is absent. 200ms (not the old 50ms, a pre-push
-        // leftover): well under the 750ms dwell so settle detection stays imperceptible, while a no-push
-        // deployment polls status at ~5/s instead of ~20/s. When push is healthy this loop issues no
-        // requests at all (see awaitStepSettled), so this only bounds detection latency there.
+        // granularity AND the poll floor when push is absent. Well under the dwell so settle detection stays
+        // imperceptible, while a no-push deployment polls status at ~5/s. When push is healthy this loop
+        // issues no requests at all (see awaitStepSettled), so this only bounds detection latency there.
         private const val slowSettlePollMillis = 200
         private const val slowSettleMaxMillis = 30_000
 
@@ -159,65 +138,39 @@ class ClientLogicGlobal(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    // Fan-out throttle for statuses arriving from the TRANSPORT (pushed or polled — one rule, either courier).
+    // Fan-out throttle for statuses arriving from the TRANSPORT (pushed or polled — one rule, either courier);
+    // structure-changed publishes at once, sequence-only defers. Rationale: architecture.md § 3.
     // Control verbs deliberately bypass it: they are one per user action and must land immediately.
-    //
-    // Why this exists at all: the engine bumps the run's sequence on every emit, so a status arrives ~3.4/s
-    // during an active script — and each publish() fans out into ~4 REST round trips (lookup / run-history /
-    // traced / run-executions). Nobody can read 3 trace repaints a second, so paying 12 requests/s for them is
-    // pure waste. Throttling HERE rather than at each query is what makes that one decision instead of four:
-    // every downstream view is publish-driven, so they all inherit the cadence and none needs its own clock.
-    //
-    // throttle (leading + trailing), NOT debounce: a run is a continuous stream, and a trailing-only debounce
-    // would publish nothing at all until the run stopped.
     private val publishStatusThrottle: FunctionWithDebounce = lodash.throttle({
         publish()
     }, statusPublishThrottleMillis)
 
 
     private fun publishStatus(structureChanged: Boolean) {
-        // A structure change is a transition the user is WAITING on — a run started, settled, changed state
-        // (every step boundary is one of these), or a trace was cleared. Never throttled, and it resets the
-        // throttle's clock so the next value that arrives repaints at once: that is what keeps a stepped run
-        // showing its first intermediate frame instantly instead of up to a second late.
         if (structureChanged) {
             publishStatusThrottle.cancel()
             publish()
             return
         }
 
-        // Sequence-only: new values, same shape. The trailing edge is what makes this safe to defer — the
-        // last status of a burst always publishes ~1s later even if nothing else ever arrives, so a value can
-        // never be stranded unshown by a run that goes quiet mid-flight.
         publishStatusThrottle.apply()
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    // Push transport. The EventSource carries the SAME LogicStatus payload the poll fetches, so a pushed status
-    // is applied through the identical path — push is a faster courier, not a second protocol. The poll loop
-    // stays armed as an adaptive fallback (see scheduleRefresh), so every failure mode of this stream degrades
-    // to the pre-push behaviour instead of freezing the UI.
+    // Push transport, with the poll loop armed as an adaptive fallback (see scheduleRefresh). The push /
+    // poll contract and the two silent-failure modes these flags separate: architecture.md § 3.
     private var eventSource: EventSource? = null
 
-    // Delivery-PROVEN, never connection-proven: set only by a message actually arriving, because a buffering
-    // intermediary opens the stream fine and delivers nothing. Drives the poll cadence and lets the
-    // slow-motion settle wait skip its network polling.
+    // Delivery-proven, never connection-proven. Also lets the slow-motion settle wait skip its network polling.
     private var sseHealthy: Boolean = false
     private var lastSseMessageMillis: Double = 0.0
 
-    // Latched when a stream OPENS but delivers nothing within the probe window — the signature of a buffering
-    // intermediary. Push is then given up on for this page's life and we stay on the 1.5s poll. The latch is
-    // required for termination: the probe's own teardown re-arms the refresh loop, which reconnects, which
-    // fails the probe again — a permanent 3s reconnect cycle against exactly the intermediary the probe
-    // exists to detect. It is the right shape because a buffering proxy is a static property of the
-    // deployment, not a transient fault, and a false positive costs only "pre-push behaviour until reload".
+    // Latched on opened-but-mute (a buffering intermediary): push is given up on for this page's life.
     private var sseUnavailable: Boolean = false
 
-    // Whether the CURRENT connection reached open. This is what separates the two silent failures: opened but
-    // mute ⇒ buffering ⇒ latch; never opened ⇒ the server/network is down ⇒ do NOT latch and do not close —
-    // EventSource retries by itself, so a backend that comes back is picked up automatically (we sit demoted
-    // on the 1.5s poll meanwhile, and a delivered message re-promotes).
+    // Whether the CURRENT connection reached open — opened-but-mute latches, never-opened is left to
+    // EventSource's own retry.
     private var sseOpened: Boolean = false
 
 
@@ -234,10 +187,7 @@ class ClientLogicGlobal(
             return
         }
 
-        // Only the visible tab holds a stream open. This is the mitigation for the browser's ~6-connections
-        // -per-origin HTTP/1.1 cap, which is shared across EVERY tab of this origin (in the packaged product
-        // that is the shell: the launcher and every project). A background tab has nothing to animate, and
-        // re-syncs on becoming visible, so the realistic worst case is one connection per window.
+        // Only the visible tab holds a stream open — the connection-budget mitigation in architecture.md § 3.
         if (!isDocumentVisible()) {
             return
         }
@@ -250,9 +200,7 @@ class ClientLogicGlobal(
         val source = EventSource(restClient.logicEventsUrl())
         sseOpened = false
 
-        // Deliberately does NOT mark the stream healthy — that is the whole point of the probe. A buffering
-        // intermediary opens the connection perfectly and then delivers nothing, so "open" proves only that
-        // something accepted the request. Only an arriving message proves delivery.
+        // Deliberately does NOT mark the stream healthy — only an arriving message proves delivery.
         source.onopen = {
             sseOpened = true
         }
@@ -270,9 +218,9 @@ class ClientLogicGlobal(
             }
         }
 
-        // Heartbeat. Only feeds the staleness watchdog — it carries no status, and being a NAMED event it
-        // never reaches onmessage. (A bare SSE comment would keep the proxy socket alive but fire no event at
-        // all, leaving the watchdog unable to tell a live idle stream from a dead one.)
+        // Heartbeat: feeds only the staleness watchdog, and being a NAMED event it never reaches onmessage.
+        // (A bare SSE comment would keep the proxy socket alive but fire no event at all, leaving the
+        // watchdog unable to tell a live idle stream from a dead one.)
         source.addEventListener("ping", {
             noteSseMessage()
         })
@@ -288,10 +236,8 @@ class ClientLogicGlobal(
         eventSource = source
         lastSseMessageMillis = Date.now()
 
-        // Probe. Fires only on the opened-but-mute case (see sseOpened): that is a buffering intermediary, and
-        // no amount of reconnecting will fix it, so latch push off and stay on the 1.5s poll. A stream that
-        // never opened is left alone to retry itself. The identity check keeps a stale probe from tearing down
-        // a stream that was already replaced.
+        // Probe. Fires only on the opened-but-mute case (see sseOpened). The identity check keeps a stale
+        // probe from tearing down a stream that was already replaced.
         async {
             delay(sseProbeMillis.toLong())
             if (eventSource === source && !sseHealthy && sseOpened) {
@@ -317,7 +263,7 @@ class ClientLogicGlobal(
         if (!sseHealthy) {
             return
         }
-        // Back to the pre-push cadence, immediately — never leave the UI slower than it used to be.
+        // Back to the fallback poll cadence immediately.
         sseHealthy = false
         rearmRefresh()
     }
@@ -387,9 +333,8 @@ class ClientLogicGlobal(
             // loop is the only thing still running when push has silently stopped delivering.
             checkSseStale()
 
-            // Same throttle as the pushed path — push is a faster courier, not a second protocol. A no-op in
-            // practice (both poll cadences are already >= the throttle), but routing it here keeps the rule
-            // in one place rather than making "which transport delivered this" matter.
+            // Same throttle as the pushed path. A no-op in practice (both poll cadences are already >= the
+            // throttle), but routing it here keeps "which transport delivered this" from mattering.
             publishStatus(lookupStatus())
 
             scheduleRefresh()
@@ -399,7 +344,6 @@ class ClientLogicGlobal(
 
     private fun scheduleRefresh() {
         val running = clientLogicState.isExecuting()
-//        println("#@%$ scheduleRefresh - $running")
 
         // The one choke point binding the push stream's lifetime to the run: every path that arms this loop
         // (init, each control verb, each tick) passes through here, so the stream can't be forgotten on a
@@ -879,15 +823,11 @@ class ClientLogicGlobal(
     //
     // Both transports deliver those intermediates, from opposite directions:
     //   - push healthy: the server already publishes every status change (the settle included — see
-    //     ServerLogicController.settleAfterDrive), and publishStatus publishes on arrival. So this loop only
-    //     watches locally-updated state and issues NO requests at all — and the frames it shows are the ones
-    //     the engine actually passed through rather than a slowSettlePollMillis sampling of them, subject to
-    //     publishStatus's throttle: each step's boundary and first intermediate land at once, later ones
-    //     within the SAME step at the throttle's cadence. A step boundary is a state change, so it always
-    //     resets that clock. (slowRunAsync / runSlowLoop arm the stream per step, so this branch is the
-    //     norm whenever push is available.)
-    //   - push absent/dead: fall back to polling status here at slowSettlePollMillis and publishing each
-    //     poll, as before push existed.
+    //     ServerLogicController.settleAfterDrive), so this loop only watches locally-updated state and issues
+    //     NO requests at all, showing the frames the engine actually passed through rather than a
+    //     slowSettlePollMillis sampling of them. (slowRunAsync / runSlowLoop arm the stream per step, so this
+    //     branch is the norm whenever push is available.)
+    //   - push absent/dead: fall back to polling status here at slowSettlePollMillis and publishing each poll.
     private suspend fun awaitStepSettled() {
         var waited = 0
         while (waited < slowSettleMaxMillis) {
@@ -896,9 +836,7 @@ class ClientLogicGlobal(
 
             if (!sseHealthy) {
                 // Through the same throttle as the pushed path, so a dead stream changes the SAMPLING rate,
-                // not the repaint rule. Without it this publishes at the poll rate (~5/s at
-                // slowSettlePollMillis, ~20 REST calls/s downstream) where push publishes ~1/s for the same
-                // run. The settle itself is a state change, so it still lands immediately.
+                // not the repaint rule. The settle itself is a state change, so it still lands immediately.
                 publishStatus(lookupStatus())
             }
 
@@ -948,10 +886,8 @@ class ClientLogicGlobal(
 
 
     // Clear the retained logic trace for this document via the generic LogicTraceEndpoint reset, then
-    // re-poll status and publish: the clear bumps the controller's epoch, which changes every Logic
-    // document's progress fetch key (ClientLogicState.traceVersion), so they repaint to the now-empty
-    // trace. The epoch is what carries this — status reports no active run both before and after a
-    // clear, so nothing else in the response differs.
+    // re-poll status and publish: the clear bumps the controller's epoch, which is what makes every Logic
+    // document's progress fetch key move so they repaint to empty (architecture.md § 3).
     fun clearTraceAsync(mainLocation: ObjectLocation) {
         if (clientLogicState.isActive()) {
             return
@@ -991,10 +927,9 @@ class ClientLogicGlobal(
     // every version change. The cache holds the in-flight query, not just its result: the callers race (both
     // enter before either completes), so caching only settled answers would still let both requests leave.
     //
-    // The memo dedupes; it does not rate-limit. Keyed on structureVersion (NOT traceVersion): the traced-
-    // document set changes only when a document first appears in the run — a structural event — so this
-    // re-fetches ~15-17x/run instead of once per publish (~46x, riding traceVersion's per-emit sequence).
-    // Both callers are publish-driven; the memo collapses their two asks per publish into one.
+    // The memo dedupes; it does not rate-limit. Keyed on structureVersion (NOT traceVersion) — the
+    // structure-keyed query gate of architecture.md § 3: the traced-document set changes only when a
+    // document first appears in the run.
     suspend fun tracedDocuments(): Set<DocumentPath> {
         val version = clientLogicState.structureVersion()
 

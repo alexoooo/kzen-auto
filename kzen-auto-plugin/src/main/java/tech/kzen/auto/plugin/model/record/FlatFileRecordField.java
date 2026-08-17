@@ -102,6 +102,7 @@ public class FlatFileRecordField
         FlatFileRecord buffer = FlatFileRecord.ofSingle(host.fieldContents, valueOffset, valueLength);
         FlatFileRecordField detached = new FlatFileRecordField();
         detached.host = buffer;
+        detached.fieldIndex = 0;
         detached.valueOffset = 0;
         detached.valueLength = valueLength;
         return detached;
@@ -166,7 +167,7 @@ public class FlatFileRecordField
             return true;
         }
 
-        if (other.getClass() != FlatFileRecordField.class) {
+        if (other == null || other.getClass() != FlatFileRecordField.class) {
             return false;
         }
 

@@ -194,15 +194,23 @@ class TargetSpecEditor(
     }
 
 
+    private var mounted = false
+
+
     override fun componentDidMount() {
+        mounted = true
         super.componentDidMount()
         async {
-            props.mirroredGraphStore.observe(this)
+            // Unobserve runs synchronously on unmount, so registering after it would leak this observer.
+            if (mounted) {
+                props.mirroredGraphStore.observe(this)
+            }
         }
     }
 
 
     override fun componentWillUnmount() {
+        mounted = false
         props.mirroredGraphStore.unobserve(this)
         super.componentWillUnmount()
         committer.flush()

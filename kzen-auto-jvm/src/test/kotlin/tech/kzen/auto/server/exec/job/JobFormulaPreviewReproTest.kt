@@ -3,6 +3,7 @@ package tech.kzen.auto.server.exec.job
 import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.util.AutoTestUtils
+import tech.kzen.auto.server.util.awaitDone
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceQuery
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -57,7 +58,7 @@ class JobFormulaPreviewReproTest {
         val runId = controller.start(jobLocation, attempt)
             ?: fail("Unable to start run")
         controller.continueOrStart(runId, attempt)
-        awaitDone()
+        controller.awaitDone()
 
         // JobProgressStore.fetchRunProgress FIRST resolves the run via mostRecent(main); a null here is the bug
         // (the Preview never even fetches its worker progress).
@@ -75,16 +76,5 @@ class JobFormulaPreviewReproTest {
 
         assertEquals(100L, progress["count"], "the Preview counted every emitted scalar element")
         assertEquals(100, (progress["rows"] as? List<*>)?.size, "the Preview sample carries the emitted rows")
-    }
-
-
-    private fun awaitDone() {
-        for (attempt in 0 until 500) {
-            if (context.serverLogicController.status().active == null) {
-                return
-            }
-            Thread.sleep(10)
-        }
-        fail("Run did not complete")
     }
 }

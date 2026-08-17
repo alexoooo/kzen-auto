@@ -17,7 +17,7 @@ import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.common.objects.document.flow.FlowConventions
-import tech.kzen.auto.common.objects.document.flow.FlowWiring
+import tech.kzen.auto.common.paradigm.flow.model.structure.FlowStructureConventions
 import tech.kzen.auto.common.paradigm.flow.model.exec.VisualFlowModel
 import tech.kzen.auto.common.paradigm.flow.model.exec.VisualVertexModel
 import tech.kzen.auto.common.paradigm.flow.model.exec.VisualVertexPhase
@@ -111,7 +111,6 @@ class VertexController(
     private var menuAnchorRef: RefObject<Element> = createRef()
 
     // NB: workaround for open options icon remaining after click with drag away from item
-    private var processingOption: Boolean = false
     private var optionCompletedTime: Double? = null
 
 
@@ -146,15 +145,12 @@ class VertexController(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onMouseOver(cardOrActions: Boolean) {
-        if (state.optionsOpen || processingOption) {
-//            console.log("^^^ onMouseOver hoverItem - skip due to optionsOpen")
+        if (state.optionsOpen) {
             return
         }
 
         optionCompletedTime?.let {
-            val now = Date.now()
-            val elapsed = now - it
-//            console.log("^^^ onMouseOver hoverItem - elapsed", elapsed)
+            val elapsed = Date.now() - it
 
             if (elapsed < menuDanglingTimeout) {
                 return
@@ -208,7 +204,6 @@ class VertexController(
 
 
     private fun onOptionsCancel() {
-//        console.log("^^^^^^ onOptionsCancel")
         onOptionsClose()
         optionCompletedTime = Date.now()
     }
@@ -295,7 +290,7 @@ class VertexController(
 
     private fun ChildrenBuilder.renderVertex() {
         val cellDescriptor = props.cellDescriptor
-        val inputAttributes = FlowWiring.findInputs(
+        val inputAttributes = FlowStructureConventions.findInputs(
             cellDescriptor.objectLocation, props.graphStructure)
 
         val isRunning = props.visualFlowModel.isRunning()
@@ -320,13 +315,13 @@ class VertexController(
                 errorCardColor
 
             isNextToRun ->
-                EdgeController.goldLight50
+                RunProgressColors.goldLight50
 
             isSendingMessage ->
-                EdgeController.goldLight75
+                RunProgressColors.goldLight75
 
             visualVertexModel?.hasNext ?: false ->
-                EdgeController.goldLight93
+                RunProgressColors.goldLight93
 
             else -> when (phase) {
                 VisualVertexPhase.Pending ->
@@ -384,7 +379,7 @@ class VertexController(
 
                 isSendingMessage ->
                     if (isRunning) {
-                        EdgeController.goldLight25
+                        RunProgressColors.goldSendingWhileRunning
                     }
                     else {
                         NamedColor.gold
@@ -394,7 +389,7 @@ class VertexController(
                     NamedColor.white
 
                 isMessagePending ->
-                    EdgeController.goldLight50
+                    RunProgressColors.goldLight50
 
                 else ->
                     cardColor
@@ -422,7 +417,7 @@ class VertexController(
                     inputHasMessage
             ) {
                 if (isRunning) {
-                    EdgeController.goldLight25
+                    RunProgressColors.goldSendingWhileRunning
                 }
                 else {
                     NamedColor.gold
@@ -431,7 +426,7 @@ class VertexController(
             else if (inputHasMessage) {
                 // Input received a message the vertex has already consumed (epoch > 0): tint to match the
                 // carrying upstream pipe (between gold and white) so the active path stays continuous.
-                EdgeController.goldLight50
+                RunProgressColors.goldLight50
             }
             else {
                 NamedColor.white
@@ -547,12 +542,6 @@ class VertexController(
                         vertexLocation, AttributePath.ofName(it)
                     ) == null
         }
-//        val userAttributeValues: Map<AttributeName, AttributeNotation> =
-//                editableAttributes.mapNotNull { attribute ->
-//                    props.graphStructure.graphNotation.transitiveAttribute(
-//                            vertexLocation, AttributePath.ofName(attribute)
-//                    )?.let { notation -> attribute to notation }
-//                }.toMap()
 
         if (editableAttributes.isEmpty()) {
             return
@@ -844,19 +833,6 @@ class VertexController(
             title: String?,
             description: String?
     ) {
-//        child(ActionNameEditor::class) {
-//            attrs {
-//                objectLocation = props.objectLocation
-//                notation = props.graphStructure.graphNotation
-//
-//                description = actionDescription
-//                intentToRun = state.intentToRun
-//
-//                runCallback = ::onRun
-//                editSignal = this@ActionController.editSignal
-//            }
-//        }
-
         val name = props.cellDescriptor.objectLocation.objectPath.name
         val displayName =
                 if (AutoConventions.isAnonymous(name)) {
@@ -922,7 +898,6 @@ class VertexController(
 
 
     private fun ChildrenBuilder.renderState() {
-//        console.log("^^^^ renderState", props.visualVertexModel)
         val vertexState = visualVertexModel()?.state
                 ?: return
 

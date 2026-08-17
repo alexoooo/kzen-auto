@@ -4,12 +4,6 @@ import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
 
 
 object ExpressionUtils {
-    // https://stackoverflow.com/a/44149580/1941359
-    private val reservedWords = setOf(
-        "package", "as", "typealias", "class", "this", "super", "val", "var", "fun", "for",
-        "null", "true", "false", "is", "in", "throw", "return", "break", "continue", "object",
-        "if", "try", "else", "while", "do", "when", "interface", "typeof")
-
     // True Kotlin (ASCII) identifier grammar: a single letter/underscore start, then any letter/digit/underscore.
     // NB: the `+` quantifier in the previous form needed >= 2 chars and forbade a leading `_`, so names like
     //  `x` and `_foo` were needlessly back-ticked — and disagreed with the back-tick stripping in identifierContent.
@@ -34,7 +28,9 @@ object ExpressionUtils {
 
 
     fun escapeKotlinVariableName(kotlinVariableName: String): String {
-        if (kotlinVariableName in reservedWords) {
+        // Back-ticking a keyword is what makes it referenceable at all, so the set that decides it must be the
+        // very set the lexer tokenizes by (see [KotlinExpressionAnalyzer.hardKeywords]).
+        if (kotlinVariableName in KotlinExpressionAnalyzer.hardKeywords) {
             return backticksQuote(kotlinVariableName)
         }
 

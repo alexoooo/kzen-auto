@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.objects.plugin
 
 import kotlinx.coroutines.runBlocking
+import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.objects.document.plugin.PluginConventions
 import tech.kzen.auto.plugin.definition.ReportDefinition
 import tech.kzen.auto.plugin.model.PluginCoordinate
@@ -23,6 +24,12 @@ class PluginReportDefinitionRepository(
 ):
     ReportDefinitionRepository
 {
+    //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        private val logger = LoggerFactory.getLogger(PluginReportDefinitionRepository::class.java)
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private val metadataByDefinerCache = mutableMapOf<ObjectLocation, DefinerMetadataCache>()
 
@@ -120,6 +127,9 @@ class PluginReportDefinitionRepository(
                                 processorDefiner.define()
                             }
                             catch (e: Throwable) {
+                                // NB: identify by class name — info() is the plugin's own code and could throw too
+                                logger.warn("Plugin report definer failed: {} in {}",
+                                    processorDefiner.javaClass.name, pluginObjectLocation, e)
                                 continue
                             }
 

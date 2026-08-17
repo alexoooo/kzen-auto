@@ -62,7 +62,10 @@ class CustomStore(
     fun didMount() {
         mounted = true
         async {
-            clientStateGlobal.observe(this)
+            // willUnmount runs synchronously, so registering after it would leak this observer.
+            if (mounted) {
+                clientStateGlobal.observe(this)
+            }
         }
     }
 

@@ -33,6 +33,7 @@ import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.installContextType
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
+import tech.kzen.auto.common.objects.document.common.dragdrop.ObjectTreeReorder
 import tech.kzen.auto.common.objects.document.job.JobChannelDerivation
 import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.auto.common.objects.document.job.model.JobValidation
@@ -43,6 +44,7 @@ import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.obj.ObjectPath
+import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.DocumentNotation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.model.structure.notation.PositionRelation
@@ -70,8 +72,14 @@ external interface JobControllerProps: Props {
 }
 
 
+// The consumed subset of ClientState, never the whole thing (docs/js-architecture.md §2): ClientStateGlobal
+// replaces graphDefinitionAttempt only on notation events and navigationRoute only on navigation, so both
+// references survive the ~1/s logic-status publishes of any active run — and RPureComponent's shallow-equal
+// bails on them instead of re-rendering the whole stage.
 external interface JobControllerState: State {
-    var clientState: ClientState?
+    var graphStructure: GraphStructure?
+    var documentPath: DocumentPath?
+    var active: Boolean
 
     // Per-Worker live progress (status + counts + preview teaser), polled from the logic trace store after
     // each run-status change. Null until the first fetch. Threaded to each card via WorkerDisplayPropsCommon; a
@@ -247,7 +255,9 @@ class JobController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun JobControllerState.init(props: JobControllerProps) {
-        clientState = null
+        graphStructure = null
+        documentPath = null
+        active = false
         workerProgress = null
         traceSnapshot = null
         workerValidations = null
@@ -276,7 +286,9 @@ class JobController(
     //-----------------------------------------------------------------------------------------------------------------
     override fun onClientState(clientState: ClientState) {
         setState {
-            this.clientState = clientState
+            graphStructure = clientState.graphStructure()
+            documentPath = clientState.navigationRoute.documentPath
+            active = clientState.clientLogicState.isActive()
         }
 
         updateStageModel(clientState)
@@ -598,15 +610,8 @@ class JobController(
     }
 
 
-    // Move the dragged Worker to the chosen position. insertionIndex is in the pre-removal list, so dropping at
-    // the dragged Worker's own two edges is a no-op; otherwise account for the card leaving its slot when it
-    // sits above the target. The target document index is resolved against the document with the dragged object
-    // removed (mirrors ScriptBranchDisplay, simplified for flat single objects).
+    // Move the dragged Worker to the chosen position. insertionIndex is the gap in the pre-removal card list.
     private fun performShift(source: Int, insertionIndex: Int) {
-        if (insertionIndex == source || insertionIndex == source + 1) {
-            return
-        }
-
         val clientState = props.clientStateGlobal.current()
             ?: return
         val documentPath = clientState.navigationRoute.documentPath
@@ -615,28 +620,18 @@ class JobController(
             ?: return
         val workers = state.workerLocations
             ?: return
-        val draggedLocation = workers.getOrNull(source)
+
+        val position = ObjectTreeReorder.reorderPosition(
+            documentNotation.objects.notations.map.keys.toList(),
+            workers.map { it.objectPath },
+            source,
+            insertionIndex)
             ?: return
-        val draggedPath = draggedLocation.objectPath
-
-        val newIndex = if (insertionIndex > source) insertionIndex - 1 else insertionIndex
-        val remainingPaths = documentNotation.objects.notations.map.keys.filter { it != draggedPath }
-        val remainingWorkers = workers.filterIndexed { i, _ -> i != source }
-
-        val anchor = remainingWorkers.getOrNull(newIndex)?.objectPath
-        val targetDocumentIndex =
-            if (anchor != null) {
-                remainingPaths.indexOf(anchor)
-            }
-            else {
-                val last = remainingWorkers.lastOrNull()?.objectPath
-                if (last != null) remainingPaths.indexOf(last) + 1 else remainingPaths.size
-            }
 
         async {
             props.mirroredGraphStore.apply(ShiftObjectTreeCommand(
-                draggedLocation,
-                PositionRelation.at(targetDocumentIndex)))
+                workers[source],
+                position))
         }
     }
 
@@ -650,13 +645,13 @@ class JobController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
-        val clientState = state.clientState
+        val graphStructure = state.graphStructure
             ?: return
 
-        val documentPath = clientState.navigationRoute.documentPath
+        val documentPath = state.documentPath
             ?: return
 
-        val graphNotation = clientState.graphStructure().graphNotation
+        val graphNotation = graphStructure.graphNotation
         val documentNotation = graphNotation.documents[documentPath]
             ?: return
 
@@ -667,7 +662,7 @@ class JobController(
         val main = ObjectLocation(documentPath, NotationConventions.mainObjectPath)
         val workers = state.workerLocations ?: listOf()
         val connections = state.connectionsByUpstream ?: mapOf()
-        val active = clientState.clientLogicState.isActive()
+        val active = state.active
 
         div {
             css {
@@ -897,7 +892,7 @@ class JobController(
 
 
     // The gap at this index is the active drop target. Source no-op suppression: the dragged card's own two
-    // edges (source / source+1) are no-ops, so don't highlight them (mirrors performShift's guard).
+    // edges (source / source+1) are no-ops, so don't highlight them (mirrors ObjectTreeReorder.reorderPosition).
     private fun isActiveDropGap(gapIndex: Int): Boolean {
         val insertionIndex = state.dropInsertionIndex
             ?: return false

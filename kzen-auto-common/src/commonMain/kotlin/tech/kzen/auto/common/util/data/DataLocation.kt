@@ -73,25 +73,12 @@ data class DataLocation(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    // Segment arithmetic is the held value object's own, like parent(): only it knows its separators and its
+    // roots. An unknown location has neither, and names itself.
     fun fileName(): String {
-        if (filePath != null) {
-            if (filePath.isWindowsDriveRoot()) {
-                return filePath.location.substring(0, 2)
-            }
-            else if (filePath.isWindowsNetworkShare()) {
-                return filePath.location.substring(filePath.location.lastIndexOf('\\') + 1)
-            }
-        }
-
-        val asString = asString()
-
-        @Suppress("MoveVariableDeclarationIntoWhen", "RedundantSuppression")
-        val lastSeparator = asString.lastIndexOf('/')
-
-        return when (lastSeparator) {
-            -1 -> asString
-            else -> asString.substring(lastSeparator + 1)
-        }
+        filePath?.let { return it.fileName() }
+        url?.let { return it.fileName() }
+        return unknownLocation
     }
 
 
@@ -125,61 +112,18 @@ data class DataLocation(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    // Path arithmetic is the held value object's own: only it knows its separators, its roots and its opaque
+    // forms. An unknown location has neither, and so no parent.
     fun parent(): DataLocation? {
         if (filePath != null) {
-            if (filePath.isRoot()) {
-                return null
-            }
-        }
-        else if (url != null) {
-            if (url.path.isEmpty()) {
-                return null
-            }
-        }
-        else {
-            return null
+            return filePath.parent()?.let { ofFile(it) }
         }
 
-        val simpleString = asString()
-
-        val withoutTrainingSlash =
-            if (simpleString.endsWith("/")) {
-                simpleString.dropLast(1)
-            }
-            else {
-                simpleString
-            }
-
-        @Suppress("MoveVariableDeclarationIntoWhen", "RedundantSuppression")
-        val lastSeparator = withoutTrainingSlash.lastIndexOf('/')
-
-        return when {
-            lastSeparator == -1 ->
-                if (filePath != null &&
-                        filePath.type == FilePathType.NetworkWindows) {
-                    val backslashIndex = withoutTrainingSlash.lastIndexOf('\\')
-                    if (backslashIndex <= 1) {
-                        null
-                    }
-                    else {
-                        of(withoutTrainingSlash.substring(0, backslashIndex))
-                    }
-                }
-                else {
-                    null
-                }
-
-            lastSeparator == 0 ->
-                of("/")
-
-            filePath != null &&
-                    filePath.type == FilePathType.AbsoluteWindows &&
-                    lastSeparator == 2 ->
-                of(simpleString.take(lastSeparator + 1))
-
-            else ->
-                of(simpleString.take(lastSeparator))
+        if (url != null) {
+            return url.parent()?.let { ofUrl(it) }
         }
+
+        return null
     }
 
 

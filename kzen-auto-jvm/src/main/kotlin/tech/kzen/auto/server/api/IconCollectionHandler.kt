@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.api
 
 import kotlinx.serialization.json.*
+import java.util.concurrent.ConcurrentHashMap
 
 
 /**
@@ -18,16 +19,21 @@ object IconCollectionHandler {
     // than a blank box, while still being reported under not_found for diagnostics.
     private const val fallbackIconName = "texture"
 
-    // SER5: kotlinx JsonObject tree (was a Jackson tools.jackson JsonNode) — kzen-auto-jvm is Jackson-free.
     // Each set's whole collection is parsed once, lazily, and the tree is cached for the process lifetime.
-    private val collections: MutableMap<String, JsonObject?> = HashMap()
+    // ConcurrentHashMap: queried from concurrent Ktor request handlers. It disallows null values, so a
+    // missing resource is cached as an empty JsonObject sentinel rather than null.
+    private val missingCollection = JsonObject(emptyMap())
+    private val collections = ConcurrentHashMap<String, JsonObject>()
 
-    private fun collection(set: String): JsonObject? =
-        collections.getOrPut(set) {
+    private fun collection(set: String): JsonObject? {
+        val cached = collections.computeIfAbsent(set) {
             IconCollectionHandler::class.java
                 .getResourceAsStream("$resourcePathPrefix$set.json")
                 ?.use { Json.parseToJsonElement(it.readBytes().decodeToString()).jsonObject }
+                ?: missingCollection
         }
+        return cached.takeIf { it !== missingCollection }
+    }
 
     fun query(set: String, names: List<String>): String {
         val collection = collection(set)

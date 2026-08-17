@@ -1,6 +1,7 @@
 package tech.kzen.auto.common.objects.document.script
 
 import tech.kzen.auto.common.paradigm.logic.LogicConventions
+import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributePath
@@ -248,14 +249,6 @@ object ScriptConventions {
 
 
     fun isScript(documentNotation: DocumentNotation): Boolean {
-        val mainObjectNotation =
-            documentNotation.objects.notations[NotationConventions.mainObjectPath]
-                ?: return false
-
-        val mainObjectIs =
-            mainObjectNotation.get(NotationConventions.isAttributeName)?.asString()
-                ?: return false
-
-        return mainObjectIs == objectName.value
+        return AutoConventions.isMainArchetype(documentNotation, objectName)
     }
 }

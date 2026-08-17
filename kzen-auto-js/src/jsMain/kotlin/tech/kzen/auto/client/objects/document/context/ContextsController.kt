@@ -1,12 +1,9 @@
 package tech.kzen.auto.client.objects.document.context
 
 import emotion.react.css
-import js.objects.unsafeJso
 import mui.material.IconButton
 import mui.material.Size
 import mui.material.TextField
-import mui.material.ToggleButton
-import mui.system.sx
 import react.ChildrenBuilder
 import react.Key
 import react.Props
@@ -21,7 +18,7 @@ import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.objects.document.common.dragdrop.dragHandle
 import tech.kzen.auto.client.objects.document.common.dragdrop.dropIndicator
 import tech.kzen.auto.client.objects.document.common.dragdrop.dropMarkerFor
-import tech.kzen.auto.client.objects.document.common.signature.LogicTypeOptions
+import tech.kzen.auto.client.objects.document.common.signature.logicTypePicker
 import tech.kzen.auto.client.objects.document.objectLocationMarker
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
@@ -30,9 +27,8 @@ import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.react
-import tech.kzen.auto.client.wrap.select.SelectOption
-import tech.kzen.auto.client.wrap.select.muiAutocompleteField
 import tech.kzen.auto.client.wrap.setState
+import tech.kzen.auto.common.objects.document.common.dragdrop.ObjectTreeReorder
 import tech.kzen.auto.common.objects.document.logic.TypeMetadataDefiner
 import tech.kzen.auto.common.objects.document.logic.context.ContextConventions
 import tech.kzen.lib.common.model.attribute.AttributeName
@@ -488,45 +484,22 @@ class ContextsController(
             return
         }
 
-        // insertionIndex is the gap (0..size) the cursor points at; dropping at the dragged row's own two
-        // edges is a no-op. Otherwise account for the row leaving its slot when it sits above the target.
-        val insertionIndex = target + (if (after) 1 else 0)
-        if (insertionIndex == source || insertionIndex == source + 1) {
-            return
-        }
-        val newIndex = if (insertionIndex > source) insertionIndex - 1 else insertionIndex
-
         val documentNotation = documentNotation() ?: return
 
-        val draggedLocation = declarations[source].location
-        val draggedRoot = draggedLocation.objectPath
+        // The gap (0..size) the cursor points at, counted before the dragged row leaves its slot.
+        val insertionIndex = target + (if (after) 1 else 0)
 
-        // Document order with the dragged object removed — the frame the shift index resolves against.
-        val remainingPaths = documentNotation.objects.notations.map.keys.filter {
-            it != draggedRoot && ! it.startsWith(draggedRoot)
-        }
-
-        val siblings = declarations
-            .filterIndexed { i, _ -> i != source }
-            .map { it.location }
-        if (siblings.isEmpty()) {
-            return
-        }
-
-        val anchor = siblings.getOrNull(newIndex)?.objectPath
-        val targetDocumentIndex =
-            if (anchor != null) {
-                remainingPaths.indexOf(anchor)
-            }
-            else {
-                val lastSibling = siblings.last().objectPath
-                remainingPaths.indexOfLast { it == lastSibling || it.startsWith(lastSibling) } + 1
-            }
+        val position = ObjectTreeReorder.reorderPosition(
+            documentNotation.objects.notations.map.keys.toList(),
+            declarations.map { it.location.objectPath },
+            source,
+            insertionIndex)
+            ?: return
 
         async {
             props.mirroredGraphStore.apply(ShiftObjectTreeCommand(
-                draggedLocation,
-                PositionRelation.at(targetDocumentIndex)))
+                declarations[source].location,
+                position))
         }
     }
 
@@ -757,55 +730,16 @@ class ContextsController(
                 setState { editingName = text }
             }
 
-            span {
-                css {
-                    display = Display.inlineBlock
-                    width = 8.em
-                }
-
-                val typeOptions = LogicTypeOptions.classOptions
-                    .map { (value, simpleLabel) ->
-                        val option: SelectOption = unsafeJso {
-                            this.value = value
-                            this.label = simpleLabel
-                        }
-                        option
-                    }
-                    .toTypedArray()
-
-                val className = row.type.className.asString()
-
-                muiAutocompleteField(
-                    label = "Type",
-                    options = typeOptions,
-                    selectedOption = typeOptions.find { it.value == className },
-                    onSelect = { onTypeChange(row, it.value, row.type.nullable) },
-                    disableClearable = true,
-                    onClosedKeyDown = { event ->
-                        ClientInputUtils.handleEnterAndEscape(
-                            event, { onCommitEdit(row) }, ::onCancelEdit)
-                    })
-            }
-
-            // Nullable as a compact toggle (`?`) rather than a switch + label — the pressed state IS the
-            // meaning.
-            ToggleButton {
-                value = "nullable"
-                selected = row.type.nullable
-                size = Size.small
-                sx {
-                    height = 28.px
-                }
-                title =
-                    if (row.type.nullable) {
-                        "Nullable (click to require non-null)"
-                    }
-                    else {
-                        "Allow null"
-                    }
-                onChange = { _, _ -> onTypeChange(row, row.type.className.asString(), ! row.type.nullable) }
-                icon("material-symbols:question-mark") {}
-            }
+            logicTypePicker(
+                className = row.type.className.asString(),
+                nullable = row.type.nullable,
+                onTypeChange = { className, nullable -> onTypeChange(row, className, nullable) },
+                onClosedKeyDown = { event ->
+                    ClientInputUtils.handleEnterAndEscape(
+                        event, { onCommitEdit(row) }, ::onCancelEdit)
+                },
+                // The form's own flex `gap` already spaces this row's controls.
+                itemSpacing = null)
 
             renderEditorText(
                 row, "Qualifier", 7.em, state.editingQualifier) { text -> setState { editingQualifier = text } }

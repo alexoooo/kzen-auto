@@ -13,18 +13,12 @@ import kotlin.random.Random
 class ValueSummaryBuilder {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-//        private const val maxNominalBuckets = 100
-
         private const val maxNominalBuckets = 100
-//        private const val maxNominalBuckets = 250
 
         private const val maxSampleSize = 100
 
-//        private const val sampleThreshold = 250
         private const val sampleThreshold = 1_000
-//        private const val sampleThreshold = 10_000
 
-//        private const val histogramLengthThreshold = 64
         private const val histogramLengthThreshold = 128
 
         private const val nominalOther = "<other>"

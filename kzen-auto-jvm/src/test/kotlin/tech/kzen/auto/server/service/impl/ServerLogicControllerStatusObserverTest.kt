@@ -5,6 +5,7 @@ import org.junit.Before
 import org.junit.Test
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.util.AutoTestUtils
+import tech.kzen.auto.server.util.awaitSettled
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -79,7 +80,7 @@ class ServerLogicControllerStatusObserverTest {
                 "start() must announce the new run")
 
             controller.continueOrStart(runId, snapshot)
-            awaitSettled(controller)
+            controller.awaitSettled()
 
             val settledState = assertNotNull(controller.status().active).state
             assertTrue(
@@ -139,7 +140,7 @@ class ServerLogicControllerStatusObserverTest {
         assertEquals(runId, assertNotNull(started.active).id)
 
         controller.continueOrStart(runId, snapshot)
-        awaitSettled(controller)
+        controller.awaitSettled()
 
         // The run actually did work, so its trace high-water must have advanced past the start. This is the
         // value every client keys its per-emit trace re-fetch on: no advance would mean no refresh.
@@ -167,17 +168,5 @@ class ServerLogicControllerStatusObserverTest {
     //-----------------------------------------------------------------------------------------------------------------
     private fun graphDefinitionAttempt(): GraphDefinitionAttempt {
         return AutoTestUtils.graphDefinitionAttempt(AutoTestUtils.readNotation())
-    }
-
-
-    private fun awaitSettled(controller: ServerLogicController) {
-        for (attempt in 0 until 500) {
-            val state = controller.status().active?.state
-            if (state != null && !state.isExecuting()) {
-                return
-            }
-            Thread.sleep(10)
-        }
-        fail("Run did not settle")
     }
 }

@@ -11,7 +11,6 @@ import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.global.NavigationGlobal
 import tech.kzen.auto.client.service.logic.ClientLogicGlobal
-import tech.kzen.auto.client.service.logic.ClientLogicState
 import tech.kzen.auto.client.service.logic.LogicRunFrames
 import tech.kzen.auto.client.service.logic.LogicValidationGlobal
 import tech.kzen.auto.client.util.DefinitionErrors
@@ -86,8 +85,6 @@ class HeaderRunController (
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-//        const val runningKey = "running"
-
         private const val actionStep = "step"
         private const val actionStepOver = "step-over"
         private const val actionStepOut = "step-out"
@@ -129,24 +126,10 @@ class HeaderRunController (
     override fun componentDidMount() {
         props.clientStateGlobal.observe(this)
         props.logicValidationGlobal.observe(this)
-
-//        async {
-//            ClientContext.executionRepository.observe(this)
-//
-//            val initialActiveScripts =
-//                    ClientContext.restClient.runningHosts()
-//
-//            val nextActive = state.active + initialActiveScripts
-//
-//            setState {
-//                active = nextActive
-//            }
-//        }
     }
 
 
     override fun componentWillUnmount() {
-//        ClientContext.executionRepository.unobserve(this)
         props.clientStateGlobal.unobserve(this)
         props.logicValidationGlobal.unobserve(this)
     }
@@ -349,8 +332,6 @@ class HeaderRunController (
                 throw IllegalArgumentException("Unknown action: $action")
             }
         }
-
-//        println("%%%% action: $action")
     }
 
 
@@ -376,30 +357,30 @@ class HeaderRunController (
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
-//        val clientState = state.clientState
-//            ?: return
-
         div {
             css {
                 display = Display.flex
                 alignItems = AlignItems.center
             }
 
-            renderControls(/*clientState.clientLogicState*/)
+            renderControls()
         }
 
         renderDetailsOverlay()
     }
 
 
-    private fun ChildrenBuilder.renderControls(
-//        clientLogicState: ClientLogicState
-    ) {
-//        println("#### renderControls: ${clientLogicState.logicStatus?.active?.state}")
-
+    private fun ChildrenBuilder.renderControls() {
         val active = state.active
         val executing = state.executing
         val runnable = state.runnable
+
+        // Step, Step Over and the two slow-motion modes share one availability rule: paused mid-run (advance the
+        // current frame) or idle on a runnable document (start fresh).
+        val steppable = active && !executing || !active && runnable
+
+        val slowRunning = state.slowLooping && !state.slowStepOver
+        val slowSteppingOver = state.slowLooping && state.slowStepOver
 
         // Two compact rows stacked at the top-right (right-aligned). This is a floated cluster, so the
         // ribbon's tabs and sub-action buttons flow around it — filling the width beside it on the rows it
@@ -415,7 +396,6 @@ class HeaderRunController (
             // Row 1 — transport: momentary actions (Step / Step Over / Step Out / Run-Pause / Stop) as an
             // exclusive group.
             ToggleButtonGroup {
-//                value = actionRun
                 exclusive = true
                 size = Size.small
 
@@ -436,11 +416,43 @@ class HeaderRunController (
                     disabled = true
                 }
 
-                renderStepButton(active, executing, runnable)
-                renderStepOverButton(active, executing, runnable)
-                renderStepOutButton(active, executing)
-                renderRunPauseButton(active, executing, runnable)
-                renderStopButton(active)
+                renderControlButton(
+                    buttonValue = actionStep,
+                    iconName = "material-symbols:redo",
+                    buttonDisabled = !steppable,
+                    buttonTitle = "Step")
+
+                // Enabled while paused mid-run (step the current frame, running any sub-document entered on this
+                // step to completion instead of descending) AND while idle on a runnable document (start fresh in
+                // stepping-over mode) — mirroring Step's start-fresh path.
+                renderControlButton(
+                    buttonValue = actionStepOver,
+                    iconName = "material-symbols:step-over",
+                    buttonDisabled = !steppable,
+                    buttonTitle = "Step over (run nested sub-documents to completion)")
+
+                // Only while paused mid-run: run the current document to its end, pausing at the caller's
+                // next step (or finish, at the run root).
+                renderControlButton(
+                    buttonValue = actionStepOut,
+                    iconName = "material-symbols:step-out",
+                    buttonDisabled = !(active && !executing),
+                    buttonTitle = "Step out (run to end of current document)")
+
+                renderControlButton(
+                    buttonValue = actionRunOrPause,
+                    iconName = when {
+                        executing -> "material-symbols:pause"
+                        else -> "material-symbols:play-arrow"
+                    },
+                    buttonDisabled = !active && !runnable,
+                    buttonTitle = runPauseTitle(active, executing, runnable))
+
+                renderControlButton(
+                    buttonValue = actionStop,
+                    iconName = "material-symbols:stop",
+                    buttonDisabled = !active,
+                    buttonTitle = "Stop")
             }
 
             // Row 2 — run modes (persistent on/off toggles, kept OUT of the exclusive group so a deselect
@@ -452,15 +464,71 @@ class HeaderRunController (
                     marginTop = 0.25.em
                 }
 
-                renderSlowRunButton(active, executing, runnable)
-                renderSlowStepOverButton(active, executing, runnable)
-                renderPauseOnErrorToggle(active, executing, runnable)
+                // Slow-motion is a persistent on/off state, like Pause-on-error, rather than a momentary
+                // action; it stays enabled while looping so it can be toggled off.
+                renderControlButton(
+                    buttonValue = "slowRun",
+                    iconName = "material-symbols:slow-motion-video",
+                    buttonDisabled = !(state.slowLooping || steppable),
+                    buttonTitle = when {
+                        slowRunning -> "Pause slow-motion run"
+                        else -> "Slow-motion run (auto-step, descends into nested logic)"
+                    },
+                    buttonSelected = slowRunning,
+                    onToggle = { onSlowToggle(false) })
+
+                // Slow-motion variant that auto-issues Step Over instead of Step: it paces step-by-step within
+                // the current document without descending into nested logic.
+                renderControlButton(
+                    buttonValue = "slowStepOver",
+                    iconName = "material-symbols:autoplay",
+                    buttonDisabled = !(state.slowLooping || steppable),
+                    buttonTitle = when {
+                        slowSteppingOver -> "Pause slow-motion run"
+                        else -> "Slow-motion run, stepping over nested logic (stays in this document)"
+                    },
+                    buttonSelected = slowSteppingOver,
+                    onToggle = { onSlowToggle(true) })
+
+                // A live toggle: clickable while paused (so it can be turned on/off mid-run and pushed to the
+                // active run) and while idle on a runnable document (to seed the next start); locked only while
+                // actively executing or on a non-runnable idle document.
+                renderControlButton(
+                    buttonValue = "pauseOnError",
+                    iconName = "material-symbols:warning",
+                    buttonDisabled = executing || (!active && !runnable),
+                    buttonTitle = "Pause on error: stop at a failed step so it can be fixed and re-run",
+                    buttonSelected = state.pauseOnError,
+                    onToggle = ::onTogglePauseOnError)
 
                 renderControlsDivider()
 
-                renderClearButton(active)
+                // Enabled whenever some trace is retained and nothing is running (Clear is global — see
+                // onClear / hasTrace, which reflect ANY document's trace).
+                renderControlButton(
+                    buttonValue = "clear",
+                    iconName = "material-symbols:replay",
+                    buttonDisabled = active || !state.hasTrace,
+                    buttonTitle = "Clear all traces",
+                    onToggle = ::onClear)
+
                 renderDetailsToggle(active)
             }
+        }
+    }
+
+
+    private fun runPauseTitle(active: Boolean, executing: Boolean, runnable: Boolean): String? {
+        return when {
+            executing -> "Pause"
+
+            // During slow-motion the loop holds the run Paused between steps; Run here means
+            // "stop dwelling and finish at full speed" (continueRunAsync cancels the slow loop).
+            state.slowLooping && active -> "Run at full speed"
+
+            !runnable -> null
+            active -> "Continue running"
+            else -> "Run"
         }
     }
 
@@ -489,264 +557,48 @@ class HeaderRunController (
     }
 
 
-    private fun ChildrenBuilder.renderClearButton(active: Boolean) {
-        ToggleButton {
-            value = "clear"
-
-            // Enabled whenever some trace is retained and nothing is running (Clear is global — see
-            // onClear / hasTrace, which reflect ANY document's trace).
-            disabled = active || !state.hasTrace
-            size = Size.small
-
-            sx {
-                height = 30.px
-                marginLeft = 0.25.em
-                color = NamedColor.black
-            }
-
-            title = "Clear all traces"
-
-            // ToggleButton's onClick is (event, value) -> Unit; ignore both and just clear.
-            onClick = { _, _ -> onClear() }
-
-            controlIcon("material-symbols:replay")
-        }
-    }
-
-
-    private fun ChildrenBuilder.renderSlowRunButton(
-        active: Boolean,
-        executing: Boolean,
-        runnable: Boolean
+    /**
+     * One run-control button. [onToggle] is what separates the two rows: the transport buttons are members of
+     * the exclusive [ToggleButtonGroup], which reports their clicks through its own onChange and spaces them
+     * itself, while a standalone mode button handles its own click and carries its own left gap. A null
+     * [buttonTitle] leaves the tooltip attribute off entirely; a null [buttonSelected] leaves the pressed state
+     * unset, which is what lets the group compute it (it only fills in a child whose own `selected` is absent).
+     */
+    private fun ChildrenBuilder.renderControlButton(
+        buttonValue: String,
+        iconName: String,
+        buttonDisabled: Boolean,
+        buttonTitle: String?,
+        buttonSelected: Boolean? = null,
+        onToggle: (() -> Unit)? = null
     ) {
-        // Standalone toggle (not in the exclusive Step/Run/Stop group): slow-motion is a persistent
-        // on/off state, like Pause-on-error, rather than a momentary action.
         ToggleButton {
-            value = "slowRun"
-            selected = state.slowLooping && !state.slowStepOver
-
-            // Same availability as Step (start fresh, or continue from a pause); stays enabled while
-            // looping so it can be toggled off.
-            disabled = !(state.slowLooping || active && !executing || !active && runnable)
+            value = buttonValue
+            if (buttonSelected != null) {
+                selected = buttonSelected
+            }
+            disabled = buttonDisabled
             size = Size.small
 
             sx {
                 height = 30.px
-                marginLeft = 0.25.em
-                color = NamedColor.black
-            }
-
-            title =
-                if (state.slowLooping && !state.slowStepOver) {
-                    "Pause slow-motion run"
+                if (onToggle != null) {
+                    marginLeft = 0.25.em
                 }
-                else {
-                    "Slow-motion run (auto-step, descends into nested logic)"
-                }
-
-            // ToggleButton's onClick is (event, value) -> Unit; ignore both and just toggle.
-            onClick = { _, _ -> onSlowToggle(false) }
-
-            controlIcon("material-symbols:slow-motion-video")
-        }
-    }
-
-
-    private fun ChildrenBuilder.renderSlowStepOverButton(
-        active: Boolean,
-        executing: Boolean,
-        runnable: Boolean
-    ) {
-        // Slow-motion variant that auto-issues Step Over instead of Step: it paces step-by-step within
-        // the current document without descending into nested logic.
-        ToggleButton {
-            value = "slowStepOver"
-            selected = state.slowLooping && state.slowStepOver
-
-            disabled = !(state.slowLooping || active && !executing || !active && runnable)
-            size = Size.small
-
-            sx {
-                height = 30.px
-                marginLeft = 0.25.em
                 color = NamedColor.black
             }
 
-            title =
-                if (state.slowLooping && state.slowStepOver) {
-                    "Pause slow-motion run"
-                }
-                else {
-                    "Slow-motion run, stepping over nested logic (stays in this document)"
-                }
-
-            onClick = { _, _ -> onSlowToggle(true) }
-
-            controlIcon("material-symbols:autoplay")
-        }
-    }
-
-
-    private fun ChildrenBuilder.renderPauseOnErrorToggle(active: Boolean, executing: Boolean, runnable: Boolean) {
-        ToggleButton {
-            value = "pauseOnError"
-            selected = state.pauseOnError
-
-            // A live toggle: clickable while paused (so it can be turned on/off mid-run and pushed to the
-            // active run) and while idle on a runnable document (to seed the next start); locked only while
-            // actively executing or on a non-runnable idle document.
-            disabled = executing || (!active && !runnable)
-            size = Size.small
-
-            sx {
-                height = 30.px
-                marginLeft = 0.25.em
-                color = NamedColor.black
+            if (buttonTitle != null) {
+                title = buttonTitle
             }
 
-            title = "Pause on error: stop at a failed step so it can be fixed and re-run"
-
-            // ToggleButton's onClick is (event, value) -> Unit; we ignore both and just flip state.
-            onClick = { _, _ -> onTogglePauseOnError() }
-
-            controlIcon("material-symbols:warning")
-        }
-    }
-
-
-    private fun ChildrenBuilder.renderStepButton(
-        active: Boolean,
-        executing: Boolean,
-        runnable: Boolean
-    ) {
-        ToggleButton {
-            value = actionStep
-
-            disabled = !(active && !executing || !active && runnable)
-
-            size = Size.small
-
-            sx {
-                height = 30.px
-                color = NamedColor.black
+            if (onToggle != null) {
+                // ToggleButton's onClick is (event, value) -> Unit; both are ignored — the handler already
+                // knows which control it belongs to.
+                onClick = { _, _ -> onToggle() }
             }
 
-            title = "Step"
-
-            controlIcon("material-symbols:redo")
-        }
-    }
-
-
-    private fun ChildrenBuilder.renderStepOverButton(
-        active: Boolean,
-        executing: Boolean,
-        runnable: Boolean
-    ) {
-        ToggleButton {
-            value = actionStepOver
-
-            // Enabled while paused mid-run (step the current frame, running any sub-document entered on this
-            // step to completion instead of descending) AND while idle on a runnable document (start fresh in
-            // stepping-over mode) — mirroring Step's start-fresh path.
-            disabled = !(active && !executing || !active && runnable)
-
-            size = Size.small
-
-            sx {
-                height = 30.px
-                color = NamedColor.black
-            }
-
-            title = "Step over (run nested sub-documents to completion)"
-
-            controlIcon("material-symbols:step-over")
-        }
-    }
-
-
-    private fun ChildrenBuilder.renderStepOutButton(
-        active: Boolean,
-        executing: Boolean
-    ) {
-        ToggleButton {
-            value = actionStepOut
-
-            // Only while paused mid-run: run the current document to its end, pausing at the caller's
-            // next step (or finish, at the run root).
-            disabled = !(active && !executing)
-
-            size = Size.small
-
-            sx {
-                height = 30.px
-                color = NamedColor.black
-            }
-
-            title = "Step out (run to end of current document)"
-
-            controlIcon("material-symbols:step-out")
-        }
-    }
-
-
-    private fun ChildrenBuilder.renderRunPauseButton(
-        active: Boolean,
-        executing: Boolean,
-        runnable: Boolean
-    ) {
-        ToggleButton {
-            value = actionRunOrPause
-            disabled = !active && !runnable
-            size = Size.small
-
-            sx {
-                height = 30.px
-                color = NamedColor.black
-            }
-
-            if (executing) {
-                title = "Pause"
-            }
-            else if (state.slowLooping && active) {
-                // During slow-motion the loop holds the run Paused between steps; Run here means
-                // "stop dwelling and finish at full speed" (continueRunAsync cancels the slow loop).
-                title = "Run at full speed"
-            }
-            else if (runnable) {
-                title =
-                    if (active) {
-                        "Continue running"
-                    }
-                    else {
-                        "Run"
-                    }
-            }
-
-            if (executing) {
-                controlIcon("material-symbols:pause")
-            }
-            else {
-                controlIcon("material-symbols:play-arrow")
-            }
-        }
-    }
-
-
-    private fun ChildrenBuilder.renderStopButton(active: Boolean) {
-        ToggleButton {
-            value = actionStop
-            disabled = !active
-            size = Size.small
-
-            sx {
-                height = 30.px
-                color = NamedColor.black
-            }
-
-            title = "Stop"
-
-            controlIcon("material-symbols:stop")
+            controlIcon(iconName)
         }
     }
 
@@ -873,65 +725,4 @@ class HeaderRunController (
             renderFrameNode(dependency, depth + 1, activeLeaf)
         }
     }
-
-
-//    private fun ChildrenBuilder.renderSelected(
-//            selected: DocumentPath?,
-//            selectedFramePaths: List<DocumentPath>
-//    ) {
-//        if (selected == null) {
-//            +"Please select a running script (below)"
-//            return
-//        }
-//
-//        +"Selected: ${selected.name}"
-//
-//        for (framePath in selectedFramePaths) {
-//            div {
-//                key = framePath.asString()
-//                +framePath.name.value
-//            }
-//        }
-//    }
-//
-//
-//    private fun ChildrenBuilder.renderActiveSelection(
-//            selected: DocumentPath?,
-//            graphNotation: GraphNotation,
-//            active: Set<DocumentPath>,
-//            navigationRoute: NavigationRoute
-//    ) {
-//        val scriptDocuments = graphNotation
-//                .documents
-//                .values
-//                .filter { ScriptDocument.isScript(/*it.key,*/ it.value) }
-//
-//        for (script in scriptDocuments) {
-//            if (! active.contains(script.key) ||
-//                    selected == script.key) {
-//                continue
-//            }
-//
-//            val pathValue = script.key.asString()
-//
-//            a {
-//                css {
-//                    color = Globals.inherit
-//                    textDecoration = Globals.initial
-//                    width = 100.pct
-//                    height = 100.pct
-//                }
-//
-//                key = pathValue
-//                href = NavigationRoute(
-//                    script.key,
-//                    navigationRoute.requestParams.set(runningKey, pathValue)
-//                ).toFragment()
-//
-//                MenuItem {
-//                    +script.key.name.value
-//                }
-//            }
-//        }
-//    }
 }

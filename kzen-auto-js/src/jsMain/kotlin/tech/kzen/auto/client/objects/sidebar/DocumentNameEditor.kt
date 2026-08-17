@@ -37,7 +37,6 @@ external interface DocumentNameEditorProps : PropsWithRef<DocumentNameEditor> {
 external interface DocumentNameEditorState: State {
     var editing: Boolean
     var name: String
-    var saving: Boolean
 }
 
 
@@ -57,7 +56,6 @@ class DocumentNameEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    private var inputRef: HTMLInputElement? = null
     private var inputRef: RefObject<HTMLInputElement> = createRef()
 
     // The in-row name text doubles as the popover anchor, so the floating edit card lifts out of
@@ -65,38 +63,11 @@ class DocumentNameEditor(
     private var readerRef: RefObject<HTMLDivElement> = createRef()
 
 
-
     //-----------------------------------------------------------------------------------------------------------------
     override fun DocumentNameEditorState.init(props: DocumentNameEditorProps) {
-//        console.log("ObjectNameEditor | State.init - ${props.objectName}", Date.now())
         name = displayPath()
-
         editing = false
-        saving = false
-//        readerHover = false
     }
-
-
-//    override fun componentDidUpdate(
-//            prevProps: Props,
-//            prevState: State,
-//            snapshot: Any
-//    ) {
-//        if (state.saving && ! prevState.saving) {
-//            saveAsync()
-//        }
-//    }
-//
-//
-//    private fun saveAsync() {
-//        async {
-//            val nameWithExtension = DocumentName.ofYaml(state.name)
-//            ClientContext.commandBus.apply(RenameDocumentRefactorCommand(
-//                    props.documentPath, nameWithExtension))
-//
-////            // NB: no need to set saving = false, the component will un-mount?
-//        }
-//    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -111,21 +82,6 @@ class DocumentNameEditor(
     private fun displayPath(): String {
         return props.documentPath.name.value
     }
-
-
-    // TODO: what does this do and how to make this work (post-migration)
-//    private fun onInputRef(inputRef: HTMLInputElement?) {
-//        val isNew = this.inputRef == null && inputRef != null
-//
-//        this.inputRef = inputRef
-//
-//        if (isNew) {
-//            async {
-//                delay(1)
-//                this.inputRef?.focus()
-//            }
-//        }
-//    }
 
 
     private fun handleEnterAndEscape(event: KeyboardEvent<*>) {
@@ -152,7 +108,6 @@ class DocumentNameEditor(
 
         setState {
             editing = false
-            saving = true
         }
 
         // a folder and a document rename through the same editor — the path form selects the refactor
@@ -166,8 +121,6 @@ class DocumentNameEditor(
 
         async {
             props.mirroredGraphStore.apply(command)
-
-            // NB: no need to set saving = false, the component will un-mount
         }
     }
 

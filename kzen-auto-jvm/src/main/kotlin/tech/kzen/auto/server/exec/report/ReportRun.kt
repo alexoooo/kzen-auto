@@ -388,8 +388,10 @@ class ReportRun(
             runExecutionId)
 
         val pivotValueTableSpec = PivotValueTableSpec.ofRequest(executionRequest.parameters)
-        val start = executionRequest.getLong(OutputExploreSpec.previewStartKey)!!
-        val count = executionRequest.getInt(OutputExploreSpec.previewRowCountKey)!!
+        val start = executionRequest.getLong(OutputExploreSpec.previewStartKey)
+            ?: return ExecutionResult.failure("Missing ${OutputExploreSpec.previewStartKey}")
+        val count = executionRequest.getInt(OutputExploreSpec.previewRowCountKey)
+            ?: return ExecutionResult.failure("Missing ${OutputExploreSpec.previewRowCountKey}")
 
         val withPreview =
             if (tableOutput != null) {

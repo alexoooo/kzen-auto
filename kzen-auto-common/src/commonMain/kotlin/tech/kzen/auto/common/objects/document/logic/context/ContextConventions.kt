@@ -1,6 +1,7 @@
 package tech.kzen.auto.common.objects.document.logic.context
 
 import tech.kzen.auto.common.objects.document.logic.TypeMetadataDefiner
+import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -11,7 +12,6 @@ import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.model.structure.notation.DocumentNotation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
-import tech.kzen.lib.common.service.notation.NotationConventions
 
 
 /**
@@ -51,13 +51,7 @@ object ContextConventions {
 
     /** Is [documentNotation] a Contexts document — i.e. does its `main` declare `is: Contexts`? */
     fun isContextsDocument(documentNotation: DocumentNotation): Boolean {
-        val mainObjectNotation = documentNotation.objects.notations[NotationConventions.mainObjectPath]
-            ?: return false
-
-        val mainObjectIs = mainObjectNotation.get(NotationConventions.isAttributeName)?.asString()
-            ?: return false
-
-        return mainObjectIs == contextsDocumentObjectName.value
+        return AutoConventions.isMainArchetype(documentNotation, contextsDocumentObjectName)
     }
 
 

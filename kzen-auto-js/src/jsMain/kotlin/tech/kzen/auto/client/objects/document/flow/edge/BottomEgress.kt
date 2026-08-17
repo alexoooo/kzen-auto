@@ -53,8 +53,6 @@ class BottomEgress(
                 position = Position.absolute
                 bottom = 0.em
 
-//                width = halfWidth.plus(CellController.arrowSide)
-//                width = 100.pct.plus(CellController.arrowSide)
                 width = 100.pct
                 height = CellController.egressLength
                 zIndex = integer(-1)

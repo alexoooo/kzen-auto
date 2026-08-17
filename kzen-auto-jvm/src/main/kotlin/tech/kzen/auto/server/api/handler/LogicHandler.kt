@@ -14,9 +14,7 @@ import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunResponse
 import tech.kzen.lib.common.exec.logic.run.model.LogicStatus
-import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.service.store.DirectGraphStore
 
 
@@ -43,13 +41,7 @@ class LogicHandler(
 
 
     fun logicStart(parameters: Parameters, paused: Boolean): LogicStartAttempt {
-        val documentPath: DocumentPath = parameters.getParam(
-            CommonRestApi.paramDocumentPath, DocumentPath::parse)
-
-        val objectPath: ObjectPath = parameters.getParam(
-            CommonRestApi.paramObjectPath, ObjectPath::parse)
-
-        val objectLocation = ObjectLocation(documentPath, objectPath)
+        val objectLocation = parameters.getObjectLocationParam()
 
         val pauseOnError: Boolean = parameters
             .getAll(CommonRestApi.paramPauseOnError)
@@ -146,114 +138,72 @@ class LogicHandler(
     }
 
 
-    fun logicCancel(parameters: Parameters): String {
+    // The uniform control-verb shape: parse the run id, apply [verb] on the controller, answer the
+    // response name as the text body. A verb needing more than the run id parses its extras first and
+    // closes over them (setBreakpoints / setPauseOnError below); logicMoveTo stays separate — alone among
+    // the control verbs it answers a reason alongside the response.
+    private fun controlVerb(
+        parameters: Parameters,
+        verb: suspend (LogicRunId) -> LogicRunResponse
+    ): String {
         val runId: LogicRunId = parameters.getParam(CommonRestApi.paramRunId) {
             value -> LogicRunId(value)
         }
 
         val response = runBlocking {
-            serverLogicController.cancel(runId)
+            verb(runId)
         }
 
         return response.name
+    }
+
+
+    fun logicCancel(parameters: Parameters): String {
+        return controlVerb(parameters) { serverLogicController.cancel(it) }
     }
 
 
     fun logicPause(parameters: Parameters): String {
-        val runId: LogicRunId = parameters.getParam(CommonRestApi.paramRunId) {
-            value -> LogicRunId(value)
-        }
-
-        val response = runBlocking {
-            serverLogicController.pause(runId)
-        }
-
-        return response.name
+        return controlVerb(parameters) { serverLogicController.pause(it) }
     }
 
 
     fun logicContinueRun(parameters: Parameters): String {
-        val runId: LogicRunId = parameters.getParam(CommonRestApi.paramRunId) {
-            value -> LogicRunId(value)
-        }
-
-        val response = runBlocking {
-            serverLogicController.continueOrStart(runId)
-        }
-
-        return response.name
+        return controlVerb(parameters) { serverLogicController.continueOrStart(it) }
     }
 
 
     fun logicSetBreakpoints(parameters: Parameters): String {
-        val runId: LogicRunId = parameters.getParam(CommonRestApi.paramRunId) {
-            value -> LogicRunId(value)
-        }
-
         val breakpoints: List<ObjectLocation> = parameters.getParamList(
             CommonRestApi.paramBreakpoint, ObjectLocation::parse)
 
-        val response = serverLogicController.setBreakpoints(runId, breakpoints)
-
-        return response.name
+        return controlVerb(parameters) { serverLogicController.setBreakpoints(it, breakpoints) }
     }
 
 
     fun logicSetPauseOnError(parameters: Parameters): String {
-        val runId: LogicRunId = parameters.getParam(CommonRestApi.paramRunId) {
-            value -> LogicRunId(value)
-        }
-
         val pauseOnError: Boolean = parameters
             .getAll(CommonRestApi.paramPauseOnError)
             ?.singleOrNull()
             ?.toBoolean()
             ?: false
 
-        val response = runBlocking {
-            serverLogicController.setPauseOnError(runId, pauseOnError)
-        }
-
-        return response.name
+        return controlVerb(parameters) { serverLogicController.setPauseOnError(it, pauseOnError) }
     }
 
 
     fun logicContinueStep(parameters: Parameters): String {
-        val runId: LogicRunId = parameters.getParam(CommonRestApi.paramRunId) {
-            value -> LogicRunId(value)
-        }
-
-        val response = runBlocking {
-            serverLogicController.step(runId)
-        }
-
-        return response.name
+        return controlVerb(parameters) { serverLogicController.step(it) }
     }
 
 
     fun logicStepOver(parameters: Parameters): String {
-        val runId: LogicRunId = parameters.getParam(CommonRestApi.paramRunId) {
-            value -> LogicRunId(value)
-        }
-
-        val response = runBlocking {
-            serverLogicController.stepOver(runId)
-        }
-
-        return response.name
+        return controlVerb(parameters) { serverLogicController.stepOver(it) }
     }
 
 
     fun logicStepOut(parameters: Parameters): String {
-        val runId: LogicRunId = parameters.getParam(CommonRestApi.paramRunId) {
-            value -> LogicRunId(value)
-        }
-
-        val response = runBlocking {
-            serverLogicController.stepOut(runId)
-        }
-
-        return response.name
+        return controlVerb(parameters) { serverLogicController.stepOut(it) }
     }
 
 
@@ -262,11 +212,7 @@ class LogicHandler(
             value -> LogicRunId(value)
         }
 
-        val documentPath: DocumentPath = parameters.getParam(
-            CommonRestApi.paramDocumentPath, DocumentPath::parse)
-        val objectPath: ObjectPath = parameters.getParam(
-            CommonRestApi.paramObjectPath, ObjectPath::parse)
-        val target = ObjectLocation(documentPath, objectPath)
+        val target = parameters.getObjectLocationParam()
 
         // The frame to reposition — the run root when absent, so a caller that only ever moves within the
         // root document doesn't have to name it.

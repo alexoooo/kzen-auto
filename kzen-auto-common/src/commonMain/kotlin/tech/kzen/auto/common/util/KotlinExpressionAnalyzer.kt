@@ -65,7 +65,12 @@ object KotlinExpressionAnalyzer {
     // not a variable, while `` `true` `` (back-ticked) IS an identifier. A step named like a keyword is therefore
     // only ever referenced back-ticked, which the lexer captures separately. Soft/contextual keywords (it, field,
     // …) remain valid identifiers, matching Kotlin.
-    private val hardKeywords = setOf(
+    //
+    // This is the ONE definition: [ExpressionUtils.escapeKotlinVariableName] back-ticks exactly this set, so a
+    // name the lexer reads as a keyword is a name escaping quoted. A second copy would let escaping and
+    // tokenization drift, silently dropping the dependency edge and the rename for the divergent names.
+    // https://stackoverflow.com/a/44149580/1941359
+    val hardKeywords = setOf(
         "package", "as", "typealias", "class", "this", "super", "val", "var", "fun", "for",
         "null", "true", "false", "is", "in", "throw", "return", "break", "continue", "object",
         "if", "try", "else", "while", "do", "when", "interface", "typeof")

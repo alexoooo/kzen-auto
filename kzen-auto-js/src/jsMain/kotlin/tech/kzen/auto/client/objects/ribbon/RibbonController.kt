@@ -111,16 +111,24 @@ class RibbonController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private var mounted = false
+
+
     override fun componentDidMount() {
+        mounted = true
         bridge()?.channel(InsertionKey)?.subscribe(this)
         props.navigationGlobal.observe(this)
         async {
-            props.mirroredGraphStore.observe(this)
+            // Unobserve runs synchronously on unmount, so registering after it would leak this observer.
+            if (mounted) {
+                props.mirroredGraphStore.observe(this)
+            }
         }
     }
 
 
     override fun componentWillUnmount() {
+        mounted = false
         bridge()?.channel(InsertionKey)?.unsubscribe(this)
         props.navigationGlobal.unobserve(this)
         props.mirroredGraphStore.unobserve(this)
@@ -161,6 +169,9 @@ class RibbonController(
                     .filter { it.archetype.objectPath.name == typeName }
 
             if (documentRibbonGroups == prevState.currentRibbonGroups) {
+                setState {
+                    updatePending = false
+                }
                 return
             }
 

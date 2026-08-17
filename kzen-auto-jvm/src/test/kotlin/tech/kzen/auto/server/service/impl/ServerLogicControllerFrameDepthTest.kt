@@ -5,6 +5,7 @@ import org.junit.Before
 import org.junit.Test
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.util.AutoTestUtils
+import tech.kzen.auto.server.util.awaitSettled
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunFrameInfo
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -61,7 +62,8 @@ class ServerLogicControllerFrameDepthTest {
         val runId = controller.start(level1, snapshot)
             ?: fail("Unable to start run")
         controller.continueOrStart(runId, snapshot)
-        awaitPaused(controller)
+        // The leaf document halts at a Pause step (ExplicitPaused); accept any settled pause state.
+        controller.awaitSettled("Run did not reach the paused state")
 
         val frame = assertNotNull(controller.status().active).frame
 
@@ -78,19 +80,6 @@ class ServerLogicControllerFrameDepthTest {
     //-----------------------------------------------------------------------------------------------------------------
     private fun graphDefinitionAttempt(): GraphDefinitionAttempt {
         return AutoTestUtils.graphDefinitionAttempt(AutoTestUtils.readNotation())
-    }
-
-
-    private fun awaitPaused(controller: ServerLogicController) {
-        for (attempt in 0 until 500) {
-            // The leaf document halts at a Pause step (ExplicitPaused); accept any settled pause state.
-            val state = controller.status().active?.state
-            if (state != null && !state.isExecuting()) {
-                return
-            }
-            Thread.sleep(10)
-        }
-        fail("Run did not reach the paused state")
     }
 
 

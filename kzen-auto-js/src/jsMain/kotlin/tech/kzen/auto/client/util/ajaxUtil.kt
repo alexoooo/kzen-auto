@@ -123,34 +123,20 @@ suspend fun httpPostBytes(url: String, body: ByteArray): String = suspendCorouti
 }
 
 
-suspend fun httpDelete(url: String): String = suspendCoroutine { c ->
-    val xhr = XMLHttpRequest()
-    xhr.onreadystatechange = {
-        if (xhr.readyState == XMLHttpRequest.DONE) {
-            if (xhr.status / 100 == 2) {
-                c.resume(xhr.response as String)
-            }
-            else {
-                c.resumeWithException(xhr.statusException())
-            }
-        }
-        null
-    }
-    xhr.open("DELETE", url)
-    xhr.send()
-}
-
-
-// TODO: what does this really do?
+// Starts a suspend lambda from non-suspend code (React lifecycle methods, event handlers) and exposes it as a
+// Promise. Almost every call site is fire-and-forget, so a failure is logged here as well as rejected -
+// otherwise a failed REST call surfaces only as an unobserved rejection.
 fun <T> async(x: suspend () -> T): Promise<T> {
     return Promise { resolve, reject ->
         x.startCoroutine(object: Continuation<T> {
             override fun resumeWith(result: Result<T>) {
-                if (result.isSuccess) {
+                val failure = result.exceptionOrNull()
+                if (failure == null) {
                     resolve(result.getOrThrow())
                 }
                 else {
-                    reject(result.exceptionOrNull() ?: RuntimeException("Unknown failure"))
+                    console.error("Async failure", failure)
+                    reject(failure)
                 }
             }
 

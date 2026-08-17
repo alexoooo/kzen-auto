@@ -7,6 +7,8 @@ import org.junit.Test
 import tech.kzen.auto.common.objects.document.script.model.StepTrace
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.util.AutoTestUtils
+import tech.kzen.auto.server.util.awaitDone
+import tech.kzen.auto.server.util.awaitState
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunState
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
@@ -86,7 +88,7 @@ class ServerLogicControllerScriptMigrationTest {
         var guard = 0
         while (!isDone(runId, flagLocation) && guard < 50) {
             controller.step(runId, base)
-            awaitState(LogicRunState.Paused)
+            controller.awaitState(LogicRunState.Paused)
             guard += 1
         }
         assertTrue(isDone(runId, flagLocation), "Flag should complete before the edit")
@@ -100,7 +102,7 @@ class ServerLogicControllerScriptMigrationTest {
 
         // Resume against the edited snapshot: the controller detects the change, recompiles, and migrates.
         controller.continueOrStart(runId, edited)
-        awaitDone()
+        controller.awaitDone()
 
         assertEquals(
             "99", resultDisplay(runId),
@@ -147,28 +149,5 @@ class ServerLogicControllerScriptMigrationTest {
         val entry = snapshot.values[LogicTracePath.ofObjectStableId(stableId)]
             ?: return null
         return StepTrace.ofExecutionValue(entry.value)
-    }
-
-
-    @Suppress("SameParameterValue")
-    private fun awaitState(state: LogicRunState) {
-        for (attempt in 0 until 500) {
-            if (context.serverLogicController.status().active?.state == state) {
-                return
-            }
-            Thread.sleep(10)
-        }
-        fail("Run did not reach $state (was ${context.serverLogicController.status().active?.state})")
-    }
-
-
-    private fun awaitDone() {
-        for (attempt in 0 until 500) {
-            if (context.serverLogicController.status().active == null) {
-                return
-            }
-            Thread.sleep(10)
-        }
-        fail("Run did not complete")
     }
 }

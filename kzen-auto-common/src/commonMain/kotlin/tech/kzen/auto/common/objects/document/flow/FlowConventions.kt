@@ -1,7 +1,8 @@
 package tech.kzen.auto.common.objects.document.flow
 
+import tech.kzen.auto.common.paradigm.flow.model.structure.FlowStructureConventions
+import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.attribute.AttributeName
-import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.location.ObjectReference
 import tech.kzen.lib.common.model.obj.ObjectName
@@ -9,7 +10,6 @@ import tech.kzen.lib.common.model.structure.notation.DocumentNotation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
-import tech.kzen.lib.common.service.notation.NotationConventions
 
 
 /**
@@ -21,11 +21,13 @@ object FlowConventions {
     val objectName = ObjectName("Flow")
     val edgePipeName = ObjectName("EdgePipe")
 
-    val verticesAttributeName = AttributeName("vertices")
-    val verticesAttributePath = AttributePath.ofName(verticesAttributeName)
+    // Aliases of the paradigm's own structural vocabulary, so document-side code reads naturally without the
+    // paradigm having to depend on this document (same shape as ScriptConventions over LogicConventions).
+    val verticesAttributeName = FlowStructureConventions.verticesAttributeName
+    val verticesAttributePath = FlowStructureConventions.verticesAttributePath
 
-    val edgesAttributeName = AttributeName("edges")
-    val edgesAttributePath = AttributePath.ofName(edgesAttributeName)
+    val edgesAttributeName = FlowStructureConventions.edgesAttributeName
+    val edgesAttributePath = FlowStructureConventions.edgesAttributePath
 
     // A Flow's Logic signature lives in its vertices: each FlowInput vertex carries an input parameter
     // name in a scalar `parameter` attribute, each FlowOutput vertex a result name in a scalar `result`
@@ -37,15 +39,7 @@ object FlowConventions {
 
 
     fun isFlow(documentNotation: DocumentNotation): Boolean {
-        val mainObjectNotation =
-            documentNotation.objects.notations[NotationConventions.mainObjectPath]
-                ?: return false
-
-        val mainObjectIs =
-            mainObjectNotation.get(NotationConventions.isAttributeName)?.asString()
-                ?: return false
-
-        return mainObjectIs == objectName.value
+        return AutoConventions.isMainArchetype(documentNotation, objectName)
     }
 
 

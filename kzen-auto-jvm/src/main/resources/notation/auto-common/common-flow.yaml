@@ -13,14 +13,17 @@ EdgeDescriptor:
 #######################################################################################################################
 
 
+# KEEP IN SYNC with the ClassName constants in FlowWiring, which match a channel marker's declared type by
+# string. Both sides agreeing is all that is enforced, so both drifted together when these classes moved into
+# the api/input and api/output subpackages.
 OptionalInput:
   abstract: true
-  class: tech.kzen.auto.common.paradigm.flow.api.OptionalInput
+  class: tech.kzen.auto.common.paradigm.flow.api.input.OptionalInput
 
 
 RequiredInput:
   abstract: true
-  class: tech.kzen.auto.common.paradigm.flow.api.RequiredInput
+  class: tech.kzen.auto.common.paradigm.flow.api.input.RequiredInput
 
 
 ###########################################################
@@ -28,22 +31,22 @@ RequiredInput:
 
 OptionalOutput:
   abstract: true
-  class: tech.kzen.auto.common.paradigm.flow.api.OptionalOutput
+  class: tech.kzen.auto.common.paradigm.flow.api.output.OptionalOutput
 
 
 RequiredOutput:
   abstract: true
-  class: tech.kzen.auto.common.paradigm.flow.api.RequiredOutput
+  class: tech.kzen.auto.common.paradigm.flow.api.output.RequiredOutput
 
 
 BatchOutput:
   abstract: true
-  class: tech.kzen.auto.common.paradigm.flow.api.BatchOutput
+  class: tech.kzen.auto.common.paradigm.flow.api.output.BatchOutput
 
 
 StreamOutput:
   abstract: true
-  class: tech.kzen.auto.common.paradigm.flow.api.StreamOutput
+  class: tech.kzen.auto.common.paradigm.flow.api.output.StreamOutput
 
 
 ###########################################################

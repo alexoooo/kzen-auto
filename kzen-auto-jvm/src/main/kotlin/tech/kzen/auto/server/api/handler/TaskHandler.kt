@@ -8,9 +8,6 @@ import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.RequestParams
 import tech.kzen.lib.common.exec.task.model.TaskId
 import tech.kzen.lib.common.exec.task.model.TaskModel
-import tech.kzen.lib.common.model.document.DocumentPath
-import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.lib.common.model.obj.ObjectPath
 
 
 class TaskHandler(
@@ -18,13 +15,7 @@ class TaskHandler(
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     fun taskSubmit(parameters: Parameters): TaskModel {
-        val documentPath: DocumentPath = parameters.getParam(
-            CommonRestApi.paramDocumentPath, DocumentPath::parse)
-
-        val objectPath: ObjectPath = parameters.getParam(
-            CommonRestApi.paramObjectPath, ObjectPath::parse)
-
-        val objectLocation = ObjectLocation(documentPath, objectPath)
+        val objectLocation = parameters.getObjectLocationParam()
 
         val params = mutableMapOf<String, List<String>>()
         for (e in parameters.entries()) {
@@ -68,13 +59,7 @@ class TaskHandler(
 
 
     fun taskLookup(parameters: Parameters): List<String> {
-        val documentPath: DocumentPath = parameters.getParam(
-            CommonRestApi.paramDocumentPath, DocumentPath::parse)
-
-        val objectPath: ObjectPath = parameters.getParam(
-            CommonRestApi.paramObjectPath, ObjectPath::parse)
-
-        val objectLocation = ObjectLocation(documentPath, objectPath)
+        val objectLocation = parameters.getObjectLocationParam()
 
         val tasks: Set<TaskId> = runBlocking {
             modelTaskRepository.lookupActive(objectLocation)

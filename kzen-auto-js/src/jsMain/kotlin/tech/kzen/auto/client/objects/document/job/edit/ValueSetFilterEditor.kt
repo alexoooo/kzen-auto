@@ -6,14 +6,12 @@ import mui.material.Checkbox
 import mui.material.IconButton
 import mui.material.InputLabel
 import mui.material.Size
-import mui.material.TextField
 import mui.material.ToggleButton
 import mui.material.ToggleButtonGroup
 import mui.system.sx
 import react.ChildrenBuilder
 import react.Key
 import react.Props
-import react.ReactNode
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
@@ -23,7 +21,6 @@ import react.dom.html.ReactHTML.td
 import react.dom.html.ReactHTML.th
 import react.dom.html.ReactHTML.thead
 import react.dom.html.ReactHTML.tr
-import react.dom.onChange
 import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
 import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor
@@ -32,7 +29,6 @@ import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
 import tech.kzen.auto.client.objects.document.common.edit.MultiTextAttributeEditor
 import tech.kzen.auto.client.objects.document.job.JobSummaryStore
 import tech.kzen.auto.client.service.global.ClientStateGlobal
-import tech.kzen.auto.client.util.ClientInputUtils
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RComponent
 import tech.kzen.auto.client.wrap.iconify.icon
@@ -40,7 +36,6 @@ import tech.kzen.auto.client.wrap.installContextType
 import tech.kzen.auto.client.wrap.contextValue
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.select.SelectOption
-import tech.kzen.auto.client.wrap.select.muiAutocompleteField
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
 import tech.kzen.auto.common.objects.document.report.spec.filter.ColumnFilterSpec
@@ -48,6 +43,7 @@ import tech.kzen.auto.common.objects.document.report.spec.filter.ColumnFilterTyp
 import tech.kzen.auto.common.objects.document.report.spec.filter.FilterSpec
 import tech.kzen.auto.common.objects.document.report.summary.ColumnSummary
 import tech.kzen.auto.common.objects.document.report.summary.TableSummary
+import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -61,7 +57,6 @@ import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.common.service.store.MirroredGraphStore
 import web.cssom.*
-import web.html.HTMLInputElement
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -72,11 +67,6 @@ external interface ValueSetFilterEditorState: State {
     // The nearest upstream SummaryWorker's live TableSummary (or null pre-run / when no Summary is upstream) —
     // the source of each column's candidate distinct values (its NominalValueSummary histogram).
     var upstreamSummary: TableSummary?
-
-    // Transient add-column form (ephemeral UI): `adding` toggles it open; `addName` holds the free-text name
-    // used only in the no-summary fallback (with a summary, columns are picked from a dropdown).
-    var adding: Boolean
-    var addName: String
 }
 
 
@@ -137,19 +127,25 @@ class ValueSetFilterEditor(
         val graphStructure = props.clientStateGlobal.current()!!.graphStructure()
         filterSpec = readFilterSpec(graphStructure.graphNotation)
         upstreamSummary = null
-        adding = false
-        addName = ""
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private var mounted = false
+
+
     override fun componentDidMount() {
+        mounted = true
+
         val store = contextValue<DocumentBridge?>()?.channel(JobSummaryStore.Key)
         summaryStore = store
         store?.observe(this)
 
         async {
-            props.mirroredGraphStore.observe(this)
+            // Unobserve runs synchronously on unmount, so registering after it would leak this observer.
+            if (mounted) {
+                props.mirroredGraphStore.observe(this)
+            }
         }
 
         // The store isn't re-pushed on observe; pick up any summaries already present before this editor mounted.
@@ -158,6 +154,7 @@ class ValueSetFilterEditor(
 
 
     override fun componentWillUnmount() {
+        mounted = false
         props.mirroredGraphStore.unobserve(this)
         summaryStore?.unobserve(this)
     }
@@ -238,68 +235,6 @@ class ValueSetFilterEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun onAddClick() {
-        setState {
-            adding = true
-            addName = ""
-        }
-    }
-
-
-    private fun onAddCancel() {
-        setState {
-            adding = false
-            addName = ""
-        }
-    }
-
-
-    private fun onAddFromSummary(columnKey: String) {
-        applyAddColumn(columnKey)
-        setState {
-            adding = false
-            addName = ""
-        }
-    }
-
-
-    private fun onFreeTextAddSubmit() {
-        val trimmed = state.addName.trim()
-        if (trimmed.isEmpty() || isDuplicate(trimmed)) {
-            return
-        }
-
-        applyAddColumn(HeaderLabel(trimmed, 0).asString())
-
-        setState {
-            adding = false
-            addName = ""
-        }
-    }
-
-
-    private fun onAddNameChange(newName: String) {
-        setState {
-            addName = newName
-        }
-    }
-
-
-    private fun handleEnterAndEscape(event: react.dom.events.KeyboardEvent<*>) {
-        ClientInputUtils.handleEnterAndEscape(
-            event, ::onFreeTextAddSubmit, ::onAddCancel)
-    }
-
-
-    // Free-text add can only create an occurrence-0 label, so a name already present at occurrence 0 is a
-    // duplicate (an InsertMapEntryInAttributeCommand on an existing key would fail).
-    private fun isDuplicate(name: String): Boolean {
-        val candidate = HeaderLabel(name, 0)
-        return state.filterSpec?.columns?.keys?.contains(candidate) ?: false
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
         val filterSpec = state.filterSpec
             ?: return
@@ -331,48 +266,11 @@ class ValueSetFilterEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     // Add-column affordance: when an upstream Summary offers columns not yet filtered, pick one from a dropdown
-    // (Report's FilterAddController pattern); otherwise fall back to free-text column entry (SortSpecEditor's
-    // pattern) so a filter can still be configured before any run has produced a summary.
+    // (Report's FilterAddController pattern); otherwise fall back to free-text column entry so a filter can
+    // still be configured before any run has produced a summary.
     private fun ChildrenBuilder.renderAdd(filterSpec: FilterSpec, summary: TableSummary?) {
-        val availableColumns = (summary?.columnSummaries?.map?.keys ?: setOf())
+        val availableOptions = (summary?.columnSummaries?.map?.keys ?: setOf())
             .filter { it !in filterSpec.columns }
-
-        div {
-            if (state.adding) {
-                if (availableColumns.isNotEmpty()) {
-                    renderAddFromSummary(availableColumns)
-                }
-                else {
-                    renderFreeTextAdd(filterSpec)
-                }
-                renderAddCancel()
-            }
-            else {
-                renderAddButton()
-            }
-        }
-    }
-
-
-    private fun ChildrenBuilder.renderAddButton() {
-        div {
-            title = "Add column filter"
-            css {
-                display = Display.inlineBlock
-            }
-
-            IconButton {
-                onClick = {
-                    onAddClick()
-                }
-                icon("material-symbols:add-circle-outline") {}
-            }
-        }
-    }
-
-
-    private fun ChildrenBuilder.renderAddFromSummary(availableColumns: List<HeaderLabel>) {
-        val selectOptions = availableColumns
             .map {
                 val option: SelectOption = unsafeJso {
                     value = it.asString()
@@ -382,74 +280,15 @@ class ValueSetFilterEditor(
             }
             .toTypedArray()
 
-        div {
-            css {
-                display = Display.inlineBlock
-                width = 15.em
-            }
-
-            muiAutocompleteField(
-                label = "Column name",
-                options = selectOptions,
-                selectedOption = null,
-                onSelect = { onAddFromSummary(it.value) },
-                disableClearable = true,
-                autoFocus = true,
-                openOnFocus = true)
-        }
-    }
-
-
-    private fun ChildrenBuilder.renderFreeTextAdd(filterSpec: FilterSpec) {
-        val trimmed = state.addName.trim()
-        val duplicate = trimmed.isNotEmpty() && filterSpec.columns.keys.contains(HeaderLabel(trimmed, 0))
-
-        div {
-            css {
-                display = Display.inlineBlock
-                width = 15.em
-            }
-
-            TextField {
-                label = ReactNode("Column name")
-                fullWidth = true
-                size = Size.small
-
-                onChange = {
-                    val target = it.target as HTMLInputElement
-                    onAddNameChange(target.value)
-                }
-
-                error = duplicate
-
-                onKeyDown = { e ->
-                    handleEnterAndEscape(e)
-                }
-            }
-        }
-
-        IconButton {
-            title = "Add column filter"
-            onClick = {
-                onFreeTextAddSubmit()
-            }
-            icon("material-symbols:add-circle-outline") {}
-        }
-    }
-
-
-    private fun ChildrenBuilder.renderAddCancel() {
-        div {
-            css {
-                display = Display.inlineBlock
-            }
-
-            IconButton {
-                title = "Cancel adding column filter"
-                onClick = {
-                    onAddCancel()
-                }
-                icon("material-symbols:cancel") {}
+        AddNameForm::class.react {
+            entityLabel = "column filter"
+            fieldLabel = "Column name"
+            options = availableOptions
+            isDuplicate = { name -> HeaderLabel(name, 0) in filterSpec.columns }
+            onAdd = { added ->
+                // A picked column carries its own occurrence; free text can only name occurrence 0.
+                applyAddColumn(
+                    if (availableOptions.isEmpty()) HeaderLabel(added, 0).asString() else added)
             }
         }
     }
@@ -482,30 +321,6 @@ class ValueSetFilterColumn(
 ):
     RComponent<ValueSetFilterColumnProps, ValueSetFilterColumnState>(props)
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    companion object {
-        private const val maxValueLength = 96
-        private const val abbreviationSuffix = "…"
-
-
-        private fun formatCount(count: Long): String {
-            return count.toString()
-                .replace(Regex("(\\d)(?=(\\d{3})+(?!\\d))"), "$1,")
-        }
-
-
-        private fun abbreviateValue(value: String): String {
-            if (value.isBlank()) {
-                return "(blank)"
-            }
-            if (value.length < maxValueLength) {
-                return value
-            }
-            return value.substring(0, maxValueLength - abbreviationSuffix.length) + abbreviationSuffix
-        }
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     override fun ValueSetFilterColumnState.init(props: ValueSetFilterColumnProps) {
         // Start expanded when there are already values to review; a freshly-added (empty) column starts collapsed.
@@ -598,7 +413,7 @@ class ValueSetFilterColumn(
                         color = NamedColor.gray
                         fontSize = 0.85.em
                     }
-                    +"Count: ${formatCount(it.count)}"
+                    +"Count: ${FormatUtils.decimalSeparator(it.count)}"
                 }
             }
 
@@ -728,11 +543,11 @@ class ValueSetFilterColumn(
                             }
 
                             td {
-                                +abbreviateValue(entry.key)
+                                +FormatUtils.abbreviateValue(entry.key)
                             }
 
                             td {
-                                +formatCount(entry.value)
+                                +FormatUtils.decimalSeparator(entry.value)
                             }
                         }
                     }

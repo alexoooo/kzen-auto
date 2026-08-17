@@ -40,7 +40,7 @@ external interface CellControllerProps: Props {
 
     // Routing, derived once per render by FlowController and threaded through — never re-derived per cell.
     var nextToRun: ObjectLocation?
-    var runningVertex: ObjectLocation?
+    var edgeRouting: FlowEdgeRouting
 }
 
 
@@ -95,8 +95,7 @@ class CellController(
                 visualFlowModel = props.visualFlowModel
                 flowMatrix = props.flowMatrix
                 flowDag = props.flowDag
-                nextToRun = props.nextToRun
-                runningVertex = props.runningVertex
+                edgeRouting = props.edgeRouting
             }
         }
     }

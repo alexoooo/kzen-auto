@@ -18,19 +18,19 @@ kotlin {
 
 dependencies {
     api("net.openhft:zero-allocation-hashing:$zeroAllocationHashingVersion")
+
+    testImplementation("org.junit.jupiter:junit-jupiter:$junitJupiterVersion")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
-
-
-//tasks.withType<KotlinCompile> {
-//    kotlinOptions {
-//        freeCompilerArgs += listOf("-Xjsr305=strict")
-//        jvmTarget = jvmTargetVersion
-//    }
-//}
 
 
 tasks.compileJava {
     options.release.set(javaVersion)
+}
+
+
+tasks.test {
+    useJUnitPlatform()
 }
 
 

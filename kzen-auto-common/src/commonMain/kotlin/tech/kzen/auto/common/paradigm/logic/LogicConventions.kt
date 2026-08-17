@@ -80,22 +80,36 @@ object LogicConventions {
 
 
     fun wrongRunningError(runId: LogicRunId, actualRunId: LogicRunId): String {
-        return "Expected runId '${runId.value}' but was '${actualRunId.value}'"
+        return wrongRunningPrefix(runId) + "'${actualRunId.value}'"
     }
 
 
-    fun missingExecution(executionId: LogicExecutionId, runId: LogicRunId): String {
-        return "Execution '${executionId.value}' not found in run '${runId.value}'"
+    // The half of wrongRunningError a caller can reconstruct: it knows the run it asked for, not the one that
+    // replaced it.
+    private fun wrongRunningPrefix(runId: LogicRunId): String {
+        return "Expected runId '${runId.value}' but was "
     }
 
 
+    /**
+     * Did the request fail because the *run* the caller addressed is gone — replaced or no longer active while a
+     * client was still projecting it — rather than because the request itself was bad? A caller uses this to stay
+     * quiet through a teardown instead of surfacing an error the user cannot act on.
+     *
+     * Each arm reconstructs a message THIS object builds instead of matching prose out of one, so a reworded
+     * message moves the check with it. That is as structural as the seam gets: the failure crosses the wire as
+     * `ExecutionFailure`, which carries a message and no code.
+     *
+     * Scope is deliberately the run, not the individual execution. A request addressed to a node that has
+     * vanished fails with kzen-lib `RunEngine`'s "No request handler for node: …", which is NOT treated as
+     * missing: that same message is what a genuinely unregistered handler produces, and swallowing it would
+     * hide a wiring defect behind a teardown that may not be happening.
+     */
     fun isMissingError(
         errorMessage: String,
-        runId: LogicRunId,
-        executionId: LogicExecutionId
+        runId: LogicRunId
     ): Boolean {
         return errorMessage == notRunningError() ||
-                errorMessage.contains("'${runId.value}' but was") ||
-                errorMessage.contains("'${executionId.value}' not found")
+                errorMessage.startsWith(wrongRunningPrefix(runId))
     }
 }

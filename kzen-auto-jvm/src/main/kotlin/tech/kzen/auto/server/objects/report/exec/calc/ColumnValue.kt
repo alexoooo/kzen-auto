@@ -236,7 +236,7 @@ class ColumnValue(
             return ofNumber(addition)
         }
 
-        return ofTextNan(asText + that.toString())
+        return ofTextNan(text + that.toString())
     }
 
 
@@ -249,13 +249,13 @@ class ColumnValue(
             return ofNumber(addition)
         }
 
-        return ofTextNan(asText + that.asText)
+        return ofTextNan(text + that.text)
     }
 
 
     operator fun plus(that: Any?): ColumnValue {
         if (that is String) {
-            return ofText(asText + that)
+            return ofText(text + that)
         }
 
         val thisNumber = toDoubleOrNan()
@@ -267,7 +267,7 @@ class ColumnValue(
             return ofNumber(addition)
         }
 
-        return ofTextNan(asText + thatText)
+        return ofTextNan(text + thatText)
     }
 
 
@@ -549,6 +549,8 @@ class ColumnValue(
 
 
     // https://discuss.kotlinlang.org/t/overloading-with-different-types-of-operands/4059/23
+    // NB: equals is epsilon-based but hashCode is text-based, so equal values can hash differently —
+    //  instances are not safe as hash-map/set keys.
     override fun equals(other: Any?): Boolean {
         return this eq other
     }

@@ -10,7 +10,6 @@ import react.Key
 import react.dom.events.DragEvent
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
-import tech.kzen.auto.client.objects.document.common.dragdrop.computeDropIndex
 import tech.kzen.auto.client.objects.document.common.dragdrop.dragHandle
 import tech.kzen.auto.client.objects.document.common.dragdrop.dropIndicator
 import tech.kzen.auto.client.objects.document.common.dragdrop.dropMarkerFor
@@ -28,13 +27,14 @@ import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.client.wrap.iconify.icon
+import tech.kzen.auto.common.objects.document.common.ObjectSubtreeRemoval
+import tech.kzen.auto.common.objects.document.common.dragdrop.ObjectTreeReorder
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.objects.document.script.model.StepTrace
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.lib.common.model.structure.notation.PositionRelation
 import tech.kzen.lib.common.model.structure.notation.cqrs.RemoveObjectCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.ShiftObjectTreeCommand
 import tech.kzen.lib.common.reflect.Reflect
@@ -215,17 +215,15 @@ class IfStepDisplay(
     }
 
 
-    // Removing a branch cascade-deletes its steps: the same deepest-first subtree walk StepHeader.onRemove
-    // does for a step, so every object is a leaf when it is removed.
+    // Removing a branch cascade-deletes its steps (see ObjectSubtreeRemoval).
     private fun onRemoveBranch(branchLocation: ObjectLocation) {
         async {
             val documentNotation = props.mirroredGraphStore.graphNotation()
                 .documents[branchLocation.documentPath]
                 ?: return@async
 
-            val subtreePaths = documentNotation.objects.notations.map.keys
-                .filter { it == branchLocation.objectPath || it.startsWith(branchLocation.objectPath) }
-                .sortedByDescending { it.nesting.segments.size }
+            val subtreePaths = ObjectSubtreeRemoval.deepestFirst(
+                documentNotation.objects.notations.map.keys, branchLocation.objectPath)
 
             for (objectPath in subtreePaths) {
                 props.mirroredGraphStore.apply(RemoveObjectCommand(
@@ -324,40 +322,27 @@ class IfStepDisplay(
             return
         }
 
-        val newIndex = computeDropIndex(source, index, dropAfter)
-        if (newIndex == source) {
-            return
-        }
-
-        val dragged = branchLocations[source]
+        val dragged = branchLocations.getOrNull(source)
+            ?: return
         val graphStructure = props.clientStateGlobal.current()?.graphStructure()
             ?: return
         val documentNotation = graphStructure.graphNotation.documents[dragged.documentPath]
             ?: return
 
-        val draggedRoot = dragged.objectPath
+        // The gap (0..size) the cursor points at, counted before the dragged section leaves its slot.
+        val insertionIndex = index + (if (dropAfter) 1 else 0)
 
-        // Document order with the dragged subtree removed — the frame PositionRelation.at resolves against.
-        val remainingPaths = documentNotation.objects.notations.map.keys.filter {
-            it != draggedRoot && !it.startsWith(draggedRoot)
-        }
-
-        val siblings = branchLocations.filterIndexed { i, _ -> i != source }
-        val anchor = siblings.getOrNull(newIndex)?.objectPath
-
-        val targetDocumentIndex =
-            if (anchor != null) {
-                remainingPaths.indexOf(anchor)
-            }
-            else {
-                val lastSibling = siblings.last().objectPath
-                remainingPaths.indexOfLast { it == lastSibling || it.startsWith(lastSibling) } + 1
-            }
+        val position = ObjectTreeReorder.reorderPosition(
+            documentNotation.objects.notations.map.keys.toList(),
+            branchLocations.map { it.objectPath },
+            source,
+            insertionIndex)
+            ?: return
 
         async {
             props.mirroredGraphStore.apply(ShiftObjectTreeCommand(
                 dragged,
-                PositionRelation.at(targetDocumentIndex)))
+                position))
         }
     }
 
@@ -413,7 +398,7 @@ class IfStepDisplay(
      * strip in a section several hundred px tall.
      *
      * [index] is the branch's index, or the branch count for the Else (see [alwaysAbove]) — which is exactly
-     * what [computeDropIndex] and [dropMarkerFor] want for "past the last branch", including their own no-op
+     * what [onBranchDrop] and [dropMarkerFor] want for "past the last branch", including their own no-op
      * suppression when the last branch is dragged onto it.
      */
     private fun ChildrenBuilder.branchSection(

@@ -179,6 +179,8 @@ class KzenAutoProcess private constructor(
     }
 
 
+    // kill/signalShutdown are the parent side of the managed-lifeline protocol, intentionally
+    //  duplicated in kzen-shell's MainJarProcess (no shared module) — keep the copies in sync.
     fun kill(forceAfter: Duration = Duration.ofSeconds(15)) {
         // Graceful first: signal via the stdin lifeline so the child self-exits, running its own
         // shutdown hook (context.close()) for orderly resource disposal. OS-agnostic — works even on

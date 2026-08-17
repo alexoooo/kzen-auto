@@ -105,18 +105,26 @@ class StorageManagerController(
             loading = true
         }
         async {
-            val summary = props.restClient.storageSummary()
-            val expandedBundles =
-                if (expanded == null) {
-                    mapOf()
+            try {
+                val summary = props.restClient.storageSummary()
+                val expandedBundles =
+                    if (expanded == null) {
+                        mapOf()
+                    }
+                    else {
+                        mapOf(expanded to props.restClient.storageBundleList(expanded))
+                    }
+                setState {
+                    areas = summary
+                    bundlesByArea = expandedBundles
+                    loading = false
                 }
-                else {
-                    mapOf(expanded to props.restClient.storageBundleList(expanded))
+            }
+            catch (e: Throwable) {
+                setState {
+                    loading = false
+                    errorMessage = "Unable to load storage details - ${detailOf(e)}"
                 }
-            setState {
-                areas = summary
-                bundlesByArea = expandedBundles
-                loading = false
             }
         }
     }
@@ -135,13 +143,33 @@ class StorageManagerController(
             expandedAreaId = areaId
         }
 
-        val previousBundles = state.bundlesByArea
         async {
-            val bundles = props.restClient.storageBundleList(areaId)
-            setState {
-                bundlesByArea = previousBundles + (areaId to bundles)
+            try {
+                val bundles = props.restClient.storageBundleList(areaId)
+                setState {
+                    // Merged against the state as of the response, not a pre-request capture, so two
+                    // overlapping expands don't drop each other's rows.
+                    bundlesByArea = state.bundlesByArea + (areaId to bundles)
+                }
+            }
+            catch (e: Throwable) {
+                val areaName = state.areas?.firstOrNull { it.id == areaId }?.displayName ?: areaId
+                val stillExpanded = state.expandedAreaId == areaId
+                setState {
+                    // Collapse the row rather than leaving it on a spinner that can never resolve.
+                    if (stillExpanded) {
+                        expandedAreaId = null
+                    }
+                    errorMessage = "Unable to list $areaName items - ${detailOf(e)}"
+                }
             }
         }
+    }
+
+
+    // Throwable.message can be null; toString at least names the failure type.
+    private fun detailOf(cause: Throwable): String {
+        return cause.message ?: cause.toString()
     }
 
 
@@ -175,11 +203,16 @@ class StorageManagerController(
 
         async {
             val error =
-                if (bundleKey != null) {
-                    props.restClient.storageBundleDelete(areaId, bundleKey).ifEmpty { null }
+                try {
+                    if (bundleKey != null) {
+                        props.restClient.storageBundleDelete(areaId, bundleKey).ifEmpty { null }
+                    }
+                    else {
+                        deleteAll(areaId)
+                    }
                 }
-                else {
-                    deleteAll(areaId)
+                catch (e: Throwable) {
+                    "Unable to delete - ${detailOf(e)}"
                 }
 
             setState {

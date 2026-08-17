@@ -41,7 +41,30 @@ object AutoTestUtils {
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    // The on-disk notation corpus is fixture data: read-only for the life of a test run, but reading it parses
+    // every document in the project, and the suite asks for it at over a hundred call sites. Parsed once and
+    // shared — GraphNotation is immutable (persistent maps), so no test can hand a mutation of it to the next.
+    // No test writes the corpus either; the ones that write notation use an in-memory MapNotationMedia.
+    //
+    // Deliberately NOT extended to graphDefinitionAttempt: an AttributeDefiner may embed a live object in the
+    // definition it returns (FlowWiring mints MutableRequiredInput / MutableFlowOutput channels), so definitions
+    // are not shareable across tests the way notation and metadata are.
+    private val sharedNotation: GraphNotation by lazy {
+        parseNotation()
+    }
+
+    private val sharedMetadata: GraphMetadata by lazy {
+        NotationMetadataReader().read(sharedNotation)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     fun readNotation(): GraphNotation {
+        return sharedNotation
+    }
+
+
+    private fun parseNotation(): GraphNotation {
         val locator = GradleLocator(true)
         val notationMedia = FileNotationMedia(locator)
 
@@ -89,7 +112,9 @@ object AutoTestUtils {
 
 
     fun graphMetadata(graphNotation: GraphNotation): GraphMetadata {
-        val notationMetadataReader = NotationMetadataReader()
-        return notationMetadataReader.read(graphNotation)
+        return when {
+            graphNotation === sharedNotation -> sharedMetadata
+            else -> NotationMetadataReader().read(graphNotation)
+        }
     }
 }

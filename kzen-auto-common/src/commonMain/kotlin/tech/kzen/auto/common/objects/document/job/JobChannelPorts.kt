@@ -9,10 +9,9 @@ import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
  * A Worker declares channel ports as arbitrarily-named attributes whose TYPE is one of these (the attribute
  * value is a reference to the shared Channel object). [tech.kzen.auto.server.objects.job.JobChannelCreator]
  * dispatches the injected endpoint view on that type, and
- * [tech.kzen.auto.common.objects.document.job.ChannelTypeDefiner] validates wiring by it. This object lets the
- * order-driven channel synthesis ([JobChannelDerivation] / [JobChannelSynthesis]) and the JS editor classify a
- * port from its metadata type without re-spelling the api class-name strings (ChannelTypeDefiner keeps its own
- * copy of these constants for its hot validation loop — keep the two in sync).
+ * [ChannelTypeDefiner] validates wiring by it. This object lets the order-driven channel synthesis
+ * ([JobChannelDerivation] / [JobChannelSynthesis]), the definition-time validation and the JS editor classify a
+ * port from its metadata type without re-spelling the api class-name strings.
  */
 object JobChannelPorts {
     //-----------------------------------------------------------------------------------------------------------------

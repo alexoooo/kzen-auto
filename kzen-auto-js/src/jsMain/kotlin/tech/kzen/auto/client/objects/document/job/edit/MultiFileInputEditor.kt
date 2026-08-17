@@ -146,9 +146,16 @@ class MultiFileInputEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private var mounted = false
+
+
     override fun componentDidMount() {
+        mounted = true
         async {
-            props.mirroredGraphStore.observe(this)
+            // Unobserve runs synchronously on unmount, so registering after it would leak this observer.
+            if (mounted) {
+                props.mirroredGraphStore.observe(this)
+            }
         }
 
         if (state.directory.isNotEmpty()) {
@@ -158,6 +165,7 @@ class MultiFileInputEditor(
 
 
     override fun componentWillUnmount() {
+        mounted = false
         props.mirroredGraphStore.unobserve(this)
     }
 

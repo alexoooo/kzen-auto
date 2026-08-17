@@ -26,6 +26,7 @@ import tech.kzen.auto.common.objects.document.report.summary.NominalValueSummary
 import tech.kzen.auto.common.objects.document.report.summary.OpaqueValueSummary
 import tech.kzen.auto.common.objects.document.report.summary.StatisticValueSummary
 import tech.kzen.auto.common.objects.document.report.summary.TableSummary
+import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.exec.ExecutionSuccess
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -223,7 +224,7 @@ class SummaryWorkerDisplay(
                 css {
                     color = NamedColor.gray
                 }
-                +"Summary — ${formatCount(totalRows)} row(s) total"
+                +"Summary — ${FormatUtils.decimalSeparator(totalRows)} row(s) total"
             }
 
             if (tableSummary != null) {
@@ -256,8 +257,8 @@ class SummaryWorkerDisplay(
         val opaque = columnSummary.opaqueValueSummary
 
         val typeHint = when {
-            !numeric.isEmpty() -> "numeric · count ${formatCount(numeric.count)}"
-            !nominal.isEmpty() -> "nominal · ${formatCount(nominal.histogram.size.toLong())} distinct"
+            !numeric.isEmpty() -> "numeric · count ${FormatUtils.decimalSeparator(numeric.count)}"
+            !nominal.isEmpty() -> "nominal · ${FormatUtils.decimalSeparator(nominal.histogram.size.toLong())} distinct"
             else -> "sample"
         }
 
@@ -312,7 +313,7 @@ class SummaryWorkerDisplay(
             val top = nominal.histogram.entries
                 .sortedByDescending { it.value }
                 .take(topNominalValues)
-            val rendered = top.joinToString(" · ") { "${abbreviate(it.key)} ${formatCount(it.value)}" }
+            val rendered = top.joinToString(" · ") { "${abbreviate(it.key)} ${FormatUtils.decimalSeparator(it.value)}" }
             return if (nominal.histogram.size > top.size) "$rendered …" else rendered
         }
 
@@ -326,13 +327,6 @@ class SummaryWorkerDisplay(
     }
 
 
-    // Thousands-separated integer (mirrors the Report's FilterItemController.formatCount).
-    private fun formatCount(count: Long): String {
-        return count.toString()
-            .replace(Regex("(\\d)(?=(\\d{3})+(?!\\d))"), "$1,")
-    }
-
-
     // A compact decimal: round to 3 places, drop a trailing ".0" (JS-safe — the JVM ColumnValueUtils formatter isn't).
     private fun formatNumber(value: Double): String {
         if (!value.isFinite()) {
@@ -341,7 +335,7 @@ class SummaryWorkerDisplay(
         val rounded = round(value * 1000.0) / 1000.0
         val asLong = rounded.toLong()
         return if (rounded == asLong.toDouble()) {
-            formatCount(asLong)
+            FormatUtils.decimalSeparator(asLong)
         }
         else {
             rounded.toString()

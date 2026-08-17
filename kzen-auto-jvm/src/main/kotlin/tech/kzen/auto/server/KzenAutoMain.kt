@@ -59,8 +59,9 @@ fun main(args: Array<String>) {
 // Managed-child lifeline. Wired from kzenAutoInit (below) — NOT from each main() — so every kzen-auto-
 //  based server inherits it: kzen-auto's own KzenAutoMain AND kzen-project's KzenProjectMain, which
 //  reaches the server only through kzenAutoInit/kzenAutoMain and previously (silently) had no reaper, so
-//  project children orphaned the shell. (kzen-launcher's KzenLauncherMain intentionally duplicates these
-//  ~20 lines — it depends on neither kzen-lib nor kzen-auto, so there's no shared home worth the coupling.)
+//  project children orphaned the shell. Intentionally duplicated in kzen-launcher's
+//  KzenLauncherMain.startManagedLifeline (the launcher depends on neither kzen-lib nor kzen-auto, so
+//  there's no shared home worth the coupling for ~20 lines) — keep the copies in sync.
 //  The spawning parent keeps our stdin open as a PIPE; when it closes that stream (graceful stop) or dies
 //  (the OS then closes the inherited pipe on every platform) we observe EOF. The parent may also send a
 //  "SHUTDOWN" line. Either way exitProcess(0) runs the shutdown hook registered in kzenAutoInit
@@ -239,15 +240,34 @@ private suspend inline fun <reified T> ApplicationCall.respondJson(dto: T) {
 }
 
 
+// The three dominant route shapes, compacted to one line per route (the URLs and their registration order
+// are the contract — the helpers change neither): a GET answering the handler's text/plain response, its
+// PUT twin taking form-body parameters (the client's fallback when a long payload overflows the GET URL
+// limit), and the respondJson GET equivalent.
+private fun Routing.getText(path: String, handle: (Parameters) -> String) {
+    get(path) {
+        call.respondText(handle(call.parameters))
+    }
+}
+
+private fun Routing.putText(path: String, handle: (Parameters) -> String) {
+    put(path) {
+        call.respondText(handle(call.receiveParameters()))
+    }
+}
+
+private inline fun <reified T> Routing.getJson(path: String, crossinline handle: (Parameters) -> T) {
+    get(path) {
+        call.respondJson(handle(call.parameters))
+    }
+}
+
+
 private fun Routing.routeStorage(
     storageHandler: StorageHandler
 ) {
-    get(CommonRestApi.storageSummary) {
-        call.respondJson(storageHandler.storageSummary())
-    }
-    get(CommonRestApi.storageBundleList) {
-        call.respondJson(storageHandler.storageBundleList(call.parameters))
-    }
+    getJson(CommonRestApi.storageSummary) { storageHandler.storageSummary() }
+    getJson(CommonRestApi.storageBundleList) { storageHandler.storageBundleList(it) }
     get(CommonRestApi.storageBundleDelete) {
         // NB: text/plain error-message-or-empty, not JSON — deliberately un-migrated
         val response = storageHandler.storageBundleDelete(call.parameters)
@@ -259,9 +279,7 @@ private fun Routing.routeStorage(
 private fun Routing.routeFileListing(
     fileListingHandler: FileListingHandler
 ) {
-    get(CommonRestApi.fileListing) {
-        call.respondJson(fileListingHandler.fileListing(call.parameters))
-    }
+    getJson(CommonRestApi.fileListing) { fileListingHandler.fileListing(it) }
 }
 
 
@@ -286,9 +304,7 @@ private fun Routing.routeIcons() {
 private fun Routing.routeObjectStable(
     objectStableHandler: ObjectStableHandler
 ) {
-    get(CommonRestApi.objectStableMapperSnapshot) {
-        call.respondJson(objectStableHandler.objectStableMapperSnapshot())
-    }
+    getJson(CommonRestApi.objectStableMapperSnapshot) { objectStableHandler.objectStableMapperSnapshot() }
 }
 
 
@@ -377,9 +393,7 @@ private fun Routing.routeLogic(
         }
     }
 
-    get(CommonRestApi.logicStatus) {
-        call.respondJson(logicHandler.logicStatus())
-    }
+    getJson(CommonRestApi.logicStatus) { logicHandler.logicStatus() }
     get(CommonRestApi.logicStartAndRun) {
         call.respondLogicStart(
             logicHandler.logicStart(call.parameters, false))
@@ -399,50 +413,17 @@ private fun Routing.routeLogic(
         call.respondLogicStart(
             logicHandler.logicStart(parameters, true))
     }
-    get(CommonRestApi.logicRequest) {
-        call.respondJson(logicHandler.logicRequest(call.parameters))
-    }
-    get(CommonRestApi.logicCancel) {
-        val response = logicHandler.logicCancel(call.parameters)
-        call.respondText(response)
-    }
-    get(CommonRestApi.logicPause) {
-        val response = logicHandler.logicPause(call.parameters)
-        call.respondText(response)
-    }
-    get(CommonRestApi.logicContinueRun) {
-        val response = logicHandler.logicContinueRun(call.parameters)
-        call.respondText(response)
-    }
-    get(CommonRestApi.logicSetPauseOnError) {
-        val response = logicHandler.logicSetPauseOnError(call.parameters)
-        call.respondText(response)
-    }
-    get(CommonRestApi.logicSetBreakpoints) {
-        val response = logicHandler.logicSetBreakpoints(call.parameters)
-        call.respondText(response)
-    }
-    put(CommonRestApi.logicSetBreakpoints) {
-        val parameters = call.receiveParameters()
-        val response = logicHandler.logicSetBreakpoints(parameters)
-        call.respondText(response)
-    }
-    get(CommonRestApi.logicContinueStep) {
-        val response = logicHandler.logicContinueStep(call.parameters)
-        call.respondText(response)
-    }
-    get(CommonRestApi.logicStepOver) {
-        val response = logicHandler.logicStepOver(call.parameters)
-        call.respondText(response)
-    }
-    get(CommonRestApi.logicStepOut) {
-        val response = logicHandler.logicStepOut(call.parameters)
-        call.respondText(response)
-    }
-    get(CommonRestApi.logicMoveTo) {
-        val response = logicHandler.logicMoveTo(call.parameters)
-        call.respondText(response)
-    }
+    getJson(CommonRestApi.logicRequest) { logicHandler.logicRequest(it) }
+    getText(CommonRestApi.logicCancel) { logicHandler.logicCancel(it) }
+    getText(CommonRestApi.logicPause) { logicHandler.logicPause(it) }
+    getText(CommonRestApi.logicContinueRun) { logicHandler.logicContinueRun(it) }
+    getText(CommonRestApi.logicSetPauseOnError) { logicHandler.logicSetPauseOnError(it) }
+    getText(CommonRestApi.logicSetBreakpoints) { logicHandler.logicSetBreakpoints(it) }
+    putText(CommonRestApi.logicSetBreakpoints) { logicHandler.logicSetBreakpoints(it) }
+    getText(CommonRestApi.logicContinueStep) { logicHandler.logicContinueStep(it) }
+    getText(CommonRestApi.logicStepOver) { logicHandler.logicStepOver(it) }
+    getText(CommonRestApi.logicStepOut) { logicHandler.logicStepOut(it) }
+    getText(CommonRestApi.logicMoveTo) { logicHandler.logicMoveTo(it) }
     get(CommonRestApi.logicTraceBinary) {
         val bytes = logicHandler.logicTraceBinary(call.parameters)
         if (bytes == null) {
@@ -461,9 +442,7 @@ private fun Routing.routeLogic(
 private fun Routing.routeTask(
     taskHandler: TaskHandler
 ) {
-    get(CommonRestApi.taskSubmit) {
-        call.respondJson(taskHandler.taskSubmit(call.parameters))
-    }
+    getJson(CommonRestApi.taskSubmit) { taskHandler.taskSubmit(it) }
     get(CommonRestApi.taskQuery) {
         val response = taskHandler.taskQuery(call.parameters)
         if (response == null) {
@@ -486,26 +465,20 @@ private fun Routing.routeTask(
             call.respondJson(response)
         }
     }
-    get(CommonRestApi.taskLookup) {
-        call.respondJson(taskHandler.taskLookup(call.parameters))
-    }
+    getJson(CommonRestApi.taskLookup) { taskHandler.taskLookup(it) }
 }
 
 
 private fun Routing.routeNotationQuery(
     notationQueryHandler: NotationQueryHandler
 ) {
-    get(CommonRestApi.scan) {
-        call.respondJson(notationQueryHandler.scan(call.parameters))
-    }
+    getJson(CommonRestApi.scan) { notationQueryHandler.scan(it) }
     get(CommonRestApi.notationPrefix + "{notationPath...}") {
         val notationPath = call.parameters.getAll("notationPath")?.joinToString("/") ?: ""
         val response = notationQueryHandler.notation(notationPath, false)
         call.respondText(response)
     }
-    get(CommonRestApi.notationBatch) {
-        call.respondJson(notationQueryHandler.notationBatch(call.parameters))
-    }
+    getJson(CommonRestApi.notationBatch) { notationQueryHandler.notationBatch(it) }
     put(CommonRestApi.notationBatch) {
         val parameters = call.receiveParameters()
         call.respondJson(notationQueryHandler.notationBatch(parameters))
@@ -520,170 +493,49 @@ private fun Routing.routeNotationQuery(
 private fun Routing.routeNotationCommands(
     notationCommandHandler: NotationCommandHandler
 ) {
-    get(CommonRestApi.commandDocumentCreate) {
-        val response = notationCommandHandler.createDocument(call.parameters)
-        call.respondText(response)
-    }
-    get(CommonRestApi.commandDocumentDelete) {
-        val response = notationCommandHandler.deleteDocument(call.parameters)
-        call.respondText(response)
-    }
-    get(CommonRestApi.commandDocumentSetObjects) {
-        val response = notationCommandHandler.setDocumentObjects(call.parameters)
-        call.respondText(response)
-    }
-    put(CommonRestApi.commandDocumentSetObjects) {
-        val parameters = call.receiveParameters()
-        val response = notationCommandHandler.setDocumentObjects(parameters)
-        call.respondText(response)
-    }
+    getText(CommonRestApi.commandDocumentCreate) { notationCommandHandler.createDocument(it) }
+    getText(CommonRestApi.commandDocumentDelete) { notationCommandHandler.deleteDocument(it) }
+    getText(CommonRestApi.commandDocumentSetObjects) { notationCommandHandler.setDocumentObjects(it) }
+    putText(CommonRestApi.commandDocumentSetObjects) { notationCommandHandler.setDocumentObjects(it) }
     post(CommonRestApi.commandResourceAdd) {
         val bytes = call.receive<ByteArray>()
         val wrappedBytes = ImmutableByteArray.wrap(bytes)
         val response = notationCommandHandler.addResource(call.parameters, wrappedBytes)
         call.respondText(response)
     }
-    get(CommonRestApi.commandResourceRemove) {
-        val response = notationCommandHandler.resourceDelete(call.parameters)
-        call.respondText(response)
-    }
-    get(CommonRestApi.commandObjectAdd) {
-        val response = notationCommandHandler.addObject(call.parameters)
-        call.respondText(response)
-    }
-    get(CommonRestApi.commandObjectRemove) {
-        val response = notationCommandHandler.removeObject(call.parameters)
-        call.respondText(response)
-    }
-    get(CommonRestApi.commandObjectShift) {
-        val response = notationCommandHandler.shiftObject(call.parameters)
-        call.respondText(response)
-    }
-    get(CommonRestApi.commandObjectShiftTree) {
-        val response = notationCommandHandler.shiftObjectTree(call.parameters)
-        call.respondText(response)
-    }
-    get(CommonRestApi.commandObjectRelocateTree) {
-        val response = notationCommandHandler.relocateObjectTree(call.parameters)
-        call.respondText(response)
-    }
-    get(CommonRestApi.commandObjectRename) {
-        val response = notationCommandHandler.renameObject(call.parameters)
-        call.respondText(response)
-    }
-    get(CommonRestApi.commandObjectAddAtAttribute) {
-        val response = notationCommandHandler.addObjectAtAttribute(call.parameters)
-        call.respondText(response)
-    }
-    get(CommonRestApi.commandObjectInsertInList) {
-        val response = notationCommandHandler.insertObjectInList(call.parameters)
-        call.respondText(response)
-    }
-    get(CommonRestApi.commandObjectRemoveIn) {
-        val response = notationCommandHandler.removeObjectInAttribute(call.parameters)
-        call.respondText(response)
-    }
-    get(CommonRestApi.commandAttributeUpsert) {
-        val response = notationCommandHandler.upsertAttribute(call.parameters)
-        call.respondText(response)
-    }
-    put(CommonRestApi.commandAttributeUpsert) {
-        val parameters = call.receiveParameters()
-        val response = notationCommandHandler.upsertAttribute(parameters)
-        call.respondText(response)
-    }
-    get(CommonRestApi.commandAttributeUpdateIn) {
-        val response = notationCommandHandler.updateInAttribute(call.parameters)
-        call.respondText(response)
-    }
-    put(CommonRestApi.commandAttributeUpdateIn) {
-        val parameters = call.receiveParameters()
-        val response = notationCommandHandler.updateInAttribute(parameters)
-        call.respondText(response)
-    }
-    get(CommonRestApi.commandAttributeUpdateAllNestingsIn) {
-        val response = notationCommandHandler.updateAllNestingsInAttribute(call.parameters)
-        call.respondText(response)
-    }
-    put(CommonRestApi.commandAttributeUpdateAllNestingsIn) {
-        val parameters = call.receiveParameters()
-        val response = notationCommandHandler.updateAllNestingsInAttribute(parameters)
-        call.respondText(response)
-    }
-    get(CommonRestApi.commandAttributeUpdateAllValuesIn) {
-        val response = notationCommandHandler.updateAllValuesInAttribute(call.parameters)
-        call.respondText(response)
-    }
-    put(CommonRestApi.commandAttributeUpdateAllValuesIn) {
-        val parameters = call.receiveParameters()
-        val response = notationCommandHandler.updateAllValuesInAttribute(parameters)
-        call.respondText(response)
-    }
-    get(CommonRestApi.commandAttributeInsertItemIn) {
-        val response = notationCommandHandler.insertListItemInAttribute(call.parameters)
-        call.respondText(response)
-    }
-    put(CommonRestApi.commandAttributeInsertItemIn) {
-        val parameters = call.receiveParameters()
-        val response = notationCommandHandler.insertListItemInAttribute(parameters)
-        call.respondText(response)
-    }
-    get(CommonRestApi.commandAttributeInsertAllItemsIn) {
-        val response = notationCommandHandler.insertAllListItemsInAttribute(call.parameters)
-        call.respondText(response)
-    }
-    put(CommonRestApi.commandAttributeInsertAllItemsIn) {
-        val parameters = call.receiveParameters()
-        val response = notationCommandHandler.insertAllListItemsInAttribute(parameters)
-        call.respondText(response)
-    }
-    get(CommonRestApi.commandAttributeRemoveIn) {
-        val response = notationCommandHandler.removeInAttribute(call.parameters)
-        call.respondText(response)
-    }
-    get(CommonRestApi.commandAttributeInsertEntryIn) {
-        val response = notationCommandHandler.insertMapEntryInAttribute(call.parameters)
-        call.respondText(response)
-    }
-    put(CommonRestApi.commandAttributeInsertEntryIn) {
-        val parameters = call.receiveParameters()
-        val response = notationCommandHandler.insertMapEntryInAttribute(parameters)
-        call.respondText(response)
-    }
-    get(CommonRestApi.commandAttributeRemoveItemIn) {
-        val response = notationCommandHandler.removeListItemInAttribute(call.parameters)
-        call.respondText(response)
-    }
-    put(CommonRestApi.commandAttributeRemoveItemIn) {
-        val parameters = call.receiveParameters()
-        val response = notationCommandHandler.removeListItemInAttribute(parameters)
-        call.respondText(response)
-    }
-    get(CommonRestApi.commandAttributeRemoveAllItemsIn) {
-        val response = notationCommandHandler.removeAllListItemsInAttribute(call.parameters)
-        call.respondText(response)
-    }
-    put(CommonRestApi.commandAttributeRemoveAllItemsIn) {
-        val parameters = call.receiveParameters()
-        val response = notationCommandHandler.removeAllListItemsInAttribute(parameters)
-        call.respondText(response)
-    }
-    get(CommonRestApi.commandAttributeShiftIn) {
-        val response = notationCommandHandler.shiftInAttribute(call.parameters)
-        call.respondText(response)
-    }
-    get(CommonRestApi.commandRefactorObjectRename) {
-        val response = notationCommandHandler.refactorObjectName(call.parameters)
-        call.respondText(response)
-    }
-    get(CommonRestApi.commandRefactorDocumentRename) {
-        val response = notationCommandHandler.refactorDocumentName(call.parameters)
-        call.respondText(response)
-    }
-    get(CommonRestApi.commandRefactorMove) {
-        val response = notationCommandHandler.refactorMove(call.parameters)
-        call.respondText(response)
-    }
+    getText(CommonRestApi.commandResourceRemove) { notationCommandHandler.resourceDelete(it) }
+    getText(CommonRestApi.commandObjectAdd) { notationCommandHandler.addObject(it) }
+    getText(CommonRestApi.commandObjectRemove) { notationCommandHandler.removeObject(it) }
+    getText(CommonRestApi.commandObjectShift) { notationCommandHandler.shiftObject(it) }
+    getText(CommonRestApi.commandObjectShiftTree) { notationCommandHandler.shiftObjectTree(it) }
+    getText(CommonRestApi.commandObjectRelocateTree) { notationCommandHandler.relocateObjectTree(it) }
+    getText(CommonRestApi.commandObjectRename) { notationCommandHandler.renameObject(it) }
+    getText(CommonRestApi.commandObjectAddAtAttribute) { notationCommandHandler.addObjectAtAttribute(it) }
+    getText(CommonRestApi.commandObjectInsertInList) { notationCommandHandler.insertObjectInList(it) }
+    getText(CommonRestApi.commandObjectRemoveIn) { notationCommandHandler.removeObjectInAttribute(it) }
+    getText(CommonRestApi.commandAttributeUpsert) { notationCommandHandler.upsertAttribute(it) }
+    putText(CommonRestApi.commandAttributeUpsert) { notationCommandHandler.upsertAttribute(it) }
+    getText(CommonRestApi.commandAttributeUpdateIn) { notationCommandHandler.updateInAttribute(it) }
+    putText(CommonRestApi.commandAttributeUpdateIn) { notationCommandHandler.updateInAttribute(it) }
+    getText(CommonRestApi.commandAttributeUpdateAllNestingsIn) { notationCommandHandler.updateAllNestingsInAttribute(it) }
+    putText(CommonRestApi.commandAttributeUpdateAllNestingsIn) { notationCommandHandler.updateAllNestingsInAttribute(it) }
+    getText(CommonRestApi.commandAttributeUpdateAllValuesIn) { notationCommandHandler.updateAllValuesInAttribute(it) }
+    putText(CommonRestApi.commandAttributeUpdateAllValuesIn) { notationCommandHandler.updateAllValuesInAttribute(it) }
+    getText(CommonRestApi.commandAttributeInsertItemIn) { notationCommandHandler.insertListItemInAttribute(it) }
+    putText(CommonRestApi.commandAttributeInsertItemIn) { notationCommandHandler.insertListItemInAttribute(it) }
+    getText(CommonRestApi.commandAttributeInsertAllItemsIn) { notationCommandHandler.insertAllListItemsInAttribute(it) }
+    putText(CommonRestApi.commandAttributeInsertAllItemsIn) { notationCommandHandler.insertAllListItemsInAttribute(it) }
+    getText(CommonRestApi.commandAttributeRemoveIn) { notationCommandHandler.removeInAttribute(it) }
+    getText(CommonRestApi.commandAttributeInsertEntryIn) { notationCommandHandler.insertMapEntryInAttribute(it) }
+    putText(CommonRestApi.commandAttributeInsertEntryIn) { notationCommandHandler.insertMapEntryInAttribute(it) }
+    getText(CommonRestApi.commandAttributeRemoveItemIn) { notationCommandHandler.removeListItemInAttribute(it) }
+    putText(CommonRestApi.commandAttributeRemoveItemIn) { notationCommandHandler.removeListItemInAttribute(it) }
+    getText(CommonRestApi.commandAttributeRemoveAllItemsIn) { notationCommandHandler.removeAllListItemsInAttribute(it) }
+    putText(CommonRestApi.commandAttributeRemoveAllItemsIn) { notationCommandHandler.removeAllListItemsInAttribute(it) }
+    getText(CommonRestApi.commandAttributeShiftIn) { notationCommandHandler.shiftInAttribute(it) }
+    getText(CommonRestApi.commandRefactorObjectRename) { notationCommandHandler.refactorObjectName(it) }
+    getText(CommonRestApi.commandRefactorDocumentRename) { notationCommandHandler.refactorDocumentName(it) }
+    getText(CommonRestApi.commandRefactorMove) { notationCommandHandler.refactorMove(it) }
 }
 
 

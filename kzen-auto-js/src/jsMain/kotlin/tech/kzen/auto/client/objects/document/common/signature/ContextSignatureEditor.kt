@@ -18,7 +18,8 @@ import react.create
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
 import react.dom.onChange
-import tech.kzen.auto.client.objects.document.StageErrorIndicator
+import tech.kzen.auto.client.objects.document.StageFloatStack
+import tech.kzen.auto.client.objects.document.stageFloatRow
 import tech.kzen.auto.client.objects.document.common.scope.ObjectScopedComponent
 import tech.kzen.auto.client.objects.document.common.scope.ObjectScopedProps
 import tech.kzen.auto.client.service.global.ClientState
@@ -152,11 +153,6 @@ class ContextSignatureEditor:
         private val exportsFillColour = Color("rgba(21, 101, 192, 0.10)")
         private val requiresAccentColour = Color("rgba(0, 0, 0, 0.55)")
         private val warningAccentColour = Color("#b26a00")
-
-        // Vertical rhythm of the stage's top-right float stack, shared with Parameters (0.5em) and Result
-        // (2.75em) above.
-        private const val requiresRowEm = 5.0
-        private const val providesRowEm = 7.25
 
         // Not an ObjectLocation, so it can never collide with a real option's value (those are
         // `ObjectLocation.asString()`), and the select's own equality is by value string.
@@ -500,17 +496,12 @@ class ContextSignatureEditor:
     override fun ChildrenBuilder.render() {
         div {
             css {
-                // Third and fourth floats in the stage's top-right stack — below Parameters (0.5em) and Result
-                // (2.75em), on the same 2.25em rhythm, and below the reserved error-chip row
-                // (StageErrorIndicator). Absolute, so an undeclared document costs no vertical space and the
-                // step list still starts at the top.
-                position = Position.absolute
-                top = ((if (provides()) providesRowEm else requiresRowEm) + StageErrorIndicator.reservedRowEm).em
-                right = 0.5.em
+                // Out of flow, so an undeclared document costs no vertical space and the step list still starts
+                // at the top.
+                stageFloatRow(
+                    if (provides()) StageFloatStack.contextProvidesRow else StageFloatStack.contextRequiresRow)
                 display = Display.flex
                 alignItems = AlignItems.center
-                // above the step cards (which are positioned but auto z-index) so it stays clickable.
-                zIndex = integer(2)
             }
 
             if (state.adding) {

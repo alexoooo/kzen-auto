@@ -6,6 +6,7 @@ import tech.kzen.lib.common.model.document.DocumentNesting
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
+import tech.kzen.lib.common.model.structure.notation.DocumentNotation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.platform.DateTimeUtils
@@ -57,6 +58,28 @@ object AutoConventions {
             attributeName == titleAttributePath.attribute ||
             attributeName == descriptionAttributePath.attribute ||
             attributeName == displayAttributePath.attribute
+    }
+
+
+    /**
+     * Does [documentNotation]'s `main` declare `is: [archetypeName]` directly?
+     *
+     * The mechanism each document type identifies ITSELF by. It is deliberately a direct `is`-name match and not
+     * an inheritance-chain query: this answers "which editor / which shape", where a subtype of Script is not a
+     * Script document. Chain membership is the right test for open capability sets instead — see [isLogic] and
+     * `JobConventions.isChannelArchetype`.
+     *
+     * This generic side names no archetype; each domain's `*Conventions` wraps it with its own (self-reference,
+     * CC-17), so the knowledge "what identifies a Script" lives beside the Script definitions.
+     */
+    fun isMainArchetype(documentNotation: DocumentNotation, archetypeName: ObjectName): Boolean {
+        val mainObjectNotation = documentNotation.objects.notations[NotationConventions.mainObjectPath]
+            ?: return false
+
+        val mainObjectIs = mainObjectNotation.get(NotationConventions.isAttributeName)?.asString()
+            ?: return false
+
+        return mainObjectIs == archetypeName.value
     }
 
 

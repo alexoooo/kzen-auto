@@ -108,7 +108,7 @@ class ReportOutputStore(
                 } }
                 return
             }
-            else if (!LogicConventions.isMissingError(onlineError, runId, executionId)) {
+            else if (!LogicConventions.isMissingError(onlineError, runId)) {
                 store.update { state -> state.withOutput {
                     it.copy(
                         outputInfo = null,

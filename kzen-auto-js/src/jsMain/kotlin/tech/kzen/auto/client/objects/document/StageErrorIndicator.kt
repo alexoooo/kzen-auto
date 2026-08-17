@@ -84,14 +84,12 @@ class StageErrorIndicator(
         // Neutral row highlight on the popover's white surface — a red tint would read as a severity change.
         private val hoverColour = Color("#eeeeee")
 
-        // Vertical space (em) this chip occupies at the stage's top-right, including its margin. Every float that
-        // shares this corner — Parameters (LogicSignatureEditor), Result (ResultSignatureEditor), and a Job's
-        // Channel defaults (JobChannelDefaults) — adds this to its own stack offset so it always clears the chip.
+        // Vertical space (em) this chip occupies at the stage's top-right, including its margin. StageFloatStack
+        // clears it for every float sharing this corner.
         //
         // Reserved UNCONDITIONALLY rather than toggled on error presence, for two reasons: the layout must not
         // shift as errors appear/clear, and the chip's condition (definition failures OR async validation errors)
-        // isn't observable from those floats — a conditional offset silently desynced and overlapped. Defined here,
-        // once, because three separate floats previously hardcoded their own offsets and drifted apart.
+        // isn't observable from those floats — a conditional offset silently desynced and overlapped.
         const val reservedRowEm = 2.5
     }
 

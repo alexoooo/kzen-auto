@@ -2,6 +2,7 @@ package tech.kzen.auto.server.api.handler.command
 
 import io.ktor.http.*
 import tech.kzen.auto.common.api.CommonRestApi
+import tech.kzen.auto.server.api.handler.getObjectLocationParam
 import tech.kzen.auto.server.api.handler.getParam
 import tech.kzen.auto.server.api.handler.getParamList
 import tech.kzen.auto.server.api.handler.getParamOrNull
@@ -9,9 +10,6 @@ import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributeNesting
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.attribute.AttributeSegment
-import tech.kzen.lib.common.model.document.DocumentPath
-import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.model.structure.notation.AttributeNotation
 import tech.kzen.lib.common.model.structure.notation.PositionRelation
 import tech.kzen.lib.common.model.structure.notation.cqrs.*
@@ -19,11 +17,7 @@ import tech.kzen.lib.common.model.structure.notation.cqrs.*
 
 //---------------------------------------------------------------------------------------------------------------------
 fun NotationCommandHandler.upsertAttribute(parameters: Parameters): String {
-    val documentPath: DocumentPath = parameters.getParam(
-        CommonRestApi.paramDocumentPath, DocumentPath::parse)
-
-    val objectPath: ObjectPath = parameters.getParam(
-        CommonRestApi.paramObjectPath, ObjectPath::parse)
+    val objectLocation = parameters.getObjectLocationParam()
 
     val attributeName: AttributeName = parameters.getParam(
         CommonRestApi.paramAttributeName, AttributeName::parse)
@@ -32,7 +26,7 @@ fun NotationCommandHandler.upsertAttribute(parameters: Parameters): String {
         CommonRestApi.paramAttributeNotation, yamlNotationParser::parseAttribute)
 
     val command = UpsertAttributeCommand(
-        ObjectLocation(documentPath, objectPath),
+        objectLocation,
         attributeName,
         attributeNotation)
 
@@ -41,11 +35,7 @@ fun NotationCommandHandler.upsertAttribute(parameters: Parameters): String {
 
 
 fun NotationCommandHandler.updateInAttribute(parameters: Parameters): String {
-    val documentPath: DocumentPath = parameters.getParam(
-        CommonRestApi.paramDocumentPath, DocumentPath::parse)
-
-    val objectPath: ObjectPath = parameters.getParam(
-        CommonRestApi.paramObjectPath, ObjectPath::parse)
+    val objectLocation = parameters.getObjectLocationParam()
 
     val attributePath: AttributePath = parameters.getParam(
         CommonRestApi.paramAttributePath, AttributePath::parse)
@@ -54,7 +44,7 @@ fun NotationCommandHandler.updateInAttribute(parameters: Parameters): String {
         CommonRestApi.paramAttributeNotation, yamlNotationParser::parseAttribute)
 
     val command = UpdateInAttributeCommand(
-        ObjectLocation(documentPath, objectPath),
+        objectLocation,
         attributePath,
         attributeNotation)
 
@@ -63,11 +53,7 @@ fun NotationCommandHandler.updateInAttribute(parameters: Parameters): String {
 
 
 fun NotationCommandHandler.updateAllNestingsInAttribute(parameters: Parameters): String {
-    val documentPath: DocumentPath = parameters.getParam(
-        CommonRestApi.paramDocumentPath, DocumentPath::parse)
-
-    val objectPath: ObjectPath = parameters.getParam(
-        CommonRestApi.paramObjectPath, ObjectPath::parse)
+    val objectLocation = parameters.getObjectLocationParam()
 
     val attributeName: AttributeName = parameters.getParam(
         CommonRestApi.paramAttributeName, AttributeName::parse)
@@ -79,7 +65,7 @@ fun NotationCommandHandler.updateAllNestingsInAttribute(parameters: Parameters):
         CommonRestApi.paramAttributeNotation, yamlNotationParser::parseAttribute)
 
     val command = UpdateAllNestingsInAttributeCommand(
-        ObjectLocation(documentPath, objectPath),
+        objectLocation,
         attributeName,
         attributeNestings,
         attributeNotation)
@@ -89,11 +75,7 @@ fun NotationCommandHandler.updateAllNestingsInAttribute(parameters: Parameters):
 
 
 fun NotationCommandHandler.updateAllValuesInAttribute(parameters: Parameters): String {
-    val documentPath: DocumentPath = parameters.getParam(
-        CommonRestApi.paramDocumentPath, DocumentPath::parse)
-
-    val objectPath: ObjectPath = parameters.getParam(
-        CommonRestApi.paramObjectPath, ObjectPath::parse)
+    val objectLocation = parameters.getObjectLocationParam()
 
     val attributeName: AttributeName = parameters.getParam(
         CommonRestApi.paramAttributeName, AttributeName::parse)
@@ -109,7 +91,7 @@ fun NotationCommandHandler.updateAllValuesInAttribute(parameters: Parameters): S
     val nestingNotations = attributeNestings.zip(attributeNotations).toMap()
 
     val command = UpdateAllValuesInAttributeCommand(
-        ObjectLocation(documentPath, objectPath),
+        objectLocation,
         attributeName,
         nestingNotations)
 
@@ -118,11 +100,7 @@ fun NotationCommandHandler.updateAllValuesInAttribute(parameters: Parameters): S
 
 
 fun NotationCommandHandler.insertListItemInAttribute(parameters: Parameters): String {
-    val documentPath: DocumentPath = parameters.getParam(
-        CommonRestApi.paramDocumentPath, DocumentPath::parse)
-
-    val objectPath: ObjectPath = parameters.getParam(
-        CommonRestApi.paramObjectPath, ObjectPath::parse)
+    val objectLocation = parameters.getObjectLocationParam()
 
     val containingList: AttributePath = parameters.getParam(
         CommonRestApi.paramAttributePath, AttributePath::parse)
@@ -134,7 +112,7 @@ fun NotationCommandHandler.insertListItemInAttribute(parameters: Parameters): St
         CommonRestApi.paramAttributeNotation, yamlNotationParser::parseAttribute)
 
     val command = InsertListItemInAttributeCommand(
-        ObjectLocation(documentPath, objectPath),
+        objectLocation,
         containingList,
         indexInList,
         itemNotation)
@@ -144,11 +122,7 @@ fun NotationCommandHandler.insertListItemInAttribute(parameters: Parameters): St
 
 
 fun NotationCommandHandler.insertAllListItemsInAttribute(parameters: Parameters): String {
-    val documentPath: DocumentPath = parameters.getParam(
-        CommonRestApi.paramDocumentPath, DocumentPath::parse)
-
-    val objectPath: ObjectPath = parameters.getParam(
-        CommonRestApi.paramObjectPath, ObjectPath::parse)
+    val objectLocation = parameters.getObjectLocationParam()
 
     val containingList: AttributePath = parameters.getParam(
         CommonRestApi.paramAttributePath, AttributePath::parse)
@@ -160,7 +134,7 @@ fun NotationCommandHandler.insertAllListItemsInAttribute(parameters: Parameters)
         CommonRestApi.paramAttributeNotation, yamlNotationParser::parseAttribute)
 
     val command = InsertAllListItemsInAttributeCommand(
-        ObjectLocation(documentPath, objectPath),
+        objectLocation,
         containingList,
         indexInList,
         itemNotations)
@@ -170,11 +144,7 @@ fun NotationCommandHandler.insertAllListItemsInAttribute(parameters: Parameters)
 
 
 fun NotationCommandHandler.insertMapEntryInAttribute(parameters: Parameters): String {
-    val documentPath: DocumentPath = parameters.getParam(
-        CommonRestApi.paramDocumentPath, DocumentPath::parse)
-
-    val objectPath: ObjectPath = parameters.getParam(
-        CommonRestApi.paramObjectPath, ObjectPath::parse)
+    val objectLocation = parameters.getObjectLocationParam()
 
     val containingMap: AttributePath = parameters.getParam(
         CommonRestApi.paramAttributePath, AttributePath::parse)
@@ -193,7 +163,7 @@ fun NotationCommandHandler.insertMapEntryInAttribute(parameters: Parameters): St
         ?: false
 
     val command = InsertMapEntryInAttributeCommand(
-        ObjectLocation(documentPath, objectPath),
+        objectLocation,
         containingMap,
         indexInMap,
         mapKey,
@@ -205,11 +175,7 @@ fun NotationCommandHandler.insertMapEntryInAttribute(parameters: Parameters): St
 
 
 fun NotationCommandHandler.removeInAttribute(parameters: Parameters): String {
-    val documentPath: DocumentPath = parameters.getParam(
-        CommonRestApi.paramDocumentPath, DocumentPath::parse)
-
-    val objectPath: ObjectPath = parameters.getParam(
-        CommonRestApi.paramObjectPath, ObjectPath::parse)
+    val objectLocation = parameters.getObjectLocationParam()
 
     val attributePath: AttributePath = parameters.getParam(
         CommonRestApi.paramAttributePath, AttributePath::parse)
@@ -219,7 +185,7 @@ fun NotationCommandHandler.removeInAttribute(parameters: Parameters): String {
         ?: false
 
     val command = RemoveInAttributeCommand(
-        ObjectLocation(documentPath, objectPath),
+        objectLocation,
         attributePath,
         removeContainerIfEmpty)
 
@@ -228,11 +194,7 @@ fun NotationCommandHandler.removeInAttribute(parameters: Parameters): String {
 
 
 fun NotationCommandHandler.removeListItemInAttribute(parameters: Parameters): String {
-    val documentPath: DocumentPath = parameters.getParam(
-        CommonRestApi.paramDocumentPath, DocumentPath::parse)
-
-    val objectPath: ObjectPath = parameters.getParam(
-        CommonRestApi.paramObjectPath, ObjectPath::parse)
+    val objectLocation = parameters.getObjectLocationParam()
 
     val attributePath: AttributePath = parameters.getParam(
         CommonRestApi.paramAttributePath, AttributePath::parse)
@@ -245,7 +207,7 @@ fun NotationCommandHandler.removeListItemInAttribute(parameters: Parameters): St
         ?: false
 
     val command = RemoveListItemInAttributeCommand(
-        ObjectLocation(documentPath, objectPath),
+        objectLocation,
         attributePath,
         itemNotation,
         removeContainerIfEmpty)
@@ -255,11 +217,7 @@ fun NotationCommandHandler.removeListItemInAttribute(parameters: Parameters): St
 
 
 fun NotationCommandHandler.removeAllListItemsInAttribute(parameters: Parameters): String {
-    val documentPath: DocumentPath = parameters.getParam(
-        CommonRestApi.paramDocumentPath, DocumentPath::parse)
-
-    val objectPath: ObjectPath = parameters.getParam(
-        CommonRestApi.paramObjectPath, ObjectPath::parse)
+    val objectLocation = parameters.getObjectLocationParam()
 
     val attributePath: AttributePath = parameters.getParam(
         CommonRestApi.paramAttributePath, AttributePath::parse)
@@ -272,7 +230,7 @@ fun NotationCommandHandler.removeAllListItemsInAttribute(parameters: Parameters)
         ?: false
 
     val command = RemoveAllListItemsInAttributeCommand(
-        ObjectLocation(documentPath, objectPath),
+        objectLocation,
         attributePath,
         itemNotations,
         removeContainerIfEmpty)
@@ -282,11 +240,7 @@ fun NotationCommandHandler.removeAllListItemsInAttribute(parameters: Parameters)
 
 
 fun NotationCommandHandler.shiftInAttribute(parameters: Parameters): String {
-    val documentPath: DocumentPath = parameters.getParam(
-        CommonRestApi.paramDocumentPath, DocumentPath::parse)
-
-    val objectPath: ObjectPath = parameters.getParam(
-        CommonRestApi.paramObjectPath, ObjectPath::parse)
+    val objectLocation = parameters.getObjectLocationParam()
 
     val attributePath: AttributePath = parameters.getParam(
         CommonRestApi.paramAttributePath, AttributePath::parse)
@@ -295,7 +249,7 @@ fun NotationCommandHandler.shiftInAttribute(parameters: Parameters): String {
         CommonRestApi.paramPositionIndex, PositionRelation::parse)
 
     val command = ShiftInAttributeCommand(
-        ObjectLocation(documentPath, objectPath),
+        objectLocation,
         attributePath,
         newPosition)
 

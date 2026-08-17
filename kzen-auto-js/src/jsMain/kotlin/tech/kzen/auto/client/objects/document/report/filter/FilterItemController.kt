@@ -26,6 +26,7 @@ import tech.kzen.auto.common.objects.document.report.spec.filter.ColumnFilterSpe
 import tech.kzen.auto.common.objects.document.report.spec.filter.ColumnFilterType
 import tech.kzen.auto.common.objects.document.report.spec.filter.FilterSpec
 import tech.kzen.auto.common.objects.document.report.summary.*
+import tech.kzen.auto.common.util.FormatUtils
 import web.cssom.*
 
 
@@ -55,28 +56,7 @@ class FilterItemController(
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        private const val maxValueLength = 96
         private const val abbreviationSuffix = "..."
-
-
-        private fun formatCount(count: Long): String {
-            return count.toString()
-                .replace(Regex("(\\d)(?=(\\d{3})+(?!\\d))"), "$1,")
-        }
-
-
-        private fun abbreviateValue(value: String): String {
-            if (value.isBlank()) {
-                return "$value(blank)"
-            }
-
-            if (value.length < maxValueLength) {
-                return value
-            }
-
-            val truncated = value.substring(0, maxValueLength - abbreviationSuffix.length)
-            return truncated + abbreviationSuffix
-        }
     }
 
 
@@ -234,7 +214,7 @@ class FilterItemController(
                         }
 
                         if (columnSummary != null) {
-                            val countFormat = formatCount(columnSummary.count)
+                            val countFormat = FormatUtils.decimalSeparator(columnSummary.count)
                             +"Count: $countFormat"
                         }
 
@@ -472,12 +452,12 @@ class FilterItemController(
                             }
 
                             td {
-                                val abbreviated = abbreviateValue(e.key)
+                                val abbreviated = FormatUtils.abbreviateValue(e.key, abbreviationSuffix)
                                 +abbreviated
                             }
 
                             td {
-                                +formatCount(e.value)
+                                +FormatUtils.decimalSeparator(e.value)
                             }
                         }
                     }
@@ -586,7 +566,7 @@ class FilterItemController(
                             key = Key(value)
 
                             td {
-                                val abbreviated = abbreviateValue(value)
+                                val abbreviated = FormatUtils.abbreviateValue(value, abbreviationSuffix)
                                 +abbreviated
                             }
                         }

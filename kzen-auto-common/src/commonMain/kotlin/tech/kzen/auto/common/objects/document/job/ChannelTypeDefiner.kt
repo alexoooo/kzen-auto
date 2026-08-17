@@ -56,19 +56,6 @@ import tech.kzen.lib.platform.ClassNames
 @Reflect
 class ChannelTypeDefiner: AttributeDefiner {
     //-----------------------------------------------------------------------------------------------------------------
-    companion object {
-        private const val channelInputClassName = "tech.kzen.auto.common.paradigm.job.api.ChannelInput"
-        private const val channelOutputClassName = "tech.kzen.auto.common.paradigm.job.api.ChannelOutput"
-        private const val channelClientClassName = "tech.kzen.auto.common.paradigm.job.api.ChannelClient"
-        private const val channelServerClassName = "tech.kzen.auto.common.paradigm.job.api.ChannelServer"
-
-        // A port that DRAINS the channel (the single-reader constraint applies to these); the others FEED it.
-        private val consumerPortClassNames = setOf(channelInputClassName, channelServerClassName)
-        private val producerPortClassNames = setOf(channelOutputClassName, channelClientClassName)
-        private val portClassNames = consumerPortClassNames + producerPortClassNames
-    }
-
-
     private class PortRef(
         location: ObjectLocation,
         portName: AttributeName,
@@ -129,17 +116,28 @@ class ChannelTypeDefiner: AttributeDefiner {
         val consumers = mutableListOf<PortRef>()
         val producers = mutableListOf<PortRef>()
 
-        for (workerLocation in graphNotation.objectLocations) {
+        // A Job's Workers and its Channels are one document — synthesis mints channels into the Job's own
+        // notation and a port names a sibling — so the ports that can reach this channel are its document's,
+        // and scanning the whole project would re-walk every unrelated document per channel defined.
+        val hostDocument = objectLocation.documentPath
+        val hostObjectPaths = graphNotation.documents[hostDocument]
+            ?.objects
+            ?.notations
+            ?.map
+            ?.keys
+            ?: emptySet()
+
+        for (workerObjectPath in hostObjectPaths) {
+            val workerLocation = ObjectLocation(hostDocument, workerObjectPath)
+
             val objectMetadata = graphStructure.graphMetadata.get(workerLocation)
                 ?: continue
 
             for ((portName, portMetadata) in objectMetadata.attributes.map) {
                 val portType = portMetadata.type
                     ?: continue
-                val portClassName = portType.className.asString()
-                if (portClassName !in portClassNames) {
-                    continue
-                }
+                val portKind = JobChannelPorts.kindOf(portType)
+                    ?: continue
 
                 val portNotation = graphNotation.firstAttribute(workerLocation, portName)
                         as? ScalarAttributeNotation
@@ -155,11 +153,12 @@ class ChannelTypeDefiner: AttributeDefiner {
                 }
 
                 val portRef = PortRef(workerLocation, portName, portType.generics.getOrNull(0))
-                if (portClassName in consumerPortClassNames) {
-                    consumers.add(portRef)
-                }
-                else {
-                    producers.add(portRef)
+                when (portKind.direction) {
+                    JobChannelPorts.Direction.Consumer ->
+                        consumers.add(portRef)
+
+                    JobChannelPorts.Direction.Producer ->
+                        producers.add(portRef)
                 }
             }
         }

@@ -40,17 +40,13 @@ class ReportInputPipeline<Output>(
     companion object {
         private val logger = LoggerFactory.getLogger(ReportInputPipeline::class.java)
 
-//        private const val binaryDisruptorBufferSize = 128
         private const val binaryDisruptorBufferSize = 256
-//        private const val binaryDisruptorBufferSize = 512
 
         private val binaryProducerType =
             ProducerType.SINGLE
-//            ProducerType.MULTI
 
         private val modelProducerType =
             ProducerType.SINGLE
-//            ProducerType.MULTI
 
 
         private data class BinaryDisruptor(
@@ -61,7 +57,6 @@ class ReportInputPipeline<Output>(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-//    private val executor = Executors.newCachedThreadPool(DaemonThreadFactory.INSTANCE)
     private val threadFactory = DaemonThreadFactory.INSTANCE
 
     private var binaryDisruptor: BinaryDisruptor? = null
@@ -271,8 +266,5 @@ class ReportInputPipeline<Output>(
         binaryDisruptor = null
         binaryRingBuffer = null
         modelDisruptorChain = null
-
-//        executor.shutdown()
-//        executor.awaitTermination(1, TimeUnit.MINUTES)
     }
 }

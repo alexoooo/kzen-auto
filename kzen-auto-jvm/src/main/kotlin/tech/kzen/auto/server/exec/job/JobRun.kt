@@ -34,61 +34,27 @@ import kotlin.time.Duration.Companion.milliseconds
 
 
 /**
- * One run of a [JobLogic]'s Worker graph on the new engine: the coroutine-shaped successor to the retired
- * `JobExecution`'s re-entrant `continueOrStart` + `WorkerSupervisor`. It
- * builds the one shared instance graph (the Workers plus the Channels [tech.kzen.auto.server.objects.job.JobChannelCreator]
- * wires between them), then hosts each Worker as its OWN confined engine node ([Execution.host]) launched
- * concurrently with structured concurrency. The run completes when every Worker settles.
+ * One run of a [JobLogic]'s Worker graph: builds the one shared instance graph (Workers plus the Channels
+ * [tech.kzen.auto.server.objects.job.JobChannelCreator] wires between them), hosts each Worker as its own
+ * confined engine node ([Execution.host]) under structured concurrency, and completes when every Worker
+ * settles. Engine semantics (checkpoints, quiescent wavefront, migrate barrier) are canonical in kzen-lib's
+ * logic-spec; the Job paradigm is canonical in kzen-auto's docs/architecture.md. What JobRun itself owns:
  *
- * SIGNATURE (J2): the Job's bound run arguments arrive as the root [execution]'s typed [Execution.inputs] tuple —
- * any Worker reads a declared parameter by name off it (via [EngineJobControl.parameter], falling back to the
- * declaration's default per [JobParameters]) — and each ResultSink Worker's yielded component
- * ([EngineJobControl.yieldResult]) is gathered by a per-run [JobResultCollector] into the [TupleValue] this run
- * returns (so a host — a Script RunStep, a Flow Run vertex, a Job RunWorker — receives the Job's result).
- * Discovery of the signature is the compiler's job
- * ([tech.kzen.auto.common.objects.document.job.JobSignatureCapability]); here the seeding / harvest is generic —
- * no Worker-type knowledge (the extension rule).
- *
- * PAYLOAD TYPES (element-model phase 3): after instantiation this run computes the static payload-type walk
- * ([tech.kzen.auto.server.objects.job.JobValidator.validate], cache-shared with the editor's detached
- * validation) and threads each Worker's inferred INPUT payload type into its [EngineJobControl] — so an
- * expression-compiling Worker's receiver scope matches what the editor's cards display.
- *
- * KEY COLLAPSE: each Worker checks pause / step / cancel at its own [Execution.checkpoint] (via [EngineJobControl]),
- * and the engine's `CountingDispatcher` brings the Workers to a quiescent wavefront — so the old supervisor poll
- * loop, the shared `JobControlImpl` phase + release-signal, and the manual await / deadlock-grace machinery all
- * collapse into `coroutineScope { … host … }` + the engine. A Worker suspended on a channel `receive` / `send`
- * (or parked at a checkpoint) leaves the dispatcher, so `inFlight == 0` is exactly the wavefront the engine
- * pauses / steps on. Bulk data flows Worker-to-Worker through the channels (engine-owned buffers), never the
- * trace fold; only per-Worker progress is emitted (observability-rate, throttled — see [EngineJobControl]).
- *
- * LIVE-EDIT MIGRATION (logic-spec §5): each per-run [JobRun] is rebuilt from scratch by the engine's migrate
- * barrier (a fresh instance graph, fresh Channels, fresh Worker nodes). Two kinds of state survive the rebuild,
- * carried by [stable id][ObjectStableId]:
- * - Per-Worker run-scoped state — adopted at the Worker's own node (see [WorkerLogic]).
- * - In-flight Channel payloads — owned here, since the Channels are not nodes but shared instances this run
- *   builds. The Job's ROOT node carries them: [Execution.onCapture] drains every one-way [JobChannel]
- *   ([JobChannel.drainBuffered]) at the quiescent barrier BEFORE teardown (buffered + parked-mid-send, in
- *   delivery order), keyed by the channel's stable id; the rebuilt run [Execution.restored]s that map and
- *   [JobChannel.preload]s each fresh channel before any Worker launches — so the consumer sees the exact stream
- *   it would have without the edit, neither dropping nor replaying a row across the cut — this is JobRun's
- *   channel carry-over across a live edit.
- *
- * EXTERNAL DUPLEX BRIDGE (logic-spec §4): each `external` duplex Channel (a Worker's UI-facing `serve` port,
- * e.g. the Preview's slice query) gets a UI-bridge client opened here at launch; the Job's ROOT node registers an
- * [Execution.onRequest] router that forwards an inbound request (addressed by `channel` name) to that client's
- * serving Worker and returns its reply (see [route]). Re-opened on every (re)launch, so it survives a migrate;
- * closed at teardown so the serving Worker's serve stream ends (see [route] and `externalClients`).
- *
- * DEADLOCK DETECTION (the retired engine watchdog's replacement): a Job whose Workers all block on channels with
- * no progress — a lone sink on an orphan channel, or a cycle of Workers each waiting on the other — is failed by
- * [JobDeadlockMonitor], which polls this run's stream channels off the engine dispatcher. The external bridge
- * above is its suppression signal (a run idling on an open serve port awaits a UI request, not a deadlock). On a
- * verdict the monitor completes a deadlock signal exceptionally and a guard coroutine awaiting it throws, failing
- * the whole run (structured concurrency then cancels the channel-blocked Workers). A failing Worker instead
- * parks / fails the run through [WorkerLogic]'s per-Worker `recoverable` (pause-on-error). Each Worker's
- * terminal outcome (Success / Failed / Cancelled) is surfaced as an outcome chip in the Job UI, projected
- * from the retained engine via `LogicTracePath.nodeOutcome` (a general per-node fact, no per-Worker branch).
+ * - Signature: run arguments arrive as the root [execution]'s [Execution.inputs] tuple, read by name via
+ *   [EngineJobControl.parameter]; ResultSink yields are gathered per run by [JobResultCollector] into the
+ *   returned [TupleValue]. Seeding / harvest is generic — no Worker-type knowledge.
+ * - Payload types: [JobValidator.validate]'s static walk (cache-shared with the editor's detached validation)
+ *   threads each Worker's inferred input payload type into its [EngineJobControl].
+ * - Channel carry-over across a live edit (logic-spec §5): Channels are shared instances, not nodes, so the
+ *   Job's root node owns their in-flight payloads — [Execution.onCapture] drains every one-way [JobChannel]
+ *   at the quiescent barrier keyed by [stable id][ObjectStableId], and the rebuilt run [JobChannel.preload]s
+ *   each fresh channel before any Worker launches, so no row is dropped or replayed across the cut.
+ *   (Per-Worker run-scoped state migrates at the Worker's own node instead — see [WorkerLogic].)
+ * - External duplex bridge (logic-spec §4): each `external` duplex Channel gets a UI-bridge client opened at
+ *   every (re)launch and closed at teardown; the root node's [Execution.onRequest] router forwards inbound
+ *   requests by `channel` name to the serving Worker (see [route]).
+ * - Deadlock: [JobDeadlockMonitor] polls this run's stream channels off the engine dispatcher and fails the
+ *   run through an exceptionally-completed signal; the open external bridge is its suppression signal.
  */
 class JobRun(
     private val execution: Execution,

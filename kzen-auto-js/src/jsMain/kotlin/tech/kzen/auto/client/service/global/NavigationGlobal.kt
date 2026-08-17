@@ -27,7 +27,6 @@ class NavigationGlobal:
     private val observers = mutableSetOf<Observer>()
     private var documentPath: DocumentPath? = null
     private var parameters: RequestParams = RequestParams.empty
-    private var returnPending: Boolean = false
 
 
     fun observe(observer: Observer) {
@@ -45,8 +44,6 @@ class NavigationGlobal:
 
 
     private fun publish() {
-        returnPending = false
-
         val observersCopy = observers.toList()
         for (observer in observersCopy) {
             if (observer !in observers) {
@@ -54,7 +51,6 @@ class NavigationGlobal:
                 continue
             }
 
-//            console.log("^^^^ nav publishing - observer", observer)
             observer.handleNavigation(documentPath, parameters)
         }
     }
@@ -62,18 +58,13 @@ class NavigationGlobal:
 
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun postConstruct(commandBus: MirroredGraphStore) {
-        // var type = window.location.hash.substr(1);
-
         readAndPublishIfNecessary()
 
         window.addEventListener("hashchange", {
-//            console.log("^^^ hashchange", it)
-
             // TODO: get chrome error here: [Violation] 'hashchange' handler took <N>ms
             readAndPublishIfNecessary()
         })
 
-//        commandBus.subscribe(this)
         commandBus.observe(this)
     }
 
@@ -162,12 +153,6 @@ class NavigationGlobal:
     }
 
 
-    fun returnTo(documentPath: DocumentPath) {
-        returnPending = true
-        goto(documentPath)
-    }
-
-
     fun parameterize(requestParams: RequestParams) {
         window.location.hash = NavigationRoute(documentPath, requestParams).toFragment()
     }
@@ -188,7 +173,6 @@ class NavigationGlobal:
 
 
     private fun readPathAndParameters() {
-//        console.log("^^^ read", window.location.hash)
         val encodedLocationHash = window.location.hash.substring(1)
 
         if (encodedLocationHash.isEmpty()) {

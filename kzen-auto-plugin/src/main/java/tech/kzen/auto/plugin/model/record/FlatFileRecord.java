@@ -438,13 +438,6 @@ public class FlatFileRecord
     }
 
 
-    public void clearWithoutCache() {
-        fieldCount = 0;
-        fieldContentLength = 0;
-        nonEmpty = false;
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     public char[] fieldContentsUnsafe() {
         return fieldContents;

@@ -4,7 +4,6 @@ import kotlinx.browser.window
 import tech.kzen.auto.client.service.logic.ClientLogicGlobal
 import tech.kzen.auto.client.service.logic.ClientLogicState
 import tech.kzen.auto.client.util.NavigationRoute
-import tech.kzen.auto.client.util.async
 import tech.kzen.lib.common.exec.RequestParams
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -20,10 +19,6 @@ class ClientStateGlobal:
     LocalGraphStore.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
-    companion object {
-        const val runningKey = "running"
-    }
-
     interface Observer {
         fun onClientState(clientState: ClientState)
 
@@ -80,16 +75,7 @@ class ClientStateGlobal:
     //-----------------------------------------------------------------------------------------------------------------
     override fun handleNavigation(documentPath: DocumentPath?, parameters: RequestParams) {
         navigationRoute = NavigationRoute(documentPath, parameters)
-
-        val selected = parameters.get(runningKey)?.let { DocumentPath.parse(it) }
-        if (selected != null) {
-            async {
-                publishIfReady()
-            }
-        }
-        else {
-            publishIfReady()
-        }
+        publishIfReady()
     }
 
 

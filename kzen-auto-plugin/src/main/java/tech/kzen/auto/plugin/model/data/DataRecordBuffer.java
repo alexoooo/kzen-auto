@@ -75,6 +75,10 @@ public class DataRecordBuffer {
     }
 
 
+    // Assigns BOTH lengths, like copy() does: a frame is byte-content or char-content, never a mix, so the
+    // representation not being written has to be zeroed rather than left at whatever a previous occupant of
+    // this reusable buffer put there — length() takes the max of the two, so a stale sibling length outlives
+    // the content it described.
     public void setFrame(DataBlockBuffer dataBlockBuffer, int frameIndex) {
         DataFrameBuffer frames = dataBlockBuffer.frames;
         int offset = frames.offsets[frameIndex];
@@ -88,6 +92,7 @@ public class DataRecordBuffer {
             }
             System.arraycopy(dataBlockBuffer.bytes, offset, bytes, 0, length);
             bytesLength = length;
+            charsLength = 0;
         }
         else {
             if (chars.length < length) {
@@ -96,6 +101,7 @@ public class DataRecordBuffer {
             }
             System.arraycopy(eventChars, offset, chars, 0, length);
             charsLength = length;
+            bytesLength = 0;
         }
     }
 

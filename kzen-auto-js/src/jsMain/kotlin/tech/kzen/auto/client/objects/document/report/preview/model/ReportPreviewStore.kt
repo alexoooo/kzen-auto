@@ -65,7 +65,7 @@ class ReportPreviewStore(
                 } }
                 return
             }
-            else if (!LogicConventions.isMissingError(onlineError, runId, executionId)) {
+            else if (!LogicConventions.isMissingError(onlineError, runId)) {
                 store.update { state -> state.withPreviewFiltered {
                     it.copy(
                         tableSummary = null,

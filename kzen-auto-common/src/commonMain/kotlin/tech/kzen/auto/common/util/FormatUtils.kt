@@ -11,6 +11,9 @@ object FormatUtils {
     // https://stackoverflow.com/a/5599842
     private val units = arrayOf("B", "kB", "MB", "GB", "TB")
 
+    private const val maxAbbreviatedLength = 96
+    private const val ellipsisSuffix = "…"
+
 
     fun sanitizeFilename(filenameFragment: String): String {
         return filenameFragment
@@ -42,6 +45,22 @@ object FormatUtils {
                 wholeFormat + "." + (unitFraction * 10).toLong()
             }
         return unitFormat + " " + units[digitGroups]
+    }
+
+
+    // A cell-width-bounded rendering of an arbitrary data value: whitespace-only carries no visible content, so
+    // it is labelled instead. The suffix is a parameter because it counts against the same total width, so the
+    // typographic ellipsis and the three-dot spelling keep a different amount of the original.
+    fun abbreviateValue(value: String, abbreviationSuffix: String = ellipsisSuffix): String {
+        if (value.isBlank()) {
+            return "(blank)"
+        }
+
+        if (value.length < maxAbbreviatedLength) {
+            return value
+        }
+
+        return value.substring(0, maxAbbreviatedLength - abbreviationSuffix.length) + abbreviationSuffix
     }
 
 

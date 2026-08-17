@@ -9,6 +9,8 @@ import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.exec.script.test.CountingStep
 import tech.kzen.auto.server.exec.script.test.ScriptStepTestModule
 import tech.kzen.auto.server.util.AutoTestUtils
+import tech.kzen.auto.server.util.awaitDone
+import tech.kzen.auto.server.util.awaitState
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunResponse
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunState
@@ -72,12 +74,12 @@ class ScriptMoveToTest {
         assertEquals(3, CountingStep.count.get())
 
         assertEquals(LogicRunResponse.Submitted, moveTo(runId, linearPath, "main.steps/B"))
-        awaitState(LogicRunState.Paused)
+        context.serverLogicController.awaitState(LogicRunState.Paused)
         assertNextToRun(runId, ObjectLocation(linearPath, ObjectPath.parse("main.steps/B")))
         assertEquals(3, CountingStep.count.get())   // the jump itself runs nothing
 
         resume(runId)
-        awaitDone()
+        context.serverLogicController.awaitDone()
         assertEquals(6, CountingStep.count.get())   // B, C, D re-ran; A (kept) did not
     }
 
@@ -89,12 +91,12 @@ class ScriptMoveToTest {
         assertEquals(1, CountingStep.count.get())
 
         assertEquals(LogicRunResponse.Submitted, moveTo(runId, linearPath, "main.steps/D"))
-        awaitState(LogicRunState.Paused)
+        context.serverLogicController.awaitState(LogicRunState.Paused)
         assertNextToRun(runId, ObjectLocation(linearPath, ObjectPath.parse("main.steps/D")))
         assertEquals(1, CountingStep.count.get())   // B, C skipped (not run)
 
         resume(runId)
-        awaitDone()
+        context.serverLogicController.awaitDone()
         assertEquals(2, CountingStep.count.get())   // only A and D ran
     }
 
@@ -112,7 +114,7 @@ class ScriptMoveToTest {
     fun jumpAfterTerminalReturnsNotFound() {
         val runId = startPaused(linearPath)
         resume(runId)
-        awaitDone()
+        context.serverLogicController.awaitDone()
         assertEquals(LogicRunResponse.NotFound, moveTo(runId, linearPath, "main.steps/A"))
     }
 
@@ -125,9 +127,9 @@ class ScriptMoveToTest {
         // Skip B (value-less), park before C; C references B, so on resume it hits the "No value produced"
         // backstop and error-parks (decision 2). awaitState fails the test if ErrorPaused is never reached.
         assertEquals(LogicRunResponse.Submitted, moveTo(runId, backstopPath, "main.steps/C"))
-        awaitState(LogicRunState.Paused)
+        context.serverLogicController.awaitState(LogicRunState.Paused)
         resume(runId)
-        awaitState(LogicRunState.ErrorPaused)
+        context.serverLogicController.awaitState(LogicRunState.ErrorPaused)
     }
 
 
@@ -151,12 +153,12 @@ class ScriptMoveToTest {
         assertEquals(3, CountingStep.count.get())
 
         assertEquals(LogicRunResponse.Submitted, moveTo(runId, loopPath, "main.steps/Loop"))
-        awaitState(LogicRunState.Paused)
+        context.serverLogicController.awaitState(LogicRunState.Paused)
         assertNextToRun(runId, ObjectLocation(loopPath, ObjectPath.parse("main.steps/Loop")))
         assertEquals(3, CountingStep.count.get())
 
         resume(runId)
-        awaitDone()
+        context.serverLogicController.awaitDone()
         assertEquals(6, CountingStep.count.get())   // the loop restarted at iteration 0: 3 more body runs
     }
 
@@ -173,7 +175,7 @@ class ScriptMoveToTest {
         // Total reads `Loop.sum()`. The loop is mid-flight, so rather than being skipped value-less (which would
         // error-park Total on the "No value produced" backstop) it commits the iterations it had collected.
         assertEquals(LogicRunResponse.Submitted, moveTo(runId, loopPath, "main.steps/Total"))
-        awaitState(LogicRunState.Paused)
+        context.serverLogicController.awaitState(LogicRunState.Paused)
         assertNextToRun(runId, ObjectLocation(loopPath, ObjectPath.parse("main.steps/Total")))
 
         val loopTrace = stepTrace(runId, loopPath, "main.steps/Loop")
@@ -186,7 +188,7 @@ class ScriptMoveToTest {
         assertEquals(listOf("1" to "1", "2" to "2"), progress.produced.map { it.item to it.value })
 
         resume(runId)
-        awaitDone()
+        context.serverLogicController.awaitDone()
 
         assertEquals(2, CountingStep.count.get(), "the third iteration never ran")
         assertEquals(
@@ -207,12 +209,12 @@ class ScriptMoveToTest {
         // Backward into the If branch: Gate re-runs its condition (descend, checkpoint suppressed), T1 is
         // adopted (kept), and the run parks at T2 — nothing re-executes yet.
         assertEquals(LogicRunResponse.Submitted, moveTo(runId, ifPath, "main.steps/Gate.branches/Branch.steps/T2"))
-        awaitState(LogicRunState.Paused)
+        context.serverLogicController.awaitState(LogicRunState.Paused)
         assertNextToRun(runId, ObjectLocation(ifPath, ObjectPath.parse("main.steps/Gate.branches/Branch.steps/T2")))
         assertEquals(2, CountingStep.count.get())
 
         resume(runId)
-        awaitDone()
+        context.serverLogicController.awaitDone()
         assertEquals(3, CountingStep.count.get())   // only T2 re-ran; T1 (kept) did not
     }
 
@@ -234,14 +236,14 @@ class ScriptMoveToTest {
         assertEquals(
             LogicRunResponse.Submitted,
             moveTo(runId, elseIfPath, "main.steps/Gate.branches/Branch 2.steps/B2"))
-        awaitState(LogicRunState.Paused)
+        context.serverLogicController.awaitState(LogicRunState.Paused)
         assertNextToRun(
             runId,
             ObjectLocation(elseIfPath, ObjectPath.parse("main.steps/Gate.branches/Branch 2.steps/B2")))
         assertEquals(2, CountingStep.count.get())
 
         resume(runId)
-        awaitDone()
+        context.serverLogicController.awaitDone()
         assertEquals(3, CountingStep.count.get())  // only B2 re-ran; B1 (kept) and A1 (not taken) did not
     }
 
@@ -258,12 +260,12 @@ class ScriptMoveToTest {
         // discarded, or the fresh invocation adopts it, replay-short-circuits every step, and the sub-Script
         // "re-runs" instantaneously while returning its pre-jump values.
         assertEquals(LogicRunResponse.Submitted, moveTo(runId, abandonPath, "main.steps/Before"))
-        awaitState(LogicRunState.Paused)
+        context.serverLogicController.awaitState(LogicRunState.Paused)
         assertNextToRun(runId, ObjectLocation(abandonPath, ObjectPath.parse("main.steps/Before")))
         assertEquals(2, CountingStep.count.get(), "the jump itself runs nothing")
 
         resume(runId)
-        awaitDone()
+        context.serverLogicController.awaitDone()
 
         // Before re-runs (3), the re-hosted child's Inner re-runs (4), After runs (5). Without the discard the
         // child replay-adopts instead of executing and the count stops at 4.
@@ -274,8 +276,9 @@ class ScriptMoveToTest {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val snapshot: GraphDefinitionAttempt
-        get() = AutoTestUtils.graphDefinitionAttempt(AutoTestUtils.readNotation())
+    private val snapshot: GraphDefinitionAttempt by lazy {
+        AutoTestUtils.graphDefinitionAttempt(AutoTestUtils.readNotation())
+    }
 
 
     private fun startPaused(documentPath: DocumentPath, pauseOnError: Boolean = false): LogicRunId {
@@ -285,20 +288,20 @@ class ScriptMoveToTest {
             ?: fail("Unable to start run")
         // Pause-at-entry: the run was created but never set running, so pause() lands paused immediately.
         controller.pause(runId)
-        awaitState(LogicRunState.Paused)
+        context.serverLogicController.awaitState(LogicRunState.Paused)
         return runId
     }
 
 
     private fun step(runId: LogicRunId) {
         context.serverLogicController.step(runId, snapshot)
-        awaitState(LogicRunState.Paused)
+        context.serverLogicController.awaitState(LogicRunState.Paused)
     }
 
 
     private fun stepOver(runId: LogicRunId) {
         context.serverLogicController.stepOver(runId, snapshot)
-        awaitState(LogicRunState.Paused)
+        context.serverLogicController.awaitState(LogicRunState.Paused)
     }
 
 
@@ -330,27 +333,5 @@ class ScriptMoveToTest {
             ?: fail("Run is not active")
         assertEquals(runId, active.id)
         assertEquals(expected, active.frame.position, "next to run")
-    }
-
-
-    private fun awaitState(state: LogicRunState) {
-        for (attempt in 0 until 500) {
-            if (context.serverLogicController.status().active?.state == state) {
-                return
-            }
-            Thread.sleep(10)
-        }
-        fail("Run did not reach $state (was ${context.serverLogicController.status().active?.state})")
-    }
-
-
-    private fun awaitDone() {
-        for (attempt in 0 until 500) {
-            if (context.serverLogicController.status().active == null) {
-                return
-            }
-            Thread.sleep(10)
-        }
-        fail("Run did not complete")
     }
 }

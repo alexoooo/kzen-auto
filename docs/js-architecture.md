@@ -53,12 +53,14 @@ fun didMount(subscriber: Observer) {
     this.observer = subscriber
     mounted = true
     async {
-        ClientContext.clientStateGlobal.observe(this)
+        clientStateGlobal.observe(this)     // injected via the store's constructor
     }
 }
 ```
 
 So the chain is: `ClientStateGlobal` → `ReportStore` (observes) → `ReportController` (observes) → `setState` → React rerender. No diffing logic; everything flows through method-call observer notifications.
+
+Stores reach their globals through **constructor injection**, never a global singleton — `ClientContext` is instantiated once and its services are handed to graph-instantiated objects through the `graphEnvironment` (see § 4).
 
 ### Preferred render scoping with `RPureComponent` and consumed-subset state
 
@@ -240,10 +242,17 @@ The pure view-model pieces — `CustomObjectInfo`, `CustomViewModel`, `CustomVie
 
 ## 4. Service-layer plumbing
 
-`service/ClientContext.kt` is the **composition root**. It's a singleton `object` that constructs the entire client-side service graph at load time:
+`service/ClientContext.kt` is the **composition root**: an instantiable class that constructs the entire client-side service graph. `Main.kt` creates exactly one at boot and passes its services onward — nothing reads it as a global.
 
 ```kotlin
-object ClientContext {
+class ClientContext private constructor() {
+    companion object {
+        init { /* KzenLibCommonModule / KzenAutoCommonModule / KzenAutoJsModule register() */ }
+
+        // Construction is self-initializing: callers get a ready context, no separate init() step
+        suspend fun create(): ClientContext = ClientContext().also { it.initAsync() }
+    }
+
     val restClient = ClientRestApi(baseUrl)
     val notationParser = YamlNotationParser()
     // … reducer, definer, creator, media …
@@ -256,10 +265,11 @@ object ClientContext {
     val clientLogicGlobal = ClientLogicGlobal(restClient)
     val clientStateGlobal = ClientStateGlobal()
 
-    fun init() { /* register modules */ }
-    suspend fun initAsync() { /* wire observers */ }
+    private suspend fun initAsync() { /* wire observers, scan seeded media, seed stable ids */ }
 }
 ```
+
+The private constructor plus `create()` is what makes "a context is always fully wired" unrepresentable-otherwise: there is no way to obtain a half-initialized instance.
 
 It also builds the `graphEnvironment` that fills `@Service` constructor parameters of graph-instantiated
 objects. Because `KClass.qualifiedName` is unavailable in Kotlin/JS, its keys are **hand-written

@@ -21,7 +21,6 @@ import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceSnapshot
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.service.store.normal.ObjectStableId
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
-import tech.kzen.lib.common.util.digest.Digest
 import tech.kzen.lib.server.exec.engine.RunEngine
 import kotlin.time.Clock
 
@@ -197,7 +196,7 @@ class RunEngineLogicTrace(
 
 
     /**
-     * Resolve the raw bytes of a binary trace value by its content hash (`Digest.ofBytes(bytes).asString()`),
+     * Resolve the raw bytes of a binary trace value by its content hash ([BinaryExecutionValue.contentHash]),
      * for the `/logic/trace-binary` blob endpoint. Scans the union of every node's live map and the
      * append-only history: a screenshot can be a live emit (served by [lookup] / [lookupRun]) and/or a
      * retained log event (the film strip, which survives a loop's `clearAll` of the live paths). Returns null
@@ -214,7 +213,7 @@ class RunEngineLogicTrace(
         forEachNode(access.engine.snapshot().root) { node ->
             if (match == null) {
                 for (value in node.live.values) {
-                    if (value is BinaryExecutionValue && Digest.ofBytes(value.value).asString() == hash) {
+                    if (value is BinaryExecutionValue && value.contentHash() == hash) {
                         match = value.value
                         break
                     }
@@ -227,7 +226,7 @@ class RunEngineLogicTrace(
 
         for (event in access.engine.history(0L)) {
             val value = event.value
-            if (value is BinaryExecutionValue && Digest.ofBytes(value.value).asString() == hash) {
+            if (value is BinaryExecutionValue && value.contentHash() == hash) {
                 return value.value
             }
         }
@@ -271,7 +270,7 @@ class RunEngineLogicTrace(
         }
         return BinaryHandleExecutionValue(
             runId.value,
-            Digest.ofBytes(value.value).asString(),
+            value.contentHash(),
             value.value.size,
             "image/png")
     }

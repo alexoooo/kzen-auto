@@ -33,6 +33,7 @@ import tech.kzen.auto.client.wrap.select.muiAutocompleteField
 import tech.kzen.auto.common.objects.document.flow.FlowConventions
 import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.auto.common.objects.document.job.JobSignatureCapability
+import tech.kzen.auto.common.objects.document.logic.TypeMetadataDefiner
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.objects.document.script.model.RunStepInstructions
 import tech.kzen.lib.common.model.attribute.AttributeName
@@ -114,8 +115,6 @@ class RunStepArgumentsEditor(
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private val typeAttributePath = AttributePath.ofName(AttributeName("type"))
-        private const val classKey = "class"
-        private const val nullableKey = "nullable"
         private const val defaultClassName = "kotlin.Any"
     }
 
@@ -158,17 +157,25 @@ class RunStepArgumentsEditor(
     }
 
 
+    private var mounted = false
+
+
     override fun componentDidMount() {
+        mounted = true
         super.componentDidMount()
         contextValue<DocumentBridge?>()?.lookup(ScriptStoreKey)?.observe(this)
         referenceStore()?.observe(this)
         async {
-            props.mirroredGraphStore.observe(this)
+            // Unobserve runs synchronously on unmount, so registering after it would leak this observer.
+            if (mounted) {
+                props.mirroredGraphStore.observe(this)
+            }
         }
     }
 
 
     override fun componentWillUnmount() {
+        mounted = false
         // Unobserve the reference store before ending the session, so the resulting clear/publish doesn't call
         // back into this unmounting component.
         val referenceStore = referenceStore()
@@ -242,8 +249,8 @@ class RunStepArgumentsEditor(
                         .documentPath.toObjectLocation(parameterPath)
                     val typeNotation = graphNotation
                         .firstAttribute(parameterLocation, typeAttributePath) as? MapAttributeNotation
-                    val className = typeNotation?.get(classKey)?.asString() ?: defaultClassName
-                    val nullable = typeNotation?.get(nullableKey)?.asString()?.toBoolean() ?: false
+                    val className = typeNotation?.get(TypeMetadataDefiner.classKey)?.asString() ?: defaultClassName
+                    val nullable = typeNotation?.get(TypeMetadataDefiner.nullableKey)?.asString()?.toBoolean() ?: false
                     newParameterTypes[parameterPath.name.value] =
                         LogicTypeOptions.simpleLabel(className, nullable)
                 }

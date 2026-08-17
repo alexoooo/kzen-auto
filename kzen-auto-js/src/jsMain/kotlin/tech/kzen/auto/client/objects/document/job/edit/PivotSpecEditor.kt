@@ -134,13 +134,20 @@ class PivotSpecEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private var mounted = false
+
+
     override fun componentDidMount() {
+        mounted = true
         val store = contextValue<DocumentBridge?>()?.channel(JobSummaryStore.Key)
         summaryStore = store
         store?.observe(this)
 
         async {
-            props.mirroredGraphStore.observe(this)
+            // Unobserve runs synchronously on unmount, so registering after it would leak this observer.
+            if (mounted) {
+                props.mirroredGraphStore.observe(this)
+            }
         }
 
         props.clientStateGlobal.current()?.let { recompute(it.graphStructure()) }
@@ -148,6 +155,7 @@ class PivotSpecEditor(
 
 
     override fun componentWillUnmount() {
+        mounted = false
         props.mirroredGraphStore.unobserve(this)
         summaryStore?.unobserve(this)
     }

@@ -2,29 +2,24 @@ package tech.kzen.auto.server.api.handler.command
 
 import io.ktor.http.*
 import tech.kzen.auto.common.api.CommonRestApi
+import tech.kzen.auto.server.api.handler.getObjectLocationParam
 import tech.kzen.auto.server.api.handler.getParam
 import tech.kzen.lib.common.model.document.DocumentName
 import tech.kzen.lib.common.model.document.DocumentNesting
 import tech.kzen.lib.common.model.document.DocumentPath
-import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
-import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.model.structure.notation.cqrs.*
 
 
 //---------------------------------------------------------------------------------------------------------------------
 fun NotationCommandHandler.refactorObjectName(parameters: Parameters): String {
-    val documentPath: DocumentPath = parameters.getParam(
-        CommonRestApi.paramDocumentPath, DocumentPath::parse)
-
-    val objectPath: ObjectPath = parameters.getParam(
-        CommonRestApi.paramObjectPath, ObjectPath::parse)
+    val objectLocation = parameters.getObjectLocationParam()
 
     val newName: ObjectName = parameters.getParam(
         CommonRestApi.paramObjectName, ::ObjectName)
 
     val command = RenameObjectRefactorCommand(
-        ObjectLocation(documentPath, objectPath),
+        objectLocation,
         newName)
 
     return applyCommand(command).asString()

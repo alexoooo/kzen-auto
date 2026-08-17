@@ -5,6 +5,8 @@ import org.junit.Before
 import org.junit.Test
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.util.AutoTestUtils
+import tech.kzen.auto.server.util.awaitDone
+import tech.kzen.auto.server.util.awaitState
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunState
 import tech.kzen.lib.common.model.attribute.AttributeName
@@ -67,7 +69,7 @@ class ServerLogicControllerPauseOnErrorTest {
 
         // The failing step settles the run (terminal), never pausing — so the run goes inactive. Boom always
         // throws, so a terminated run here is a failed one (it cannot have succeeded).
-        awaitInactive()
+        controller.awaitDone("Run did not go inactive")
         assertNull(controller.status().active, "pause-on-error off: the failing step ends the run")
     }
 
@@ -82,7 +84,7 @@ class ServerLogicControllerPauseOnErrorTest {
 
         // The failing step parks the run Suspended(Error) — non-terminal, still active, distinctly ErrorPaused
         // (not a plain Boundary pause) — for inspect / fix + resume.
-        awaitState(LogicRunState.ErrorPaused)
+        controller.awaitState(LogicRunState.ErrorPaused)
         assertEquals(runId, controller.status().active?.id, "the run stays active, paused on the failed step")
     }
 
@@ -94,7 +96,7 @@ class ServerLogicControllerPauseOnErrorTest {
             ?: fail("Unable to start run")
 
         controller.continueOrStart(runId, snapshot)
-        awaitState(LogicRunState.ErrorPaused)
+        controller.awaitState(LogicRunState.ErrorPaused)
 
         // Fix the failing step (replace the throwing expression with a working one) and resume: the controller
         // detects the edit, migrates, and the previously-failed step — never recorded as completed — re-runs
@@ -103,14 +105,15 @@ class ServerLogicControllerPauseOnErrorTest {
             edit(AutoTestUtils.readNotation(), boomLocation, "code", "42"))
         controller.continueOrStart(runId, fixed)
 
-        awaitInactive()
+        controller.awaitDone("Run did not go inactive")
         assertNull(controller.status().active, "the fixed step ran and the run completed")
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val snapshot: GraphDefinitionAttempt
-        get() = AutoTestUtils.graphDefinitionAttempt(AutoTestUtils.readNotation())
+    private val snapshot: GraphDefinitionAttempt by lazy {
+        AutoTestUtils.graphDefinitionAttempt(AutoTestUtils.readNotation())
+    }
 
 
     private fun edit(
@@ -125,27 +128,4 @@ class ServerLogicControllerPauseOnErrorTest {
                 UpsertAttributeCommand(
                     objectLocation, AttributeName(attribute), ScalarAttributeNotation(value)))
             .graphNotation
-
-
-    @Suppress("SameParameterValue")
-    private fun awaitState(state: LogicRunState) {
-        for (attempt in 0 until 500) {
-            if (context.serverLogicController.status().active?.state == state) {
-                return
-            }
-            Thread.sleep(10)
-        }
-        fail("Run did not reach $state (was ${context.serverLogicController.status().active?.state})")
-    }
-
-
-    private fun awaitInactive() {
-        for (attempt in 0 until 500) {
-            if (context.serverLogicController.status().active == null) {
-                return
-            }
-            Thread.sleep(10)
-        }
-        fail("Run did not go inactive")
-    }
 }

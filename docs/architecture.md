@@ -32,6 +32,8 @@ A "paradigm" is **a category of execution model**. It determines how the runtime
 
 **Dataflow is not a fourth paradigm** — `paradigm/flow/` is the *vertex SPI* that the Flow flavour of Logic is built from. `FlowVertex<State>` vertices declare `RequiredInput` / `OptionalInput` and emit via `RequiredOutput` / `OptionalOutput`, with `StatelessFlowVertex` and `StreamFlowVertex` variants. A Flow document's *execution* is a Logic run; the vertex model is how one step of it is described.
 
+The dependency between the two flow packages runs **one way**: `objects/document/flow/` (the Flow *document*) depends on `paradigm/flow/` (the vertex SPI and the structure it reads), never the reverse. The structural notation vocabulary — the `vertices` / `edges` attribute shape and the input-channel markers — therefore lives in `paradigm/flow/model/structure/FlowStructureConventions`, next to the `FlowMatrix` that reads it; `FlowConventions` aliases it so document-side code reads naturally, the same way `ScriptConventions` aliases `LogicConventions`. `FlowWiring` is left doing only what its name says — minting the live channel object behind a declared input/output attribute.
+
 A document is **not** limited to one paradigm: `ReportDocument` is simultaneously a `LogicDocument` (it runs), a `DetachedAction` (file browsing, column listing, preview), and a `DetachedDownloadAction` (export).
 
 **Rule of thumb when reading code:** `LogicTrace` / `Execution` / step controllers ⇒ Logic. `RequiredInput` / `RequiredOutput` ⇒ a Flow vertex, i.e. still Logic. `TaskModel` ⇒ Task. Plain `ExecutionRequest` / `ExecutionResult` with no wrapper ⇒ Detached.

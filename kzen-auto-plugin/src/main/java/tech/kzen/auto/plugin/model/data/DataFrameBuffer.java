@@ -17,6 +17,9 @@ public class DataFrameBuffer {
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    // NB: reads as "safe to enter the drain loop", not "holds a complete frame" — an empty buffer answers true.
+    //  DataFrameFeeder relies on that: at count == 0 it falls through to a drain range of 0..-1 (a no-op), whereas
+    //  answering false would route it into partialInput.addFrame(buffer, 0) against an unwritten lengths[0].
     public boolean hasFull() {
         return count > 1 || ! partialLast;
     }

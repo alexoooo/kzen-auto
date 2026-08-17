@@ -6,25 +6,19 @@ import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeViewManager
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeWrapperLookup
-import tech.kzen.auto.client.objects.document.flow.EdgeController
 import tech.kzen.auto.client.objects.document.script.ScriptController
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
 import tech.kzen.auto.client.objects.document.script.step.header.StepHeader
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.*
-import tech.kzen.auto.common.objects.document.logic.context.ContextDescriptor
 import tech.kzen.auto.common.objects.document.logic.context.LogicContextConventions
-import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.objects.document.script.model.StepTrace
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.exec.*
 import tech.kzen.lib.common.model.attribute.AttributeName
-import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.structure.metadata.ObjectMetadata
-import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.service.store.MirroredGraphStore
@@ -46,29 +40,13 @@ external interface ScriptStepDisplayDefaultProps: ScriptStepDisplayBaseProps {
 
 
 external interface ScriptStepDisplayDefaultState: ScriptStepDisplayBaseState {
-    var objectMetadata: ObjectMetadata?
-    var summaryAttributeNames: List<AttributeName>?
+    // Everything this card derives from notation, in one value. The Context declarations it carries are derived
+    // HERE rather than in StepHeader because this component already owns the ClientState subscription and the
+    // value-equality guard that keeps a fresh-value-per-publish from defeating StepHeader's RPureComponent
+    // prop check.
+    var content: StepContentInfo?
 
     var expanded: Boolean
-
-    // True when this step's object has attribute-level definition failures — surfaced per-field by the attribute
-    // editors — so the (redundant, less specific) step-level validation message is suppressed in the body.
-    var hasFieldDefinitionError: Boolean?
-
-    // True when one of this step's attributes is edited as a Kotlin expression, which prints the step's
-    // validation message under itself and marks the offending token — so the body suppresses its own copy.
-    var hasExpressionField: Boolean?
-
-    // The run-scoped Context declarations this step carries, badged by the header. Derived HERE rather than in
-    // StepHeader because this component already owns the ClientState subscription and the value-equality guard
-    // that keeps a fresh-list-per-publish from defeating StepHeader's RPureComponent prop check.
-    var bindsContext: ContextDescriptor?
-    var closePolicy: String?
-    var bindsExported: Boolean?
-    var hostedExports: List<ContextDescriptor>?
-    var hostedExportsContinuingUp: List<ContextDescriptor>?
-    var usesContexts: List<ContextDescriptor>?
-    var releasesContext: ContextDescriptor?
 }
 
 
@@ -114,15 +92,6 @@ class ScriptStepDisplayDefault(
         const val statusBorderWidthPx = 4
         val statusBorderWidth = statusBorderWidthPx.px
 
-        // Read straight off notation for the binds badge's tooltip. The nullable AttributePath overload,
-        // because a step that owns no resource has no such attribute (the AttributeName overload throws).
-        private val closePolicyAttributePath = AttributePath.ofName(AttributeName("closePolicy"))
-
-        // The Script flavour's Kotlin-expression field editor, named by an attribute's `editor:` metadata.
-        // Self-reference within the Script display: this card and that editor are the two halves of one
-        // decision — the field renders a step's validation message inline, so the card must not repeat it.
-        private val expressionEditorName = ObjectName("KotlinExpressionEditor")
-
         fun statusBorderColor(
             traceState: StepTrace.State,
             error: String?,
@@ -162,7 +131,7 @@ class ScriptStepDisplayDefault(
                 NamedColor.gold
             }
             else if (traceState == StepTrace.State.Active) {
-                EdgeController.goldLight90
+                RunProgressColors.goldLight90
             }
             else if (traceState == StepTrace.State.Done) {
                 if (error != null) {
@@ -182,7 +151,7 @@ class ScriptStepDisplayDefault(
                 skippedColour
             }
             else if (nextToRun) {
-                EdgeController.goldLight50
+                RunProgressColors.goldLight50
             }
             else {
                 null
@@ -249,116 +218,17 @@ class ScriptStepDisplayDefault(
     }
 
 
-    // NB: the base only calls this once the step's metadata is present (computeStepHeaderInfo returned
-    // non-null), which is what makes the objectMetadata lookup below safe to force.
     override fun onClientStateExtra(clientState: ClientState) {
-        val graphStructure = clientState.graphStructure()
-        val objectMetadata = graphStructure
-            .graphMetadata
-            .objectMetadata[props.common.objectLocation]!!
-
-        val summaryAttributeNames = findSummaryAttributes(objectMetadata)
-
-        // The attribute editors now surface this step's attribute-level definition failures per-field, so the
-        // step-level validation message ("Not found") is redundant when any is present (see renderValidation).
-        val hasFieldDefinitionError = clientState
-            .graphDefinitionAttempt
-            .failures.map[props.common.objectLocation]
-            ?.attributeErrors?.isNotEmpty() == true
-
-        // Attribute-definition inspection, not a step-type list: any object whose notation names the
-        // expression editor on an attribute gets the field-level message, including one a plugin declares.
-        val hasExpressionField = objectMetadata.attributes.map.values.any {
-            AttributeWrapperLookup.wrapperName(it, AttributeWrapperLookup.editorAttributePath) ==
-                    expressionEditorName
-        }
-
-        val graphNotation = graphStructure.graphNotation
-        val stepLocation = props.common.objectLocation
-
-        val bindsContext = LogicContextConventions.stepBinds(graphNotation, stepLocation)
-        val usesContexts = LogicContextConventions.stepUses(graphNotation, stepLocation)
-        val releasesContext = LogicContextConventions.stepReleases(graphNotation, stepLocation)
-
-        // Read unconditionally — binding a Context and owning a resource are independent declarations
-        // (ContextBinder carries `binds`, ResourceOwner carries `closePolicy`), so a step may own a resource
-        // without binding a Context, and vice versa. Absence is tolerated at both levels: the nullable
-        // AttributePath overload returns null when the attribute isn't declared, and the cast covers a
-        // non-scalar notation.
-        val closePolicy =
-            (graphNotation.firstAttribute(stepLocation, closePolicyAttributePath) as? ScalarAttributeNotation)
-                ?.value
-
-        val documentExports = LogicContextConventions.documentExports(graphNotation, stepLocation.documentPath)
-
-        // Whether the bound value leaves this document: exported means the caller takes ownership,
-        // un-exported means it is private and dies at this document's settle. Both are legitimate, and the
-        // badge's tooltip says which — a verified claim about THIS document's own signature, not a guess about
-        // a caller the editor cannot see.
-        val bindsExported = bindsContext?.let { bound ->
-            documentExports.any { it.location == bound.location }
-        }
-
-        // A RunStep's counterpart: what the hosted document hands up, and which of those this document passes
-        // further up rather than owning. One notation read each, no graph walk.
-        val hostedPath = when {
-            ScriptConventions.isRunStep(graphNotation, stepLocation) ->
-                ScriptConventions.hostedDocumentPath(graphNotation, stepLocation)
-
-            else -> null
-        }
-
-        val hostedExports = hostedPath?.let { LogicContextConventions.documentExports(graphNotation, it) }
-
-        val hostedExportsContinuingUp = hostedExports?.filter { hosted ->
-            documentExports.any { it.location == hosted.location }
-        }
-
-        // NB: value compare (==) — summaryAttributeNames and the two context lists are freshly built each call
-        //     (Kotlin List / data-class == is structural). Skip setState on no-op clientState publishes so the
-        //     RPureComponent conversion isn't defeated by a fresh reference on every broadcast.
-        if (state.objectMetadata == objectMetadata &&
-            state.summaryAttributeNames == summaryAttributeNames &&
-            state.hasFieldDefinitionError == hasFieldDefinitionError &&
-            state.hasExpressionField == hasExpressionField &&
-            state.bindsContext == bindsContext &&
-            state.closePolicy == closePolicy &&
-            state.bindsExported == bindsExported &&
-            state.hostedExports == hostedExports &&
-            state.hostedExportsContinuingUp == hostedExportsContinuingUp &&
-            state.usesContexts == usesContexts &&
-            state.releasesContext == releasesContext
-        ) {
+        // NB: value compare (==) — the slice is freshly built each call, so a reference guard would never bail
+        //     and the RPureComponent conversion would be defeated by every no-op broadcast.
+        val content = computeStepContentInfo(clientState, props.common.objectLocation)
+        if (state.content == content) {
             return
         }
 
         setState {
-            this.objectMetadata = objectMetadata
-            this.summaryAttributeNames = summaryAttributeNames
-            this.hasFieldDefinitionError = hasFieldDefinitionError
-            this.hasExpressionField = hasExpressionField
-            this.bindsContext = bindsContext
-            this.closePolicy = closePolicy
-            this.bindsExported = bindsExported
-            this.hostedExports = hostedExports
-            this.hostedExportsContinuingUp = hostedExportsContinuingUp
-            this.usesContexts = usesContexts
-            this.releasesContext = releasesContext
+            this.content = content
         }
-    }
-
-
-    private fun findSummaryAttributes(objectMetadata: ObjectMetadata): List<AttributeName> {
-        val result = mutableListOf<AttributeName>()
-        for ((attributeName, attributeMetadata) in objectMetadata.attributes.map) {
-            val hasSummaryView = AttributeWrapperLookup.wrapperName(
-                attributeMetadata, AttributeWrapperLookup.summaryAttributePath) != null
-
-            if (hasSummaryView) {
-                result.add(attributeName)
-            }
-        }
-        return result
     }
 
 
@@ -379,7 +249,7 @@ class ScriptStepDisplayDefault(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
-        val objectMetadata = state.objectMetadata
+        val content = state.content
             ?: return
 
         val trace = state.stepTrace
@@ -434,18 +304,18 @@ class ScriptStepDisplayDefault(
                 description = state.description ?: ""
                 title = state.title ?: ""
 
-                summaryAttributeNames = state.summaryAttributeNames
+                summaryAttributeNames = content.summaryAttributeNames
                 attributeViewManager = props.attributeViewManager
                 typeMetadata = state.stepValidation?.typeMetadata?.toSimple()
                 validationError = state.stepValidation?.errorMessage
                 validationWarning = state.stepValidation?.warningMessage
-                bindsContext = state.bindsContext
-                closePolicy = state.closePolicy
-                bindsExported = state.bindsExported
-                hostedExports = state.hostedExports
-                hostedExportsContinuingUp = state.hostedExportsContinuingUp
-                usesContexts = state.usesContexts
-                releasesContext = state.releasesContext
+                bindsContext = content.bindsContext
+                closePolicy = content.closePolicy
+                bindsExported = content.bindsExported
+                hostedExports = content.hostedExports
+                hostedExportsContinuingUp = content.hostedExportsContinuingUp
+                usesContexts = content.usesContexts
+                releasesContext = content.releasesContext
                 isResult = state.isResult
                 skipped = traceState == StepTrace.State.Skipped
                 expanded = state.expanded
@@ -454,7 +324,6 @@ class ScriptStepDisplayDefault(
                 mirroredGraphStore = props.mirroredGraphStore
             }
 
-//            +"[x]"
             if (state.expanded) {
                 div {
                     css {
@@ -468,8 +337,8 @@ class ScriptStepDisplayDefault(
 
                     onClick = { it.stopPropagation() }
 
-                    renderBody(objectMetadata, trace)
-                    renderValidation()
+                    renderBody(content.objectMetadata, trace)
+                    renderValidation(content)
                     props.expandedBodyExtra?.invoke(this)
                 }
             }
@@ -638,11 +507,11 @@ class ScriptStepDisplayDefault(
 
     // NB: reached from the EXPANDED branch only — a collapsed card mounts no editor, so nothing below it can
     // be saying the same thing and the suppressions never apply there.
-    private fun ChildrenBuilder.renderValidation() {
+    private fun ChildrenBuilder.renderValidation(content: StepContentInfo) {
         // Suppressed when a field below already says this, more specifically: the attribute editors surface a
         // definition failure per-field (the step-level "Not found" is the same root cause), and a Kotlin
         // expression field prints the step's validation message under itself, marked at the offending token.
-        if (state.hasFieldDefinitionError == true || state.hasExpressionField == true) {
+        if (content.hasFieldDefinitionError || content.hasExpressionField) {
             return
         }
 

@@ -9,6 +9,8 @@ import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.exec.script.test.CountingStep
 import tech.kzen.auto.server.exec.script.test.ScriptStepTestModule
 import tech.kzen.auto.server.util.AutoTestUtils
+import tech.kzen.auto.server.util.awaitDone
+import tech.kzen.auto.server.util.awaitState
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunState
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
@@ -92,7 +94,7 @@ class ServerLogicControllerLoopMigrationTest {
 
         runBlocking { controller.onStoreRefresh(edited) }
         controller.continueOrStart(runId, edited)
-        awaitDone()
+        controller.awaitDone()
 
         assertEquals(
             4, CountingStep.count.get(),
@@ -120,7 +122,7 @@ class ServerLogicControllerLoopMigrationTest {
 
         runBlocking { controller.onStoreRefresh(edited) }
         controller.continueOrStart(runId, edited)
-        awaitDone()
+        controller.awaitDone()
 
         assertEquals(
             4, CountingStep.count.get(),
@@ -151,7 +153,7 @@ class ServerLogicControllerLoopMigrationTest {
 
         runBlocking { controller.onStoreRefresh(edited) }
         controller.continueOrStart(runId, edited)
-        awaitDone()
+        controller.awaitDone()
 
         assertEquals(
             4, CountingStep.count.get(),
@@ -184,7 +186,7 @@ class ServerLogicControllerLoopMigrationTest {
 
         runBlocking { controller.onStoreRefresh(edited) }
         controller.continueOrStart(runId, edited)
-        awaitDone()
+        controller.awaitDone()
 
         assertEquals(
             4, CountingStep.count.get(),
@@ -213,7 +215,7 @@ class ServerLogicControllerLoopMigrationTest {
         var guard = 0
         while (!isDone(runId, loopLocation) && guard < 100) {
             controller.step(runId, base)
-            awaitState(LogicRunState.Paused)
+            controller.awaitState(LogicRunState.Paused)
             guard += 1
         }
         assertTrue(isDone(runId, loopLocation), "Loop should complete before the edit")
@@ -221,7 +223,7 @@ class ServerLogicControllerLoopMigrationTest {
 
         runBlocking { controller.onStoreRefresh(edited) }
         controller.continueOrStart(runId, edited)
-        awaitDone()
+        controller.awaitDone()
 
         assertEquals(
             4, CountingStep.count.get(),
@@ -250,13 +252,13 @@ class ServerLogicControllerLoopMigrationTest {
         stepUntilCount(runId, base, 2)
         runBlocking { controller.onStoreRefresh(edited) }
         controller.step(runId, edited)
-        awaitState(LogicRunState.Paused)
+        controller.awaitState(LogicRunState.Paused)
         assertEquals(2, CountingStep.count.get(), "migration re-park must not re-execute any iteration")
 
         stepUntilCount(runId, edited, 3)
         runBlocking { controller.onStoreRefresh(edited2) }
         controller.continueOrStart(runId, edited2)
-        awaitDone()
+        controller.awaitDone()
 
         assertEquals(
             4, CountingStep.count.get(),
@@ -286,7 +288,7 @@ class ServerLogicControllerLoopMigrationTest {
         var guard = 0
         while (CountingStep.count.get() < target && guard < 100) {
             context.serverLogicController.step(runId, definition)
-            awaitState(LogicRunState.Paused)
+            context.serverLogicController.awaitState(LogicRunState.Paused)
             guard += 1
         }
         assertEquals(target, CountingStep.count.get(), "expected to park right after Count invocation $target")
@@ -327,28 +329,5 @@ class ServerLogicControllerLoopMigrationTest {
         val entry = snapshot.values[LogicTracePath.ofObjectStableId(stableId)]
             ?: return null
         return StepTrace.ofExecutionValue(entry.value)
-    }
-
-
-    @Suppress("SameParameterValue")
-    private fun awaitState(state: LogicRunState) {
-        for (attempt in 0 until 500) {
-            if (context.serverLogicController.status().active?.state == state) {
-                return
-            }
-            Thread.sleep(10)
-        }
-        fail("Run did not reach $state (was ${context.serverLogicController.status().active?.state})")
-    }
-
-
-    private fun awaitDone() {
-        for (attempt in 0 until 500) {
-            if (context.serverLogicController.status().active == null) {
-                return
-            }
-            Thread.sleep(10)
-        }
-        fail("Run did not complete")
     }
 }

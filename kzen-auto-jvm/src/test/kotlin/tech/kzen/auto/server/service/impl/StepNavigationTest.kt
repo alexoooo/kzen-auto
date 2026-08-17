@@ -5,6 +5,8 @@ import org.junit.Before
 import org.junit.Test
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.util.AutoTestUtils
+import tech.kzen.auto.server.util.awaitDone
+import tech.kzen.auto.server.util.awaitState
 import tech.kzen.lib.common.exec.engine.StepMode
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunFrameInfo
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
@@ -86,7 +88,7 @@ class StepNavigationTest {
         assertNextToRun(runId, childALocation)
 
         resume(runId)
-        awaitDone()
+        context.serverLogicController.awaitDone()
     }
 
 
@@ -102,7 +104,7 @@ class StepNavigationTest {
         assertNextToRun(runId, lastLocation)     // child was consumed: now paused before Last
 
         resume(runId)
-        awaitDone()
+        context.serverLogicController.awaitDone()
     }
 
 
@@ -122,7 +124,7 @@ class StepNavigationTest {
         assertNextToRun(runId, lastLocation)
 
         resume(runId)
-        awaitDone()
+        context.serverLogicController.awaitDone()
     }
 
 
@@ -136,13 +138,13 @@ class StepNavigationTest {
             ?: fail("Unable to start run")
 
         controller.startStep(runId, StepMode.Into)
-        awaitState(LogicRunState.Paused)
+        controller.awaitState(LogicRunState.Paused)
 
         assertPausedAtDepth(1)
         assertNextToRun(runId, childALocation)
 
         resume(runId)
-        awaitDone()
+        controller.awaitDone()
     }
 
 
@@ -157,13 +159,13 @@ class StepNavigationTest {
             ?: fail("Unable to start run")
 
         controller.startStep(runId, StepMode.Over)
-        awaitState(LogicRunState.Paused)
+        controller.awaitState(LogicRunState.Paused)
 
         assertPausedAtDepth(0)
         assertNextToRun(runId, runFirstLastLocation)
 
         resume(runId)
-        awaitDone()
+        controller.awaitDone()
     }
 
 
@@ -178,13 +180,13 @@ class StepNavigationTest {
         // handler as a racing pause() + step(), which tripped the controller guard with
         // "Can't step, already running" (pause-at-entry sets running before the synchronous step()).
         controller.startStep(runId)
-        awaitState(LogicRunState.Paused)
+        controller.awaitState(LogicRunState.Paused)
 
         assertPausedAtDepth(0)
         assertNextToRun(runId, runLocation)
 
         resume(runId)
-        awaitDone()
+        controller.awaitDone()
     }
 
 
@@ -217,7 +219,7 @@ class StepNavigationTest {
         assertNextToRun(runId, foreachTotalLocation)
 
         resume(runId)
-        awaitDone()
+        context.serverLogicController.awaitDone()
     }
 
 
@@ -231,7 +233,7 @@ class StepNavigationTest {
         assertNextToRun(runId, foreachBodyLocation)
 
         resume(runId)
-        awaitDone()
+        context.serverLogicController.awaitDone()
     }
 
 
@@ -246,13 +248,14 @@ class StepNavigationTest {
         // Step-out exits the frame — the single-document run finishes (the loop's remaining iterations and
         // Total/Result run free); parking at a PARENT is pinned by the RunStep-based step-out test above.
         context.serverLogicController.stepOut(runId, snapshot)
-        awaitDone()
+        context.serverLogicController.awaitDone()
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val snapshot: GraphDefinitionAttempt
-        get() = AutoTestUtils.graphDefinitionAttempt(AutoTestUtils.readNotation())
+    private val snapshot: GraphDefinitionAttempt by lazy {
+        AutoTestUtils.graphDefinitionAttempt(AutoTestUtils.readNotation())
+    }
 
 
     private fun startPaused(): LogicRunId {
@@ -262,31 +265,30 @@ class StepNavigationTest {
 
     private fun startPausedAt(location: ObjectLocation): LogicRunId {
         val controller = context.serverLogicController
-        val snapshot = snapshot
         val runId = controller.start(location, snapshot)
             ?: fail("Unable to start run")
         // Pause-at-entry: the run was created but never set running, so pause() lands paused immediately.
         controller.pause(runId)
-        awaitState(LogicRunState.Paused)
+        controller.awaitState(LogicRunState.Paused)
         return runId
     }
 
 
     private fun step(runId: LogicRunId) {
         context.serverLogicController.step(runId, snapshot)
-        awaitState(LogicRunState.Paused)
+        context.serverLogicController.awaitState(LogicRunState.Paused)
     }
 
 
     private fun stepOver(runId: LogicRunId) {
         context.serverLogicController.stepOver(runId, snapshot)
-        awaitState(LogicRunState.Paused)
+        context.serverLogicController.awaitState(LogicRunState.Paused)
     }
 
 
     private fun stepOut(runId: LogicRunId) {
         context.serverLogicController.stepOut(runId, snapshot)
-        awaitState(LogicRunState.Paused)
+        context.serverLogicController.awaitState(LogicRunState.Paused)
     }
 
 
@@ -316,28 +318,6 @@ class StepNavigationTest {
     private fun frameForDocument(frame: LogicRunFrameInfo, documentPath: DocumentPath): LogicRunFrameInfo? {
         val deeper = frame.dependencies.firstNotNullOfOrNull { frameForDocument(it, documentPath) }
         return deeper ?: frame.takeIf { it.objectLocation.documentPath == documentPath }
-    }
-
-
-    private fun awaitState(state: LogicRunState) {
-        for (attempt in 0 until 500) {
-            if (context.serverLogicController.status().active?.state == state) {
-                return
-            }
-            Thread.sleep(10)
-        }
-        fail("Run did not reach $state (was ${context.serverLogicController.status().active?.state})")
-    }
-
-
-    private fun awaitDone() {
-        for (attempt in 0 until 500) {
-            if (context.serverLogicController.status().active == null) {
-                return
-            }
-            Thread.sleep(10)
-        }
-        fail("Run did not complete")
     }
 
 

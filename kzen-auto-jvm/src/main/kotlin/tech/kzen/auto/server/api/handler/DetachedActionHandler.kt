@@ -11,9 +11,6 @@ import tech.kzen.auto.server.service.exec.ModelDetachedExecutor
 import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionResult
 import tech.kzen.lib.common.exec.RequestParams
-import tech.kzen.lib.common.model.document.DocumentPath
-import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.util.ImmutableByteArray
 import tech.kzen.lib.platform.DateTimeUtils
 import java.nio.file.Files
@@ -28,13 +25,7 @@ class DetachedActionHandler(
         parameters: Parameters,
         body: ImmutableByteArray?
     ): ExecutionResult {
-        val documentPath: DocumentPath = parameters.getParam(
-            CommonRestApi.paramDocumentPath, DocumentPath::parse)
-
-        val objectPath: ObjectPath = parameters.getParam(
-            CommonRestApi.paramObjectPath, ObjectPath::parse)
-
-        val objectLocation = ObjectLocation(documentPath, objectPath)
+        val objectLocation = parameters.getObjectLocationParam()
 
         val detachedParams = mutableMapOf<String, List<String>>()
         for (e in parameters.entries()) {
@@ -62,13 +53,7 @@ class DetachedActionHandler(
         parameters: Parameters,
         body: ImmutableByteArray?
     ): ExecutionDownloadResult {
-        val documentPath: DocumentPath = parameters.getParam(
-            CommonRestApi.paramDocumentPath, DocumentPath::parse)
-
-        val objectPath: ObjectPath = parameters.getParam(
-            CommonRestApi.paramObjectPath, ObjectPath::parse)
-
-        val objectLocation = ObjectLocation(documentPath, objectPath)
+        val objectLocation = parameters.getObjectLocationParam()
 
         val params = mutableMapOf<String, List<String>>()
         for (e in parameters.entries()) {
@@ -96,13 +81,7 @@ class DetachedActionHandler(
     // (last-run-wins), so this resolves it straight from path + object with NO live run — letting the report be
     // downloaded after the run ends. The object path both resolves the Worker's dir and names the file.
     fun jobDownload(parameters: Parameters): ExecutionDownloadResult {
-        val documentPath: DocumentPath = parameters.getParam(
-            CommonRestApi.paramDocumentPath, DocumentPath::parse)
-
-        val objectPath: ObjectPath = parameters.getParam(
-            CommonRestApi.paramObjectPath, ObjectPath::parse)
-
-        val workerLocation = ObjectLocation(documentPath, objectPath)
+        val workerLocation = parameters.getObjectLocationParam()
 
         val outputDir = jobWorkPool.workerOutputDir(workerLocation)
         val tablePath = outputDir.resolve(IndexedCsvTable.tableFile)
@@ -110,7 +89,7 @@ class DetachedActionHandler(
             error("No downloadable result: $workerLocation")
         }
 
-        val filenamePrefix = FormatUtils.sanitizeFilename(objectPath.name.value)
+        val filenamePrefix = FormatUtils.sanitizeFilename(workerLocation.objectPath.name.value)
         val filename = filenamePrefix + "_" + DateTimeUtils.filenameTimestamp() + ".csv"
 
         return ExecutionDownloadResult(

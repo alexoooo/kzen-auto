@@ -11,6 +11,7 @@ import tech.kzen.auto.client.objects.document.flow.edge.BottomEgress
 import tech.kzen.auto.client.objects.document.flow.edge.TopIngress
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.client.wrap.RunProgressColors
 import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
@@ -45,8 +46,7 @@ external interface EdgeControllerProps: Props {
     var flowDag: FlowDag
 
     // Routing, derived once per render by FlowController and threaded through — never re-derived per cell.
-    var nextToRun: ObjectLocation?
-    var runningVertex: ObjectLocation?
+    var edgeRouting: FlowEdgeRouting
 }
 
 
@@ -61,17 +61,6 @@ class EdgeController(
 ):
     RPureComponent<EdgeControllerProps, EdgeControllerState>(props)
 {
-    //-----------------------------------------------------------------------------------------------------------------
-    companion object {
-        val goldLight20 = Color("#ffe13f")
-        val goldLight25 = Color("#ffe13f")
-        val goldLight50 = Color("#ffeb7f")
-        val goldLight75 = Color("#fff5bf")
-        val goldLight90 = Color("#fffbe5")
-        val goldLight93 = Color("#fffced")
-    }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     override fun EdgeControllerState.init(props: EdgeControllerProps) {
         edgeHover = false
@@ -97,171 +86,20 @@ class EdgeController(
     private fun onRemove() {
         async {
             val sourceMain = ObjectLocation(
-                    props.documentPath,
-                    NotationConventions.mainObjectPath)
+                props.documentPath,
+                NotationConventions.mainObjectPath)
 
             val objectAttributePath = AttributePath(
-                    FlowConventions.edgesAttributeName,
-                    props.attributeNesting)
+                FlowConventions.edgesAttributeName,
+                props.attributeNesting)
 
             props.mirroredGraphStore.apply(RemoveInAttributeCommand(
-                    sourceMain, objectAttributePath, false))
+                sourceMain, objectAttributePath, false))
         }
     }
 
 
-    // A running vertex takes precedence over the pure routing pick, which is what tints the pipes feeding the
-    // vertex being executed rather than the one queued behind it.
-    private fun nextToRun(): ObjectLocation? {
-        return props.runningVertex
-                ?: props.nextToRun
-    }
-
-
-    private fun pendingToRunVertexDescriptor(
-            nextToRun: ObjectLocation
-    ): VertexDescriptor? {
-        val nextToRunVisualVertexModel = props.visualFlowModel.vertices[nextToRun]
-                ?: return null
-
-        if (nextToRunVisualVertexModel.epoch > 0) {
-            return null
-        }
-
-        // NB: might be null when navigating to new document while running
-        return props.flowMatrix.verticesByLocation[nextToRun]
-    }
-
-
-    private fun edgesFlowingToPending(
-            nextToRun: VertexDescriptor
-    ): Set<EdgeDescriptor> {
-        val builder = mutableSetOf<EdgeDescriptor>()
-
-        for ((objectLocation, vertexVisualModel) in props.visualFlowModel.vertices) {
-            if (vertexVisualModel.message == null) {
-                continue
-            }
-
-            val pendingSuccessors = pendingSuccessors(objectLocation)
-            if (nextToRun.objectLocation in pendingSuccessors) {
-                continue
-            }
-
-            for (pendingSuccessor in pendingSuccessors) {
-                val successorVertexDescriptor = props.flowMatrix.verticesByLocation[pendingSuccessor]
-                        ?: throw IllegalStateException()
-
-                val edgesToSuccessor = edgesLeadingTo(successorVertexDescriptor)
-
-                val successorsUpToNextToRun = edgesToSuccessor
-                        .filter { it.coordinate.row <= nextToRun.coordinate.row }
-
-                builder.addAll(successorsUpToNextToRun)
-            }
-        }
-
-        return builder
-    }
-
-
-    private fun pendingWithAvailableMessage(): Set<ObjectLocation> {
-        return props.visualFlowModel.vertices
-                .filter { it.value.message != null }
-                .flatMap { pendingSuccessors(it.key) }
-                .toSet()
-    }
-
-
-    private fun edgesAvailableToPending(
-            pendingWithAvailableMessage: Collection<ObjectLocation>
-    ): Set<EdgeDescriptor> {
-        return pendingWithAvailableMessage
-                .mapNotNull { props.flowMatrix.verticesByLocation[it] }
-                .flatMap { edgesLeadingTo(it) }
-                .toSet()
-
-//        val builder = mutableSetOf<EdgeDescriptor>()
-//
-//        for ((objectLocation, vertexVisualModel) in props.visualFlowModel.vertices) {
-//            if (vertexVisualModel.message == null) {
-//                continue
-//            }
-//
-//            val pendingSuccessors = pendingSuccessors(objectLocation)
-//
-//            for (pendingSuccessor in pendingSuccessors) {
-//                val successorVertexDescriptor = props.flowMatrix.verticesByLocation[pendingSuccessor]
-//                        ?: throw IllegalStateException()
-//
-//                val edgesToSuccessor = edgesLeadingTo(successorVertexDescriptor)
-//
-//                builder.addAll(edgesToSuccessor)
-//            }
-//        }
-//
-//        return builder
-    }
-
-
-    private fun pendingSuccessors(
-            objectLocation: ObjectLocation
-    ): List<ObjectLocation> {
-        val successors = props.flowDag.successors[objectLocation]
-                ?: return listOf()
-
-        val builder = mutableListOf<ObjectLocation>()
-
-        for (successor in successors) {
-            val successorVisualVertexModel =
-                    props.visualFlowModel.vertices[successor]
-                    ?: continue
-
-            if (successorVisualVertexModel.epoch == 0) {
-                builder.add(successor)
-            }
-        }
-
-        return builder
-    }
-
-
-    private fun edgesLeadingTo(
-            nextToRun: VertexDescriptor
-    ): Set<EdgeDescriptor> {
-        val buffer = mutableSetOf<EdgeDescriptor>()
-        for ((i, inputName) in nextToRun.inputNames.withIndex()) {
-            val sourceVertex = props.flowMatrix.traceVertexBackFrom(nextToRun, inputName)
-                    ?: continue
-
-            val sourceVisualModel = props.visualFlowModel.vertices[sourceVertex.objectLocation]
-                    ?: continue
-
-            if (sourceVisualModel.message == null) {
-                continue
-            }
-
-            val leadingEdges = props.flowMatrix.traceEdgeBackFrom(nextToRun, i)
-            buffer.addAll(leadingEdges)
-        }
-        return buffer
-    }
-
-
-    // Every edge currently carrying a message: leading to any vertex (pending or already-run) fed by a
-    // source that still holds its message. Superset of the sending / in-flight / available sets; the
-    // colour when-chains test those stronger categories first, so this only colours the "already
-    // traversed" upstream segments of the active path — the message went down them but its consumer has
-    // already run (epoch > 0), which the pending-only sets miss and leave white.
-    private fun edgesCarryingMessage(): Set<EdgeDescriptor> {
-        val builder = mutableSetOf<EdgeDescriptor>()
-        for (vertexDescriptor in props.flowMatrix.verticesByLocation.values) {
-            builder.addAll(edgesLeadingTo(vertexDescriptor))
-        }
-        return builder
-    }
-
-
+    //-----------------------------------------------------------------------------------------------------------------
     private fun hasMessageHoldingPredecessor(
             vertexLocation: ObjectLocation
     ): Boolean {
@@ -329,18 +167,13 @@ class EdgeController(
     }
 
 
-    // TODO: refactor
     private fun egressColor(
-            edgeDirection: EdgeDirection,
-            isRunning: Boolean,
-            nextToRun: ObjectLocation?,
-            hasMessage: Boolean,
-            edgesLeadingToNextToRun: Set<EdgeDescriptor>,
-            edgesInFlightToPending: Set<EdgeDescriptor>,
-            edgesAvailableToPending: Set<EdgeDescriptor>,
-            edgesCarryingMessage: Set<EdgeDescriptor>,
-            pendingWithAvailableMessage: Set<ObjectLocation>
+        edgeDirection: EdgeDirection,
+        isRunning: Boolean,
+        hasMessage: Boolean
     ): Color {
+        val routing = props.edgeRouting
+        val nextToRun = routing.nextToRun
         if (nextToRun == null || !hasMessage) {
             return NamedColor.white
         }
@@ -348,31 +181,31 @@ class EdgeController(
         val nextCoordinate = props.cellDescriptor.coordinate.offset(edgeDirection)
 
         val isSending = isEgressActive(
-                edgeDirection, nextCoordinate, nextToRun, edgesLeadingToNextToRun)
+            edgeDirection, nextCoordinate, nextToRun, routing.edgesLeadingToNextToRun)
 
         val isInFlight = isEgressActive(
-                edgeDirection, nextCoordinate, nextToRun, edgesInFlightToPending)
+            edgeDirection, nextCoordinate, nextToRun, routing.edgesInFlightToPending)
 
         val isEdgeMessageAvailable = isEgressAvailable(
-                edgeDirection, nextCoordinate, edgesAvailableToPending, pendingWithAvailableMessage)
+            edgeDirection, nextCoordinate, routing.edgesAvailableToPending, routing.pendingWithAvailableMessage)
 
         val isCarrying = isEgressCarrying(
-                edgeDirection, nextCoordinate, edgesCarryingMessage)
+            edgeDirection, nextCoordinate, routing.edgesCarryingMessage)
 
         return when {
             isSending ->
-                if (isRunning) goldLight20
+                if (isRunning) RunProgressColors.goldSendingWhileRunning
                 else NamedColor.gold
 
             isInFlight ->
-                goldLight50
+                RunProgressColors.goldLight50
 
             isEdgeMessageAvailable ->
-                goldLight90
+                RunProgressColors.goldLight90
 
             // Already-traversed upstream of the active path: between gold and white.
             isCarrying ->
-                goldLight50
+                RunProgressColors.goldLight50
 
             else ->
                 NamedColor.white
@@ -404,35 +237,16 @@ class EdgeController(
 
 
     private fun ChildrenBuilder.renderEdge() {
-//        val isDebug =
-//                props.cellDescriptor.coordinate.row == 5 &&
-//                props.cellDescriptor.coordinate.column == 0
-
         val orientation = props.cellDescriptor.orientation
+        val routing = props.edgeRouting
 
         val isRunning = props.visualFlowModel.isRunning()
-        val nextToRun = nextToRun()
-        val pendingToRunVertexDescriptor = nextToRun?.let { pendingToRunVertexDescriptor(it) }
 
-        val edgesLeadingToNextToRun = pendingToRunVertexDescriptor
-                ?.let { edgesLeadingTo(it) }
-                ?: setOf()
-
-        val edgesInFlightToPending = pendingToRunVertexDescriptor
-                ?.let { edgesFlowingToPending(it) }
-                ?: setOf()
-
-//        val edgesSendingMessages = edgesLeadingToNextToRun + edgesInFlightToPending
-
-        val isEdgeSendingMessage = props.cellDescriptor in edgesLeadingToNextToRun
-        val isEdgeInFlightMessage = props.cellDescriptor in edgesInFlightToPending
-
-        val pendingWithAvailableMessage = pendingWithAvailableMessage()
-        val edgesAvailableToPending = edgesAvailableToPending(pendingWithAvailableMessage)
-        val isEdgeMessageAvailable = props.cellDescriptor in edgesAvailableToPending
-
-        val edgesCarryingMessage = edgesCarryingMessage()
-        val isEdgeCarryingMessage = nextToRun != null && props.cellDescriptor in edgesCarryingMessage
+        val isEdgeSendingMessage = props.cellDescriptor in routing.edgesLeadingToNextToRun
+        val isEdgeInFlightMessage = props.cellDescriptor in routing.edgesInFlightToPending
+        val isEdgeMessageAvailable = props.cellDescriptor in routing.edgesAvailableToPending
+        val isEdgeCarryingMessage =
+            routing.nextToRun != null && props.cellDescriptor in routing.edgesCarryingMessage
 
         val hasMessage = isEdgeSendingMessage || isEdgeInFlightMessage ||
                 isEdgeMessageAvailable || isEdgeCarryingMessage
@@ -440,21 +254,21 @@ class EdgeController(
         val ingressAndCentreColor = when {
             isEdgeSendingMessage ->
                 if (isRunning) {
-                    goldLight25
+                    RunProgressColors.goldSendingWhileRunning
                 }
                 else {
                     NamedColor.gold
                 }
 
             isEdgeInFlightMessage ->
-                goldLight50
+                RunProgressColors.goldLight50
 
             isEdgeMessageAvailable ->
-                goldLight90
+                RunProgressColors.goldLight90
 
             // Already-traversed upstream of the active path: between gold and white.
             isEdgeCarryingMessage ->
-                goldLight50
+                RunProgressColors.goldLight50
 
             else ->
                 NamedColor.white
@@ -483,19 +297,8 @@ class EdgeController(
                 orientation.hasLeftIngress() ->
                     renderIngressLeft(ingressAndCentreColor)
 
-                orientation.hasLeftEgress() -> {
-                    val edgeColor = egressColor(
-                            EdgeDirection.Left,
-                            isRunning,
-                            nextToRun,
-                            hasMessage,
-                            edgesLeadingToNextToRun,
-                            edgesInFlightToPending,
-                            edgesAvailableToPending,
-                            edgesCarryingMessage,
-                            pendingWithAvailableMessage)
-                    renderEgressLeft(edgeColor)
-                }
+                orientation.hasLeftEgress() ->
+                    renderEgressLeft(egressColor(EdgeDirection.Left, isRunning, hasMessage))
 
                 else -> div {
                     css {
@@ -535,17 +338,7 @@ class EdgeController(
             }
 
             if (orientation.hasRightEgress()) {
-                val edgeColor = egressColor(
-                        EdgeDirection.Right,
-                        isRunning,
-                        nextToRun,
-                        hasMessage,
-                        edgesLeadingToNextToRun,
-                        edgesInFlightToPending,
-                        edgesAvailableToPending,
-                        edgesCarryingMessage,
-                        pendingWithAvailableMessage)
-                renderEgressRight(edgeColor)
+                renderEgressRight(egressColor(EdgeDirection.Right, isRunning, hasMessage))
             }
             else if (orientation.hasRightIngress()) {
                 renderIngressRight(ingressAndCentreColor)
@@ -553,18 +346,9 @@ class EdgeController(
         }
 
         if (orientation.hasBottom()) {
-            val edgeColor = egressColor(
-                    EdgeDirection.Bottom,
-                    isRunning,
-                    nextToRun,
-                    hasMessage,
-                    edgesLeadingToNextToRun,
-                    edgesInFlightToPending,
-                    edgesAvailableToPending,
-                    edgesCarryingMessage,
-                    pendingWithAvailableMessage)
+            val bottomColor = egressColor(EdgeDirection.Bottom, isRunning, hasMessage)
             BottomEgress::class.react {
-                egressColor = edgeColor
+                egressColor = bottomColor
             }
         }
         else {
@@ -686,7 +470,6 @@ class EdgeController(
             css {
                 display = Display.inlineBlock
                 backgroundColor = cardColor
-//                backgroundColor = Color.burlyWood
 
                 width = CellController.cardWidth.div(2)
                         .minus(CellController.arrowSide).plus(3.px)

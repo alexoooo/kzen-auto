@@ -8,6 +8,8 @@ import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.exec.script.test.CountingStep
 import tech.kzen.auto.server.exec.script.test.ScriptStepTestModule
 import tech.kzen.auto.server.util.AutoTestUtils
+import tech.kzen.auto.server.util.awaitDone
+import tech.kzen.auto.server.util.awaitState
 import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunFrameInfo
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
@@ -116,13 +118,13 @@ class ScriptNestedMoveToTest {
         assertEquals(
             LogicRunResponse.Submitted,
             moveTo(runId, nestedChildPath, "main.steps/C1", frameFor(nestedChildPath)))
-        awaitState(LogicRunState.Paused)
+        context.serverLogicController.awaitState(LogicRunState.Paused)
         assertFrameNextToRun(nestedChildPath, "main.steps/C1")
         assertFrameNextToRun(nestedPath, "main.steps/Call")
         assertEquals(3, CountingStep.count.get(), "the jump itself runs nothing")
 
         resume(runId)
-        awaitDone()
+        context.serverLogicController.awaitDone()
 
         // The child re-ran C1, C2, G1, C3 (4..7) and the parent then ran After (8). The parent is the TRANSIT
         // frame: it re-hosts the child through a suppressed Call boundary but repositions nothing of its own, so
@@ -148,13 +150,13 @@ class ScriptNestedMoveToTest {
         assertEquals(
             LogicRunResponse.Submitted,
             moveTo(runId, nestedChildPath, "main.steps/C3", frameFor(nestedChildPath)))
-        awaitState(LogicRunState.Paused)
+        context.serverLogicController.awaitState(LogicRunState.Paused)
         assertFrameNextToRun(nestedChildPath, "main.steps/C3")
         assertFrameNextToRun(nestedPath, "main.steps/Call")
         assertEquals(2, CountingStep.count.get(), "C2, On and Gate are skipped, not run")
 
         resume(runId)
-        awaitDone()
+        context.serverLogicController.awaitDone()
 
         // Only C3 (3) and the parent's After (4): the skipped Gate never opened its branch, so G1 never ran.
         assertEquals(4, CountingStep.count.get())
@@ -183,13 +185,13 @@ class ScriptNestedMoveToTest {
         assertEquals(
             LogicRunResponse.Submitted,
             moveTo(runId, nestedChildPath, "main.steps/Gate.branches/Branch.steps/G1", frameFor(nestedChildPath)))
-        awaitState(LogicRunState.Paused)
+        context.serverLogicController.awaitState(LogicRunState.Paused)
         assertFrameNextToRun(nestedChildPath, "main.steps/Gate.branches/Branch.steps/G1")
         assertFrameNextToRun(nestedPath, "main.steps/Call")
         assertEquals(4, CountingStep.count.get())
 
         resume(runId)
-        awaitDone()
+        context.serverLogicController.awaitDone()
 
         // G1 re-ran (5) and C3 followed (6); C1 / C2 were adopted, and the parent only added After (7).
         assertEquals(7, CountingStep.count.get())
@@ -213,7 +215,7 @@ class ScriptNestedMoveToTest {
         assertEquals(
             LogicRunResponse.Submitted,
             moveTo(runId, chainBPath, "main.steps/B1", frameFor(chainBPath)))
-        awaitState(LogicRunState.Paused)
+        context.serverLogicController.awaitState(LogicRunState.Paused)
         assertFrameNextToRun(chainBPath, "main.steps/B1")
         // The root is this jump's only transit hop — B is the frame it addresses — so CallB is the one
         // suppressed boundary whose position has to be re-established.
@@ -222,7 +224,7 @@ class ScriptNestedMoveToTest {
         assertEquals(3, CountingStep.count.get())
 
         resume(runId)
-        awaitDone()
+        context.serverLogicController.awaitDone()
 
         // B1 (4), then CallC re-hosts C, which must EXECUTE C1 (5) and C2 (6) rather than replay-adopt the
         // abandoned invocation's capture — adoption would short-circuit C1 and stop the total at 7.
@@ -248,14 +250,14 @@ class ScriptNestedMoveToTest {
         assertEquals(
             LogicRunResponse.Submitted,
             moveTo(runId, chainCPath, "main.steps/C1", frameFor(chainCPath)))
-        awaitState(LogicRunState.Paused)
+        context.serverLogicController.awaitState(LogicRunState.Paused)
         assertFrameNextToRun(chainCPath, "main.steps/C1")
         assertFrameNextToRun(chainBPath, "main.steps/CallC")
         assertFrameNextToRun(chainPath, "main.steps/CallB")
         assertEquals(3, CountingStep.count.get(), "the jump itself runs nothing")
 
         resume(runId)
-        awaitDone()
+        context.serverLogicController.awaitDone()
 
         // Only C re-ran (C1, C2 -> 4, 5); both transit frames adopted their completed steps and merely carried
         // on afterwards (B2 -> 6, A2 -> 7).
@@ -298,7 +300,7 @@ class ScriptNestedMoveToTest {
         assertEquals(
             LogicRunResponse.Submitted,
             moveTo(runId, recursivePath, "main.steps/R1", deepFrame.executionId))
-        awaitState(LogicRunState.Paused)
+        context.serverLogicController.awaitState(LogicRunState.Paused)
     }
 
 
@@ -348,13 +350,13 @@ class ScriptNestedMoveToTest {
         assertEquals(
             LogicRunResponse.Submitted,
             moveTo(runId, loopTransitChildPath, "main.steps/C1", frameFor(loopTransitChildPath)))
-        awaitState(LogicRunState.Paused)
+        context.serverLogicController.awaitState(LogicRunState.Paused)
         assertFrameNextToRun(loopTransitChildPath, "main.steps/C1")
         assertFrameNextToRun(loopTransitPath, "main.steps/Loop.steps/Call")
         assertEquals(3, CountingStep.count.get(), "the jump itself runs nothing")
 
         resume(runId)
-        awaitDone()
+        context.serverLogicController.awaitDone()
 
         // The repositioned invocation re-ran C1 + C2 (4, 5), iteration 2's fresh invocation ran its own
         // (6, 7), and After closed the run (8). A loop restarted at iteration 0 would have re-hosted items 1
@@ -380,7 +382,7 @@ class ScriptNestedMoveToTest {
         assertEquals(
             LogicRunResponse.Submitted,
             moveTo(runId, doWhileTransitChildPath, "main.steps/D1", frameFor(doWhileTransitChildPath)))
-        awaitState(LogicRunState.Paused)
+        context.serverLogicController.awaitState(LogicRunState.Paused)
         assertFrameNextToRun(doWhileTransitChildPath, "main.steps/D1")
         assertFrameNextToRun(doWhileTransitPath, "main.steps/Loop.steps/Call")
         assertEquals(2, CountingStep.count.get(), "the jump itself runs nothing")
@@ -390,7 +392,7 @@ class ScriptNestedMoveToTest {
                 "it, re-run it, and parked there short of the call-site")
 
         resume(runId)
-        awaitDone()
+        context.serverLogicController.awaitDone()
 
         assertEquals(
             4, CountingStep.count.get(),
@@ -410,13 +412,13 @@ class ScriptNestedMoveToTest {
         assertEquals(
             LogicRunResponse.Submitted,
             moveTo(runId, loopTransitChildPath, "main.steps/C1", frameFor(loopTransitChildPath)))
-        awaitState(LogicRunState.Paused)
+        context.serverLogicController.awaitState(LogicRunState.Paused)
         assertFrameNextToRun(loopTransitChildPath, "main.steps/C1")
         assertFrameNextToRun(nestedLoopTransitPath, "main.steps/Outer.steps/Inner.steps/Call")
         assertEquals(7, CountingStep.count.get(), "the jump itself runs nothing")
 
         resume(runId)
-        awaitDone()
+        context.serverLogicController.awaitDone()
 
         // Only the repositioned invocation re-ran (C1, C2 -> 8, 9) before After closed the run (10). An inner
         // loop that replayed from its first item would have re-hosted one more invocation, reaching 12.
@@ -451,8 +453,9 @@ class ScriptNestedMoveToTest {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val snapshot: GraphDefinitionAttempt
-        get() = AutoTestUtils.graphDefinitionAttempt(AutoTestUtils.readNotation())
+    private val snapshot: GraphDefinitionAttempt by lazy {
+        AutoTestUtils.graphDefinitionAttempt(AutoTestUtils.readNotation())
+    }
 
 
     private fun startPaused(documentPath: DocumentPath): LogicRunId {
@@ -462,14 +465,14 @@ class ScriptNestedMoveToTest {
             ?: fail("Unable to start run")
         // Pause-at-entry: the run was created but never set running, so pause() lands paused immediately.
         controller.pause(runId)
-        awaitState(LogicRunState.Paused)
+        context.serverLogicController.awaitState(LogicRunState.Paused)
         return runId
     }
 
 
     private fun step(runId: LogicRunId) {
         context.serverLogicController.step(runId, snapshot)
-        awaitState(LogicRunState.Paused)
+        context.serverLogicController.awaitState(LogicRunState.Paused)
     }
 
 
@@ -489,7 +492,7 @@ class ScriptNestedMoveToTest {
 
     private fun stepOut(runId: LogicRunId) {
         context.serverLogicController.stepOut(runId, snapshot)
-        awaitState(LogicRunState.Paused)
+        context.serverLogicController.awaitState(LogicRunState.Paused)
     }
 
 
@@ -563,27 +566,5 @@ class ScriptNestedMoveToTest {
             ObjectLocation(documentPath, ObjectPath.parse(objectPath)),
             deepestFrame(documentPath).position,
             "next to run in $documentPath")
-    }
-
-
-    private fun awaitState(state: LogicRunState) {
-        for (attempt in 0 until 500) {
-            if (context.serverLogicController.status().active?.state == state) {
-                return
-            }
-            Thread.sleep(10)
-        }
-        fail("Run did not reach $state (was ${context.serverLogicController.status().active?.state})")
-    }
-
-
-    private fun awaitDone() {
-        for (attempt in 0 until 500) {
-            if (context.serverLogicController.status().active == null) {
-                return
-            }
-            Thread.sleep(10)
-        }
-        fail("Run did not complete")
     }
 }

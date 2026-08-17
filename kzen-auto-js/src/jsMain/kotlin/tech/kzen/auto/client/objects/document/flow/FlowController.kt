@@ -34,7 +34,7 @@ import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.common.objects.document.flow.FlowConventions
 import tech.kzen.auto.common.objects.document.flow.FlowStructureValidator
-import tech.kzen.auto.common.objects.document.flow.FlowWiring
+import tech.kzen.auto.common.paradigm.flow.model.structure.FlowStructureConventions
 import tech.kzen.auto.common.paradigm.flow.model.exec.VisualFlowModel
 import tech.kzen.auto.common.paradigm.flow.model.structure.FlowDag
 import tech.kzen.auto.common.paradigm.flow.model.structure.FlowMatrix
@@ -99,6 +99,10 @@ external interface FlowControllerState: State {
 // The Flow document UI: a vertex/edge grid (CellController) whose per-vertex VisualFlowModel is
 // rebuilt from the logic trace store (via FlowProgressStore); run control comes from the global
 // logic ribbon (HeaderRunController).
+//
+// Legacy: this package predates the render-discipline rules in docs/js-architecture.md § 7 and deviates from
+// them in two known places — hover held as React state (VertexController / EdgeController) and the
+// Date.now() menu-dangling timeout. Maintained, not invested in; a new document type follows § 7.
 @Suppress("unused")
 class FlowController(
     props: FlowControllerProps
@@ -178,8 +182,16 @@ class FlowController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private var mounted = false
+
+
     override fun componentDidMount() {
+        mounted = true
         async {
+            // Unobserve runs synchronously on unmount, so registering after it would leak this observer.
+            if (!mounted) {
+                return@async
+            }
             props.clientStateGlobal.observe(this)
             bridge()?.channel(InsertionKey)?.subscribe(this)
         }
@@ -187,6 +199,7 @@ class FlowController(
 
 
     override fun componentWillUnmount() {
+        mounted = false
         bridge()?.channel(InsertionKey)?.unsubscribe(this)
         props.clientStateGlobal.unobserve(this)
     }
@@ -546,10 +559,13 @@ class FlowController(
         val graphStructure = state.graphStructure!!
         val flowDag = FlowDag.of(flowMatrix)
 
-        // Routing derived ONCE per render and threaded down as props — never recomputed per cell (each per-cell
-        // FlowUtils.next used to rebuild FlowMatrix + FlowDag from notation: O(V²)-scale work per grid paint).
+        // Routing derived ONCE per render and threaded down as props — never recomputed per cell. Both the
+        // next-to-run pick and the edge tinting sets are functions of the whole grid, so per-cell derivation
+        // was O(V²)- and O(V·E)-scale work per grid paint.
         val nextToRun = FlowUtils.next(flowMatrix, flowDag, visualFlowModel)
         val runningVertex = visualFlowModel.running()
+        val edgeRouting = FlowEdgeRouting.of(
+            visualFlowModel, flowMatrix, flowDag, runningVertex ?: nextToRun)
 
         var colspanRemaining = 0
         table {
@@ -589,7 +605,7 @@ class FlowController(
                                             .attributes
                                             .map
                                             .filter {
-                                                FlowWiring.isInput(it.value.attributeMetadataNotation)
+                                                FlowStructureConventions.isInput(it.value.attributeMetadataNotation)
                                             }
                                             .map {
                                                 it.key
@@ -607,7 +623,7 @@ class FlowController(
                                         flowMatrix,
                                         flowDag,
                                         nextToRun,
-                                        runningVertex)
+                                        edgeRouting)
                                 }
                             }
                         }
@@ -671,7 +687,7 @@ class FlowController(
         flowMatrix: FlowMatrix,
         flowDag: FlowDag,
         nextToRun: ObjectLocation?,
-        runningVertex: ObjectLocation?
+        edgeRouting: FlowEdgeRouting
     ) {
         CellController::class.react {
             this.attributeController = props.attributeController
@@ -690,7 +706,7 @@ class FlowController(
             this.flowMatrix = flowMatrix
             this.flowDag = flowDag
             this.nextToRun = nextToRun
-            this.runningVertex = runningVertex
+            this.edgeRouting = edgeRouting
         }
     }
 }

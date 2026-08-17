@@ -121,6 +121,45 @@ class Url private constructor(
             .ifEmpty { null }
 
 
+    /**
+     * The last `/`-separated segment of [location], or the whole location when it carries no separator.
+     *
+     * String surgery on [location], like [parent]. NB a query or fragment stays attached (`data.csv?v=2`);
+     * that is long-standing behaviour which extension sniffing inherits, so narrowing it would change how
+     * query-bearing urls are classified.
+     */
+    fun fileName(): String {
+        val lastSeparator = location.lastIndexOf('/')
+
+        return when (lastSeparator) {
+            -1 -> location
+            else -> location.substring(lastSeparator + 1)
+        }
+    }
+
+
+    /**
+     * The url one path segment up, or null when there is nothing to climb: no [path] at all
+     * (`http://example.com`), or an opaque one carrying no separator (`mailto:user@example.com`).
+     *
+     * String surgery on [location], like [path] itself — the scheme's `:` precedes every `/`, so the last
+     * separator is always inside the path.
+     */
+    fun parent(): Url? {
+        if (path.isEmpty()) {
+            return null
+        }
+
+        // A trailing slash names the same place, so it is not a segment of its own.
+        val lastSeparator = location.removeSuffix("/").lastIndexOf('/')
+        if (lastSeparator <= 0) {
+            return null
+        }
+
+        return of(location.take(lastSeparator))
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     override fun digest(sink: Digest.Sink) {
         sink.addUtf8(location)

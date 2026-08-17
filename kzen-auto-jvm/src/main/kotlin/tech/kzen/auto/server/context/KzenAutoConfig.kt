@@ -28,6 +28,9 @@ data class KzenAutoConfig(
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
+        // --server.port= parsing is intentionally duplicated across the spawn protocol's mains
+        //  (kzen-launcher's KzenLauncherConfig, kzen-shell's KzenShellProperties — no shared module);
+        //  keep the copies in sync.
         const val serverPortPrefix = "--server.port="
         private val serverPortRegex = Regex(
             Regex.escape(serverPortPrefix) + "\\d+")

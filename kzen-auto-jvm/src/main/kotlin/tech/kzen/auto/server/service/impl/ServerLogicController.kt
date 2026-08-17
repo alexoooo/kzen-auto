@@ -4,10 +4,8 @@ import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.paradigm.logic.LogicConventions
 import tech.kzen.auto.common.paradigm.logic.LogicControlReply
-import tech.kzen.auto.common.paradigm.logic.MoveToRefusal
 import tech.kzen.auto.server.exec.LogicCompiler
 import tech.kzen.auto.server.exec.LogicCompilerServices
-import tech.kzen.auto.server.exec.RepositionDiagnostic
 import tech.kzen.auto.server.exec.RunTraceAccess
 import tech.kzen.auto.server.objects.job.JobValidationCache
 import tech.kzen.auto.server.objects.job.service.JobWorkPool
@@ -16,13 +14,11 @@ import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionResult
 import tech.kzen.lib.common.exec.engine.Logic
-import tech.kzen.lib.common.exec.engine.MoveTarget
 import tech.kzen.lib.common.exec.engine.Node
 import tech.kzen.lib.common.exec.engine.NodeId
 import tech.kzen.lib.common.exec.engine.NodeStatus
 import tech.kzen.lib.common.exec.engine.Outcome
 import tech.kzen.lib.common.exec.engine.PauseReason
-import tech.kzen.lib.common.exec.engine.Repositionable
 import tech.kzen.lib.common.exec.engine.StepMode
 import tech.kzen.lib.common.exec.logic.run.LogicController
 import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
@@ -50,20 +46,12 @@ import java.util.concurrent.TimeUnit
 
 
 /**
- * Drives a single run on the new single-writer [RunEngine] (logic-spec greenfield core), while keeping the
- * existing [LogicController] REST contract intact so the client (status / start / run / step / pause / cancel)
- * is unchanged. The root document is translated to an engine [tech.kzen.lib.common.exec.engine.Logic] by
- * [LogicCompiler]. The engine IS the trace store: this controller no longer mirrors trace events anywhere;
- * the REST trace surface is served by projecting the run's engine at query time
- * ([tech.kzen.auto.server.exec.RunEngineLogicTrace], reachable via [retainedTraceAccess]). A settled run's
- * engine is RETAINED (pools stopped via [RunEngine.shutdown], tree + history kept readable) for post-run
- * review; the next [start] (or a global clear via [clearRetainedTrace]) disposes it. [status] reports a
- * settled run as no-active-run.
- *
- * Script, Flow, Job and Report documents all compile onto the engine now (a document of any other type fails to
- * compile → clean 400). The Job port runs its Workers as concurrent confined child nodes; a Report runs its
- * record pipeline on the run's root node — each flavour's per-element / progress values reach the JS UI through
- * the shared query-time projection, with no per-flavour code here.
+ * Drives a single run on the single-writer [RunEngine], keeping the [LogicController] REST contract
+ * unchanged; the root document — any of the four Logic flavours, each with no per-flavour code here — is
+ * translated to an engine [Logic] by [LogicCompiler]. The engine IS the trace store: the REST trace surface
+ * projects the run's engine at query time ([tech.kzen.auto.server.exec.RunEngineLogicTrace], reachable via
+ * [retainedTraceAccess]), and a settled run's engine is RETAINED for post-run review until the next [start]
+ * (or [clearRetainedTrace]) disposes it — see kzen-auto architecture.md §3 for the wire-level picture.
  *
  * Run-lifecycle convergence: every control action that releases work (resume / step / cancel) is driven on a
  * single-thread executor that then blocks in [RunEngine.awaitQuiescent] until the run settles at its next
@@ -71,21 +59,14 @@ import java.util.concurrent.TimeUnit
  * state back into the status flags. Signal-only actions (pause / cancel / setPauseOnError) call the engine
  * directly so they reach an in-flight run without queueing behind the busy executor.
  *
- * Live-edit migration (logic-spec §5): the client re-reads the (possibly edited) notation and passes it as the
- * run's `snapshotGraphDefinitionAttempt` each time it releases work. When that definition differs from the one
- * the live run was compiled against (a pause → edit → resume), [pendingMigration] recompiles the root [Logic]
- * and the executor calls [RunEngine.migrate] at the quiescent barrier instead of plain resume / step — so the
- * edit takes effect on the live run. Detection is event-driven: this controller observes the graph store (as a
- * [LocalGraphStore.Observer], registered at the composition root) to set a coarse edit-dirty flag, so a clean
- * release skips the closure compare entirely (slow motion would otherwise pay it per tick). The compared
- * closure spans the root document PLUS its linked logic documents (a RunStep sub-script, a Flow RunLogic
- * callee, a Job RunWorker callee — recursively, discovered from notation by [LinkedLogicDocuments]), so
- * editing a paused caller's callee migrates the caller even though the `instructions` link is weak. This is
- * flavour-agnostic: a Job carries its Worker state + channel carryover across the rebuild (see
- * [tech.kzen.auto.server.exec.job.JobRun]); a Script carries its completed step outcomes + result (see
- * [tech.kzen.auto.server.exec.script.ScriptMigrationState]) — and the engine itself carries open resource
- * registrations (a browser) by owning frame; a Flow registers no capture yet, so it cleanly restarts on the
- * edited definition (the safe best-effort §5 default).
+ * Live-edit migration (logic-spec §5): when the notation changed under a paused run, [pendingMigration]
+ * recompiles the root [Logic] and the executor calls [RunEngine.migrate] at the quiescent barrier instead of
+ * plain resume / step. Detection is two-stage (see [editDirty] and [pendingMigration]); the compared closure
+ * spans the root document PLUS its linked logic documents ([LinkedLogicDocuments]), so editing a paused
+ * caller's callee migrates the caller even though the `instructions` link is weak. Each flavour carries its
+ * own surviving state across the rebuild by stable id (e.g. [tech.kzen.auto.server.exec.job.JobRun],
+ * [tech.kzen.auto.server.exec.script.ScriptMigrationState]); the engine itself carries open resource
+ * registrations by owning frame.
  */
 class ServerLogicController(
     private val graphStore: LocalGraphStore,
@@ -162,34 +143,25 @@ class ServerLogicController(
     //-----------------------------------------------------------------------------------------------------------------
     private var stateOrNull: LogicState? = null
 
-    // Version of everything a trace/progress consumer projects that the run's own trace sequence CANNOT express:
-    // a run started, a run settled terminal, a retained trace was cleared. Bumped under the controller lock;
-    // surfaced as LogicStatus.epoch, and deliberately bumps even while there is no active run — that is what lets
-    // a client notice a post-run "clear traces" (before and after, status() reports active == null, so an
-    // active-run-derived version alone would be identical across the clear and no view would ever repaint to
-    // empty). Replaces the retired LogicStatus.time wall clock, which conveyed this by being fresh on EVERY call
-    // — and therefore forced every consumer to re-fetch its full trace snapshot on every poll.
+    // Surfaced as LogicStatus.epoch: the transitions a run's own trace sequence cannot express (a run
+    // started, settled terminal, or a retained trace was cleared). Bumped under the controller lock, and
+    // deliberately bumps even with no active run — what lets a client notice a post-run "clear traces".
+    // Canonical semantics: architecture.md §3.
     private var epoch: Long = 0
 
-    // Surfaced as LogicStatus.structureVersion: a monotone counter that moves only on a genuine EXECUTION-TREE
-    // change — an execution created/destroyed, a run-state transition, or a run lifecycle/clear event — but
-    // NOT on a plain trace emit (which advances only the run's sequence). It is what lets a structure-keyed
-    // consumer (the traced-document set, the execution tree) re-fetch ~15-17x/run instead of once per publish.
-    //
-    // Computed LAZILY in status() (under this controller's monitor, off the engine hot path) by comparing a
-    // cheap signature against the last: epoch is folded in (so all three bumpEpoch transitions ride into it),
-    // runState catches state transitions, and the unfiltered node-id set catches execution create/destroy.
-    // Deliberately no reactive bump sites of its own — every structural mutation already fires
-    // notifyStatusObservers(), which pulls a status() that observes the change; conflation of the push channel
-    // can only COLLAPSE bumps, which is safe because the structure-keyed queries are full snapshots, not deltas.
+    // Surfaced as LogicStatus.structureVersion: moves only on a genuine EXECUTION-TREE change, never on a
+    // plain trace emit — what lets a structure-keyed consumer re-fetch on structure rather than per publish
+    // (semantics: architecture.md §3). Computed LAZILY in status() (under this controller's monitor, off the
+    // engine hot path) by diffing a cheap signature against the last; deliberately no reactive bump sites of
+    // its own — every structural mutation already fires notifyStatusObservers(), and conflation of the push
+    // channel can only COLLAPSE bumps, which is safe because the structure-keyed queries are full snapshots.
     private var structureVersion: Long = 0
     private var lastStructureSignature: StructureSignature? = null
 
     // The value status() diffs to decide whether structureVersion moved. nodeIds is the UNFILTERED set of
-    // execution-node ids under snapshot.root (mirrors RunEngineLogicTrace's execution walk, NOT the terminal-
-    // pruned nodeToFrame): a child hosted and run to completion inside one Step-Over stays in the execution
-    // tree though it leaves the live frame, so a frame-derived set would let the client's execution tree go
-    // stale. Node ids are monotone (n0, n1, ...) and never revisited, so equal signatures ⇒ identical trees.
+    // execution-node ids under snapshot.root — mirrors RunEngineLogicTrace's execution walk, NOT the
+    // terminal-pruned nodeToFrame (architecture.md §3 explains why a frame-derived set would go stale).
+    // Node ids are monotone (n0, n1, ...) and never revisited, so equal signatures ⇒ identical trees.
     private data class StructureSignature(
         val epoch: Long,
         val runId: LogicRunId?,
@@ -198,13 +170,11 @@ class ServerLogicController(
 
     // Consumers of "the run status may have changed" — the push transport (/logic/events) is the only one.
     // Payload-free, mirroring the engine's own Run.observe contract: a listener is told THAT something changed
-    // and pulls status() itself.
-    //
-    // Deliberately controller-scoped rather than one engine subscription per consumer: the engine a consumer
-    // would subscribe to is replaced on each start() and disposed on clear, and the engine never clears its
-    // observer list on shutdown()/dispose() — so per-consumer engine subscriptions would both miss the run they
-    // care about and accumulate. The controller holds exactly one subscription per run (LogicState
-    // .engineSubscription) and fans out from here; it also owns the epoch transitions no engine can see.
+    // and pulls status() itself. Controller-scoped rather than one engine subscription per consumer — the
+    // engine is replaced on each start() and never clears its observer list (architecture.md §3, "Subscribe to
+    // the controller, never to an engine"); the controller holds exactly one subscription per run
+    // (LogicState.engineSubscription) and fans out from here, and it also owns the epoch transitions no
+    // engine can see.
     //
     // CONTRACT (load-bearing): a listener is invoked on an engine dispatcher thread, on the emit/log/park hot
     // path, and sometimes while this controller's monitor is held. It must do nothing but hand off to its own
@@ -244,6 +214,40 @@ class ServerLogicController(
         return LogicRunResponse.Submitted
     }
 
+
+    // The control-verb preamble every verb shares: a settled (terminal-retained) run is not-found for
+    // control — it exists only for trace review — and a stale run id refuses rather than driving a run the
+    // caller has never seen. Callers unwrap with `when` and return [Refused.response] (wrapped as needed).
+    private sealed interface ControlTarget {
+        data class Active(val state: LogicState): ControlTarget
+        data class Refused(val response: LogicRunResponse): ControlTarget
+    }
+
+    private fun controlTarget(runId: LogicRunId): ControlTarget {
+        val state = stateOrNull?.takeIf { !it.settled }
+            ?: return ControlTarget.Refused(LogicRunResponse.NotFound)
+
+        if (state.runId != runId) {
+            return ControlTarget.Refused(LogicRunResponse.RunIdMismatch)
+        }
+
+        return ControlTarget.Active(state)
+    }
+
+
+    // Every drive converges the same way (see the class KDoc): [engineWork] runs on the single-thread
+    // driving executor — ending in an awaitQuiescent that blocks until the engine settles at its next
+    // wavefront — then [settleAfterDrive] reflects the settled state back into the status flags under the
+    // controller monitor.
+    private fun driveAndSettle(state: LogicState, engineWork: (RunEngine) -> Unit) {
+        executor.execute {
+            engineWork(state.engine)
+            synchronized(this@ServerLogicController) {
+                settleAfterDrive(state)
+            }
+        }
+    }
+
     // A notation edit MAY have landed since [pendingMigration] last reconciled — the cheap first stage of
     // live-edit detection (fed by the graphStore observer callbacks below; registered at the composition root).
     // Coarse by design (an edit to an unrelated document also sets it): the closure compare in
@@ -257,6 +261,9 @@ class ServerLogicController(
             isDaemon = true
         }
     }
+
+    // The move-to per-hop capability gate (pure, no run-state mutation) — see [RepositionGate].
+    private val repositionGate = RepositionGate(objectStableMapper)
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -453,12 +460,9 @@ class ServerLogicController(
 
     @Synchronized
     override fun cancel(runId: LogicRunId): LogicRunResponse {
-        // A settled (terminal-retained) run is not-found for control — it exists only for trace review.
-        val state = stateOrNull?.takeIf { !it.settled }
-            ?: return LogicRunResponse.NotFound
-
-        if (state.runId != runId) {
-            return LogicRunResponse.RunIdMismatch
+        val state = when (val target = controlTarget(runId)) {
+            is ControlTarget.Refused -> return target.response
+            is ControlTarget.Active -> target.state
         }
 
         state.cancelRequested = true
@@ -470,12 +474,7 @@ class ServerLogicController(
         if (!state.running && !state.stepping) {
             // No in-flight drive task is waiting to observe the settle (the run was paused), so finalize the
             // now-cancelling run on the executor (which is free).
-            executor.execute {
-                state.engine.awaitQuiescent()
-                synchronized(this@ServerLogicController) {
-                    settleAfterDrive(state)
-                }
-            }
+            driveAndSettle(state) { it.awaitQuiescent() }
         }
 
         return submitted()
@@ -484,12 +483,9 @@ class ServerLogicController(
 
     @Synchronized
     override fun pause(runId: LogicRunId): LogicRunResponse {
-        // A settled (terminal-retained) run is not-found for control — it exists only for trace review.
-        val state = stateOrNull?.takeIf { !it.settled }
-            ?: return LogicRunResponse.NotFound
-
-        if (state.runId != runId) {
-            return LogicRunResponse.RunIdMismatch
+        val state = when (val target = controlTarget(runId)) {
+            is ControlTarget.Refused -> return target.response
+            is ControlTarget.Active -> target.state
         }
 
         when {
@@ -500,12 +496,9 @@ class ServerLogicController(
                 state.launched = true
                 state.running = true
                 state.pauseRequested = true
-                executor.execute {
-                    state.engine.step(StepMode.Into)
-                    state.engine.awaitQuiescent()
-                    synchronized(this@ServerLogicController) {
-                        settleAfterDrive(state)
-                    }
+                driveAndSettle(state) {
+                    it.step(StepMode.Into)
+                    it.awaitQuiescent()
                 }
             }
 
@@ -538,12 +531,9 @@ class ServerLogicController(
     // climb back out on the first subsequent Step Over.
     @Synchronized
     fun startStep(runId: LogicRunId, mode: StepMode = StepMode.Into): LogicRunResponse {
-        // A settled (terminal-retained) run is not-found for control — it exists only for trace review.
-        val state = stateOrNull?.takeIf { !it.settled }
-            ?: return LogicRunResponse.NotFound
-
-        if (state.runId != runId) {
-            return LogicRunResponse.RunIdMismatch
+        val state = when (val target = controlTarget(runId)) {
+            is ControlTarget.Refused -> return target.response
+            is ControlTarget.Active -> target.state
         }
 
         check(!state.launched) { "Can't start stepping, already running" }
@@ -552,18 +542,15 @@ class ServerLogicController(
         state.launched = true
         state.stepping = true
 
-        executor.execute {
+        driveAndSettle(state) { engine ->
             // The first step launches the run parked at entry (before the first step; the launch is always
             // mode-agnostic — the never-started engine simply parks at the entry wavefront); the intermediate
             // quiesce lets it park so the second step has a parked node to drain — running that first step in
             // [mode] and parking before the next. Mirrors pause-at-entry followed by one Step [mode].
-            state.engine.step(StepMode.Into)
-            state.engine.awaitQuiescent()
-            state.engine.step(mode)
-            state.engine.awaitQuiescent()
-            synchronized(this@ServerLogicController) {
-                settleAfterDrive(state)
-            }
+            engine.step(StepMode.Into)
+            engine.awaitQuiescent()
+            engine.step(mode)
+            engine.awaitQuiescent()
         }
 
         return submitted()
@@ -574,12 +561,9 @@ class ServerLogicController(
     // the next boundary the execution checks.
     @Synchronized
     fun setPauseOnError(runId: LogicRunId, value: Boolean): LogicRunResponse {
-        // A settled (terminal-retained) run is not-found for control — it exists only for trace review.
-        val state = stateOrNull?.takeIf { !it.settled }
-            ?: return LogicRunResponse.NotFound
-
-        if (state.runId != runId) {
-            return LogicRunResponse.RunIdMismatch
+        val state = when (val target = controlTarget(runId)) {
+            is ControlTarget.Refused -> return target.response
+            is ControlTarget.Active -> target.state
         }
 
         state.engine.pauseOnError(value)
@@ -592,12 +576,9 @@ class ServerLogicController(
     // like [pause] — takes effect at the next named boundary any execution reaches.
     @Synchronized
     fun setBreakpoints(runId: LogicRunId, locations: List<ObjectLocation>): LogicRunResponse {
-        // A settled (terminal-retained) run is not-found for control — it exists only for trace review.
-        val state = stateOrNull?.takeIf { !it.settled }
-            ?: return LogicRunResponse.NotFound
-
-        if (state.runId != runId) {
-            return LogicRunResponse.RunIdMismatch
+        val state = when (val target = controlTarget(runId)) {
+            is ControlTarget.Refused -> return target.response
+            is ControlTarget.Active -> target.state
         }
 
         state.engine.setBreakpoints(
@@ -611,12 +592,9 @@ class ServerLogicController(
         runId: LogicRunId,
         snapshotGraphDefinitionAttempt: GraphDefinitionAttempt?
     ): LogicRunResponse {
-        // A settled (terminal-retained) run is not-found for control — it exists only for trace review.
-        val state = stateOrNull?.takeIf { !it.settled }
-            ?: return LogicRunResponse.NotFound
-
-        if (state.runId != runId) {
-            return LogicRunResponse.RunIdMismatch
+        val state = when (val target = controlTarget(runId)) {
+            is ControlTarget.Refused -> return target.response
+            is ControlTarget.Active -> target.state
         }
 
         check(!state.running && !state.stepping) { "Can't run, already running" }
@@ -629,20 +607,17 @@ class ServerLogicController(
         state.launched = true
         state.running = true
 
-        executor.execute {
-            state.engine.awaitQuiescent()
+        driveAndSettle(state) { engine ->
+            engine.awaitQuiescent()
             if (migration != null) {
                 // The notation changed under the paused run: rebuild from the edit and run free (the migrate
                 // carries each flavour's surviving state across by stable id).
-                state.engine.migrate(migration, paused = false, removedStableIds = removedStableIds)
+                engine.migrate(migration, paused = false, removedStableIds = removedStableIds)
             }
             else {
-                state.engine.resume()
+                engine.resume()
             }
-            state.engine.awaitQuiescent()
-            synchronized(this@ServerLogicController) {
-                settleAfterDrive(state)
-            }
+            engine.awaitQuiescent()
         }
 
         return submitted()
@@ -683,11 +658,9 @@ class ServerLogicController(
      *
      * [executionId] names the FRAME the request addresses — null = the run's root frame, which is the whole
      * behaviour when nothing is nested. The frame's chain of call-sites is resolved from the engine's live node
-     * tree and travels with the target as a [MoveTarget], so a move inside a hosted sub-Logic reaches that one
-     * invocation: under recursion the same target id is live in several frames at once, and only the addressed
-     * one may move. Every frame on the path must be [Repositionable] and able to honour its own role — each
-     * transit hop [descending][Repositionable.canDescendThrough] through the call-site of the hop below it, and
-     * the addressed frame [moving][Repositionable.canMoveTo] to the target.
+     * tree and travels with the target, so a move inside a hosted sub-Logic reaches that one invocation: under
+     * recursion the same target id is live in several frames at once, and only the addressed one may move.
+     * Whether every frame on the path can honour its own role is gated by [RepositionGate].
      *
      * Unlike step / resume, a jump ALWAYS recompiles from the current notation (a jump is itself a migrate — it
      * shares the barrier with any concurrent edit, so an edit-then-jump takes both in one rebuild) and is
@@ -704,12 +677,9 @@ class ServerLogicController(
         snapshotGraphDefinitionAttempt: GraphDefinitionAttempt? = null,
         executionId: LogicExecutionId? = null
     ): LogicControlReply {
-        // A settled (terminal-retained) run is not-found for control — it exists only for trace review.
-        val state = stateOrNull?.takeIf { !it.settled }
-            ?: return LogicControlReply(LogicRunResponse.NotFound)
-
-        if (state.runId != runId) {
-            return LogicControlReply(LogicRunResponse.RunIdMismatch)
+        val state = when (val controlTarget = controlTarget(runId)) {
+            is ControlTarget.Refused -> return LogicControlReply(controlTarget.response)
+            is ControlTarget.Active -> controlTarget.state
         }
 
         check(!state.running && !state.stepping) { "Can't move, already running" }
@@ -718,7 +688,7 @@ class ServerLogicController(
 
         val targetId = objectStableMapper.objectStableId(target)
 
-        val framePath = framePathTo(state.engine.snapshot().root, executionId)
+        val framePath = repositionGate.framePathTo(state.engine.snapshot().root, executionId)
             ?: return rejected("That run frame is no longer active")
         val addressedNode = framePath.last()
 
@@ -757,10 +727,12 @@ class ServerLogicController(
         }
 
         val moveTarget =
-            when (val request = repositionRequest(
-                    framePath, state.rootLocation, logic, attempt, state.runExecutionId, targetId)) {
-                is RepositionAttempt.Refused -> return rejected(request.reason)
-                is RepositionAttempt.Accepted -> request.moveTarget
+            when (val request = repositionGate.repositionRequest(
+                    framePath, state.rootLocation, logic,
+                    { hopLocation -> compileLogic(hopLocation, attempt, state.runExecutionId) },
+                    targetId)) {
+                is RepositionGate.Attempt.Refused -> return rejected(request.reason)
+                is RepositionGate.Attempt.Accepted -> request.moveTarget
             }
 
         val removedStableIds = objectStableMapper.drainRemovedIds()
@@ -768,14 +740,11 @@ class ServerLogicController(
         state.pauseRequested = false
         state.stepping = true
 
-        executor.execute {
-            state.engine.awaitQuiescent()
-            state.engine.migrate(
+        driveAndSettle(state) { engine ->
+            engine.awaitQuiescent()
+            engine.migrate(
                 logic, paused = true, moveTarget = moveTarget, removedStableIds = removedStableIds)
-            state.engine.awaitQuiescent()
-            synchronized(this@ServerLogicController) {
-                settleAfterDrive(state)
-            }
+            engine.awaitQuiescent()
         }
 
         return LogicControlReply(submitted())
@@ -799,121 +768,14 @@ class ServerLogicController(
     }
 
 
-    // The chain of nodes root -> the frame [executionId] names, collected on the way DOWN: [Node] has no parent
-    // pointer, parentage is the [Node.children] nesting alone. A null [executionId] addresses the root frame, so
-    // the chain is that node by itself. Null when no node carries the id — node ids are monotone and never
-    // reused, so a stale id from a client poll resolves to nothing instead of to some unrelated later frame.
-    private fun framePathTo(node: Node, executionId: LogicExecutionId?): List<Node>? {
-        if (executionId == null || node.id.value == executionId.value) {
-            return listOf(node)
-        }
-        for (child in node.children) {
-            val childPath = framePathTo(child, executionId)
-            if (childPath != null) {
-                return listOf(node) + childPath
-            }
-        }
-        return null
-    }
-
-
-    // The outcome of the per-hop gate below: the request to carry across the barrier, or the reason it was
-    // refused. Private to this controller — the reason travels on as [LogicControlReply.reason].
-    private sealed interface RepositionAttempt {
-        data class Accepted(val moveTarget: MoveTarget): RepositionAttempt
-
-        data class Refused(val reason: String): RepositionAttempt
-    }
-
-
-    // The per-hop capability gate for a repositioning request (logic-spec §4): the request to carry across the
-    // barrier, or the reason to refuse it. Every frame on [framePath] must be [Repositionable] and able to honour
-    // its own role — a transit hop descends through the call-site the NEXT hop was opened from, the addressed
-    // frame moves to [targetId] — so a move no frame on the path can carry out is rejected before anything is
-    // torn down, and the run keeps its current state.
-    //
-    // Capability-based and flavour-blind, which is the whole point of asking each frame about its own structure:
-    // today only a Script answers yes, so a Flow or Job hop refuses cleanly instead of silently parking at the
-    // element that hosts the destination. The reason is asked for the same way — a hop that declares a
-    // [RepositionDiagnostic] explains its own refusal, and one that doesn't gets a generic reason naming it.
-    private fun repositionRequest(
-        framePath: List<Node>,
-        rootLocation: ObjectLocation,
-        rootLogic: Logic,
-        attempt: GraphDefinitionAttempt,
-        runExecutionId: LogicRunExecutionId,
-        targetId: ObjectStableId
-    ): RepositionAttempt {
-        val callSitePath = mutableListOf<ObjectStableId>()
-
-        for ((index, node) in framePath.withIndex()) {
-            // The root frame survives a deleted root document by falling back to where the run started, as
-            // [status] does — so a move is refused for a real structural reason, never for a stale id.
-            val hopLocation = objectStableMapper.objectLocationOrNull(node.stableId)
-                ?: rootLocation.takeIf { index == 0 }
-                ?: return RepositionAttempt.Refused(MoveToRefusal.frameDocumentMissing())
-
-            val hopName = hopLocation.documentPath.name.value
-
-            val hopLogic =
-                if (index == 0) {
-                    // The root's Logic is the one just recompiled for this barrier; compiling it again would
-                    // build a second definition of the same document only to throw it away.
-                    rootLogic
-                }
-                else {
-                    try {
-                        compileLogic(hopLocation, attempt, runExecutionId)
-                    }
-                    catch (e: Throwable) {
-                        logger.warn("Unable to compile frame for move-to: {}", hopLocation, e)
-                        return RepositionAttempt.Refused(
-                            "Unable to compile $hopName: ${e.message ?: e::class.simpleName}")
-                    }
-                }
-
-            if (hopLogic !is Repositionable) {
-                return RepositionAttempt.Refused(MoveToRefusal.frameCannotReposition(hopName))
-            }
-
-            val hostedHop = framePath.getOrNull(index + 1)
-            if (hostedHop == null) {
-                if (!hopLogic.canMoveTo(targetId)) {
-                    return RepositionAttempt.Refused(
-                        (hopLogic as? RepositionDiagnostic)?.moveToRefusal(targetId)
-                            ?: "$hopName doesn't support moving to that step")
-                }
-            }
-            else {
-                // Addressability: null is not a wildcard. A host that names no distinct call-site matches no
-                // hop of a path, so the frame it opened cannot be path-addressed at all.
-                val callSite = hostedHop.callerStableId
-                    ?: return RepositionAttempt.Refused(MoveToRefusal.frameCallSiteUnknown(hopName))
-
-                if (!hopLogic.canDescendThrough(callSite)) {
-                    return RepositionAttempt.Refused(
-                        (hopLogic as? RepositionDiagnostic)?.descendRefusal(callSite)
-                            ?: "$hopName can't continue into the nested logic")
-                }
-                callSitePath.add(callSite)
-            }
-        }
-
-        return RepositionAttempt.Accepted(MoveTarget(targetId, callSitePath))
-    }
-
-
     private fun drive(
         runId: LogicRunId,
         mode: StepMode,
         snapshotGraphDefinitionAttempt: GraphDefinitionAttempt?
     ): LogicRunResponse {
-        // A settled (terminal-retained) run is not-found for control — it exists only for trace review.
-        val state = stateOrNull?.takeIf { !it.settled }
-            ?: return LogicRunResponse.NotFound
-
-        if (state.runId != runId) {
-            return LogicRunResponse.RunIdMismatch
+        val state = when (val target = controlTarget(runId)) {
+            is ControlTarget.Refused -> return target.response
+            is ControlTarget.Active -> target.state
         }
 
         check(!state.running && !state.stepping) { "Can't step, already running" }
@@ -926,19 +788,16 @@ class ServerLogicController(
         state.launched = true
         state.stepping = true
 
-        executor.execute {
-            state.engine.awaitQuiescent()
+        driveAndSettle(state) { engine ->
+            engine.awaitQuiescent()
             if (migration != null) {
                 // Step after an edit: rebuild from the edit and park at the new definition's first wavefront.
-                state.engine.migrate(migration, paused = true, removedStableIds = removedStableIds)
+                engine.migrate(migration, paused = true, removedStableIds = removedStableIds)
             }
             else {
-                state.engine.step(mode)
+                engine.step(mode)
             }
-            state.engine.awaitQuiescent()
-            synchronized(this@ServerLogicController) {
-                settleAfterDrive(state)
-            }
+            engine.awaitQuiescent()
         }
 
         return submitted()
@@ -957,12 +816,10 @@ class ServerLogicController(
         state.stepping = false
         state.pauseRequested = false
 
-        // The settle is invisible to the engine's own change signal, so it MUST be announced here: the engine
-        // published its park BEFORE this runs (we only get here once awaitQuiescent returned), and at that
-        // moment `stepping` was still set — so that publish reported Stepping, not Paused. Without this notify
-        // the Stepping -> Paused transition — precisely what an interactive client and the slow-motion loop
-        // wait on — would never be pushed, and the UI would sit on "Stepping" until the fallback poll.
-        // Announced for every settle, not just the terminal one below (which also bumps the epoch).
+        // The settle is invisible to the engine's own change signal — the engine published its park while
+        // `stepping` was still set, so that publish reported Stepping, not Paused. Announce it here (for
+        // every settle, not just the terminal one below) or the Stepping -> Paused transition never pushes;
+        // see architecture.md §3, pinned by ServerLogicControllerStatusObserverTest.
         notifyStatusObservers()
 
         val rootStatus = state.engine.snapshot().root.status
@@ -1020,10 +877,8 @@ class ServerLogicController(
         }
         disposeState(state)
 
-        // The load-bearing epoch bump: status() reported active == null before this clear and reports
-        // active == null after it, so WITHOUT this the wire response is byte-identical across the clear and no
-        // trace view would ever repaint to empty (this is precisely what the retired `time` wall clock used to
-        // convey by accident, by being fresh per call).
+        // Load-bearing: status() reports active == null both before and after this clear, so without the
+        // epoch bump the wire response is byte-identical and no trace view ever repaints to empty (see [epoch]).
         bumpEpoch()
         return true
     }

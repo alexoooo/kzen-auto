@@ -33,14 +33,13 @@ import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.client.wrap.iconify.icon
+import tech.kzen.auto.common.objects.document.common.dragdrop.ObjectTreeReorder
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.obj.ObjectNesting
-import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.model.structure.GraphStructure
-import tech.kzen.lib.common.model.structure.notation.PositionRelation
 import tech.kzen.lib.common.model.structure.notation.cqrs.RelocateObjectTreeRefactorCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.ShiftObjectTreeCommand
 import tech.kzen.lib.common.service.store.MirroredGraphStore
@@ -429,38 +428,34 @@ class ScriptBranchDisplay(
         val documentNotation = graphStructure.graphNotation.documents[documentPath]
             ?: return
 
+        val documentPaths = documentNotation.objects.notations.map.keys.toList()
         val draggedLocation = dragSource.objectLocation
-        val draggedRoot = draggedLocation.objectPath
-
-        // Document order with the dragged subtree removed — the frame the relocate index resolves against.
-        val remainingPaths = documentNotation.objects.notations.map.keys.filter {
-            it != draggedRoot && !it.startsWith(draggedRoot)
-        }
-
         val sameBranch = dragSource.branchLocation == props.attributeLocation
 
         if (sameBranch) {
-            // Reorder within this branch. insertionIndex is in the pre-removal list, so dropping at the
-            // dragged step's own two edges (source / source+1) is a no-op; otherwise account for the step
-            // leaving its slot when it sits above the target.
-            val source = dragSource.indexInBranch
-            if (insertionIndex == source || insertionIndex == source + 1) {
-                return
-            }
-            val newIndex = if (insertionIndex > source) insertionIndex - 1 else insertionIndex
-            val siblings = (state.stepLocations ?: return).filterIndexed { i, _ -> i != source }
-            val targetDocumentIndex = resolveTargetDocumentIndex(remainingPaths, siblings, newIndex)
+            // Reorder within this branch: insertionIndex is the gap in the pre-removal step list.
+            val position = ObjectTreeReorder.reorderPosition(
+                documentPaths,
+                (state.stepLocations ?: return).map { it.objectPath },
+                dragSource.indexInBranch,
+                insertionIndex)
+                ?: return
 
             async {
                 props.mirroredGraphStore.apply(ShiftObjectTreeCommand(
                     draggedLocation,
-                    PositionRelation.at(targetDocumentIndex)))
+                    position))
             }
         }
         else {
             // Re-parent into this branch: the dragged step isn't in this list, so insertionIndex is direct.
-            val siblings = state.stepLocations ?: listOf()
-            val targetDocumentIndex = resolveTargetDocumentIndex(remainingPaths, siblings, insertionIndex)
+            // An empty branch anchors on the containing object, so the subtree serializes inside the branch.
+            val position = ObjectTreeReorder.insertionPosition(
+                documentPaths,
+                draggedLocation.objectPath,
+                (state.stepLocations ?: listOf()).map { it.objectPath },
+                insertionIndex,
+                props.attributeLocation.objectLocation.objectPath)
 
             val newNesting = newBranchNesting(draggedLocation.objectPath.name)
 
@@ -468,7 +463,7 @@ class ScriptBranchDisplay(
                 props.mirroredGraphStore.apply(RelocateObjectTreeRefactorCommand(
                     draggedLocation,
                     newNesting,
-                    PositionRelation.at(targetDocumentIndex)))
+                    position))
             }
         }
     }
@@ -515,28 +510,6 @@ class ScriptBranchDisplay(
         return props.attributeLocation.objectLocation.objectPath
             .nest(props.attributeLocation.attributePath, draggedName)
             .nesting
-    }
-
-
-    // The document insertion index (resolved against the doc with the dragged subtree removed) for placing the
-    // subtree at newIndex among siblings. anchor = the sibling it should precede; null = goes after the last
-    // sibling's subtree, or — for an empty branch — after this branch's containing object's whole subtree so it
-    // serializes inside the branch region.
-    private fun resolveTargetDocumentIndex(
-        remainingPaths: List<ObjectPath>,
-        siblings: List<ObjectLocation>,
-        newIndex: Int
-    ): Int {
-        val anchor = siblings.getOrNull(newIndex)?.objectPath
-        if (anchor != null) {
-            return remainingPaths.indexOf(anchor)
-        }
-        if (siblings.isNotEmpty()) {
-            val lastSibling = siblings.last().objectPath
-            return remainingPaths.indexOfLast { it == lastSibling || it.startsWith(lastSibling) } + 1
-        }
-        val containerPath = props.attributeLocation.objectLocation.objectPath
-        return remainingPaths.indexOfLast { it == containerPath || it.startsWith(containerPath) } + 1
     }
 
 

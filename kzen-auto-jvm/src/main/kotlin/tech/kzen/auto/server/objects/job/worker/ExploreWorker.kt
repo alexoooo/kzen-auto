@@ -18,47 +18,27 @@ import java.nio.file.Path
 
 
 /**
- * The EXPLORE stage as a Job Worker — the disk-backed, random-access browse over the whole result stream, reusing
- * Report's substrate-neutral [IndexedCsvTable] engine (a CSV file + a row-offset index; NOT Report's disruptor
- * pipeline). A [SinkWorker] with no output: every incoming record is appended to the table in [onElement], and
- * the browser reads ANY window of the accumulated result — no matter how large — via on-demand slice queries
- * (`offset` / `limit`) answered from the LIVE table in [onQuery]. It is the Job analogue of Report's Explore
- * output, and the heavy-duty counterpart to [PreviewWorker]: where Preview keeps a bounded in-memory live tail,
- * Explore indexes the FULL tabular stream to disk so the user can page through all of it. It indexes each
- * message's flat part (a payload-lane message auto-flattens — [JobMessage.flatView] — so a scalar stream
- * browses as a `value` column).
+ * The EXPLORE stage as a Job Worker: a [SinkWorker] with no output that appends every incoming record to a
+ * disk-backed [IndexedCsvTable] (Report's substrate-neutral engine — a CSV file + row-offset index, not
+ * Report's disruptor pipeline) and answers on-demand preview-slice queries (`offset` / `limit`) against the
+ * live table in [onQuery]. The heavy-duty counterpart to [PreviewWorker]: where Preview keeps a bounded
+ * in-memory tail, Explore indexes the full stream to disk so the user can page through all of it. Each
+ * message's flat part is indexed ([JobMessage.flatView]), so a scalar stream browses as a `value` column.
+ * Threading (single-threaded work/serve interleave) and lifecycle follow the base contract — see [WorkerBase]
+ * and [SinkWorker].
  *
- * OUTPUT DIR (PERSISTENT): [IndexedCsvTable] is file-backed, so it opens under the per-Worker directory from
- * [JobControl.outputDir] (see [tech.kzen.auto.server.objects.job.service.JobWorkPool]) — but, UNLIKE
- * [PivotWorker]'s transient `scratchDir`, this is the Worker's PERSISTENT, notation-keyed output that must
- * OUTLIVE the run so the result stays browsable / downloadable afterward (a Job used for reporting — otherwise
- * the report is useless the instant the run settles). Semantics are last-run-wins: [onStart] CLEARS the dir so
- * this run fully replaces the previous run's table, and [onClose] FLUSHES-and-closes it (keeping the files) —
- * it never deletes. The header is only known once the first record arrives, so the table is created lazily on
- * the first [onElement] (its constructor writes the header row); an empty stream leaves an empty dir (and serves
- * an empty preview, with no downloadable table).
+ * Output dir is PERSISTENT, unlike [PivotWorker]'s transient scratchDir: the table lives at the notation-keyed
+ * path from [JobControl.outputDir] and must outlive the run so the result stays browsable / downloadable.
+ * Last-run-wins: [onStart] clears the dir, [onClose] flushes-and-closes without deleting. The table is created
+ * lazily on the first [onElement] (its constructor needs the stream's header); an empty stream leaves an empty
+ * dir and serves an empty preview.
  *
- * INTERACTIVITY (via [SinkWorker]'s optional `serve` port): answers on-demand preview-slice queries against the
- * LIVE table ([onQuery]) while the run is active. Reading the disk-backed table from the serve coroutine is
- * race-free because a Worker runs SINGLE-THREADED on its own node coroutine (see
- * [tech.kzen.auto.server.exec.job.EngineJobControl]): the serve loop only runs while the work coroutine is
- * parked at a checkpoint / awaiting input, never concurrently with an [onElement] append. [IndexedCsvTable]
- * interleaves append and random-access read on the same handle by design (`preview` flushes pending writes,
- * then seeks to read), so a query mid-stream sees every appended row. A running row count is pushed to the trace.
+ * Download resolves the same persistent path straight from the Worker's [ObjectLocation], with no live run:
+ * [tech.kzen.auto.server.api.handler.DetachedActionHandler.jobDownload] streams `table.csv` via
+ * [IndexedCsvTable.downloadCsvOffline]. This Worker holds no download logic of its own.
  *
- * DOWNLOAD (the Job analogue of Report's `DetachedDownloadAction`): because the table lives at a NOTATION-keyed
- * path that survives the run, [tech.kzen.auto.server.api.handler.DetachedActionHandler.jobDownload] resolves it straight from the
- * Worker's [ObjectLocation] — with NO live run — and streams `table.csv` (via [IndexedCsvTable.downloadCsvOffline]).
- * So the report downloads AFTER the run ends (post-settle the on-disk file is complete — [onClose] flushed it);
- * during a live run the same endpoint streams the rows flushed so far. This Worker holds no download logic of
- * its own (the serve port is only for live preview slices).
- *
- * LIVE-EDIT MIGRATION: P4 baseline is RESTART on a live edit (the [WorkerBase] default — no state carried). The
- * output path is deterministic per [ObjectLocation] (stable across the rebuild), so the OUTGOING instance's
- * [onClose] flushes-and-closes the table and the rebuilt instance's [onStart] clears + re-indexes into a fresh
- * table at the same path — the same fresh-table restart as before, just with the delete moved from teardown to
- * the rebuild's start (so the final settle keeps the data). Carrying the table forward across an edit (like
- * [tech.kzen.auto.server.objects.job.worker.CsvReaderWorker] carries its reader) is a documented later extension.
+ * Live-edit migration is the [WorkerBase] restart default (no state carried): the output path is deterministic
+ * per [ObjectLocation], so the rebuilt instance's [onStart] clears and re-indexes at the same path.
  */
 @Reflect
 class ExploreWorker(

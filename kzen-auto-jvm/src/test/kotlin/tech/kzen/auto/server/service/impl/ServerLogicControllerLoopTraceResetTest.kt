@@ -9,6 +9,8 @@ import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.exec.script.test.CountingStep
 import tech.kzen.auto.server.exec.script.test.ScriptStepTestModule
 import tech.kzen.auto.server.util.AutoTestUtils
+import tech.kzen.auto.server.util.awaitDone
+import tech.kzen.auto.server.util.awaitState
 import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
@@ -94,7 +96,7 @@ class ServerLogicControllerLoopTraceResetTest {
             "iteration 3's own completed Count shows Done (only the superseded pass's values cleared)")
 
         controller.continueOrStart(runId, base)
-        awaitDone()
+        controller.awaitDone()
 
         assertEquals(4, CountingStep.count.get())
         assertEquals(
@@ -133,7 +135,7 @@ class ServerLogicControllerLoopTraceResetTest {
             "the film-strip retains each COMPLETED invocation's binary detail across the resets")
 
         controller.continueOrStart(runId, base)
-        awaitDone()
+        controller.awaitDone()
 
         assertEquals(4, CountingStep.count.get())
         assertEquals("110", resultDisplay(runId, hostedDocumentPath))
@@ -163,7 +165,7 @@ class ServerLogicControllerLoopTraceResetTest {
 
         runBlocking { controller.onStoreRefresh(edited) }
         controller.continueOrStart(runId, edited)
-        awaitDone()
+        controller.awaitDone()
 
         assertEquals(
             4, CountingStep.count.get(),
@@ -193,7 +195,7 @@ class ServerLogicControllerLoopTraceResetTest {
         var guard = 0
         while (CountingStep.count.get() < target && guard < 100) {
             context.serverLogicController.step(runId, definition)
-            awaitState(LogicRunState.Paused)
+            context.serverLogicController.awaitState(LogicRunState.Paused)
             guard += 1
         }
         assertEquals(target, CountingStep.count.get(), "expected to park right after Count invocation $target")
@@ -257,28 +259,5 @@ class ServerLogicControllerLoopTraceResetTest {
         val entry = snapshot.values[LogicTracePath.ofObjectStableId(stableId)]
             ?: return null
         return StepTrace.ofExecutionValue(entry.value)
-    }
-
-
-    @Suppress("SameParameterValue")
-    private fun awaitState(state: LogicRunState) {
-        for (attempt in 0 until 500) {
-            if (context.serverLogicController.status().active?.state == state) {
-                return
-            }
-            Thread.sleep(10)
-        }
-        fail("Run did not reach $state (was ${context.serverLogicController.status().active?.state})")
-    }
-
-
-    private fun awaitDone() {
-        for (attempt in 0 until 500) {
-            if (context.serverLogicController.status().active == null) {
-                return
-            }
-            Thread.sleep(10)
-        }
-        fail("Run did not complete")
     }
 }

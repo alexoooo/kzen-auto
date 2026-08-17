@@ -170,18 +170,26 @@ class StageController(
     }
 
 
+    private var mounted = false
+
+
     override fun componentDidMount() {
+        mounted = true
         props.clientLogicGlobal.observe(this)
         props.logicValidationGlobal.observe(this)
 
         async {
-            props.mirroredGraphStore.observe(this)
-            props.navigationGlobal.observe(this)
+            // Unobserve runs synchronously on unmount, so registering after it would leak this observer.
+            if (mounted) {
+                props.mirroredGraphStore.observe(this)
+                props.navigationGlobal.observe(this)
+            }
         }
     }
 
 
     override fun componentWillUnmount() {
+        mounted = false
         props.mirroredGraphStore.unobserve(this)
         props.navigationGlobal.unobserve(this)
         props.clientLogicGlobal.unobserve(this)

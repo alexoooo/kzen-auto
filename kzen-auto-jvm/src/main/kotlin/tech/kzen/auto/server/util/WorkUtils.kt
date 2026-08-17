@@ -32,10 +32,12 @@ class WorkUtils(
 
 
         fun recursivelyDeleteDir(dir: Path) {
-            Files.walk(dir)
-                .sorted(Comparator.reverseOrder())
-                .map(Path::toFile)
-                .forEach(File::delete)
+            Files.walk(dir).use { stream ->
+                stream
+                    .sorted(Comparator.reverseOrder())
+                    .map(Path::toFile)
+                    .forEach(File::delete)
+            }
         }
 
 

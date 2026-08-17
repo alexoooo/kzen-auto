@@ -28,8 +28,6 @@ class TopIngress(
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private val arrowPullBack: Length = 3.em.unaryMinus()
-//            (CellController.arrowSide.plus(CellController.cardHorizontalMargin)).unaryMinus()
-//            (-3).em
     }
 
 
@@ -63,9 +61,7 @@ class TopIngress(
 
                     width = CellController.arrowSide
                     height = CellController.arrowSide
-//                    marginRight = (CellController.arrowSide.plus(CellController.cardHorizontalMargin)).unaryMinus()
                     marginRight = arrowPullBack
-//                    marginRight = 3.em.unaryMinus()
 
                     float = Float.right
                 }

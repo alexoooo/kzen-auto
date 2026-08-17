@@ -1,10 +1,9 @@
 package tech.kzen.auto.common.paradigm.flow.model.structure
 
-import tech.kzen.auto.common.objects.document.flow.FlowConventions
-import tech.kzen.auto.common.objects.document.flow.FlowWiring
 import tech.kzen.auto.common.paradigm.flow.model.structure.cell.CellCoordinate
 import tech.kzen.auto.common.paradigm.flow.model.structure.cell.CellDescriptor
 import tech.kzen.auto.common.paradigm.flow.model.structure.cell.EdgeDescriptor
+import tech.kzen.auto.common.paradigm.flow.model.structure.cell.EdgeDirection
 import tech.kzen.auto.common.paradigm.flow.model.structure.cell.VertexDescriptor
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -25,6 +24,10 @@ data class FlowMatrix(
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         val empty = FlowMatrix(listOf())
+
+        // Order is immaterial walking backward — an orientation has exactly one ingress, so at most one lateral
+        // side is ever open. FlowDag's forward walk, which CAN open both, states its own order.
+        private val backwardLateralSides = listOf(EdgeDirection.Left, EdgeDirection.Right)
 
 
         fun ofDocument(
@@ -49,7 +52,7 @@ data class FlowMatrix(
                     .objects
                     .notations[NotationConventions.mainObjectPath]
                     ?.attributes
-                    ?.get(FlowConventions.verticesAttributeName)
+                    ?.get(FlowStructureConventions.verticesAttributeName)
                     as? ListAttributeNotation
                     ?: ListAttributeNotation(persistentListOf())
         }
@@ -62,7 +65,7 @@ data class FlowMatrix(
                     .objects
                     .notations[NotationConventions.mainObjectPath]
                     ?.attributes
-                    ?.get(FlowConventions.edgesAttributeName)
+                    ?.get(FlowStructureConventions.edgesAttributeName)
                     as? ListAttributeNotation
                     ?: ListAttributeNotation(persistentListOf())
         }
@@ -79,8 +82,8 @@ data class FlowMatrix(
                 val objectLocation = graphStructure.graphNotation.coalesce.locate(vertexReference)
                 val objectNotation = graphStructure.graphNotation.coalesce[objectLocation]!!
 
-                val inputNames = FlowWiring.findInputs(objectLocation, graphStructure)
-                val requiredInputNames = FlowWiring.findRequiredInputs(objectLocation, graphStructure)
+                val inputNames = FlowStructureConventions.findInputs(objectLocation, graphStructure)
+                val requiredInputNames = FlowStructureConventions.findRequiredInputs(objectLocation, graphStructure)
 
                 VertexDescriptor.fromNotation(
                         it.index,
@@ -198,6 +201,52 @@ data class FlowMatrix(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    /** Which end of an edge a walk is stepping out of. */
+    enum class EdgeTraversal {
+        /** Upstream: leave by this cell's ingress, arriving at the neighbour's egress. */
+        Backward,
+
+        /** Downstream: leave by this cell's egress, arriving at the neighbour's ingress. */
+        Forward
+    }
+
+
+    /**
+     * The edge cell one step [side]-ward of [descriptor], when the two are wired to each other: [descriptor]
+     * must open on [side] and the neighbour must open back on the facing side, with [traversal] deciding which
+     * end of each is the open one. A vertex or an empty cell is not a wired edge neighbour, so null.
+     *
+     * **This is why every walk over these cells terminates**, and the only reason: an EdgeOrientation never
+     * egresses by the side it ingresses, so a neighbour reached laterally cannot step straight back — a run of
+     * lateral hops moves monotonically in one column direction, and every other hop changes the row. The grid
+     * is finite, so no walk needs a visited set.
+     */
+    internal fun wiredNeighbour(
+        descriptor: EdgeDescriptor,
+        side: EdgeDirection,
+        traversal: EdgeTraversal
+    ): EdgeDescriptor? {
+        val opensOnSide = when (traversal) {
+            EdgeTraversal.Backward -> descriptor.orientation.hasIngress(side)
+            EdgeTraversal.Forward -> descriptor.orientation.hasEgress(side)
+        }
+        if (!opensOnSide) {
+            return null
+        }
+
+        val neighbour = get(descriptor.coordinate.offset(side)) as? EdgeDescriptor
+            ?: return null
+
+        val facing = side.reverse()
+        val neighbourOpens = when (traversal) {
+            EdgeTraversal.Backward -> neighbour.orientation.hasEgress(facing)
+            EdgeTraversal.Forward -> neighbour.orientation.hasIngress(facing)
+        }
+        return neighbour.takeIf { neighbourOpens }
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     fun traceVertexBackFrom(vertexLocation: ObjectLocation): Set<VertexDescriptor> {
         val vertexDescriptor = verticesByLocation[vertexLocation]
                 ?: return setOf()
@@ -249,25 +298,13 @@ data class FlowMatrix(
                     }
                 }
 
-                if (descriptor.orientation.hasLeftIngress()) {
-                    val coordinateLeft = descriptor.coordinate.offset(0, -1)
-                    val edgeDescriptorLeft = get(coordinateLeft) as? EdgeDescriptor
-                    if (edgeDescriptorLeft != null && edgeDescriptorLeft.orientation.hasRightEgress()) {
-                        val vertexLeft = traceVertexBackFrom(edgeDescriptorLeft)
-                        if (vertexLeft != null) {
-                            return vertexLeft
-                        }
-                    }
-                }
+                for (side in backwardLateralSides) {
+                    val lateral = wiredNeighbour(descriptor, side, EdgeTraversal.Backward)
+                        ?: continue
 
-                if (descriptor.orientation.hasRightIngress()) {
-                    val coordinateRight = descriptor.coordinate.offset(0, 1)
-                    val edgeDescriptorRight = get(coordinateRight) as? EdgeDescriptor
-                    if (edgeDescriptorRight != null && edgeDescriptorRight.orientation.hasLeftEgress()) {
-                        val vertexRight = traceVertexBackFrom(edgeDescriptorRight)
-                        if (vertexRight != null) {
-                            return vertexRight
-                        }
+                    val vertex = traceVertexBackFrom(lateral)
+                    if (vertex != null) {
+                        return vertex
                     }
                 }
 
@@ -295,10 +332,6 @@ data class FlowMatrix(
 
         traceEdgeBackFrom(edgeDescriptorAbove, edges)
 
-//        if (vertexDescriptor.inputNames.size > 1 && offsetLeft == 0) {
-//            println("traceEdgeBackFrom > $edges")
-//        }
-
         return edges
     }
 
@@ -317,20 +350,11 @@ data class FlowMatrix(
             }
         }
 
-        if (descriptor.orientation.hasLeftIngress()) {
-            val coordinateLeft = descriptor.coordinate.offset(0, -1)
-            val edgeDescriptorLeft = get(coordinateLeft) as? EdgeDescriptor
-            if (edgeDescriptorLeft != null && edgeDescriptorLeft.orientation.hasRightEgress()) {
-                traceEdgeBackFrom(edgeDescriptorLeft, buffer)
-            }
-        }
+        for (side in backwardLateralSides) {
+            val lateral = wiredNeighbour(descriptor, side, EdgeTraversal.Backward)
+                ?: continue
 
-        if (descriptor.orientation.hasRightIngress()) {
-            val coordinateRight = descriptor.coordinate.offset(0, 1)
-            val edgeDescriptorRight = get(coordinateRight) as? EdgeDescriptor
-            if (edgeDescriptorRight != null && edgeDescriptorRight.orientation.hasLeftEgress()) {
-                traceEdgeBackFrom(edgeDescriptorRight, buffer)
-            }
+            traceEdgeBackFrom(lateral, buffer)
         }
     }
 }

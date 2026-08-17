@@ -7,6 +7,8 @@ import org.junit.Test
 import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.util.AutoTestUtils
+import tech.kzen.auto.server.util.awaitDone
+import tech.kzen.auto.server.util.awaitState
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunState
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
@@ -95,12 +97,12 @@ class ServerLogicControllerMigrationTest {
         // reader's file position is then past the start, so resume-vs-restart is observable. Each step passes the
         // base snapshot (== baseline), so none of them migrate.
         controller.pause(runId)
-        awaitState(LogicRunState.Paused)
+        controller.awaitState(LogicRunState.Paused)
 
         var guard = 0
         while (previewCount(runId) == 0L && guard < 300) {
             controller.step(runId, base)
-            awaitState(LogicRunState.Paused)
+            controller.awaitState(LogicRunState.Paused)
             guard += 1
         }
         assertTrue(previewCount(runId) > 0L, "Preview should consume at least one batch before the edit")
@@ -114,7 +116,7 @@ class ServerLogicControllerMigrationTest {
         // Resume against the EDITED snapshot: the controller detects the change, recompiles, and migrates — the
         // reader resumes from its position, the Preview carries its count, the channel carries any in-flight batch.
         controller.continueOrStart(runId, edited)
-        awaitDone()
+        controller.awaitDone()
 
         assertEquals(
             rows.toLong(), previewCount(runId),
@@ -146,28 +148,5 @@ class ServerLogicControllerMigrationTest {
         val progress = snapshot.values[progressPath]?.value?.get() as? Map<*, *>
             ?: return 0L
         return progress["count"] as? Long ?: 0L
-    }
-
-
-    @Suppress("SameParameterValue")
-    private fun awaitState(state: LogicRunState) {
-        for (attempt in 0 until 500) {
-            if (context.serverLogicController.status().active?.state == state) {
-                return
-            }
-            Thread.sleep(10)
-        }
-        fail("Run did not reach $state (was ${context.serverLogicController.status().active?.state})")
-    }
-
-
-    private fun awaitDone() {
-        for (attempt in 0 until 500) {
-            if (context.serverLogicController.status().active == null) {
-                return
-            }
-            Thread.sleep(10)
-        }
-        fail("Run did not complete")
     }
 }

@@ -96,14 +96,22 @@ class HeaderController(
     }
 
 
+    private var mounted = false
+
+
     override fun componentDidMount() {
+        mounted = true
         async {
-            props.navigationGlobal.observe(this)
+            // Unobserve runs synchronously on unmount, so registering after it would leak this observer.
+            if (mounted) {
+                props.navigationGlobal.observe(this)
+            }
         }
     }
 
 
     override fun componentWillUnmount() {
+        mounted = false
         props.navigationGlobal.unobserve(this)
     }
 

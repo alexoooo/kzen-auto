@@ -2,6 +2,7 @@ package tech.kzen.auto.server.exec.flow
 
 import kotlinx.coroutines.runBlocking
 import tech.kzen.auto.server.context.KzenAutoContext
+import tech.kzen.auto.server.util.awaitCondition
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunState
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -73,13 +74,9 @@ class FlowControllerStepTest {
 
     // Poll until the in-flight step has settled (back to a Paused-family state, or the run finished).
     private fun awaitSettled() {
-        for (attempt in 0 until 500) {
+        awaitCondition({ "Step did not settle" }) {
             val state = context.serverLogicController.status().active?.state
-            if (state == null || (state != LogicRunState.Stepping && state != LogicRunState.Running)) {
-                return
-            }
-            Thread.sleep(10)
+            state == null || (state != LogicRunState.Stepping && state != LogicRunState.Running)
         }
-        fail("Step did not settle")
     }
 }

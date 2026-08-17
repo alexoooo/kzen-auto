@@ -238,11 +238,18 @@ class ProjectController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private var mounted = false
+
+
     override fun componentDidMount() {
+        mounted = true
         async {
-            props.mirroredGraphStore.observe(this)
-            props.navigationGlobal.observe(this)
-            props.clientStateGlobal.observe(this)
+            // Unobserve runs synchronously on unmount, so registering after it would leak this observer.
+            if (mounted) {
+                props.mirroredGraphStore.observe(this)
+                props.navigationGlobal.observe(this)
+                props.clientStateGlobal.observe(this)
+            }
         }
 
         window.addEventListener("resize", handleResize)
@@ -251,6 +258,7 @@ class ProjectController(
 
 
     override fun componentWillUnmount() {
+        mounted = false
         props.mirroredGraphStore.unobserve(this)
         props.navigationGlobal.unobserve(this)
         props.clientStateGlobal.unobserve(this)

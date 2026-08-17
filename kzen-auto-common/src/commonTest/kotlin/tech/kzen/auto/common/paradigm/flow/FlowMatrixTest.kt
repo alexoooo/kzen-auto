@@ -104,6 +104,46 @@ class FlowMatrixTest {
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
+    @Test
+    fun edgeTraceCollectsEveryPipeCellBackToTheSource() {
+        val source = vertex("source", 0, 0)
+        val sink = vertex("sink", 2, 2, "input")
+        val corner = edge(EdgeOrientation.TopToRight, 1, 0)
+        val run = edge(EdgeOrientation.LeftToRight, 1, 1)
+        val drop = edge(EdgeOrientation.LeftToBottom, 1, 2)
+        val matrix = matrixOf(source, corner, run, drop, sink)
+
+        // Nearest-first: the cell above the input, then the run leftward, stopping at the vertex.
+        assertEquals(listOf(drop, run, corner), matrix.traceEdgeBackFrom(sink, 0))
+    }
+
+
+    @Test
+    fun edgeTraceStopsWhereTheRunIsSevered() {
+        val source = vertex("source", 0, 0)
+        val sink = vertex("sink", 2, 2, "input")
+        val corner = edge(EdgeOrientation.TopToRight, 1, 0)
+        // Fed from the right rather than the left, so nothing connects it to the corner beside it.
+        val severed = edge(EdgeOrientation.RightToBottom, 1, 1)
+        val drop = edge(EdgeOrientation.LeftToBottom, 1, 2)
+        val matrix = matrixOf(source, corner, severed, drop, sink)
+
+        assertEquals(listOf(drop), matrix.traceEdgeBackFrom(sink, 0))
+        assertNull(matrix.traceVertexBackFrom(sink, AttributeName("input")))
+    }
+
+
+    @Test
+    fun edgeTraceIsEmptyWhenNothingDropsIntoTheInput() {
+        val sink = vertex("sink", 2, 0, "input")
+        val matrix = matrixOf(edge(EdgeOrientation.TopToLeft, 1, 0), sink)
+
+        assertEquals(listOf(), matrix.traceEdgeBackFrom(sink, 0))
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     @Test
     fun brokenPipeRunTracesToNull() {
         // The horizontal run is severed: (1, 1) carries no left egress, so the sink's input

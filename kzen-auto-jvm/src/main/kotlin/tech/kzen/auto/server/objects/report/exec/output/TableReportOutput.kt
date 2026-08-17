@@ -6,6 +6,7 @@ import tech.kzen.auto.common.objects.document.report.output.OutputTableInfo
 import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisType
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotValueTableSpec
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputExploreSpec
+import org.slf4j.LoggerFactory
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.auto.server.objects.report.exec.output.flat.IndexedCsvTable
 import tech.kzen.auto.server.objects.report.exec.output.pivot.PivotBuilder
@@ -22,6 +23,9 @@ class TableReportOutput(
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
+        private val logger = LoggerFactory.getLogger(TableReportOutput::class.java)
+
+
         private fun <T> usePassive(
             reportRunContext: ReportRunContext,
             user: (TableReportOutput) -> T
@@ -164,6 +168,7 @@ class TableReportOutput(
             }
         }
         catch (e: Exception) {
+            logger.warn("Preview failed", e)
             return null
         }
 

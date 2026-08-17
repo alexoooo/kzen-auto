@@ -6,6 +6,8 @@ import org.junit.Test
 import tech.kzen.auto.common.objects.document.script.model.StepTrace
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.util.AutoTestUtils
+import tech.kzen.auto.server.util.awaitDone
+import tech.kzen.auto.server.util.awaitState
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunResponse
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunState
@@ -63,7 +65,7 @@ class ServerLogicControllerTest {
             ?: fail("Unable to start run")
 
         controller.continueOrStart(runId, snapshot)
-        awaitDone()
+        controller.awaitDone()
 
         // The Result step's value (Loop.sum() == 12) reached the trace store via the engine -> trace bridge,
         // shaped as a StepTrace exactly as the client expects (Done state + display value).
@@ -89,7 +91,7 @@ class ServerLogicControllerTest {
             ?: fail("Unable to start run")
 
         controller.step(runId, snapshot)
-        awaitState(LogicRunState.Paused)
+        controller.awaitState(LogicRunState.Paused)
 
         val active = controller.status().active
             ?: fail("Run is not active while paused")
@@ -100,7 +102,7 @@ class ServerLogicControllerTest {
         assertEquals(foreachFirstStep, active.frame.position)
 
         controller.continueOrStart(runId, snapshot)
-        awaitDone()
+        controller.awaitDone()
     }
 
 
@@ -114,7 +116,7 @@ class ServerLogicControllerTest {
         // at the breakpointed step, with the frame position naming it.
         assertEquals(LogicRunResponse.Submitted, controller.setBreakpoints(runId, listOf(foreachResult)))
         controller.continueOrStart(runId, snapshot)
-        awaitState(LogicRunState.ExplicitPaused)
+        controller.awaitState(LogicRunState.ExplicitPaused)
 
         val active = controller.status().active
             ?: fail("Run is not active while paused at breakpoint")
@@ -123,7 +125,7 @@ class ServerLogicControllerTest {
         // Replace-set with empty clears; the run resumes past the boundary and completes.
         assertEquals(LogicRunResponse.Submitted, controller.setBreakpoints(runId, listOf()))
         controller.continueOrStart(runId, snapshot)
-        awaitDone()
+        controller.awaitDone()
     }
 
 
@@ -139,7 +141,7 @@ class ServerLogicControllerTest {
             ?: fail("Unable to start run")
 
         controller.continueOrStart(runId, snapshot)
-        awaitDone()
+        controller.awaitDone()
 
         val traceSnapshot = context.logicTrace.lookupRun(runId, LogicTraceQuery(LogicTracePath.root))
             ?: fail("No run trace")
@@ -153,28 +155,7 @@ class ServerLogicControllerTest {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val snapshot: GraphDefinitionAttempt
-        get() = AutoTestUtils.graphDefinitionAttempt(AutoTestUtils.readNotation())
-
-
-    private fun awaitState(state: LogicRunState) {
-        for (attempt in 0 until 500) {
-            if (context.serverLogicController.status().active?.state == state) {
-                return
-            }
-            Thread.sleep(10)
-        }
-        fail("Run did not reach $state (was ${context.serverLogicController.status().active?.state})")
-    }
-
-
-    private fun awaitDone() {
-        for (attempt in 0 until 500) {
-            if (context.serverLogicController.status().active == null) {
-                return
-            }
-            Thread.sleep(10)
-        }
-        fail("Run did not complete")
+    private val snapshot: GraphDefinitionAttempt by lazy {
+        AutoTestUtils.graphDefinitionAttempt(AutoTestUtils.readNotation())
     }
 }

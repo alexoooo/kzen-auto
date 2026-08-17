@@ -7,15 +7,12 @@ import react.Props
 import react.State
 import react.dom.html.ReactHTML.br
 import react.dom.html.ReactHTML.div
-import tech.kzen.auto.client.objects.ProjectController
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.iconify.icon
-import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.registry.model.ObjectRegistryReflection
 import tech.kzen.auto.common.objects.document.registry.spec.ClassListSpec
 import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.lib.common.service.store.MirroredGraphError
 import tech.kzen.lib.common.service.store.MirroredGraphStore
 import tech.kzen.lib.platform.ClassName
 import web.cssom.Display
@@ -32,67 +29,17 @@ external interface ObjectRegistryEditProps: Props {
 }
 
 
-external interface ObjectRegistryEditState: State {
-//    var newClassName: String
-    var editing: Boolean
-    var previousError: String?
-}
-
-
 //---------------------------------------------------------------------------------------------------------------------
 class ObjectRegistryEdit(
     props: ObjectRegistryEditProps
 ):
-    RPureComponent<ObjectRegistryEditProps, ObjectRegistryEditState>(props)
+    RPureComponent<ObjectRegistryEditProps, State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
-    override fun ObjectRegistryEditState.init(props: ObjectRegistryEditProps) {
-//        newClassName = ""
-        editing = false
-        previousError = null
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-//    private fun onEdit(value: String) {
-//        setState {
-//            newClassName = value
-//        }
-//    }
-//
-//
-//    private fun onKeyDown(event: react.dom.events.KeyboardEvent<*>) {
-//        ClientInputUtils.handleEnter(event) {
-//            onAdd()
-//        }
-//    }
-
-
     private fun onRemove() {
-        setState {
-            editing = true
-            previousError = null
-        }
-
-        async {
-            removeSync()
-        }
-    }
-
-
-    private suspend fun removeSync() {
         val command = ClassListSpec.removeCommand(props.objectLocation, props.className)
-
-        val result = props.mirroredGraphStore.apply(
-            command, ProjectController.suppressErrorDisplay)
-
-        val error = (result as? MirroredGraphError)
-            ?.error
-            ?.let { it.message ?: "$result" }
-
-        setState {
-            editing = false
-            previousError = error
+        async {
+            props.mirroredGraphStore.apply(command)
         }
     }
 
@@ -115,10 +62,7 @@ class ObjectRegistryEdit(
             +"[${props.className.asString()}]"
 
             renderDeleteButton()
-//            renderClassNameEditor()
         }
-
-//        renderErrorIfPresent()
     }
 
 
@@ -130,7 +74,6 @@ class ObjectRegistryEdit(
             }
             IconButton {
                 title = "Remove"
-//                disabled = state.adding
 
                 onClick = {
                     onRemove()
@@ -140,39 +83,4 @@ class ObjectRegistryEdit(
             }
         }
     }
-
-//
-//    private fun ChildrenBuilder.renderClassNameEditor() {
-//        div {
-//            css {
-//                display = Display.tableCell
-//            }
-//
-//            TextField {
-//                size = Size.small
-//                label = ReactNode("Fully qualified class name")
-//                value = state.newClassName
-//
-//                onChange = {
-//                    val value = (it.target as HTMLInputElement).value
-//                    onEdit(value)
-//                }
-//
-//                onKeyDown = ::onKeyDown
-//            }
-//        }
-//    }
-//
-//
-//    private fun ChildrenBuilder.renderErrorIfPresent() {
-//        val previousError = state.previousError
-//            ?: return
-//
-//        div {
-//            css {
-//                color = NamedColor.red
-//            }
-//            +"Error: $previousError"
-//        }
-//    }
 }

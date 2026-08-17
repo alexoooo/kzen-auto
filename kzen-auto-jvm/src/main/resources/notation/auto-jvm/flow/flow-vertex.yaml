@@ -1,19 +1,4 @@
 
-###########################################################
-
-
-#CsvSource:
-#  abstract: true
-#  is: Action
-#  class: tech.kzen.auto.server.objects.query.CsvSource
-#  icon: TripOrigin
-#  title: "CSV Source"
-#  description: "CSV: Comma-separated value"
-#  filePath: "C:/path/to/file.csv"
-#  meta:
-#    filePath: String
-
-
 #######################################################################################################################
 
 
@@ -32,22 +17,6 @@ IntRangeSource:
       by: FlowWiring
     from: Int
     to: Int
-
-
-#PrimeFilter:
-#  abstract: true
-#  is: FlowVertex
-#  class: tech.kzen.auto.server.objects.query.PrimeFilter
-#  icon: FilterList
-#  title: "Prime Filter"
-#  description: "Filter prime numbers"
-#  meta:
-#    input:
-#      is: RequiredInput
-#      by: FlowWiring
-#    output:
-#      is: OptionalOutput
-#      by: FlowWiring
 
 
 DivisibleFilter:

@@ -16,9 +16,6 @@ class H2DigestIndex(
     companion object {
         private const val missingOrdinal = -1L
         private const val maxFalsePositive = 0.5
-
-//        private const val alwaysAdd = true
-//        private const val alwaysAdd = false
     }
 
 

@@ -2,6 +2,7 @@ package tech.kzen.auto.common.paradigm.flow.model.structure
 
 import tech.kzen.auto.common.paradigm.flow.model.structure.cell.CellDescriptor
 import tech.kzen.auto.common.paradigm.flow.model.structure.cell.EdgeDescriptor
+import tech.kzen.auto.common.paradigm.flow.model.structure.cell.EdgeDirection
 import tech.kzen.auto.common.paradigm.flow.model.structure.cell.VertexDescriptor
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.platform.collect.toPersistentList
@@ -14,6 +15,10 @@ data class FlowDag(
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
+        // A forward walk can leave by BOTH lateral sides, so this order is the order successors are collected in.
+        private val forwardLateralSides = listOf(EdgeDirection.Right, EdgeDirection.Left)
+
+
         fun of(flowMatrix: FlowMatrix): FlowDag {
             val vertexMap = flowMatrix.verticesByLocation
             val successors = successors(flowMatrix, vertexMap)
@@ -94,28 +99,12 @@ data class FlowDag(
                 traceCellBelow(edgeDescriptor, flowMatrix, buffer)
             }
 
-            if (edgeDescriptor.orientation.hasRightEgress()) {
-                @Suppress("MoveVariableDeclarationIntoWhen")
-                val cellRight = flowMatrix.get(
-                        edgeDescriptor.coordinate.row,
-                        edgeDescriptor.coordinate.column + 1)
+            for (side in forwardLateralSides) {
+                val lateral = flowMatrix.wiredNeighbour(
+                    edgeDescriptor, side, FlowMatrix.EdgeTraversal.Forward)
+                    ?: continue
 
-                if (cellRight is EdgeDescriptor &&
-                        cellRight.orientation.hasLeftIngress()) {
-                    traceEdge(cellRight, flowMatrix, buffer)
-                }
-            }
-
-            if (edgeDescriptor.orientation.hasLeftEgress()) {
-                @Suppress("MoveVariableDeclarationIntoWhen")
-                val cellLeft = flowMatrix.get(
-                        edgeDescriptor.coordinate.row,
-                        edgeDescriptor.coordinate.column - 1)
-
-                if (cellLeft is EdgeDescriptor &&
-                        cellLeft.orientation.hasRightIngress()) {
-                    traceEdge(cellLeft, flowMatrix, buffer)
-                }
+                traceEdge(lateral, flowMatrix, buffer)
             }
         }
 

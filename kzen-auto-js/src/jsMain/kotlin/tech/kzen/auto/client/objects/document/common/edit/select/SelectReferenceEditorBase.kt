@@ -85,16 +85,24 @@ abstract class SelectReferenceEditorBase<P: AttributeEditorProps, S: SelectRefer
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private var mounted = false
+
+
     final override fun componentDidMount() {
+        mounted = true
         // NB: observe is suspending, hence the async - keep this ordering, subclass observers attach after.
         async {
-            props.mirroredGraphStore.observe(this)
+            // Unobserve runs synchronously on unmount, so registering after it would leak this observer.
+            if (mounted) {
+                props.mirroredGraphStore.observe(this)
+            }
         }
         onMount()
     }
 
 
     final override fun componentWillUnmount() {
+        mounted = false
         props.mirroredGraphStore.unobserve(this)
         onUnmount()
     }

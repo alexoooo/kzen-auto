@@ -5,6 +5,7 @@ import org.junit.Before
 import org.junit.Test
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.util.AutoTestUtils
+import tech.kzen.auto.server.util.awaitDone
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceQuery
@@ -60,7 +61,7 @@ class SubScriptTraceScopingTest {
             ?: fail("Unable to start run")
 
         controller.continueOrStart(runId, snapshot)
-        awaitDone()
+        controller.awaitDone()
 
         // ForEach 1..2 hosts the sub-Script twice; each invocation is its own child node, hence its own trace
         // execution buffer (parent = the root execution), NOT flattened into one shared buffer.
@@ -95,17 +96,7 @@ class SubScriptTraceScopingTest {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val snapshot: GraphDefinitionAttempt
-        get() = AutoTestUtils.graphDefinitionAttempt(AutoTestUtils.readNotation())
-
-
-    private fun awaitDone() {
-        for (attempt in 0 until 500) {
-            if (context.serverLogicController.status().active == null) {
-                return
-            }
-            Thread.sleep(10)
-        }
-        fail("Run did not complete")
+    private val snapshot: GraphDefinitionAttempt by lazy {
+        AutoTestUtils.graphDefinitionAttempt(AutoTestUtils.readNotation())
     }
 }

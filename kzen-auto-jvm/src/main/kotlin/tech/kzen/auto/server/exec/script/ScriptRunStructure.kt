@@ -3,6 +3,7 @@ package tech.kzen.auto.server.exec.script
 import tech.kzen.auto.common.objects.document.script.model.ScriptTree
 import tech.kzen.auto.common.objects.document.script.model.ScriptValidation
 import tech.kzen.auto.server.exec.LogicCompilerServices
+import tech.kzen.auto.server.objects.script.api.ScriptStep
 import tech.kzen.lib.common.exec.tuple.TupleDefinition
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.instance.GraphInstance
@@ -31,4 +32,10 @@ class ScriptRunStructure(
     val services: LogicCompilerServices
 ) {
     val objectStableMapper: ObjectStableMapper get() = services.objectStableMapper
+
+
+    fun scriptStepAt(location: ObjectLocation): ScriptStep {
+        return graphInstance[location]?.reference as? ScriptStep
+            ?: error("Not a ScriptStep: $location")
+    }
 }

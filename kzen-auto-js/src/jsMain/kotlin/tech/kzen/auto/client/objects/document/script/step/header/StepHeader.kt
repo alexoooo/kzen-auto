@@ -20,6 +20,7 @@ import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.react
+import tech.kzen.auto.common.objects.document.common.ObjectSubtreeRemoval
 import tech.kzen.auto.common.objects.document.logic.context.ContextDescriptor
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.exec.logic.ResourceClosePolicy
@@ -149,10 +150,8 @@ class StepHeader(
                 .documents[objectLocation.documentPath]
                 ?: return@async
 
-            // Remove the step and its whole nested subtree, deepest-first so each object is a leaf when removed.
-            val subtreePaths = documentNotation.objects.notations.map.keys
-                .filter { it == objectLocation.objectPath || it.startsWith(objectLocation.objectPath) }
-                .sortedByDescending { it.nesting.segments.size }
+            val subtreePaths = ObjectSubtreeRemoval.deepestFirst(
+                documentNotation.objects.notations.map.keys, objectLocation.objectPath)
 
             for (objectPath in subtreePaths) {
                 props.mirroredGraphStore.apply(RemoveObjectCommand(

@@ -7,6 +7,8 @@ import org.junit.Test
 import tech.kzen.auto.common.objects.document.script.model.StepTrace
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.util.AutoTestUtils
+import tech.kzen.auto.server.util.awaitDone
+import tech.kzen.auto.server.util.awaitState
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunFrameInfo
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunState
@@ -97,7 +99,7 @@ class ServerLogicControllerLinkedDocumentMigrationTest {
         var guard = 0
         while (!isDone(runId, seedLocation) && guard < 50) {
             controller.step(runId, base)
-            awaitState(LogicRunState.Paused)
+            controller.awaitState(LogicRunState.Paused)
             guard += 1
         }
         assertTrue(isDone(runId, seedLocation), "Seed should complete before the edit")
@@ -110,7 +112,7 @@ class ServerLogicControllerLinkedDocumentMigrationTest {
         // Resume against the edited snapshot: only the WIDENED signal sees the callee-document change (the
         // parent document's own closure is untouched), recompiles, and migrates.
         controller.continueOrStart(runId, edited)
-        awaitDone()
+        controller.awaitDone()
 
         assertEquals(
             "106", resultDisplay(runId),
@@ -134,7 +136,7 @@ class ServerLogicControllerLinkedDocumentMigrationTest {
         var guard = 0
         while (!isDone(runId, callLocation) && guard < 50) {
             controller.step(runId, base)
-            awaitState(LogicRunState.Paused)
+            controller.awaitState(LogicRunState.Paused)
             guard += 1
         }
         assertTrue(isDone(runId, callLocation), "the RunStep should complete before the edit")
@@ -150,7 +152,7 @@ class ServerLogicControllerLinkedDocumentMigrationTest {
         runBlocking { controller.onStoreRefresh(edited) }
 
         controller.step(runId, edited)
-        awaitState(LogicRunState.Paused)
+        controller.awaitState(LogicRunState.Paused)
 
         val childExecution = context.logicTrace.mostRecent(childScriptLocation)
             ?: fail("the finished sub-document must still resolve to an execution after the caller was edited")
@@ -194,7 +196,7 @@ class ServerLogicControllerLinkedDocumentMigrationTest {
         var guard = 0
         while (liveChildFrames().isEmpty() && guard < 50) {
             controller.step(runId, base)
-            awaitState(LogicRunState.Paused)
+            controller.awaitState(LogicRunState.Paused)
             guard += 1
         }
         assertEquals(
@@ -207,7 +209,7 @@ class ServerLogicControllerLinkedDocumentMigrationTest {
         runBlocking { controller.onStoreRefresh(edited) }
 
         controller.step(runId, edited)
-        awaitState(LogicRunState.Paused)
+        controller.awaitState(LogicRunState.Paused)
 
         val rootFrame = controller.status().active?.frame
             ?: fail("the run must still be active after the edit")
@@ -263,28 +265,5 @@ class ServerLogicControllerLinkedDocumentMigrationTest {
         val entry = snapshot.values[LogicTracePath.ofObjectStableId(stableId)]
             ?: return null
         return StepTrace.ofExecutionValue(entry.value)
-    }
-
-
-    @Suppress("SameParameterValue")
-    private fun awaitState(state: LogicRunState) {
-        for (attempt in 0 until 500) {
-            if (context.serverLogicController.status().active?.state == state) {
-                return
-            }
-            Thread.sleep(10)
-        }
-        fail("Run did not reach $state (was ${context.serverLogicController.status().active?.state})")
-    }
-
-
-    private fun awaitDone() {
-        for (attempt in 0 until 500) {
-            if (context.serverLogicController.status().active == null) {
-                return
-            }
-            Thread.sleep(10)
-        }
-        fail("Run did not complete")
     }
 }

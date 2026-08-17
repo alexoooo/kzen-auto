@@ -7,6 +7,7 @@ import org.junit.Test
 import tech.kzen.auto.common.objects.document.script.model.StepTrace
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.util.AutoTestUtils
+import tech.kzen.auto.server.util.awaitState
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunState
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
@@ -90,9 +91,9 @@ class ServerLogicControllerStepRemovalTest {
 
         // Two steps: park at First, then run it and park at Second — the step the user is about to delete.
         controller.step(runId, base)
-        awaitState(LogicRunState.Paused)
+        controller.awaitState(LogicRunState.Paused)
         controller.step(runId, base)
-        awaitState(LogicRunState.Paused)
+        controller.awaitState(LogicRunState.Paused)
         assertEquals(secondLocation, position(), "the run must be parked at the step being deleted")
 
         val edited = applyEdit(baseNotation, RemoveObjectCommand(secondLocation))
@@ -102,7 +103,7 @@ class ServerLogicControllerStepRemovalTest {
         assertNull(position(), "a deleted next-to-run step reports no position rather than failing the status")
 
         controller.step(runId, edited)
-        awaitState(LogicRunState.Paused)
+        controller.awaitState(LogicRunState.Paused)
         assertEquals(thirdLocation, position(), "the rebuilt run re-parks at the step after the deleted one")
     }
 
@@ -121,7 +122,7 @@ class ServerLogicControllerStepRemovalTest {
         var guard = 0
         while (!isDone(runId, secondLocation) && guard < 50) {
             controller.step(runId, base)
-            awaitState(LogicRunState.Paused)
+            controller.awaitState(LogicRunState.Paused)
             guard += 1
         }
         assertEquals("2", display(runId, secondLocation), "Second should complete before the edit")
@@ -146,13 +147,13 @@ class ServerLogicControllerStepRemovalTest {
             "the replacement mints the deleted step's id")
 
         controller.step(runId, edited)
-        awaitState(LogicRunState.Paused)
+        controller.awaitState(LogicRunState.Paused)
         assertEquals(
             secondLocation, position(),
             "the replacement is not carried work, so the rebuilt run parks at it rather than replaying past it")
 
         controller.step(runId, edited)
-        awaitState(LogicRunState.Paused)
+        controller.awaitState(LogicRunState.Paused)
         assertEquals(
             "22", display(runId, secondLocation),
             "the replacement produced its OWN value — inheriting the deleted step's id must not report it done")
@@ -172,7 +173,7 @@ class ServerLogicControllerStepRemovalTest {
         var guard = 0
         while (!isDone(runId, branchLocation) && guard < 50) {
             controller.step(runId, base)
-            awaitState(LogicRunState.Paused)
+            controller.awaitState(LogicRunState.Paused)
             guard += 1
         }
         assertTrue(isDone(runId, branchLocation), "the If container should complete before the edit")
@@ -185,7 +186,7 @@ class ServerLogicControllerStepRemovalTest {
             UpsertAttributeCommand(ifResultLocation, AttributeName("code"), ScalarAttributeNotation("Branch + 1")))
 
         controller.step(runId, edited)
-        awaitState(LogicRunState.Paused)
+        controller.awaitState(LogicRunState.Paused)
 
         assertTrue(
             isDone(runId, branchLocation),
@@ -242,17 +243,5 @@ class ServerLogicControllerStepRemovalTest {
         val entry = snapshot.values[LogicTracePath.ofObjectStableId(stableId)]
             ?: return null
         return StepTrace.ofExecutionValue(entry.value)
-    }
-
-
-    @Suppress("SameParameterValue")
-    private fun awaitState(state: LogicRunState) {
-        for (attempt in 0 until 500) {
-            if (context.serverLogicController.status().active?.state == state) {
-                return
-            }
-            Thread.sleep(10)
-        }
-        fail("Run did not reach $state (was ${context.serverLogicController.status().active?.state})")
     }
 }
