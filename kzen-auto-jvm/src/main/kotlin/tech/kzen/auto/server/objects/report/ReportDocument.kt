@@ -91,9 +91,6 @@ class ReportDocument(
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        @Suppress("ConstPropertyName")
-        private const val mimeTypeCsv = "text/csv"
-
         private fun patternErrorOrNull(errors: List<String>): String? {
             return errors.firstOrNull()
         }
@@ -170,9 +167,7 @@ class ReportDocument(
 
         return ExecutionDownloadResult(
             TableReportOutput.downloadCsvOffline(reportRunContext),
-            filename,
-            mimeTypeCsv
-        )
+            filename)
     }
 
 

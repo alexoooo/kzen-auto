@@ -78,6 +78,11 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-html-jvm:$kotlinxHtmlVersion")
 
     testImplementation(kotlin("test"))
+
+    // Route-level tests: testApplication stands up the real plugin stack and route table in-process against
+    // Application.ktorMain, with no Netty and no socket. Ktor's own testing artifact, released in lockstep
+    // with the server modules above, so its version can never drift from theirs.
+    testImplementation("io.ktor:ktor-server-test-host:$ktorVersion")
 }
 
 

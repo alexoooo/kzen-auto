@@ -1,0 +1,5 @@
+main:
+  is: Contexts
+
+main.contexts/My Context:
+  is: Context

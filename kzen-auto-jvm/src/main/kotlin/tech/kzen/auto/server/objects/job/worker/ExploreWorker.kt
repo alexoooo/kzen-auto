@@ -34,8 +34,8 @@ import java.nio.file.Path
  * dir and serves an empty preview.
  *
  * Download resolves the same persistent path straight from the Worker's [ObjectLocation], with no live run:
- * [tech.kzen.auto.server.api.handler.DetachedActionHandler.jobDownload] streams `table.csv` via
- * [IndexedCsvTable.downloadCsvOffline]. This Worker holds no download logic of its own.
+ * [tech.kzen.auto.server.api.handler.DetachedActionHandler.jobDownload] serves `table.csv` at
+ * [IndexedCsvTable.tablePath]. This Worker holds no download logic of its own.
  *
  * Live-edit migration is the [WorkerBase] restart default (no state carried): the output path is deterministic
  * per [ObjectLocation], so the rebuilt instance's [onStart] clears and re-indexes at the same path.

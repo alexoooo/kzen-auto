@@ -12,7 +12,6 @@ import tech.kzen.auto.server.objects.report.exec.input.stages.ReportInputReader
 import tech.kzen.auto.server.objects.report.exec.output.pivot.store.BufferedOffsetStore
 import tech.kzen.auto.server.objects.report.exec.output.pivot.store.FileOffsetStore
 import tech.kzen.auto.server.objects.report.exec.output.pivot.store.StoreUtils
-import java.io.InputStream
 import java.io.OutputStreamWriter
 import java.io.RandomAccessFile
 import java.nio.channels.Channels
@@ -35,9 +34,8 @@ class IndexedCsvTable(
         private val lineBreak = "\r\n".toCharArray()
 
 
-        fun downloadCsvOffline(dir: Path): InputStream {
-            val tablePath = dir.resolve(tableFile)
-            return Files.newInputStream(tablePath)
+        fun tablePath(dir: Path): Path {
+            return dir.resolve(tableFile)
         }
     }
 

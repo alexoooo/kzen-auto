@@ -12,7 +12,7 @@ import tech.kzen.auto.server.objects.report.exec.output.flat.IndexedCsvTable
 import tech.kzen.auto.server.objects.report.exec.output.pivot.PivotBuilder
 import tech.kzen.auto.server.objects.report.exec.trace.ReportOutputTrace
 import tech.kzen.auto.server.objects.report.model.ReportRunContext
-import java.io.InputStream
+import tech.kzen.auto.server.paradigm.detached.ExecutionDownloadContent
 import java.nio.file.Files
 import java.util.concurrent.CompletableFuture
 
@@ -58,10 +58,11 @@ class TableReportOutput(
 
         fun downloadCsvOffline(
             reportRunContext: ReportRunContext
-        ): InputStream {
+        ): ExecutionDownloadContent {
             return when (reportRunContext.analysis.type) {
                 AnalysisType.FlatData ->
-                    IndexedCsvTable.downloadCsvOffline(reportRunContext.runDir)
+                    ExecutionDownloadContent.OfFile(
+                        IndexedCsvTable.tablePath(reportRunContext.runDir))
 
                 AnalysisType.PivotTable ->
                     PivotBuilder.downloadCsvOffline(reportRunContext)

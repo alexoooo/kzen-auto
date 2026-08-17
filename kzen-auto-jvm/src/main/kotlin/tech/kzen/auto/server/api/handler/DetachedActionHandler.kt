@@ -84,7 +84,10 @@ class DetachedActionHandler(
         val workerLocation = parameters.getObjectLocationParam()
 
         val outputDir = jobWorkPool.workerOutputDir(workerLocation)
-        val tablePath = outputDir.resolve(IndexedCsvTable.tableFile)
+        val tablePath = IndexedCsvTable.tablePath(outputDir)
+
+        // Domain-level guard, naming the Worker. Deliberately redundant with the transport-level existence
+        // check in KzenAutoMain.respondDownload, which can only speak of a path.
         if (!Files.exists(tablePath)) {
             error("No downloadable result: $workerLocation")
         }
@@ -92,9 +95,6 @@ class DetachedActionHandler(
         val filenamePrefix = FormatUtils.sanitizeFilename(workerLocation.objectPath.name.value)
         val filename = filenamePrefix + "_" + DateTimeUtils.filenameTimestamp() + ".csv"
 
-        return ExecutionDownloadResult(
-            IndexedCsvTable.downloadCsvOffline(outputDir),
-            filename,
-            "text/csv")
+        return ExecutionDownloadResult.ofFile(tablePath, filename)
     }
 }

@@ -24,10 +24,8 @@ import tech.kzen.auto.server.objects.report.exec.output.pivot.stats.store.FileVa
 import tech.kzen.auto.server.objects.report.exec.output.pivot.store.BufferedOffsetStore
 import tech.kzen.auto.server.objects.report.exec.output.pivot.store.FileOffsetStore
 import tech.kzen.auto.server.objects.report.model.ReportRunContext
-import java.io.InputStream
+import tech.kzen.auto.server.paradigm.detached.ExecutionDownloadContent
 import java.io.OutputStreamWriter
-import java.io.PipedInputStream
-import java.io.PipedOutputStream
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 
@@ -47,66 +45,64 @@ class PivotBuilder(
         private const val missingStatisticCellValue = ""
 
 
-        fun downloadCsvOffline(reportRunContext: ReportRunContext): InputStream {
+        fun downloadCsvOffline(reportRunContext: ReportRunContext): ExecutionDownloadContent {
             val pivotSpec = reportRunContext.analysis.pivot
-            val pivotBuilder = create(
-                pivotSpec.rows,
-                HeaderListing(pivotSpec.values.columns.keys.toList()),
-                reportRunContext.runDir)
 
-            val input = PipedInputStream()
-            val output = PipedOutputStream(input)
-            val writer = OutputStreamWriter(output, StandardCharsets.UTF_8)
+            return ExecutionDownloadContent.OfWriter { out ->
+                // Opened here rather than when the download descriptor is built: create() opens file-backed
+                // stores, and holding them across the gap until the response streams is the ownership
+                // ambiguity OfWriter exists to remove. The meaningful precondition - that a run exists - is
+                // validated by the caller before the descriptor is built.
+                val pivotBuilder = create(
+                    pivotSpec.rows,
+                    HeaderListing(pivotSpec.values.columns.keys.toList()),
+                    reportRunContext.runDir)
 
-            Thread {
                 pivotBuilder.use { pivotBuilder ->
-                    val exportSignature = OutputPivotExportSignature.of(
-                        pivotSpec.rows, reportRunContext.analysis.pivot.values)
-                    val valueTypes = exportSignature.valueTypes
+                    OutputStreamWriter(out, StandardCharsets.UTF_8).use { writer ->
+                        val exportSignature = OutputPivotExportSignature.of(
+                            pivotSpec.rows, reportRunContext.analysis.pivot.values)
+                        val valueTypes = exportSignature.valueTypes
 
-                    val headerValues = exportSignature.header
-                    val flatFileRecord = FlatFileRecord(
-                        headerValues.sumOf { it.headerLabel.text.length },
-                        headerValues.size)
-                    flatFileRecord.addAll(headerValues.map { it.headerLabel.render() })
-                    flatFileRecord.writeCsv(writer)
-
-                    val rowIndex = pivotBuilder.rowIndex
-                    val size = rowIndex.size()
-                    val valueStatistics = pivotBuilder.valueStatistics
-                    val valueBuffer = ArrayList<String?>()
-
-                    for (rowNumber in 0 until size) {
-                        writer.write(CsvFormatUtils.lineFeedInt)
-
-                        flatFileRecord.clear()
-                        valueBuffer.clear()
-
-                        rowIndex.rowValuesInto(rowNumber, valueBuffer)
-
-                        for (i in 0 until valueBuffer.size) {
-                            flatFileRecord.add(valueBuffer[i] ?: missingRowCellValue)
-                        }
-
-                        val statisticValues = valueStatistics.get(rowNumber, valueTypes)
-                        @Suppress("ReplaceManualRangeWithIndicesCalls")
-                        for (i in 0 until valueTypes.size) {
-                            val value = statisticValues[i]
-                            val type = valueTypes[i].value
-
-                            val asString = formatStatistic(value, type)
-                            flatFileRecord.add(asString)
-                        }
-
+                        val headerValues = exportSignature.header
+                        val flatFileRecord = FlatFileRecord(
+                            headerValues.sumOf { it.headerLabel.text.length },
+                            headerValues.size)
+                        flatFileRecord.addAll(headerValues.map { it.headerLabel.render() })
                         flatFileRecord.writeCsv(writer)
+
+                        val rowIndex = pivotBuilder.rowIndex
+                        val size = rowIndex.size()
+                        val valueStatistics = pivotBuilder.valueStatistics
+                        val valueBuffer = ArrayList<String?>()
+
+                        for (rowNumber in 0 until size) {
+                            writer.write(CsvFormatUtils.lineFeedInt)
+
+                            flatFileRecord.clear()
+                            valueBuffer.clear()
+
+                            rowIndex.rowValuesInto(rowNumber, valueBuffer)
+
+                            for (i in 0 until valueBuffer.size) {
+                                flatFileRecord.add(valueBuffer[i] ?: missingRowCellValue)
+                            }
+
+                            val statisticValues = valueStatistics.get(rowNumber, valueTypes)
+                            @Suppress("ReplaceManualRangeWithIndicesCalls")
+                            for (i in 0 until valueTypes.size) {
+                                val value = statisticValues[i]
+                                val type = valueTypes[i].value
+
+                                val asString = formatStatistic(value, type)
+                                flatFileRecord.add(asString)
+                            }
+
+                            flatFileRecord.writeCsv(writer)
+                        }
                     }
-
-                    writer.flush()
-                    output.close()
                 }
-            }.start()
-
-            return input
+            }
         }
 
 

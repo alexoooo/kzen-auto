@@ -6,6 +6,9 @@ import tech.kzen.lib.common.exec.ExecutionRequest
 /**
  * Server-side Detached action that streams a download instead of returning an in-band result.
  *
+ * The split from the common [tech.kzen.auto.common.paradigm.detached.DetachedAction] is by platform reach:
+ * common holds what a commonMain object can implement, this holds what needs a JVM file or stream.
+ *
  * Statelessness contract: implementations are instantiated from notation and may be cached and
  * reused across requests - including concurrent requests (see GraphInstanceCache). Instance fields
  * must be immutable configuration (notation-derived values, injected @Service references); all

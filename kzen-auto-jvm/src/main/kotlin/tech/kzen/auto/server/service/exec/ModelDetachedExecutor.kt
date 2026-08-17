@@ -4,7 +4,6 @@ import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.paradigm.detached.DetachedAction
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.auto.server.paradigm.detached.DetachedDownloadAction
-import tech.kzen.auto.server.paradigm.detached.DetachedDownloadExecutor
 import tech.kzen.auto.server.paradigm.detached.ExecutionDownloadResult
 import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.exec.ExecutionRequest
@@ -17,9 +16,7 @@ import tech.kzen.lib.common.service.store.LocalGraphStore
 class ModelDetachedExecutor(
     private val graphStore: LocalGraphStore,
     private val graphInstanceCache: GraphInstanceCache
-):
-    DetachedDownloadExecutor
-{
+) {
     companion object {
         private val logger = LoggerFactory.getLogger(ModelDetachedExecutor::class.java)
     }
@@ -80,7 +77,7 @@ class ModelDetachedExecutor(
     }
 
 
-    override suspend fun executeDownload(
+    suspend fun executeDownload(
         actionLocation: ObjectLocation,
         request: ExecutionRequest
     ): ExecutionDownloadResult {

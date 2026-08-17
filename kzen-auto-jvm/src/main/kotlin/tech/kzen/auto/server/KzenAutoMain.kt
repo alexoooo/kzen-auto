@@ -1,6 +1,5 @@
 package tech.kzen.auto.server
 
-import com.google.common.io.ByteStreams
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
@@ -35,8 +34,11 @@ import tech.kzen.auto.server.backend.indexPage
 import tech.kzen.auto.server.context.BuildInfo
 import tech.kzen.auto.server.context.KzenAutoConfig
 import tech.kzen.auto.server.context.KzenAutoContext
+import tech.kzen.auto.server.paradigm.detached.ExecutionDownloadContent
+import tech.kzen.auto.server.paradigm.detached.ExecutionDownloadResult
 import tech.kzen.auto.server.service.impl.LogicStartAttempt
 import tech.kzen.lib.common.util.ImmutableByteArray
+import java.nio.file.Files
 import kotlin.system.exitProcess
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -539,6 +541,37 @@ private fun Routing.routeNotationCommands(
 }
 
 
+// Attachment plumbing shared by both download routes. The un-percent-encoded `filename*` form is malformed
+// under RFC 5987 for a non-ASCII name; it is safe only because every filename reaching here is built through
+// FormatUtils.sanitizeFilename, which collapses to [a-zA-Z0-9_-].
+private suspend fun ApplicationCall.respondDownload(result: ExecutionDownloadResult) {
+    // Everything that can refuse the download is settled before the response is touched at all, so a refusal
+    // is a bare error rather than one wearing an attachment header that a browser would save as the file.
+    val contentType = ContentType.parse(result.mimeType)
+
+    val content = result.content
+    if (content is ExecutionDownloadContent.OfFile) {
+        // LocalFileContent opens the file only at body transfer, once status and headers are committed, so a
+        // missing file would otherwise reach the client as a truncated 200.
+        check(Files.exists(content.path)) {
+            "Download content missing: ${content.path}"
+        }
+    }
+
+    response.header(
+        HttpHeaders.ContentDisposition,
+        "attachment; filename*=utf-8''" + result.fileName)
+
+    when (content) {
+        is ExecutionDownloadContent.OfFile ->
+            respond(LocalFileContent(content.path.toFile(), contentType))
+
+        is ExecutionDownloadContent.OfWriter ->
+            respondOutputStream(contentType) { content.write(this) }
+    }
+}
+
+
 private fun Routing.routeDetached(
     detachedActionHandler: DetachedActionHandler
 ) {
@@ -564,30 +597,14 @@ private fun Routing.routeDetached(
     get(CommonRestApi.actionDetachedDownload) {
         val bytes = call.receiveNullable<ByteArray>()
         val wrappedBytes = bytes?.let { ImmutableByteArray.wrap(it) }
-        val response = detachedActionHandler.actionDetachedDownload(call.parameters, wrappedBytes)
-
-        val attachmentFilename = "attachment; filename*=utf-8''" + response.fileName
-        call.response.header(HttpHeaders.ContentDisposition, attachmentFilename)
-
-        call.respondOutputStream(
-            ContentType.parse(response.mimeType)
-        ) {
-            ByteStreams.copy(response.data, this)
-        }
+        call.respondDownload(
+            detachedActionHandler.actionDetachedDownload(call.parameters, wrappedBytes))
     }
     // Streams a Job Explore Worker's persisted table.csv (resolved from notation, no live run needed) — the
     // same attachment plumbing as actionDetachedDownload above; see DetachedActionHandler.jobDownload.
     get(CommonRestApi.jobDownload) {
-        val response = detachedActionHandler.jobDownload(call.parameters)
-
-        val attachmentFilename = "attachment; filename*=utf-8''" + response.fileName
-        call.response.header(HttpHeaders.ContentDisposition, attachmentFilename)
-
-        call.respondOutputStream(
-            ContentType.parse(response.mimeType)
-        ) {
-            ByteStreams.copy(response.data, this)
-        }
+        call.respondDownload(
+            detachedActionHandler.jobDownload(call.parameters))
     }
 }
 
