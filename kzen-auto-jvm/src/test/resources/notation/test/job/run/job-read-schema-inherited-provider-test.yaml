@@ -1,0 +1,4 @@
+InheritedReadWorker:
+  abstract: true
+  is: ReadWorker
+  source: test/job/run/job-read-schema-validation-test.yaml#main.sources/input

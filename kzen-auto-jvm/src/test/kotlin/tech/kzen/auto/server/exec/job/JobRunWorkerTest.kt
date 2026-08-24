@@ -6,12 +6,14 @@ import tech.kzen.auto.server.exec.LogicCompilerServices
 import tech.kzen.auto.server.exec.script.test.FlakyStep
 import tech.kzen.auto.server.exec.script.test.ScriptStepTestModule
 import tech.kzen.auto.server.objects.job.worker.test.RecordingSinkWorker
+import tech.kzen.auto.common.data.model.DataRef
 import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.lib.common.exec.engine.Node
 import tech.kzen.lib.common.exec.engine.NodeStatus
 import tech.kzen.lib.common.exec.engine.Outcome
 import tech.kzen.lib.common.exec.engine.PauseReason
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
+import tech.kzen.lib.common.exec.tuple.TupleComponentName
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
@@ -21,6 +23,8 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
+import java.nio.file.Files
+import java.nio.file.Path
 
 
 /**
@@ -153,6 +157,56 @@ class JobRunWorkerTest {
             }
 
         assertIs<Outcome.Failed>(outcome)
+    }
+
+
+    @Test
+    fun perUnitChildBindsNamedDateAndYieldsOrderedFingerprintedRefs() {
+        val root = Path.of("build/job-per-unit").toAbsolutePath().normalize()
+        val input = root.resolve("input")
+        val output = root.resolve("output")
+        output.toFile().deleteRecursively()
+        Files.createDirectories(input)
+        val dates = listOf("2026-08-21", "2026-08-22", "2026-08-23")
+        for ((index, date) in dates.withIndex()) {
+            Files.writeString(input.resolve("$date.csv"), "value\n${index + 1}\n")
+        }
+
+        val engine = newEngine("test/job/run/job-per-unit-test.yaml")
+        val outcome = try {
+            val completed = runBlocking {
+                engine.resume()
+                engine.await()
+            }
+            val runStableId = context.objectStableMapper.objectStableId(ObjectLocation(
+                DocumentPath.parse("test/job/run/job-per-unit-test.yaml"),
+                ObjectPath.parse("main.workers/run")))
+            val runNode = engine.snapshot().root.children.first { it.stableId == runStableId }
+            assertEquals(3, runNode.children.size, "one retained child invocation per input unit")
+            assertEquals(3, runNode.children.map { it.id }.toSet().size)
+            val childStableId = context.objectStableMapper.objectStableId(ObjectLocation(
+                DocumentPath.parse("test/job/run/job-per-unit-child-test.yaml"),
+                ObjectPath.parse("main")))
+            assertTrue(runNode.children.all { it.stableId == childStableId })
+            completed
+        }
+        finally {
+            engine.close()
+        }
+
+        val success = assertIs<Outcome.Success>(outcome, "outcome: $outcome")
+        @Suppress("UNCHECKED_CAST")
+        val refs = success.value.find(TupleComponentName("outputs")) as List<DataRef>
+        assertEquals(dates, refs.map { Path.of(it.id).fileName.toString().removeSuffix(".csv") })
+        assertEquals(null, refs.first().source)
+        for ((index, ref) in refs.withIndex()) {
+            val path = Path.of(ref.id)
+            assertEquals(Files.size(path).toString(), ref.attributes[DataRef.sizeKey])
+            assertTrue(ref.attributes.containsKey(DataRef.modifiedKey))
+            assertEquals(
+                "date,value,copied${System.lineSeparator()}${dates[index]},${index + 1},X${index + 1}${System.lineSeparator()}",
+                Files.readString(path))
+        }
     }
 
 

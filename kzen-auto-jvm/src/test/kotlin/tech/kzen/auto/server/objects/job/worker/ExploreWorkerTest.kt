@@ -4,7 +4,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import tech.kzen.auto.common.objects.document.job.JobConventions
-import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
+import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.api.ChannelInputIterator
 import tech.kzen.auto.common.paradigm.job.api.ChannelServer

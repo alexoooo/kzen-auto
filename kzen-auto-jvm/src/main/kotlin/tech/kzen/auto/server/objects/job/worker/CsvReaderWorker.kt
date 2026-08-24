@@ -1,6 +1,6 @@
 package tech.kzen.auto.server.objects.job.worker
 
-import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
+import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
@@ -111,7 +111,7 @@ class CsvReaderWorker(
     }
 
 
-    override fun onClose() {
+    override suspend fun onClose() {
         // Skip closing a reader that was handed to a migration snapshot (it lives on in the rebuilt instance).
         if (!detached) {
             csvReader?.close()

@@ -69,13 +69,153 @@ MultiFileReaderWorker:
       by: Self
 
 
+DataReadWorkerConfig:
+  abstract: true
+  emit: items
+  role: ""
+  attributes: ignore
+  schemaMode: superset
+  meta:
+    emit:
+      is: String
+      editor: SelectValuesEditor
+      values:
+        items: "Items"
+        units: "Units"
+    role: String
+    attributes:
+      is: String
+      editor: SelectValuesEditor
+      values:
+        ignore: "Ignore"
+        columns: "As columns"
+    schemaMode:
+      is: String
+      editor: SelectValuesEditor
+      values:
+        superset: "Ordered superset"
+        strict: "Strict"
+
+
+# Resolves one DataSource manifest per run, then emits either whole units or the items of one role. The source
+# remains a nominal reference so blank, cross-document, and dangling values stay representable for validation;
+# the Worker resolves it from the compiled run snapshot. Item mode fixes one shape across the manifest, and
+# attributes=columns prepends ordered unit attributes to tabular records.
+ReadWorker:
+  abstract: true
+  is:
+    - Worker
+    - DataSourceShapeProvider
+    - DataReadWorkerConfig
+  title: "Read"
+  class: tech.kzen.auto.server.objects.job.worker.data.ReadWorker
+  output: ""
+  source: ""
+  meta:
+    output:
+      is: ChannelOutput
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    source:
+      is: DataSource
+      nullable: true
+      by: Nominal
+      creator: NominalReferenceCreator
+      editor: SelectDataSourceEditor
+      summary: DataSourceAttributeView
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
+# Reads files through the same manifest, projection, and migration engine as ReadWorker while owning its file
+# selection directly as ordinary Worker configuration.
+FileSourceWorker:
+  abstract: true
+  is:
+    - Worker
+    - DataReadWorkerConfig
+    - FileDataSourceConfig
+  title: "File"
+  class: tech.kzen.auto.server.objects.job.worker.data.FileSourceWorker
+  output: ""
+  meta:
+    output:
+      is: ChannelOutput
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
+# Hosts Logic that returns DataUnits and reads them through the same engine as ReadWorker while owning the Logic
+# call configuration directly as an ordinary Worker.
+LogicSourceWorker:
+  abstract: true
+  is:
+    - Worker
+    - DataReadWorkerConfig
+    - LogicDataSourceConfig
+  title: "Logic"
+  class: tech.kzen.auto.server.objects.job.worker.data.LogicSourceWorker
+  output: ""
+  meta:
+    output:
+      is: ChannelOutput
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
+# Expands each incoming DataUnit payload into the items of its selected role. Blank role accepts only a unit with
+# one distinct role. Output shape stays unknown because the unit carries refs, not a source declaration.
+ReadPartWorker:
+  abstract: true
+  is: Worker
+  title: "Read part"
+  class: tech.kzen.auto.server.objects.job.worker.data.ReadPartWorker
+  input: ""
+  output: ""
+  role: ""
+  attributes: ignore
+  schemaMode: superset
+  meta:
+    input:
+      is: ChannelInput
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    output:
+      is: ChannelOutput
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    role: String
+    attributes:
+      is: String
+      editor: SelectValuesEditor
+      values:
+        ignore: "Ignore"
+        columns: "As columns"
+    schemaMode:
+      is: String
+      editor: SelectValuesEditor
+      values:
+        superset: "Ordered superset"
+        strict: "Strict"
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
 # Generates a stream from a single Kotlin expression — THE parameterized source: the Job's declared parameters
 # are in `code`'s scope, bare by name and typed (`number`, `(1..number)`, `listOf("a", "b")`), compiled by the
 # genuine CalculatedColumnEval / Kotlin compiler (same engine as Filter / Formula). Dispatch is STATIC, from
-# the expression's INFERRED type (the same inference the worker card displays): an Iterable-typed expression
-# is streamed element-by-element (resuming from its position across a live edit; a null value under a nullable
-# Iterable type is an empty stream), any other type — including an untyped Any — is emitted as a single
-# element; a blank `code` produces an empty stream. The output port carries no `of:` — the inferred payload
+# the expression's INFERRED type (the same inference the worker card displays): an Iterable, Sequence, or
+# Iterator expression is streamed element-by-element (resuming from its position across a live edit; a null
+# value under a nullable stream type is empty), any other type — including an untyped Any — is emitted as a
+# single element; a blank `code` produces an empty stream. The output port carries no `of:` — the inferred payload
 # type flows through the static walk instead, so any consumer is wire-compatible and still sees the type.
 FormulaSourceWorker:
   abstract: true
@@ -299,7 +439,7 @@ SortWorker:
 # round-trip) only the records are written.
 CsvWriterWorker:
   abstract: true
-  is: Worker
+  is: ResultYielder
   title: "CSV Writer"
   class: tech.kzen.auto.server.objects.job.worker.CsvWriterWorker
   input: ""
@@ -328,7 +468,7 @@ CsvWriterWorker:
 # the WorkerBase sink default.
 ExportWriterWorker:
   abstract: true
-  is: Worker
+  is: ResultYielder
   title: "Export"
   class: tech.kzen.auto.server.objects.job.worker.ExportWriterWorker
   input: ""
@@ -442,6 +582,7 @@ RunWorker:
   input: ""
   output: ""
   instructions: ""
+  arguments: {}
   meta:
     input:
       is: ChannelInput
@@ -456,6 +597,12 @@ RunWorker:
       by: Nominal
       editor: SelectLogicEditor
       summary: ReferenceLinkAttributeView
+    arguments:
+      is: Map
+      of:
+        - String
+        - String
+      editor: RunLogicArgumentsEditor
     selfLocation:
       is: ObjectLocation
       by: Self

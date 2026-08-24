@@ -5,16 +5,18 @@ import tech.kzen.auto.common.paradigm.job.control.JobControl
 
 
 /**
- * Emission handle a [SourceWorker] / [TransformWorker] hands to its work hooks. Every channel element is a
+ * Emission handle a [SourceWorker] / [TransformWorker] / [ExpandingTransformWorker] hands to its work hooks.
+ * Every channel element is a
  * [JobMessage] (the uniform carrier), so the Worker emits single messages and never touches
  * [ChannelOutput.close] — end-of-stream propagation is owned by the framework ([WorkerBase]).
  *
  * Batching is a framework concern: [send] only buffers; the accumulated elements reach the channel (as one
  * batch) on [flush]. A TRANSFORM leaves [flush] to its drive loop (called once per input batch, after the whole
- * batch is consumed — so a parked Worker strands no received element). A SOURCE has no input-batch boundary the
- * drive loop could hook, so it enables [sourceCadence]: [send] then auto-[flush]es every [ChannelOutput.batchSize]
- * elements, checkpointing and publishing progress at that boundary — so a source still batches, stays
- * cooperatively pausable, and advances exactly one batch per step.
+ * batch is consumed — so a parked Worker strands no received element). A SOURCE and an EXPANDING TRANSFORM have
+ * no output boundary at which they can safely wait indefinitely, so they enable [flushCadence]: [send] then
+ * auto-[flush]es every [ChannelOutput.batchSize] elements, checkpointing and publishing progress at that
+ * boundary. [flush] resets the cadence before touching the channel, so a checkpoint always captures an empty
+ * emitter even when the flush itself parked under backpressure.
  */
 class Emitter(
     private val output: ChannelOutput<Any?>
@@ -24,11 +26,10 @@ class Emitter(
 
 
     /**
-     * Enables the source flush cadence (see class doc): after every [ChannelOutput.batchSize] [send]s, flush the
-     * batch, [JobControl.checkpoint], then run [onFlush] (progress publish). Called once by [SourceWorker] before
-     * [SourceWorker.produce]; a transform/sink never calls it.
+     * Enables the output flush cadence (see class doc): after every [ChannelOutput.batchSize] [send]s, flush the
+     * batch, [JobControl.checkpoint], then run [onFlush] (progress publish). Called once by a framework drive loop.
      */
-    internal fun sourceCadence(control: JobControl, onFlush: () -> Unit) {
+    internal fun flushCadence(control: JobControl, onFlush: () -> Unit) {
         cadence = Cadence(control, onFlush)
     }
 
@@ -41,15 +42,15 @@ class Emitter(
 
         sinceFlush += 1
         if (sinceFlush >= output.batchSize()) {
-            output.flush()
+            flush()
             cadence.control.checkpoint()
             cadence.onFlush()
-            sinceFlush = 0
         }
     }
 
 
     suspend fun flush() {
+        sinceFlush = 0
         output.flush()
     }
 

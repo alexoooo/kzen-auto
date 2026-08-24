@@ -60,10 +60,9 @@ enum class ExportCompression {
 
                     zipOutput.putNextEntry(ZipEntry(innerName))
 
-                    WrappedExportOutput(zipOutput, Closeable {
-                        zipOutput.closeEntry()
-                        zipOutput.close()
-                    })
+                    WrappedExportOutput(
+                        zipOutput,
+                        RetryingZipCloser(zipOutput::closeEntry, zipOutput::close))
                 }
 
                 GZip -> {
@@ -90,3 +89,51 @@ class WrappedExportOutput(
     val out: OutputStream,
     val closer: Closeable
 )
+
+
+/**
+ * Retry-safe ownership of Zip's two independent finalization phases. The stream close is attempted even when
+ * closeEntry fails. A successful phase is never repeated, while a failed stream close remains retryable by the
+ * Worker's final lifecycle cleanup. Once the stream is closed, a failed entry phase cannot be retried safely and
+ * a later cleanup invocation settles as a no-op.
+ */
+internal class RetryingZipCloser(
+    private val closeEntry: () -> Unit,
+    private val closeStream: () -> Unit
+): Closeable {
+    private var entryClosed = false
+    private var streamClosed = false
+
+
+    override fun close() {
+        var failure: Throwable? = null
+
+        if (!entryClosed && !streamClosed) {
+            try {
+                closeEntry()
+                entryClosed = true
+            }
+            catch (e: Throwable) {
+                failure = e
+            }
+        }
+
+        if (!streamClosed) {
+            try {
+                closeStream()
+                streamClosed = true
+            }
+            catch (e: Throwable) {
+                val previous = failure
+                if (previous == null) {
+                    failure = e
+                }
+                else {
+                    previous.addSuppressed(e)
+                }
+            }
+        }
+
+        failure?.let { throw it }
+    }
+}

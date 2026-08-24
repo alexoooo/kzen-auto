@@ -11,7 +11,6 @@ import tech.kzen.auto.common.objects.document.logic.StepValidation
 import tech.kzen.auto.common.objects.document.logic.ValidationDigestEcho
 import tech.kzen.auto.common.paradigm.detached.DetachedAction
 import tech.kzen.auto.server.objects.logic.TypeAssignability
-import tech.kzen.auto.server.objects.registry.ObjectRegistryDocument
 import tech.kzen.auto.server.objects.script.api.ScriptStep
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
@@ -56,8 +55,6 @@ class ScriptValidator(
             val documentNotation = graphNotation.documents[documentPath]
                 ?: throw IllegalArgumentException("Document not found: $documentPath")
 
-            val objectRegistryScan = ObjectRegistryDocument.scan(graphNotation)
-
             val stepValidationBuffer = mutableMapOf<ObjectPath, StepValidation>()
             val resultSignature = ResultSignatureDefiner.parse(
                 graphNotation.firstAttribute(
@@ -66,7 +63,6 @@ class ScriptValidator(
             val scriptDefinitionContext = ScriptDefinitionContext(
                 scriptTree,
                 ScriptValidation(stepValidationBuffer),
-                objectRegistryScan,
                 resultSignature,
                 graphNotation)
 
@@ -278,7 +274,7 @@ class ScriptValidator(
             ?: return ExecutionResult.failure("Document not found: $documentPath")
 
         // A cache hit skips graph filtering and instantiation entirely (keyed on the FULL definition:
-        // linked-callee and registry edits must invalidate, and the key must match the run-compile path's).
+        // linked-callee edits must invalidate, and the key must match the run-compile path's).
         val scriptValidation = scriptValidationCache.scriptValidation(
             documentPath, graphDefinitionAttempt.transitiveSuccessful
         ) {

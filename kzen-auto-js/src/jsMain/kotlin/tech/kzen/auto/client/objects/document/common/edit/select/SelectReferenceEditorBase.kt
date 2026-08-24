@@ -167,7 +167,11 @@ abstract class SelectReferenceEditorBase<P: AttributeEditorProps, S: SelectRefer
         val current = state.options
         if (current != null && current.size == options.size &&
                 options.indices.all {
-                    current[it].value == options[it].value && current[it].label == options[it].label
+                    current[it].value == options[it].value &&
+                        current[it].label == options[it].label &&
+                        current[it].detail == options[it].detail &&
+                        current[it].detailTitle == options[it].detailTitle &&
+                        current[it].group == options[it].group
                 }
         ) {
             return

@@ -16,6 +16,8 @@ import tech.kzen.auto.server.exec.LogicCompilerServices
 import tech.kzen.auto.server.exec.LogicParameterTrace
 import tech.kzen.auto.server.objects.job.channel.DuplexJobChannel
 import tech.kzen.auto.server.objects.job.channel.JobChannel
+import tech.kzen.auto.server.objects.job.worker.WorkerBase
+import tech.kzen.auto.server.objects.job.worker.definition.WorkerDefinitionContext
 import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionResult
 import tech.kzen.lib.common.exec.engine.Execution
@@ -98,6 +100,8 @@ class JobRun(
         // Worker's injected endpoint views reference them (via JobChannelCreator) — exactly as the old
         // buildAndLaunch built it.
         val graphInstance = GraphCreator.createGraph(filteredDefinition, graphEnvironment)
+        val workerDefinitionContext = WorkerDefinitionContext(
+            graphDefinition, graphInstance, graphEnvironment)
 
         // Resolve the Channel instances: index each one-way stream Channel by stable id (for migration carryover),
         // and open a UI-bridge client for each `external` duplex Channel (a Worker's UI-facing `serve` port, e.g.
@@ -154,6 +158,9 @@ class JobRun(
         val workers = workerLocations.mapNotNull { location ->
             val worker = graphInstance[location]?.reference as? Worker
                 ?: return@mapNotNull null
+            if (worker is WorkerBase) {
+                worker.loadDefinitionContext(workerDefinitionContext)
+            }
             location to worker
         }
 
@@ -165,7 +172,8 @@ class JobRun(
             jobLocation.documentPath, graphDefinition
         ) {
             JobValidator.validate(
-                jobLocation.documentPath, graphDefinition.graphStructure, graphInstance)
+                jobLocation.documentPath, graphDefinition, graphInstance, graphEnvironment,
+                workerDefinitionContext)
         }
         val upstreamByDownstream = JobChannelDerivation
             .derive(graphDefinition.graphStructure, jobLocation.documentPath)

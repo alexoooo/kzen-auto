@@ -15,7 +15,7 @@ import tech.kzen.auto.client.util.ClientInputUtils
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.setState
-import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
+import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
 import web.cssom.Display
 import web.cssom.em

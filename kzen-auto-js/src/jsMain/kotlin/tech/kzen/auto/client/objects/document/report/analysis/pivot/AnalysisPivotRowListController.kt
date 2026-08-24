@@ -11,8 +11,8 @@ import tech.kzen.auto.client.objects.document.report.analysis.model.ReportAnalys
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.select.SelectOption
 import tech.kzen.auto.client.wrap.select.muiAutocompleteMultiField
-import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
-import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
+import tech.kzen.auto.common.data.schema.HeaderLabel
+import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotSpec
 import web.cssom.LineStyle
 import web.cssom.em

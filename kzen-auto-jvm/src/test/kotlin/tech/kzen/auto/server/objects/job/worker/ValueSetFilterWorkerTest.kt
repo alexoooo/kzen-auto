@@ -2,8 +2,8 @@ package tech.kzen.auto.server.objects.job.worker
 
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
-import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
-import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
+import tech.kzen.auto.common.data.schema.HeaderLabel
+import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.filter.ColumnFilterSpec
 import tech.kzen.auto.common.objects.document.report.spec.filter.ColumnFilterType
 import tech.kzen.auto.common.objects.document.report.spec.filter.FilterSpec

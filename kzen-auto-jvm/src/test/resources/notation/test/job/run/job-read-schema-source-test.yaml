@@ -1,0 +1,11 @@
+main:
+  is: DataSchema
+  fields:
+    city:
+      class: kotlin.String
+      of: []
+      nullable: false
+    amount:
+      class: kotlin.Int
+      of: []
+      nullable: false

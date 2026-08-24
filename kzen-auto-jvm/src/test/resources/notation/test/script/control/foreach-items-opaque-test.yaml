@@ -1,6 +1,6 @@
 # An items expression whose STATIC type says nothing about iterability: `as Any` erases it, and an inferred
-# `Any` is exactly what an expression naming an unregistered type also approximates to. Such a loop must be
-# ACCEPTED and left to the run-time `as? Iterable<*>` backstop — rejecting it would break scripts that work.
+# `Any` is exactly what an expression with an unnameable classifier also approximates to. Such a loop must be
+# ACCEPTED and left to the shared run-time stream conversion — rejecting it would break scripts that work.
 # The item binding types Any? in that case, which is what a body referencing it sees.
 
 main:

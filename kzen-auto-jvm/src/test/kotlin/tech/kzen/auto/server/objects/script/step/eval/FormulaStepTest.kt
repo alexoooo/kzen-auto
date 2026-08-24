@@ -94,11 +94,9 @@ class FormulaStepTest {
 
 
     @Test
-    fun typeOutsideTheVisibleSetApproximatesToAny() {
-        // A Char is not a known-importable builtin and not registry-declared, so it approximates to Any rather
-        // than crashing (the reachable TODO the old diagnostic-parsing inference hit).
+    fun publicTypeStaysConcrete() {
         assertEquals(
-            TypeMetadata(ClassNames.kotlinAny, listOf(), false),
+            TypeMetadata(ClassName("kotlin.Char"), listOf(), false),
             typeMetadataFor("main.steps/CharFormula"))
     }
 
@@ -107,13 +105,13 @@ class FormulaStepTest {
     fun nothingTypedExpressionCompilesCleanly() {
         // An expression whose whole type is Nothing (e.g. `error(...)`) must compile with NO validation error
         // and throw at run time — K2 refuses an inferred-Nothing declaration, so the probe codegen must use a
-        // shape that never declares Nothing directly. The inferred type approximates to Any (like Char above).
+        // shape that never declares Nothing directly. JVM reflection exposes its public classifier as Void.
         val validation = scriptValidationFor("test/script/result/formula-step-type-inference-test.yaml")
             .stepValidations[ObjectPath.parse("main.steps/NothingFormula")]
         assertNull(validation?.errorMessage,
             "a Nothing-typed expression is valid: it fails at run time, not validation time")
         assertEquals(
-            TypeMetadata(ClassNames.kotlinAny, listOf(), false),
+            TypeMetadata(ClassName("java.lang.Void"), listOf(), false),
             validation?.typeMetadata)
     }
 

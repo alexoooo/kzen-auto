@@ -2,11 +2,17 @@ package tech.kzen.auto.server.objects.job.worker
 
 import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
+import tech.kzen.auto.common.util.PathPatternSubstitution
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
+import tech.kzen.auto.server.data.FileListingAction
+import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
+import tech.kzen.auto.server.util.ClassLoaderUtils
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.reflect.Service
 import java.io.BufferedWriter
 import java.nio.file.Files
+import java.nio.file.Path
 
 
 /**
@@ -19,11 +25,14 @@ import java.nio.file.Files
  * configured delimiter rather than hard-coding the comma — so a `;`-delimited round-trip is correct).
  *
  * A [SinkWorker]: the framework owns the drain loop, per-batch checkpoint, and throttled written-row progress.
- * The file is opened in [onStart] and closed in [onClose] (so it is flushed and closed on completion, failure,
- * and cancel alike), both via [JobControl.runBlockingIo] / a quick blocking close so the IO stays counted.
+ * The file is opened in [onStart]. Successful completion closes it through counted blocking IO before stat and
+ * yield; the final lifecycle cleanup uses the same idempotent finalizer and retries ownership retained after a
+ * cancellation race or failed close. Failure/cancel therefore closes without yielding.
  *
- * If every record was filtered out upstream no batch arrives, so the file is left empty (the header is only
- * known from a batch) — acceptable.
+ * If every record was filtered out upstream no batch arrives, [onStart] still creates an empty file. A nonblank
+ * [result] declares this Worker as a ResultYielder: successful completion closes first, stats the final bytes,
+ * then yields one fingerprinted plain [tech.kzen.auto.common.data.model.DataRef]; failure/cancel only closes.
+ * Path placeholders read scalar Job parameters and use the shared literal substitution grammar.
  */
 @Reflect
 class CsvWriterWorker(
@@ -32,26 +41,40 @@ class CsvWriterWorker(
     private val path: String,
     private val delimiter: String,
     private val header: Boolean,
+    private val result: String,
 
-    selfLocation: ObjectLocation
+    private val selfLocation: ObjectLocation,
+    @Service private val fileListingAction: FileListingAction,
+    @Service private val cachedKotlinCompiler: CachedKotlinCompiler
 ):
     SinkWorker(input, selfLocation)
 {
     private val delimiterChar: Char =
         if (delimiter.isEmpty()) ',' else delimiter[0]
 
-    private var writer: BufferedWriter? = null
+    private val writer = RetriableCloseable<BufferedWriter>()
+    private var outputPath: Path? = null
     private var headerWritten = false
     private var written = 0L
 
 
     override suspend fun onStart(control: JobControl) {
-        writer = control.runBlockingIo { Files.newBufferedWriter(toFilePath(path)) }
+        WriterResultValidation.requireRuntime(
+            result, control, cachedKotlinCompiler, ClassLoaderUtils.dynamicParentClassLoader())
+        val values = PathPatternSubstitution.referencedNames(path).associateWith {
+            WriterFilePath.parameterText(it, control.parameter(it))
+        }
+        val resolved = WriterFilePath.resolve(PathPatternSubstitution.substitute(path, values))
+        outputPath = resolved
+        control.runBlockingIo {
+            WriterFilePath.prepare(resolved)
+            writer.attach(Files.newBufferedWriter(resolved))
+        }
     }
 
 
     override suspend fun onElement(element: JobMessage, control: JobControl) {
-        val writer = writer!!
+        val writer = writer.requireOwned()
         val flat = element.flatView()
         val elementHeader = flat.header
         val record = flat.record
@@ -66,13 +89,35 @@ class CsvWriterWorker(
     }
 
 
-    override fun onClose() {
-        writer?.close()
+    override suspend fun onComplete(control: JobControl) {
+        finalizeOutput(control)
+        if (result.isNotBlank()) {
+            val ref = WriterFilePath.finalizedRef(requireNotNull(outputPath), control, fileListingAction)
+            control.yieldResult(result, ref)
+        }
+    }
+
+
+    override suspend fun onClose() {
+        finalizeOutput(null)
     }
 
 
     override fun progress(snapshot: Any?): Map<String, Any?> =
         mapOf("written" to written)
+
+
+    private suspend fun finalizeOutput(control: JobControl?) {
+        writer.close(control)
+    }
+
+
+    override fun payloadFlow(input: WorkerLane, context: WorkerLaneContext): WorkerLaneAttempt {
+        return WorkerLaneAttempt(
+            input,
+            WriterResultValidation.staticError(
+                result, selfLocation, context, cachedKotlinCompiler))
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------

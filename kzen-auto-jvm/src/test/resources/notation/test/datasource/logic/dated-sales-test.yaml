@@ -1,0 +1,44 @@
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.collections.List
+      generics:
+        - class: tech.kzen.auto.common.data.model.DataUnit
+          generics: []
+          nullable: false
+      nullable: false
+
+main.parameters/from:
+  is: ParameterBinding
+  type:
+    class: kotlin.String
+    generics: []
+    nullable: false
+  default: "2026-01-01"
+
+main.parameters/to:
+  is: ParameterBinding
+  type:
+    class: kotlin.String
+    generics: []
+    nullable: false
+  default: "2026-01-03"
+
+main.steps/Resolve:
+  is: ResultStep
+  code: |
+    generateSequence(java.time.LocalDate.parse(from)) { it.plusDays(1) }
+        .takeWhile { it <= java.time.LocalDate.parse(to) }
+        .map { date ->
+            tech.kzen.auto.common.data.model.DataUnit.of(
+                mapOf("date" to date.toString()),
+                listOf(
+                    tech.kzen.auto.common.data.model.DataPart.ofPath(
+                        tech.kzen.auto.common.data.model.DataRole.main,
+                        "build/dated-sales/input/$date/main.csv"),
+                    tech.kzen.auto.common.data.model.DataPart.ofPath(
+                        tech.kzen.auto.common.data.model.DataRole("reference"),
+                        "build/dated-sales/ref/$date.csv")))
+        }
+        .toList()

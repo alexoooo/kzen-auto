@@ -3,7 +3,7 @@ package tech.kzen.auto.client.objects.document.report.analysis.model
 import kotlinx.coroutines.delay
 import tech.kzen.auto.client.objects.document.report.model.ReportStore
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
+import tech.kzen.auto.common.data.schema.HeaderLabel
 import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisSpec
 import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisType
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotSpec

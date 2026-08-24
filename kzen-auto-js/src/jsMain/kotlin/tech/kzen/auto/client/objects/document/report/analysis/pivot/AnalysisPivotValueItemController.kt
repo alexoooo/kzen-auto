@@ -10,7 +10,7 @@ import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.report.analysis.model.ReportAnalysisStore
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.iconify.icon
-import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
+import tech.kzen.auto.common.data.schema.HeaderLabel
 import web.cssom.Float
 import web.cssom.em
 import web.cssom.pct

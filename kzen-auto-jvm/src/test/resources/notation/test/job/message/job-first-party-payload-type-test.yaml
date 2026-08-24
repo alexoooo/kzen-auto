@@ -1,0 +1,14 @@
+main:
+  is: Job
+  results:
+    main:
+      class: tech.kzen.auto.common.data.model.DataUnit
+      generics: []
+      nullable: false
+
+main.workers/source:
+  is: FormulaSourceWorker
+  code: 'tech.kzen.auto.common.data.model.DataUnit.ofPath("input.csv")'
+
+main.workers/collect:
+  is: ResultSinkWorker

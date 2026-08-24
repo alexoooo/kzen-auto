@@ -32,10 +32,10 @@ import kotlin.test.assertTrue
  *
  * Two things distinguish it from the other expression attributes and are what these tests pin. The
  * expression is compiled in the INFERENCE form, so its inferred ELEMENT type — not the expression's own
- * type — is what the loop's `item` binding publishes to the body (a forced `Iterable<*>` return would
- * compile identically and erase it). And iterability is judged THREE ways, not two: an inferred type that
- * is definitely not an Iterable is the loop's validation error, but one that carries no information (`Any`,
- * `Nothing`) is accepted and left to the run-time cast, because rejecting it would break scripts that work.
+ * type — is what the loop's `item` binding publishes to the body. And stream-ness is judged THREE ways, not
+ * two: an inferred type that is definitely not an Iterable, Sequence, or Iterator is the loop's validation
+ * error, but one that carries no information (`Any`, `Nothing`) is accepted and left to the run-time
+ * conversion, because rejecting it would break scripts that work.
  */
 class ForEachItemsTest {
     //-----------------------------------------------------------------------------------------------------------------
@@ -48,6 +48,8 @@ class ForEachItemsTest {
     private val opaquePath = DocumentPath.parse("test/script/control/foreach-items-opaque-test.yaml")
     private val outerItemPath = DocumentPath.parse("test/script/control/foreach-items-outer-item-test.yaml")
     private val selfReferencePath = DocumentPath.parse("test/script/control/foreach-items-self-reference-test.yaml")
+    private val sequencePath = DocumentPath.parse("test/script/control/foreach-items-sequence-test.yaml")
+    private val iteratorPath = DocumentPath.parse("test/script/control/foreach-items-iterator-test.yaml")
     private val nonCollectionPath = DocumentPath.parse("test/script/loop/script-loop-migration-noncollection-test.yaml")
 
     private lateinit var context: KzenAutoContext
@@ -97,10 +99,14 @@ class ForEachItemsTest {
 
     @Test
     fun anAsIterableExpressionStillYieldsItsElementType() {
-        // `listOf(...).asSequence().asIterable()` infers to Iterable<Int>, which only types precisely because
-        // Iterable is a visible builtin (ExpressionReturnTypeInference.visibleBuiltins) — otherwise it would
-        // approximate to Any and take the opaque path below, costing the item its Int.
         assertEquals(TypeMetadata.int, itemTypeOf(nonCollectionPath))
+    }
+
+
+    @Test
+    fun sequenceAndIteratorExpressionsYieldTheirElementTypes() {
+        assertEquals(TypeMetadata.int, itemTypeOf(sequencePath))
+        assertEquals(TypeMetadata.int, itemTypeOf(iteratorPath))
     }
 
 
@@ -197,6 +203,20 @@ class ForEachItemsTest {
     fun anOpaquelyTypedItemsValueIteratesAtRunTime() {
         val outcome = runScript(opaquePath)
         assertEquals(12, assertIs<Outcome.Success>(outcome).value.mainComponentValue())
+    }
+
+
+    @Test
+    fun aSequenceValueIteratesAtRunTime() {
+        val outcome = runScript(sequencePath)
+        assertEquals(12, assertIs<Outcome.Success>(outcome).value.mainComponentValue())
+    }
+
+
+    @Test
+    fun anIteratorValueIteratesAtRunTime() {
+        val outcome = runScript(iteratorPath)
+        assertEquals(9, assertIs<Outcome.Success>(outcome).value.mainComponentValue())
     }
 
 

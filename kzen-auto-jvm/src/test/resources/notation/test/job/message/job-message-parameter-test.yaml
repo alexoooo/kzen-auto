@@ -1,5 +1,5 @@
 # Mirror of the reproducing user notation (Script-2 -> Job-3): a typed scalar `number` parameter, sourced by a
-# FormulaSourceWorker referencing it by name (a Double is not Iterable, so it emits a single payload message),
+# FormulaSourceWorker referencing it by name (a Double is not a stream, so it emits a single payload message),
 # streams through a FormulaWorker — whose column formula auto-flattens the payload message (single `value`
 # column) and appends a flat `foo` column — into a ResultSinkWorker. The phase-1 element-model proof: the run
 # COMPLETES (previously the hard-typed FormulaWorker detonated on `Double cannot be cast to DataRecord`) and the

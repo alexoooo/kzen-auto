@@ -2,7 +2,7 @@ package tech.kzen.auto.server.objects.report.exec.input.connect.file
 
 import com.google.common.io.CountingInputStream
 import org.apache.commons.io.input.BOMInputStream
-import tech.kzen.auto.server.objects.report.exec.input.connect.FlatDataStream
+import tech.kzen.auto.server.data.FlatDataStream
 import tech.kzen.auto.server.objects.report.exec.input.model.ReadResult
 import java.io.InputStream
 import java.nio.file.Files

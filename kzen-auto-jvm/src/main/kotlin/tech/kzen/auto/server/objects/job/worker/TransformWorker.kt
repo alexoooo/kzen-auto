@@ -31,6 +31,10 @@ import tech.kzen.lib.common.model.location.ObjectLocation
  * answers on-demand queries against its accumulated [snapshot], exactly as [SinkWorker] does. Behaviour-
  * preserving for a plain transform: it defaults to null (no serve loop), so [FilterWorker] / [FormulaWorker] /
  * [RunWorker] are unchanged.
+ *
+ * Use [ExpandingTransformWorker] when one input can emit more than one output batch: it carries the active
+ * physical input batch and element index across checkpoints instead of relying on the channel's buffered-input
+ * recovery. This class deliberately retains its original whole-input-batch boundary and behaviour.
  */
 abstract class TransformWorker(
     private val input: ChannelInput<Any?>,

@@ -2,15 +2,24 @@ package tech.kzen.auto.server.objects.job.worker
 
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
-import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
+import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputExportSpec
+import tech.kzen.auto.common.data.model.DataRef
 import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.api.ChannelInputIterator
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
+import tech.kzen.auto.server.data.FileListingAction
+import tech.kzen.auto.server.context.KzenAutoContext
+import tech.kzen.auto.server.service.plugin.HostReportDefinitionRepository
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
+import tech.kzen.lib.common.exec.logic.model.LogicType
+import tech.kzen.lib.common.exec.tuple.TupleComponentDefinition
+import tech.kzen.lib.common.exec.tuple.TupleComponentName
+import tech.kzen.lib.common.exec.tuple.TupleDefinition
+import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.io.InputStreamReader
@@ -20,6 +29,11 @@ import java.nio.file.Path
 import java.util.zip.GZIPInputStream
 import java.util.zip.ZipInputStream
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
+import kotlin.test.AfterTest
 
 
 /**
@@ -35,6 +49,15 @@ import kotlin.test.assertEquals
  * `ReportRun` export is the separate P4j gate.
  */
 class ExportWriterWorkerTest {
+    private lateinit var context: KzenAutoContext
+
+
+    @AfterTest
+    fun tearDown() {
+        if (::context.isInitialized) context.close()
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private val header = HeaderListing.of(listOf("city", "amount"))
 
@@ -91,6 +114,57 @@ class ExportWriterWorkerTest {
     }
 
 
+    @Test
+    fun yieldedRefFingerprintsTheFinalizedContainer() = runBlocking {
+        for (compression in listOf(
+            OutputExportSpec.compressionNoneName,
+            OutputExportSpec.compressionGzName,
+            OutputExportSpec.compressionZipName)) {
+            val file = Files.createTempFile("exportworker-yield", ".$compression")
+            try {
+                val control = YieldControl()
+                val worker = ExportWriterWorker(
+                    chunkedInput(records),
+                    OutputExportSpec("csv", compression, file.toString()),
+                    "artifact", selfLocation,
+                    FileListingAction(HostReportDefinitionRepository(emptyList())), compiler())
+                worker.run(control)
+
+                val ref = control.yielded as DataRef
+                assertEquals(file.toAbsolutePath().normalize(), Path.of(ref.id))
+                assertEquals(Files.size(file).toString(), ref.attributes[DataRef.sizeKey])
+                assertNotNull(ref.attributes[DataRef.modifiedKey])
+                assertEquals(expectedCsvRows, parseRecords(decompress(compression, file), ","))
+            }
+            finally {
+                Files.deleteIfExists(file)
+            }
+        }
+    }
+
+
+    @Test
+    fun activeWriterRejectsAResultThatCannotAcceptDataRefBeforeOpening() = runBlocking {
+        val root = Files.createTempDirectory("export-writer-result-type")
+        try {
+            val path = root.resolve("wrong.csv")
+            val failure = assertFailsWith<IllegalArgumentException> {
+                ExportWriterWorker(
+                    chunkedInput(records),
+                    OutputExportSpec("csv", OutputExportSpec.compressionNoneName, path.toString()),
+                    "artifact", selfLocation,
+                    FileListingAction(HostReportDefinitionRepository(emptyList())), compiler())
+                    .run(YieldControl(TypeMetadata.string))
+            }
+            assertTrue(failure.message.orEmpty().contains("writer yields DataRef"))
+            assertFalse(Files.exists(path))
+        }
+        finally {
+            root.toFile().deleteRecursively()
+        }
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private suspend fun roundTrip(
         format: String,
@@ -102,7 +176,9 @@ class ExportWriterWorkerTest {
         try {
             // The path pattern is the literal temp file (no ${…} placeholders), so it is written to verbatim.
             val export = OutputExportSpec(format, compression, file.toString())
-            val worker = ExportWriterWorker(chunkedInput(input), export, selfLocation)
+            val worker = ExportWriterWorker(
+                chunkedInput(input), export, "", selfLocation,
+                FileListingAction(HostReportDefinitionRepository(emptyList())), compiler())
             worker.run(NoOpJobControl)
 
             val bytes = decompress(compression, file)
@@ -174,5 +250,33 @@ class ExportWriterWorkerTest {
         override fun publishProgress(location: ObjectLocation, value: Map<String, Any?>, force: Boolean) {}
         override suspend fun host(instructions: ObjectLocation, input: Any?) =
             throw UnsupportedOperationException("An ExportWriterWorker hosts no child")
+    }
+
+
+    private fun compiler() = testContext().cachedKotlinCompiler
+
+
+    private fun testContext(): KzenAutoContext {
+        if (!::context.isInitialized) context = KzenAutoContext.forTest()
+        return context
+    }
+
+
+    private class YieldControl(
+        private val resultType: TypeMetadata = TypeMetadata.anyNullable
+    ): JobControl {
+        var yielded: Any? = null
+
+        override suspend fun checkpoint() {}
+        override suspend fun <R> runBlockingIo(block: () -> R): R = block()
+        override fun scratchDir(): String = error("unused")
+        override fun publishProgress(location: ObjectLocation, value: Map<String, Any?>, force: Boolean) {}
+        override fun results(): TupleDefinition = TupleDefinition(listOf(
+            TupleComponentDefinition(TupleComponentName("artifact"), LogicType(resultType))))
+        override fun yieldResult(component: String, value: Any?) {
+            assertEquals("artifact", component)
+            yielded = value
+        }
+        override suspend fun host(instructions: ObjectLocation, input: Any?) = error("unused")
     }
 }

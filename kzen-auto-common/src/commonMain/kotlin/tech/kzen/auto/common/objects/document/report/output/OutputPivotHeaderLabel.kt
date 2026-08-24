@@ -1,6 +1,6 @@
 package tech.kzen.auto.common.objects.document.report.output
 
-import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
+import tech.kzen.auto.common.data.schema.HeaderLabel
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotValueType
 
 

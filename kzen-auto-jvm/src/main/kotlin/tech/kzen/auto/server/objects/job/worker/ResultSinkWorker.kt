@@ -9,13 +9,16 @@ import tech.kzen.auto.server.objects.logic.TypeAssignability
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.lib.common.exec.tuple.TupleComponentName
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.service.notation.NotationConventions
+import tech.kzen.lib.platform.ClassNames
 
 
 /**
- * A SINK Worker that keeps a single element of the stream ([keep]: [first] / [last]) and, at end-of-stream
+ * A SINK Worker that keeps the first, last, or every element of the stream ([keep]: [first] / [last] / [all])
+ * and, at end-of-stream
  * ([onComplete]), yields it as the Job's named output component ([result], blank = "main") via
  * [JobControl.yieldResult] — the Job-side analogue of Script's Result step, typed by the Job document's declared
  * `results` signature (Script parity: yielding into an undeclared component — or a stream whose inferred
@@ -38,7 +41,9 @@ import tech.kzen.lib.common.service.notation.NotationConventions
  * [tech.kzen.auto.server.exec.job.JobResultCollector], so the relaunched sink (a Job relaunches completed
  * Workers — logic-spec §5) re-drains the now-instantly-closed channel and re-yields at [onComplete] — which
  * works for free precisely because yield is an idempotent overwrite and the kept element survived. Capture is
- * unconditional of [result] / [keep] (the kept INPUT is valid under any component name); [SinkWorker]'s
+ * same-mode only: editing [keep] restarts rather than interpreting old state under new semantics. [all] keeps
+ * raw boundary values in encounter order and is intentionally unbounded in memory; migration defensively copies
+ * its list. Capture is unconditional of [result]; [SinkWorker]'s
  * pre-receive checkpoint is the only park point, so capture never cuts mid-[onComplete].
  */
 @Reflect
@@ -55,6 +60,7 @@ class ResultSinkWorker(
     companion object {
         const val first = "first"
         const val last = "last"
+        const val all = "all"
 
         // Upper bound on the pushed value's display text — every progress emit is retained in the engine's
         // unbounded history, so a Worker's published payload must stay O(bounded) (the WorkerBase teaser rule).
@@ -78,6 +84,7 @@ class ResultSinkWorker(
 
     //-----------------------------------------------------------------------------------------------------------------
     private var kept: JobMessage? = null
+    private val keptAll = mutableListOf<Any?>()
     private var hasAny = false
     private var collected = 0L
 
@@ -89,6 +96,12 @@ class ResultSinkWorker(
     //-----------------------------------------------------------------------------------------------------------------
     override suspend fun onElement(element: JobMessage, control: JobControl) {
         collected++
+        if (keep == all) {
+            keptAll.add(element.boundaryValue())
+            kept = element
+            hasAny = true
+            return
+        }
         if (keep == first && hasAny) {
             return
         }
@@ -101,6 +114,11 @@ class ResultSinkWorker(
         val component = componentName()
         val declaredType = control.results().find(TupleComponentName(component))?.metadata
             ?: error(noResultDeclared(component))
+
+        if (keep == all) {
+            control.yieldResult(component, keptAll.toList())
+            return
+        }
 
         if (!hasAny) {
             check(declaredType.nullable) {
@@ -125,7 +143,7 @@ class ResultSinkWorker(
     // strictness). A statically unknown lane ([WorkerLane.boundaryType] null) skips the assignability check —
     // its mismatch surfaces at run time as before.
     override fun payloadFlow(input: WorkerLane, context: WorkerLaneContext): WorkerLaneAttempt {
-        if (keep != first && keep != last) {
+        if (keep != first && keep != last && keep != all) {
             return WorkerLaneAttempt(input, "Invalid result sink 'keep': $keep")
         }
 
@@ -138,7 +156,14 @@ class ResultSinkWorker(
         val declaredType = declaredResults.find(TupleComponentName(component))?.metadata
             ?: return WorkerLaneAttempt(input, noResultDeclared(component))
 
-        val boundaryType = input.boundaryType()
+        val elementType = input.boundaryType()
+        val boundaryType =
+            if (keep == all && elementType != null) {
+                TypeMetadata(ClassNames.kotlinList, listOf(elementType), false)
+            }
+            else {
+                elementType
+            }
         if (boundaryType != null &&
                 !TypeAssignability.isAssignable(
                     boundaryType, declaredType, cachedKotlinCompiler, context.classLoader)) {
@@ -169,17 +194,26 @@ class ResultSinkWorker(
 
 
     override fun captureMigrationState(): Any =
-        KeptState(kept, hasAny, collected)
+        KeptState(keep, kept, keptAll.toList(), hasAny, collected)
 
 
     override fun loadMigrationState(captured: Any?) {
         val state = captured as? KeptState
             ?: return
+        if (state.keep != keep) {
+            return
+        }
         kept = state.kept
+        keptAll.addAll(state.keptAll)
         hasAny = state.hasAny
         collected = state.collected
     }
 
 
-    private class KeptState(val kept: JobMessage?, val hasAny: Boolean, val collected: Long)
+    private class KeptState(
+        val keep: String,
+        val kept: JobMessage?,
+        val keptAll: List<Any?>,
+        val hasAny: Boolean,
+        val collected: Long)
 }

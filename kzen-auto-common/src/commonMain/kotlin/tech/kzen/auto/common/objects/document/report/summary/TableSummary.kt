@@ -1,7 +1,7 @@
 package tech.kzen.auto.common.objects.document.report.summary
 
-import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
-import tech.kzen.auto.common.objects.document.report.listing.HeaderLabelMap
+import tech.kzen.auto.common.data.schema.HeaderLabel
+import tech.kzen.auto.common.data.schema.HeaderLabelMap
 
 
 data class TableSummary(

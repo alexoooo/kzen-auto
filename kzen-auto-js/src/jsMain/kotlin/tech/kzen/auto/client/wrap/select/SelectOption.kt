@@ -12,4 +12,5 @@ external interface SelectOption {
     var label: String
     var detail: String?
     var detailTitle: String?
+    var group: String?
 }

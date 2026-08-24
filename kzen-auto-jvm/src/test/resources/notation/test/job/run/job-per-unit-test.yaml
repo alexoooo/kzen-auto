@@ -1,0 +1,49 @@
+main:
+  is: Job
+  results:
+    outputs:
+      class: kotlin.collections.List
+      generics:
+        - class: tech.kzen.auto.common.data.model.DataRef
+          generics: []
+          nullable: false
+      nullable: false
+
+main.sources/input:
+  is: FileDataSource
+  files:
+    - location: build/job-per-unit/input/2026-08-21.csv
+    - location: build/job-per-unit/input/2026-08-22.csv
+    - location: build/job-per-unit/input/2026-08-23.csv
+  groupPattern: "(?<date>\\d{4}-\\d{2}-\\d{2})"
+
+main.parameters/prefix:
+  is: ParameterBinding
+  type:
+    class: kotlin.String
+    generics: []
+    nullable: false
+  default: X
+
+main.workers/units:
+  is: ReadWorker
+  source: main.sources/input
+  emit: units
+
+main.workers/enrich:
+  is: FormulaWorker
+  formula:
+    flatDate: 'attributes["date"]'
+
+main.workers/run:
+  is: RunWorker
+  instructions: test/job/run/job-per-unit-child-test.yaml#main
+  arguments:
+    outputDate: 'attributes["date"]'
+    flatDate: flatDate.text
+    prefix: prefix
+
+main.workers/outputs:
+  is: ResultSinkWorker
+  result: outputs
+  keep: all

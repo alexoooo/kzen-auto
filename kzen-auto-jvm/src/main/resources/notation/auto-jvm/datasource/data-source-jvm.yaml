@@ -1,0 +1,79 @@
+FileDataSourceConfig:
+  abstract: true
+  directory: ""
+  filter: ""
+  files: []
+  format: ""
+  encoding: ""
+  groupPattern: ""
+  missing: fail
+  schema: ""
+  meta:
+    directory: String
+    filter: String
+    files:
+      is: List
+      editor: FileSelectionEditor
+      of:
+        is: Map
+        of:
+          - String
+          - String
+    format: String
+    encoding: String
+    groupPattern: String
+    missing:
+      is: String
+      editor: SelectValuesEditor
+      values:
+        fail: "Fail if a file is missing"
+        skip: "Skip the unit"
+    schema:
+      is: DataSchema
+      nullable: true
+      by: DataSchemaReference
+      editor: SelectObjectEditor
+
+
+FileDataSource:
+  abstract: true
+  is:
+    - DataSource
+    - FileDataSourceConfig
+  title: "File"
+  class: tech.kzen.auto.server.objects.datasource.FileDataSource
+
+
+LogicDataSourceConfig:
+  abstract: true
+  instructions: ""
+  arguments: []
+  schema: ""
+  meta:
+    instructions:
+      is: ObjectLocation
+      nullable: true
+      by: Nominal
+      editor: SelectLogicEditor
+      summary: ReferenceLinkAttributeView
+    arguments:
+      is: List
+      of: String
+    schema:
+      is: DataSchema
+      nullable: true
+      by: DataSchemaReference
+      editor: SelectObjectEditor
+
+
+LogicDataSource:
+  abstract: true
+  is:
+    - DataSource
+    - LogicDataSourceConfig
+  title: "Logic"
+  class: tech.kzen.auto.server.objects.datasource.LogicDataSource
+
+
+DataSourceActions:
+  class: tech.kzen.auto.server.objects.datasource.DataSourceActions

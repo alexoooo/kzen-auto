@@ -27,13 +27,15 @@ import tech.kzen.lib.common.util.digest.Digest
  */
 class GraphInstanceCache(
     private val graphCreator: GraphCreator,
-    private val environment: GraphEnvironment
+    private val environment: GraphEnvironment,
+    private val maxEntries: Int = defaultMaxEntries,
+    private val honorInstanceCachingOptOut: Boolean = true
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         // Bounds entries left behind by renamed / deleted objects. Cached instances hold no resources
         // (statelessness contract), so eviction needs no disposal hook.
-        private const val maxEntries = 32
+        private const val defaultMaxEntries = 32
 
         private val logger = LoggerFactory.getLogger(GraphInstanceCache::class.java)
     }
@@ -76,7 +78,7 @@ class GraphInstanceCache(
             return ObjectInstanceAttempt.Undefined
         }
 
-        if (cachingOptedOut(definition, objectLocation)) {
+        if (honorInstanceCachingOptOut && cachingOptedOut(definition, objectLocation)) {
             // an archetype that just gained the opt-out takes effect immediately, regardless of digest
             entries.remove(objectLocation)
             return create(definition, objectLocation)
@@ -124,7 +126,7 @@ class GraphInstanceCache(
 
 
     // Closure digest plus the closure members' inheritance-chain notation digests (see class kdoc).
-    private fun cacheKey(definition: GraphDefinition, objectLocation: ObjectLocation): Digest {
+    internal fun cacheKey(definition: GraphDefinition, objectLocation: ObjectLocation): Digest {
         val closureDigest = definition.transitiveDigest(listOf(objectLocation))
         val closure = definition.transitiveClosure(listOf(objectLocation))
         val graphNotation = definition.graphStructure.graphNotation

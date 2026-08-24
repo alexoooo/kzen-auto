@@ -8,6 +8,7 @@ import react.Props
 import react.ReactNode
 import react.State
 import react.dom.onChange
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
 import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.util.FormatUtils
@@ -74,7 +75,11 @@ class TextAttributeEditor(
         objectLocation = { this.props.objectLocation },
         attributePath = { this.props.attributePath },
         pendingNotation = { ScalarAttributeNotation(state.value) },
-        onCommitted = { this.props.onChange?.invoke((it as ScalarAttributeNotation).value) },
+        onCommitted = {
+            val committedValue = (it as ScalarAttributeNotation).value
+            draftStore()?.remove(this.props.objectLocation, this.props.attributePath, committedValue)
+            this.props.onChange?.invoke(committedValue)
+        },
         onError = { message -> setState { errorMessage = message } },
         editActivity = { documentEditActivity() })
 
@@ -95,12 +100,25 @@ class TextAttributeEditor(
         prevState: TextAttributeEditorState,
         snapshot: Any
     ) {
-        if (props.value == prevProps.value) {
+        val addressingChanged =
+            props.objectLocation != prevProps.objectLocation || props.attributePath != prevProps.attributePath
+        if (addressingChanged) {
+            draftStore()?.remove(prevProps.objectLocation, prevProps.attributePath)
+        }
+        if (!addressingChanged && props.value == prevProps.value) {
             return
         }
 
-        setState {
-            this.value = stateText(props.value, props.type)
+        val nextValue = stateText(props.value, props.type)
+        val draft = draftStore()?.value(props.objectLocation, props.attributePath)
+        if (draft != null && draft != nextValue) {
+            return
+        }
+        draftStore()?.remove(props.objectLocation, props.attributePath, nextValue)
+        if (state.value != nextValue) {
+            setState {
+                this.value = nextValue
+            }
         }
     }
 
@@ -124,16 +142,23 @@ class TextAttributeEditor(
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentWillUnmount() {
         committer.flush()
+        draftStore()?.remove(props.objectLocation, props.attributePath)
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onValueChange(newValue: String) {
+        draftStore()?.put(props.objectLocation, props.attributePath, newValue)
         setState {
             value = newValue
         }
 
         committer.schedule()
+    }
+
+
+    private fun draftStore(): AttributeDraftStore? {
+        return contextValue<DocumentBridge?>()?.channel(AttributeDraftStore.Key)
     }
 
 

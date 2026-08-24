@@ -1,10 +1,10 @@
 package tech.kzen.auto.server.objects.report.exec.output.flat
 
 import org.slf4j.LoggerFactory
-import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
+import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.auto.common.objects.document.report.output.OutputPreview
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
-import tech.kzen.auto.server.objects.report.exec.input.ReportInputChain
+import tech.kzen.auto.server.data.ReportInputChain
 import tech.kzen.auto.server.objects.report.exec.input.connect.InputStreamFlatDataStream
 import tech.kzen.auto.server.objects.report.exec.input.model.header.RecordHeaderIndex
 import tech.kzen.auto.server.objects.report.exec.input.parse.csv.CsvReportDefiner

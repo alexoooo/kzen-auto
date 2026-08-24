@@ -1,9 +1,16 @@
 package tech.kzen.auto.server.objects.report
 
 import tech.kzen.auto.common.api.CommonRestApi
+import tech.kzen.auto.common.data.schema.HeaderLabelMap
+import tech.kzen.auto.common.data.schema.HeaderListing
+import tech.kzen.auto.common.data.model.DataPart
+import tech.kzen.auto.common.data.model.DataRef
+import tech.kzen.auto.common.data.model.DataRole
 import tech.kzen.auto.common.objects.document.DocumentArchetype
 import tech.kzen.auto.common.objects.document.report.ReportConventions
-import tech.kzen.auto.common.objects.document.report.listing.*
+import tech.kzen.auto.common.objects.document.report.listing.AnalysisColumnInfo
+import tech.kzen.auto.common.objects.document.report.listing.FilteredHeaderListing
+import tech.kzen.auto.common.objects.document.report.listing.InputBrowserInfo
 import tech.kzen.auto.common.objects.document.report.output.OutputStatus
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
 import tech.kzen.auto.common.objects.document.report.spec.PreviewSpec
@@ -25,23 +32,24 @@ import tech.kzen.auto.server.exec.report.ReportRun
 import tech.kzen.auto.server.objects.plugin.PluginUtils.asCommon
 import tech.kzen.auto.server.objects.plugin.PluginUtils.asPluginCoordinate
 import tech.kzen.auto.server.objects.report.exec.calc.CalculatedColumnEval
-import tech.kzen.auto.server.objects.report.exec.input.connect.file.FileFlatDataSource
+import tech.kzen.auto.server.data.FileFlatDataSource
 import tech.kzen.auto.server.objects.report.exec.input.model.data.DatasetInfo
 import tech.kzen.auto.server.objects.report.exec.input.model.data.FlatDataHeaderDefinition
 import tech.kzen.auto.server.objects.report.exec.input.model.data.FlatDataInfo
-import tech.kzen.auto.server.objects.report.exec.input.model.data.FlatDataLocation
+import tech.kzen.auto.server.data.FlatDataLocation
 import tech.kzen.auto.server.objects.report.exec.output.TableReportOutput
 import tech.kzen.auto.server.objects.report.exec.summary.ReportSummary
 import tech.kzen.auto.server.objects.report.model.GroupPattern
 import tech.kzen.auto.server.objects.report.model.ReportRunContext
-import tech.kzen.auto.server.objects.report.service.ColumnListingAction
-import tech.kzen.auto.server.objects.report.service.FileListingAction
+import tech.kzen.auto.server.data.ColumnListingAction
+import tech.kzen.auto.server.data.FileListingAction
 import tech.kzen.auto.server.objects.report.service.ReportUtils
 import tech.kzen.auto.server.objects.report.service.ReportWorkPool
 import tech.kzen.auto.server.paradigm.detached.DetachedDownloadAction
 import tech.kzen.auto.server.paradigm.detached.ExecutionDownloadResult
 import tech.kzen.auto.server.service.impl.ServerLogicController
-import tech.kzen.auto.server.service.plugin.ReportDefinitionRepository
+import tech.kzen.auto.server.data.ReportDefinitionRepository
+import tech.kzen.auto.server.data.ReportHeaderReader
 import tech.kzen.auto.server.util.ClassLoaderUtils
 import tech.kzen.lib.common.exec.*
 import tech.kzen.lib.common.exec.engine.Logic
@@ -432,22 +440,27 @@ class ReportDocument(
 
         val items = mutableListOf<FlatDataInfo>()
         for (inputDataSpec in input.selection.locations) {
-            val dataLocation = inputDataSpec.location
-
             val pluginCoordinate = inputDataSpec.processorDefinitionCoordinate.asPluginCoordinate()
             val processorDefinitionMetadata = definitionRepository.metadata(pluginCoordinate)
                 ?: return null
 
             val dataEncoding = ReportUtils.encodingWithMetadata(inputDataSpec, processorDefinitionMetadata)
+            val dataEncodingCommon = with(ReportUtils) { dataEncoding.asCommon() }
+            val info = fileListingAction.fileInfoBlocking(inputDataSpec.location)
+            val part = DataPart(
+                DataRole.main,
+                DataRef.of(info),
+                inputDataSpec.processorDefinitionCoordinate,
+                dataEncodingCommon)
 
             val flatDataLocation = FlatDataLocation(
-                dataLocation, dataEncoding)
+                info.path, dataEncoding)
 
-            val cachedHeaderListing = columnListingAction.cachedHeaderListing(
-                dataLocation, pluginCoordinate)
-
-            val headerListing = cachedHeaderListing
-                ?: run {
+            val headerListing = columnListingAction.headerListing(
+                part,
+                inputDataSpec.processorDefinitionCoordinate,
+                dataEncodingCommon
+            ) {
                     val classLoaderHandle = definitionRepository
                         .classLoaderHandle(setOf(pluginCoordinate), ClassLoaderUtils.dynamicParentClassLoader())
 
@@ -455,13 +468,10 @@ class ReportDocument(
                         val processorDefinition = definitionRepository.define(
                             pluginCoordinate, it)
 
-                        columnListingAction.headerListing(
-                            FlatDataHeaderDefinition(
-                                flatDataLocation,
-                                FileFlatDataSource(),
-                                processorDefinition),
-                            pluginCoordinate
-                        )
+                        ReportHeaderReader().extract(FlatDataHeaderDefinition(
+                            flatDataLocation,
+                            FileFlatDataSource(),
+                            processorDefinition))
                     }
                 }
 

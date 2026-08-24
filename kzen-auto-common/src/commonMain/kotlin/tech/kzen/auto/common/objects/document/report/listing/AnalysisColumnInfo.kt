@@ -1,5 +1,7 @@
 package tech.kzen.auto.common.objects.document.report.listing
 
+import tech.kzen.auto.common.data.schema.HeaderListing
+
 
 data class AnalysisColumnInfo(
     val inputColumns: FilteredHeaderListing,

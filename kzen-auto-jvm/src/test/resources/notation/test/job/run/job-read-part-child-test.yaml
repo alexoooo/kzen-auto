@@ -1,0 +1,21 @@
+main:
+  is: Job
+
+main.parameters/unit:
+  is: ParameterBinding
+  type:
+    class: tech.kzen.auto.common.data.model.DataUnit
+    generics: []
+    nullable: false
+
+main.workers/unit:
+  is: FormulaSourceWorker
+  code: unit
+
+main.workers/items:
+  is: ReadPartWorker
+  role: main
+
+main.workers/write:
+  is: CsvWriterWorker
+  path: build/job-read-part/child-output.csv

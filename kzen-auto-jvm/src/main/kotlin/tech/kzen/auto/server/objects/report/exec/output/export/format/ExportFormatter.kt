@@ -1,6 +1,6 @@
 package tech.kzen.auto.server.objects.report.exec.output.export.format
 
-import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
+import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputExportSpec
 import tech.kzen.auto.common.util.data.DataLocationGroup
 import tech.kzen.auto.plugin.model.record.FlatFileRecord

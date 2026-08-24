@@ -1,7 +1,7 @@
 package tech.kzen.auto.client.objects.document.report.model
 
 import tech.kzen.auto.common.objects.document.report.listing.AnalysisColumnInfo
-import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
+import tech.kzen.auto.common.data.schema.HeaderListing
 
 
 class ReportStateCache {

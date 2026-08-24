@@ -22,9 +22,11 @@ import tech.kzen.auto.server.objects.report.exec.calc.CalculatedColumnEval
 import tech.kzen.auto.server.objects.report.exec.input.parse.csv.CsvReportDefiner
 import tech.kzen.auto.server.objects.report.exec.input.parse.text.TextReportDefiner
 import tech.kzen.auto.server.objects.report.exec.input.parse.tsv.TsvReportDefiner
-import tech.kzen.auto.server.objects.report.service.ColumnListingAction
-import tech.kzen.auto.server.objects.report.service.FileListingAction
-import tech.kzen.auto.server.objects.report.service.FilterIndex
+import tech.kzen.auto.server.data.ColumnListingAction
+import tech.kzen.auto.server.data.DataOpenerLookup
+import tech.kzen.auto.server.data.FileListingAction
+import tech.kzen.auto.server.data.FileDataOpener
+import tech.kzen.auto.server.data.SchemaCache
 import tech.kzen.auto.server.objects.report.service.ReportWorkPool
 import tech.kzen.auto.server.objects.script.ScriptValidationCache
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
@@ -36,9 +38,9 @@ import tech.kzen.auto.server.service.exec.ModelTaskRepository
 import tech.kzen.auto.server.service.impl.ServerLogicController
 import tech.kzen.auto.server.service.plugin.HostReportDefinitionRepository
 import tech.kzen.auto.server.service.plugin.MultiDefinitionRepository
-import tech.kzen.auto.server.service.plugin.ReportDefinitionRepository
+import tech.kzen.auto.server.data.ReportDefinitionRepository
 import tech.kzen.auto.server.service.storage.DirectoryStorageArea
-import tech.kzen.auto.server.service.storage.FilterIndexStorageArea
+import tech.kzen.auto.server.service.storage.SchemaCacheStorageArea
 import tech.kzen.auto.server.service.storage.JobOutputStorageArea
 import tech.kzen.auto.server.service.storage.ManagedStorageRegistry
 import tech.kzen.auto.server.service.storage.ReportStorageArea
@@ -174,8 +176,10 @@ class KzenAutoContext(
         basicDefinitionRepository, pluginProcessorDefinitionRepository))
 
     val fileListingAction = FileListingAction(definitionRepository)
-    val filterIndex = FilterIndex(workUtils)
-    val columnListingAction = ColumnListingAction(filterIndex)
+    val schemaCache = SchemaCache(workUtils)
+    val fileDataOpener = FileDataOpener(definitionRepository, schemaCache)
+    val dataOpenerLookup = DataOpenerLookup(fileDataOpener)
+    val columnListingAction = ColumnListingAction(schemaCache)
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -200,6 +204,9 @@ class KzenAutoContext(
         .put(ClassName(CalculatedColumnEval::class.qualifiedName!!), calculatedColumnEval)
         .put(ClassName(FileListingAction::class.qualifiedName!!), fileListingAction)
         .put(ClassName(ColumnListingAction::class.qualifiedName!!), columnListingAction)
+        .put(ClassName(SchemaCache::class.qualifiedName!!), schemaCache)
+        .put(ClassName(DataOpenerLookup::class.qualifiedName!!), dataOpenerLookup)
+        .put(ClassName(GraphInstanceCache::class.qualifiedName!!)) { graphInstanceCache }
         .put(ClassName(LogicTrace::class.qualifiedName!!)) { logicTrace }
         .put(ClassName(ServerLogicController::class.qualifiedName!!)) { serverLogicController }
         .build()
@@ -277,8 +284,8 @@ class KzenAutoContext(
         managedStorageRegistry.register(ReportStorageArea(
             workUtils.resolve(ReportWorkPool.defaultReportDir), reportWorkPool))
 
-        managedStorageRegistry.register(FilterIndexStorageArea(
-            workUtils.resolve(FilterIndex.indexDirName), anyRunActive))
+        managedStorageRegistry.register(SchemaCacheStorageArea(
+            workUtils.resolve(SchemaCache.indexDirName), anyRunActive, schemaCache::invalidate))
 
         managedStorageRegistry.register(JobOutputStorageArea(
             jobWorkPool.workerOutputBase(),

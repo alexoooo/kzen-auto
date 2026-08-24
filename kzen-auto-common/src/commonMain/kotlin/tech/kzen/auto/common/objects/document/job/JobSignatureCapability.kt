@@ -33,6 +33,25 @@ object JobSignatureCapability {
 
 
     fun isResultSink(graphNotation: GraphNotation, workerLocation: ObjectLocation): Boolean {
+        return hasMarker(graphNotation, workerLocation, JobConventions.resultSinkObjectName)
+    }
+
+
+    fun isResultYielder(graphNotation: GraphNotation, workerLocation: ObjectLocation): Boolean {
+        return hasMarker(graphNotation, workerLocation, JobConventions.resultYielderObjectName)
+    }
+
+
+    fun yieldsResult(graphNotation: GraphNotation, workerLocation: ObjectLocation): Boolean {
+        return isResultYielder(graphNotation, workerLocation)
+    }
+
+
+    private fun hasMarker(
+        graphNotation: GraphNotation,
+        workerLocation: ObjectLocation,
+        marker: tech.kzen.lib.common.model.obj.ObjectName
+    ): Boolean {
         if (workerLocation !in graphNotation.coalesce) {
             // Stale-location guard: a client observer can fire with a just-deleted / renamed callee, on which
             // inheritanceChain would throw.
@@ -40,7 +59,7 @@ object JobSignatureCapability {
         }
 
         return graphNotation.inheritanceChain(workerLocation).any {
-            it.objectPath.name == JobConventions.resultSinkObjectName
+            it.objectPath.name == marker
         }
     }
 

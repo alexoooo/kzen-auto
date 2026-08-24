@@ -104,13 +104,26 @@ ExportSpecEditor:
   class: tech.kzen.auto.client.objects.document.job.edit.ExportSpecEditor$Wrapper
 
 
-# Multi-file input editor: edits a MultiFileReaderWorker's `paths` attribute (an ordered List<String> of concrete
-# input file paths) — a reorderable selected-paths list plus a directory browser (directory + name filter, backed
-# by the document-agnostic /file-listing route reusing FileListingAction) to pick files. Selected via
-# `editor: MultiFileInputEditor` on the MultiFileReaderWorker's `paths` metadata.
+# File-selection editor: writes FileSelectionSpec for FileDataSource.files. The legacy registration points at the
+# same wrapper and keeps MultiFileReaderWorker.paths as an ordered List<String>.
+FileSelectionEditor:
+  is: AttributeEditor
+  class: tech.kzen.auto.client.objects.document.job.edit.FileSelectionEditor$Wrapper
+
+
 MultiFileInputEditor:
   is: AttributeEditor
-  class: tech.kzen.auto.client.objects.document.job.edit.MultiFileInputEditor$Wrapper
+  class: tech.kzen.auto.client.objects.document.job.edit.FileSelectionEditor$Wrapper
+
+
+SelectDataSourceEditor:
+  is: AttributeEditor
+  class: tech.kzen.auto.client.objects.document.job.edit.SelectDataSourceEditor$Wrapper
+
+
+DataSourceAttributeView:
+  is: AttributeView
+  class: tech.kzen.auto.client.objects.document.job.source.DataSourceAttributeView$Wrapper
 
 
 # Value-set filter editor: edits a ValueSetFilterWorker's `filter` attribute (a FilterSpec — a column ->
@@ -134,8 +147,8 @@ PivotSpecEditor:
 
 
 #######################################################################################################################
-# Job insert ribbon: each RibbonTool delegates to a Worker / Channel archetype; clicking it inserts that
-# archetype into the active Job document (Workers nest under `workers`, Channels under `channels`).
+# Job insert ribbon: every tool delegates to an ordinary Worker or Channel archetype. The active tool remains
+# selected until the user chooses its position in the Job stage.
 
 
 JobGroup_Sources:
@@ -144,10 +157,22 @@ JobGroup_Sources:
   archetype: Job
 
 
-CsvReaderTool:
+FileSourceTool:
   is: RibbonTool
   parent: JobGroup_Sources
-  delegate: CsvReaderWorker
+  delegate: FileSourceWorker
+
+
+LogicSourceTool:
+  is: RibbonTool
+  parent: JobGroup_Sources
+  delegate: LogicSourceWorker
+
+
+ReadTool:
+  is: RibbonTool
+  parent: JobGroup_Sources
+  delegate: ReadWorker
 
 
 FormulaSourceTool:
@@ -156,18 +181,18 @@ FormulaSourceTool:
   delegate: FormulaSourceWorker
 
 
-MultiFileReaderTool:
-  is: RibbonTool
-  parent: JobGroup_Sources
-  delegate: MultiFileReaderWorker
-
-
 ################################################################
 
 JobGroup_Transforms:
   is: RibbonGroup
   title: "Transforms"
   archetype: Job
+
+
+ReadPartTool:
+  is: RibbonTool
+  parent: JobGroup_Transforms
+  delegate: ReadPartWorker
 
 
 FilterTool:

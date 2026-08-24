@@ -73,6 +73,17 @@ object StepExpressionSupport {
     }
 
 
+    fun generateCode(
+        selfLocation: ObjectLocation,
+        returnType: TypeMetadata,
+        code: String,
+        scope: Map<ObjectPath, TypeMetadata>
+    ): KotlinCode {
+        return StepExpressionCompiler.generateCode(
+            mainClassName(selfLocation), returnType, code, scope)
+    }
+
+
     // The inference form of the expression (see [StepExpressionCompiler.generateInferenceCode]): [FormulaStep]
     // uses it for both validation (reflect the inferred return type) and execution (call `evaluate`), so the
     // single content signature compiles once and serves both.
@@ -107,10 +118,12 @@ object StepExpressionSupport {
         valueResolver: (ObjectLocation) -> Any?,
         compiler: CachedKotlinCompiler,
         infer: Boolean = false,
+        returnTypeMetadata: TypeMetadata? = null,
         instanceCache: (signature: String, factory: () -> StepExpression) -> StepExpression = { _, factory -> factory() }
     ): Any? {
         return prepare(
-            selfLocation, returnType, code, nonUnitTypes, valueResolver, compiler, infer, instanceCache)()
+            selfLocation, returnType, code, nonUnitTypes, valueResolver, compiler,
+            infer, returnTypeMetadata, instanceCache)()
     }
 
 
@@ -127,6 +140,7 @@ object StepExpressionSupport {
         valueResolver: (ObjectLocation) -> Any?,
         compiler: CachedKotlinCompiler,
         infer: Boolean = false,
+        returnTypeMetadata: TypeMetadata? = null,
         instanceCache: (signature: String, factory: () -> StepExpression) -> StepExpression = { _, factory -> factory() }
     ): () -> Any? {
         val classLoader = ClassLoaderUtils.dynamicParentClassLoader()
@@ -135,7 +149,12 @@ object StepExpressionSupport {
                 generateInferenceCode(selfLocation, code, nonUnitTypes)
             }
             else {
-                generateCode(selfLocation, returnType, code, nonUnitTypes)
+                if (returnTypeMetadata == null) {
+                    generateCode(selfLocation, returnType, code, nonUnitTypes)
+                }
+                else {
+                    generateCode(selfLocation, returnTypeMetadata, code, nonUnitTypes)
+                }
             }
 
         val error = compiler.tryCompile(generatedCode, classLoader)

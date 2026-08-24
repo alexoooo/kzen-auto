@@ -101,9 +101,9 @@ external interface ContextsControllerState: State {
  * as the Script signature's parameter list and reuses the same machinery wholesale — [AddObjectCommand] at a
  * computed document index, [RemoveObjectCommand], [ShiftObjectTreeCommand] for drag-reorder,
  * [RenameObjectRefactorCommand] so a rename propagates into every `provides:` / `requires:` /
- * `context.exports` that names it, and [UpsertAttributeCommand] per field. Nothing here is bespoke, which is
- * the point: a spec-payload list (the shape `ObjectRegistry`'s `classes` uses) would have reached none of it,
- * because its entries have no location for a nominal reference to resolve to.
+ * `context.exports` that names it, and [UpsertAttributeCommand] per field. Nothing here is bespoke: a
+ * spec-payload list would have reached none of it because its entries have no location for a nominal
+ * reference to resolve to.
  *
  * This document registers nothing. Discovery is graph-wide by inheritance
  * ([ContextConventions.allContexts]), so a declaration reaches the signature picker and the graph-wide

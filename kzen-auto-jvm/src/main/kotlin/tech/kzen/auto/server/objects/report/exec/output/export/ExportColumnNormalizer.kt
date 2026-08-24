@@ -1,6 +1,6 @@
 package tech.kzen.auto.server.objects.report.exec.output.export
 
-import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
+import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.auto.server.objects.report.exec.ReportPipelineStage
 import tech.kzen.auto.server.objects.report.exec.event.ReportOutputEvent
 import tech.kzen.auto.server.objects.report.exec.input.model.header.RecordHeaderIndex

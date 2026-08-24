@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.objects.report.exec.calc
 
 import org.junit.Test
-import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
+import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.auto.server.service.compile.KotlinSyntaxValidator

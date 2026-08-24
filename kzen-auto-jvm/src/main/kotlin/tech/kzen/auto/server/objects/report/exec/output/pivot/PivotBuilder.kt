@@ -1,6 +1,6 @@
 package tech.kzen.auto.server.objects.report.exec.output.pivot
 
-import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
+import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.auto.common.objects.document.report.output.OutputPivotExportSignature
 import tech.kzen.auto.common.objects.document.report.output.OutputPreview
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotValueTableSpec

@@ -1,7 +1,6 @@
 package tech.kzen.auto.server.objects.job.worker
 
-import tech.kzen.auto.common.objects.document.registry.model.ObjectRegistryScan
-import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
+import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.lib.common.exec.tuple.TupleDefinition
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
@@ -92,14 +91,11 @@ class WorkerLaneAttempt(
 
 /**
  * What a [WorkerBase.payloadFlow] override needs beyond its own injected services: the Job's declared
- * [parameters] (every expression's typed parameter scope), the [objectRegistryScan] gating which inferred
- * classifiers stay concrete (vs approximating to Any — see
- * [tech.kzen.auto.server.objects.logic.ExpressionReturnTypeInference]), the saved [graphStructure] (a
- * nested-Logic Worker reads its callee's signature from it), and the [classLoader] probe compiles run under.
+ * [parameters] (every expression's typed parameter scope), the saved [graphStructure] (a nested-Logic Worker
+ * reads its callee's signature from it), and the [classLoader] probe compiles run under.
  */
 class WorkerLaneContext(
     val parameters: TupleDefinition,
-    val objectRegistryScan: ObjectRegistryScan,
     val graphStructure: GraphStructure,
     val classLoader: ClassLoader
 )

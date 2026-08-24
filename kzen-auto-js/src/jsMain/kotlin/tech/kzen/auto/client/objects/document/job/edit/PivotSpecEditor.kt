@@ -22,6 +22,10 @@ import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorProps
 import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
 import tech.kzen.auto.client.objects.document.job.JobSummaryStore
+import tech.kzen.auto.client.objects.document.job.source.DataSourceResolveStore
+import tech.kzen.auto.client.objects.document.job.source.DataSourceResolveStoreKey
+import tech.kzen.auto.client.objects.document.job.source.DataSourceShapeStore
+import tech.kzen.auto.client.objects.document.job.source.DataSourceShapeStoreKey
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.util.ClientInputUtils
 import tech.kzen.auto.client.util.async
@@ -33,7 +37,7 @@ import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.select.SelectOption
 import tech.kzen.auto.client.wrap.select.muiAutocompleteField
 import tech.kzen.auto.client.wrap.setState
-import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
+import tech.kzen.auto.common.data.schema.HeaderLabel
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotSpec
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotValueColumnSpec
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotValueType
@@ -67,6 +71,7 @@ external interface PivotSpecEditorState: State {
     // The nearest upstream SummaryWorker's live TableSummary (or null pre-run / no Summary upstream) — the source
     // of the candidate columns offered by the row / value pickers (its column keys).
     var upstreamSummary: TableSummary?
+    var upstreamColumns: List<HeaderLabel>?
 
     // Transient add form: which section is adding (null = none), and the free-text name used in the no-summary
     // fallback (with a summary, columns are picked from a dropdown).
@@ -93,7 +98,8 @@ class PivotSpecEditor(
 ):
     RComponent<AttributeEditorProps, PivotSpecEditorState>(props),
     LocalGraphStore.Observer,
-    JobSummaryStore.Observer
+    JobSummaryStore.Observer,
+    DataSourceShapeStore.GlobalObserver
 {
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
@@ -116,6 +122,8 @@ class PivotSpecEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     private var summaryStore: JobSummaryStore? = null
+    private var resolveStore: DataSourceResolveStore? = null
+    private var shapeStore: DataSourceShapeStore? = null
 
 
     init {
@@ -128,6 +136,7 @@ class PivotSpecEditor(
         val graphStructure = props.clientStateGlobal.current()!!.graphStructure()
         pivotSpec = readPivotSpec(graphStructure.graphNotation)
         upstreamSummary = null
+        upstreamColumns = listOf()
         addTarget = null
         addName = ""
     }
@@ -139,9 +148,12 @@ class PivotSpecEditor(
 
     override fun componentDidMount() {
         mounted = true
-        val store = contextValue<DocumentBridge?>()?.channel(JobSummaryStore.Key)
+        val bridge = contextValue<DocumentBridge?>()
+        val store = bridge?.channel(JobSummaryStore.Key)
         summaryStore = store
         store?.observe(this)
+        resolveStore = bridge?.lookup(DataSourceResolveStoreKey)
+        shapeStore = bridge?.lookup(DataSourceShapeStoreKey)?.also { it.observeAll(this) }
 
         async {
             // Unobserve runs synchronously on unmount, so registering after it would leak this observer.
@@ -158,6 +170,7 @@ class PivotSpecEditor(
         mounted = false
         props.mirroredGraphStore.unobserve(this)
         summaryStore?.unobserve(this)
+        shapeStore?.unobserveAll(this)
     }
 
 
@@ -186,6 +199,11 @@ class PivotSpecEditor(
     }
 
 
+    override fun onDataSourceShapesChanged() {
+        props.clientStateGlobal.current()?.graphStructure()?.let(::recompute)
+    }
+
+
     // Re-derive the committed pivot + the upstream summary and setState only when either changed (value compare,
     // both are data classes) — so an unrelated command or an unchanged summary poll doesn't re-render.
     private fun recompute(graphStructure: GraphStructure) {
@@ -196,11 +214,19 @@ class PivotSpecEditor(
 
         val nextPivotSpec = readPivotSpec(graphStructure.graphNotation)
         val nextSummary = computeUpstreamSummary(graphStructure)
+        val nextColumns = JobUpstreamSchema.columns(
+            graphStructure,
+            props.objectLocation,
+            summaryStore?.current().orEmpty(),
+            resolveStore,
+            shapeStore)?.columns?.values.orEmpty()
 
-        if (state.pivotSpec != nextPivotSpec || state.upstreamSummary != nextSummary) {
+        if (state.pivotSpec != nextPivotSpec || state.upstreamSummary != nextSummary ||
+            state.upstreamColumns != nextColumns) {
             setState {
                 pivotSpec = nextPivotSpec
                 upstreamSummary = nextSummary
+                upstreamColumns = nextColumns
             }
         }
     }
@@ -226,7 +252,8 @@ class PivotSpecEditor(
 
 
     private fun availableColumns(): List<HeaderLabel> {
-        return state.upstreamSummary?.columnSummaries?.map?.keys?.toList() ?: listOf()
+        return state.upstreamSummary?.columnSummaries?.map?.keys?.toList()
+            ?: state.upstreamColumns.orEmpty()
     }
 
 

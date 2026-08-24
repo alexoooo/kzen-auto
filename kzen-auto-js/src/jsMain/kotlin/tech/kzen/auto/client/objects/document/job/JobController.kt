@@ -20,6 +20,10 @@ import tech.kzen.auto.client.objects.document.common.signature.LogicSignatureEdi
 import tech.kzen.auto.client.objects.document.common.signature.ResultSignatureEditor
 import tech.kzen.auto.client.objects.document.job.display.WorkerDisplayManager
 import tech.kzen.auto.client.objects.document.job.display.WorkerDisplayPropsCommon
+import tech.kzen.auto.client.objects.document.job.source.DataSourceResolveStore
+import tech.kzen.auto.client.objects.document.job.source.DataSourceResolveStoreKey
+import tech.kzen.auto.client.objects.document.job.source.DataSourceShapeStore
+import tech.kzen.auto.client.objects.document.job.source.DataSourceShapeStoreKey
 import tech.kzen.auto.client.objects.ribbon.RibbonController
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
@@ -33,6 +37,7 @@ import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.installContextType
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
+import tech.kzen.auto.common.data.DataSourceConventions
 import tech.kzen.auto.common.objects.document.common.dragdrop.ObjectTreeReorder
 import tech.kzen.auto.common.objects.document.job.JobChannelDerivation
 import tech.kzen.auto.common.objects.document.job.JobConventions
@@ -40,6 +45,7 @@ import tech.kzen.auto.common.objects.document.job.model.JobValidation
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceSnapshot
 import tech.kzen.lib.common.model.attribute.AttributeName
+import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
@@ -48,9 +54,11 @@ import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.DocumentNotation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.model.structure.notation.PositionRelation
+import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.AddObjectCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.RemoveInAttributeCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.ShiftObjectTreeCommand
+import tech.kzen.lib.common.model.structure.notation.cqrs.UpsertAttributeCommand
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.service.notation.NotationConventions
@@ -232,6 +240,14 @@ class JobController(
         JobProgressStore(props.restClient, props.objectStableMapper)
     }
 
+    private val dataSourceResolveStore by lazy {
+        DataSourceResolveStore(props.restClient)
+    }
+
+    private val dataSourceShapeStore by lazy {
+        DataSourceShapeStore(props.restClient)
+    }
+
     // Refetch progress only when the document or the run status changes (mirrors FlowController); during a run
     // the status time advances on each logic-status poll, so this also drives the live progress refresh.
     private var lastFetchKey: String? = null
@@ -272,6 +288,8 @@ class JobController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
+        dataSourceResolveStore.mount()
+        dataSourceShapeStore.mount()
         props.clientStateGlobal.observe(this)
         insertion()?.subscribe(this)
     }
@@ -280,6 +298,8 @@ class JobController(
     override fun componentWillUnmount() {
         insertion()?.unsubscribe(this)
         props.clientStateGlobal.unobserve(this)
+        dataSourceResolveStore.unmount()
+        dataSourceShapeStore.unmount()
     }
 
 
@@ -316,6 +336,10 @@ class JobController(
                 workerLocations = workers
             }
         }
+
+        val dataSources = DataSourceConventions.allDataSources(graphStructure.graphNotation).toSet()
+        dataSourceResolveStore.retain(dataSources)
+        dataSourceShapeStore.retain(dataSources)
 
         val connections = JobChannelDerivation.derive(graphStructure, documentPath)
             .connections
@@ -442,8 +466,6 @@ class JobController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    // Ribbon archetype selected: enter insert-mode so the user picks a position (the "+" gaps), rather than
-    // inserting immediately. The selection stays in InsertionGlobal until a gap is clicked (onCreate).
     override fun onInsertionSelected(action: ObjectLocation) {
         setState {
             creating = true
@@ -474,7 +496,8 @@ class JobController(
     private suspend fun insertArchetypeAt(archetype: ObjectLocation, gapIndex: Int) {
         val clientState = props.clientStateGlobal.current()
             ?: return
-        val graphNotation = clientState.graphStructure().graphNotation
+        val graphStructure = clientState.graphStructure()
+        val graphNotation = graphStructure.graphNotation
 
         val documentPath = clientState.navigationRoute.documentPath
             ?: return
@@ -484,8 +507,9 @@ class JobController(
             return
         }
 
+        val isChannel = JobConventions.isChannelArchetype(graphNotation, archetype)
         val attributePath =
-            if (JobConventions.isChannelArchetype(graphNotation, archetype)) {
+            if (isChannel) {
                 JobConventions.channelsAttributePath
             }
             else {
@@ -516,6 +540,49 @@ class JobController(
             newObjectLocation,
             PositionRelation.at(insertIndex),
             archetype.objectPath.name))
+
+        if (!isChannel) {
+            autoBindDataSource(graphStructure, archetype, newObjectLocation)
+        }
+    }
+
+
+    private suspend fun autoBindDataSource(
+        graphStructure: GraphStructure,
+        archetype: ObjectLocation,
+        newObjectLocation: ObjectLocation
+    ) {
+        val sourceAttributes = graphStructure.graphMetadata.objectMetadata[archetype]
+            ?.attributes
+            ?.map
+            ?.filterValues { DataSourceConventions.isDataSourceType(it.type) }
+            ?.keys
+            ?.toList()
+            ?: return
+        if (sourceAttributes.size != 1) {
+            return
+        }
+
+        val sourceAttribute = sourceAttributes.single()
+        val inheritedValue = graphStructure.graphNotation
+            .firstAttribute(archetype, AttributePath.ofName(sourceAttribute))
+            ?.asString()
+        if (!inheritedValue.isNullOrBlank()) {
+            return
+        }
+
+        val sources = DataSourceConventions.allDataSources(graphStructure.graphNotation)
+            .filter { it.documentPath == newObjectLocation.documentPath }
+        if (sources.size != 1) {
+            return
+        }
+
+        val source = sources.single()
+        val reference = source.toReference().crop(retainPath = false).asString()
+        props.mirroredGraphStore.apply(UpsertAttributeCommand(
+            newObjectLocation,
+            sourceAttribute,
+            ScalarAttributeNotation(reference)))
     }
 
 
@@ -534,7 +601,6 @@ class JobController(
                 documentNotation.indexOf(workers.last().objectPath).value + 1
         }
     }
-
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun onDragStart(sourceIndex: Int) {
@@ -664,6 +730,9 @@ class JobController(
         val connections = state.connectionsByUpstream ?: mapOf()
         val active = state.active
 
+        contextValue<DocumentBridge?>()?.provide(DataSourceResolveStoreKey, dataSourceResolveStore)
+        contextValue<DocumentBridge?>()?.provide(DataSourceShapeStoreKey, dataSourceShapeStore)
+
         div {
             css {
                 margin = Margin(2.em, 2.em, 2.em, 2.em)
@@ -730,7 +799,6 @@ class JobController(
             }
         }
     }
-
 
     private fun ChildrenBuilder.renderWorkerSlot(
         index: Int,

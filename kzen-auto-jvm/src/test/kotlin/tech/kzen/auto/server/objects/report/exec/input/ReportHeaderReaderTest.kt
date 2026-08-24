@@ -1,11 +1,11 @@
 package tech.kzen.auto.server.objects.report.exec.input
 
 import org.junit.Test
-import tech.kzen.auto.server.objects.report.exec.input.connect.FlatDataSource
+import tech.kzen.auto.server.data.FlatDataSource
 import tech.kzen.auto.server.objects.report.exec.input.model.data.FlatDataHeaderDefinition
-import tech.kzen.auto.server.objects.report.exec.input.model.data.FlatDataLocation
+import tech.kzen.auto.server.data.FlatDataLocation
 import tech.kzen.auto.server.objects.report.exec.input.parse.tsv.TsvReportDefiner
-import tech.kzen.auto.server.objects.report.exec.input.stages.ReportHeaderReader
+import tech.kzen.auto.server.data.ReportHeaderReader
 import kotlin.test.assertEquals
 
 

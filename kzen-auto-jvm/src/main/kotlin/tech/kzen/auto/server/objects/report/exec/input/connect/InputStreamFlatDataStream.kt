@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.objects.report.exec.input.connect
 
+import tech.kzen.auto.server.data.FlatDataStream
 import tech.kzen.auto.server.objects.report.exec.input.model.ReadResult
 import java.io.ByteArrayInputStream
 import java.io.InputStream

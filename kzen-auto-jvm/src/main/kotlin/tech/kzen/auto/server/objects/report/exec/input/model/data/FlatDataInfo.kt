@@ -1,8 +1,9 @@
 package tech.kzen.auto.server.objects.report.exec.input.model.data
 
-import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
+import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.auto.common.util.data.DataLocationGroup
 import tech.kzen.auto.plugin.model.PluginCoordinate
+import tech.kzen.auto.server.data.FlatDataLocation
 import tech.kzen.auto.server.objects.plugin.PluginUtils
 import tech.kzen.lib.common.util.digest.Digest
 import tech.kzen.lib.common.util.digest.Digestible

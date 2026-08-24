@@ -1,0 +1,46 @@
+main:
+  is: Job
+  results:
+    main:
+      class: kotlin.String
+      generics: []
+      nullable: false
+
+main.channels/first:
+  is: Channel
+
+main.channels/second:
+  is: Channel
+
+main.channels/undeclared:
+  is: Channel
+
+main.workers/sourceFirst:
+  is: FormulaSourceWorker
+  code: '1'
+  output: main.channels/first
+
+main.workers/first:
+  is: CsvWriterWorker
+  input: main.channels/first
+  result: main
+
+main.workers/sourceSecond:
+  is: FormulaSourceWorker
+  code: '1'
+  output: main.channels/second
+
+main.workers/second:
+  is: ExportWriterWorker
+  input: main.channels/second
+  result: main
+
+main.workers/sourceUndeclared:
+  is: FormulaSourceWorker
+  code: '1'
+  output: main.channels/undeclared
+
+main.workers/undeclared:
+  is: CsvWriterWorker
+  input: main.channels/undeclared
+  result: missing

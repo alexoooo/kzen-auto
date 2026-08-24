@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.objects.job.worker
 
 import org.junit.Test
-import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
+import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import kotlin.test.assertEquals
 import kotlin.test.assertNull

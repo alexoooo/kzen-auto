@@ -56,6 +56,7 @@ class ResultStep(
         val value = StepExpressionSupport.evaluate(
             selfLocation, declaredType.toSimple(), code, nonUnitPredecessorTypes,
             { execution.referencedValue(it) }, cachedKotlinCompiler,
+            returnTypeMetadata = declaredType,
             instanceCache = { signature, factory -> execution.perRunSingleton(signature, factory) })
 
         execution.setResult(TupleValue.ofMain(value))
@@ -84,7 +85,7 @@ class ResultStep(
         // not conform yields a compile error, which becomes this step's validationError (the type mismatch).
         val classLoader = ClassLoaderUtils.dynamicParentClassLoader()
         val generatedCode = StepExpressionSupport.generateCode(
-            selfLocation, declaredType.toSimple(), code, nonUnitPredecessorTypes)
+            selfLocation, declaredType, code, nonUnitPredecessorTypes)
         val compileError = cachedKotlinCompiler.tryCompile(generatedCode, classLoader)
 
         return ScriptStepDefinition(

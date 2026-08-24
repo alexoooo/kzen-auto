@@ -128,7 +128,7 @@ class ExploreWorker(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun onClose() {
+    override suspend fun onClose() {
         // Flush-and-close, KEEP the files: the output dir is persistent (last-run-wins), so the result stays on
         // disk to be browsed / downloaded after the run settles. `error = false` flushes pending rows first, so
         // the post-run table.csv is complete. onStart clears the dir on the next run.

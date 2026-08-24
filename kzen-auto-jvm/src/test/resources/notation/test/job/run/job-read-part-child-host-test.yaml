@@ -1,0 +1,24 @@
+main:
+  is: Job
+  results:
+    main:
+      class: kotlin.Any
+      generics: []
+      nullable: true
+
+main.sources/input:
+  is: FileDataSource
+  files:
+    - location: build/job-read-part/child-input.csv
+
+main.workers/units:
+  is: ReadWorker
+  source: main.sources/input
+  emit: units
+
+main.workers/run:
+  is: RunWorker
+  instructions: test/job/run/job-read-part-child-test.yaml#main
+
+main.workers/collect:
+  is: ResultSinkWorker

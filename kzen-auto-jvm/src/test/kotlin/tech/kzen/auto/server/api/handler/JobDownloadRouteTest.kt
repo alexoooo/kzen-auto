@@ -7,7 +7,7 @@ import io.ktor.server.testing.*
 import org.junit.AfterClass
 import org.junit.BeforeClass
 import tech.kzen.auto.common.api.CommonRestApi
-import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
+import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.ktorMain

@@ -5,6 +5,7 @@ import kotlinx.coroutines.launch
 import tech.kzen.auto.common.paradigm.job.api.ChannelServer
 import tech.kzen.auto.common.paradigm.job.api.Worker
 import tech.kzen.auto.common.paradigm.job.control.JobControl
+import tech.kzen.auto.server.objects.job.worker.definition.WorkerDefinitionContext
 import tech.kzen.lib.common.model.location.ObjectLocation
 
 
@@ -79,7 +80,7 @@ abstract class WorkerBase(
 
 
     /** Deterministic cleanup after the run ends — completion, failure, or cancel alike. Default no-op. */
-    protected open fun onClose() {}
+    protected open suspend fun onClose() {}
 
 
     /**
@@ -100,6 +101,10 @@ abstract class WorkerBase(
 
     /** Adopt state captured by the previous (same stable id) instance's [captureMigrationState]. Default no-op. */
     internal open fun loadMigrationState(captured: Any?) {}
+
+
+    /** Binds services derived from the exact compiled graph snapshot that owns this Worker instance. */
+    internal open fun loadDefinitionContext(context: WorkerDefinitionContext) {}
 
 
     /**

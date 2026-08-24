@@ -1,8 +1,8 @@
 package tech.kzen.auto.server.objects.report.exec.summary
 
-import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
-import tech.kzen.auto.common.objects.document.report.listing.HeaderLabelMap
-import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
+import tech.kzen.auto.common.data.schema.HeaderLabel
+import tech.kzen.auto.common.data.schema.HeaderLabelMap
+import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.auto.common.objects.document.report.summary.*
 import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.auto.plugin.model.record.FlatFileRecord

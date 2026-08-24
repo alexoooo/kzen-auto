@@ -1,0 +1,13 @@
+DataSource:
+  abstract: true
+  class: tech.kzen.auto.common.data.api.DataSource
+
+
+# Capability marker for a Worker whose output lane is projected directly from a DataSource declaration.
+# Validators/editors use this metadata, never a concrete ReadWorker class-name check.
+DataSourceShapeProvider:
+  abstract: true
+
+
+DataSchemaReference:
+  class: tech.kzen.auto.common.data.DataSchemaReferenceDefiner

@@ -28,6 +28,10 @@ import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorPr
 import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
 import tech.kzen.auto.client.objects.document.common.edit.MultiTextAttributeEditor
 import tech.kzen.auto.client.objects.document.job.JobSummaryStore
+import tech.kzen.auto.client.objects.document.job.source.DataSourceResolveStore
+import tech.kzen.auto.client.objects.document.job.source.DataSourceResolveStoreKey
+import tech.kzen.auto.client.objects.document.job.source.DataSourceShapeStore
+import tech.kzen.auto.client.objects.document.job.source.DataSourceShapeStoreKey
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RComponent
@@ -37,7 +41,7 @@ import tech.kzen.auto.client.wrap.contextValue
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.select.SelectOption
 import tech.kzen.auto.client.wrap.setState
-import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
+import tech.kzen.auto.common.data.schema.HeaderLabel
 import tech.kzen.auto.common.objects.document.report.spec.filter.ColumnFilterSpec
 import tech.kzen.auto.common.objects.document.report.spec.filter.ColumnFilterType
 import tech.kzen.auto.common.objects.document.report.spec.filter.FilterSpec
@@ -67,6 +71,7 @@ external interface ValueSetFilterEditorState: State {
     // The nearest upstream SummaryWorker's live TableSummary (or null pre-run / when no Summary is upstream) —
     // the source of each column's candidate distinct values (its NominalValueSummary histogram).
     var upstreamSummary: TableSummary?
+    var upstreamColumns: List<HeaderLabel>?
 }
 
 
@@ -89,7 +94,8 @@ class ValueSetFilterEditor(
 ):
     RComponent<AttributeEditorProps, ValueSetFilterEditorState>(props),
     LocalGraphStore.Observer,
-    JobSummaryStore.Observer
+    JobSummaryStore.Observer,
+    DataSourceShapeStore.GlobalObserver
 {
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
@@ -115,6 +121,8 @@ class ValueSetFilterEditor(
     // componentDidMount, null only if there is no bridge. The SummaryWorker cards write into it; recompute
     // defensively treats null as "no data".
     private var summaryStore: JobSummaryStore? = null
+    private var resolveStore: DataSourceResolveStore? = null
+    private var shapeStore: DataSourceShapeStore? = null
 
 
     init {
@@ -127,6 +135,7 @@ class ValueSetFilterEditor(
         val graphStructure = props.clientStateGlobal.current()!!.graphStructure()
         filterSpec = readFilterSpec(graphStructure.graphNotation)
         upstreamSummary = null
+        upstreamColumns = listOf()
     }
 
 
@@ -137,9 +146,12 @@ class ValueSetFilterEditor(
     override fun componentDidMount() {
         mounted = true
 
-        val store = contextValue<DocumentBridge?>()?.channel(JobSummaryStore.Key)
+        val bridge = contextValue<DocumentBridge?>()
+        val store = bridge?.channel(JobSummaryStore.Key)
         summaryStore = store
         store?.observe(this)
+        resolveStore = bridge?.lookup(DataSourceResolveStoreKey)
+        shapeStore = bridge?.lookup(DataSourceShapeStoreKey)?.also { it.observeAll(this) }
 
         async {
             // Unobserve runs synchronously on unmount, so registering after it would leak this observer.
@@ -157,6 +169,7 @@ class ValueSetFilterEditor(
         mounted = false
         props.mirroredGraphStore.unobserve(this)
         summaryStore?.unobserve(this)
+        shapeStore?.unobserveAll(this)
     }
 
 
@@ -185,6 +198,11 @@ class ValueSetFilterEditor(
     }
 
 
+    override fun onDataSourceShapesChanged() {
+        props.clientStateGlobal.current()?.graphStructure()?.let(::recompute)
+    }
+
+
     // Re-derive the committed filter + the upstream summary and setState only when either changed (value compare,
     // both are data classes) — so an unrelated command or an unchanged summary poll doesn't re-render.
     private fun recompute(graphStructure: GraphStructure) {
@@ -195,11 +213,19 @@ class ValueSetFilterEditor(
 
         val nextFilterSpec = readFilterSpec(graphStructure.graphNotation)
         val nextSummary = computeUpstreamSummary(graphStructure)
+        val nextColumns = JobUpstreamSchema.columns(
+            graphStructure,
+            props.objectLocation,
+            summaryStore?.current().orEmpty(),
+            resolveStore,
+            shapeStore)?.columns?.values.orEmpty()
 
-        if (state.filterSpec != nextFilterSpec || state.upstreamSummary != nextSummary) {
+        if (state.filterSpec != nextFilterSpec || state.upstreamSummary != nextSummary ||
+            state.upstreamColumns != nextColumns) {
             setState {
                 filterSpec = nextFilterSpec
                 upstreamSummary = nextSummary
+                upstreamColumns = nextColumns
             }
         }
     }
@@ -269,7 +295,7 @@ class ValueSetFilterEditor(
     // (Report's FilterAddController pattern); otherwise fall back to free-text column entry so a filter can
     // still be configured before any run has produced a summary.
     private fun ChildrenBuilder.renderAdd(filterSpec: FilterSpec, summary: TableSummary?) {
-        val availableOptions = (summary?.columnSummaries?.map?.keys ?: setOf())
+        val availableOptions = (summary?.columnSummaries?.map?.keys?.toList() ?: state.upstreamColumns.orEmpty())
             .filter { it !in filterSpec.columns }
             .map {
                 val option: SelectOption = unsafeJso {

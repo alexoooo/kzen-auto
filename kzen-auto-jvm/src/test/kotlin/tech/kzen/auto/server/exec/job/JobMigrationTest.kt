@@ -52,6 +52,17 @@ class JobMigrationTest {
     private val previewDir = Path.of("build/job-migration")
     private val previewInput = previewDir.resolve("input.csv")
 
+    // Composition-reader fixture: ReadWorker(units) -> ReadPartWorker -> SummaryWorker -> gated sink. The exact
+    // final count catches a restarted/replayed ReadPart cursor (overshoot), a lost active unit or in-flight item
+    // (shortfall), and a Summary accumulator that was not carried into the rebuilt graph (shortfall).
+    private val readDocumentPath = DocumentPath.parse("test/job/migration/job-read-migration-test.yaml")
+    private val readJobLocation = ObjectLocation(readDocumentPath, ObjectPath.parse("main"))
+    private val readPartWorkerLocation = ObjectLocation(
+        readDocumentPath, ObjectPath.parse("main.workers/readPart"))
+    private val readSummaryLocation = ObjectLocation(readDocumentPath, ObjectPath.parse("main.workers/summary"))
+    private val readSinkLocation = ObjectLocation(readDocumentPath, ObjectPath.parse("main.workers/sink"))
+    private val readInput = previewDir.resolve("read-input.csv")
+
     // Gated channel-carryover fixture (shared with JobMigrationCarryoverTest): GatedSourceWorker -> buffered
     // channel -> GatedCountingSinkWorker (first instance never drains). Must match the fixture's `buffer`/`total`.
     private val carryoverDocumentPath = DocumentPath.parse("test/job/migration/job-migration-carryover-test.yaml")
@@ -175,6 +186,48 @@ class JobMigrationTest {
     }
 
 
+    @Test
+    fun readUnitsToReadPartToSummaryMigrationCountsEveryRecordExactlyOnce() {
+        val rows = 1_000
+        writeCsv(readInput, rows)
+        GatedCountingSinkWorker.reset()
+        context = KzenAutoContext.forTest()
+
+        val notation = AutoTestUtils.readNotation()
+        val baseLogic = compile(readJobLocation, notation)
+        // Editing only the downstream gate leaves both reader configurations intact. ReadWorker has already
+        // emitted the unit; ReadPart must adopt its detached item cursor plus base-owned active input batch, and
+        // the rebuilt Summary must adopt its accumulation.
+        val editedLogic = compile(readJobLocation, edit(notation, readSinkLocation, "note", "edited"))
+
+        val engine = RunEngine(baseLogic, context.objectStableMapper.objectStableId(readJobLocation))
+        try {
+            engine.resume()
+            val deadlineNanos = System.nanoTime() + TimeUnit.SECONDS.toNanos(30)
+            while (workerProgress(engine, readPartWorkerLocation, "emitted") == 0L) {
+                assertTrue(System.nanoTime() < deadlineNanos, "ReadPartWorker never reached a mid-unit checkpoint")
+                Thread.sleep(1)
+            }
+            engine.pause()
+            engine.awaitQuiescent()
+            val emittedBefore = workerProgress(engine, readPartWorkerLocation, "emitted")
+            assertTrue(emittedBefore in 1 until rows.toLong(), "migration cuts ReadPart within its active unit")
+
+            engine.migrate(editedLogic, paused = false)
+            val outcome = runBlocking { engine.await() }
+
+            assertIs<Outcome.Success>(outcome)
+            assertEquals(
+                rows.toLong(), workerCount(engine, readSummaryLocation),
+                "ReadPart cursor/active unit, in-flight payloads, and Summary state migrate without loss")
+            assertEquals(rows.toLong(), GatedCountingSinkWorker.received.get())
+        }
+        finally {
+            engine.close()
+        }
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private fun compile(jobLocation: ObjectLocation, notation: GraphNotation): JobLogic {
         val definition = AutoTestUtils.graphDefinitionAttempt(notation).transitiveSuccessful
@@ -218,6 +271,26 @@ class JobMigrationTest {
         val progress = previewNode.live[Address.of(EngineJobControl.workerProgressAddressMarker)]?.get() as? Map<*, *>
             ?: return 0L
         return progress["count"] as? Long ?: 0L
+    }
+
+
+    private fun workerCount(engine: RunEngine, workerLocation: ObjectLocation): Long {
+        return workerProgress(engine, workerLocation, "count")
+    }
+
+
+    private fun workerProgress(
+        engine: RunEngine,
+        workerLocation: ObjectLocation,
+        key: String
+    ): Long {
+        val workerStableId = context.objectStableMapper.objectStableId(workerLocation)
+        val workerNode = engine.snapshot().root.children
+            .firstOrNull { it.stableId == workerStableId }
+            ?: return 0L
+        val progress = workerNode.live[Address.of(EngineJobControl.workerProgressAddressMarker)]?.get() as? Map<*, *>
+            ?: return 0L
+        return progress[key] as? Long ?: 0L
     }
 
 

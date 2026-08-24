@@ -1,5 +1,5 @@
 # Typed payload chain (element-model phase 3): a FormulaSource streams (1..3) as Int payloads (strict-static —
-# IntRange is Iterable-typed, element type Int); the Formula's `payload:` expression TRANSFORMS each payload
+# IntRange is stream-typed, element type Int); the Formula's `payload:` expression TRANSFORMS each payload
 # (payload * 10 — the receiver is the lane's inferred Int, so the arithmetic is bare and no flat part is ever
 # materialized); the Filter's `where` reads the typed payload bare (payload > 15) over the auto-flattened
 # `value` view; the ResultSink keeps the LAST survivor (30). All ports BLANK -> JobChannelSynthesis derives

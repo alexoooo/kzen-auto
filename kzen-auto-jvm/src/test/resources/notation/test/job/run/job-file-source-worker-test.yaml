@@ -1,0 +1,11 @@
+main:
+  is: Job
+
+main.workers/read:
+  is: FileSourceWorker
+  files:
+    - location: build/job-read/inline-input.csv
+
+main.workers/write:
+  is: CsvWriterWorker
+  path: build/job-read/inline-output.csv

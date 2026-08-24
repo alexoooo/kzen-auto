@@ -1,0 +1,13 @@
+CrossTarget:
+  is: ReferenceTarget
+  value: cross
+
+
+OptOutTarget:
+  is: ReferenceTarget
+  value: opt-out
+  instanceCaching: false
+
+
+FailingTarget:
+  is: FailingReferenceTarget

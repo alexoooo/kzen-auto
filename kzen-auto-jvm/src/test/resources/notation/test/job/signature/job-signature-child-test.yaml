@@ -1,5 +1,5 @@
 # Parameterized STREAMING Job fixture (J2 JobSignatureTest + JobSignatureMigrationTest): a typed `items`
-# parameter declaration (nullable List — an Iterable TYPE, so under phase 3's strict-static dispatch the
+# parameter declaration (nullable List — a stream type, so under phase 3's strict-static dispatch the
 # FormulaSourceWorker whose expression IS the parameter always streams: a bound List streams element-by-element,
 # a bare run's null is an empty stream, and a mistyped non-List binding fails the typed accessor's cast — a run
 # failure, never a wrong-shaped stream) into a ResultSinkWorker that keeps the LAST element (default `keep`) and

@@ -40,6 +40,12 @@ class JobSignatureCapabilityTest {
     }
 
 
+    private fun isResultYielder(workerName: String): Boolean {
+        val workerLocation = ObjectLocation(documentPath, ObjectPath.parse("main.workers/$workerName"))
+        return JobSignatureCapability.isResultYielder(graphStructure.graphNotation, workerLocation)
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     @Test
     fun resultSinkClassifiesAsResult() {
@@ -57,6 +63,14 @@ class JobSignatureCapabilityTest {
     fun thirdPartyResultSinkSubtypeIsRecognizedWithoutCodeChange() {
         // The CC-17 proof: a user-defined ResultSink subtype classifies purely via its inheritance chain.
         assertTrue(isResultSink("subtypeResult"))
+    }
+
+
+    @Test
+    fun resultYielderSubtypeAndResultSinkAreBothCapabilityRecognized() {
+        assertTrue(isResultYielder("writerYielder"))
+        assertTrue(isResultYielder("result"))
+        assertFalse(isResultSink("writerYielder"))
     }
 
 

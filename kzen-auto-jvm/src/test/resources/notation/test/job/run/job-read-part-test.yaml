@@ -1,0 +1,21 @@
+main:
+  is: Job
+
+main.sources/input:
+  is: FileDataSource
+  files:
+    - location: build/job-read-part/input-a.csv
+    - location: build/job-read-part/input-b.csv
+
+main.workers/units:
+  is: ReadWorker
+  source: main.sources/input
+  emit: units
+
+main.workers/items:
+  is: ReadPartWorker
+  role: main
+
+main.workers/write:
+  is: CsvWriterWorker
+  path: build/job-read-part/output.csv

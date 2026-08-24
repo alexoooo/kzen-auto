@@ -1,6 +1,6 @@
 package tech.kzen.auto.server.objects.job.worker
 
-import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
+import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
 import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
@@ -211,7 +211,7 @@ class FormulaWorker(
             selfLocation.objectPath.name.value, payload, payloadColumns,
             receiverType, context.classLoader, context.parameters)
         val payloadType = calculatedColumnEval.inferredReturnKType(compiled)
-            ?.let { ExpressionReturnTypeInference.toTypeMetadata(it, context.objectRegistryScan) }
+            ?.let(ExpressionReturnTypeInference::toTypeMetadata)
             ?: TypeMetadata.anyNullable
 
         return WorkerLaneAttempt(WorkerLane(payloadType, outputColumns), errorMessage)

@@ -60,6 +60,10 @@ main.workers/subtypeResult:
   is: TypedResultSink
   result: "typed"
 
+main.workers/writerYielder:
+  is: TestResultYielder
+  result: typed
+
 
 #######################################################################################################################
 # Test-only archetype (unique name, declared once, so there's no whole-graph reference ambiguity): a user-defined
@@ -79,3 +83,8 @@ TypedResultSink:
     selfLocation:
       is: ObjectLocation
       by: Self
+
+
+TestResultYielder:
+  abstract: true
+  is: ResultYielder

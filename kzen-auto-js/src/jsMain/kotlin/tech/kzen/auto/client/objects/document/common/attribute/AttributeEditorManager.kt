@@ -38,6 +38,7 @@ external interface AttributeEditorManagerProps: ObjectScopedProps {
 external interface AttributeEditorManagerState: State {
     var attributeEditorName: ObjectName?
     var attributeEditor: AttributeEditor?
+    var missingEditorName: ObjectName?
 
     // This attribute's definition-failure message (or null), so the field can highlight itself in place
     // rather than the document showing a top-level error banner.
@@ -90,10 +91,18 @@ class AttributeEditorManager(
 
             val attributeEditor =
                 props.attributeEditors.find { it.name() == editorWrapperName }
+            val fallbackEditor =
+                if (attributeEditor == null && editorWrapperName != DefaultAttributeEditor.wrapperName) {
+                    props.attributeEditors.find { it.name() == DefaultAttributeEditor.wrapperName }
+                }
+                else {
+                    null
+                }
 
             setState {
                 this.attributeEditorName = editorWrapperName
-                this.attributeEditor = attributeEditor
+                this.attributeEditor = attributeEditor ?: fallbackEditor
+                this.missingEditorName = if (fallbackEditor == null) null else editorWrapperName
             }
         }
 
@@ -155,6 +164,17 @@ class AttributeEditorManager(
                         fontSize = 0.8.em
                     }
                     +attributeError
+                }
+            }
+
+            state.missingEditorName?.let { missingEditorName ->
+                div {
+                    css {
+                        marginTop = 0.25.em
+                        color = Color("#9a6700")
+                        fontSize = 0.8.em
+                    }
+                    +"Editor unavailable: $missingEditorName; using the default editor."
                 }
             }
         }

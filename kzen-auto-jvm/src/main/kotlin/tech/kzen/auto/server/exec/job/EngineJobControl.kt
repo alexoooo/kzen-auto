@@ -2,6 +2,8 @@ package tech.kzen.auto.server.exec.job
 
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.lib.common.exec.ExecutionValue
+import tech.kzen.lib.common.exec.ListExecutionValue
+import tech.kzen.lib.common.exec.MapExecutionValue
 import tech.kzen.lib.common.exec.engine.Address
 import tech.kzen.lib.common.exec.engine.Execution
 import tech.kzen.lib.common.exec.tuple.TupleComponentName
@@ -60,6 +62,31 @@ class EngineJobControl(
         // Minimum spacing between (non-forced) progress emits per Worker, mirroring JobControlImpl — a forced
         // write (the final end-of-stream value) always lands.
         private const val progressThrottleNanos = 200_000_000L  // 200 ms
+
+
+        internal fun normalizeArguments(
+            instructions: ObjectLocation,
+            signature: TupleDefinition,
+            arguments: TupleValue
+        ): TupleValue {
+            val duplicate = arguments.components
+                .groupingBy { it.name }
+                .eachCount()
+                .entries
+                .firstOrNull { it.value > 1 }
+                ?.key
+            require(duplicate == null) {
+                "Duplicate child argument: ${duplicate?.value}"
+            }
+
+            val signatureNames = signature.components.map { it.name }
+            val supplied = arguments.components.associateBy { it.name }
+            val unknown = supplied.keys.firstOrNull { it !in signatureNames }
+            require(unknown == null) {
+                "Unknown child argument '${unknown?.value}' for $instructions"
+            }
+            return TupleValue(signatureNames.mapNotNull(supplied::get))
+        }
     }
 
 
@@ -164,6 +191,24 @@ class EngineJobControl(
     }
 
 
+    override fun log(location: ObjectLocation, value: Map<String, Any?>) {
+        execution.log(MapExecutionValue(value.mapValues { logValue(it.value) }))
+    }
+
+
+    private fun logValue(value: Any?): ExecutionValue {
+        return when (value) {
+            is ExecutionValue -> value
+            is Map<*, *> -> MapExecutionValue(value.entries.associate {
+                require(it.key is String) { "Job log map keys must be strings" }
+                it.key as String to logValue(it.value)
+            })
+            is List<*> -> ListExecutionValue(value.map(::logValue))
+            else -> ExecutionValue.of(value)
+        }
+    }
+
+
     override suspend fun host(instructions: ObjectLocation, input: Any?): TupleValue {
         val child = childLogicHost.compile(instructions)
 
@@ -180,6 +225,25 @@ class EngineJobControl(
 
         // Host under the child document's stable id (matching a Script RunStep), so the engine's execution tree
         // and its live-edit migration carry the child by the same identity across a rebuild.
-        return execution.host(objectStableMapper.objectStableId(instructions), child, arguments)
+        return hostCompiled(instructions, child, arguments)
+    }
+
+
+    override suspend fun host(instructions: ObjectLocation, arguments: TupleValue): TupleValue {
+        val child = childLogicHost.compile(instructions)
+        val ordered = normalizeArguments(instructions, child.signature().inputs, arguments)
+        return hostCompiled(instructions, child, ordered)
+    }
+
+
+    private suspend fun hostCompiled(
+        instructions: ObjectLocation,
+        child: tech.kzen.lib.common.exec.engine.Logic,
+        arguments: TupleValue
+    ): TupleValue {
+        return execution.host(
+            stableId = objectStableMapper.objectStableId(instructions),
+            child = child,
+            inputs = arguments)
     }
 }

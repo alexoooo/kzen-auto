@@ -22,8 +22,9 @@ import kotlin.reflect.KType
  * yields the ELEMENT type — the loop variable's type. Forcing an `Iterable<*>` return would compile just as
  * well but erase exactly the thing the loop exists to publish.
  *
- * Two objects need that derivation and must not drift: [ForEachStep] (which validates the expression and
- * evaluates it at loop entry) and [ForEachItemBinding] (which publishes the element type to the body). The
+ * Two objects need that static derivation and must not drift: [ForEachStep] validates the expression, while
+ * [ForEachItemBinding] publishes its element type to the body. [ForEachStep] also evaluates the expression
+ * at loop entry. The
  * binding cannot simply read the ForEach's validation, and no channel can be added to carry it either:
  * `ScriptValidator` records a step's definition EXACTLY ONCE, so for the ForEach to publish an element type
  * it would have to commit its own type in the same breath — but its type is `List<bodyTerminalType>`, and
@@ -32,7 +33,7 @@ import kotlin.reflect.KType
  *
  * The second derivation is close to free: [CachedKotlinCompiler] is keyed by content signature (class name +
  * source digest), and both callers pass the FOREACH's location, so both generate byte-identical source and
- * the second compile is a cache hit. The scope map is identical too — [StepExpressionSupport.resolveNonUnit]
+ * the second derivation is a cache hit. The scope map is identical too — [StepExpressionSupport.resolveNonUnit]
  * returns null until every in-scope type is recorded, and recorded types are write-once, so the first
  * non-null map is already the final one.
  */
@@ -106,9 +107,7 @@ object ForEachItemsExpression {
         val clazz = cachedKotlinCompiler.tryLoad(generatedCode, classLoader)
             ?: return Attempt.Invalid("Unable to load: $generatedCode")
 
-        return classify(
-            ExpressionReturnTypeInference.inferReturnKType(clazz),
-            scriptDefinitionContext)
+        return classify(ExpressionReturnTypeInference.inferReturnKType(clazz))
     }
 
 
@@ -163,23 +162,17 @@ object ForEachItemsExpression {
 
     /**
      * Three-way, not a boolean, because an inferred type can be genuinely uninformative:
-     * [ExpressionReturnTypeInference.toTypeMetadata] approximates anything outside its visible set to `Any`,
-     * and an expression can also infer to `Nothing` (`error(...)`) or to an unresolved classifier. Those say
-     * NOTHING about iterability, so they are accepted and left to the run-time `as? Iterable<*>` backstop —
+     * [ExpressionReturnTypeInference.toTypeMetadata] approximates an unnameable classifier to `Any`, and an
+     * expression can also infer to `Nothing` (`error(...)`) or to an unresolved classifier. Those say NOTHING
+     * about stream-ness, so they are accepted and left to the run-time iterator conversion —
      * exactly the behaviour that held while `items` was a reference to a step of unknown type. Only a
-     * classifier that is definitely not an Iterable (`Int`, `String`, `Sequence<T>`) is a validation error.
+     * classifier that is definitely not a stream (`Int`, `String`) is a validation error.
      */
-    private fun classify(
-        inferred: KType,
-        scriptDefinitionContext: ScriptDefinitionContext
-    ): Attempt {
-        if (ExpressionReturnTypeInference.isIterable(inferred)) {
+    private fun classify(inferred: KType): Attempt {
+        if (ExpressionReturnTypeInference.isStreamType(inferred)) {
             val elementType = ExpressionReturnTypeInference
-                .iterableElementType(inferred)
-                ?.let {
-                    ExpressionReturnTypeInference.toTypeMetadata(
-                        it, scriptDefinitionContext.objectRegistryScan)
-                }
+                .streamElementType(inferred)
+                ?.let(ExpressionReturnTypeInference::toTypeMetadata)
                 // An element the projection can't resolve (star projection, deeper type-parameter
                 // indirection). NULLABLE Any deliberately: the generated accessor casts with `as <type>`,
                 // so a non-null Any would throw on a collection that contains a null.

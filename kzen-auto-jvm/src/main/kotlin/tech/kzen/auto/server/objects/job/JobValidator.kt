@@ -13,16 +13,16 @@ import tech.kzen.auto.server.objects.job.worker.WorkerBase
 import tech.kzen.auto.server.objects.job.worker.WorkerLane
 import tech.kzen.auto.server.objects.job.worker.WorkerLaneAttempt
 import tech.kzen.auto.server.objects.job.worker.WorkerLaneContext
-import tech.kzen.auto.server.objects.registry.ObjectRegistryDocument
+import tech.kzen.auto.server.objects.job.worker.definition.WorkerDefinitionContext
 import tech.kzen.auto.server.util.ClassLoaderUtils
 import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionResult
 import tech.kzen.lib.common.exec.ExecutionSuccess
 import tech.kzen.lib.common.model.document.DocumentPath
+import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.instance.GraphInstance
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
-import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.service.context.GraphCreator
@@ -62,9 +62,13 @@ class JobValidator(
     companion object {
         fun validate(
             documentPath: DocumentPath,
-            graphStructure: GraphStructure,
-            graphInstance: GraphInstance
+            graphDefinition: GraphDefinition,
+            graphInstance: GraphInstance,
+            environment: GraphEnvironment,
+            definitionContext: WorkerDefinitionContext = WorkerDefinitionContext(
+                graphDefinition, graphInstance, environment)
         ): JobValidation {
+            val graphStructure = graphDefinition.graphStructure
             val graphNotation = graphStructure.graphNotation
             val documentNotation = graphNotation.documents[documentPath]
                 ?: return JobValidation.empty
@@ -75,10 +79,8 @@ class JobValidator(
             val jobMainLocation = documentPath.toObjectLocation(NotationConventions.mainObjectPath)
             val context = WorkerLaneContext(
                 JobSignatureCapability.signature(graphStructure, jobMainLocation).inputs,
-                ObjectRegistryDocument.scan(graphNotation),
                 graphStructure,
                 ClassLoaderUtils.dynamicParentClassLoader())
-
             // The saved (pre-synthesis) structure drives the derivation — the same rule the client draws
             // pipes from — giving each downstream Worker its single inferred upstream.
             val upstreamByDownstream: Map<ObjectPath, ObjectPath> = JobChannelDerivation
@@ -89,6 +91,9 @@ class JobValidator(
             val workerPaths = documentNotation.directNestedObjectPaths(
                 NotationConventions.mainObjectPath, JobConventions.workersAttributeName)
 
+            val signature = JobSignatureCapability.signature(graphStructure, jobMainLocation)
+            val resultErrors = resultYielderErrors(workerPaths, documentPath, graphStructure.graphNotation, signature)
+
             val outputLanes = mutableMapOf<ObjectPath, WorkerLane>()
             val workerValidations = mutableMapOf<ObjectPath, StepValidation>()
 
@@ -96,6 +101,7 @@ class JobValidator(
                 val workerLocation = ObjectLocation(documentPath, workerPath)
                 val worker = graphInstance[workerLocation]?.reference as? WorkerBase
                     ?: continue
+                worker.loadDefinitionContext(definitionContext)
 
                 val inputLane = upstreamByDownstream[workerPath]
                     ?.let { outputLanes[it] }
@@ -112,11 +118,68 @@ class JobValidator(
                     }
 
                 outputLanes[workerPath] = attempt.lane
+                val joinedError = listOfNotNull(attempt.errorMessage, resultErrors[workerPath])
+                    .distinct()
+                    .joinToString("; ")
+                    .ifBlank { null }
                 workerValidations[workerPath] = StepValidation(
-                    attempt.lane.payloadType, attempt.errorMessage)
+                    attempt.lane.payloadType, joinedError,
+                    flatColumns = attempt.lane.flatColumns)
+            }
+
+            for ((path, error) in resultErrors) {
+                workerValidations.putIfAbsent(path, StepValidation(null, error))
             }
 
             return JobValidation(workerValidations)
+        }
+
+
+        private fun resultYielderErrors(
+            workerPaths: List<ObjectPath>,
+            documentPath: DocumentPath,
+            graphNotation: tech.kzen.lib.common.model.structure.notation.GraphNotation,
+            signature: tech.kzen.lib.common.exec.engine.LogicSignature
+        ): Map<ObjectPath, String> {
+            val active = mutableListOf<Pair<ObjectPath, String>>()
+            for (workerPath in workerPaths) {
+                val location = ObjectLocation(documentPath, workerPath)
+                if (!JobSignatureCapability.yieldsResult(graphNotation, location)) {
+                    continue
+                }
+                val configured = graphNotation
+                    .firstAttribute(location, JobConventions.resultAttributeName)
+                    .asString()
+                    .orEmpty()
+                val component =
+                    if (JobSignatureCapability.isResultSink(graphNotation, location)) {
+                        configured.ifBlank { "main" }
+                    }
+                    else {
+                        configured
+                    }
+                if (component.isNotBlank()) {
+                    active.add(workerPath to component)
+                }
+            }
+
+            val errors = linkedMapOf<ObjectPath, MutableList<String>>()
+            for ((path, component) in active) {
+                if (signature.outputs.find(tech.kzen.lib.common.exec.tuple.TupleComponentName(component)) == null) {
+                    errors.getOrPut(path, ::mutableListOf)
+                        .add("No result type declared in the Job signature for '$component'")
+                }
+            }
+            for ((component, paths) in active.groupBy({ it.second }, { it.first })) {
+                if (paths.size > 1) {
+                    val message = "Multiple result yielders for '$component': " +
+                        paths.joinToString { it.name.value }
+                    for (path in paths) {
+                        errors.getOrPut(path, ::mutableListOf).add(message)
+                    }
+                }
+            }
+            return errors.mapValues { it.value.joinToString("; ") }
         }
     }
 
@@ -139,7 +202,7 @@ class JobValidator(
             ?: return ExecutionResult.failure("Document not found: $documentPath")
 
         // A cache hit skips channel synthesis, graph filtering and instantiation entirely (keyed on the FULL
-        // definition — linked-callee and registry edits must invalidate — matching the run path's key).
+        // definition — linked-callee edits must invalidate — matching the run path's key).
         val jobValidation = jobValidationCache.jobValidation(documentPath, transitiveSuccessful) {
             val synthesis = JobChannelSynthesis(notationMetadataReader)
                 .synthesize(transitiveSuccessful, documentPath)
@@ -149,8 +212,9 @@ class JobValidator(
 
             validate(
                 documentPath,
-                transitiveSuccessful.graphStructure,
-                graphInstance)
+                transitiveSuccessful,
+                graphInstance,
+                environment)
         }
 
         return ExecutionSuccess

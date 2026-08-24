@@ -7,6 +7,11 @@
 main:
   is: Job
 
+# A deliberately blank source is in the Job graph but outside workers: it must construct without resolving,
+# and must remain invisible to channel derivation and execution of the unchanged worker pipeline.
+main.sources/unused:
+  is: FileDataSource
+
 main.workers/reader:
   is: CsvReaderWorker
   path: build/job-engine-linear/input.csv

@@ -2,7 +2,6 @@ package tech.kzen.auto.server.service.exec
 
 import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.paradigm.detached.DetachedAction
-import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.auto.server.paradigm.detached.DetachedDownloadAction
 import tech.kzen.auto.server.paradigm.detached.ExecutionDownloadResult
 import tech.kzen.lib.common.exec.ExecutionFailure
@@ -45,9 +44,7 @@ class ModelDetachedExecutor(
     private suspend fun actionLookup(actionLocation: ObjectLocation): ActionLookup {
         val definitionAttempt = graphStore.graphDefinition()
 
-        val serverDefinition = definitionAttempt
-            .transitiveSuccessful
-            .filterDefinitions(AutoConventions.serverAllowed)
+        val serverDefinition = ServerGraphDefinition.of(definitionAttempt)
 
         return ActionLookup(
             definitionAttempt,

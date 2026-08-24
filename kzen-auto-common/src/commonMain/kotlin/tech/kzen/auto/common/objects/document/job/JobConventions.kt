@@ -41,6 +41,7 @@ object JobConventions {
     // outputs from the `results` map, inputs from the `parameters` branch of typed ParameterBinding
     // declarations (LogicConventions).
     val resultSinkObjectName = ObjectName("ResultSink")
+    val resultYielderObjectName = ObjectName("ResultYielder")
 
     // The marker-declared name attribute: a ResultSink's `result` names the declared output component it
     // yields into (blank = main). Signature-managed — hidden from the Worker card's editors.

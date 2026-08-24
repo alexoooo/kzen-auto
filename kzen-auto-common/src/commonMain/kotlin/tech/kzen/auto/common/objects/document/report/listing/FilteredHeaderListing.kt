@@ -1,5 +1,9 @@
 package tech.kzen.auto.common.objects.document.report.listing
 
+import tech.kzen.auto.common.data.schema.HeaderLabel
+import tech.kzen.auto.common.data.schema.HeaderLabelMap
+import tech.kzen.auto.common.data.schema.HeaderListing
+
 
 data class FilteredHeaderListing(
     val values: HeaderLabelMap<Boolean>

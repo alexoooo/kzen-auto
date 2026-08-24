@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.objects.report.exec.calc
 
-import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
+import tech.kzen.auto.common.data.schema.HeaderListing
+import tech.kzen.auto.common.data.schema.DataShape
 import tech.kzen.auto.common.util.ExpressionUtils
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.auto.server.objects.logic.ExpressionReturnTypeInference
@@ -198,7 +199,7 @@ class $mainClassName: ${ CalculatedColumn::class.java.simpleName }<$modelSimple>
 
     private fun columnValue(columnIndex: Int): ${ ColumnValue::class.java.simpleName } {
         val index = indices[columnIndex]
-        val text = if (index == -1) { "<missing>" } else { record.getString(index) }
+        val text = if (index == -1) { DataShape.missingCellValue } else { record.getString(index) }
         return ${ ColumnValue::class.java.simpleName }.ofText(text)
     }
 
@@ -263,6 +264,7 @@ $calculatedColumnFormula
         val classImports = setOf(
             CalculatedColumn::class.java.name,
             ColumnValue::class.java.name,
+            DataShape::class.java.name,
             HeaderListing::class.java.name,
             RecordHeaderIndex::class.java.name,
             FlatFileRecord::class.java.name

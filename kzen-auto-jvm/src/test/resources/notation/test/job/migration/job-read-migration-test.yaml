@@ -1,0 +1,49 @@
+main:
+  is: Job
+
+main.channels/units:
+  is: Channel
+  capacity: 4
+  batchSize: 1
+
+main.channels/raw:
+  is: Channel
+  capacity: 4
+  batchSize: 10
+
+main.channels/summarized:
+  is: Channel
+  capacity: 4
+  batchSize: 1
+
+# Suppresses deadlock detection while the first gated sink deliberately refuses to drain.
+main.channels/signal:
+  is: DuplexChannel
+  external: true
+
+main.sources/input:
+  is: FileDataSource
+  files:
+    - location: build/job-migration/read-input.csv
+
+main.workers/read:
+  is: ReadWorker
+  source: main.sources/input
+  emit: units
+  output: main.channels/units
+
+main.workers/readPart:
+  is: ReadPartWorker
+  input: main.channels/units
+  output: main.channels/raw
+  role: main
+
+main.workers/summary:
+  is: SummaryWorker
+  input: main.channels/raw
+  output: main.channels/summarized
+
+main.workers/sink:
+  is: GatedCountingSinkWorker
+  input: main.channels/summarized
+  note: ""

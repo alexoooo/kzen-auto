@@ -1,0 +1,54 @@
+main:
+  is: Job
+  results:
+    main:
+      class: tech.kzen.auto.common.data.model.DataRef
+      generics: []
+      nullable: false
+
+main.parameters/unit:
+  is: ParameterBinding
+  type:
+    class: tech.kzen.auto.common.data.model.DataUnit
+    generics: []
+    nullable: false
+
+main.parameters/outputDate:
+  is: ParameterBinding
+  type:
+    class: kotlin.String
+    generics: []
+    nullable: false
+
+main.parameters/flatDate:
+  is: ParameterBinding
+  type:
+    class: kotlin.String
+    generics: []
+    nullable: false
+
+main.parameters/prefix:
+  is: ParameterBinding
+  type:
+    class: kotlin.String
+    generics: []
+    nullable: false
+
+main.workers/unit:
+  is: FormulaSourceWorker
+  code: unit
+
+main.workers/items:
+  is: ReadPartWorker
+  role: main
+  attributes: columns
+
+main.workers/copy:
+  is: FormulaWorker
+  formula:
+    copied: 'prefix + value.text'
+
+main.workers/write:
+  is: CsvWriterWorker
+  path: 'build/job-per-unit/output/${outputDate}.csv'
+  result: main

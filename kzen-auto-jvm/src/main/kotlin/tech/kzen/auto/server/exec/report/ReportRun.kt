@@ -20,7 +20,7 @@ import tech.kzen.auto.server.objects.report.exec.ReportInputPipeline
 import tech.kzen.auto.server.objects.report.exec.calc.CalculatedColumnEval
 import tech.kzen.auto.server.objects.report.exec.event.ReportOutputEvent
 import tech.kzen.auto.server.objects.report.exec.event.output.DisruptorPipelineOutput
-import tech.kzen.auto.server.objects.report.exec.input.connect.file.FileFlatDataSource
+import tech.kzen.auto.server.data.FileFlatDataSource
 import tech.kzen.auto.server.objects.report.exec.input.model.data.DatasetDefinition
 import tech.kzen.auto.server.objects.report.exec.input.model.data.DatasetInfo
 import tech.kzen.auto.server.objects.report.exec.input.model.data.FlatDataContentDefinition
@@ -38,7 +38,7 @@ import tech.kzen.auto.server.objects.report.exec.trace.ReportInputTrace
 import tech.kzen.auto.server.objects.report.exec.trace.ReportOutputTrace
 import tech.kzen.auto.server.objects.report.model.ReportRunContext
 import tech.kzen.auto.server.objects.report.service.ReportWorkPool
-import tech.kzen.auto.server.service.plugin.ReportDefinitionRepository
+import tech.kzen.auto.server.data.ReportDefinitionRepository
 import tech.kzen.auto.server.util.ClassLoaderUtils
 import tech.kzen.auto.server.util.DisruptorUtils
 import tech.kzen.auto.server.util.WorkUtils

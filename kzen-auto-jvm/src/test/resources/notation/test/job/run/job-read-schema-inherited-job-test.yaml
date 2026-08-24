@@ -1,0 +1,5 @@
+main:
+  is: Job
+
+main.workers/read:
+  is: test/job/run/job-read-schema-inherited-provider-test.yaml#InheritedReadWorker

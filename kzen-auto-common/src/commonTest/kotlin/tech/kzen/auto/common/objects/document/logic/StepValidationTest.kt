@@ -1,5 +1,6 @@
 package tech.kzen.auto.common.objects.document.logic
 
+import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.MapExecutionValue
 import tech.kzen.lib.common.exec.NullExecutionValue
@@ -20,7 +21,8 @@ class StepValidationTest {
     @Test
     fun everyFieldSurvivesTheRoundTrip() {
         val stepValidation = StepValidation(
-            TypeMetadata.unit, "Expecting an element", "Never runs", 6)
+            TypeMetadata.unit, "Expecting an element", "Never runs", 6,
+            HeaderListing.ofUnique(listOf("city", "amount")))
 
         assertEquals(stepValidation, roundTrip(stepValidation))
     }

@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.objects.report.model
 
 import tech.kzen.auto.common.objects.document.report.listing.AnalysisColumnInfo
-import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
+import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
 import tech.kzen.auto.common.objects.document.report.spec.PreviewSpec
 import tech.kzen.auto.common.objects.document.report.spec.analysis.AnalysisSpec

@@ -53,6 +53,11 @@ JobChannelCreator:
   class: tech.kzen.auto.server.objects.job.JobChannelCreator
 
 
+# Preserves a nullable nominal reference as ObjectReference data for snapshot-scoped Worker resolution.
+NominalReferenceCreator:
+  class: tech.kzen.auto.server.objects.job.NominalReferenceCreator
+
+
 # Parses a Channel's `elementType` and validates channel wiring (port type compatibility + single-reader) at
 # definition time. Bound via the Channel's `elementType` meta (mirrors how TypeMetadataDefiner is bound).
 # Every channel element is a JobMessage at run time; `elementType` / a port's `of:` describe the message's

@@ -3,8 +3,8 @@ package tech.kzen.auto.server.objects.job.worker
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import tech.kzen.auto.common.objects.document.job.JobConventions
-import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
-import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
+import tech.kzen.auto.common.data.schema.HeaderLabel
+import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotSpec
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotValueColumnSpec
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotValueTableSpec

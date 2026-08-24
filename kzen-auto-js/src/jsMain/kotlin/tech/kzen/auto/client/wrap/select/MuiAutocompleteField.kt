@@ -119,6 +119,9 @@ fun ChildrenBuilder.muiAutocompleteField(
         this.value = selectedOption
         this.getOptionLabel = { it.label }
         this.isOptionEqualToValue = { a, b -> a.value == b.value }
+        if (options.any { it.group != null }) {
+            this.groupBy = { it.group ?: "" }
+        }
         this.disableClearable = disableClearable
         // Auto-highlight the first (top) filtered option as the user types so Enter selects it without first
         // arrow-down'ing or hovering. Default true app-wide (MUI's own default is false — Enter does nothing
@@ -228,6 +231,9 @@ fun ChildrenBuilder.muiAutocompleteMultiField(
         this.asDynamic().value = selectedOptions
         this.getOptionLabel = { it.label }
         this.isOptionEqualToValue = { a, b -> a.value == b.value }
+        if (options.any { it.group != null }) {
+            this.groupBy = { it.group ?: "" }
+        }
         this.disabled = disabled
         this.fullWidth = true
 

@@ -3,6 +3,8 @@ package tech.kzen.auto.server.service.compile
 import tech.kzen.auto.server.objects.script.step.eval.StepExpressionCompiler
 import tech.kzen.auto.server.util.ClassLoaderUtils
 import tech.kzen.auto.server.util.WorkUtils
+import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
+import tech.kzen.lib.platform.ClassName
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -36,6 +38,29 @@ class ScriptKotlinCompilerTest {
     @Test
     fun validExpressionCompiles() {
         assertIs<KotlinCompilerSuccess>(compile("1 + 1"))
+    }
+
+
+    @Test
+    fun forcedReturnRecursivelyImportsDeclaredGenericTypes() {
+        val dataUnit = TypeMetadata.of(ClassName("tech.kzen.auto.common.data.model.DataUnit"))
+        val list = TypeMetadata(ClassName("kotlin.collections.List"), listOf(dataUnit), false)
+        val declared = TypeMetadata(
+            ClassName("kotlin.collections.Map"),
+            listOf(TypeMetadata.string, list),
+            false)
+        val generated = StepExpressionCompiler.generateCode(
+            mainClassName, declared, "emptyMap()", emptyMap())
+
+        assertTrue(generated.sourceText.contains("import kotlin.collections.Map"))
+        assertTrue(generated.sourceText.contains("import kotlin.collections.List"))
+        assertTrue(generated.sourceText.contains("import tech.kzen.auto.common.data.model.DataUnit"))
+        assertIs<KotlinCompilerSuccess>(
+            ScriptKotlinCompiler().compile(
+                generated,
+                workUtils.base().resolve("$mainClassName-forced.jar"),
+                listOf(),
+                ClassLoaderUtils.dynamicParentClassLoader()))
     }
 
 

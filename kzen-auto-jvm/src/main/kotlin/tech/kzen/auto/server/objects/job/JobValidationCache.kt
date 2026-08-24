@@ -3,7 +3,6 @@ package tech.kzen.auto.server.objects.job
 import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
 import tech.kzen.auto.common.objects.document.job.model.JobValidation
-import tech.kzen.auto.server.objects.logic.LogicValidationDigest
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.util.digest.Digest
@@ -16,10 +15,10 @@ import tech.kzen.lib.common.util.digest.Digest
  * call sites — the editor's detached [JobValidator.execute] (where a hit also skips channel synthesis and
  * graph instantiation) and the run path ([tech.kzen.auto.server.exec.job.JobRun], which threads each Worker's
  * inferred input payload type into its control) — which share entries because both key on the same full
- * (unfiltered) definition via [LogicValidationDigest.documentClosureKey] (see its doc for coverage: the
- * Workers themselves, which are pruned from the definition but digested from notation; linked callee
- * documents — a RunWorker's output type comes from its weakly-linked callee's signature — and the
- * object-registry class lists gating type visibility).
+ * (unfiltered) definition via [JobValidationDigest.documentClosureKey] (see its doc for coverage: the
+ * Workers themselves, which are pruned from the definition but digested from notation, and linked callee
+ * documents — a RunWorker's output type comes from its weakly-linked callee's signature — plus each
+ * capability-declared nominal DataSource's structural closure).
  *
  * Keyed by digest (not document path) so a paused run's compile-time snapshot and the editor's current
  * version coexist; bounded LRU, stale versions age out. A mid-edit broken graph can make the closure digest
@@ -46,7 +45,7 @@ class JobValidationCache {
         graphDefinition: GraphDefinition,
         compute: () -> JobValidation
     ): JobValidation {
-        val key = LogicValidationDigest.documentClosureKey(documentPath, graphDefinition)
+        val key = JobValidationDigest.documentClosureKey(documentPath, graphDefinition)
             ?: return compute()
 
         return cache.get(key) {

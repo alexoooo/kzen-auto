@@ -3,6 +3,7 @@ package tech.kzen.auto.server.objects.script.step.control.foreach
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.objects.document.script.model.ForEachProgress
 import tech.kzen.auto.common.util.TraceDisplay
+import tech.kzen.auto.server.objects.logic.ExpressionReturnTypeInference
 import tech.kzen.auto.server.objects.script.api.PartialOutcome
 import tech.kzen.auto.server.objects.script.api.ScriptControlSignal
 import tech.kzen.auto.server.objects.script.api.ScriptStep
@@ -22,9 +23,9 @@ import tech.kzen.lib.platform.ClassNames
 
 
 /**
- * A for-each loop: [items] is a user-supplied Kotlin expression yielding an [Iterable], and the body runs
- * once per element with the current element bound under the loop's `item` binding so body expressions can
- * reference it by name.
+ * A for-each loop: [items] is a user-supplied Kotlin expression yielding an [Iterable], [Sequence], or
+ * [Iterator], and the body runs once per element with the current element bound under the loop's `item`
+ * binding so body expressions can reference it by name.
  *
  * The expression is compiled in the INFERENCE form (see [ForEachItemsExpression]) rather than with a forced
  * `Iterable<*>` return, because the inferred ELEMENT type is what the `item` binding publishes to the body —
@@ -56,7 +57,7 @@ class ForEachStep(
     /**
      * The loop's mid-flight migration carry ([StepExecution.recordCarry]): the LIVE [iterator] — carried as-is,
      * like any other migrating in-memory handle, so resume continues the traversal exactly where it left off
-     * for ANY [Iterable] with no re-iterability constraint — plus the in-flight [currentItem] (already consumed
+     * for any supported stream with no re-iterability constraint — plus the in-flight [currentItem] (already consumed
      * from the iterator; the resumed iteration replays it), its [currentIndex], the [collectedOutputs] so far,
      * and the [totalSize] for the progress counter. Best-effort by design (logic-spec §5): the iterator belongs
      * to the pre-edit items value, so an edit to the items EXPRESSION (or to anything it reads) is not reflected
@@ -137,12 +138,12 @@ class ForEachStep(
         else {
             // Evaluated once, HERE — at loop entry, not per iteration (and skipped entirely on a resumed
             // loop, which carries its live iterator instead).
-            val iterable = ForEachItemsExpression
-                .evaluate(selfLocation, items, execution, cachedKotlinCompiler) as? Iterable<*>
+            val stream = ForEachItemsExpression
+                .evaluate(selfLocation, items, execution, cachedKotlinCompiler)
+            iterator = ExpressionReturnTypeInference.streamIterator(stream)
                 ?: error("ForEach items are not iterable: $selfLocation")
-            iterator = iterable.iterator()
             output = ArrayList()
-            size = (iterable as? Collection<*>)?.size
+            size = (stream as? Collection<*>)?.size
             index = 0
             item = null
             journal = ArrayDeque()

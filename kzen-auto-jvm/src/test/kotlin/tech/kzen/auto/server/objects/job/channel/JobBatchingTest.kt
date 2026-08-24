@@ -3,6 +3,7 @@ package tech.kzen.auto.server.objects.job.channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
+import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.server.objects.job.worker.Emitter
 import tech.kzen.auto.server.objects.job.worker.JobMessage
@@ -20,12 +21,12 @@ import kotlin.test.assertEquals
 class JobBatchingTest {
     //-----------------------------------------------------------------------------------------------------------------
     @Test
-    fun sourceCadenceGroupsScalarElementsIntoConfiguredBatches() = runBlocking {
+    fun flushCadenceGroupsScalarElementsIntoConfiguredBatches() = runBlocking {
         val channel = JobChannel(capacity = 8, batchSize = 3)
         val producer = channel.newProducer()
 
         val emitter = Emitter(producer)
-        emitter.sourceCadence(NoOpControl) {}
+        emitter.flushCadence(NoOpControl) {}
 
         val sender = launch {
             for (i in 0 until 7) {
@@ -48,6 +49,26 @@ class JobBatchingTest {
     }
 
 
+    @Test
+    fun explicitFlushResetsCadenceBeforeTheNextBatch() = runBlocking {
+        val output = CountingOutput(3)
+        val control = CountingControl()
+        val emitter = Emitter(output)
+        emitter.flushCadence(control) {}
+
+        emitter.send(JobMessage.ofPayload(0))
+        emitter.send(JobMessage.ofPayload(1))
+        emitter.flush()
+        emitter.send(JobMessage.ofPayload(2))
+        emitter.send(JobMessage.ofPayload(3))
+        assertEquals(0, control.checkpoints)
+
+        emitter.send(JobMessage.ofPayload(4))
+        assertEquals(1, control.checkpoints)
+        assertEquals(2, output.flushes)
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private object NoOpControl: JobControl {
         override suspend fun checkpoint() {}
@@ -56,5 +77,30 @@ class JobBatchingTest {
         override fun publishProgress(location: ObjectLocation, value: Map<String, Any?>, force: Boolean) {}
         override suspend fun host(instructions: ObjectLocation, input: Any?) =
             throw UnsupportedOperationException("no child")
+    }
+
+
+    private class CountingControl: JobControl by NoOpControl {
+        var checkpoints = 0
+
+
+        override suspend fun checkpoint() {
+            checkpoints += 1
+        }
+    }
+
+
+    private class CountingOutput(
+        private val size: Int
+    ): ChannelOutput<Any?> {
+        var flushes = 0
+
+
+        override suspend fun send(element: Any?) {}
+        override suspend fun flush() {
+            flushes += 1
+        }
+        override fun batchSize(): Int = size
+        override fun close() {}
     }
 }

@@ -68,8 +68,8 @@ class ContextStepValidationTest {
 
     @Test
     fun aBindWhoseExpressionCanBeNullIsRejectedAgainstANonNullableContext() {
-        // The nullability half survives the registry-visibility approximation that sends an unnameable
-        // classifier to `Any`, so it is checked even where the class comparison is skipped.
+        // The nullability half survives approximation of an unnameable classifier to `Any`, so it is checked
+        // even where the class comparison is skipped.
         val error = errorOf("test/script/context/script-context-bind-nullable-test.yaml", "main.steps/Bind")
 
         assertNotNull(error)

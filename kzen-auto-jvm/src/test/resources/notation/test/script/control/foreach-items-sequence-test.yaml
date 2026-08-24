@@ -1,0 +1,22 @@
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.Int
+      generics: []
+      nullable: false
+
+main.steps/Loop:
+  is: ForEachStep
+  items: "sequenceOf(1, 2, 3)"
+
+main.steps/Loop.item/Item:
+  is: ForEachItemBinding
+
+main.steps/Loop.steps/Doubled:
+  is: FormulaStep
+  code: "Item * 2"
+
+main.steps/Result:
+  is: ResultStep
+  code: "Loop.sum()"

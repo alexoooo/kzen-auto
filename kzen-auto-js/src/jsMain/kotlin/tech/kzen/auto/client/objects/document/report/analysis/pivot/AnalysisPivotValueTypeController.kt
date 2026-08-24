@@ -10,7 +10,7 @@ import react.State
 import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.objects.document.report.analysis.model.ReportAnalysisStore
 import tech.kzen.auto.client.wrap.RPureComponent
-import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
+import tech.kzen.auto.common.data.schema.HeaderLabel
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotValueColumnSpec
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotValueType
 import web.cssom.FontWeight

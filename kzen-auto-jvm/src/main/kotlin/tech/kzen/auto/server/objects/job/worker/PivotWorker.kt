@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.objects.job.worker
 
 import tech.kzen.auto.common.objects.document.job.JobConventions
-import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
+import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.auto.common.objects.document.report.output.OutputPivotExportSignature
 import tech.kzen.auto.common.objects.document.report.output.OutputPreview
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotSpec
@@ -164,7 +164,7 @@ class PivotWorker(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun onClose() {
+    override suspend fun onClose() {
         // Close-then-delete: the H2 stores hold a Windows file lock, so the store MUST be closed before its
         // scratch dir can be removed.
         try {

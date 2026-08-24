@@ -2,7 +2,7 @@ package tech.kzen.auto.client.objects.document.report.filter.model
 
 import tech.kzen.auto.client.objects.document.report.model.ReportStore
 import tech.kzen.auto.client.util.async
-import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
+import tech.kzen.auto.common.data.schema.HeaderLabel
 import tech.kzen.auto.common.objects.document.report.output.OutputStatus
 import tech.kzen.auto.common.objects.document.report.spec.filter.ColumnFilterType
 import tech.kzen.auto.common.objects.document.report.spec.filter.FilterSpec

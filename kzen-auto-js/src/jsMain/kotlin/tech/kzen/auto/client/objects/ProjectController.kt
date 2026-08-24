@@ -230,6 +230,8 @@ class ProjectController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ProjectControllerState.init(props: ProjectControllerProps) {
+        commandErrorMessage = null
+        commandErrorRequest = null
         sidebarWidthPx = SidebarPreferences.loadWidth(defaultSidebarWidth)
         sidebarCollapsed = SidebarPreferences.loadCollapsed(false)
         executingDepths = emptyMap()

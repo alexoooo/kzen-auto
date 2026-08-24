@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.objects.report.exec.input.stages
 
 import tech.kzen.auto.plugin.model.data.DataBlockBuffer
-import tech.kzen.auto.server.objects.report.exec.input.connect.FlatDataStream
+import tech.kzen.auto.server.data.FlatDataStream
 import tech.kzen.auto.server.objects.report.exec.input.connect.InputStreamFlatDataStream
 import tech.kzen.auto.server.objects.report.exec.trace.ReportInputTrace
 

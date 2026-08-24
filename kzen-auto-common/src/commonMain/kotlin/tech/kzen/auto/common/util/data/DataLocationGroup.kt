@@ -1,6 +1,7 @@
 package tech.kzen.auto.common.util.data
 
 
+/** Generalized by `tech.kzen.auto.common.data.model.DataUnit.attributes`; see `common/data/model`. */
 data class DataLocationGroup(
     val group: String?
 ): Comparable<DataLocationGroup> {

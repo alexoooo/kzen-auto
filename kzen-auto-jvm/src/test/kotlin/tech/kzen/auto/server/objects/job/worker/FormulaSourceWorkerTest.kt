@@ -22,8 +22,8 @@ import kotlin.test.assertEquals
 /**
  * Unit test for [FormulaSourceWorker] in isolation: drives the Worker's full [FormulaSourceWorker.run]
  * lifecycle (compile the Kotlin expression -> evaluate -> STRICT-STATIC dispatch on the INFERRED type: an
- * Iterable-typed expression streams element-by-element — a null value under a nullable Iterable type, or a
- * mistyped binding, is an empty stream — anything else, including untyped `Any`, emits once) against a
+ * Iterable, Sequence, or Iterator expression streams element-by-element — a null value under a nullable
+ * stream type, or a mistyped binding, is empty — anything else, including untyped `Any`, emits once) against a
  * capturing [ChannelOutput] and a no-op [JobControl], using the real [CalculatedColumnEval] engine from a
  * test context. Also covers the declared-parameter scope (bare typed accessor, value via
  * [JobControl.parameter]) and the live-edit stream cursor (a same-code resume skips the delivered prefix; an
@@ -67,6 +67,20 @@ class FormulaSourceWorkerTest {
     fun rangeIterableEmitsEachInteger() = runBlocking {
         val emitted = runSource("1..3")
         assertEquals(listOf(1, 2, 3), emitted)
+    }
+
+
+    @Test
+    fun sequenceEmitsEachElement() = runBlocking {
+        val emitted = runSource("sequenceOf(\"first\", \"second\")")
+        assertEquals(listOf("first", "second"), emitted)
+    }
+
+
+    @Test
+    fun iteratorEmitsEachElement() = runBlocking {
+        val emitted = runSource("listOf(4, 5).iterator()")
+        assertEquals(listOf(4, 5), emitted)
     }
 
 

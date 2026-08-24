@@ -123,6 +123,10 @@ interface JobControl {
     fun yieldResult(component: String, value: Any?) {}
 
 
+    /** Append one immutable structured event to this Worker's run history. */
+    fun log(location: ObjectLocation, value: Map<String, Any?>) {}
+
+
     /**
      * Invoke another Logic ([instructions] — a Script / Flow / Job) as a confined child, binding [input] as its
      * first declared parameter (the single-positional convention shared with a Script Run step and a Flow
@@ -137,4 +141,16 @@ interface JobControl {
      * [RunWorker][tech.kzen.auto.server.objects.job.worker.RunWorker]) call this.
      */
     suspend fun host(instructions: ObjectLocation, input: Any?): TupleValue
+
+
+    /**
+     * Invoke a child with named arguments. Compatibility controls can support a single component by delegating
+     * to the positional overload; a real engine overrides this for arbitrary named tuples.
+     */
+    suspend fun host(instructions: ObjectLocation, arguments: TupleValue): TupleValue {
+        check(arguments.components.size == 1) {
+            "Named child hosting is unsupported by this JobControl for ${arguments.components.size} arguments"
+        }
+        return host(instructions = instructions, input = arguments.components.single().value)
+    }
 }

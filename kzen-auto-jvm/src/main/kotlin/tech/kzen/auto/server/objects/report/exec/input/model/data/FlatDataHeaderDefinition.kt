@@ -1,10 +1,11 @@
 package tech.kzen.auto.server.objects.report.exec.input.model.data
 
-import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
+import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.auto.plugin.api.managed.TraversableReportOutput
 import tech.kzen.auto.plugin.definition.ReportDefinition
-import tech.kzen.auto.server.objects.report.exec.input.ReportInputChain
-import tech.kzen.auto.server.objects.report.exec.input.connect.FlatDataSource
+import tech.kzen.auto.server.data.FlatDataLocation
+import tech.kzen.auto.server.data.FlatDataSource
+import tech.kzen.auto.server.data.ReportInputChain
 import tech.kzen.auto.server.objects.report.exec.input.stages.ReportInputReader
 
 

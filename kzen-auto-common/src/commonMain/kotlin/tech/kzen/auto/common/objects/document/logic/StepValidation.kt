@@ -2,7 +2,9 @@
 
 package tech.kzen.auto.common.objects.document.logic
 
+import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.lib.common.exec.ExecutionValue
+import tech.kzen.lib.common.exec.ListExecutionValue
 import tech.kzen.lib.common.exec.MapExecutionValue
 import tech.kzen.lib.common.exec.NullExecutionValue
 import tech.kzen.lib.common.exec.NumberExecutionValue
@@ -34,7 +36,8 @@ data class StepValidation(
     val typeMetadata: TypeMetadata?,
     val errorMessage: String?,
     val warningMessage: String? = null,
-    val errorOffset: Int? = null
+    val errorOffset: Int? = null,
+    val flatColumns: HeaderListing? = null
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -42,6 +45,7 @@ data class StepValidation(
         private const val errorMessageKey = "error"
         private const val warningMessageKey = "warning"
         private const val errorOffsetKey = "errorOffset"
+        private const val flatColumnsKey = "flatColumns"
 
         fun ofMapExecutionValue(executionValue: MapExecutionValue): StepValidation {
             val typeExecutionValue = executionValue[typeMetadataKey]
@@ -98,7 +102,18 @@ data class StepValidation(
                     errorOffsetExecutionValue.value.toInt()
                 }
 
-            return StepValidation(typeMetadata, errorMessage, warningMessage, errorOffset)
+            val columnsExecutionValue = executionValue[flatColumnsKey]
+            val flatColumns = when (columnsExecutionValue) {
+                null, NullExecutionValue -> null
+                is ListExecutionValue -> HeaderListing.ofCollection(
+                    columnsExecutionValue.values.map {
+                        (it as? TextExecutionValue)?.value
+                            ?: throw IllegalArgumentException("'$flatColumnsKey' text list expected: $executionValue")
+                    })
+                else -> throw IllegalArgumentException("'$flatColumnsKey' list expected: $executionValue")
+            }
+
+            return StepValidation(typeMetadata, errorMessage, warningMessage, errorOffset, flatColumns)
         }
     }
 
@@ -111,7 +126,10 @@ data class StepValidation(
             typeMetadataKey to metadataExecutionValue,
             errorMessageKey to ExecutionValue.of(errorMessage),
             warningMessageKey to ExecutionValue.of(warningMessage),
-            errorOffsetKey to ExecutionValue.of(errorOffset)
+            errorOffsetKey to ExecutionValue.of(errorOffset),
+            flatColumnsKey to (flatColumns?.let {
+                ListExecutionValue(it.asCollection().map(::TextExecutionValue))
+            } ?: NullExecutionValue)
         ))
     }
 }

@@ -83,16 +83,23 @@ SummaryServer:
 # Job document's `parameters` branch of typed ParameterBinding declarations (see common-document.yaml).
 
 
-ResultSink:
+ResultYielder:
   abstract: true
   is: Worker
   result: ""
-  keep: "last"
   meta:
     result: String
+
+
+ResultSink:
+  abstract: true
+  is: ResultYielder
+  keep: "last"
+  meta:
     keep:
       is: String
       editor: SelectValuesEditor
       values:
         first: "First"
         last: "Last"
+        all: "All (keeps every element in memory)"

@@ -88,12 +88,11 @@ Context:
 # each entry is a real notation object at `main.contexts/<Name>` with its own ObjectLocation. That is not a
 # style choice: a Context is a nominal symbol other documents NAME, and ObjectLocation is that identity.
 # `by: Nominal` references resolve through the coalesced OBJECT map, renameObjectRefactor asserts its target
-# is in that map, and allContexts iterates it — so a spec-payload list attribute (the shape ObjectRegistry's
-# `classes` uses, whose entries are AttributeNotations with no location) would reach none of it.
+# is in that map, and allContexts iterates it — so a spec-payload list whose entries have no location would
+# reach none of it.
 #
 # There is no `contexts: []` default: a NestedList branch is DERIVED from object paths and is never stored,
-# so an empty document is just `main: {is: Contexts}` (contrast ObjectRegistry, whose `classes` is a real
-# attribute and therefore must declare one).
+# so an empty document is just `main: {is: Contexts}`.
 Contexts:
   abstract: true
   is: Document
@@ -312,6 +311,10 @@ Job:
       is: List
       of: Worker
       by: NestedList
+    sources:
+      is: List
+      of: DataSource
+      by: NestedList
     channels:
       is: List
       of: Channel
@@ -353,50 +356,26 @@ Target:
 
 
 ################################################################
-DataFormat:
+DataSchema:
   abstract: true
   is: Document
-  class: tech.kzen.auto.server.objects.data.DataFormatDocument
-  title: "Data Format"
+  class: tech.kzen.auto.server.objects.data.schema.DataSchemaDocument
+  title: "Data Schema"
   icon: "material-symbols:storage"
   group: "Customize"
   fields: {}
   meta:
-    fields: FieldFormatListSpec
+    fields: DataSchemaFieldListSpec
 
-FieldFormatListSpec:
+DataSchemaFieldListSpec:
   abstract: true
-  class: tech.kzen.auto.common.objects.document.data.spec.FieldFormatListSpec
+  class: tech.kzen.auto.common.objects.document.data.schema.DataSchemaFieldListSpec
   meta:
     ref:
-      by: FieldFormatListSpecDefiner
+      by: DataSchemaFieldListSpecDefiner
 
-FieldFormatListSpecDefiner:
-  class: tech.kzen.auto.common.objects.document.data.spec.FieldFormatListSpec$Definer
-
-
-################################################################
-ObjectRegistry:
-  abstract: true
-  is: Document
-  class: tech.kzen.auto.server.objects.registry.ObjectRegistryDocument
-  title: "Object Registry"
-  icon: "material-symbols:menu-book"
-  group: "Customize"
-  classes: []
-  meta:
-    classes: ClassListSpec
-
-ClassListSpec:
-  abstract: true
-  class: tech.kzen.auto.common.objects.document.registry.spec.ClassListSpec
-  meta:
-    ref:
-      by: ClassListSpecDefiner
-
-ClassListSpecDefiner:
-  class: tech.kzen.auto.common.objects.document.registry.spec.ClassListSpec$Definer
-
+DataSchemaFieldListSpecDefiner:
+  class: tech.kzen.auto.common.objects.document.data.schema.DataSchemaFieldListSpec$Definer
 
 ################################################################
 

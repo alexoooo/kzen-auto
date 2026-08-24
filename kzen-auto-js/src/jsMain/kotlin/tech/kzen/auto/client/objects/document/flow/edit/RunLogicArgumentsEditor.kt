@@ -24,6 +24,8 @@ import tech.kzen.auto.client.wrap.installContextType
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.flow.FlowConventions
+import tech.kzen.auto.common.objects.document.job.JobConventions
+import tech.kzen.auto.common.objects.document.job.JobSignatureCapability
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.objects.document.script.model.RunStepInstructions
 import tech.kzen.lib.common.model.attribute.AttributePath
@@ -34,6 +36,7 @@ import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
+import tech.kzen.lib.common.exec.engine.LogicSignature
 import tech.kzen.lib.common.service.store.MirroredGraphStore
 import tech.kzen.lib.platform.collect.PersistentList
 import tech.kzen.lib.platform.collect.PersistentMap
@@ -55,6 +58,12 @@ external interface RunLogicArgumentsEditorState: State {
 
     // Non-null once a write failed, turning the edited field red; the message itself is carried by the banner.
     var errorMessage: String?
+}
+
+
+internal fun jobRunArgumentNames(signature: LogicSignature, bindsFirstPositionally: Boolean): List<String> {
+    val names = signature.inputs.components.map { it.name.value }
+    return if (bindsFirstPositionally) names.drop(1) else names
 }
 
 
@@ -136,15 +145,25 @@ class RunLogicArgumentsEditor(
             }
             else {
                 val documentNotation = graphNotation.documents[calleeLocation.documentPath]
-                if (documentNotation != null && FlowConventions.isFlow(documentNotation)) {
-                    FlowConventions.inputParameterNames(graphNotation, calleeLocation)
+                val jobRunWorker = graphNotation.inheritanceChain(props.objectLocation).any {
+                    it.objectPath.name.value == "RunWorker"
+                }
+                if (documentNotation != null && JobConventions.isJob(documentNotation)) {
+                    jobRunArgumentNames(
+                        JobSignatureCapability.signature(clientState.graphStructure(), calleeLocation),
+                        jobRunWorker)
+                }
+                else if (documentNotation != null && FlowConventions.isFlow(documentNotation)) {
+                    val names = FlowConventions.inputParameterNames(graphNotation, calleeLocation)
+                    if (jobRunWorker) names.drop(1) else names
                 }
                 else {
-                    documentNotation
+                    val names = documentNotation
                         ?.directNestedObjectPaths(
                             calleeLocation.objectPath, ScriptConventions.parametersAttributeName)
                         ?.map { it.name.value }
                         ?: listOf()
+                    if (jobRunWorker) names.drop(1) else names
                 }
             }
 

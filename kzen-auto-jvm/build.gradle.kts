@@ -40,7 +40,7 @@ dependencies {
     api("org.jetbrains.kotlinx:kotlinx-datetime:$kotlinxDatetimeVersion")
 
     // kotlin.reflect.full.* (declaredMemberProperties, allSupertypes) — ExpressionReturnTypeInference reads
-    // a compiled expression's inferred type off its probe property, and recovers an Iterable's element type
+    // a compiled expression's inferred type off its probe property, and recovers a stream's element type
     // from the class hierarchy. Already on the classpath transitively via the scripting deps below;
     // declared explicitly because it's used directly.
     implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")

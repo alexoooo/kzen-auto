@@ -1,6 +1,6 @@
 package tech.kzen.auto.server.objects.job.worker
 
-import tech.kzen.auto.common.objects.document.report.listing.HeaderListing
+import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
@@ -20,8 +20,8 @@ import tech.kzen.lib.common.reflect.Service
  * `listOf("a", "b")` are all valid expressions. Compiled via the shared [CalculatedColumnEval] engine (the same
  * `@Service` Filter / Formula use; no columns in scope — a source has no incoming flat part), evaluated once,
  * and dispatched STATICALLY on the expression's INFERRED type (the same inference the editor's worker card and
- * the payload-type walk display, so the runtime always matches them): an `Iterable`-typed expression is
- * streamed element-by-element (a null value under a nullable Iterable type is an empty stream), any other
+ * the payload-type walk display, so the runtime always matches them): an `Iterable`, `Sequence`, or `Iterator`
+ * expression is streamed element-by-element (a null value under a nullable stream type is empty), any other
  * type — including an untyped `Any` — is emitted as a single element, each as a payload [JobMessage] into
  * [output]. A blank [code] produces an empty stream.
  *
@@ -85,19 +85,18 @@ class FormulaSourceWorker(
 
             // Strict-static dispatch: the INFERRED type alone decides stream-vs-single (never the value).
             val inferredType = calculatedColumnEval.inferredReturnKType(compiled)
-            val streams = inferredType != null && ExpressionReturnTypeInference.isIterable(inferredType)
+            val streams = inferredType != null && ExpressionReturnTypeInference.isStreamType(inferredType)
 
             streams to compiled.evaluateRaw(Unit, FlatFileRecord(), HeaderListing.empty)
         }
 
         if (streams) {
-            // A null value under a nullable Iterable type is an empty stream (there is nothing to iterate;
+            // A null value under a nullable stream type is empty (there is nothing to iterate;
             // the static contract stays "this lane streams"). A mistyped binding never reaches here — the
             // typed parameter accessor's cast rejects it during evaluation (a run failure naming the
             // violation).
-            val iterable = value as? Iterable<*>
+            val iterator = ExpressionReturnTypeInference.streamIterator(value)
                 ?: return
-            val iterator = iterable.iterator()
 
             // Live-edit resume: skip the prefix the torn-down instance already delivered (stable re-evaluation
             // order — see the class kdoc).
@@ -123,7 +122,7 @@ class FormulaSourceWorker(
 
     //-----------------------------------------------------------------------------------------------------------------
     // The expression source knows its output statically: compile (cached — the same artifact produce() will
-    // load) and expose the inferred type — the element type when Iterable-classified (the stream lane), the
+    // load) and expose the inferred type — the element type when stream-classified (the stream lane), the
     // whole type otherwise (the single-emission lane). A compile error becomes this Worker's validation error.
     override fun payloadFlow(input: WorkerLane, context: WorkerLaneContext): WorkerLaneAttempt {
         if (code.isBlank()) {
@@ -144,13 +143,13 @@ class FormulaSourceWorker(
             ?: return WorkerLaneAttempt(WorkerLane(null, HeaderListing.empty), null)
 
         val payloadType =
-            if (ExpressionReturnTypeInference.isIterable(inferredType)) {
-                ExpressionReturnTypeInference.iterableElementType(inferredType)
-                    ?.let { ExpressionReturnTypeInference.toTypeMetadata(it, context.objectRegistryScan) }
+            if (ExpressionReturnTypeInference.isStreamType(inferredType)) {
+                ExpressionReturnTypeInference.streamElementType(inferredType)
+                    ?.let(ExpressionReturnTypeInference::toTypeMetadata)
                     ?: TypeMetadata.anyNullable
             }
             else {
-                ExpressionReturnTypeInference.toTypeMetadata(inferredType, context.objectRegistryScan)
+                ExpressionReturnTypeInference.toTypeMetadata(inferredType)
             }
 
         return WorkerLaneAttempt(WorkerLane(payloadType, HeaderListing.empty), null)

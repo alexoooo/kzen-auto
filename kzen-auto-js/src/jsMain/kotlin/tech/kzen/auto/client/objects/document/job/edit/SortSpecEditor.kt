@@ -1,6 +1,7 @@
 package tech.kzen.auto.client.objects.document.job.edit
 
 import emotion.react.css
+import js.objects.unsafeJso
 import mui.material.IconButton
 import mui.material.InputLabel
 import mui.system.sx
@@ -15,19 +16,30 @@ import react.dom.html.ReactHTML.tr
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorProps
 import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
+import tech.kzen.auto.client.objects.document.job.JobSummaryStore
+import tech.kzen.auto.client.objects.document.job.source.DataSourceResolveStore
+import tech.kzen.auto.client.objects.document.job.source.DataSourceResolveStoreKey
+import tech.kzen.auto.client.objects.document.job.source.DataSourceShapeStore
+import tech.kzen.auto.client.objects.document.job.source.DataSourceShapeStoreKey
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RComponent
 import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
-import tech.kzen.auto.common.objects.document.report.listing.HeaderLabel
+import tech.kzen.auto.client.wrap.contextValue
+import tech.kzen.auto.client.wrap.installContextType
+import tech.kzen.auto.client.wrap.select.SelectOption
+import tech.kzen.auto.common.data.schema.HeaderLabel
 import tech.kzen.auto.common.objects.document.report.spec.sort.SortColumnSpec
 import tech.kzen.auto.common.objects.document.report.spec.sort.SortSpec
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
+import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
@@ -44,6 +56,7 @@ external interface SortSpecEditorState: State {
     // The Worker's committed sort keys, in PRIORITY order (the notation map's insertion order). Value-compared
     // on refresh so an unrelated command elsewhere doesn't re-render the rows.
     var columns: List<SortColumnSpec>?
+    var availableColumns: List<HeaderLabel>?
 }
 
 
@@ -65,7 +78,9 @@ class SortSpecEditor(
     props: AttributeEditorProps
 ):
     RComponent<AttributeEditorProps, SortSpecEditorState>(props),
-    LocalGraphStore.Observer
+    LocalGraphStore.Observer,
+    JobSummaryStore.Observer,
+    DataSourceShapeStore.GlobalObserver
 {
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
@@ -88,8 +103,19 @@ class SortSpecEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun SortSpecEditorState.init(props: AttributeEditorProps) {
-        val graphNotation = props.clientStateGlobal.current()!!.graphStructure().graphNotation
-        columns = readColumns(graphNotation)
+        val graphStructure = props.clientStateGlobal.current()!!.graphStructure()
+        columns = readColumns(graphStructure.graphNotation)
+        availableColumns = listOf()
+    }
+
+
+    private var summaryStore: JobSummaryStore? = null
+    private var resolveStore: DataSourceResolveStore? = null
+    private var shapeStore: DataSourceShapeStore? = null
+
+
+    init {
+        installContextType(DocumentBridgeContext)
     }
 
 
@@ -108,6 +134,10 @@ class SortSpecEditor(
 
     override fun componentDidMount() {
         mounted = true
+        val bridge = contextValue<DocumentBridge?>()
+        summaryStore = bridge?.channel(JobSummaryStore.Key)?.also { it.observe(this) }
+        resolveStore = bridge?.lookup(DataSourceResolveStoreKey)
+        shapeStore = bridge?.lookup(DataSourceShapeStoreKey)?.also { it.observeAll(this) }
         async {
             // Unobserve runs synchronously on unmount, so registering after it would leak this observer.
             if (mounted) {
@@ -120,6 +150,8 @@ class SortSpecEditor(
     override fun componentWillUnmount() {
         mounted = false
         props.mirroredGraphStore.unobserve(this)
+        summaryStore?.unobserve(this)
+        shapeStore?.unobserveAll(this)
     }
 
 
@@ -127,7 +159,7 @@ class SortSpecEditor(
     override suspend fun onCommandSuccess(
         event: NotationEvent, graphDefinition: GraphDefinitionAttempt, attachment: LocalGraphStore.Attachment
     ) {
-        refreshColumns(graphDefinition.graphStructure.graphNotation)
+        refresh(graphDefinition.graphStructure)
     }
 
 
@@ -137,22 +169,40 @@ class SortSpecEditor(
 
 
     override suspend fun onStoreRefresh(graphDefinitionAttempt: GraphDefinitionAttempt) {
-        refreshColumns(graphDefinitionAttempt.graphStructure.graphNotation)
+        refresh(graphDefinitionAttempt.graphStructure)
+    }
+
+
+    override fun onJobSummaries(summaries: Map<ObjectLocation, tech.kzen.auto.common.objects.document.report.summary.TableSummary>) {
+        props.clientStateGlobal.current()?.graphStructure()?.let(::refresh)
+    }
+
+
+    override fun onDataSourceShapesChanged() {
+        props.clientStateGlobal.current()?.graphStructure()?.let(::refresh)
     }
 
 
     // Pick up add / remove / direction toggle (and any external edit) of the sort keys. Value-equality gated
     // (SortColumnSpec is a data class) so an unrelated command elsewhere in the document doesn't re-render.
-    private fun refreshColumns(graphNotation: GraphNotation) {
+    private fun refresh(graphStructure: GraphStructure) {
+        val graphNotation = graphStructure.graphNotation
         if (props.objectLocation !in graphNotation.coalesce) {
             // The containing Worker was deleted; its parent card hasn't re-rendered to drop us yet.
             return
         }
 
         val nextColumns = readColumns(graphNotation)
-        if (state.columns != nextColumns) {
+        val nextAvailable = JobUpstreamSchema.columns(
+            graphStructure,
+            props.objectLocation,
+            summaryStore?.current().orEmpty(),
+            resolveStore,
+            shapeStore)?.columns?.values.orEmpty()
+        if (state.columns != nextColumns || state.availableColumns != nextAvailable) {
             setState {
                 columns = nextColumns
+                availableColumns = nextAvailable
             }
         }
     }
@@ -268,11 +318,22 @@ class SortSpecEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun ChildrenBuilder.renderAdd(columns: List<SortColumnSpec>) {
+        val options = state.availableColumns.orEmpty()
+            .filter { candidate -> columns.none { it.column == candidate } }
+            .map {
+                val option: SelectOption = unsafeJso {
+                    value = it.asString()
+                    label = it.render()
+                }
+                option
+            }
+            .toTypedArray()
         AddNameForm::class.react {
             entityLabel = "sort key"
             fieldLabel = "Sort column name"
             isDuplicate = { name -> columns.any { it.column == HeaderLabel(name, 0) } }
             onAdd = { name -> applyAdd(HeaderLabel(name, 0)) }
+            this.options = options
         }
     }
 }

@@ -73,8 +73,7 @@ class BindStep(
         // The STATIC half of the conformance the runtime bind re-checks by raw class: caught here, the
         // mismatch is reported against the expression that caused it rather than surfacing several steps
         // later inside whatever read the Context.
-        val inferred = ExpressionReturnTypeInference.inferReturnType(
-            clazz, scriptDefinitionContext.objectRegistryScan)
+        val inferred = ExpressionReturnTypeInference.inferReturnType(clazz)
 
         val mismatch = conformanceMismatch(inferred, descriptor, classLoader)
         if (mismatch != null) {
@@ -91,13 +90,11 @@ class BindStep(
     /**
      * The static conformance verdict, or null when the expression may be bound.
      *
-     * [ExpressionReturnTypeInference] approximates any classifier outside the object registry scan (and its
-     * builtin allow-list) to `Any`, and does not mark the approximation — an expression genuinely typed `Any`
-     * reads identically. So `Any` here means *the graph cannot name this type*, not *this is the top type*,
-     * and asserting assignability from it would reject exactly the interesting cases: every expression
-     * yielding a plugin's own class, `RemoteWebDriver` included. The class comparison is therefore skipped
-     * for that case and the runtime raw-class check in `ScriptRunContext.checkBindConformance` stays
-     * definitive — which is what it is for, and what the design calls for on an unknown-source value.
+     * [ExpressionReturnTypeInference] approximates an unnameable classifier to `Any` and does not mark the
+     * approximation — an expression genuinely typed `Any` reads identically. So `Any` here can mean *the
+     * graph cannot name this type*, not only *this is the top type*, and asserting assignability from it would
+     * reject values whose static classifier cannot be imported. The class comparison is therefore skipped for
+     * that case and the runtime raw-class check in `ScriptRunContext.checkBindConformance` stays definitive.
      *
      * Nullability survives the approximation (it is read off the `KType`, not the classifier), so it is
      * checked either way — and it is the half a runtime check can only catch once a null actually arrives.

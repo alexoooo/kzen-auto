@@ -11,7 +11,7 @@ import tech.kzen.auto.plugin.api.managed.PipelineOutput
  *
  * **Not thread-safe.** The backing list and write cursor are unsynchronized.
  * Intended for in-process drain-after-fill use within a single call — see
- * `tech.kzen.auto.server.objects.report.exec.input.ReportInputChain` for the
+ * `tech.kzen.auto.server.data.ReportInputChain` for the
  * canonical pattern (one segment buffer per ring-stage, filled by the
  * producer-side step and drained immediately before recursing into the next
  * segment, all on the calling thread).

@@ -37,7 +37,26 @@ object StepExpressionCompiler {
         code: String,
         scope: Map<ObjectPath, TypeMetadata>
     ): KotlinCode {
-        return generate(mainClassName, scope, evaluateReturnType = returnType, probe = false, code = code)
+        return generate(
+            mainClassName, scope, evaluateReturnType = returnType,
+            forcedReturnType = null, probe = false, code = code)
+    }
+
+
+    /**
+     * Forced-return form backed by declared metadata. Besides driving the generated return type, the complete
+     * metadata tree contributes imports, so nested generic types remain nameable when no in-scope value happens
+     * to use them.
+     */
+    fun generateCode(
+        mainClassName: String,
+        returnType: TypeMetadata,
+        code: String,
+        scope: Map<ObjectPath, TypeMetadata>
+    ): KotlinCode {
+        return generate(
+            mainClassName, scope, evaluateReturnType = returnType.toSimple(),
+            forcedReturnType = returnType, probe = false, code = code)
     }
 
 
@@ -49,7 +68,9 @@ object StepExpressionCompiler {
         code: String,
         scope: Map<ObjectPath, TypeMetadata>
     ): KotlinCode {
-        return generate(mainClassName, scope, evaluateReturnType = "Any?", probe = true, code = code)
+        return generate(
+            mainClassName, scope, evaluateReturnType = "Any?",
+            forcedReturnType = null, probe = true, code = code)
     }
 
 
@@ -57,10 +78,11 @@ object StepExpressionCompiler {
         mainClassName: String,
         scope: Map<ObjectPath, TypeMetadata>,
         evaluateReturnType: String,
+        forcedReturnType: TypeMetadata?,
         probe: Boolean,
         code: String = ""
     ): KotlinCode {
-        val imports = generateImports(scope.values)
+        val imports = generateImports(scope.values, forcedReturnType)
 
         val accessors = scope
             .entries
@@ -133,8 +155,13 @@ class $mainClassName: ${ StepExpression::class.java.simpleName } {
     }
 
 
-    private fun generateImports(importTypeMetadata: Collection<TypeMetadata>): String {
-        val classNames = importTypeMetadata.flatMap { it.classNames() }.toSet()
+    private fun generateImports(
+        importTypeMetadata: Collection<TypeMetadata>,
+        forcedReturnType: TypeMetadata?
+    ): String {
+        val classNames = (importTypeMetadata + listOfNotNull(forcedReturnType))
+            .flatMap { it.classNames() }
+            .toSet()
 
         val basicClassNames = setOf(
             StepExpression::class.java.name)

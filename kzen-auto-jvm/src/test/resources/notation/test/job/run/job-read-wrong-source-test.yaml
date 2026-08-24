@@ -1,0 +1,10 @@
+main:
+  is: Job
+
+main.workers/read:
+  is: ReadWorker
+  source: main
+
+main.workers/write:
+  is: CsvWriterWorker
+  path: build/job-read/wrong-output.csv

@@ -1,0 +1,57 @@
+ReferenceTarget:
+  abstract: true
+  class: tech.kzen.auto.server.objects.job.worker.definition.ReferenceTarget
+  value: ""
+  meta:
+    value: String
+
+
+FailingReferenceTarget:
+  abstract: true
+  class: tech.kzen.auto.server.objects.job.worker.definition.FailingReferenceTarget
+
+
+NominalReferenceHolder:
+  abstract: true
+  class: tech.kzen.auto.server.objects.job.NominalReferenceHolder
+  reference: ""
+  meta:
+    reference:
+      is: ObjectLocation
+      nullable: true
+      by: Nominal
+      creator: NominalReferenceCreator
+
+
+SameTarget:
+  is: ReferenceTarget
+  value: same
+
+
+BlankHolder:
+  is: NominalReferenceHolder
+
+
+SameHolder:
+  is: NominalReferenceHolder
+  reference: SameTarget
+
+
+CrossHolder:
+  is: NominalReferenceHolder
+  reference: test/job/reference/nominal-reference-target-test.yaml#CrossTarget
+
+
+DanglingHolder:
+  is: NominalReferenceHolder
+  reference: MissingTarget
+
+
+WrongTypeHolder:
+  is: NominalReferenceHolder
+  reference: NominalReferenceCreator
+
+
+FailingHolder:
+  is: NominalReferenceHolder
+  reference: test/job/reference/nominal-reference-target-test.yaml#FailingTarget

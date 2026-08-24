@@ -5,7 +5,7 @@ import kotlinx.coroutines.runBlocking
 import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.common.util.data.DataLocationInfo
-import tech.kzen.auto.server.objects.report.service.FileListingAction
+import tech.kzen.auto.server.data.FileListingAction
 
 
 class FileListingHandler(

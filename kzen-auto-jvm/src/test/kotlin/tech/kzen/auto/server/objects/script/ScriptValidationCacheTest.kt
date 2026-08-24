@@ -21,11 +21,9 @@ import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.model.structure.notation.AttributeNotation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
-import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.UpsertAttributeCommand
 import tech.kzen.lib.common.service.notation.NotationReducer
-import tech.kzen.lib.platform.collect.persistentListOf
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
@@ -33,17 +31,16 @@ import kotlin.test.assertTrue
 
 /**
  * The [ScriptValidationCache] key must re-run validation exactly when notation it depends on changed:
- * the script document itself, a weakly-linked callee (a RunStep's return type reads the callee's `results`
- * signature), or an object-registry document (the global type-visibility scan) — and must NOT re-run on
- * an edit to an unrelated document. Cache behaviour is observed through the compute-invocation count
- * (the fixpoint itself is covered end-to-end by ScriptNotationTest via ScriptLogicCompiler).
+ * the script document itself or a weakly-linked callee (a RunStep's return type reads the callee's `results`
+ * signature) — and must NOT re-run on an edit to an unrelated document. Cache behaviour is observed through
+ * the compute-invocation count (the fixpoint itself is covered end-to-end by ScriptNotationTest via
+ * ScriptLogicCompiler).
  */
 class ScriptValidationCacheTest {
     //-----------------------------------------------------------------------------------------------------------------
     private val runParent = DocumentPath.parse("test/script/engine/script-engine-run-test.yaml")
     private val runChild = DocumentPath.parse("test/script/engine/script-engine-child-test.yaml")
     private val ifDocument = DocumentPath.parse("test/script/control/script-engine-if-test.yaml")
-    private val registryDocument = DocumentPath.parse("auto-jvm/registry/registry-jvm.yaml")
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -94,18 +91,6 @@ class ScriptValidationCacheTest {
                 "code", ScalarAttributeNotation("number + 100"))
         })
     }
-
-
-    @Test
-    fun registryDocumentEditRecomputes() {
-        assertEquals(2, computeCountAcrossEdit {
-            edit(it, ObjectLocation(registryDocument, ObjectPath.parse("main")),
-                "classes", ListAttributeNotation(persistentListOf(
-                    ScalarAttributeNotation("kotlin.ranges.IntRange"),
-                    ScalarAttributeNotation("kotlin.ranges.CharRange"))))
-        })
-    }
-
 
     //-----------------------------------------------------------------------------------------------------------------
     // End-to-end over the editor's path: ScriptValidator is graph-instantiated with the cache arriving via

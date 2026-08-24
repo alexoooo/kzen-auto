@@ -1,0 +1,13 @@
+main:
+  is: Job
+
+main.workers/source:
+  is: FormulaSourceWorker
+  code: 42
+
+main.workers/readPart:
+  is: ReadPartWorker
+
+main.workers/write:
+  is: CsvWriterWorker
+  path: build/job-read-part/wrong-output.csv

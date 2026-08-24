@@ -1,0 +1,83 @@
+main:
+  is: Job
+  results:
+    main:
+      class: tech.kzen.auto.common.data.model.DataRef
+      generics: []
+      nullable: false
+
+main.parameters/unit:
+  is: ParameterBinding
+  type:
+    class: tech.kzen.auto.common.data.model.DataUnit
+    generics: []
+    nullable: false
+
+main.parameters/date:
+  is: ParameterBinding
+  type:
+    class: kotlin.String
+    generics: []
+    nullable: false
+
+main.channels/mainUnit:
+  is: Channel
+
+main.channels/mainItems:
+  is: Channel
+
+main.channels/referenceUnit:
+  is: Channel
+
+main.channels/referenceItems:
+  is: Channel
+
+main.channels/referenceTransformed:
+  is: Channel
+
+main.workers/mainUnit:
+  is: FormulaSourceWorker
+  output: main.channels/mainUnit
+  code: unit
+
+main.workers/mainItems:
+  is: ReadPartWorker
+  input: main.channels/mainUnit
+  output: main.channels/mainItems
+  role: main
+  attributes: columns
+
+main.workers/mainWrite:
+  is: ExportWriterWorker
+  input: main.channels/mainItems
+  export:
+    format: csv
+    compression: none
+    path: 'build/dated-sales/output/${date}.csv'
+  result: main
+
+main.workers/referenceUnit:
+  is: FormulaSourceWorker
+  output: main.channels/referenceUnit
+  code: unit
+
+main.workers/referenceItems:
+  is: ReadPartWorker
+  input: main.channels/referenceUnit
+  output: main.channels/referenceItems
+  role: reference
+
+main.workers/referenceTransform:
+  is: FormulaWorker
+  input: main.channels/referenceItems
+  output: main.channels/referenceTransformed
+  formula:
+    observed: '"seen-" + code.text'
+
+main.workers/referenceWrite:
+  is: ExportWriterWorker
+  input: main.channels/referenceTransformed
+  export:
+    format: csv
+    compression: none
+    path: 'build/dated-sales/reference-output/${date}.csv'

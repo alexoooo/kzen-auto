@@ -1,0 +1,14 @@
+main:
+  is: Job
+
+main.sources/input:
+  is: FileDataSource
+  schema: test/job/run/job-read-schema-source-test.yaml#main
+
+main.workers/read:
+  is: ReadWorker
+  source: main.sources/input
+
+main.workers/write:
+  is: CsvWriterWorker
+  path: build/job-read-schema-validation.csv

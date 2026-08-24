@@ -1,6 +1,7 @@
 package tech.kzen.auto.common.objects.document.report.spec.output
 
 import tech.kzen.auto.common.util.FormatUtils
+import tech.kzen.auto.common.util.PathPatternSubstitution
 import tech.kzen.auto.common.util.data.DataLocationGroup
 import tech.kzen.lib.common.api.AttributeDefiner
 import tech.kzen.lib.common.model.attribute.AttributeName
@@ -78,7 +79,12 @@ data class OutputExportSpec(
 
 
         private fun resolvePattern(
-            pattern: String, reportName: DocumentName, group: DataLocationGroup, time: Instant, extension: String
+            pattern: String,
+            reportName: DocumentName,
+            group: DataLocationGroup,
+            time: Instant,
+            extension: String,
+            variables: Map<String, String> = emptyMap()
         ): String {
             val timeFormat = FormatUtils.formatLocalDateTime(time)
                 .replace("-", "")
@@ -88,11 +94,13 @@ data class OutputExportSpec(
             val sanitizedReportName = FormatUtils.sanitizeFilename(reportName.value)
             val sanitizedGroup = FormatUtils.sanitizeFilename(group.group ?: "")
 
-            return pattern
-                .replace($$"${report}", sanitizedReportName)
-                .replace($$"${group}", sanitizedGroup)
-                .replace($$"${time}", timeFormat)
-                .replace($$"${extension}", extension)
+            return PathPatternSubstitution.substitute(
+                pattern,
+                variables + mapOf(
+                    "report" to sanitizedReportName,
+                    "group" to sanitizedGroup,
+                    "time" to timeFormat,
+                    "extension" to extension))
                 .replace(Regex("_+"), "_")
         }
     }
@@ -129,7 +137,12 @@ data class OutputExportSpec(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun resolvePath(reportName: DocumentName, group: DataLocationGroup, time: Instant): String {
+    fun resolvePath(
+        reportName: DocumentName,
+        group: DataLocationGroup,
+        time: Instant,
+        variables: Map<String, String> = emptyMap()
+    ): String {
         val extension =
             if (compression == compressionZipName) {
                 "zip"
@@ -146,11 +159,16 @@ data class OutputExportSpec(
                 format + outerExtension
             }
 
-        return resolvePattern(pathPattern, reportName, group, time, extension)
+        return resolvePattern(pathPattern, reportName, group, time, extension, variables)
     }
 
 
-    fun resolveInnerFilename(reportName: DocumentName, group: DataLocationGroup, time: Instant): String {
+    fun resolveInnerFilename(
+        reportName: DocumentName,
+        group: DataLocationGroup,
+        time: Instant,
+        variables: Map<String, String> = emptyMap()
+    ): String {
         val outerExtension =
             if (compression == compressionNoneName ||
                     compression == compressionZipName
@@ -179,6 +197,6 @@ data class OutputExportSpec(
                 pathPattern.substring(indexOfLastSeparator + 1)
             }
 
-        return resolvePattern(namePattern, reportName, group, time, extension)
+        return resolvePattern(namePattern, reportName, group, time, extension, variables)
     }
 }

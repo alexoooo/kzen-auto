@@ -71,8 +71,7 @@ class FormulaStep(
                 TupleDefinition.ofMain(LogicType(TypeMetadata.anyNullable)),
                 "Unable to load: $generatedCode")
 
-        val typeMetadata = ExpressionReturnTypeInference.inferReturnType(
-            clazz, scriptDefinitionContext.objectRegistryScan)
+        val typeMetadata = ExpressionReturnTypeInference.inferReturnType(clazz)
 
         return ScriptStepDefinition(
             TupleDefinition.ofMain(LogicType(typeMetadata)),

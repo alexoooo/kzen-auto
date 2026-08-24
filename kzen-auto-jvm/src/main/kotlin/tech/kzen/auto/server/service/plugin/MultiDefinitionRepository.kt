@@ -2,6 +2,7 @@ package tech.kzen.auto.server.service.plugin
 
 import tech.kzen.auto.plugin.definition.ReportDefinition
 import tech.kzen.auto.plugin.model.PluginCoordinate
+import tech.kzen.auto.server.data.ReportDefinitionRepository
 import tech.kzen.auto.server.objects.plugin.model.ClassLoaderHandle
 
 

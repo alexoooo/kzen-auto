@@ -1,8 +1,8 @@
 package tech.kzen.auto.server.objects.report.exec.input.model.data
 
 import tech.kzen.auto.plugin.definition.ReportDefinition
-import tech.kzen.auto.server.objects.report.exec.input.connect.FlatDataSource
-import tech.kzen.auto.server.objects.report.exec.input.connect.FlatDataStream
+import tech.kzen.auto.server.data.FlatDataSource
+import tech.kzen.auto.server.data.FlatDataStream
 
 
 data class FlatDataContentDefinition<T>(
