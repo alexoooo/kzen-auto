@@ -13,7 +13,9 @@ import react.Key
 import react.ReactNode
 import react.State
 import react.dom.html.ReactHTML.div
+import react.dom.html.ReactHTML.details
 import react.dom.html.ReactHTML.span
+import react.dom.html.ReactHTML.summary
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeViewManager
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeWrapperLookup
@@ -51,7 +53,14 @@ external interface WorkerDisplayDefaultProps: WorkerDisplayProps {
     // (PreviewWorkerDisplay / ExploreWorkerDisplay) uses it to add its sample table / download button. NB: plain
     // (non-receiver) function type — receiver function types are prohibited in external declarations (mirrors
     // ScriptStepDisplayDefault.expandedBodyExtra); the callee invokes it with the body's ChildrenBuilder.
+    var bodyBefore: ((ChildrenBuilder) -> Unit)?
     var bodyExtra: ((ChildrenBuilder) -> Unit)?
+
+    // Open display-composition seams used by a specialised card without teaching this generic renderer which
+    // Worker it is rendering. Hidden attributes are rehomed by the composing display; a non-null disclosure label
+    // places the remaining ordinary editors behind a native, keyboard-accessible details control.
+    var hiddenAttributes: Set<AttributeName>?
+    var attributeDisclosure: String?
 }
 
 
@@ -176,7 +185,32 @@ class WorkerDisplayDefault(
                 renderAttributeSummaries(objectMetadata)
             }
 
-            renderAttributeEditors(objectMetadata)
+            props.bodyBefore?.invoke(this)
+
+            val disclosure = props.attributeDisclosure
+            if (disclosure == null) {
+                renderAttributeEditors(objectMetadata)
+            }
+            else {
+                details {
+                    css {
+                        marginTop = 0.5.em
+                    }
+                    summary {
+                        css {
+                            cursor = Cursor.pointer
+                            color = Color("rgba(0, 0, 0, 0.65)")
+                        }
+                        +disclosure
+                    }
+                    div {
+                        css {
+                            marginTop = 0.5.em
+                        }
+                        renderAttributeEditors(objectMetadata)
+                    }
+                }
+            }
 
             props.bodyExtra?.invoke(this)
         }
@@ -336,6 +370,7 @@ class WorkerDisplayDefault(
     // ...) fall to the default value editor; channel-reference attributes dispatch to SelectChannelEditor via their
     // `editor:` metadata. Channel-endpoint ports are order-managed (the gold pipes between cards), not per-Worker.
     private fun ChildrenBuilder.renderAttributeEditors(objectMetadata: ObjectMetadata) {
+        val hiddenAttributes = props.hiddenAttributes ?: emptySet()
         for ((attributeName, attributeMetadata) in objectMetadata.attributes.map) {
             // Per-output channel config lives in a free-form `channels` map, which infers to no metadata and so
             // never appears in this meta-attribute loop — no explicit exclusion needed. Channel-endpoint ports
@@ -345,7 +380,8 @@ class WorkerDisplayDefault(
             // notation for a multi-result Job until the document editor wires named results.
             if (AutoConventions.isManaged(attributeName) ||
                     JobChannelPorts.isChannelPort(attributeMetadata.type) ||
-                    attributeName == JobConventions.resultAttributeName) {
+                    attributeName == JobConventions.resultAttributeName ||
+                    attributeName in hiddenAttributes) {
                 continue
             }
 

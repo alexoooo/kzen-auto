@@ -8,12 +8,19 @@ FileDataSourceConfig:
   groupPattern: ""
   missing: fail
   schema: ""
+
+  # Chooser navigation state, deliberately separate from the runtime `directory` / `filter` query above: browsing
+  # must never turn the last visited directory into a directory scan (FileSelectionBrowserConventions).
+  browser:
+    directory: "./"
+    filter: ""
   meta:
     directory: String
     filter: String
     files:
       is: List
       editor: FileSelectionEditor
+      browser: browser
       of:
         is: Map
         of:

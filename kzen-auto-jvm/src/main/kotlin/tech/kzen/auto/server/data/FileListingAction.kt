@@ -47,6 +47,51 @@ class FileListingAction(
     }
 
 
+    /**
+     * Lists one directory for an interactive chooser. Immediate directories are always included so an active
+     * filename filter cannot hide navigation; directories sort before the matching files.
+     *
+     * Runtime source discovery remains [scanInfo], whose contract is files-only.
+     */
+    suspend fun browseInfo(directory: DataLocation, filter: String): List<DataLocationInfo> {
+        return withContext(Dispatchers.IO) {
+            browseInfoBlocking(directory, filter)
+        }
+    }
+
+
+    fun browseInfoBlocking(directory: DataLocation, filter: String): List<DataLocationInfo> {
+        val parsed = Paths.get(directory.asString())
+            ?: return emptyList()
+
+        if (Files.isRegularFile(parsed)) {
+            return listOf(toFileInfo(parsed))
+        }
+
+        if (!Files.isDirectory(parsed)) {
+            return emptyList()
+        }
+
+        val filterFunction = parseFilter(filter)
+        val directories = mutableListOf<DataLocationInfo>()
+        val files = mutableListOf<DataLocationInfo>()
+        Files.newDirectoryStream(parsed).use { children ->
+            for (child in children) {
+                val attrs = Files.readAttributes(child, BasicFileAttributes::class.java)
+                if (attrs.isDirectory) {
+                    directories.add(toFileInfo(child, attrs))
+                }
+                else if (filterFunction(child)) {
+                    files.add(toFileInfo(child, attrs))
+                }
+            }
+        }
+        directories.sort()
+        files.sort()
+        return directories + files
+    }
+
+
     fun scanInfoBlocking(pattern: DataLocation, filter: String): List<DataLocationInfo> {
         val parsed = Paths.get(pattern.asString())
             ?: return listOf()
@@ -68,7 +113,7 @@ class FileListingAction(
             1,
             object: SimpleFileVisitor<Path>() {
                 override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
-                    if (filterFunction(file)) {
+                    if (!attrs.isDirectory && filterFunction(file)) {
                         builder.add(toFileInfo(file, attrs))
                     }
                     return FileVisitResult.CONTINUE

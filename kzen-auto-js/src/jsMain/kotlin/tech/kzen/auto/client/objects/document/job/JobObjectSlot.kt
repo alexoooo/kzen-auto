@@ -62,6 +62,15 @@ class JobObjectSlot(
     RPureComponent<JobObjectSlotProps, State>(props)
 {
     //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        // The stage's one card width. JobController's insertion gaps are measured against it so the gold channel
+        // pipe stays centred under the cards — the two must never drift apart, hence one constant rather than two
+        // literals. Wide enough for a Worker card to host the shared FileBrowser inline (FileSelectionEditor).
+        val cardMaxWidth = 56.em
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     // Kept stable across renders so WorkerDisplayManager (RPureComponent) can bail out when nothing card-relevant
     // changed (e.g. a drag-hover re-render that only moved the drop indicator). Mirrors ScriptStepSlot.
     private var cachedCommon: WorkerDisplayPropsCommon? = null
@@ -99,7 +108,7 @@ class JobObjectSlot(
 
             css {
                 position = Position.relative
-                maxWidth = 40.em
+                maxWidth = cardMaxWidth
 
                 "&:hover > [data-drag-handle]" {
                     opacity = number(1.0)

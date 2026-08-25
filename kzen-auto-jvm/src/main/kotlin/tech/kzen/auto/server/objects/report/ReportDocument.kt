@@ -182,7 +182,7 @@ class ReportDocument(
     //-----------------------------------------------------------------------------------------------------------------
     private suspend fun actionBrowserInfo(): ExecutionResult {
         val absoluteDir = input.browser.directory.normalize()
-        val inputPaths = fileListingAction.scanInfo(
+        val inputPaths = fileListingAction.browseInfo(
             input.browser.directory, input.browser.filter)
 
         val inputInfo = InputBrowserInfo(

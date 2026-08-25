@@ -860,7 +860,7 @@ class JobController(
                 display = Display.flex
                 alignItems = AlignItems.center
                 justifyContent = JustifyContent.center
-                maxWidth = 40.em
+                maxWidth = JobObjectSlot.cardMaxWidth
 
                 // Reserved height depends ONLY on the gap's own content, never on insert-mode — so entering /
                 // leaving insert-mode never reflows the cards (mirrors ScriptBranchDisplay). The expanded card

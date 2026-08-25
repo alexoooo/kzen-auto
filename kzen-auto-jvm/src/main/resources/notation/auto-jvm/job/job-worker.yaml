@@ -138,6 +138,7 @@ FileSourceWorker:
     - FileDataSourceConfig
   title: "File"
   class: tech.kzen.auto.server.objects.job.worker.data.FileSourceWorker
+  display: FileSourceWorkerDisplay
   output: ""
   meta:
     output:

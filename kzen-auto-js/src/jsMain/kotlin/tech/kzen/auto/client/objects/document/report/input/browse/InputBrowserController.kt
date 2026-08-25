@@ -5,21 +5,22 @@ import react.ChildrenBuilder
 import react.Props
 import react.State
 import react.dom.html.ReactHTML.div
-import react.dom.html.ReactHTML.span
+import tech.kzen.auto.client.objects.document.common.file.FileBrowser
 import tech.kzen.auto.client.objects.document.report.ReportController
 import tech.kzen.auto.client.objects.document.report.input.browse.model.InputBrowserState
 import tech.kzen.auto.client.objects.document.report.input.model.ReportInputStore
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
-import tech.kzen.auto.common.objects.document.report.listing.InputBrowserInfo
 import tech.kzen.auto.common.objects.document.report.spec.input.InputBrowserSpec
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.lib.common.model.location.ObjectLocation
-import web.cssom.*
+import tech.kzen.lib.platform.collect.toPersistentSet
+import web.cssom.LineStyle
+import web.cssom.em
+import web.cssom.pct
 
 
-//---------------------------------------------------------------------------------------------------------------------
 external interface InputBrowserControllerProps: Props {
     var mainLocation: ObjectLocation
     var spec: InputBrowserSpec
@@ -36,13 +37,12 @@ external interface InputBrowserControllerState: State {
 }
 
 
-//---------------------------------------------------------------------------------------------------------------------
+/** Report adapter for the shared callback-driven file-browser presentation. */
 class InputBrowserController(
     props: InputBrowserControllerProps
 ):
     RPureComponent<InputBrowserControllerProps, InputBrowserControllerState>(props)
 {
-    //-----------------------------------------------------------------------------------------------------------------
     override fun InputBrowserControllerState.init(props: InputBrowserControllerProps) {
         requestPending = false
     }
@@ -54,23 +54,23 @@ class InputBrowserController(
         snapshot: Any
     ) {
         if (props.open && props.inputBrowserState.browserInfo == null && !state.requestPending) {
-            setState {
-                requestPending = true
-            }
+            setState { requestPending = true }
         }
-
         if (state.requestPending && !prevState.requestPending) {
             props.inputStore.browser.browserLoadInfoAsync()
         }
     }
 
 
-    //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
         if (!props.open) {
-            // NB: keep state when browser is hidden
             return
         }
+
+        val info = props.inputBrowserState.browserInfo
+        val directory = props.inputBrowserState.browserDirChangeRequest
+            ?: info?.browseDir
+            ?: props.spec.directory
 
         if (!props.forceOpen) {
             div {
@@ -81,119 +81,23 @@ class InputBrowserController(
                     width = 100.pct
                     fontSize = 1.5.em
                 }
-
                 +"Browser"
             }
         }
 
-        val inputBrowserInfo = props.inputBrowserState.browserInfo
-        val infoError = props.inputBrowserState.browserInfoError
-
-        when {
-            infoError != null ->
-                renderInfoError(infoError)
-
-            inputBrowserInfo == null ->
-                renderInfoLoadingInitial()
-
-            else ->
-                renderInfoLoaded(inputBrowserInfo)
-        }
-    }
-
-
-    private fun ChildrenBuilder.renderInfoError(error: String) {
-        renderError(error)
-        renderPath(null)
-    }
-
-
-    private fun ChildrenBuilder.renderError(error: String) {
-        div {
-            css {
-                color = NamedColor.red
-            }
-
-            +"Error: $error"
-        }
-    }
-
-
-    private fun ChildrenBuilder.renderInfoLoadingInitial() {
-        div {
-            css {
-                fontFamily = FontFamily.monospace
-            }
-
-            +props.spec.directory.asString()
-        }
-    }
-
-
-    private fun ChildrenBuilder.renderInfoLoaded(inputBrowserInfo: InputBrowserInfo) {
-//        val browserError = props.inputState.browserChangeError()
-//        if (browserError != null) {
-//            renderError(browserError)
-//        }
-
-        renderControls(inputBrowserInfo)
-
-        div {
-            css {
-                marginTop = 0.5.em
-                marginBottom = 0.5.em
-            }
-
-            renderPath(inputBrowserInfo)
-        }
-
-        InputBrowserTableController::class.react {
-            mainLocation = props.mainLocation
-            hasFilter = props.spec.filter.isNotBlank()
-            dataLocationInfos = inputBrowserInfo.files
-            selectedDataLocation = props.selectedDataLocation
-            inputBrowserState = props.inputBrowserState
-            inputStore = props.inputStore
-        }
-    }
-
-
-    private fun ChildrenBuilder.renderControls(inputBrowserInfo: InputBrowserInfo) {
-        div {
-            InputBrowserActionController::class.react {
-                mainLocation = props.mainLocation
-                dataLocationInfos = inputBrowserInfo.files
-                selectedDataLocation = props.selectedDataLocation
-                inputBrowserState = props.inputBrowserState
-                inputStore = props.inputStore
-            }
-
-            span {
-                css {
-                    float = Float.right
-                }
-                InputBrowserFilterController::class.react {
-                    spec = props.spec
-                    inputStore = props.inputStore
-                }
-            }
-        }
-    }
-
-
-    private fun ChildrenBuilder.renderPath(inputBrowserInfoOrNull: InputBrowserInfo?) {
-        val errorMode = inputBrowserInfoOrNull == null
-
-        val browserDir =
-            props.inputBrowserState.browserDirChangeRequest ?:
-            inputBrowserInfoOrNull?.browseDir ?:
-            props.spec.directory
-
-        InputBrowserPathController::class.react {
-            mainLocation = props.mainLocation
-            this.browseDir = browserDir
-            this.errorMode = errorMode
-            inputStore = props.inputStore
+        FileBrowser::class.react {
+            this.directory = directory
+            filter = props.spec.filter
+            listing = info?.files
+            loading = props.inputBrowserState.browserInfoLoading
+            error = props.inputBrowserState.browserInfoError
+            checked = props.inputBrowserState.browserChecked
+            selected = props.selectedDataLocation
+            onDirectorySelected = { props.inputStore.browser.browserDirSelectedAsync(it) }
+            onFilterChanged = { props.inputStore.browser.browserFilterUpdateAsync(it) }
+            onCheckedChanged = { props.inputStore.browser.browserCheckedUpdate(it.toPersistentSet()) }
+            onAdd = { props.inputStore.selected.selectionAddAsync(it) }
+            onRemove = { props.inputStore.selected.selectionRemoveAsync(it) }
         }
     }
 }

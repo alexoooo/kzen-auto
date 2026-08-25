@@ -42,6 +42,13 @@ WorkerDisplayDefault:
   attributeViewManager: AttributeViewManager
 
 
+FileSourceWorkerDisplay:
+  is: WorkerDisplay
+  class: tech.kzen.auto.client.objects.document.job.display.FileSourceWorkerDisplay$Wrapper
+  attributeEditorManager: AttributeEditorManager
+  attributeViewManager: AttributeViewManager
+
+
 PreviewWorkerDisplay:
   is: WorkerDisplay
   class: tech.kzen.auto.client.objects.document.job.display.PreviewWorkerDisplay$Wrapper

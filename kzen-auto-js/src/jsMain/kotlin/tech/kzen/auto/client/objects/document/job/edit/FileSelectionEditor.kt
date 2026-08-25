@@ -1,40 +1,32 @@
 package tech.kzen.auto.client.objects.document.job.edit
 
 import emotion.react.css
-import mui.material.IconButton
+import js.objects.unsafeJso
+import mui.material.Button
+import mui.material.ButtonVariant
 import mui.material.InputLabel
 import mui.material.Size
-import mui.material.TextField
 import mui.system.sx
 import react.ChildrenBuilder
-import react.Key
-import react.ReactNode
 import react.State
 import react.dom.html.ReactHTML.div
-import react.dom.html.ReactHTML.span
-import react.dom.html.ReactHTML.table
-import react.dom.html.ReactHTML.tbody
-import react.dom.html.ReactHTML.td
-import react.dom.html.ReactHTML.tr
-import react.dom.onChange
-import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
 import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorProps
 import tech.kzen.auto.client.objects.document.common.edit.AttributeCommitter
-import tech.kzen.auto.client.objects.document.common.edit.AttributeDraftStore
 import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
 import tech.kzen.auto.client.objects.document.common.edit.documentEditActivity
+import tech.kzen.auto.client.objects.document.common.file.FileBrowser
+import tech.kzen.auto.client.objects.document.common.file.FileSelectionTable
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.rest.ClientRestApi
-import tech.kzen.auto.client.util.ClientInputUtils
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RComponent
-import tech.kzen.auto.client.wrap.contextValue
 import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.installContextType
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
+import tech.kzen.auto.common.data.file.FileSelectionBrowserConventions
 import tech.kzen.auto.common.data.file.FileSelectionEntry
 import tech.kzen.auto.common.data.file.FileSelectionSpec
 import tech.kzen.auto.common.objects.document.plugin.model.CommonDataEncodingSpec
@@ -52,14 +44,12 @@ import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationEvent
-import tech.kzen.lib.common.model.structure.notation.cqrs.UpsertAttributeCommand
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.service.store.LocalGraphStore
 import tech.kzen.lib.common.service.store.MirroredGraphStore
 import tech.kzen.lib.platform.collect.toPersistentList
 import web.cssom.*
-import web.html.HTMLInputElement
 
 
 external interface FileSelectionEditorProps : AttributeEditorProps {
@@ -75,9 +65,25 @@ external interface FileSelectionEditorState : State {
     var listingError: String?
     var editError: String?
     var loading: Boolean
+    var checked: Set<DataLocation>
+    var selectedChecked: Set<DataLocation>
+    var showDetails: Boolean
+    var browserOpen: Boolean
 }
 
 
+/**
+ * Ordered file selection edited entirely in place: the shared [FileBrowser], then the files it has chosen.
+ *
+ * The interaction is Report's ([tech.kzen.auto.client.objects.document.report.input.ReportInputController]) — an
+ * empty selection pins the browser open, a non-empty one puts it behind a Browser toggle, and the selection reads
+ * as a [FileSelectionTable] below it in the styling the browser itself uses. Browsing sits above the selection
+ * because it is what feeds it, so the eye travels the way the work does. A card that hid its chooser behind a
+ * launcher button and a modal was strictly harder to use, so there is no dialog here.
+ *
+ * The one thing Report's selection does not have is order, so remove and reorder act on the rows checked in that
+ * table, in the same check-then-act shape the browser's own Add/Remove buttons use.
+ */
 class FileSelectionEditor(
     props: FileSelectionEditorProps
 ) :
@@ -85,9 +91,82 @@ class FileSelectionEditor(
     LocalGraphStore.Observer
 {
     companion object {
-        private val directoryAttributeName = AttributeName("directory")
-        private val filterAttributeName = AttributeName("filter")
         private val legacyPathsAttributeName = AttributeName("paths")
+        private val toggleSelected = Color("#e0e0e0")
+        private val separatorColor = Color("#c3c3c3")
+        private val errorColor = Color("#c62828")
+        private val hintColor = Color("rgba(0, 0, 0, 0.55)")
+
+
+        /**
+         * Report's rule: with nothing selected the browser is the only thing on the card worth acting on, so it is
+         * pinned open; any selection makes it collapsible so a configured card stays short.
+         */
+        internal fun browserOpen(selectionEmpty: Boolean, toggledOpen: Boolean): Boolean =
+            selectionEmpty || toggledOpen
+
+
+        internal fun shouldLoadListing(browserOpen: Boolean, directory: String): Boolean =
+            browserOpen && directory.isNotEmpty()
+
+
+        /**
+         * Shifts every checked entry one position, keeping the checked entries in their relative order.
+         *
+         * Entries already against the edge they are moving towards stay put and hold back the ones behind them, so
+         * a run of checked rows travels as a block instead of scrambling itself against the boundary.
+         */
+        internal fun moveChecked(
+            entries: List<FileSelectionEntry>,
+            checked: Set<DataLocation>,
+            delta: Int
+        ): List<FileSelectionEntry> {
+            if (checked.isEmpty() || entries.isEmpty() || delta == 0) {
+                return entries
+            }
+
+            val reordered = entries.toMutableList()
+            if (delta < 0) {
+                var barrier = 0
+                for (index in reordered.indices) {
+                    if (reordered[index].location !in checked) {
+                        continue
+                    }
+                    if (index == barrier) {
+                        barrier++
+                        continue
+                    }
+                    reordered.add(index - 1, reordered.removeAt(index))
+                }
+            }
+            else {
+                var barrier = reordered.lastIndex
+                for (index in reordered.indices.reversed()) {
+                    if (reordered[index].location !in checked) {
+                        continue
+                    }
+                    if (index == barrier) {
+                        barrier--
+                        continue
+                    }
+                    reordered.add(index + 1, reordered.removeAt(index))
+                }
+            }
+            return reordered
+        }
+
+
+        internal suspend fun commitBrowserValue(
+            apply: suspend () -> String?,
+            onError: (String?) -> Unit,
+            onCommitted: () -> Unit
+        ) {
+            val error = apply()
+            onError(error)
+            if (error == null) {
+                onCommitted()
+            }
+        }
     }
 
 
@@ -134,15 +213,23 @@ class FileSelectionEditor(
 
     override fun FileSelectionEditorState.init(props: FileSelectionEditorProps) {
         val graphNotation = props.clientStateGlobal.current()!!.graphStructure().graphNotation
+        val paths = browserPaths()
         val selected = readSelection(graphNotation)
         this.selected = selected
-        directory = readString(graphNotation, directoryAttributeName)
-            ?: selected.firstOrNull()?.location?.parent()?.asString().orEmpty()
-        filter = readString(graphNotation, filterAttributeName).orEmpty()
+        directory = paths
+            ?.let { readString(graphNotation, it.directory) }
+            ?.takeIf { it.isNotEmpty() }
+            ?: selected.firstOrNull()?.location?.parent()?.asString()?.takeIf { it.isNotEmpty() }
+            ?: FileSelectionBrowserConventions.defaultDirectory
+        filter = paths?.let { readString(graphNotation, it.filter) }.orEmpty()
         listing = null
         listingError = null
         editError = null
         loading = false
+        checked = emptySet()
+        selectedChecked = emptySet()
+        showDetails = false
+        browserOpen = false
     }
 
 
@@ -153,7 +240,7 @@ class FileSelectionEditor(
                 props.mirroredGraphStore.observe(this)
             }
         }
-        if (state.directory.isNotEmpty()) {
+        if (shouldLoadListing(isBrowserOpen(), state.directory)) {
             load(state.directory, state.filter)
         }
     }
@@ -196,13 +283,20 @@ class FileSelectionEditor(
         if (pendingSelection == null) {
             val selected = readSelection(graphNotation)
             if (state.selected != selected) {
-                setState { this.selected = selected }
+                val remainingChecked = retainChecked(selected)
+                setState {
+                    this.selected = selected
+                    selectedChecked = remainingChecked
+                }
             }
         }
 
-        val directory = readString(graphNotation, directoryAttributeName)
+        val paths = browserPaths()
+            ?: return
+
+        val directory = readString(graphNotation, paths.directory)
             ?: state.directory
-        val filter = readString(graphNotation, filterAttributeName)
+        val filter = readString(graphNotation, paths.filter)
             ?: state.filter
         if (state.directory != directory || state.filter != filter) {
             setState {
@@ -210,6 +304,13 @@ class FileSelectionEditor(
                 this.filter = filter
             }
         }
+    }
+
+
+    /** Checked rows that survive a selection change: a check on a removed file must not linger as a phantom. */
+    private fun retainChecked(entries: List<FileSelectionEntry>): Set<DataLocation> {
+        val remaining = entries.map { it.location }.toSet()
+        return state.selectedChecked.filter { it in remaining }.toSet()
     }
 
 
@@ -228,10 +329,42 @@ class FileSelectionEditor(
     }
 
 
-    private fun readString(graphNotation: GraphNotation, attributeName: AttributeName): String? {
+    private fun readString(graphNotation: GraphNotation, attributePath: AttributePath): String? {
         return (graphNotation.firstAttribute(
-            props.objectLocation, AttributePath.ofName(attributeName))
+            props.objectLocation, attributePath)
             as? ScalarAttributeNotation)?.value
+    }
+
+
+    private data class BrowserPaths(
+        val directory: AttributePath,
+        val filter: AttributePath
+    )
+
+
+    /**
+     * Where chooser navigation persists, or null when this attribute keeps it view-only.
+     *
+     * A `browser: <attribute path>` marker in the attribute's metadata opts into a navigation pair held apart from
+     * a source's runtime directory query, so browsing can never turn the last visited folder into a directory scan.
+     * Without the marker — the legacy `MultiFileReaderWorker.paths` case, and any third-party attribute that has
+     * not opted in — navigation lives in component state and only the selection is written.
+     */
+    private fun browserPaths(): BrowserPaths? {
+        val metadata = props.clientStateGlobal.current()
+            ?.graphStructure()
+            ?.graphMetadata
+            ?.objectMetadata
+            ?.get(props.objectLocation)
+            ?.attributes
+            ?.get(props.attributeName)
+            ?.attributeMetadataNotation
+            ?: return null
+        val directory = FileSelectionBrowserConventions.directoryAttributePath(metadata)
+            ?: return null
+        val filter = FileSelectionBrowserConventions.filterAttributePath(metadata)
+            ?: return null
+        return BrowserPaths(directory, filter)
     }
 
 
@@ -246,8 +379,20 @@ class FileSelectionEditor(
 
 
     private fun changeSelection(entries: List<FileSelectionEntry>, debounce: Boolean) {
+        // An open browser stays open across the transition out of force-open: adding the first file must not yank
+        // the browser out from under the click that added it. Computed outside the write-only setState lambda
+        // (wrap/React.kt caveat), and only ever latches openness on — closing stays the toggle's job.
+        val keepOpen = isBrowserOpen()
+        val remainingChecked = retainChecked(entries)
+
         pendingSelection = entries
-        setState { selected = entries }
+        setState {
+            selected = entries
+            selectedChecked = remainingChecked
+            if (keepOpen) {
+                browserOpen = true
+            }
+        }
         if (debounce) {
             committer.schedule()
         }
@@ -258,34 +403,12 @@ class FileSelectionEditor(
     }
 
 
-    private fun add(location: String) {
-        val current = state.selected ?: emptyList()
-        if (current.any { it.location.asString() == location }) {
-            return
-        }
-        changeSelection(current + FileSelectionEntry(DataLocation.of(location), null, null), false)
-    }
-
-
-    private fun remove(index: Int) {
+    private fun moveCheckedBy(delta: Int) {
         val current = state.selected ?: return
-        if (index !in current.indices) {
-            return
+        val reordered = moveChecked(current, state.selectedChecked, delta)
+        if (reordered != current) {
+            changeSelection(reordered, false)
         }
-        changeSelection(current.filterIndexed { entryIndex, _ -> entryIndex != index }, false)
-    }
-
-
-    private fun move(index: Int, delta: Int) {
-        val current = state.selected ?: return
-        val target = index + delta
-        if (index !in current.indices || target !in current.indices) {
-            return
-        }
-        val reordered = current.toMutableList()
-        val moved = reordered.removeAt(index)
-        reordered.add(target, moved)
-        changeSelection(reordered, false)
     }
 
 
@@ -313,6 +436,23 @@ class FileSelectionEditor(
     }
 
 
+    private fun addAll(locations: List<DataLocation>) {
+        val current = state.selected ?: emptyList()
+        val existing = current.map { it.location }.toSet()
+        val added = locations.filter { it !in existing }
+            .map { FileSelectionEntry(it, null, null) }
+        if (added.isNotEmpty()) changeSelection(current + added, false)
+    }
+
+
+    private fun removeAll(locations: List<DataLocation>) {
+        val removed = locations.toSet()
+        val current = state.selected ?: return
+        val next = current.filterNot { it.location in removed }
+        if (next != current) changeSelection(next, false)
+    }
+
+
     private fun load(directory: String, filter: String) {
         val epoch = ++listingEpoch
         setState {
@@ -323,8 +463,11 @@ class FileSelectionEditor(
             try {
                 val listing = props.restClient.listFiles(directory, filter)
                 if (mounted && listingEpoch == epoch) {
+                    val available = listing.filterNot { it.directory }.map { it.path }.toSet()
+                    val checked = state.checked.filter { it in available }.toSet()
                     setState {
                         this.listing = listing
+                        this.checked = checked
                         loading = false
                     }
                 }
@@ -343,142 +486,132 @@ class FileSelectionEditor(
 
 
     private fun navigateTo(directory: String) {
-        if (props.attributeName == legacyPathsAttributeName) {
-            setState { this.directory = directory }
-            load(directory, state.filter)
-            return
-        }
         setState { this.directory = directory }
-        async {
-            props.mirroredGraphStore.apply(UpsertAttributeCommand(
-                props.objectLocation,
-                directoryAttributeName,
-                ScalarAttributeNotation(directory)))
+
+        val paths = browserPaths()
+        if (paths == null) {
             load(directory, state.filter)
-        }
-    }
-
-
-    private fun browse() {
-        val (directory, filter) = browserValues()
-        if (directory.isEmpty()) {
             return
         }
-        setState {
-            this.directory = directory
-            this.filter = filter
+
+        async {
+            applyBrowserValue(paths.directory, directory) {
+                load(directory, state.filter)
+            }
         }
-        load(directory, filter)
     }
 
 
-    private fun browserValues(): Pair<String, String> {
-        if (props.attributeName == legacyPathsAttributeName) {
-            return state.directory to state.filter
+    private fun updateFilter(filter: String) {
+        setState { this.filter = filter }
+
+        val paths = browserPaths()
+        if (paths == null) {
+            load(state.directory, filter)
+            return
         }
-        val drafts = contextValue<DocumentBridge?>()?.channel(AttributeDraftStore.Key)
-        val directory = drafts
-            ?.value(props.objectLocation, AttributePath.ofName(directoryAttributeName))
-            ?: state.directory
-        val filter = drafts
-            ?.value(props.objectLocation, AttributePath.ofName(filterAttributeName))
-            ?: state.filter
-        return directory to filter
+
+        async {
+            applyBrowserValue(paths.filter, filter) {
+                load(state.directory, filter)
+            }
+        }
+    }
+
+
+    private suspend fun applyBrowserValue(
+        attributePath: AttributePath,
+        value: String,
+        onCommitted: () -> Unit
+    ) {
+        commitBrowserValue(
+            apply = {
+                CommonEditUtils.applyCommand(
+                    props.mirroredGraphStore,
+                    CommonEditUtils.editCommand(
+                        props.objectLocation,
+                        attributePath,
+                        ScalarAttributeNotation(value)))
+            },
+            onError = { message -> setState { editError = message } },
+            onCommitted = onCommitted)
+    }
+
+
+    private fun isBrowserForceOpen(): Boolean {
+        return state.selected.isNullOrEmpty()
+    }
+
+
+    private fun isBrowserOpen(): Boolean {
+        return browserOpen(isBrowserForceOpen(), state.browserOpen)
+    }
+
+
+    private fun toggleBrowser() {
+        val opening = ! state.browserOpen
+        setState { browserOpen = opening }
+        if (opening && state.listing == null && shouldLoadListing(true, state.directory)) {
+            load(state.directory, state.filter)
+        }
     }
 
 
     override fun ChildrenBuilder.render() {
         val selected = state.selected ?: return
+
+        renderAttributeLabel()
+
+        if (! isBrowserForceOpen()) {
+            renderBrowserToggle()
+        }
+
+        if (isBrowserOpen()) {
+            renderBrowser(selected)
+        }
+
         renderSelected(selected)
-        renderBrowser(selected)
+
         state.editError?.let { error ->
             div {
-                css { color = Color("#c62828") }
+                css { color = errorColor }
                 +error
             }
         }
     }
 
 
-    private fun ChildrenBuilder.renderSelected(selected: List<FileSelectionEntry>) {
+    private fun ChildrenBuilder.renderAttributeLabel() {
         InputLabel {
             sx { fontSize = 0.8.em }
             +CommonEditUtils.formattedLabel(AttributePath.ofName(props.attributeName))
         }
-
-        if (selected.isEmpty()) {
-            div {
-                css {
-                    color = NamedColor.gray
-                    marginBottom = 0.25.em
-                }
-                +"No files selected — browse below to add."
-            }
-            return
-        }
-
-        table {
-            tbody {
-                for ((index, entry) in selected.withIndex()) {
-                    tr {
-                        key = Key(entry.location.asString())
-                        td {
-                            IconButton {
-                                title = "Move earlier"
-                                disabled = index == 0
-                                onClick = { move(index, -1) }
-                                icon("material-symbols:arrow-upward") {}
-                            }
-                        }
-                        td {
-                            IconButton {
-                                title = "Move later"
-                                disabled = index == selected.lastIndex
-                                onClick = { move(index, 1) }
-                                icon("material-symbols:arrow-downward") {}
-                            }
-                        }
-                        td {
-                            IconButton {
-                                title = "Remove file"
-                                onClick = { remove(index) }
-                                icon("material-symbols:delete") {}
-                            }
-                        }
-                        td {
-                            css {
-                                verticalAlign = VerticalAlign.middle
-                                fontFamily = FontFamily.monospace
-                            }
-                            +entry.location.asString()
-                        }
-                        if (props.attributeName != legacyPathsAttributeName) {
-                            td { entryTextField("Format", entry.format?.asString().orEmpty()) {
-                                editFormat(index, it)
-                            } }
-                            td { entryTextField("Encoding", entry.encoding?.asString().orEmpty()) {
-                                editEncoding(index, it)
-                            } }
-                        }
-                    }
-                }
-            }
-        }
     }
 
 
-    private fun ChildrenBuilder.entryTextField(
-        label: String,
-        value: String,
-        onValue: (String) -> Unit
-    ) {
-        TextField {
-            this.label = ReactNode(label)
-            this.value = value
+    // Report's browser toggle: offered only once something is selected, because an empty selection pins the
+    // browser open and a control that cannot change anything is noise.
+    private fun ChildrenBuilder.renderBrowserToggle() {
+        Button {
+            variant = ButtonVariant.outlined
             size = Size.small
-            sx { width = 9.em }
-            onChange = { onValue((it.target as HTMLInputElement).value) }
-            onBlur = { committer.flush() }
+
+            sx {
+                if (state.browserOpen) {
+                    backgroundColor = toggleSelected
+                }
+                color = NamedColor.black
+                borderColor = Color("#777777")
+            }
+
+            title = if (state.browserOpen) "Hide browser" else "Show browser"
+            onClick = { toggleBrowser() }
+
+            icon("material-symbols:folder-open") {
+                style = unsafeJso { marginRight = 0.25.em }
+            }
+
+            +"Browser"
         }
     }
 
@@ -487,158 +620,169 @@ class FileSelectionEditor(
         div {
             css { marginTop = 0.5.em }
 
-            if (props.attributeName == legacyPathsAttributeName) {
-                renderLegacyBrowserControls()
-            }
-            else {
-                div {
-                    css { color = Color("rgba(0, 0, 0, 0.6)") }
-                    +if (state.directory.isEmpty()) {
-                        "Enter a directory above, then browse."
-                    }
-                    else {
-                        "Directory: ${state.directory}"
-                    }
-                }
-                renderFilterHelp()
+            renderFilterHelp()
 
-                IconButton {
-                    title = "Browse directory"
-                    onClick = { browse() }
-                    icon("material-symbols:refresh") {}
-                }
+            FileBrowser::class.react {
+                directory = DataLocation.of(state.directory)
+                filter = state.filter
+                listing = state.listing
+                loading = state.loading
+                error = state.listingError
+                checked = state.checked
+                this.selected = selected.map { it.location }.toSet()
+                onDirectorySelected = { navigateTo(it.asString()) }
+                onFilterChanged = { updateFilter(it) }
+                onCheckedChanged = { setState { checked = it } }
+                onAdd = { addAll(it) }
+                onRemove = { removeAll(it) }
             }
-
-            renderListing(selected)
         }
     }
 
 
-    private fun ChildrenBuilder.renderLegacyBrowserControls() {
-        div {
-            span {
-                css {
-                    width = 24.em
-                    display = Display.inlineBlock
-                }
-                TextField {
-                    label = ReactNode("Directory")
-                    fullWidth = true
-                    size = Size.small
-                    value = state.directory
-                    onChange = { stateValue ->
-                        setState { directory = (stateValue.target as HTMLInputElement).value }
-                    }
-                    onKeyDown = { event -> ClientInputUtils.handleEnter(event) { browse() } }
-                }
-            }
-
-            IconButton {
-                title = "Browse directory"
-                onClick = { browse() }
-                icon("material-symbols:refresh") {}
-            }
-        }
-
-        div {
-            css {
-                width = 24.em
-                marginTop = 0.25.em
-            }
-            TextField {
-                label = ReactNode("Filter")
-                fullWidth = true
-                size = Size.small
-                value = state.filter
-                onChange = { stateValue ->
-                    setState { filter = (stateValue.target as HTMLInputElement).value }
-                }
-                onKeyDown = { event -> ClientInputUtils.handleEnter(event) { browse() } }
-            }
-        }
-        renderFilterHelp()
-    }
-
-
+    // The search field is not a glob: FileListingAction.parseFilter keeps names containing EVERY whitespace
+    // separated word. Saying so here is what stops `*.csv` being the feature's first five-minute failure.
     private fun ChildrenBuilder.renderFilterHelp() {
         div {
             css {
-                color = Color("rgba(0, 0, 0, 0.55)")
+                color = hintColor
                 fontSize = 0.8.em
             }
-            +"Filter matches names containing all of these words, e.g. sales csv."
+            +"Search matches names containing all of these words, e.g. sales csv."
         }
     }
 
 
-    private fun ChildrenBuilder.renderListing(selected: List<FileSelectionEntry>) {
-        when {
-            state.loading -> div { +"Loading…" }
-            state.listingError != null -> div {
-                css { color = Color("#c62828") }
-                +"Error: ${state.listingError}"
-            }
-            state.listing == null -> div {
-                css { color = NamedColor.gray }
-                +"Browse to list files."
-            }
-            else -> div {
-                css {
-                    maxHeight = 20.em
-                    overflowY = Auto.auto
-                }
-                parentDirectory(state.directory)?.let { parent ->
-                    div {
-                        key = Key("..")
-                        css { cursor = Cursor.pointer }
-                        onClick = { navigateTo(parent) }
-                        icon("material-symbols:drive-folder-upload") {}
-                        +" .."
-                    }
-                }
-                for (entry in state.listing.orEmpty()) {
-                    listingRow(entry, selected)
-                }
-            }
+    private fun ChildrenBuilder.renderSelected(selected: List<FileSelectionEntry>) {
+        if (selected.isEmpty()) {
+            return
+        }
+
+        if (isBrowserOpen()) {
+            renderSelectedHeading()
+        }
+
+        renderSelectedActions(selected)
+
+        FileSelectionTable::class.react {
+            entries = selected
+            checked = state.selectedChecked
+            showDetails = state.showDetails
+            perEntryFormat = props.attributeName != legacyPathsAttributeName
+            onCheckedChanged = { next -> setState { selectedChecked = next } }
+            onFormatChanged = { index, value -> editFormat(index, value) }
+            onEncodingChanged = { index, value -> editEncoding(index, value) }
+            onEditFlush = { committer.flush() }
         }
     }
 
 
-    private fun ChildrenBuilder.listingRow(
-        entry: DataLocationInfo,
-        selected: List<FileSelectionEntry>
-    ) {
-        val location = entry.path.asString()
+    // Worth drawing only while the browser is above it: with the browser hidden the selection is the whole card,
+    // and a heading over the only thing present is noise.
+    private fun ChildrenBuilder.renderSelectedHeading() {
         div {
-            key = Key(location)
-            if (entry.directory) {
-                css { cursor = Cursor.pointer }
-                onClick = { navigateTo(location) }
-                icon("material-symbols:folder") {}
-                +" ${entry.name}"
+            css {
+                borderTopWidth = 2.px
+                borderTopColor = separatorColor
+                borderTopStyle = LineStyle.solid
+                marginTop = 1.em
+                width = 100.pct
+                fontSize = 1.5.em
             }
-            else {
-                val alreadySelected = selected.any { it.location.asString() == location }
-                IconButton {
-                    title = if (alreadySelected) "Already selected" else "Add file"
-                    disabled = alreadySelected
-                    onClick = { add(location) }
-                    icon("material-symbols:add-circle-outline") {}
-                }
-                icon("material-symbols:description") {}
-                +" ${entry.name}"
-            }
+            +"Selected"
         }
     }
 
 
-    private fun parentDirectory(path: String): String? {
-        val trimmed = path.trimEnd('/', '\\')
-        val separator = maxOf(trimmed.lastIndexOf('/'), trimmed.lastIndexOf('\\'))
-        return when {
-            separator < 0 -> null
-            separator == 0 -> "/"
-            else -> trimmed.substring(0, separator)
+    private fun ChildrenBuilder.renderSelectedActions(selected: List<FileSelectionEntry>) {
+        val checkedCount = state.selectedChecked.size
+
+        div {
+            css {
+                display = Display.flex
+                alignItems = AlignItems.center
+                gap = 0.75.em
+                flexWrap = FlexWrap.wrap
+                marginTop = 0.5.em
+            }
+
+            selectionButton(
+                label = if (checkedCount == 0) "Remove" else "Remove ($checkedCount)",
+                iconName = "material-symbols:do-not-disturb-on-outline",
+                enabled = checkedCount != 0,
+                title = if (checkedCount == 0) "No files checked" else "Remove checked files"
+            ) {
+                removeAll(state.selectedChecked.toList())
+            }
+
+            selectionButton(
+                label = "Up",
+                iconName = "material-symbols:arrow-upward",
+                enabled = moveChecked(selected, state.selectedChecked, -1) != selected,
+                title = "Move checked files earlier"
+            ) {
+                moveCheckedBy(-1)
+            }
+
+            selectionButton(
+                label = "Down",
+                iconName = "material-symbols:arrow-downward",
+                enabled = moveChecked(selected, state.selectedChecked, 1) != selected,
+                title = "Move checked files later"
+            ) {
+                moveCheckedBy(1)
+            }
+
+            div { css { flexGrow = number(1.0) } }
+
+            renderDetailsToggle()
+        }
+    }
+
+
+    private fun ChildrenBuilder.selectionButton(
+        label: String,
+        iconName: String,
+        enabled: Boolean,
+        title: String,
+        onAction: () -> Unit
+    ) {
+        Button {
+            variant = ButtonVariant.outlined
+            size = Size.small
+            disabled = ! enabled
+            this.title = title
+            sx {
+                color = NamedColor.black
+                borderColor = Color("#777777")
+            }
+            onClick = { onAction() }
+            icon(iconName) { style = unsafeJso { marginRight = 0.25.em } }
+            +label
+        }
+    }
+
+
+    // Report's Details toggle: the full path and the per-file format overrides are what make a row wide, and most
+    // of the time neither is being read.
+    private fun ChildrenBuilder.renderDetailsToggle() {
+        val showing = state.showDetails
+
+        Button {
+            variant = ButtonVariant.outlined
+            size = Size.small
+            sx {
+                if (showing) {
+                    backgroundColor = toggleSelected
+                }
+                color = NamedColor.black
+                borderColor = Color("#777777")
+            }
+            title = if (showing) "Hide: Details" else "Show: Details"
+            onClick = { setState { showDetails = ! showing } }
+            icon("material-symbols:more-horiz") {
+                style = unsafeJso { marginLeft = (-0.25).em; marginRight = (-0.25).em }
+            }
         }
     }
 }

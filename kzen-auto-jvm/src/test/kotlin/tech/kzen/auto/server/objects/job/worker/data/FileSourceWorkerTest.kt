@@ -4,6 +4,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import tech.kzen.auto.common.data.DataSourceConventions
 import tech.kzen.auto.common.data.file.FileSelectionEntry
+import tech.kzen.auto.common.data.file.FileSelectionBrowserConventions
 import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.auto.common.objects.document.data.schema.DataSchemaFieldListSpec
 import tech.kzen.auto.common.objects.document.data.schema.DataSchemaFieldSpec
@@ -21,6 +22,8 @@ import tech.kzen.auto.server.objects.report.exec.input.parse.csv.CsvReportDefine
 import tech.kzen.auto.server.service.plugin.HostReportDefinitionRepository
 import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.auto.server.util.WorkUtils
+import tech.kzen.lib.common.model.attribute.AttributeName
+import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.location.ObjectReference
@@ -123,6 +126,36 @@ class FileSourceWorkerTest {
             assertFalse(DataSourceConventions.isDataSource(notation, location))
             assertFalse(DataSourceConventions.isShapeProvider(notation, location))
         }
+    }
+
+
+    @Test
+    fun fileWorkerKeepsChooserStateSeparateFromRuntimeDirectoryQuery() {
+        val notation = AutoTestUtils.readNotation()
+        val attempt = AutoTestUtils.graphDefinitionAttempt(notation)
+        val location = ObjectLocation.parse("auto-jvm/job/job-worker.yaml#FileSourceWorker")
+        val metadata = attempt.graphStructure.graphMetadata.get(location)!!
+        val filesMetadata = metadata.attributes.map[AttributeName("files")]!!
+
+        assertEquals(
+            FileSelectionBrowserConventions.defaultDirectory,
+            notation.firstAttribute(
+                location,
+                FileSelectionBrowserConventions.directoryAttributePath(
+                    filesMetadata.attributeMetadataNotation)!!)!!.asString())
+        assertEquals(
+            FileSelectionBrowserConventions.defaultFilter,
+            notation.firstAttribute(
+                location,
+                FileSelectionBrowserConventions.filterAttributePath(
+                    filesMetadata.attributeMetadataNotation)!!)!!.asString())
+        assertEquals(
+            "",
+            notation.firstAttribute(location, AttributePath.parse("directory"))!!.asString())
+        assertEquals(
+            "",
+            notation.firstAttribute(location, AttributePath.parse("filter"))!!.asString())
+        assertFalse(AttributeName("browser") in metadata.attributes.map)
     }
 
 
