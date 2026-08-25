@@ -26,8 +26,14 @@ FileDataSourceConfig:
         of:
           - String
           - String
-    format: String
-    encoding: String
+    # Defaults for every file this source reads, each overridable per file in the selection's Details. Blank is
+    # the normal setting: format falls back to extension inference, encoding to the format's own default.
+    format:
+      is: String
+      editor: SelectDataFormatEditor
+    encoding:
+      is: String
+      editor: SelectDataEncodingEditor
     groupPattern: String
     missing:
       is: String

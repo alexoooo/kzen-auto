@@ -35,6 +35,10 @@ object DataSourceConventions {
     const val resolveAction = "resolve"
     const val shapeAction = "shape"
 
+    // Unlike the two above, this asks about the SERVER rather than about one source — which formats and text
+    // encodings a file source could be configured with — so it takes no `source` parameter.
+    const val fileFormatsAction = "fileFormats"
+
 
     fun isDataSource(graphNotation: GraphNotation, location: ObjectLocation): Boolean {
         if (location !in graphNotation.coalesce) {

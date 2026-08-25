@@ -186,18 +186,36 @@ class FileDataOpenerTest {
     }
 
 
+    // An extension no definition claims is not an error: resolution falls through to the highest-priority
+    // non-avoid definition, which is Text — the same answer a Report gives for the same file. Failing here instead
+    // made picking a `.md` a dead end that only showed up as a red chip mid-run.
     @Test
-    fun unknownCoordinateAndUnknownExtensionFailClearly() {
-        val file = Files.createTempFile("file-opener-unknown", ".wat").also { it.writeText("x") }
+    fun unknownExtensionFallsBackToTextLikeReport() {
+        val file = Files.createTempFile("file-opener-unknown-extension", ".wat")
+            .also { it.writeText("alpha\nbeta") }
+
+        val (shape, rows) = read(file)
+
+        assertEquals(
+            listOf(TextReportDefiner.textHeader),
+            assertIs<DataShape.Tabular>(shape).header.values.map { it.text })
+        assertEquals(listOf(listOf("alpha"), listOf("beta")), rows)
+        file.deleteExisting()
+    }
+
+
+    // A format the user named explicitly still fails: the fallback answers "which format for this extension",
+    // never "did you mean a format that exists".
+    @Test
+    fun unknownExplicitFormatFailsClearly() {
+        val file = Files.createTempFile("file-opener-unknown-format", ".wat").also { it.writeText("x") }
+
         val unknownCoordinate = assertFailsWith<IllegalArgumentException> {
             runBlocking { opener.open(TestContext(), part(file, "MissingFormat")) }
         }
-        assertTrue(unknownCoordinate.message!!.contains("Unknown data format"))
 
-        val unknownExtension = assertFailsWith<IllegalArgumentException> {
-            runBlocking { opener.open(TestContext(), part(file)) }
-        }
-        assertTrue(unknownExtension.message!!.contains("Unable to infer data format"))
+        assertTrue(unknownCoordinate.message!!.contains("Unknown data format"))
+        file.deleteExisting()
     }
 
 

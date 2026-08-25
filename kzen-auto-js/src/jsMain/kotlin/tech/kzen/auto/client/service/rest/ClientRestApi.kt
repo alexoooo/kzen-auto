@@ -3,7 +3,7 @@ package tech.kzen.auto.client.service.rest
 import tech.kzen.auto.client.util.*
 import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.paradigm.logic.LogicControlReply
-import tech.kzen.auto.common.util.data.DataLocationInfo
+import tech.kzen.auto.common.util.data.DataListing
 import tech.kzen.auto.common.util.scan.NotationScanDocument
 import tech.kzen.auto.common.util.storage.StorageAreaInfo
 import tech.kzen.auto.common.util.storage.StorageBundleInfo
@@ -813,11 +813,12 @@ class ClientRestApi(
     //-----------------------------------------------------------------------------------------------------------------
     // Lists the immediate children (files + subdirectories) of `directory` matching `filter`, via the
     // document-agnostic /file-listing route (reuses the server's FileListingAction). Used by the Job
-    // MultiFileInputEditor to browse for input files.
+    // FileSelectionEditor to browse for input files. The reply names the absolute directory it read, so a
+    // relative request (the `./` notation default) can be shown and navigated as the place it resolves to.
     suspend fun listFiles(
         directory: String,
         filter: String
-    ): List<DataLocationInfo> {
+    ): DataListing {
         return clientJson.decodeFromString(getOrPut(
             CommonRestApi.fileListing,
             CommonRestApi.paramDirectory to directory,

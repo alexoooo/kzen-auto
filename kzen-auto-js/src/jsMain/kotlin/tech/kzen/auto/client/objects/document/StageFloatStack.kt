@@ -12,6 +12,10 @@ private const val firstRowTopEm = 0.5
 private const val rowHeightEm = 2.25
 private const val rightEm = 0.5
 
+// How much horizontal room the stack occupies: the widest member (a Job's Channel defaults column, 11em) plus the
+// corner offset and a little clearance. Held here beside the offsets it has to agree with.
+private const val gutterEm = 12.5
+
 
 /**
  * The stage's top-right float stack: the document-level controls (Parameters, Result, Requires / Provides, a
@@ -45,4 +49,18 @@ fun PropertiesBuilder.stageFloatRow(row: Int) {
     right = rightEm.em
     // above the step cards (which are positioned but auto z-index) so it stays clickable.
     zIndex = integer(2)
+}
+
+
+/**
+ * Keeps a stage's content clear of its float stack, applied to the positioned stage container itself.
+ *
+ * Hanging over the corner costs no vertical space, but it costs horizontal space that nothing was reserving: on a
+ * narrow window the stack sat ON the first card, and being the only thing there with a z-index it swallowed that
+ * card's clicks — its Delete button included. An absolutely positioned element resolves its offsets against its
+ * ancestor's PADDING box, so this padding does not move the stack a pixel; it only stops the content growing under
+ * it, and the cards narrow instead of being covered.
+ */
+fun PropertiesBuilder.stageFloatGutter() {
+    paddingRight = gutterEm.em
 }

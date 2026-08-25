@@ -231,6 +231,12 @@ class FileBrowser(props: FileBrowserProps): RPureComponent<FileBrowserProps, Fil
             TextField {
                 size = Size.small
                 sx { width = 20.em }
+                // The field is not a glob: FileListingAction.parseFilter keeps names containing EVERY
+                // whitespace-separated word. Said in the field's own placeholder and hover rather than on a
+                // line above it — the hint is only wanted while the field is empty, which is exactly when a
+                // placeholder shows.
+                placeholder = "Search e.g. sales csv"
+                title = "Matches names containing all of these words"
                 inputSlotProps = unsafeJso {
                     startAdornment = InputAdornment.create {
                         position = InputAdornmentPosition.start

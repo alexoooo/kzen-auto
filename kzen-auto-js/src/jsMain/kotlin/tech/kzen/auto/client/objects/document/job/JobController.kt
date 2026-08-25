@@ -20,10 +20,13 @@ import tech.kzen.auto.client.objects.document.common.signature.LogicSignatureEdi
 import tech.kzen.auto.client.objects.document.common.signature.ResultSignatureEditor
 import tech.kzen.auto.client.objects.document.job.display.WorkerDisplayManager
 import tech.kzen.auto.client.objects.document.job.display.WorkerDisplayPropsCommon
+import tech.kzen.auto.client.objects.document.job.source.DataFormatStore
+import tech.kzen.auto.client.objects.document.job.source.DataFormatStoreKey
 import tech.kzen.auto.client.objects.document.job.source.DataSourceResolveStore
 import tech.kzen.auto.client.objects.document.job.source.DataSourceResolveStoreKey
 import tech.kzen.auto.client.objects.document.job.source.DataSourceShapeStore
 import tech.kzen.auto.client.objects.document.job.source.DataSourceShapeStoreKey
+import tech.kzen.auto.client.objects.document.stageFloatGutter
 import tech.kzen.auto.client.objects.ribbon.RibbonController
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
@@ -248,6 +251,12 @@ class JobController(
         DataSourceShapeStore(props.restClient)
     }
 
+    // Document-wide rather than per-source: the Format / Encoding option lists describe the server's installed
+    // definitions, so every File Worker's selects read one fetch.
+    private val dataFormatStore by lazy {
+        DataFormatStore(props.restClient)
+    }
+
     // Refetch progress only when the document or the run status changes (mirrors FlowController); during a run
     // the status time advances on each logic-status poll, so this also drives the live progress refresh.
     private var lastFetchKey: String? = null
@@ -290,6 +299,7 @@ class JobController(
     override fun componentDidMount() {
         dataSourceResolveStore.mount()
         dataSourceShapeStore.mount()
+        dataFormatStore.mount()
         props.clientStateGlobal.observe(this)
         insertion()?.subscribe(this)
     }
@@ -300,6 +310,7 @@ class JobController(
         props.clientStateGlobal.unobserve(this)
         dataSourceResolveStore.unmount()
         dataSourceShapeStore.unmount()
+        dataFormatStore.unmount()
     }
 
 
@@ -732,12 +743,15 @@ class JobController(
 
         contextValue<DocumentBridge?>()?.provide(DataSourceResolveStoreKey, dataSourceResolveStore)
         contextValue<DocumentBridge?>()?.provide(DataSourceShapeStoreKey, dataSourceShapeStore)
+        contextValue<DocumentBridge?>()?.provide(DataFormatStoreKey, dataFormatStore)
 
         div {
             css {
                 margin = Margin(2.em, 2.em, 2.em, 2.em)
-                // Positioning context for the floating Channel-defaults panel (top-right, like Script's controls).
+                // Positioning context for the floating Channel-defaults panel (top-right, like Script's controls),
+                // and the room that panel's stack needs so cards narrow instead of sliding underneath it.
                 position = Position.relative
+                stageFloatGutter()
             }
 
             // The whole stage is one drop zone; the drop index is computed from the cursor Y (onStageDragOver).

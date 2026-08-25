@@ -10,6 +10,7 @@ import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.plugin.definition.ReportDefinition
 import tech.kzen.auto.plugin.model.PluginCoordinate
 import tech.kzen.auto.plugin.model.data.DataBlockBuffer
+import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.auto.plugin.spec.DataEncodingSpec
 import tech.kzen.auto.plugin.spec.TextEncodingSpec
 import tech.kzen.auto.server.objects.plugin.PluginUtils.asPluginCoordinate
@@ -18,6 +19,7 @@ import tech.kzen.auto.server.objects.plugin.model.ClassLoaderHandle
 import tech.kzen.auto.server.objects.report.exec.input.model.data.FlatDataHeaderDefinition
 import tech.kzen.auto.server.util.ClassLoaderUtils
 import tech.kzen.auto.server.objects.report.service.ReportUtils.asCommon
+import tech.kzen.lib.platform.ClassName
 import java.nio.charset.Charset
 
 
@@ -29,6 +31,15 @@ class FileDataOpener(
     private val definitionRepository: ReportDefinitionRepository,
     private val schemaCache: SchemaCache
 ): DataOpener {
+    companion object {
+        // The payload every flat-file definition produces, and the type a Report's input selection declares by
+        // default (`common-document.yaml` input.selection.dataType) — the axis format resolution selects along.
+        // Internal rather than private so DataSourceActions offers the UI exactly the definitions this opener
+        // would resolve among: one list, so what can be chosen and what can be read cannot drift apart.
+        internal val flatRecordPayloadType = ClassName(FlatFileRecord::class.java.name)
+    }
+
+
     override suspend fun open(context: DataContext, part: DataPart): DataCursor {
         var acquired: FileDataCursor? = null
         try {
@@ -117,16 +128,36 @@ class FileDataOpener(
     }
 
 
+    /**
+     * The format to read a file as when none was chosen, via the same resolution Report has always used
+     * ([ReportDefinitionRepository.find], as called by `ReportDocument.actionDefaultFormat`): prefer a definition
+     * claiming the extension, otherwise the highest-priority definition that is not marked avoid — in the host
+     * build, Text.
+     *
+     * This deliberately does not fail on an unrecognized extension. A local re-implementation used to, which made
+     * selecting a `.md` (or any unclaimed extension) a dead end discoverable only by running the Job, while the
+     * same file in a Report simply read as text. Reading it as one Text column is a defensible default AND a
+     * visible one — the row's Format is right there under Details to change.
+     */
     private fun inferCoordinate(location: DataLocation): PluginCoordinate {
-        val extension = location.innerExtension()
-        val matches = definitionRepository
-            .listMetadata()
-            .map { it.reportDefinitionInfo }
-            .filter { extension in it.extensions }
-            .sortedByDescending { it.priority }
-        return matches.firstOrNull()?.coordinate
+        return definitionRepository
+            .find(flatRecordPayloadType, location)
+            .firstOrNull()
+            ?.coordinate
             ?: throw IllegalArgumentException(
-                "Unable to infer data format for '${location.asString()}' from extension '$extension'")
+                "Unable to infer data format for '${location.asString()}'" +
+                        " from extension '${location.innerExtension()}'" +
+                        " (registered extensions: ${registeredExtensions()})")
+    }
+
+
+    private fun registeredExtensions(): String {
+        val extensions = definitionRepository
+            .listMetadata()
+            .flatMap { it.reportDefinitionInfo.extensions }
+            .distinct()
+            .sorted()
+        return if (extensions.isEmpty()) "none" else extensions.joinToString(", ")
     }
 
 

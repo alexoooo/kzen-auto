@@ -123,6 +123,19 @@ MultiFileInputEditor:
   class: tech.kzen.auto.client.objects.document.job.edit.FileSelectionEditor$Wrapper
 
 
+# Data-format selects: one component behind two registrations, offering the formats and text encodings the
+# SERVER has installed (DataSourceActions.fileFormats) rather than asking for a coordinate or charset name to be
+# typed from memory. Blank means "decide for me" in both, and reads as the "Default" option.
+SelectDataFormatEditor:
+  is: AttributeEditor
+  class: tech.kzen.auto.client.objects.document.job.edit.DataFormatEditor$FormatWrapper
+
+
+SelectDataEncodingEditor:
+  is: AttributeEditor
+  class: tech.kzen.auto.client.objects.document.job.edit.DataFormatEditor$EncodingWrapper
+
+
 SelectDataSourceEditor:
   is: AttributeEditor
   class: tech.kzen.auto.client.objects.document.job.edit.SelectDataSourceEditor$Wrapper

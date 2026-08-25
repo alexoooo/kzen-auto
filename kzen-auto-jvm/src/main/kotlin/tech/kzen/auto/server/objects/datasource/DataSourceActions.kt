@@ -4,9 +4,13 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import tech.kzen.auto.common.data.DataSourceConventions
 import tech.kzen.auto.common.data.api.DataSource
+import tech.kzen.auto.common.data.format.FileFormatCatalog
 import tech.kzen.auto.common.data.model.DataPart
 import tech.kzen.auto.common.paradigm.detached.DetachedAction
 import tech.kzen.auto.server.data.DataOpenerLookup
+import tech.kzen.auto.server.data.FileDataOpener
+import tech.kzen.auto.server.data.ReportDefinitionRepository
+import tech.kzen.auto.server.data.TextEncodingCatalog
 import tech.kzen.auto.server.service.exec.ExecutionGraphErrors
 import tech.kzen.auto.server.service.exec.GraphInstanceCache
 import tech.kzen.auto.server.service.exec.ObjectInstanceAttempt
@@ -15,6 +19,7 @@ import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionResult
 import tech.kzen.lib.common.exec.ExecutionSuccess
+import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
@@ -25,13 +30,22 @@ import tech.kzen.lib.common.service.store.LocalGraphStore
 class DataSourceActions(
     @Service private val graphStore: LocalGraphStore,
     @Service private val graphInstanceCache: GraphInstanceCache,
-    @Service private val openerLookup: DataOpenerLookup
+    @Service private val openerLookup: DataOpenerLookup,
+    @Service private val definitionRepository: ReportDefinitionRepository
 ): DetachedAction {
     override suspend fun execute(request: ExecutionRequest): ExecutionResult {
-        val sourceValue = request.getSingle(DataSourceConventions.sourceParameter)
-            ?: return ExecutionFailure("Missing data source")
         val action = request.getSingle(DataSourceConventions.actionParameter)
             ?: return ExecutionFailure("Missing data source action")
+
+        // Answered before a source is resolved: this one describes what the server has installed, not what one
+        // configured source holds, so it stays available on a source that cannot currently be instantiated —
+        // which is exactly when someone is in its editor picking a format.
+        if (action == DataSourceConventions.fileFormatsAction) {
+            return ExecutionSuccess.ofValue(ExecutionValue.of(fileFormats().asCollection()))
+        }
+
+        val sourceValue = request.getSingle(DataSourceConventions.sourceParameter)
+            ?: return ExecutionFailure("Missing data source")
         val sourceLocation = ObjectLocation.parse(sourceValue)
         val definitionAttempt = graphStore.graphDefinition()
         val instanceAttempt = graphInstanceCache.tryObjectInstance(
@@ -51,6 +65,19 @@ class DataSourceActions(
 
             else -> ExecutionFailure("Unknown data source action: $action")
         }
+    }
+
+
+    // Scoped to the payload type FileDataOpener resolves among, so the selects offer only formats that could
+    // actually read the chosen files — the same repository query the reader performs, asked ahead of time.
+    private fun fileFormats(): FileFormatCatalog {
+        val formats = definitionRepository
+            .listMetadata()
+            .filter { it.payloadType == FileDataOpener.flatRecordPayloadType }
+            .map { it.toProcessorDefinerDetail() }
+            .sortedBy { it.coordinate.asString() }
+
+        return FileFormatCatalog(formats, TextEncodingCatalog.available())
     }
 
 

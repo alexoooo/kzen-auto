@@ -7,6 +7,7 @@ import org.junit.AfterClass
 import org.junit.BeforeClass
 import org.junit.Test
 import tech.kzen.auto.common.data.DataSourceConventions
+import tech.kzen.auto.common.data.format.FileFormatCatalog
 import tech.kzen.auto.common.data.model.DataDiagnostic
 import tech.kzen.auto.common.data.model.DataResolveResult
 import tech.kzen.auto.common.data.model.DataPart
@@ -178,6 +179,33 @@ class DataSourceActionsTest {
         val failure = assertIs<ExecutionFailure>(execute(logicSource))
         assertTrue(failure.errorMessage.contains("requires an active run"), failure.errorMessage)
         assertTrue(failure.errorMessage.contains("runs its logic"), failure.errorMessage)
+    }
+
+
+    // The Format / Encoding selects ask for this before anything is configured — including on a source that
+    // cannot be instantiated — so it must answer with no `source` parameter at all.
+    @Test
+    fun fileFormatsAnswersWithoutASourceAndListsWhatTheReaderCouldUse() {
+        val outcome = runBlocking {
+            context.detachedExecutor.execute(
+                DataSourceConventions.dataSourceActionsLocation,
+                ExecutionRequest(RequestParams.of(
+                    DataSourceConventions.actionParameter to DataSourceConventions.fileFormatsAction), null))
+        }
+
+        val success = assertIs<ExecutionSuccess>(outcome, outcome.toString())
+
+        @Suppress("UNCHECKED_CAST")
+        val catalog = FileFormatCatalog.ofCollection(success.value.get() as Map<String, Any?>)
+
+        val formatNames = catalog.formats.map { it.coordinate.asString() }
+        assertTrue(formatNames.containsAll(listOf("CSV", "TSV", "Text")), formatNames.toString())
+        assertEquals(formatNames.sorted(), formatNames)
+        assertTrue(catalog.formats.single { it.coordinate.asString() == "CSV" }.extensions.contains("csv"))
+
+        // UTF-8 leads because the ordering is by how often a real file turns out to be in one, not alphabetical.
+        assertEquals("UTF-8", catalog.encodings.first())
+        assertTrue(catalog.encodings.size > 1)
     }
 
 

@@ -5,8 +5,10 @@ import kotlinx.coroutines.withContext
 import tech.kzen.auto.common.objects.document.report.listing.InputDataInfo
 import tech.kzen.auto.common.objects.document.report.listing.InputSelectedInfo
 import tech.kzen.auto.common.objects.document.report.spec.input.InputSelectionSpec
+import tech.kzen.auto.common.util.data.DataListing
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.common.util.data.DataLocationInfo
+import tech.kzen.auto.common.util.data.DataLocationJvm.normalize
 import tech.kzen.auto.common.util.data.FilePath
 import tech.kzen.auto.common.util.data.FilePathJvm.toPath
 import tech.kzen.auto.server.objects.plugin.PluginUtils.asPluginCoordinate
@@ -57,6 +59,19 @@ class FileListingAction(
         return withContext(Dispatchers.IO) {
             browseInfoBlocking(directory, filter)
         }
+    }
+
+
+    /**
+     * [browseInfo] plus the absolute directory it read, for a chooser that has to show where it is.
+     *
+     * A relative request — `./`, the notation default — resolves against the server's working directory, which the
+     * client cannot know and cannot navigate up out of. Report answers its own browse with the same pair.
+     */
+    suspend fun browseListing(directory: DataLocation, filter: String): DataListing {
+        return DataListing(
+            directory.normalize(),
+            browseInfo(directory, filter))
     }
 
 

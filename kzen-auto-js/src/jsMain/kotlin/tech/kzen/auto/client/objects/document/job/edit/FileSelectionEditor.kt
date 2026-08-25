@@ -4,12 +4,12 @@ import emotion.react.css
 import js.objects.unsafeJso
 import mui.material.Button
 import mui.material.ButtonVariant
-import mui.material.InputLabel
 import mui.material.Size
 import mui.system.sx
 import react.ChildrenBuilder
 import react.State
 import react.dom.html.ReactHTML.div
+import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
 import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorProps
@@ -17,11 +17,17 @@ import tech.kzen.auto.client.objects.document.common.edit.AttributeCommitter
 import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
 import tech.kzen.auto.client.objects.document.common.edit.documentEditActivity
 import tech.kzen.auto.client.objects.document.common.file.FileBrowser
+import tech.kzen.auto.client.objects.document.common.file.FileBrowserToggleChannel
+import tech.kzen.auto.client.objects.document.common.file.FileBrowserToggleKey
 import tech.kzen.auto.client.objects.document.common.file.FileSelectionTable
+import tech.kzen.auto.client.objects.document.common.file.fileBrowserToggle
+import tech.kzen.auto.client.objects.document.job.source.DataFormatStore
+import tech.kzen.auto.client.objects.document.job.source.DataFormatStoreKey
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RComponent
+import tech.kzen.auto.client.wrap.contextValue
 import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.installContextType
 import tech.kzen.auto.client.wrap.react
@@ -29,6 +35,7 @@ import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.data.file.FileSelectionBrowserConventions
 import tech.kzen.auto.common.data.file.FileSelectionEntry
 import tech.kzen.auto.common.data.file.FileSelectionSpec
+import tech.kzen.auto.common.data.format.FileFormatCatalog
 import tech.kzen.auto.common.objects.document.plugin.model.CommonDataEncodingSpec
 import tech.kzen.auto.common.objects.document.plugin.model.CommonPluginCoordinate
 import tech.kzen.auto.common.util.data.DataLocation
@@ -61,6 +68,12 @@ external interface FileSelectionEditorState : State {
     var selected: List<FileSelectionEntry>?
     var directory: String
     var filter: String
+
+    // Where [directory] actually resolved to, as the server reports it with each listing; null while none has
+    // arrived for the current request. The stored value may be relative — `./` is the notation default — which
+    // says nothing about where the browser is and cannot be navigated up out of, so what is shown is this.
+    var browseDirectory: String?
+
     var listing: List<DataLocationInfo>?
     var listingError: String?
     var editError: String?
@@ -69,6 +82,10 @@ external interface FileSelectionEditorState : State {
     var selectedChecked: Set<DataLocation>
     var showDetails: Boolean
     var browserOpen: Boolean
+
+    // Options for the per-file Format / Encoding selects under Details; null until the document's shared
+    // catalogue arrives (see DataFormatStore).
+    var formatCatalog: FileFormatCatalog?
 }
 
 
@@ -83,19 +100,23 @@ external interface FileSelectionEditorState : State {
  *
  * The one thing Report's selection does not have is order, so remove and reorder act on the rows checked in that
  * table, in the same check-then-act shape the browser's own Add/Remove buttons use.
+ *
+ * The toggle itself may be drawn by the card's header instead of here, in which case openness is shared through
+ * [FileBrowserToggleChannel] — see [toggleChannel].
  */
 class FileSelectionEditor(
     props: FileSelectionEditorProps
 ) :
     RComponent<FileSelectionEditorProps, FileSelectionEditorState>(props),
-    LocalGraphStore.Observer
+    LocalGraphStore.Observer,
+    FileBrowserToggleChannel.Observer,
+    DataFormatStore.Observer
 {
     companion object {
         private val legacyPathsAttributeName = AttributeName("paths")
         private val toggleSelected = Color("#e0e0e0")
         private val separatorColor = Color("#c3c3c3")
         private val errorColor = Color("#c62828")
-        private val hintColor = Color("rgba(0, 0, 0, 0.55)")
 
 
         /**
@@ -196,6 +217,7 @@ class FileSelectionEditor(
     private var mounted = false
     private var pendingSelection: List<FileSelectionEntry>? = null
     private var listingEpoch = 0
+    private var requestedListing: Pair<String, String>? = null
 
     private val committer = AttributeCommitter(
         graphStore = { this.props.mirroredGraphStore },
@@ -222,6 +244,7 @@ class FileSelectionEditor(
             ?: selected.firstOrNull()?.location?.parent()?.asString()?.takeIf { it.isNotEmpty() }
             ?: FileSelectionBrowserConventions.defaultDirectory
         filter = paths?.let { readString(graphNotation, it.filter) }.orEmpty()
+        browseDirectory = null
         listing = null
         listingError = null
         editError = null
@@ -230,6 +253,7 @@ class FileSelectionEditor(
         selectedChecked = emptySet()
         showDetails = false
         browserOpen = false
+        formatCatalog = null
     }
 
 
@@ -240,9 +264,20 @@ class FileSelectionEditor(
                 props.mirroredGraphStore.observe(this)
             }
         }
-        if (shouldLoadListing(isBrowserOpen(), state.directory)) {
-            load(state.directory, state.filter)
-        }
+        documentToggleChannel()?.observe(props.objectLocation, this)
+        dataFormatStore()?.observe(this)
+        ensureListingLoaded()
+    }
+
+
+    override fun componentDidUpdate(
+        prevProps: FileSelectionEditorProps,
+        prevState: FileSelectionEditorState,
+        snapshot: Any
+    ) {
+        // The browser can become visible without anyone having asked for it — removing the last file pins it open
+        // again — so the listing is fetched from wherever it ends up shown, not from each control that shows it.
+        ensureListingLoaded()
     }
 
 
@@ -251,6 +286,50 @@ class FileSelectionEditor(
         listingEpoch++
         committer.flush()
         props.mirroredGraphStore.unobserve(this)
+        // Unobserved through the document's channel rather than the hosting one: React unmounts a parent before
+        // its children, so by now the header may already have released its claim.
+        documentToggleChannel()?.unobserve(props.objectLocation, this)
+        dataFormatStore()?.unobserve(this)
+    }
+
+
+    private fun documentToggleChannel(): FileBrowserToggleChannel? {
+        return contextValue<DocumentBridge?>()?.channel(FileBrowserToggleKey)
+    }
+
+
+    // Absent outside a Job stage (the legacy `paths` attribute on a plain object, say): the selects then offer
+    // Default plus whatever is already configured, which is the same graceful floor a failed fetch leaves.
+    private fun dataFormatStore(): DataFormatStore? {
+        return contextValue<DocumentBridge?>()?.lookup(DataFormatStoreKey)
+    }
+
+
+    override fun onDataFormatState(state: DataFormatStore.State) {
+        val catalog = state.catalog
+        if (this.state.formatCatalog == catalog) {
+            return
+        }
+        setState { formatCatalog = catalog }
+    }
+
+
+    /**
+     * Where this card's browser is shown and hidden from, when that is not here.
+     *
+     * A card header can claim the toggle (see
+     * [tech.kzen.auto.client.objects.document.common.file.FileBrowserToggleChannel]); until one does — a plain
+     * `FileDataSource` object, the legacy `paths` attribute, anything outside a Worker card — this editor draws its
+     * own and keeps openness in its own state.
+     */
+    private fun toggleChannel(): FileBrowserToggleChannel? {
+        return documentToggleChannel()?.takeIf { it.hosted(props.objectLocation) }
+    }
+
+
+    override fun onFileBrowserToggled(objectLocation: ObjectLocation) {
+        val opening = toggleChannel()?.isOpen(objectLocation) ?: false
+        setState { browserOpen = opening }
     }
 
 
@@ -300,6 +379,9 @@ class FileSelectionEditor(
             ?: state.filter
         if (state.directory != directory || state.filter != filter) {
             setState {
+                if (this.directory != directory) {
+                    browseDirectory = null
+                }
                 this.directory = directory
                 this.filter = filter
             }
@@ -380,8 +462,8 @@ class FileSelectionEditor(
 
     private fun changeSelection(entries: List<FileSelectionEntry>, debounce: Boolean) {
         // An open browser stays open across the transition out of force-open: adding the first file must not yank
-        // the browser out from under the click that added it. Computed outside the write-only setState lambda
-        // (wrap/React.kt caveat), and only ever latches openness on — closing stays the toggle's job.
+        // the browser out from under the click that added it. Computed before the state write, and only ever
+        // latches openness on — closing stays the toggle's job.
         val keepOpen = isBrowserOpen()
         val remainingChecked = retainChecked(entries)
 
@@ -389,9 +471,9 @@ class FileSelectionEditor(
         setState {
             selected = entries
             selectedChecked = remainingChecked
-            if (keepOpen) {
-                browserOpen = true
-            }
+        }
+        if (keepOpen) {
+            setBrowserOpen(true)
         }
         if (debounce) {
             committer.schedule()
@@ -420,7 +502,9 @@ class FileSelectionEditor(
         val edited = current.toMutableList()
         edited[index] = edited[index].copy(
             format = value.takeIf { it.isNotBlank() }?.let(CommonPluginCoordinate::ofString))
-        changeSelection(edited, true)
+        // Committed at once, not debounced: picking from a list is a finished decision, unlike the keystrokes
+        // these two used to be.
+        changeSelection(edited, false)
     }
 
 
@@ -432,7 +516,7 @@ class FileSelectionEditor(
         val edited = current.toMutableList()
         edited[index] = edited[index].copy(
             encoding = value.takeIf { it.isNotBlank() }?.let(CommonDataEncodingSpec::ofString))
-        changeSelection(edited, true)
+        changeSelection(edited, false)
     }
 
 
@@ -454,6 +538,7 @@ class FileSelectionEditor(
 
 
     private fun load(directory: String, filter: String) {
+        requestedListing = directory to filter
         val epoch = ++listingEpoch
         setState {
             loading = true
@@ -463,10 +548,11 @@ class FileSelectionEditor(
             try {
                 val listing = props.restClient.listFiles(directory, filter)
                 if (mounted && listingEpoch == epoch) {
-                    val available = listing.filterNot { it.directory }.map { it.path }.toSet()
+                    val available = listing.files.filterNot { it.directory }.map { it.path }.toSet()
                     val checked = state.checked.filter { it in available }.toSet()
                     setState {
-                        this.listing = listing
+                        this.listing = listing.files
+                        this.browseDirectory = listing.directory.asString()
                         this.checked = checked
                         loading = false
                     }
@@ -486,7 +572,12 @@ class FileSelectionEditor(
 
 
     private fun navigateTo(directory: String) {
-        setState { this.directory = directory }
+        setState {
+            this.directory = directory
+            // Dropped with the directory it described, so the field never names the place just left. A filter
+            // change deliberately keeps it — the directory has not moved.
+            browseDirectory = null
+        }
 
         val paths = browserPaths()
         if (paths == null) {
@@ -495,8 +586,10 @@ class FileSelectionEditor(
         }
 
         async {
+            // The listing itself is already in flight from the state change above; this only reports a write
+            // failure, and re-asserts the fetch in case the write was what changed the directory in state.
             applyBrowserValue(paths.directory, directory) {
-                load(directory, state.filter)
+                ensureListingLoaded()
             }
         }
     }
@@ -513,7 +606,7 @@ class FileSelectionEditor(
 
         async {
             applyBrowserValue(paths.filter, filter) {
-                load(state.directory, filter)
+                ensureListingLoaded()
             }
         }
     }
@@ -548,21 +641,44 @@ class FileSelectionEditor(
     }
 
 
-    private fun toggleBrowser() {
-        val opening = ! state.browserOpen
-        setState { browserOpen = opening }
-        if (opening && state.listing == null && shouldLoadListing(true, state.directory)) {
-            load(state.directory, state.filter)
+    /**
+     * Openness travels through the channel when a header owns the toggle, so both ends of the card agree; the
+     * write echoes back through [onFileBrowserToggled] rather than being applied twice.
+     */
+    private fun setBrowserOpen(value: Boolean) {
+        val channel = toggleChannel()
+        if (channel != null) {
+            channel.setOpen(props.objectLocation, value)
+            return
         }
+        setState { browserOpen = value }
+    }
+
+
+    private fun toggleBrowser() {
+        setBrowserOpen(! state.browserOpen)
+    }
+
+
+    // Listings are fetched the first time the browser is actually shown: a card that already has its files chosen
+    // costs no directory read until someone opens it. Keyed on what was asked for rather than on what has arrived,
+    // so a failed or in-flight request is not re-issued on every render.
+    private fun ensureListingLoaded() {
+        val directory = state.directory
+        val filter = state.filter
+        if (! shouldLoadListing(isBrowserOpen(), directory) || requestedListing == directory to filter) {
+            return
+        }
+        load(directory, filter)
     }
 
 
     override fun ChildrenBuilder.render() {
         val selected = state.selected ?: return
 
-        renderAttributeLabel()
-
-        if (! isBrowserForceOpen()) {
+        // No attribute caption: this editor fills a card whose title already names what it holds — a Worker of
+        // type File — so a "Files" line above it only says the heading again.
+        if (! isBrowserForceOpen() && toggleChannel() == null) {
             renderBrowserToggle()
         }
 
@@ -581,38 +697,11 @@ class FileSelectionEditor(
     }
 
 
-    private fun ChildrenBuilder.renderAttributeLabel() {
-        InputLabel {
-            sx { fontSize = 0.8.em }
-            +CommonEditUtils.formattedLabel(AttributePath.ofName(props.attributeName))
-        }
-    }
-
-
     // Report's browser toggle: offered only once something is selected, because an empty selection pins the
-    // browser open and a control that cannot change anything is noise.
+    // browser open and a control that cannot change anything is noise. Drawn here only while no card header has
+    // claimed it — see [toggleChannel].
     private fun ChildrenBuilder.renderBrowserToggle() {
-        Button {
-            variant = ButtonVariant.outlined
-            size = Size.small
-
-            sx {
-                if (state.browserOpen) {
-                    backgroundColor = toggleSelected
-                }
-                color = NamedColor.black
-                borderColor = Color("#777777")
-            }
-
-            title = if (state.browserOpen) "Hide browser" else "Show browser"
-            onClick = { toggleBrowser() }
-
-            icon("material-symbols:folder-open") {
-                style = unsafeJso { marginRight = 0.25.em }
-            }
-
-            +"Browser"
-        }
+        fileBrowserToggle(state.browserOpen) { toggleBrowser() }
     }
 
 
@@ -620,10 +709,8 @@ class FileSelectionEditor(
         div {
             css { marginTop = 0.5.em }
 
-            renderFilterHelp()
-
             FileBrowser::class.react {
-                directory = DataLocation.of(state.directory)
+                directory = DataLocation.of(state.browseDirectory ?: state.directory)
                 filter = state.filter
                 listing = state.listing
                 loading = state.loading
@@ -636,19 +723,6 @@ class FileSelectionEditor(
                 onAdd = { addAll(it) }
                 onRemove = { removeAll(it) }
             }
-        }
-    }
-
-
-    // The search field is not a glob: FileListingAction.parseFilter keeps names containing EVERY whitespace
-    // separated word. Saying so here is what stops `*.csv` being the feature's first five-minute failure.
-    private fun ChildrenBuilder.renderFilterHelp() {
-        div {
-            css {
-                color = hintColor
-                fontSize = 0.8.em
-            }
-            +"Search matches names containing all of these words, e.g. sales csv."
         }
     }
 
@@ -669,10 +743,10 @@ class FileSelectionEditor(
             checked = state.selectedChecked
             showDetails = state.showDetails
             perEntryFormat = props.attributeName != legacyPathsAttributeName
+            formatCatalog = state.formatCatalog
             onCheckedChanged = { next -> setState { selectedChecked = next } }
             onFormatChanged = { index, value -> editFormat(index, value) }
             onEncodingChanged = { index, value -> editEncoding(index, value) }
-            onEditFlush = { committer.flush() }
         }
     }
 

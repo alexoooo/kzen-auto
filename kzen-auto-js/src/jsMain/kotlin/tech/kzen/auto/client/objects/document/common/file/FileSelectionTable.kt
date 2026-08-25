@@ -3,13 +3,9 @@ package tech.kzen.auto.client.objects.document.common.file
 import emotion.react.css
 import js.objects.unsafeJso
 import mui.material.Checkbox
-import mui.material.Size
-import mui.material.TextField
-import mui.system.sx
 import react.ChildrenBuilder
 import react.Key
 import react.Props
-import react.ReactNode
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.table
@@ -19,11 +15,13 @@ import react.dom.html.ReactHTML.thead
 import react.dom.html.ReactHTML.tr
 import react.dom.onChange
 import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.auto.client.wrap.select.SelectOption
+import tech.kzen.auto.client.wrap.select.muiAutocompleteField
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.data.file.FileSelectionEntry
+import tech.kzen.auto.common.data.format.FileFormatCatalog
 import tech.kzen.auto.common.util.data.DataLocation
 import web.cssom.*
-import web.html.HTMLInputElement
 
 
 /**
@@ -38,10 +36,14 @@ external interface FileSelectionTableProps: Props {
     var checked: Set<DataLocation>
     var showDetails: Boolean
     var perEntryFormat: Boolean
+
+    // Null while the catalogue is still in flight (or if it failed): the selects then offer only Default and
+    // whatever the row already holds, so an existing override still reads correctly and nothing is lost.
+    var formatCatalog: FileFormatCatalog?
+
     var onCheckedChanged: (Set<DataLocation>) -> Unit
     var onFormatChanged: (Int, String) -> Unit
     var onEncodingChanged: (Int, String) -> Unit
-    var onEditFlush: () -> Unit
 }
 
 
@@ -182,10 +184,13 @@ class FileSelectionTable(props: FileSelectionTableProps):
             }
 
             if (props.showDetails && props.perEntryFormat) {
-                td { entryTextField("Format", entry.format?.asString().orEmpty()) {
+                val format = entry.format?.asString().orEmpty()
+                val encoding = entry.encoding?.asString().orEmpty()
+
+                td { entrySelect("Format", DataFormatOptions.formats(props.formatCatalog, format), format) {
                     props.onFormatChanged(index, it)
                 } }
-                td { entryTextField("Encoding", entry.encoding?.asString().orEmpty()) {
+                td { entrySelect("Encoding", DataFormatOptions.encodings(props.formatCatalog, encoding), encoding) {
                     props.onEncodingChanged(index, it)
                 } }
             }
@@ -193,19 +198,25 @@ class FileSelectionTable(props: FileSelectionTableProps):
     }
 
 
-    private fun ChildrenBuilder.entryTextField(
+    // A select rather than a text field: neither a format coordinate nor a charset name is guessable, and a
+    // typo in either surfaces only as a failed run. The wrapping div stops a click inside the dropdown from
+    // reaching the row (which would toggle the row's checkbox mid-choice).
+    private fun ChildrenBuilder.entrySelect(
         label: String,
+        options: Array<SelectOption>,
         value: String,
         onValue: (String) -> Unit
     ) {
-        TextField {
-            this.label = ReactNode(label)
-            this.value = value
-            size = Size.small
-            sx { width = 9.em; marginTop = 0.25.em; marginBottom = 0.25.em }
+        div {
+            css { width = 11.em; paddingTop = 0.25.em; paddingBottom = 0.25.em }
             onClick = { it.stopPropagation() }
-            onChange = { onValue((it.target as HTMLInputElement).value) }
-            onBlur = { props.onEditFlush() }
+
+            muiAutocompleteField(
+                label = label,
+                options = options,
+                selectedOption = options.find { it.value == value },
+                onSelect = { onValue(it.value) },
+                disableClearable = true)
         }
     }
 }

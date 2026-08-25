@@ -56,6 +56,11 @@ external interface WorkerDisplayDefaultProps: WorkerDisplayProps {
     var bodyBefore: ((ChildrenBuilder) -> Unit)?
     var bodyExtra: ((ChildrenBuilder) -> Unit)?
 
+    // Optional control hoisted into the card header's right cluster, beside Delete — for a card whose body hides
+    // behind a toggle that reads better as a title-bar affordance than as the first thing in the body (the Report
+    // Input header precedent, FileSourceWorkerDisplay's Browser toggle). Same plain-function-type caveat as above.
+    var headerRight: ((ChildrenBuilder) -> Unit)?
+
     // Open display-composition seams used by a specialised card without teaching this generic renderer which
     // Worker it is rendering. Hidden attributes are rehomed by the composing display; a non-null disclosure label
     // places the remaining ordinary editors behind a native, keyboard-accessible details control.
@@ -86,6 +91,11 @@ class WorkerDisplayDefault(
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private val workerBorder = Color("#c4c4c4")
+
+        // The run-failure red, on the chip and on the reason beneath it — one failure said twice must not be two
+        // different colours. Deliberately darker than the validation error's red-orange (#d84315), which is a
+        // different kind of problem: that one is wrong before the run, this one happened during it.
+        private val failureColor = Color("#c62828")
     }
 
 
@@ -164,13 +174,15 @@ class WorkerDisplayDefault(
             }
 
             cardHeader {
-                span {
-                    css {
-                        fontFamily = FontFamily.monospace
-                        marginLeft = 0.5.em
-                        color = NamedColor.gray
+                statusText(props.common.progress)?.let { status ->
+                    span {
+                        css {
+                            fontFamily = FontFamily.monospace
+                            marginLeft = 0.5.em
+                            color = NamedColor.gray
+                        }
+                        +status
                     }
-                    +statusText(props.common.progress)
                 }
 
                 // A settled Worker's terminal outcome chip — a general per-node fact rendered uniformly for
@@ -184,6 +196,8 @@ class WorkerDisplayDefault(
 
                 renderAttributeSummaries(objectMetadata)
             }
+
+            props.common.progress?.outcome?.let { renderFailureMessage(it) }
 
             props.bodyBefore?.invoke(this)
 
@@ -243,6 +257,8 @@ class WorkerDisplayDefault(
                 }
             }
 
+            props.headerRight?.invoke(this)
+
             IconButton {
                 title = "Delete"
                 size = Size.small
@@ -253,9 +269,12 @@ class WorkerDisplayDefault(
     }
 
 
-    private fun statusText(progress: JobWorkerProgress?): String {
+    // Null when the Worker has nothing to say yet — before a run, and for a run that publishes no status or
+    // counters. An em-dash placeholder beside the name reads as part of the name until the eye rules it out,
+    // and it says nothing the empty space doesn't already say.
+    private fun statusText(progress: JobWorkerProgress?): String? {
         if (progress == null) {
-            return "—"
+            return null
         }
 
         val parts = mutableListOf<String>()
@@ -271,7 +290,7 @@ class WorkerDisplayDefault(
             parts.add(scalarEntries.joinToString(" ") { "${it.key}=${it.value}" })
         }
 
-        return if (parts.isEmpty()) "—" else parts.joinToString(" · ")
+        return parts.joinToString(" · ").takeIf { parts.isNotEmpty() }
     }
 
 
@@ -319,7 +338,7 @@ class WorkerDisplayDefault(
     private fun ChildrenBuilder.renderOutcomeChip(outcome: WorkerOutcome) {
         val (label, background) = when (outcome.kind) {
             WorkerOutcome.Kind.Success -> "Done" to Color("#2e7d32")
-            WorkerOutcome.Kind.Failed -> "Failed" to Color("#c62828")
+            WorkerOutcome.Kind.Failed -> "Failed" to failureColor
             WorkerOutcome.Kind.Cancelled -> "Cancelled" to Color("#757575")
         }
 
@@ -333,9 +352,32 @@ class WorkerDisplayDefault(
                 fontSize = 0.75.em
                 whiteSpace = WhiteSpace.nowrap
             }
-            // A failure's message (from Outcome.Failed) as a hover tooltip; other kinds have none.
-            outcome.message?.let { title = it }
+            // No tooltip: a failure's message is rendered in the card below (renderFailureMessage), and a hover
+            // tooltip repeating text already on screen is just a delay.
             +label
+        }
+    }
+
+
+    // Why a failure settled, in the card rather than in a hover tooltip. The message travels the whole way already
+    // (Outcome.Failed -> OutcomeTrace -> JobProgressStore -> WorkerOutcome.message); rendering it only as the chip's
+    // `title` made every run failure read as an unexplained red badge. Script's step card has said this out loud
+    // since it had traces (ScriptStepDisplayDefault.renderError) — this is that, for Workers. A general per-node
+    // fact, so no Worker-type branch.
+    private fun ChildrenBuilder.renderFailureMessage(outcome: WorkerOutcome) {
+        if (outcome.kind != WorkerOutcome.Kind.Failed) {
+            return
+        }
+
+        div {
+            css {
+                marginBottom = 0.25.em
+                color = failureColor
+                fontSize = 0.8.em
+                // A reason is a sentence, often carrying a path: let it wrap rather than clip the half that says why.
+                overflowWrap = OverflowWrap.anywhere
+            }
+            +"Error: ${outcome.message ?: "no message"}"
         }
     }
 
@@ -387,7 +429,9 @@ class WorkerDisplayDefault(
 
             div {
                 css {
-                    marginBottom = 0.25.em
+                    // The stacked-field rhythm ScriptStepDisplayDefault uses: an outlined field's floating label
+                    // overhangs its own top border, so the tighter label-to-field value reads as a collision.
+                    marginBottom = 0.5.em
                 }
                 renderAttributeEditor(attributeName)
             }
