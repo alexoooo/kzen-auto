@@ -11,8 +11,6 @@ import tech.kzen.auto.server.objects.script.api.ScriptStepDefinition
 import tech.kzen.auto.server.objects.script.api.StepExecution
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
-import tech.kzen.lib.common.exec.logic.model.LogicType
-import tech.kzen.lib.common.exec.tuple.TupleDefinition
 import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
@@ -305,12 +303,10 @@ class ForEachStep(
         val elementType = bodyTerminalType(scriptDefinitionContext)
             ?: return null
 
-        return ScriptStepDefinition.of(
-            TupleDefinition.ofMain(LogicType(
-                TypeMetadata(
-                    ClassNames.kotlinList,
-                    listOf(elementType),
-                    false))))
+        return ScriptStepDefinition.ofMain(TypeMetadata(
+            ClassNames.kotlinList,
+            listOf(elementType),
+            false))
     }
 
 

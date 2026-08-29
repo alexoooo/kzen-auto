@@ -9,6 +9,7 @@ import tech.kzen.auto.common.data.model.DataRole
 import tech.kzen.auto.common.data.schema.DataShape
 import tech.kzen.auto.common.data.schema.HeaderLabel
 import tech.kzen.auto.common.data.schema.HeaderListing
+import tech.kzen.auto.common.data.schema.LegacyDataShapeBridge
 import tech.kzen.auto.common.objects.document.job.JobChannelDerivation
 import tech.kzen.auto.common.objects.document.job.JobServeCapability
 import tech.kzen.auto.common.objects.document.report.summary.TableSummary
@@ -249,11 +250,11 @@ internal object ReadShapeProjection {
 
 
     private fun superset(candidates: List<Candidate>): HeaderListing? {
-        val tabular = candidates.map { it.shape as? DataShape.Tabular ?: return null }
+        val headers = candidates.map { LegacyDataShapeBridge.headerOrNull(it.shape) ?: return null }
         val attributeNames = linkedSetOf<String>()
         candidates.forEach { attributeNames.addAll(it.attributes?.keys.orEmpty()) }
         val dataLabels = linkedSetOf<HeaderLabel>()
-        tabular.forEach { dataLabels.addAll(it.header.values) }
+        headers.forEach { dataLabels.addAll(it.values) }
         val dataNames = dataLabels.mapTo(linkedSetOf()) { it.text }
         if (attributeNames.any { it in dataNames }) {
             return null
@@ -264,13 +265,13 @@ internal object ReadShapeProjection {
 
 
     private fun effectiveHeader(candidate: Candidate): HeaderListing? {
-        val tabular = candidate.shape as? DataShape.Tabular ?: return null
-        val attributes = candidate.attributes ?: return tabular.header
-        val dataNames = tabular.header.values.mapTo(linkedSetOf()) { it.text }
+        val header = LegacyDataShapeBridge.headerOrNull(candidate.shape) ?: return null
+        val attributes = candidate.attributes ?: return header
+        val dataNames = header.values.mapTo(linkedSetOf()) { it.text }
         if (attributes.keys.any { it in dataNames }) {
             return null
         }
-        return HeaderListing.ofUnique(attributes.keys.toList()).append(tabular.header)
+        return HeaderListing.ofUnique(attributes.keys.toList()).append(header)
     }
 
 

@@ -2,6 +2,8 @@ package tech.kzen.auto.server.objects.job.worker
 
 import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
+import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.auto.common.util.PathPatternSubstitution
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.auto.server.data.FileListingAction
@@ -17,7 +19,7 @@ import java.nio.file.Path
 
 /**
  * The CSV output stage as a Job Worker (analogue of `CompressedExportWriter`, minus compression). Writes each
- * message's flat part (a payload-lane message auto-flattens — [JobMessage.flatView] — so a scalar stream
+ * value's column projection (a scalar value projects to a synthetic `value` column, so a scalar stream
  * writes a `value` column). When [header] is true the column names are written once (from the first batch)
  * before the records; when false (a headerless round-trip) only records are written. Fields are written with RFC-4180 quoting that is
  * DELIMITER-AWARE: a field is quoted when it contains the [delimiter], a quote, or a line break, and quotes
@@ -36,7 +38,7 @@ import java.nio.file.Path
  */
 @Reflect
 class CsvWriterWorker(
-    input: ChannelInput<Any?>,
+    input: ChannelInput<*>,
 
     private val path: String,
     private val delimiter: String,
@@ -73,17 +75,16 @@ class CsvWriterWorker(
     }
 
 
-    override suspend fun onElement(element: JobMessage, control: JobControl) {
+    override suspend fun onElement(element: DataValue, control: JobControl) {
         val writer = writer.requireOwned()
-        val flat = element.flatView()
-        val elementHeader = flat.header
-        val record = flat.record
+        val projection = JobDataValues.projection(element)
+        val elementHeader = projection.header
         control.runBlockingIo {
             if (header && !headerWritten) {
                 writeRecord(writer, FlatFileRecord.of(elementHeader.values.map { it.text }))
                 headerWritten = true
             }
-            writeRecord(writer, record)
+            writeProjection(writer, projection)
             written += 1
         }
     }
@@ -93,7 +94,8 @@ class CsvWriterWorker(
         finalizeOutput(control)
         if (result.isNotBlank()) {
             val ref = WriterFilePath.finalizedRef(requireNotNull(outputPath), control, fileListingAction)
-            control.yieldResult(result, ref)
+            val definition = control.results()[tech.kzen.lib.common.exec.data.binding.BindingName(result)]
+            control.yieldResult(result, JobDataValues.lift(ref, definition.contract))
         }
     }
 
@@ -112,8 +114,8 @@ class CsvWriterWorker(
     }
 
 
-    override fun payloadFlow(input: WorkerLane, context: WorkerLaneContext): WorkerLaneAttempt {
-        return WorkerLaneAttempt(
+    override fun payloadFlow(input: JobLaneDescriptor, context: JobLaneContext): JobLaneAttempt {
+        return JobLaneAttempt(
             input,
             WriterResultValidation.staticError(
                 result, selfLocation, context, cachedKotlinCompiler))
@@ -127,6 +129,20 @@ class CsvWriterWorker(
                 writer.write(delimiter)
             }
             writeField(writer, record.getString(fieldIndex))
+        }
+        writer.newLine()
+    }
+
+
+    private fun writeProjection(
+        writer: BufferedWriter,
+        projection: tech.kzen.auto.server.objects.job.value.ColumnProjection
+    ) {
+        for (fieldIndex in 0 until projection.size) {
+            if (fieldIndex > 0) {
+                writer.write(delimiter)
+            }
+            writeField(writer, projection.render(fieldIndex))
         }
         writer.newLine()
     }

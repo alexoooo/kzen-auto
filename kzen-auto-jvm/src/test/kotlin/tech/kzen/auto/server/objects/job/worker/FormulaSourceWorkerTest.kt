@@ -6,11 +6,11 @@ import org.junit.Before
 import org.junit.Test
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
+import tech.kzen.auto.common.objects.document.logic.BindingSignatureDefiner
+import tech.kzen.lib.common.exec.data.binding.BindingDefinition
+import tech.kzen.lib.common.exec.data.binding.BindingName
+import tech.kzen.lib.common.exec.data.binding.BindingSchema
 import tech.kzen.auto.server.context.KzenAutoContext
-import tech.kzen.lib.common.exec.logic.model.LogicType
-import tech.kzen.lib.common.exec.tuple.TupleComponentDefinition
-import tech.kzen.lib.common.exec.tuple.TupleComponentName
-import tech.kzen.lib.common.exec.tuple.TupleDefinition
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
@@ -177,7 +177,7 @@ class FormulaSourceWorkerTest {
     private fun worker(code: String, emitted: MutableList<Any?> = mutableListOf()): FormulaSourceWorker {
         val output = object: ChannelOutput<Any?> {
             override suspend fun send(element: Any?) {
-                emitted.add((element as JobMessage).payload)
+                emitted.add(testBoundary(element))
             }
             override suspend fun flush() {}
             override fun batchSize(): Int = 1024
@@ -209,11 +209,10 @@ class FormulaSourceWorkerTest {
     // A control exposing one declared parameter [name] of the given [type] bound to [value].
     private fun parameterControl(name: String, type: TypeMetadata, value: Any?): JobControl {
         return object: JobControl by NoOpJobControl {
-            override fun parameters(): TupleDefinition {
-                return TupleDefinition(listOf(
-                    TupleComponentDefinition(
-                        TupleComponentName(name),
-                        LogicType(type))))
+            override fun parameters(): BindingSchema {
+                return BindingSchema.of(BindingDefinition(
+                    BindingName(name),
+                    BindingSignatureDefiner.contract(type)))
             }
 
             override fun parameter(name: String): Any? = value

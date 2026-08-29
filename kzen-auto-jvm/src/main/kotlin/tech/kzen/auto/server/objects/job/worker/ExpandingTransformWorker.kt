@@ -4,6 +4,7 @@ import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.exec.data.value.DataValue
 
 
 /**
@@ -17,12 +18,12 @@ import tech.kzen.lib.common.model.location.ObjectLocation
  * batch is frozen in migration state; it is never reconstructed from `JobChannel.drainBuffered`.
  */
 abstract class ExpandingTransformWorker(
-    private val input: ChannelInput<Any?>,
-    private val output: ChannelOutput<Any?>,
+    private val input: ChannelInput<*>,
+    private val output: ChannelOutput<DataValue>,
     selfLocation: ObjectLocation
 ): WorkerBase(selfLocation) {
     private val emitter = Emitter(output)
-    private var activeBatch: List<JobMessage>? = null
+    private var activeBatch: List<DataValue>? = null
     private var nextIndex = 0
 
 
@@ -34,7 +35,7 @@ abstract class ExpandingTransformWorker(
                 control.checkpoint()
                 val received = input.receiveBatch()
                     ?: break
-                batch = received.map(::receiveMessage)
+                batch = received.map(::receiveValue)
                 activeBatch = batch
                 nextIndex = 0
             }
@@ -65,7 +66,7 @@ abstract class ExpandingTransformWorker(
     }
 
 
-    protected abstract suspend fun onElement(element: JobMessage, emit: Emitter, control: JobControl)
+    protected abstract suspend fun onElement(element: DataValue, emit: Emitter, control: JobControl)
 
 
     protected open suspend fun onComplete(emit: Emitter, control: JobControl) {}
@@ -101,7 +102,7 @@ abstract class ExpandingTransformWorker(
 
 
     private class ExpansionState(
-        val activeBatch: List<JobMessage>?,
+        val activeBatch: List<DataValue>?,
         val nextIndex: Int,
         private var subclassState: Any?
     ): AutoCloseable {

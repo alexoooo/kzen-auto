@@ -13,6 +13,7 @@ import java.util.List;
 
 
 public class FlatFileRecord
+        extends FlatRecordValueAccess
 {
     //-----------------------------------------------------------------------------------------------------------------
     private static final double doubleCacheMissing = -0.0;
@@ -84,6 +85,24 @@ public class FlatFileRecord
     //-----------------------------------------------------------------------------------------------------------------
     public int fieldCount() {
         return fieldCount;
+    }
+
+
+    @Override
+    protected int dataFieldCount() {
+        return fieldCount;
+    }
+
+
+    @Override
+    protected String dataText(int fieldIndex) {
+        return getString(fieldIndex);
+    }
+
+
+    @Override
+    protected double dataDoubleOrNan(int fieldIndex, long[] scratch) {
+        return cachedDoubleOrNan(fieldIndex, scratch);
     }
 
 
@@ -492,6 +511,7 @@ public class FlatFileRecord
         fieldCount = that.fieldCount;
         fieldContentLength = that.fieldContentLength;
         nonEmpty = that.nonEmpty;
+        replaceAttachedHeader(that.attachedHeaderOrNull());
 
         growFieldContentsIfRequired(fieldContentLength);
         growFieldEndsIfRequired(fieldCount);
@@ -508,6 +528,10 @@ public class FlatFileRecord
 
 
     public void exchange(FlatFileRecord that) {
+        FlatRecordHeader tempHeader = that.attachedHeaderOrNull();
+        that.replaceAttachedHeader(attachedHeaderOrNull());
+        replaceAttachedHeader(tempHeader);
+
         char[] tempFieldContents = that.fieldContents;
         int[] tempFieldEnds = that.fieldEnds;
         boolean tempHasCache = that.hasCache;
@@ -541,6 +565,7 @@ public class FlatFileRecord
         fieldCount = that.fieldCount;
         fieldContentLength = that.fieldContentLength;
         nonEmpty = that.nonEmpty;
+        replaceAttachedHeader(that.attachedHeaderOrNull());
 
         fieldContents = that.fieldContents;
         fieldEnds = that.fieldEnds;

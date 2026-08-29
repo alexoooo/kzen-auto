@@ -7,9 +7,9 @@ import tech.kzen.auto.common.objects.document.report.spec.filter.FilterSpec
 import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
-import tech.kzen.auto.plugin.model.record.FlatFileRecord
-import tech.kzen.auto.plugin.model.record.FlatFileRecordField
-import tech.kzen.auto.server.objects.report.exec.input.model.header.RecordHeaderIndex
+import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.lib.common.exec.data.value.DataValue
+import tech.kzen.auto.server.objects.job.value.ColumnProjection
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 
@@ -28,7 +28,7 @@ import tech.kzen.lib.common.reflect.Reflect
  * allocation-free membership, and [ColumnFilterType.reject] for the accept/reject decision — so a Job chain
  * `reader → ValueSetFilter → …` produces byte-identical survivors to Report's filter over the same data (the
  * P4c A/B parity gate). The only adaptation is that the schema is discovered IN-BAND from each message's flat
- * part ([JobMessage.flatView] — a payload-lane message auto-flattens) rather than from a static
+ * projection (a scalar value exposes a synthetic `value` column) rather than from a static
  * `inputAndFormulaColumns`: the compiled column set / types / value sets are rebuilt whenever the incoming
  * [HeaderListing] changes (like [FilterWorker] recompiles its expression), and a filter on a column absent
  * from the current header is IGNORED (exactly as `ReportFilterStage` drops filter columns that aren't in the
@@ -39,8 +39,8 @@ import tech.kzen.lib.common.reflect.Reflect
  */
 @Reflect
 class ValueSetFilterWorker(
-    input: ChannelInput<Any?>,
-    output: ChannelOutput<Any?>,
+    input: ChannelInput<*>,
+    output: ChannelOutput<DataValue>,
 
     private val filter: FilterSpec,
     selfLocation: ObjectLocation
@@ -55,32 +55,29 @@ class ValueSetFilterWorker(
         .mapValues { (_, spec) ->
             ColumnFilter(
                 spec.type,
-                spec.values.map { FlatFileRecordField.standalone(it) }.toSet())
+                spec.values)
         }
 
     // Compiled lazily against the incoming header; recompiled only when the header changes (value-compare).
     // Empty when no configured column is present in the current header (then every record passes).
     private var compiledForHeader: HeaderListing? = null
-    private var recordHeaderIndex = RecordHeaderIndex(HeaderListing.empty)
+    private var columnIndices = IntArray(0)
     private var columnTypes: List<ColumnFilterType> = listOf()
-    private var columnValues: List<Set<FlatFileRecordField>> = listOf()
-
-    // Reused across records to read a field without allocating (mirrors ReportFilterStage).
-    private val flyweight = FlatFileRecordField()
+    private var columnValues: List<Set<String>> = listOf()
 
     private var seen = 0L
     private var kept = 0L
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun onElement(element: JobMessage, emit: Emitter, control: JobControl) {
+    override suspend fun onElement(element: DataValue, emit: Emitter, control: JobControl) {
         seen += 1
 
-        val flat = element.flatView()
-        val header = flat.header
+        val projection = JobDataValues.projection(element)
+        val header = projection.header
         compileForHeader(header)
 
-        if (test(flat.record, header)) {
+        if (test(projection)) {
             kept += 1
             emit.send(element)
         }
@@ -97,7 +94,7 @@ class ValueSetFilterWorker(
 
         val activeColumns = header.values.filter { it in nonEmptyColumns }
 
-        recordHeaderIndex = RecordHeaderIndex(HeaderListing(activeColumns))
+        columnIndices = activeColumns.map { header.values.indexOf(it) }.toIntArray()
         columnTypes = activeColumns.map { nonEmptyColumns.getValue(it).type }
         columnValues = activeColumns.map { nonEmptyColumns.getValue(it).values }
         compiledForHeader = header
@@ -105,11 +102,7 @@ class ValueSetFilterWorker(
 
 
     // Identical to ReportFilterStage.test: a record survives only if every active column accepts it.
-    private fun test(record: FlatFileRecord, header: HeaderListing): Boolean {
-        val columnIndices = recordHeaderIndex.indices(header)
-
-        flyweight.selectHost(record)
-
+    private fun test(projection: ColumnProjection): Boolean {
         for (i in columnTypes.indices) {
             val columnType = columnTypes[i]
             val columnValueSet = columnValues[i]
@@ -121,8 +114,7 @@ class ValueSetFilterWorker(
                 }
             }
             else {
-                flyweight.selectField(indexInRecord)
-                val present = columnValueSet.contains(flyweight)
+                val present = columnValueSet.contains(projection.render(indexInRecord))
 
                 if (columnType.reject(present)) {
                     return false
@@ -143,6 +135,6 @@ class ValueSetFilterWorker(
     // A column's compiled criterion: the accept/reject rule and the whitelisted values as standalone fields.
     private class ColumnFilter(
         val type: ColumnFilterType,
-        val values: Set<FlatFileRecordField>
+        val values: Set<String>
     )
 }

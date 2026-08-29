@@ -14,6 +14,8 @@ import tech.kzen.auto.common.paradigm.job.api.ChannelServerIterator
 import tech.kzen.auto.common.paradigm.job.api.ServedRequest
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
+import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -25,7 +27,7 @@ import kotlin.test.assertTrue
 
 /**
  * Unit test for [SummaryWorker] in isolation: drives the transform's full [SummaryWorker.run] lifecycle over a
- * fake [ChannelInput] of flat-part [JobMessage]s and a capturing [ChannelOutput], asserting the two things that make it a
+ * fake [ChannelInput] of flat-backed values and a capturing [ChannelOutput], asserting the two things that make it a
  * live analytics operator — (1) it PASSES every record through downstream unchanged (it composes into a
  * pipeline), and (2) its accumulated [TableSummary] matches the per-column stats / histogram the reused
  * [tech.kzen.auto.server.objects.report.exec.summary.model.ValueSummaryBuilder] engine computes. The duplex
@@ -42,9 +44,9 @@ class SummaryWorkerTest {
     @Test
     fun passesRecordsThroughUnchangedWhileSummarizingPerColumn() = runBlocking {
         val records = listOf(
-            JobMessage.ofFlat(header, FlatFileRecord.of(listOf("alice", "30"))),
-            JobMessage.ofFlat(header, FlatFileRecord.of(listOf("bob", "40"))),
-            JobMessage.ofFlat(header, FlatFileRecord.of(listOf("alice", "50"))))
+            JobDataValues.flat(header, FlatFileRecord.of(listOf("alice", "30"))),
+            JobDataValues.flat(header, FlatFileRecord.of(listOf("bob", "40"))),
+            JobDataValues.flat(header, FlatFileRecord.of(listOf("alice", "50"))))
 
         val (forwarded, summary) = runSummary(records)
 
@@ -83,7 +85,7 @@ class SummaryWorkerTest {
     @Test
     fun periodicProgressIsCountOnlyWhileFinalPushCarriesFullSummary() = runBlocking {
         val records = (1..25).map {
-            JobMessage.ofFlat(header, FlatFileRecord.of(listOf("name$it", it.toString())))
+            JobDataValues.flat(header, FlatFileRecord.of(listOf("name$it", it.toString())))
         }
 
         val selfLocation = ObjectLocation(
@@ -115,11 +117,11 @@ class SummaryWorkerTest {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private suspend fun runSummary(records: List<JobMessage>): Pair<List<Any?>, TableSummary> {
+    private suspend fun runSummary(records: List<DataValue>): Pair<List<Any?>, TableSummary> {
         val forwarded = mutableListOf<Any?>()
         val output = object: ChannelOutput<Any?> {
             override suspend fun send(element: Any?) {
-                forwarded.add(element)
+                forwarded.add(testJobValue(element))
             }
             override suspend fun flush() {}
             override fun batchSize(): Int = 1024
@@ -148,7 +150,7 @@ class SummaryWorkerTest {
         }
 
 
-    private fun chunkedInput(chunks: List<List<JobMessage>>): ChannelInput<Any?> =
+    private fun chunkedInput(chunks: List<List<DataValue>>): ChannelInput<Any?> =
         object: ChannelInput<Any?> {
             // The framework TransformWorker drive loop drains whole chunks: hand it each chunk in turn, then EOF.
             private var next = 0

@@ -6,7 +6,6 @@ import tech.kzen.auto.server.objects.script.api.ScriptStepDefinition
 import tech.kzen.auto.server.objects.script.api.StepExecution
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
 import tech.kzen.lib.common.exec.logic.model.LogicType
-import tech.kzen.lib.common.exec.tuple.TupleDefinition
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 
@@ -38,7 +37,7 @@ class UseContextStep(
                     graphNotation, selfLocation, LogicContextConventions.usesAttributePath,
                     "No context to read — choose one"))
 
-            1 -> ScriptStepDefinition.of(TupleDefinition.ofMain(LogicType(used.single().type)))
+            1 -> ScriptStepDefinition.ofMain(used.single().type)
 
             // The base `uses` is a list and stays one for the steps that genuinely read several; this step
             // publishes ONE value, so it has no answer for a second Context. Reachable only by hand-editing

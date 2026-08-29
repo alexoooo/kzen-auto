@@ -5,6 +5,7 @@ import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.api.ChannelInputIterator
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.exec.data.value.DataValue
 import java.util.Collections
 import java.util.IdentityHashMap
 import java.util.concurrent.CopyOnWriteArrayList
@@ -17,11 +18,11 @@ import java.util.concurrent.atomic.AtomicInteger
  * endpoint handed out by [newProducer].
  *
  * **Framework batching.** Workers emit / consume single logical ELEMENTS (the domain unit, a
- * [tech.kzen.auto.server.objects.job.worker.JobMessage]), but the physical transfer unit is a
- * BATCH (a `List<Any?>` of up to [batchSize] elements) — so the per-element coroutine-channel overhead is
+ * [DataValue]), but the physical transfer unit is a
+ * BATCH (a `List<DataValue>` of up to [batchSize] elements) — so the per-element coroutine-channel overhead is
  * amortized without any worker hand-rolling batching (the retired `RecordBatch` hack). A producer buffers
  * emitted elements and flushes them as one batch (see [Producer]); the consumer receives a batch and yields its
- * elements. Element type is otherwise erased (`Any?`) at run time — the declared `of` / `elementType` is
+ * elements. The declared `of` / `elementType` remains
  * authoring/wiring metadata validated by
  * [tech.kzen.auto.common.objects.document.job.ChannelTypeDefiner] — so a single non-generic class instantiates
  * cleanly via `@Reflect`.
@@ -48,7 +49,7 @@ class JobChannel(
     // Elements per physical transfer unit (the batch granularity). At least 1 so a source always makes progress.
     private val batchSize: Int = batchSize.coerceAtLeast(1)
 
-    private val channel: Channel<List<Any?>> =
+    private val channel: Channel<List<DataValue>> =
         if (capacity <= 0) {
             Channel(Channel.RENDEZVOUS)
         }
@@ -68,14 +69,14 @@ class JobChannel(
     // Elements carried over from a previous instance of this channel across a migration: delivered to the
     // consumer (via input) BEFORE the live channel, so the rebuilt graph resumes the stream without a gap.
     // Seeded by preload before any worker launches; thereafter read only by the single consumer coroutine.
-    private val carryover = ArrayDeque<Any?>()
+    private val carryover = ArrayDeque<DataValue>()
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    val input: ChannelInput<Any?> = Input()
+    val input: ChannelInput<DataValue> = Input()
 
 
-    fun newProducer(): ChannelOutput<Any?> {
+    fun newProducer(): ChannelOutput<DataValue> {
         openProducers.incrementAndGet()
         val producer = Producer()
         producers.add(producer)
@@ -112,7 +113,7 @@ class JobChannel(
     //-----------------------------------------------------------------------------------------------------------------
     // Seed the carryover (elements) drained from a previous instance of this channel (by stable id) during a
     // migration. Called from the run driver before any worker launches, so no consumer is reading yet.
-    fun preload(items: List<Any?>) {
+    fun preload(items: List<DataValue>) {
         carryover.addAll(items)
     }
 
@@ -127,16 +128,16 @@ class JobChannel(
      * because it is provably empty at a quiescent barrier: the framework flushes it before every checkpoint, so
      * a parked producer is either at a checkpoint (pending empty) or mid-flush (pending drained into [inFlight]).
      */
-    fun drainBuffered(): List<Any?> {
+    fun drainBuffered(): List<DataValue> {
         // Snapshot parked-mid-flush batches up front (a suspended sender's batch is NOT in the channel buffer).
         val parkedSends = producers.mapNotNull { it.inFlight }
 
-        val result = ArrayList<Any?>(carryover)
+        val result = ArrayList<DataValue>(carryover)
         carryover.clear()
 
         // Draining the buffer frees space, so a parked sender may resume and move its (same) batch into the
         // buffer mid-drain; track buffered batches by identity so such a batch is counted exactly once.
-        val bufferedByIdentity = Collections.newSetFromMap(IdentityHashMap<List<Any?>, Boolean>())
+        val bufferedByIdentity = Collections.newSetFromMap(IdentityHashMap<List<DataValue>, Boolean>())
         while (true) {
             val received = channel.tryReceive()
             if (received.isSuccess) {
@@ -159,16 +160,16 @@ class JobChannel(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private inner class Producer: ChannelOutput<Any?> {
+    private inner class Producer: ChannelOutput<DataValue> {
         // Buffered elements not yet flushed to the channel. Confined to the owning Worker's coroutine (send /
         // flush run there); provably empty whenever the run driver inspects the channel (quiescent barrier), so
         // it needs no cross-thread synchronization.
-        private val pending = ArrayList<Any?>()
+        private val pending = ArrayList<DataValue>()
 
         // The batch currently being sent, while a full-channel flush is parked (null otherwise). Read by
         // drainBuffered from the run-driver thread to capture a suspended sender's batch (not in the buffer).
         @Volatile
-        var inFlight: List<Any?>? = null
+        var inFlight: List<DataValue>? = null
 
         private var closed = false
 
@@ -178,7 +179,7 @@ class JobChannel(
         }
 
 
-        override suspend fun send(element: Any?) {
+        override suspend fun send(element: DataValue) {
             pending.add(element)
         }
 
@@ -190,7 +191,7 @@ class JobChannel(
 
             // Move the whole buffer into one batch BEFORE sending: a park mid-send then holds the entire batch in
             // inFlight (captured by drainBuffered) with pending empty — no partial-buffer capture is needed.
-            val batch = ArrayList<Any?>(pending)
+            val batch = ArrayList<DataValue>(pending)
             pending.clear()
 
             inFlight = batch
@@ -213,16 +214,16 @@ class JobChannel(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private inner class Input: ChannelInput<Any?> {
+    private inner class Input: ChannelInput<DataValue> {
         // A partially-consumed batch, when a raw Worker reads element-by-element via receive() / iterator().
-        private var held: ArrayDeque<Any?>? = null
+        private var held: ArrayDeque<DataValue>? = null
 
 
-        override suspend fun receiveBatch(): List<Any?>? {
+        override suspend fun receiveBatch(): List<DataValue>? {
             // Drain any partially-consumed held batch first (if receive() was interleaved on this input).
             held?.let { remaining ->
                 if (remaining.isNotEmpty()) {
-                    val out = ArrayList<Any?>(remaining)
+                    val out = ArrayList<DataValue>(remaining)
                     remaining.clear()
                     held = null
                     return out
@@ -233,7 +234,7 @@ class JobChannel(
             // Migration carryover is delivered before the live stream, sliced into batch-sized pieces.
             if (carryover.isNotEmpty()) {
                 val n = minOf(batchSize, carryover.size)
-                val out = ArrayList<Any?>(n)
+                val out = ArrayList<DataValue>(n)
                 repeat(n) { out.add(carryover.removeFirst()) }
                 return out
             }
@@ -242,7 +243,7 @@ class JobChannel(
         }
 
 
-        override suspend fun receive(): Any? {
+        override suspend fun receive(): DataValue? {
             while (true) {
                 val h = held
                 if (h != null && h.isNotEmpty()) {
@@ -255,9 +256,9 @@ class JobChannel(
         }
 
 
-        override operator fun iterator(): ChannelInputIterator<Any?> {
-            return object: ChannelInputIterator<Any?> {
-                private var nextElement: Any? = null
+        override operator fun iterator(): ChannelInputIterator<DataValue> {
+            return object: ChannelInputIterator<DataValue> {
+                private var nextElement: DataValue? = null
                 private var hasNextElement = false
                 private var ended = false
 
@@ -283,9 +284,9 @@ class JobChannel(
                     return hasNext()
                 }
 
-                override fun next(): Any? {
+                override fun next(): DataValue {
                     hasNextElement = false
-                    return nextElement
+                    return checkNotNull(nextElement)
                 }
             }
         }

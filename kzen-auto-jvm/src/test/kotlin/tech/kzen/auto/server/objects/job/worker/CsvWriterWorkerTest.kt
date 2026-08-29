@@ -7,13 +7,15 @@ import tech.kzen.auto.common.data.model.DataRef
 import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.api.ChannelInputIterator
 import tech.kzen.auto.common.paradigm.job.control.JobControl
+import tech.kzen.auto.common.objects.document.logic.BindingSignatureDefiner
+import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.lib.common.exec.data.binding.BindingDefinition
+import tech.kzen.lib.common.exec.data.binding.BindingName
+import tech.kzen.lib.common.exec.data.binding.BindingSchema
+import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.auto.server.data.FileListingAction
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.service.plugin.HostReportDefinitionRepository
-import tech.kzen.lib.common.exec.logic.model.LogicType
-import tech.kzen.lib.common.exec.tuple.TupleComponentDefinition
-import tech.kzen.lib.common.exec.tuple.TupleComponentName
-import tech.kzen.lib.common.exec.tuple.TupleDefinition
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
@@ -201,10 +203,10 @@ class CsvWriterWorkerTest {
         override fun scratchDir(): String = error("unused")
         override fun publishProgress(location: ObjectLocation, value: Map<String, Any?>, force: Boolean) {}
         override fun parameter(name: String): Any? = parameters[name]
-        override fun results(): TupleDefinition = TupleDefinition(listOf(
-            TupleComponentDefinition(TupleComponentName("file"), LogicType(resultType))))
-        override fun yieldResult(component: String, value: Any?) {
-            yielded = value
+        override fun results(): BindingSchema = BindingSchema.of(
+            BindingDefinition(BindingName("file"), BindingSignatureDefiner.contract(resultType)))
+        override fun yieldResult(component: String, value: DataValue) {
+            yielded = JobDataValues.boundary(value)
         }
         override suspend fun host(instructions: ObjectLocation, input: Any?) = error("unused")
     }

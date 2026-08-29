@@ -196,7 +196,7 @@ Script:
         - is: List
           of: ObjectLocation
       by: Nominal
-    # The result signature: a map (component name -> TypeMetadata) parsed into the output TupleDefinition.
+    # The result signature: a map (binding name -> TypeMetadata) parsed into the output BindingSchema.
     # Plain data (not a live step object); empty/absent => void. Only `main` is wired today, but the map
     # shape leaves room for additional named results with no schema change.
     results:
@@ -326,7 +326,7 @@ Job:
       of: ParameterBinding
       by: NestedList
     # The result signature (Script parity, same shape): a map (component name -> TypeMetadata) parsed
-    # into the output TupleDefinition — the Job's output signature (JobSignatureCapability), which each
+    # into the output BindingSchema — the Job's output signature (JobSignatureCapability), which each
     # ResultSink Worker yields into by component name. Empty/absent => void.
     results:
       is: Object

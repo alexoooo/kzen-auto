@@ -5,9 +5,10 @@ import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.exec.LogicCompilerServices
 import tech.kzen.auto.server.exec.script.test.ScriptStepTestModule
 import tech.kzen.auto.server.util.AutoTestUtils
+import tech.kzen.lib.common.exec.engine.LogicFailure
 import tech.kzen.lib.common.exec.engine.Outcome
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
-import tech.kzen.lib.common.exec.tuple.TupleValue
+import tech.kzen.auto.server.exec.mainBoundaryValue
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
@@ -15,6 +16,7 @@ import tech.kzen.lib.server.exec.engine.RunEngine
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 
 
@@ -44,21 +46,21 @@ class ScriptImplicitResultTest {
     @Test
     fun lastStepValueIsTheResultWhenNoResultStep() {
         val outcome = runScript("test/script/result/implicit-result-test.yaml")
-        assertEquals(42, assertIs<Outcome.Success>(outcome).value.mainComponentValue())
+        assertEquals(42, assertIs<Outcome.Success>(outcome).value.mainBoundaryValue())
     }
 
 
     @Test
     fun trailingLoopIsCollectedWhenItIsTheImplicitResult() {
         val outcome = runScript("test/script/result/implicit-result-loop-test.yaml")
-        assertEquals(listOf(2, 4, 6), assertIs<Outcome.Success>(outcome).value.mainComponentValue())
+        assertEquals(listOf(2, 4, 6), assertIs<Outcome.Success>(outcome).value.mainBoundaryValue())
     }
 
 
     @Test
     fun voidScriptDiscardsTheLastStepValue() {
         val outcome = runScript("test/script/result/implicit-result-void-test.yaml")
-        assertEquals(TupleValue.empty, assertIs<Outcome.Success>(outcome).value)
+        assertEquals(0, assertIs<Outcome.Success>(outcome).value.schema.definitions.size)
     }
 
 
@@ -66,7 +68,7 @@ class ScriptImplicitResultTest {
     fun nestedResultStepStillWinsOverTheImplicitLastStep() {
         // The Result runs inside the taken branch, ending the Script — so the trailing Tail (0) never runs.
         val outcome = runScript("test/script/result/implicit-result-nested-result-test.yaml")
-        assertEquals(5, assertIs<Outcome.Success>(outcome).value.mainComponentValue())
+        assertEquals(5, assertIs<Outcome.Success>(outcome).value.mainBoundaryValue())
     }
 
 
@@ -75,7 +77,29 @@ class ScriptImplicitResultTest {
         // The child's implicit result (7) is the caller's RunStep value, and the caller's own last root step
         // computes Call + 1 = 8 — implicitly, in turn.
         val outcome = runScript("test/script/result/implicit-result-parent-test.yaml")
-        assertEquals(8, assertIs<Outcome.Success>(outcome).value.mainComponentValue())
+        assertEquals(8, assertIs<Outcome.Success>(outcome).value.mainBoundaryValue())
+    }
+
+
+    @Test
+    fun nonMainResultIsRejectedAtCompileTime() {
+        ScriptStepTestModule.register()
+        context = KzenAutoContext.forTest()
+
+        val documentPath = DocumentPath.parse("test/script/result/non-main-result-test.yaml")
+        val scriptLocation = ObjectLocation(documentPath, ObjectPath.parse("main"))
+        val graphNotation = AutoTestUtils.readNotation()
+        val graphDefinition = AutoTestUtils.graphDefinitionAttempt(graphNotation).transitiveSuccessful
+
+        val failure = assertFailsWith<LogicFailure> {
+            ScriptLogicCompiler.compile(
+                scriptLocation,
+                graphNotation,
+                graphDefinition,
+                compilerServices())
+        }
+
+        assertEquals("Script supports only the 'main' result; found 'other'", failure.message)
     }
 
 
@@ -97,7 +121,7 @@ class ScriptImplicitResultTest {
             graphDefinition,
             compilerServices())
 
-        val engine = RunEngine(logic, context.objectStableMapper.objectStableId(scriptLocation), TupleValue.empty)
+        val engine = RunEngine(logic, context.objectStableMapper.objectStableId(scriptLocation))
         return try {
             runBlocking {
                 engine.resume()

@@ -6,8 +6,6 @@ import tech.kzen.auto.server.objects.report.exec.calc.CalculatedColumnEval
 import tech.kzen.auto.server.objects.report.service.ReportWorkPool
 import tech.kzen.auto.server.data.ReportDefinitionRepository
 import tech.kzen.lib.common.exec.engine.LogicSignature
-import tech.kzen.lib.common.exec.logic.model.LogicType
-import tech.kzen.lib.common.exec.tuple.TupleDefinition
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
@@ -50,10 +48,8 @@ object ReportLogicCompiler {
         val definitionRepository = resolve<ReportDefinitionRepository>(services)
         val calculatedColumnEval = resolve<CalculatedColumnEval>(services)
 
-        // Mirrors ReportDocument.define(): no declared inputs, a nominal string output.
-        val logicSignature = LogicSignature(
-            TupleDefinition.empty,
-            TupleDefinition.ofMain(LogicType.string))
+        // Report materializes data for its existing inspection/download surfaces; it returns no Logic value.
+        val logicSignature = LogicSignature.empty
 
         return ReportLogic(
             reportRunContext,

@@ -1,5 +1,9 @@
 package tech.kzen.auto.server.exec.job
 
+import tech.kzen.lib.common.exec.data.value.DataValue
+import tech.kzen.lib.common.exec.data.binding.BindingSchema
+import tech.kzen.lib.common.exec.data.binding.DataBindings
+
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -24,8 +28,6 @@ import tech.kzen.lib.common.exec.engine.Execution
 import tech.kzen.lib.common.exec.engine.LogicFailure
 import tech.kzen.lib.common.exec.engine.disposal.SettleDisposalPolicy
 import tech.kzen.lib.common.exec.engine.restoredAs
-import tech.kzen.lib.common.exec.tuple.TupleDefinition
-import tech.kzen.lib.common.exec.tuple.TupleValue
 import java.util.concurrent.atomic.AtomicInteger
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -42,9 +44,9 @@ import kotlin.time.Duration.Companion.milliseconds
  * settles. Engine semantics (checkpoints, quiescent wavefront, migrate barrier) are canonical in kzen-lib's
  * logic-spec; the Job paradigm is canonical in kzen-auto's docs/architecture.md. What JobRun itself owns:
  *
- * - Signature: run arguments arrive as the root [execution]'s [Execution.inputs] tuple, read by name via
+ * - Signature: run arguments arrive as the root [execution]'s [Execution.inputs], read by name via
  *   [EngineJobControl.parameter]; ResultSink yields are gathered per run by [JobResultCollector] into the
- *   returned [TupleValue]. Seeding / harvest is generic — no Worker-type knowledge.
+ *   returned [DataBindings]. Seeding / harvest is generic — no Worker-type knowledge.
  * - Payload types: [JobValidator.validate]'s static walk (cache-shared with the editor's detached validation)
  *   threads each Worker's inferred input payload type into its [EngineJobControl].
  * - Channel carry-over across a live edit (logic-spec §5): Channels are shared instances, not nodes, so the
@@ -65,7 +67,7 @@ class JobRun(
     private val workerLocations: List<ObjectLocation>,
     private val channelLocations: List<ObjectLocation>,
     private val jobParameters: JobParameters,
-    private val jobResults: TupleDefinition,
+    private val jobResults: BindingSchema,
     private val graphNotation: GraphNotation,
     private val graphDefinition: GraphDefinition,
     private val services: LogicCompilerServices
@@ -78,7 +80,7 @@ class JobRun(
     private val runId get() = services.runExecutionId.logicRunId
 
 
-    suspend fun run(): TupleValue {
+    suspend fun run(): DataBindings {
         // Surface each declared parameter's resolved value (bound argument falling back to the declared default)
         // at the parameter's own address, once per (re)launch — the signature editor shows it beside the declared
         // default. Emitted on the Job's ROOT node: parameters belong to the document, not any Worker.
@@ -90,11 +92,11 @@ class JobRun(
         val childLogicHost = JobChildLogicHost(graphNotation, graphDefinition, services)
 
         // Parameter seeding + result harvest (JobSignatureCapability's runtime half): the root [execution]'s typed
-        // [Execution.inputs] tuple carries the Job's bound run arguments (a Worker reads a declared parameter by
+        // [Execution.inputs] carries the Job's bound run arguments (a Worker reads a declared parameter by
         // name via JobControl.parameter), and this collector gathers what the ResultSinkWorkers yield into the
-        // tuple returned as the run's result. Owned per run — a migrate rebuilds it empty, so a carried sink
+        // bindings returned as the run's result. Owned per run — a migrate rebuilds it empty, so a carried sink
         // re-yields at its onComplete (yield is last-write-wins).
-        val resultCollector = JobResultCollector()
+        val resultCollector = JobResultCollector(jobResults)
 
         // One shared instance graph for the whole run: the Channel objects are single shared instances and each
         // Worker's injected endpoint views reference them (via JobChannelCreator) — exactly as the old
@@ -123,7 +125,7 @@ class JobRun(
 
         // Restore: seed each channel with the in-flight payloads its predecessor (same stable id) was carrying at
         // the edit, BEFORE any Worker launches — so the consumer drains the carryover ahead of the live stream.
-        val carriedChannels = execution.restoredAs<Map<ObjectStableId, List<Any?>>>()
+        val carriedChannels = execution.restoredAs<Map<ObjectStableId, List<DataValue>>>()
         if (carriedChannels != null) {
             for ((stableId, channel) in streamChannels) {
                 carriedChannels[stableId]?.let { channel.preload(it) }
@@ -227,6 +229,7 @@ class JobRun(
                                         workerScratchDir, workerOutputDir,
                                         execution.inputs, jobParameters, jobResults,
                                         inputPayloadType, resultCollector),
+                                    inputs = DataBindings.bind(BindingSchema.empty),
                                     // These frames are live SIMULTANEOUSLY, which is the one shape the engine's
                                     // ambient-context model is not specified for (logic-spec §6): two Workers
                                     // binding one exported key would collapse onto a single slot on this Job
@@ -253,7 +256,7 @@ class JobRun(
             externalClients.values.forEach { it.close() }
         }
 
-        return resultCollector.toTupleValue()
+        return resultCollector.settle()
     }
 
 

@@ -7,16 +7,11 @@
 # AutoConventions.isLogic matches the Logic marker a Report carries. This fixture is what makes the uniform
 # nesting a tested property rather than an unstated one.
 #
-# `arguments:` is absent deliberately: ReportLogicCompiler declares TupleDefinition.empty inputs, so a Report
+# `arguments:` is absent deliberately: ReportLogicCompiler declares an empty input BindingSchema, so a Report
 # takes none.
 #
-# There is deliberately NO ResultStep and no `results:` block either, and that is a finding rather than a
-# simplification. ReportRun.run() returns TupleValue.empty on success while ReportLogicCompiler declares its
-# output as TupleDefinition.ofMain(LogicType.string) — so a hosted Report's `main` component is null, and a
-# caller declaring `nullable: false` fails the cast AFTER the report has run correctly to completion. That
-# mismatch is pre-existing and unrelated to hosting (nothing reads the ROOT frame's main value, which is why it
-# has never surfaced); it is filed as ledger row 45 rather than worked around here. A Report's real output is
-# its materialized table, which is what the test asserts on.
+# There is deliberately NO ResultStep and no `results:` block: a Report has an empty output BindingSchema.
+# Its real output is the materialized table, which is what the test asserts on.
 main:
   is: Script
 

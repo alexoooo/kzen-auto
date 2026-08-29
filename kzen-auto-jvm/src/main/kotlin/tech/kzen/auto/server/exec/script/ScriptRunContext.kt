@@ -6,6 +6,7 @@ import tech.kzen.auto.common.objects.document.script.model.ScriptValidation
 import tech.kzen.auto.common.objects.document.script.model.StepTrace
 import tech.kzen.auto.common.util.TraceDisplay
 import tech.kzen.auto.server.exec.LogicCompiler
+import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.auto.server.objects.script.api.ScriptControlSignal
 import tech.kzen.auto.server.objects.script.api.StepExecution
 import tech.kzen.lib.common.exec.BinaryExecutionValue
@@ -17,9 +18,14 @@ import tech.kzen.lib.common.exec.engine.Logic
 import tech.kzen.lib.common.exec.engine.PauseReason
 import tech.kzen.lib.common.exec.engine.disposal.SettleDisposalPolicy
 import tech.kzen.lib.common.exec.logic.ResourceClosePolicy
-import tech.kzen.lib.common.exec.tuple.TupleComponentName
-import tech.kzen.lib.common.exec.tuple.TupleDefinition
-import tech.kzen.lib.common.exec.tuple.TupleValue
+import tech.kzen.lib.common.exec.data.binding.BindingName
+import tech.kzen.lib.common.exec.data.binding.BindingSchema
+import tech.kzen.lib.common.exec.data.binding.BindingState
+import tech.kzen.lib.common.exec.data.binding.DataBindings
+import tech.kzen.lib.common.exec.data.value.DataSnapshot
+import tech.kzen.lib.common.exec.data.value.DataValue
+import tech.kzen.lib.common.exec.data.value.SnapshotPolicy
+import tech.kzen.lib.common.exec.data.value.SnapshotResult
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.service.store.normal.ObjectStableId
@@ -58,7 +64,7 @@ class ScriptRunContext(
     //----------------------------------------------------------------------------------------- per-Script structures
     override val scriptTree: ScriptTree get() = structure.scriptTree
     override val scriptValidation: ScriptValidation get() = structure.scriptValidation
-    override val resultSignature: TupleDefinition get() = structure.resultSignature
+    override val resultSignature: BindingSchema get() = structure.resultSignature
     override val graphNotation: GraphNotation get() = structure.graphNotation
 
     private val objectStableMapper get() = structure.objectStableMapper
@@ -66,7 +72,7 @@ class ScriptRunContext(
 
     //----------------------------------------------------------------------------------------------- per-run state
     // The live value graph downstream expressions reference (step outcomes + non-step bindings).
-    private val stepValues = HashMap<ObjectStableId, Any?>()
+    private val stepValues = HashMap<ObjectStableId, DataValue?>()
 
     // The replay / migration / move-to bookkeeping (see [ScriptReplayState]) and the typed context
     // resolution (see [ScriptStepContexts]) — both run-confined like this orchestrator.
@@ -80,7 +86,7 @@ class ScriptRunContext(
     // keyed by content signature. Confined to the run coroutine, so no locking.
     private val perRunSingletons = HashMap<String, Any>()
 
-    private var resultValue: TupleValue? = null
+    private var resultValue: DataBindings? = null
 
     // A pending control-flow completion signal (continue/break/return — see [ScriptControlSignal]) and the stable
     // id of the step that raised it. Release-local: the spine short-circuits on it and a loop / the root consumes
@@ -128,7 +134,7 @@ class ScriptRunContext(
     override fun referencedValue(location: ObjectLocation): Any? {
         val stableId = objectStableMapper.objectStableId(location)
         check(stepValues.containsKey(stableId)) { "No value produced for: $location" }
-        return stepValues[stableId]
+        return stepValues[stableId]?.let(JobDataValues::boundary)
     }
 
 
@@ -137,17 +143,22 @@ class ScriptRunContext(
     }
 
 
-    override fun argument(name: TupleComponentName): Any? {
-        return execution.inputs.find(name)
+    override fun argument(name: BindingName): Any? {
+        return when (val state = execution.inputs[name]) {
+            BindingState.Unbound -> null
+            is BindingState.Bound -> JobDataValues.boundary(state.value)
+        }
     }
 
 
     override fun recordValue(location: ObjectLocation, value: Any?) {
-        recordValue(objectStableMapper.objectStableId(location), value)
+        recordValue(
+            objectStableMapper.objectStableId(location),
+            structure.liftStepResult(location, value))
     }
 
 
-    override fun setResult(value: TupleValue) {
+    override fun setResult(value: DataBindings) {
         resultValue = value
     }
 
@@ -296,7 +307,7 @@ class ScriptRunContext(
 
     //-------------------------------------------------------------------------------------------- StepExecution: spine
     override suspend fun runSteps(steps: List<ObjectLocation>): Any? {
-        var last: Any? = null
+        var last: DataValue? = null
         for (stepLocation in steps) {
             val stableId = objectStableMapper.objectStableId(stepLocation)
 
@@ -340,7 +351,7 @@ class ScriptRunContext(
                 // if off, the failure propagates and the run fails. markRunning is inside the recoverable unit so
                 // each (re-)try repaints Running (and clears the prior try's detail). A failed step is never
                 // markDone'd, so on resume / migrate it re-runs.
-                last = execution.recoverable({ error ->
+                val rawResult = execution.recoverable({ error ->
                     // A step that errored after raising a signal re-raises on its successful retry, so a failed
                     // try must never leave a signal pending across the resulting park (no signal coexists with a
                     // park — the release-local invariant).
@@ -356,6 +367,7 @@ class ScriptRunContext(
                     stepContexts.checkUsedContexts(stepLocation)
                     step.run(this)
                 }
+                last = structure.liftStepResult(stepLocation, rawResult)
 
                 // Control flow (continue/break/return — see [ScriptControlSignal]): after the step runs, a pending
                 // signal short-circuits the walk. A CONTAINER the signal merely passed through (an If, or a loop
@@ -365,12 +377,12 @@ class ScriptRunContext(
                 // a loop ([consumeLoopSignal]) or the root ([consumeRootSignalOrFail]) consumes the signal.
                 val signal = pendingSignal
                 if (signal != null && pendingSignalRaisedBy != stableId) {
-                    emitStepTrace(stableId, StepTrace.State.Done, displayOf(signalDisplay(signal)), currentDetail)
-                    return last
+                    emitStepTrace(stableId, StepTrace.State.Done, displayTextOf(signalDisplay(signal)), currentDetail)
+                    return last?.let(JobDataValues::boundary)
                 }
                 markDone(stableId, last)
                 if (signal != null) {
-                    return last
+                    return last?.let(JobDataValues::boundary)
                 }
             }
             finally {
@@ -380,7 +392,7 @@ class ScriptRunContext(
                 currentNote = previousNote
             }
         }
-        return last
+        return last?.let(JobDataValues::boundary)
     }
 
 
@@ -401,7 +413,7 @@ class ScriptRunContext(
 
 
     //--------------------------------------------------------------------------------------------- StepExecution: host
-    override suspend fun host(instructions: ObjectLocation, arguments: TupleValue): TupleValue {
+    override suspend fun host(instructions: ObjectLocation, arguments: DataBindings): DataBindings {
         val child = childLogics.getOrPut(instructions) {
             LogicCompiler.compile(
                 instructions, structure.graphNotation, structure.graphDefinition, structure.services)
@@ -411,8 +423,22 @@ class ScriptRunContext(
         // call-site: recording it on the child node lets the trace store attribute the child's execution to
         // THIS RunStep, so its screenshot strip scopes to the invocations it spawned (distinguishing two
         // RunSteps that host the same sub-Script document).
+        val bindingChild = child as? Logic
+            ?: error("Child Logic is not binding-native: $instructions")
+        val childInputs = bindingChild.signature().inputs
+        val supplied = arguments.entries().mapNotNull { (definition, state) ->
+            val childDefinition = childInputs.find(definition.name)
+            require(childDefinition != null) {
+                "Unknown child argument '${definition.name}' for $instructions"
+            }
+            val bound = state as? BindingState.Bound ?: return@mapNotNull null
+            definition.name to JobDataValues.lift(
+                JobDataValues.boundary(bound.value),
+                childDefinition.contract)
+        }
+        val normalized = DataBindings.bind(childInputs, supplied)
         return execution.host(
-            objectStableMapper.objectStableId(instructions), child, arguments, currentStableId,
+            objectStableMapper.objectStableId(instructions), child, normalized, currentStableId,
             initialBindings = stepContexts.callSiteBindings())
     }
 
@@ -425,12 +451,12 @@ class ScriptRunContext(
      * [tech.kzen.auto.server.objects.script.api.StepExecution.bindContext] writes to). A parameter's display value is surfaced
      * separately, once at run start, by [ScriptLogic] via [tech.kzen.auto.server.exec.LogicParameterTrace].
      */
-    fun recordValue(stableId: ObjectStableId, value: Any?) {
+    fun recordValue(stableId: ObjectStableId, value: DataValue?) {
         stepValues[stableId] = value
     }
 
 
-    fun result(): TupleValue? {
+    fun result(): DataBindings? {
         return resultValue
     }
 
@@ -500,7 +526,7 @@ class ScriptRunContext(
     // reference to a branch-internal step would find no value in [stepValues] and error-park.
     // Only nested steps the carry actually holds are adopted: a branch the run never took, or a loop-body
     // iteration [dropReplay] reset, has no outcome and stays Idle — which is what was on screen before the edit.
-    private fun adoptCompleted(stepLocation: ObjectLocation, stableId: ObjectStableId): Any? {
+    private fun adoptCompleted(stepLocation: ObjectLocation, stableId: ObjectStableId): DataValue? {
         for (nestedStepList in structure.scriptStepAt(stepLocation).nestedStepLists(structure.graphNotation)) {
             for (nestedLocation in nestedStepList) {
                 val nestedStableId = objectStableMapper.objectStableId(nestedLocation)
@@ -513,7 +539,7 @@ class ScriptRunContext(
     }
 
 
-    private fun adoptOutcome(stableId: ObjectStableId): Any? {
+    private fun adoptOutcome(stableId: ObjectStableId): DataValue? {
         val value = replay.restoredOutcome(stableId)
         stepValues[stableId] = value
         replay.recordCompleted(stableId, value)
@@ -524,7 +550,7 @@ class ScriptRunContext(
     }
 
 
-    private fun markDone(stableId: ObjectStableId, value: Any?) {
+    private fun markDone(stableId: ObjectStableId, value: DataValue?) {
         stepValues[stableId] = value
         replay.recordCompleted(stableId, value)
         emitStepTrace(stableId, StepTrace.State.Done, displayOf(value), currentDetail)
@@ -556,10 +582,28 @@ class ScriptRunContext(
     // Human-facing only, and bounded: the value graph ([stepValues]) keeps the whole value, so downstream
     // expressions and the Script's result are unaffected — this caps just the string that reaches the trace,
     // the wire, and every client poll.
-    private fun displayOf(value: Any?): ExecutionValue {
-        return ExecutionValue.of(
-            TraceDisplay.truncatedToString(value, TraceDisplay.maxScriptTraceChars))
+    private fun displayOf(value: DataValue?): ExecutionValue {
+        if (value == null) {
+            return NullExecutionValue
+        }
+        val snapshot = DataSnapshot.capture(value, SnapshotPolicy(
+            maximumDepth = 16,
+            maximumElements = 256,
+            maximumTextLength = TraceDisplay.maxScriptTraceChars,
+            maximumBinaryBytes = TraceDisplay.maxScriptTraceChars,
+            maximumDurationMillis = 100))
+        return when (snapshot) {
+            is SnapshotResult.Complete -> ExecutionValue.of(TraceDisplay.truncatedToString(
+                snapshot.snapshot.value.get(), TraceDisplay.maxScriptTraceChars))
+            SnapshotResult.Redacted -> ExecutionValue.of("<redacted>")
+            is SnapshotResult.Rejected -> ExecutionValue.of(
+                "<preview unavailable: ${snapshot.problems.firstOrNull()?.message ?: "rejected"}>")
+        }
     }
+
+
+    private fun displayTextOf(value: Any?): ExecutionValue = ExecutionValue.of(
+        TraceDisplay.truncatedToString(value, TraceDisplay.maxScriptTraceChars))
 
 
     // The trace label a container passed-through by a control signal shows (decision 17) — a clearly-non-value

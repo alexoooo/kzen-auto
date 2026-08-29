@@ -1,0 +1,37 @@
+main:
+  is: Report
+  input:
+    browser:
+      directory: "."
+      filter: ""
+    selection:
+      dataType: tech.kzen.auto.plugin.model.record.FlatFileRecord
+      groupBy: ""
+      locations:
+        - location: "build/bench/exp/input.csv"
+          coordinate: CSV
+  filter:
+    "0|flag":
+      type: RequireAny
+      values:
+        - yes
+  formula:
+    total: "qty * price"
+  analysis:
+    type: FlatData
+    flat:
+      allow: []
+      exclude: []
+    pivot:
+      rows: []
+      values: {}
+  output:
+    type: Export
+    explore:
+      start: 1
+      count: 50
+    export:
+      format: csv
+      compression: none
+      path: "build/bench/exp/report-export.csv"
+    work: "build/bench/exp/report-work"

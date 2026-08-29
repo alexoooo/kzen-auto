@@ -8,6 +8,7 @@ import tech.kzen.auto.server.exec.LogicCompilerServices
 import tech.kzen.auto.server.objects.report.ReportDocument
 import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.lib.common.exec.engine.Outcome
+import tech.kzen.lib.common.exec.data.binding.BindingSchema
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -45,15 +46,8 @@ import kotlin.test.assertNotNull
  * completes cleanly — so success alone proves only that nothing threw. Reading the materialized table back is
  * what distinguishes "ran" from "returned".
  *
- * ⚠ **Found by the first run of this fixture, and deliberately not worked around:** the caller declares no
- * `results:` because a hosted Report's `main` component is **null**. [ReportRun].`run` returns
- * [tech.kzen.lib.common.exec.tuple.TupleValue.empty] on success, while [ReportLogicCompiler] declares the
- * output as `TupleDefinition.ofMain(LogicType.string)` — a signature that promises a value nothing produces.
- * The first version of this test had a `ResultStep` and failed on exactly that, with the report itself having
- * already run correctly to completion. The mismatch is pre-existing and independent of hosting (nothing reads
- * the ROOT frame's main value, so top-level runs never notice); it is filed as ledger row 45 rather than
- * silently patched here, because whether a Report SHOULD return something — a status, a row count, an export
- * path — is a product decision and not this row's to make.
+ * A Report deliberately declares and returns no result component. Its observable product is the materialized
+ * report read through the inspection/download surfaces; this test pins both the empty signature and the data.
  */
 class ReportHostedTest {
     //-----------------------------------------------------------------------------------------------------------------
@@ -104,6 +98,19 @@ class ReportHostedTest {
             graphDefinition.filterTransitive(reportPath), context.graphEnvironment)
         val reportDocument = graphInstance[reportLocation]!!.reference as ReportDocument
         val reportRunContext = assertNotNull(reportDocument.reportRunContext())
+
+        val compilerServices = LogicCompilerServices(
+            context.graphEnvironment,
+            context.objectStableMapper,
+            context.cachedKotlinCompiler,
+            context.scriptValidationCache,
+            context.jobValidationCache,
+            context.notationMetadataReader,
+            context.jobWorkPool,
+            LogicRunExecutionId.random())
+        val reportLogic = LogicCompiler.compile(
+            reportLocation, graphNotation, graphDefinition, compilerServices)
+        assertEquals(BindingSchema.empty, reportLogic.signature().outputs)
 
         val scriptLogic = LogicCompiler.compile(
             scriptLocation,

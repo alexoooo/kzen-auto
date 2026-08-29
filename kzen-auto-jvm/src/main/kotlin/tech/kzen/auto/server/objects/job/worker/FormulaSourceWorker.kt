@@ -8,6 +8,9 @@ import tech.kzen.auto.server.objects.logic.ExpressionReturnTypeInference
 import tech.kzen.auto.server.objects.report.exec.calc.CalculatedColumnEval
 import tech.kzen.auto.server.util.ClassLoaderUtils
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.exec.data.type.DefaultNativeTypeResolver
+import tech.kzen.lib.common.exec.data.value.DataValue
+import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
@@ -22,7 +25,7 @@ import tech.kzen.lib.common.reflect.Service
  * and dispatched STATICALLY on the expression's INFERRED type (the same inference the editor's worker card and
  * the payload-type walk display, so the runtime always matches them): an `Iterable`, `Sequence`, or `Iterator`
  * expression is streamed element-by-element (a null value under a nullable stream type is empty), any other
- * type — including an untyped `Any` — is emitted as a single element, each as a payload [JobMessage] into
+ * type — including an untyped `Any` — is lifted and emitted as a single `DataValue` into
  * [output]. A blank [code] produces an empty stream.
  *
  * The output channel is UNTYPED in notation (no `of:` on the port) — the inferred payload type flows through
@@ -48,7 +51,7 @@ import tech.kzen.lib.common.reflect.Service
  */
 @Reflect
 class FormulaSourceWorker(
-    output: ChannelOutput<Any?>,
+    output: ChannelOutput<DataValue>,
 
     private val code: String,
     private val selfLocation: ObjectLocation,
@@ -75,7 +78,7 @@ class FormulaSourceWorker(
         // The declared parameters are the expression's scope (typed, bare by name); values are run-constant,
         // injected once per compiled instance (never baked into the generated source).
         val parameters = control.parameters()
-        val parameterValues = parameters.components.map { control.parameter(it.name.value) }
+        val parameterValues = parameters.definitions.map { control.parameter(it.name.value) }
 
         val (streams, value) = control.runBlockingIo {
             val compiled = calculatedColumnEval.create(
@@ -110,12 +113,12 @@ class FormulaSourceWorker(
                 // The SourceWorker cadence checkpoints + flushes + publishes per batch, so this loop just emits.
                 val element = iterator.next()
                 nextIndex += 1
-                emit.send(JobMessage.ofPayload(element))
+                emit.send(JobDataValues.lift(element))
             }
         }
         else if (nextIndex == 0) {
             nextIndex = 1
-            emit.send(JobMessage.ofPayload(value))
+            emit.send(JobDataValues.lift(value))
         }
     }
 
@@ -124,35 +127,35 @@ class FormulaSourceWorker(
     // The expression source knows its output statically: compile (cached — the same artifact produce() will
     // load) and expose the inferred type — the element type when stream-classified (the stream lane), the
     // whole type otherwise (the single-emission lane). A compile error becomes this Worker's validation error.
-    override fun payloadFlow(input: WorkerLane, context: WorkerLaneContext): WorkerLaneAttempt {
+    override fun payloadFlow(input: JobLaneDescriptor, context: JobLaneContext): JobLaneAttempt {
         if (code.isBlank()) {
-            return WorkerLaneAttempt(WorkerLane(null, HeaderListing.empty), null)
+            return JobLaneAttempt(JobLaneDescriptor(null, HeaderListing.empty), null)
         }
 
         val error = calculatedColumnEval.validate(
             selfLocation.objectPath.name.value, code,
             HeaderListing.empty, TypeMetadata.anyNullable, context.classLoader, context.parameters)
         if (error != null) {
-            return WorkerLaneAttempt(WorkerLane.unknown, error)
+            return JobLaneAttempt(JobLaneDescriptor.unknown, error)
         }
 
         val compiled = calculatedColumnEval.create(
             selfLocation.objectPath.name.value, code,
             HeaderListing.empty, TypeMetadata.anyNullable, context.classLoader, context.parameters)
         val inferredType = calculatedColumnEval.inferredReturnKType(compiled)
-            ?: return WorkerLaneAttempt(WorkerLane(null, HeaderListing.empty), null)
+            ?: return JobLaneAttempt(JobLaneDescriptor(null, HeaderListing.empty), null)
 
         val payloadType =
             if (ExpressionReturnTypeInference.isStreamType(inferredType)) {
                 ExpressionReturnTypeInference.streamElementType(inferredType)
-                    ?.let(ExpressionReturnTypeInference::toTypeMetadata)
-                    ?: TypeMetadata.anyNullable
+                    ?: return JobLaneAttempt(JobLaneDescriptor.unknown, null)
             }
             else {
-                ExpressionReturnTypeInference.toTypeMetadata(inferredType)
+                inferredType
             }
 
-        return WorkerLaneAttempt(WorkerLane(payloadType, HeaderListing.empty), null)
+        val resolved = DefaultNativeTypeResolver().use { it.describe(payloadType) }
+        return JobLaneAttempt(JobLaneDescriptor(resolved.contract, resolved), null)
     }
 
 

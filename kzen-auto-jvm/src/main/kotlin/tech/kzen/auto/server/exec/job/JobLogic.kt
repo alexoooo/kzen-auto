@@ -2,9 +2,9 @@ package tech.kzen.auto.server.exec.job
 
 import tech.kzen.auto.server.exec.LogicCompilerServices
 import tech.kzen.lib.common.exec.engine.Execution
+import tech.kzen.lib.common.exec.data.binding.DataBindings
 import tech.kzen.lib.common.exec.engine.Logic
 import tech.kzen.lib.common.exec.engine.LogicSignature
-import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
@@ -39,7 +39,7 @@ class JobLogic(
     }
 
 
-    override suspend fun run(execution: Execution): TupleValue {
+    override suspend fun run(execution: Execution): DataBindings {
         return JobRun(
             execution,
             jobLocation,

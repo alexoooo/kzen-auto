@@ -3,7 +3,7 @@ package tech.kzen.auto.server.exec.flow.test
 import tech.kzen.auto.common.paradigm.flow.api.FlowRunOutput
 import tech.kzen.auto.common.paradigm.flow.api.StatelessFlowVertex
 import tech.kzen.auto.common.paradigm.flow.api.input.RequiredInput
-import tech.kzen.lib.common.exec.tuple.TupleComponentName
+import tech.kzen.lib.common.exec.data.binding.BindingName
 import tech.kzen.lib.common.reflect.Reflect
 
 
@@ -19,7 +19,7 @@ class AliasOutputVertex(
     StatelessFlowVertex,
     FlowRunOutput
 {
-    override val tupleComponentName = TupleComponentName("aliased-$alias")
+    override val bindingName = BindingName("aliased-$alias")
 
 
     override fun process() {

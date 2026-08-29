@@ -9,14 +9,15 @@ import tech.kzen.auto.common.paradigm.logic.MoveToRefusal
 import tech.kzen.auto.server.exec.LogicParameter
 import tech.kzen.auto.server.exec.LogicParameterTrace
 import tech.kzen.auto.server.exec.RepositionDiagnostic
+import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.lib.common.exec.data.binding.DataBindings
+import tech.kzen.lib.common.exec.data.binding.ProducedBindingsBuilder
 import tech.kzen.lib.common.exec.engine.Execution
 import tech.kzen.lib.common.exec.engine.Logic
 import tech.kzen.lib.common.exec.engine.LogicSignature
 import tech.kzen.lib.common.exec.engine.Repositionable
 import tech.kzen.lib.common.exec.engine.context.ExportSelector
 import tech.kzen.lib.common.exec.engine.restoredAs
-import tech.kzen.lib.common.exec.tuple.TupleComponentName
-import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.service.store.normal.ObjectStableId
 
@@ -115,7 +116,7 @@ class ScriptLogic(
     }
 
 
-    override suspend fun run(execution: Execution): TupleValue {
+    override suspend fun run(execution: Execution): DataBindings {
         val context = ScriptRunContext(execution, structure)
 
         // Contexts this document EXPORTS (logic-spec §6): declared BEFORE any step runs and before any child is
@@ -167,8 +168,9 @@ class ScriptLogic(
         execution.onCapture { context.captureState() }
 
         for (parameter in parameters) {
-            val value = parameter.resolve(execution.inputs)
-            context.recordValue(parameter.stableId, value)
+            val dataValue = parameter.resolveValue(execution.inputs)
+            val value = dataValue?.let(JobDataValues::boundary)
+            context.recordValue(parameter.stableId, dataValue)
             LogicParameterTrace.emit(execution, parameter.stableId, value)
         }
 
@@ -181,17 +183,21 @@ class ScriptLogic(
         // A Result step's captured value wins — including one raised from a nested branch, which sets the result
         // before ending the Script. Otherwise the last root step's value IS the result, mirroring the way a
         // ForEachStep collects its body's terminal value.
-        return context.result()
-            ?: implicitResult(lastStepValue)
-    }
-
-
-    /** A Script declaring no `main` result is void, so there is nothing for the last root step's value to fill. */
-    private fun implicitResult(lastStepValue: Any?): TupleValue {
-        return when (structure.resultSignature.find(TupleComponentName.main)) {
-            null -> TupleValue.empty
-            else -> TupleValue.ofMain(lastStepValue)
+        val produced = ProducedBindingsBuilder(logicSignature.outputs)
+        val mainDefinition = logicSignature.outputs.definitions.singleOrNull()
+        if (mainDefinition != null) {
+            val explicitResult = context.result()
+            val result = if (explicitResult != null) {
+                JobDataValues.boundary(explicitResult.requireValue(mainDefinition.name))
+            }
+            else {
+                lastStepValue
+            }
+            produced.set(
+                mainDefinition.name,
+                JobDataValues.lift(result, mainDefinition.contract))
         }
+        return produced.settle()
     }
 
 

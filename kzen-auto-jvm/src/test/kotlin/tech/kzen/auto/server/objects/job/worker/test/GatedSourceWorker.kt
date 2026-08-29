@@ -3,7 +3,7 @@ package tech.kzen.auto.server.objects.job.worker.test
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.server.objects.job.worker.Emitter
-import tech.kzen.auto.server.objects.job.worker.JobMessage
+import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.auto.server.objects.job.worker.SourceWorker
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
@@ -67,7 +67,7 @@ class GatedSourceWorker(
             // inFlight (drained into the migration carryover), so on resume this index must not re-send it.
             nextIndex += 1
             sendsStarted.incrementAndGet()
-            emit.send(JobMessage.ofPayload(row))
+            emit.send(JobDataValues.lift(row))
             control.checkpoint()
         }
     }

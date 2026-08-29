@@ -2,11 +2,12 @@ package tech.kzen.auto.server.objects.job.worker
 
 import tech.kzen.auto.common.data.model.DataRef
 import tech.kzen.auto.common.objects.document.logic.ResultSignatureDefiner
+import tech.kzen.auto.common.objects.document.logic.BindingSignatureDefiner
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.common.paradigm.logic.LogicConventions
 import tech.kzen.auto.server.objects.logic.TypeAssignability
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
-import tech.kzen.lib.common.exec.tuple.TupleComponentName
+import tech.kzen.lib.common.exec.data.binding.BindingName
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.service.notation.NotationConventions
@@ -28,7 +29,9 @@ internal object WriterResultValidation {
         if (result.isBlank()) {
             return
         }
-        val declaredType = control.results().find(TupleComponentName(result))?.metadata
+        val declaredType = control.results().find(BindingName(result))
+            ?.contract
+            ?.let(BindingSignatureDefiner::metadata)
             ?: error(noResultDeclared(result))
         val compatible = control.runBlockingIo {
             TypeAssignability.isAssignable(
@@ -41,7 +44,7 @@ internal object WriterResultValidation {
     fun staticError(
         result: String,
         selfLocation: ObjectLocation,
-        context: WorkerLaneContext,
+        context: JobLaneContext,
         cachedKotlinCompiler: CachedKotlinCompiler
     ): String? {
         if (result.isBlank()) {
@@ -52,8 +55,9 @@ internal object WriterResultValidation {
         val declaredType = ResultSignatureDefiner.parse(
             context.graphStructure.graphNotation.firstAttribute(
                 mainLocation, LogicConventions.resultsAttributePath))
-            .find(TupleComponentName(result))
-            ?.metadata
+            .find(BindingName(result))
+            ?.contract
+            ?.let(BindingSignatureDefiner::metadata)
             ?: return noResultDeclared(result)
         return if (TypeAssignability.isAssignable(
                 yieldedType, declaredType, cachedKotlinCompiler, context.classLoader)) {

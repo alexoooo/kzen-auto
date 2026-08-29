@@ -3,7 +3,8 @@ package tech.kzen.auto.server.exec.script
 import tech.kzen.auto.common.objects.document.script.model.ScriptJumpAnalysis
 import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.engine.Execution
-import tech.kzen.lib.common.exec.tuple.TupleValue
+import tech.kzen.lib.common.exec.data.binding.DataBindings
+import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.service.store.normal.ObjectStableId
 
@@ -45,11 +46,11 @@ class ScriptReplayState(
 
     // The outcome each step that COMPLETED produced — the live-edit capture source. Excludes the non-step
     // bindings (a parameter / loop item), which the rebuilt run re-derives rather than carries.
-    private val completedOutcomes = LinkedHashMap<ObjectStableId, Any?>()
+    private val completedOutcomes = LinkedHashMap<ObjectStableId, DataValue?>()
 
     // The predecessor run's completed outcomes, seeded by [restore] across a live edit; consulted by the spine to
     // replay-short-circuit and pruned by a re-running loop ([dropReplay]). Empty on a fresh (non-migration) run.
-    private val restoredOutcomes = HashMap<ObjectStableId, Any?>()
+    private val restoredOutcomes = HashMap<ObjectStableId, DataValue?>()
 
     // Move-to (Set Next Statement) surgery, seeded by [restore] when the migration named this frame: steps the
     // rebuilt spine short-circuits with NO value ([skippedSteps] — forward-skipped over; a later reference to
@@ -83,7 +84,7 @@ class ScriptReplayState(
     }
 
 
-    fun restoredOutcome(stableId: ObjectStableId): Any? {
+    fun restoredOutcome(stableId: ObjectStableId): DataValue? {
         return restoredOutcomes[stableId]
     }
 
@@ -99,7 +100,7 @@ class ScriptReplayState(
     }
 
 
-    fun recordCompleted(stableId: ObjectStableId, value: Any?) {
+    fun recordCompleted(stableId: ObjectStableId, value: DataValue?) {
         completedOutcomes[stableId] = value
     }
 
@@ -134,7 +135,7 @@ class ScriptReplayState(
 
 
     /** Snapshot the run's completed work for carry-over at the migration barrier (see [ScriptMigrationState]). */
-    fun captureState(result: TupleValue?): ScriptMigrationState {
+    fun captureState(result: DataBindings?): ScriptMigrationState {
         return ScriptMigrationState(LinkedHashMap(completedOutcomes), LinkedHashMap(carryStates), result)
     }
 
@@ -175,7 +176,7 @@ class ScriptReplayState(
         removedStableIds: Set<ObjectStableId>,
         discardCaptured: (Set<ObjectStableId>) -> Unit,
         emitIdle: (ObjectStableId) -> Unit
-    ): TupleValue? {
+    ): DataBindings? {
         val carriedOutcomes = state?.completedOutcomes.orEmpty().filterKeys { survivesEdit(it, removedStableIds) }
         val carriedCarries = state?.stepCarry.orEmpty().filterKeys { survivesEdit(it, removedStableIds) }
 
@@ -244,7 +245,7 @@ class ScriptReplayState(
                 skippedSteps.add(stableId)
             }
             else {
-                restoredOutcomes[stableId] = partial.value
+                restoredOutcomes[stableId] = structure.liftStepResult(location, partial.value)
                 partialDetails[stableId] = partial.detail
 
                 // It is adopted rather than re-run, so its cursor is spent — a stale one must not survive to be

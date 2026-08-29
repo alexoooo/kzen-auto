@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.objects.report.exec.calc
 
 import tech.kzen.auto.common.data.schema.HeaderListing
-import tech.kzen.auto.common.data.schema.DataShape
+import tech.kzen.auto.common.data.schema.LegacyDataShapeBridge
 import tech.kzen.auto.common.util.ExpressionUtils
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.auto.server.objects.logic.ExpressionReturnTypeInference
@@ -9,8 +9,14 @@ import tech.kzen.auto.server.objects.report.exec.input.model.header.RecordHeader
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.auto.server.service.compile.KotlinCode
 import tech.kzen.auto.server.service.compile.KotlinSyntaxValidator
-import tech.kzen.lib.common.exec.tuple.TupleDefinition
+import tech.kzen.lib.common.exec.data.binding.BindingDefinition
+import tech.kzen.lib.common.exec.data.binding.BindingSchema
+import tech.kzen.lib.common.exec.data.type.DataType
+import tech.kzen.lib.common.exec.data.type.DataTypePath
+import tech.kzen.lib.common.exec.data.type.ScalarKind
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
+import tech.kzen.lib.platform.ClassName
+import tech.kzen.lib.platform.ClassNames
 import tech.kzen.lib.platform.ClassNames.asTopLevelImport
 import kotlin.reflect.KType
 
@@ -46,7 +52,7 @@ class CalculatedColumnEval(
         columnNames: HeaderListing,
         modelType: TypeMetadata,
         classLoader: ClassLoader,
-        parameters: TupleDefinition = TupleDefinition.empty
+        parameters: BindingSchema = BindingSchema.empty
     ): String? {
         if (calculatedColumnFormula.isEmpty()) {
             return null
@@ -60,8 +66,6 @@ class CalculatedColumnEval(
         val compileError = cachedKotlinCompiler.tryCompile(code, classLoader)
         return compileError?.let { cleanupErrorMessage(it.error) }
     }
-
-
     /**
      * The scope-independent half of [validate], for a caller whose column scope is NOT statically known (a Job
      * Worker on a CSV lane): reports malformed source, which no header could make compile, and stays silent on
@@ -89,7 +93,7 @@ class CalculatedColumnEval(
         columnNames: HeaderListing,
         modelType: TypeMetadata,
         classLoader: ClassLoader,
-        parameters: TupleDefinition = TupleDefinition.empty
+        parameters: BindingSchema = BindingSchema.empty
     ): CalculatedColumn<Any?> {
         if (calculatedColumnFormula.isEmpty()) {
             return ConstantCalculatedColumn.empty()
@@ -118,8 +122,6 @@ class CalculatedColumnEval(
 
         return classCast.getDeclaredConstructor().newInstance()
     }
-
-
     //-----------------------------------------------------------------------------------------------------------------
     /**
      * The raw [KType] the compiler inferred for a [create]d column's expression (the probe contract —
@@ -139,8 +141,8 @@ class CalculatedColumnEval(
     // A declared parameter and a column that escape to the same accessor name would generate duplicate class
     // properties — rejected up front with a message naming the culprit (rather than a cryptic Kotlin
     // duplicate-declaration error out of the generated source).
-    private fun collisionError(columnNames: HeaderListing, parameters: TupleDefinition): String? {
-        if (parameters.components.isEmpty()) {
+    private fun collisionError(columnNames: HeaderListing, parameters: BindingSchema): String? {
+        if (parameters.definitions.isEmpty()) {
             return null
         }
 
@@ -149,7 +151,7 @@ class CalculatedColumnEval(
             .map { ExpressionUtils.escapeKotlinVariableName(it) }
             .toSet()
 
-        val collision = parameters.components.firstOrNull {
+        val collision = parameters.definitions.firstOrNull {
             ExpressionUtils.escapeKotlinVariableName(it.name.value) in columnAccessors
         } ?: return null
 
@@ -163,7 +165,7 @@ class CalculatedColumnEval(
         calculatedColumnFormula: String,
         columnNames: HeaderListing,
         modelType: TypeMetadata,
-        parameters: TupleDefinition
+        parameters: BindingSchema
     ): KotlinCode {
         val sanitizedName = sanitizeClassName(calculatedColumnName)
         val mainClassName = "Column_$sanitizedName"
@@ -199,7 +201,7 @@ class $mainClassName: ${ CalculatedColumn::class.java.simpleName }<$modelSimple>
 
     private fun columnValue(columnIndex: Int): ${ ColumnValue::class.java.simpleName } {
         val index = indices[columnIndex]
-        val text = if (index == -1) { DataShape.missingCellValue } else { record.getString(index) }
+        val text = if (index == -1) { LegacyDataShapeBridge.missingCellValue } else { record.getString(index) }
         return ${ ColumnValue::class.java.simpleName }.ofText(text)
     }
 
@@ -247,14 +249,14 @@ $calculatedColumnFormula
     }
 
 
-    private fun generateImports(modelType: TypeMetadata, parameters: TupleDefinition): String {
+    private fun generateImports(modelType: TypeMetadata, parameters: BindingSchema): String {
         val operatorImports = ColumnValueConversions.operators.map {
             ColumnValueConversions::class.java.name + ".$it"
         }
 
         val parameterImports = parameters
-            .components
-            .flatMap { it.type.metadata.classNames() }
+            .definitions
+            .flatMap { it.typeMetadata().classNames() }
             .map { it.asTopLevelImport() }
 
         val modelImports = modelType
@@ -264,7 +266,7 @@ $calculatedColumnFormula
         val classImports = setOf(
             CalculatedColumn::class.java.name,
             ColumnValue::class.java.name,
-            DataShape::class.java.name,
+            LegacyDataShapeBridge::class.java.name,
             HeaderListing::class.java.name,
             RecordHeaderIndex::class.java.name,
             FlatFileRecord::class.java.name
@@ -296,13 +298,13 @@ $calculatedColumnFormula
     // Bare typed accessors for the declared parameters (Script's StepExpressionCompiler precedent): the
     // accessor name is the canonical escape of the declaration name, the type its declared TypeMetadata, and
     // the value the same-index element of the injected [setParameters] list.
-    private fun generateParameterAccessors(parameters: TupleDefinition): String {
+    private fun generateParameterAccessors(parameters: BindingSchema): String {
         return parameters
-            .components
+            .definitions
             .withIndex()
             .joinToString("\n") {
                 val accessorName = ExpressionUtils.escapeKotlinVariableName(it.value.name.value)
-                val accessorType = it.value.type.metadata.toSimple()
+                val accessorType = it.value.typeMetadata().toSimple()
                 "val $accessorName get(): $accessorType {" +
                 "    return parameterValues[${it.index}] as $accessorType" +
                 "}"
@@ -312,4 +314,43 @@ $calculatedColumnFormula
     private fun sanitizeClassName(text: String): String {
         return text.replace(Regex("\\W+"), "_")
     }
+
+
+    private fun BindingDefinition.typeMetadata(): TypeMetadata =
+        contract.nativeByPath[DataTypePath.root] ?: contract.structural.toTypeMetadata()
+
+
+    private fun DataType.toTypeMetadata(): TypeMetadata =
+        when (this) {
+            is DataType.Dynamic -> if (nullable) TypeMetadata.anyNullable else TypeMetadata.any
+            is DataType.Listing -> TypeMetadata(
+                ClassNames.kotlinList,
+                listOf(element.toTypeMetadata()),
+                nullable)
+            is DataType.Mapping -> TypeMetadata(
+                ClassName("kotlin.collections.Map"),
+                listOf(key.toTypeMetadata(), value.toTypeMetadata()),
+                nullable)
+            is DataType.Opaque,
+            is DataType.Record,
+            is DataType.Union -> if (nullable) TypeMetadata.anyNullable else TypeMetadata.any
+            is DataType.Scalar -> TypeMetadata(ClassName(when (val scalarKind = kind) {
+                ScalarKind.Boolean -> "kotlin.Boolean"
+                is ScalarKind.Integer -> when (scalarKind.bits) {
+                    8 -> "kotlin.Byte"
+                    16 -> "kotlin.Short"
+                    32 -> "kotlin.Int"
+                    else -> "kotlin.Long"
+                }
+                ScalarKind.Decimal -> "java.math.BigDecimal"
+                is ScalarKind.Floating -> if (scalarKind.bits == 32) "kotlin.Float" else "kotlin.Double"
+                ScalarKind.Text -> "kotlin.String"
+                ScalarKind.Binary -> "kotlin.ByteArray"
+                ScalarKind.Date -> "java.time.LocalDate"
+                ScalarKind.Time -> "java.time.LocalTime"
+                ScalarKind.Instant -> "java.time.Instant"
+                ScalarKind.Duration -> "java.time.Duration"
+                ScalarKind.Uuid -> "java.util.UUID"
+            }), emptyList(), nullable)
+        }
 }

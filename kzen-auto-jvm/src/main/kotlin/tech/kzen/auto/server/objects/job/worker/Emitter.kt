@@ -2,12 +2,13 @@ package tech.kzen.auto.server.objects.job.worker
 
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
+import tech.kzen.lib.common.exec.data.value.DataValue
 
 
 /**
  * Emission handle a [SourceWorker] / [TransformWorker] / [ExpandingTransformWorker] hands to its work hooks.
  * Every channel element is a
- * [JobMessage] (the uniform carrier), so the Worker emits single messages and never touches
+ * [DataValue] (the uniform carrier), so the Worker emits single values and never touches
  * [ChannelOutput.close] — end-of-stream propagation is owned by the framework ([WorkerBase]).
  *
  * Batching is a framework concern: [send] only buffers; the accumulated elements reach the channel (as one
@@ -19,7 +20,7 @@ import tech.kzen.auto.common.paradigm.job.control.JobControl
  * emitter even when the flush itself parked under backpressure.
  */
 class Emitter(
-    private val output: ChannelOutput<Any?>
+    private val output: ChannelOutput<DataValue>
 ) {
     private var cadence: Cadence? = null
     private var sinceFlush = 0
@@ -34,7 +35,7 @@ class Emitter(
     }
 
 
-    suspend fun send(element: JobMessage) {
+    suspend fun send(element: DataValue) {
         output.send(element)
 
         val cadence = cadence

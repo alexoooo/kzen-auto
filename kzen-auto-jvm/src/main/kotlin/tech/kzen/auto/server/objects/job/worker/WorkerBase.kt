@@ -7,6 +7,7 @@ import tech.kzen.auto.common.paradigm.job.api.Worker
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.server.objects.job.worker.definition.WorkerDefinitionContext
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.exec.data.value.DataValue
 
 
 /**
@@ -117,12 +118,12 @@ abstract class WorkerBase(
      *
      * Default: identity — correct for every transform that forwards elements without changing the payload
      * (Filter, Sort, Summary, Pivot, Preview, ValueSet) and for a sink (whose "output" is its input, which
-     * is what its card displays). A source's input is [WorkerLane.unknown], so identity is also right for a
+     * is what its card displays). A source's input is [JobLaneDescriptor.unknown], so identity is also right for a
      * reader whose output shape only exists at run time (CSV lanes); a source that DOES know its output
      * statically (an expression source, a nested-Logic host) overrides.
      */
-    internal open fun payloadFlow(input: WorkerLane, context: WorkerLaneContext): WorkerLaneAttempt =
-        WorkerLaneAttempt(input, null)
+    internal open fun payloadFlow(input: JobLaneDescriptor, context: JobLaneContext): JobLaneAttempt =
+        JobLaneAttempt(input, null)
 
 
     /**
@@ -153,20 +154,14 @@ abstract class WorkerBase(
     protected open fun onQuery(request: Any?, snapshot: Any?): Any? = snapshot
 
 
-    //-----------------------------------------------------------------------------------------------------------------
-    /**
-     * The framework's per-element conversion: every Job channel element is a [JobMessage] (the uniform carrier —
-     * see its doc), so this can only fail on a raw / 3rd-party producer that bypassed the [Emitter]. Fails
-     * DESCRIPTIVELY — naming the Worker and the offending element — so the miswire surfaces as a readable run
-     * failure on the Worker's card rather than a bare ClassCastException.
-     */
-    internal fun receiveMessage(element: Any?): JobMessage {
-        return element as? JobMessage
-            ?: throw IllegalStateException(
-                "${selfLocation.objectPath.name.value} expects JobMessage elements, but received " +
-                    (element?.let { "${it::class.qualifiedName}: $it" } ?: "null") +
-                    " — every Job channel element must be a JobMessage (emit via Emitter.send)")
-    }
+    /** Converts an erased/custom channel endpoint at the Worker boundary; JobChannel itself carries DataValue. */
+    internal fun receiveValue(element: Any?): DataValue =
+        when (element) {
+            is DataValue -> element
+            else -> throw IllegalStateException(
+                "${selfLocation.objectPath.name.value} expects DataValue elements, but received " +
+                    (element?.let { "${it::class.qualifiedName}: $it" } ?: "null"))
+        }
 
 
     //-----------------------------------------------------------------------------------------------------------------

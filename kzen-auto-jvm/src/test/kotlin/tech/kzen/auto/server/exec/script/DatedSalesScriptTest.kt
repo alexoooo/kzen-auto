@@ -8,7 +8,7 @@ import tech.kzen.auto.server.exec.LogicCompilerServices
 import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.lib.common.exec.engine.Outcome
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
-import tech.kzen.lib.common.exec.tuple.TupleValue
+import tech.kzen.auto.server.exec.mainBoundaryValue
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
@@ -54,8 +54,7 @@ class DatedSalesScriptTest {
                 LogicRunExecutionId.random()))
         val engine = RunEngine(
             logic,
-            context.objectStableMapper.objectStableId(scriptLocation),
-            TupleValue.empty)
+            context.objectStableMapper.objectStableId(scriptLocation))
 
         val outcome = try {
             runBlocking {
@@ -69,7 +68,7 @@ class DatedSalesScriptTest {
 
         @Suppress("UNCHECKED_CAST")
         val units = assertIs<Outcome.Success>(outcome, "outcome: $outcome")
-            .value.mainComponentValue() as List<DataUnit>
+            .value.mainBoundaryValue() as List<DataUnit>
         assertEquals(listOf("2026-01-01", "2026-01-02", "2026-01-03"), units.map { it.attributes["date"] })
         assertEquals(
             listOf(DataRole.main, DataRole("reference")),

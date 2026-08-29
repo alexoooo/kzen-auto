@@ -1,11 +1,11 @@
 package tech.kzen.auto.client.objects.document.flow.edit
 
 import tech.kzen.lib.common.exec.engine.LogicSignature
-import tech.kzen.lib.common.exec.logic.model.LogicType
-import tech.kzen.lib.common.exec.tuple.TupleComponentDefinition
-import tech.kzen.lib.common.exec.tuple.TupleComponentName
-import tech.kzen.lib.common.exec.tuple.TupleDefinition
-import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
+import tech.kzen.lib.common.exec.data.binding.BindingDefinition
+import tech.kzen.lib.common.exec.data.binding.BindingName
+import tech.kzen.lib.common.exec.data.binding.BindingSchema
+import tech.kzen.lib.common.exec.data.type.DataContract
+import tech.kzen.lib.common.exec.data.type.DataType
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -14,10 +14,12 @@ class RunLogicArgumentsEditorTest {
     @Test
     fun jobRunWorkerShowsOnlyAdditionalInputsInSignatureOrder() {
         val signature = LogicSignature(
-            TupleDefinition(listOf("unit", "date", "prefix").map {
-                TupleComponentDefinition(TupleComponentName(it), LogicType(TypeMetadata.anyNullable))
+            BindingSchema.of(listOf("unit", "date", "prefix").map {
+                BindingDefinition(
+                    BindingName(it),
+                    DataContract(DataType.Dynamic(nullable = true)))
             }),
-            TupleDefinition.empty)
+            BindingSchema.empty)
 
         assertEquals(listOf("date", "prefix"), jobRunArgumentNames(signature, true))
         assertEquals(listOf("unit", "date", "prefix"), jobRunArgumentNames(signature, false))

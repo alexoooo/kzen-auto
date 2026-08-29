@@ -10,6 +10,8 @@ import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.api.ChannelServer
 import tech.kzen.auto.common.paradigm.job.control.JobControl
+import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.auto.server.objects.report.exec.output.pivot.PivotBuilder
 import tech.kzen.auto.server.util.WorkUtils
@@ -26,8 +28,8 @@ import java.nio.file.Path
  * The pivot-table analytics stage as a Job Worker — reusing Report's substrate-neutral [PivotBuilder] engine
  * (the disk-backed row index + value statistics; NOT Report's disruptor pipeline). It ACCUMULATES every incoming
  * message's flat part into the pivot in [onElement] (a payload-lane message auto-flattens —
- * [JobMessage.flatView]), then on end-of-stream ([onComplete]) EMITS the built pivot table downstream
- * row-by-row as flat-part [JobMessage]s under a stable [outputHeader] (row-key columns + one column per
+ * its column projection), then on end-of-stream ([onComplete]) EMITS the built pivot table downstream
+ * row-by-row as flat-backed `DataValue`s under a stable [outputHeader] (row-key columns + one column per
  * value/type), so it composes into any pipeline (`reader → pivot → writer` / `→ preview`) — an arbitrary DAG
  * replacing Report's fixed `analysis → output` coupling.
  *
@@ -51,8 +53,8 @@ import java.nio.file.Path
  */
 @Reflect
 class PivotWorker(
-    input: ChannelInput<Any?>,
-    output: ChannelOutput<Any?>,
+    input: ChannelInput<*>,
+    output: ChannelOutput<DataValue>,
     serve: ChannelServer<Any?, Any?>,
     private val pivot: PivotSpec,
     selfLocation: ObjectLocation
@@ -94,10 +96,10 @@ class PivotWorker(
     }
 
 
-    override suspend fun onElement(element: JobMessage, emit: Emitter, control: JobControl) {
+    override suspend fun onElement(element: DataValue, emit: Emitter, control: JobControl) {
         // Accumulate only: the pivot table is emitted once, at end-of-stream (onComplete).
-        val flat = element.flatView()
-        pivotBuilder!!.add(flat.record, flat.header)
+        val projection = JobDataValues.projection(element)
+        pivotBuilder!!.add(JobDataValues.record(projection), projection.header)
     }
 
 
@@ -112,7 +114,7 @@ class PivotWorker(
                 break
             }
             for (row in preview.rows) {
-                emit.send(JobMessage.ofFlat(outputHeader, FlatFileRecord.of(row)))
+                emit.send(JobDataValues.flat(outputHeader, FlatFileRecord.of(row)))
             }
             start += preview.rows.size
         }

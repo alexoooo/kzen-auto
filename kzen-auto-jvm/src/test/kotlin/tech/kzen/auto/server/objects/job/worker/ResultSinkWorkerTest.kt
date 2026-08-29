@@ -8,12 +8,14 @@ import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.api.ChannelInputIterator
 import tech.kzen.auto.common.paradigm.job.control.JobControl
+import tech.kzen.auto.common.objects.document.logic.BindingSignatureDefiner
+import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.lib.common.exec.data.binding.BindingDefinition
+import tech.kzen.lib.common.exec.data.binding.BindingName
+import tech.kzen.lib.common.exec.data.binding.BindingSchema
+import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.util.AutoTestUtils
-import tech.kzen.lib.common.exec.logic.model.LogicType
-import tech.kzen.lib.common.exec.tuple.TupleComponentDefinition
-import tech.kzen.lib.common.exec.tuple.TupleComponentName
-import tech.kzen.lib.common.exec.tuple.TupleDefinition
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
@@ -27,7 +29,7 @@ import kotlin.test.assertNull
 /**
  * Unit test for [ResultSinkWorker]'s progress push — the wire contract [ResultWorkerDisplay]'s value box
  * renders from. Drives the sink's full [ResultSinkWorker.run] lifecycle over a fake [ChannelInput] of payload
- * [JobMessage]s and asserts the forced final push (WorkerBase.run, after onComplete) carries the settled kept
+ * values and asserts the forced final push (WorkerBase.run, after onComplete) carries the settled kept
  * value's display text under [JobConventions.progressResultValueKey] (a single-element list so the generic
  * default-card status line skips it), keyed by [ResultSinkWorker.keep].
  */
@@ -72,15 +74,15 @@ class ResultSinkWorkerTest {
         val selfLocation = ObjectLocation(
             DocumentPath.parse("test/result-sink-unit-test.yaml"),
             ObjectPath.parse("main.workers/collect"))
-        val control = RecordingJobControl()
+        val control = RecordingJobControl(listOfType(TypeMetadata.int))
         ResultSinkWorker(
-            singleBatchInput(listOf(1, 2, 3).map(JobMessage::ofPayload)),
+            singleBatchInput(listOf(1, 2, 3).map(JobDataValues::lift)),
             "", ResultSinkWorker.all, selfLocation, context.cachedKotlinCompiler).run(control)
         assertEquals(listOf(1, 2, 3), control.yielded["main"])
 
-        val emptyControl = RecordingJobControl()
+        val emptyControl = RecordingJobControl(listOfType(TypeMetadata.int))
         ResultSinkWorker(
-            singleBatchInput(emptyList<JobMessage>()), "", ResultSinkWorker.all,
+            singleBatchInput(emptyList<DataValue>()), "", ResultSinkWorker.all,
             selfLocation, context.cachedKotlinCompiler).run(emptyControl)
         assertEquals(emptyList<Any?>(), emptyControl.yielded["main"])
     }
@@ -93,22 +95,22 @@ class ResultSinkWorkerTest {
             DocumentPath.parse("test/result-sink-unit-test.yaml"),
             ObjectPath.parse("main.workers/collect"))
         val first = ResultSinkWorker(
-            singleBatchInput(listOf(JobMessage.ofPayload(1))),
+            singleBatchInput(listOf(JobDataValues.lift(1))),
             "", ResultSinkWorker.all, selfLocation, context.cachedKotlinCompiler)
-        first.run(RecordingJobControl())
+        first.run(RecordingJobControl(listOfType(TypeMetadata.int)))
         val captured = first.captureMigrationState()
 
-        val resumedControl = RecordingJobControl()
+        val resumedControl = RecordingJobControl(listOfType(TypeMetadata.int))
         ResultSinkWorker(
-            singleBatchInput(listOf(JobMessage.ofPayload(2), JobMessage.ofPayload(3))),
+            singleBatchInput(listOf(JobDataValues.lift(2), JobDataValues.lift(3))),
             "", ResultSinkWorker.all, selfLocation, context.cachedKotlinCompiler)
             .also { it.loadMigrationState(captured) }
             .run(resumedControl)
         assertEquals(listOf(1, 2, 3), resumedControl.yielded["main"])
 
-        val changedControl = RecordingJobControl()
+        val changedControl = RecordingJobControl(TypeMetadata.int)
         ResultSinkWorker(
-            singleBatchInput(listOf(JobMessage.ofPayload(9))),
+            singleBatchInput(listOf(JobDataValues.lift(9))),
             "", ResultSinkWorker.last, selfLocation, context.cachedKotlinCompiler)
             .also { it.loadMigrationState(captured) }
             .run(changedControl)
@@ -130,8 +132,8 @@ class ResultSinkWorkerTest {
             ClassName(DataRef::class.qualifiedName!!), emptyList(), false)
 
         val attempt = worker.payloadFlow(
-            WorkerLane(dataRefType, HeaderListing.empty),
-            WorkerLaneContext(TupleDefinition.empty, graph, ResultSinkWorker::class.java.classLoader))
+            JobLaneDescriptor(dataRefType, HeaderListing.empty),
+            JobLaneContext(BindingSchema.empty, graph, ResultSinkWorker::class.java.classLoader))
 
         assertNull(attempt.errorMessage)
     }
@@ -148,7 +150,7 @@ class ResultSinkWorkerTest {
         // cachedKotlinCompiler is only used by the static payloadFlow validation, never the run path exercised
         // here — the forTest() service instance satisfies the ctor without being touched.
         val worker = ResultSinkWorker(
-            singleBatchInput(payloads.map { JobMessage.ofPayload(it) }),
+            singleBatchInput(payloads.map(JobDataValues::lift)),
             "", keep, selfLocation, context.cachedKotlinCompiler)
 
         val control = RecordingJobControl()
@@ -157,7 +159,7 @@ class ResultSinkWorkerTest {
     }
 
 
-    private fun singleBatchInput(messages: List<JobMessage>): ChannelInput<Any?> =
+    private fun singleBatchInput(messages: List<DataValue>): ChannelInput<Any?> =
         object: ChannelInput<Any?> {
             // Hand the framework the whole stream as one batch, then EOF (mirrors SummaryWorkerTest.chunkedInput).
             private var served = false
@@ -180,7 +182,9 @@ class ResultSinkWorkerTest {
     // A ResultSink only consumes + checkpoints + publishes + yields; it reads the declared result signature at
     // onComplete, so results() declares `main: String`. Every push (value + force) is recorded, bypassing
     // EngineJobControl's throttle so the forced final push is always observable.
-    private class RecordingJobControl: JobControl {
+    private class RecordingJobControl(
+        private val resultType: TypeMetadata = TypeMetadata.string
+    ): JobControl {
         val progressPushes = mutableListOf<Pair<Map<String, Any?>, Boolean>>()
         val yielded = linkedMapOf<String, Any?>()
 
@@ -193,15 +197,19 @@ class ResultSinkWorkerTest {
             progressPushes.add(value to force)
         }
 
-        override fun results(): TupleDefinition =
-            TupleDefinition(listOf(
-                TupleComponentDefinition(TupleComponentName.main, LogicType(TypeMetadata.string))))
+        override fun results(): BindingSchema =
+            BindingSchema.of(BindingDefinition(
+                BindingName("main"), BindingSignatureDefiner.contract(resultType)))
 
-        override fun yieldResult(component: String, value: Any?) {
-            yielded[component] = value
+        override fun yieldResult(component: String, value: DataValue) {
+            yielded[component] = JobDataValues.boundary(value)
         }
 
         override suspend fun host(instructions: ObjectLocation, input: Any?) =
             throw UnsupportedOperationException("A ResultSink hosts no child")
     }
+
+
+    private fun listOfType(element: TypeMetadata): TypeMetadata =
+        TypeMetadata(tech.kzen.lib.platform.ClassNames.kotlinList, listOf(element), false)
 }

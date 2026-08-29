@@ -2,6 +2,7 @@ package tech.kzen.auto.server.objects.script
 
 import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.objects.document.logic.ResultSignatureDefiner
+import tech.kzen.auto.common.objects.document.logic.BindingSignatureDefiner
 import tech.kzen.auto.common.objects.document.logic.context.LogicContextAnalysis
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.objects.document.script.model.ScriptResultAnalysis
@@ -18,8 +19,8 @@ import tech.kzen.auto.server.util.ClassLoaderUtils
 import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionResult
 import tech.kzen.lib.common.exec.ExecutionSuccess
-import tech.kzen.lib.common.exec.tuple.TupleComponentName
-import tech.kzen.lib.common.exec.tuple.TupleDefinition
+import tech.kzen.lib.common.exec.data.binding.BindingName
+import tech.kzen.lib.common.exec.data.binding.BindingSchema
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.instance.GraphInstance
@@ -157,7 +158,7 @@ class ScriptValidator(
         private fun resultFindings(
             documentPath: DocumentPath,
             graphNotation: GraphNotation,
-            resultSignature: TupleDefinition,
+            resultSignature: BindingSchema,
             stepValidations: Map<ObjectPath, StepValidation>,
             cachedKotlinCompiler: CachedKotlinCompiler
         ): Map<ObjectPath, ResultFinding> {
@@ -174,7 +175,8 @@ class ScriptValidator(
                 return findings
             }
 
-            val declaredType = resultSignature.find(TupleComponentName.main)!!.metadata
+            val declaredType = BindingSignatureDefiner.metadata(
+                resultSignature[BindingName("main")].contract)
 
             if (analysis.rootSteps.isEmpty()) {
                 findings[NotationConventions.mainObjectPath] = ResultFinding(
@@ -242,8 +244,9 @@ class ScriptValidator(
                         }
                         else {
                             returnValueDefinition
-                                .find(TupleComponentName.main)
-                                ?.metadata
+                                .find(BindingName("main"))
+                                ?.contract
+                                ?.let(BindingSignatureDefiner::metadata)
                                 ?: TypeMetadata.unit
                         }
 

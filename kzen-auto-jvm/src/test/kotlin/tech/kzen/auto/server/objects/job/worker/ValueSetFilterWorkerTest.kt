@@ -12,6 +12,8 @@ import tech.kzen.auto.common.paradigm.job.api.ChannelInputIterator
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
+import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
@@ -20,7 +22,7 @@ import kotlin.test.assertEquals
 
 /**
  * Unit test for [ValueSetFilterWorker] in isolation: drives the transform's [ValueSetFilterWorker.run] lifecycle
- * over a fake [ChannelInput] of flat-part [JobMessage]s and a capturing [ChannelOutput], asserting which records SURVIVE
+ * over a fake [ChannelInput] of flat-backed values and a capturing [ChannelOutput], asserting which records SURVIVE
  * the distinct-value whitelist and that survivors are forwarded unchanged.
  *
  * The predicate is a verbatim copy of
@@ -39,8 +41,8 @@ class ValueSetFilterWorkerTest {
     private fun label(text: String): HeaderLabel =
         HeaderLabel(text, 0)
 
-    private fun record(vararg fields: String): JobMessage =
-        JobMessage.ofFlat(header, FlatFileRecord.of(fields.toList()))
+    private fun record(vararg fields: String): DataValue =
+        JobDataValues.flat(header, FlatFileRecord.of(fields.toList()))
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -122,10 +124,10 @@ class ValueSetFilterWorkerTest {
         // Kyiv under the first schema becomes a no-op (ignored absent column) under the second.
         val otherHeader = HeaderListing.of(listOf("name", "age"))
 
-        val lviv = JobMessage.ofFlat(header, FlatFileRecord.of(listOf("Lviv", "30")))
-        val kyiv = JobMessage.ofFlat(header, FlatFileRecord.of(listOf("Kyiv", "40")))
-        val personA = JobMessage.ofFlat(otherHeader, FlatFileRecord.of(listOf("Ada", "30")))
-        val personB = JobMessage.ofFlat(otherHeader, FlatFileRecord.of(listOf("Bob", "40")))
+        val lviv = JobDataValues.flat(header, FlatFileRecord.of(listOf("Lviv", "30")))
+        val kyiv = JobDataValues.flat(header, FlatFileRecord.of(listOf("Kyiv", "40")))
+        val personA = JobDataValues.flat(otherHeader, FlatFileRecord.of(listOf("Ada", "30")))
+        val personB = JobDataValues.flat(otherHeader, FlatFileRecord.of(listOf("Bob", "40")))
 
         val filter = FilterSpec(mapOf(
             label("city") to ColumnFilterSpec(ColumnFilterType.RequireAny, setOf("Lviv"))))
@@ -138,11 +140,11 @@ class ValueSetFilterWorkerTest {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private suspend fun runFilter(filter: FilterSpec, records: List<JobMessage>): List<Any?> {
+    private suspend fun runFilter(filter: FilterSpec, records: List<DataValue>): List<Any?> {
         val forwarded = mutableListOf<Any?>()
         val output = object: ChannelOutput<Any?> {
             override suspend fun send(element: Any?) {
-                forwarded.add(element)
+                forwarded.add(testJobValue(element))
             }
             override suspend fun flush() {}
             override fun batchSize(): Int = 1024
@@ -160,7 +162,7 @@ class ValueSetFilterWorkerTest {
     }
 
 
-    private fun chunkedInput(records: List<JobMessage>): ChannelInput<Any?> =
+    private fun chunkedInput(records: List<DataValue>): ChannelInput<Any?> =
         object: ChannelInput<Any?> {
             // The framework TransformWorker drive loop drains whole chunks: hand it every record as one chunk, then EOF.
             private var delivered = false

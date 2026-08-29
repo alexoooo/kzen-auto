@@ -3,6 +3,7 @@ package tech.kzen.auto.server.objects.job.worker
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.exec.data.value.DataValue
 
 
 /**
@@ -19,7 +20,7 @@ import tech.kzen.lib.common.model.location.ObjectLocation
  *   forgetting to close, nor drop its last sub-batch of rows.
  */
 abstract class SourceWorker(
-    private val output: ChannelOutput<Any?>,
+    private val output: ChannelOutput<DataValue>,
     selfLocation: ObjectLocation
 ):
     WorkerBase(selfLocation)

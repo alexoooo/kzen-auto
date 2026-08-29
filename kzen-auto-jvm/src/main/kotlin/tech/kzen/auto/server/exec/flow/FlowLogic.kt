@@ -4,10 +4,10 @@ import tech.kzen.auto.common.objects.document.logic.context.ContextAddressing
 import tech.kzen.auto.common.objects.document.logic.context.ContextDescriptor
 import tech.kzen.auto.common.objects.document.logic.context.LogicContextConventions
 import tech.kzen.lib.common.exec.engine.Execution
+import tech.kzen.lib.common.exec.data.binding.DataBindings
 import tech.kzen.lib.common.exec.engine.Logic
 import tech.kzen.lib.common.exec.engine.LogicSignature
 import tech.kzen.lib.common.exec.engine.context.ExportSelector
-import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
@@ -39,7 +39,7 @@ class FlowLogic(
     }
 
 
-    override suspend fun run(execution: Execution): TupleValue {
+    override suspend fun run(execution: Execution): DataBindings {
         // Contexts this document EXPORTS (logic-spec §6): declared BEFORE any vertex runs and before any child
         // is hosted, so a provide anywhere below climbs through this frame when it is on an export chain. The
         // same prologue every Script's Logic runs, and for the same reason — hosting needs no knowledge of the
@@ -75,6 +75,7 @@ class FlowLogic(
             documentPath,
             graphDefinition,
             childLogics,
+            logicSignature.outputs,
             objectStableMapper,
             graphEnvironment
         ).run()

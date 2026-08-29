@@ -8,6 +8,7 @@ import tech.kzen.auto.common.data.model.DataPart
 import tech.kzen.auto.common.data.model.DataRef
 import tech.kzen.auto.common.data.model.DataRole
 import tech.kzen.auto.common.data.schema.DataShape
+import tech.kzen.auto.common.data.schema.LegacyDataShapeBridge
 import tech.kzen.auto.common.objects.document.plugin.model.CommonDataEncodingSpec
 import tech.kzen.auto.common.objects.document.plugin.model.CommonPluginCoordinate
 import tech.kzen.auto.plugin.api.HeaderExtractor
@@ -86,7 +87,7 @@ class FileDataOpenerTest {
         cursor.use {
             val rows = mutableListOf<List<String>>()
             while (cursor.hasNext()) {
-                rows.add((cursor.next() as FlatFileRecord).toList())
+                rows.add((cursor.next().access as FlatFileRecord).toList())
             }
             return cursor.shape to rows
         }
@@ -112,7 +113,7 @@ class FileDataOpenerTest {
 
         assertEquals(directCsv(text).drop(1), rows)
         assertEquals(listOf("name", "note"),
-            assertIs<DataShape.Tabular>(shape).header.values.map { it.text })
+            LegacyDataShapeBridge.headerOrNull(shape!!)!!.values.map { it.text })
     }
 
 
@@ -125,7 +126,7 @@ class FileDataOpenerTest {
         val shape = runBlocking { opener.inspectShape(TestContext(), part) }
         assertEquals(
             listOf("city", "amount"),
-            assertIs<DataShape.Tabular>(shape).header.values.map { it.text })
+            LegacyDataShapeBridge.headerOrNull(shape!!)!!.values.map { it.text })
 
         file.deleteExisting()
         val cached = runBlocking { opener.inspectShape(TestContext(), part) }
@@ -139,14 +140,14 @@ class FileDataOpenerTest {
             .also { it.writeText("a\n1\n") }
         assertEquals(
             listOf("a"),
-            assertIs<DataShape.Tabular>(
-                runBlocking { opener.inspectShape(TestContext(), part(file)) }).header.values.map { it.text })
+            LegacyDataShapeBridge.headerOrNull(
+                runBlocking { opener.inspectShape(TestContext(), part(file)) }!!)!!.values.map { it.text })
 
         file.writeText("b,c\n2,3\n")
         assertEquals(
             listOf("b", "c"),
-            assertIs<DataShape.Tabular>(
-                runBlocking { opener.inspectShape(TestContext(), part(file)) }).header.values.map { it.text })
+            LegacyDataShapeBridge.headerOrNull(
+                runBlocking { opener.inspectShape(TestContext(), part(file)) }!!)!!.values.map { it.text })
     }
 
 
@@ -198,7 +199,7 @@ class FileDataOpenerTest {
 
         assertEquals(
             listOf(TextReportDefiner.textHeader),
-            assertIs<DataShape.Tabular>(shape).header.values.map { it.text })
+            LegacyDataShapeBridge.headerOrNull(shape!!)!!.values.map { it.text })
         assertEquals(listOf(listOf("alpha"), listOf("beta")), rows)
         file.deleteExisting()
     }
@@ -259,8 +260,8 @@ class FileDataOpenerTest {
         context.valid = false
 
         assertTrue(cursor.hasNext())
-        assertEquals(listOf("first"), (cursor.next() as FlatFileRecord).toList())
-        assertEquals(listOf("second"), (cursor.next() as FlatFileRecord).toList())
+        assertEquals(listOf("first"), (cursor.next().access as FlatFileRecord).toList())
+        assertEquals(listOf("second"), (cursor.next().access as FlatFileRecord).toList())
         assertFalse(cursor.hasNext())
         assertFalse(cursor.hasNext())
         cursor.close()

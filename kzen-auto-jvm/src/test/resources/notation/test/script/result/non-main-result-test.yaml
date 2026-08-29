@@ -1,0 +1,11 @@
+main:
+  is: Script
+  results:
+    other:
+      class: kotlin.Int
+      generics: []
+      nullable: false
+
+main.steps/Value:
+  is: FormulaStep
+  code: 42

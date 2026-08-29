@@ -3,6 +3,8 @@ package tech.kzen.auto.server.objects.job.worker
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputExportSpec
 import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
+import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.auto.common.util.PathPatternSubstitution
 import tech.kzen.auto.common.util.data.DataLocationGroup
 import tech.kzen.auto.plugin.model.data.DataRecordBuffer
@@ -62,7 +64,7 @@ import kotlin.time.Clock
  */
 @Reflect
 class ExportWriterWorker(
-    input: ChannelInput<Any?>,
+    input: ChannelInput<*>,
 
     private val export: OutputExportSpec,
     private val result: String,
@@ -114,11 +116,11 @@ class ExportWriterWorker(
     }
 
 
-    override suspend fun onElement(element: JobMessage, control: JobControl) {
+    override suspend fun onElement(element: DataValue, control: JobControl) {
         val out = out!!
-        val flat = element.flatView()
-        val elementHeader = flat.header
-        val record = flat.record
+        val projection = JobDataValues.projection(element)
+        val elementHeader = projection.header
+        val record = JobDataValues.record(projection)
         control.runBlockingIo {
             if (!headerWritten) {
                 // The column header, once — rendered exactly as Report's ExportFormatter (`render` disambiguates
@@ -136,7 +138,8 @@ class ExportWriterWorker(
         finalizeOutput(control)
         if (result.isNotBlank()) {
             val ref = WriterFilePath.finalizedRef(requireNotNull(outputPath), control, fileListingAction)
-            control.yieldResult(result, ref)
+            val definition = control.results()[tech.kzen.lib.common.exec.data.binding.BindingName(result)]
+            control.yieldResult(result, JobDataValues.lift(ref, definition.contract))
         }
     }
 
@@ -158,8 +161,8 @@ class ExportWriterWorker(
     }
 
 
-    override fun payloadFlow(input: WorkerLane, context: WorkerLaneContext): WorkerLaneAttempt {
-        return WorkerLaneAttempt(
+    override fun payloadFlow(input: JobLaneDescriptor, context: JobLaneContext): JobLaneAttempt {
+        return JobLaneAttempt(
             input,
             WriterResultValidation.staticError(
                 result, selfLocation, context, cachedKotlinCompiler))

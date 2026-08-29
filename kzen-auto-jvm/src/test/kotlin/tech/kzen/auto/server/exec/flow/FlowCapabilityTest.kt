@@ -4,15 +4,15 @@ import kotlinx.coroutines.runBlocking
 import tech.kzen.auto.common.paradigm.flow.model.exec.VisualVertexModel
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.exec.LogicCompilerServices
+import tech.kzen.auto.server.exec.bindingsOf
+import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.lib.common.exec.engine.Address
 import tech.kzen.lib.common.exec.engine.NodeStatus
 import tech.kzen.lib.common.exec.engine.Outcome
 import tech.kzen.lib.common.exec.engine.PauseReason
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
-import tech.kzen.lib.common.exec.tuple.TupleComponentName
-import tech.kzen.lib.common.exec.tuple.TupleComponentValue
-import tech.kzen.lib.common.exec.tuple.TupleValue
+import tech.kzen.lib.common.exec.data.binding.BindingName
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
@@ -56,7 +56,8 @@ class FlowCapabilityTest {
     @Test
     fun thirdPartyCapabilityVerticesRunWithNoSharedCodeEdit() {
         val outcome = runFlow("test/flow/flow-capability-test.yaml", argument("aliased-x", 6))
-        assertEquals(12, assertIs<Outcome.Success>(outcome).value.find(TupleComponentName("aliased-out")))
+        assertEquals(12, JobDataValues.boundary(
+            assertIs<Outcome.Success>(outcome).value.requireValue(BindingName("aliased-out"))))
     }
 
 
@@ -129,13 +130,10 @@ class FlowCapabilityTest {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun argument(name: String, value: Any?): TupleValue {
-        return TupleValue(listOf(
-            TupleComponentValue(TupleComponentName(name), value)))
-    }
+    private fun argument(name: String, value: Any?): Map<String, Any?> = mapOf(name to value)
 
 
-    private fun runFlow(documentPathString: String, inputs: TupleValue = TupleValue.empty): Outcome {
+    private fun runFlow(documentPathString: String, inputs: Map<String, Any?> = emptyMap()): Outcome {
         val engine = engineFor(documentPathString, inputs)
         return try {
             runBlocking {
@@ -149,7 +147,7 @@ class FlowCapabilityTest {
     }
 
 
-    private fun engineFor(documentPathString: String, inputs: TupleValue = TupleValue.empty): RunEngine {
+    private fun engineFor(documentPathString: String, inputs: Map<String, Any?> = emptyMap()): RunEngine {
         context = KzenAutoContext.forTest()
 
         val documentPath = DocumentPath.parse(documentPathString)
@@ -172,7 +170,10 @@ class FlowCapabilityTest {
                 context.jobWorkPool,
                 LogicRunExecutionId.random()))
 
-        return RunEngine(flowLogic, context.objectStableMapper.objectStableId(flowLocation), inputs)
+        return RunEngine(
+            flowLogic,
+            context.objectStableMapper.objectStableId(flowLocation),
+            bindingsOf(flowLogic.signature().inputs, *inputs.entries.map { it.key to it.value }.toTypedArray()))
     }
 
 

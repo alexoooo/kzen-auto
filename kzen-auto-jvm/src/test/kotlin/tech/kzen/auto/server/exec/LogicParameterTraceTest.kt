@@ -8,10 +8,10 @@ import tech.kzen.lib.common.exec.NullExecutionValue
 import tech.kzen.lib.common.exec.engine.Address
 import tech.kzen.lib.common.exec.engine.Node
 import tech.kzen.lib.common.exec.engine.Outcome
+import tech.kzen.lib.common.exec.data.binding.BindingName
+import tech.kzen.lib.common.exec.data.binding.DataBindings
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
-import tech.kzen.lib.common.exec.tuple.TupleComponentName
-import tech.kzen.lib.common.exec.tuple.TupleComponentValue
-import tech.kzen.lib.common.exec.tuple.TupleValue
+import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
@@ -61,8 +61,7 @@ class LogicParameterTraceTest {
 
     @Test
     fun scriptParameterBoundArgumentEmitsAtItsAddress() {
-        val inputs = TupleValue(listOf(
-            TupleComponentValue(TupleComponentName("Start"), 5)))
+        val inputs = mapOf("Start" to 5)
 
         runLogic("test/script/result/script-engine-parameter-test.yaml", inputs) { engine, documentPath ->
             assertEquals(
@@ -86,8 +85,7 @@ class LogicParameterTraceTest {
     //------------------------------------------------------------------------------------------------------------ Job
     @Test
     fun jobParameterBoundArgumentEmitsAtItsAddress() {
-        val inputs = TupleValue(listOf(
-            TupleComponentValue(TupleComponentName("items"), listOf(1, 2, 3))))
+        val inputs = mapOf("items" to listOf(1, 2, 3))
 
         runLogic("test/job/signature/job-signature-child-test.yaml", inputs) { engine, documentPath ->
             assertEquals(
@@ -130,7 +128,7 @@ class LogicParameterTraceTest {
 
     private fun runLogic(
         documentPathString: String,
-        inputs: TupleValue = TupleValue.empty,
+        inputs: Map<String, Any?> = emptyMap(),
         assertions: (RunEngine, DocumentPath) -> Unit
     ) {
         context = KzenAutoContext.forTest()
@@ -155,7 +153,11 @@ class LogicParameterTraceTest {
                 context.jobWorkPool,
                 LogicRunExecutionId.random()))
 
-        val engine = RunEngine(logic, context.objectStableMapper.objectStableId(mainLocation), inputs)
+        val inputBindings = DataBindings.bind(logic.signature().inputs, inputs.map { (name, value) ->
+            val bindingName = BindingName(name)
+            bindingName to JobDataValues.lift(value, logic.signature().inputs[bindingName].contract)
+        })
+        val engine = RunEngine(logic, context.objectStableMapper.objectStableId(mainLocation), inputBindings)
         try {
             val outcome = runBlocking {
                 engine.resume()

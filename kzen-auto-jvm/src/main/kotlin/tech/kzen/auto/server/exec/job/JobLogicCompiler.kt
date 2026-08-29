@@ -3,9 +3,12 @@ package tech.kzen.auto.server.exec.job
 import tech.kzen.auto.common.objects.document.job.JobChannelSynthesis
 import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.auto.common.objects.document.job.JobSignatureCapability
+import tech.kzen.auto.common.objects.document.logic.BindingSignatureDefiner
 import tech.kzen.auto.common.paradigm.logic.LogicConventions
 import tech.kzen.auto.server.exec.LogicCompilerServices
 import tech.kzen.auto.server.exec.LogicParameter
+import tech.kzen.lib.common.exec.data.binding.BindingSchema
+import tech.kzen.lib.common.exec.engine.LogicSignature
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
@@ -56,7 +59,7 @@ object JobLogicCompiler {
         // Derived from the SAVED notation (the pre-synthesis structure, matching what the client sees):
         // inputs from the `parameters` declarations, outputs from the declared `results` signature map — not
         // the synthesized channels.
-        val logicSignature = JobSignatureCapability.signature(graphDefinition.graphStructure, jobLocation)
+        val declaredSignature = JobSignatureCapability.signature(graphDefinition.graphStructure, jobLocation)
 
         // Per-parameter bindings (stable id + name + typed default — the `default` scalar coerced by the
         // declared `type`): JobRun surfaces each resolved value to the trace at run start, and
@@ -64,6 +67,9 @@ object JobLogicCompiler {
         val parameterBindings = documentNotation
             .directNestedObjectPaths(NotationConventions.mainObjectPath, LogicConventions.parametersAttributeName)
             .map { LogicParameter.of(ObjectLocation(documentPath, it), graphNotation, services.objectStableMapper) }
+        val inputSignature = BindingSchema.of(parameterBindings.map(LogicParameter::definition))
+        val outputSignature = declaredSignature.outputs
+        val logicSignature = LogicSignature(inputSignature, outputSignature)
 
         return JobLogic(
             jobLocation,
@@ -71,7 +77,7 @@ object JobLogicCompiler {
             workerLocations,
             synthesis.channelLocations,
             logicSignature,
-            JobParameters(logicSignature.inputs, parameterBindings),
+            JobParameters(inputSignature, parameterBindings),
             graphNotation,
             graphDefinition,
             services)

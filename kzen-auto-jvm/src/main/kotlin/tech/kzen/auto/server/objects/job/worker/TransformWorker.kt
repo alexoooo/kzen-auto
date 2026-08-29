@@ -5,6 +5,7 @@ import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.api.ChannelServer
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.exec.data.value.DataValue
 
 
 /**
@@ -20,9 +21,7 @@ import tech.kzen.lib.common.model.location.ObjectLocation
  * migration) and every produced element is in the output channel or its parked-mid-flush batch. This is what
  * keeps a mid-stream migration lossless at the batch grain.
  *
- * Every channel element is a [JobMessage] (the uniform carrier — payload and/or flat part), so the framework's
- * dispatch needs no per-Worker element typing: [WorkerBase.receiveMessage] converts each element, failing
- * descriptively on a raw element from a producer that bypassed the [Emitter]. A channel's declared element
+ * Every channel element is a [DataValue], so the framework has one canonical runtime carrier. A channel's declared element
  * type / a port's `of:` describe the message's PAYLOAD type, cross-checked at definition time by
  * [tech.kzen.auto.common.objects.document.job.ChannelTypeDefiner].
  *
@@ -37,8 +36,8 @@ import tech.kzen.lib.common.model.location.ObjectLocation
  * recovery. This class deliberately retains its original whole-input-batch boundary and behaviour.
  */
 abstract class TransformWorker(
-    private val input: ChannelInput<Any?>,
-    private val output: ChannelOutput<Any?>,
+    private val input: ChannelInput<*>,
+    private val output: ChannelOutput<DataValue>,
     selfLocation: ObjectLocation,
     serve: ChannelServer<Any?, Any?>? = null
 ):
@@ -58,7 +57,7 @@ abstract class TransformWorker(
                     ?: break
 
                 for (element in batch) {
-                    onElement(receiveMessage(element), emitter, control)
+                    onElement(receiveValue(element), emitter, control)
                 }
 
                 // Send this input batch's whole output as one batch (park-on-backpressure is safe now: the input
@@ -75,7 +74,7 @@ abstract class TransformWorker(
     }
 
 
-    protected abstract suspend fun onElement(element: JobMessage, emit: Emitter, control: JobControl)
+    protected abstract suspend fun onElement(element: DataValue, emit: Emitter, control: JobControl)
 
 
     protected open suspend fun onComplete(emit: Emitter, control: JobControl) {}

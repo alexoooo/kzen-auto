@@ -1,6 +1,9 @@
 package tech.kzen.auto.server.objects.datasource
 
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.junit.Test
 import tech.kzen.auto.common.data.api.DataContext
 import tech.kzen.auto.common.data.file.FileSelectionEntry
@@ -8,6 +11,7 @@ import tech.kzen.auto.common.data.model.DataDiagnostic
 import tech.kzen.auto.common.data.model.DataRef
 import tech.kzen.auto.common.data.model.DataRole
 import tech.kzen.auto.common.data.schema.DataShape
+import tech.kzen.auto.common.data.schema.LegacyDataShapeBridge
 import tech.kzen.auto.common.objects.document.data.schema.DataSchemaFieldListSpec
 import tech.kzen.auto.common.objects.document.data.schema.DataSchemaFieldSpec
 import tech.kzen.auto.common.util.data.DataLocation
@@ -23,6 +27,8 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Instant
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
+import tech.kzen.lib.common.exec.data.type.DataType
+import tech.kzen.lib.common.exec.data.type.ScalarKind
 
 
 class FileDataSourceTest {
@@ -180,15 +186,28 @@ class FileDataSourceTest {
 
 
     @Test
-    fun declaredSchemaPublishesOrderedLabelsOnlyForMainRole() {
+    fun declaredSchemaPublishesOrderedTypedFieldsForMainRoleAndBothCodecs() {
         val schema = DataSchemaDocument(DataSchemaFieldListSpec(linkedMapOf(
             "city" to DataSchemaFieldSpec(TypeMetadata.string),
-            "amount" to DataSchemaFieldSpec(TypeMetadata.int))))
+            "amount" to DataSchemaFieldSpec(TypeMetadata.int),
+            "note" to DataSchemaFieldSpec(TypeMetadata(
+                TypeMetadata.string.className,
+                TypeMetadata.string.generics,
+                true)))))
         val source = source(schema = schema)
+        val shape = source.staticShape(null)!!
 
         assertEquals(
-            listOf("city", "amount"),
-            (source.staticShape(null) as DataShape.Tabular).header.values.map { it.text })
+            listOf("city", "amount", "note"),
+            LegacyDataShapeBridge.headerOrNull(shape)!!.values.map { it.text })
+        val record = kotlin.test.assertIs<DataType.Record>(shape.itemType.structural)
+        assertEquals(ScalarKind.Text, kotlin.test.assertIs<DataType.Scalar>(record.fields[0].type).kind)
+        assertEquals(
+            ScalarKind.Integer(32),
+            kotlin.test.assertIs<DataType.Scalar>(record.fields[1].type).kind)
+        assertTrue(kotlin.test.assertIs<DataType.Scalar>(record.fields[2].type).nullable)
+        assertEquals(shape, DataShape.ofExecutionValue(shape.asExecutionValue()))
+        assertEquals(shape, Json.decodeFromString<DataShape>(Json.encodeToString(shape)))
         assertEquals(source.staticShape(null), source.staticShape(DataRole.main))
         assertNull(source.staticShape(DataRole("preview")))
     }

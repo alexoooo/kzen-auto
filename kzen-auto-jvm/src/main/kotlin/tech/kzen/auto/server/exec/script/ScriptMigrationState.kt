@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.exec.script
 
-import tech.kzen.lib.common.exec.tuple.TupleValue
+import tech.kzen.lib.common.exec.data.binding.DataBindings
+import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.lib.common.service.store.normal.ObjectStableId
 
 
@@ -19,7 +20,7 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableId
  * - [result]: the captured Result value.
  */
 data class ScriptMigrationState(
-    val completedOutcomes: Map<ObjectStableId, Any?>,
+    val completedOutcomes: Map<ObjectStableId, DataValue?>,
     val stepCarry: Map<ObjectStableId, Any?>,
-    val result: TupleValue?
+    val result: DataBindings?
 )

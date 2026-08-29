@@ -4,6 +4,7 @@ import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.api.ChannelServer
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.exec.data.value.DataValue
 
 
 /**
@@ -15,11 +16,10 @@ import tech.kzen.lib.common.model.location.ObjectLocation
  * the batch's elements to [onElement] one by one, throttled progress, and — when a [serve] port is supplied —
  * the duplex serve loop answering [WorkerBase.onQuery].
  *
- * Every channel element is a [JobMessage] (the uniform carrier), converted per element by
- * [WorkerBase.receiveMessage] with a descriptive failure on a raw element — see [TransformWorker].
+ * Every channel element is a [DataValue]; see [TransformWorker].
  */
 abstract class SinkWorker(
-    private val input: ChannelInput<Any?>,
+    private val input: ChannelInput<*>,
     selfLocation: ObjectLocation,
     serve: ChannelServer<Any?, Any?>? = null
 ):
@@ -33,7 +33,7 @@ abstract class SinkWorker(
                 ?: break
 
             for (element in batch) {
-                onElement(receiveMessage(element), control)
+                onElement(receiveValue(element), control)
             }
 
             publish(control)
@@ -42,7 +42,7 @@ abstract class SinkWorker(
     }
 
 
-    protected abstract suspend fun onElement(element: JobMessage, control: JobControl)
+    protected abstract suspend fun onElement(element: DataValue, control: JobControl)
 
 
     protected open suspend fun onComplete(control: JobControl) {}

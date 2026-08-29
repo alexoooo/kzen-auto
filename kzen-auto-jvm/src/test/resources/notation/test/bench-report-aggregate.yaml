@@ -1,0 +1,35 @@
+main:
+  is: Report
+  input:
+    browser:
+      directory: "."
+      filter: ""
+    selection:
+      dataType: tech.kzen.auto.plugin.model.record.FlatFileRecord
+      groupBy: ""
+      locations:
+        - location: "build/bench/agg/input.csv"
+          coordinate: CSV
+  analysis:
+    type: PivotTable
+    flat:
+      allow: []
+      exclude: []
+    pivot:
+      rows:
+        - "0|station"
+      values:
+        "0|value":
+          - Min
+          - Average
+          - Max
+  output:
+    type: Explore
+    explore:
+      start: 1
+      count: 400
+    export:
+      format: csv
+      compression: none
+      path: "build/bench/agg/report-unused.csv"
+    work: "build/bench/agg/report-work"

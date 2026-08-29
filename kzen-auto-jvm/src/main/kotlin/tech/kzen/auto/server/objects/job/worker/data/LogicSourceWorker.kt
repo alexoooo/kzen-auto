@@ -8,11 +8,12 @@ import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.util.digest.Digest
+import tech.kzen.lib.common.exec.data.value.DataValue
 
 
 @Reflect
 class LogicSourceWorker(
-    output: ChannelOutput<Any?>,
+    output: ChannelOutput<DataValue>,
     instructions: ObjectLocation?,
     arguments: List<String>,
     schema: DataSchemaDocument?,
@@ -35,7 +36,7 @@ class LogicSourceWorker(
         ): Digest = Digest.build {
             addDigestibleNullable(instructions)
             arguments.forEach(::addUtf8)
-            addDigestibleNullable(schema?.shape()?.header)
+            addDigestibleNullable(schema?.shape()?.asExecutionValue())
         }
     }
 }

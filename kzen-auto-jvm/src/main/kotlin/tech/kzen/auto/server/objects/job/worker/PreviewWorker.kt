@@ -4,6 +4,9 @@ import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.api.ChannelServer
 import tech.kzen.auto.common.paradigm.job.control.JobControl
+import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.lib.common.exec.data.value.DataValue
+import tech.kzen.lib.common.exec.data.value.DataState
 import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionResult
 import tech.kzen.lib.common.exec.ExecutionSuccess
@@ -26,7 +29,7 @@ import tech.kzen.lib.common.reflect.Reflect
  *
  * One live view serves every stream via the message's flat part: a flat-part message (the CSV lane) renders
  * column-for-column, while a payload-lane message (a scalar from a FormulaSource / Run lane — e.g. a FizzBuzz
- * `String`) auto-flattens ([JobMessage.flatView]) to a single `value` column.
+ * `String`) projects to a single synthetic `value` column.
  *
  * It keeps a ROLLING window of the most recent [sample] records (a live tail — so the sample keeps changing as
  * data flows rather than freezing on the first [sample] records), copied off the hot-path [FlatFileRecord] to
@@ -38,7 +41,7 @@ import tech.kzen.lib.common.reflect.Reflect
  */
 @Reflect
 class PreviewWorker(
-    input: ChannelInput<Any?>,
+    input: ChannelInput<*>,
     serve: ChannelServer<Any?, Any?>,
 
     private val sample: Int,
@@ -55,15 +58,22 @@ class PreviewWorker(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun onElement(element: JobMessage, control: JobControl) {
+    override suspend fun onElement(element: DataValue, control: JobControl) {
+        if (element.access.state(element.root) == DataState.Null) {
+            if (header.isEmpty()) {
+                header = listOf("value")
+            }
+            addRow(listOf("null"))
+            return
+        }
         // The flat part is the one rendering lane: the CSV lane renders column-for-column under its header, a
         // payload lane auto-flattens to the shared `value` column (or a Map payload's keyed columns).
-        val flat = element.flatView()
-        val elementHeader = flat.header
+        val projection = JobDataValues.projection(element)
+        val elementHeader = projection.header
         if (header.isEmpty() && elementHeader.values.isNotEmpty()) {
             header = elementHeader.values.map { it.text }
         }
-        addRow(flat.record.toList())
+        addRow((0 until projection.size).map(projection::render))
     }
 
 

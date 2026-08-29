@@ -3,7 +3,7 @@ package tech.kzen.auto.server.objects.flow.vertex
 import tech.kzen.auto.common.paradigm.flow.api.FlowRunInput
 import tech.kzen.auto.common.paradigm.flow.api.StatelessFlowVertex
 import tech.kzen.auto.common.paradigm.flow.api.output.RequiredOutput
-import tech.kzen.lib.common.exec.tuple.TupleComponentName
+import tech.kzen.lib.common.exec.data.binding.BindingName
 import tech.kzen.lib.common.reflect.Reflect
 
 
@@ -13,7 +13,7 @@ import tech.kzen.lib.common.reflect.Reflect
  * ([ParameterBinding][tech.kzen.auto.server.objects.logic.ParameterBinding]), but as a graph
  * vertex. Downstream vertices wire to it via the [output] channel.
  *
- * The seeding is the [FlowRunInput] capability contract: the runner reads [tupleComponentName] from the run's
+ * The seeding is the [FlowRunInput] capability contract: the runner reads [bindingName] from the run's
  * arguments and sets the message directly, so [process] is a no-op and [output] is never written — the channel
  * is declared only so the vertex renders an egress funnel. This archetype is also what puts the parameter in
  * the Flow's declared signature, which
@@ -27,7 +27,7 @@ class FlowInputVertex(
     StatelessFlowVertex,
     FlowRunInput
 {
-    override val tupleComponentName = TupleComponentName(parameter)
+    override val bindingName = BindingName(parameter)
 
 
     override fun process() {

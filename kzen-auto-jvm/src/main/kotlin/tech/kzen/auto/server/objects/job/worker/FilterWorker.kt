@@ -4,6 +4,8 @@ import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
+import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.auto.server.objects.report.exec.calc.CalculatedColumn
 import tech.kzen.auto.server.objects.report.exec.calc.CalculatedColumnEval
 import tech.kzen.auto.server.util.ClassLoaderUtils
@@ -22,7 +24,7 @@ import tech.kzen.lib.common.reflect.Service
  * `temp.number > 30`, …), and the Job's declared parameters bare and typed (`value > threshold`, values read
  * via [JobControl.parameter]). It is compiled by the genuine [CalculatedColumnEval] engine — the SAME engine
  * [FormulaWorker] uses, injected as a `@Service`. A payload-lane message auto-flattens
- * ([JobMessage.flatView]: a scalar filters via the `value` column), so the predicate works over any stream.
+ * (a scalar filters via the synthetic `value` column), so the predicate works over any stream.
  *
  * The predicate is compiled lazily and recompiled only when the incoming header changes; a message is kept
  * when the compiled expression's result is truthy ([tech.kzen.auto.server.objects.report.exec.calc.ColumnValue.truthy]
@@ -35,8 +37,8 @@ import tech.kzen.lib.common.reflect.Service
  */
 @Reflect
 class FilterWorker(
-    input: ChannelInput<Any?>,
-    output: ChannelOutput<Any?>,
+    input: ChannelInput<*>,
+    output: ChannelOutput<DataValue>,
 
     private val where: String,
     selfLocation: ObjectLocation,
@@ -56,7 +58,7 @@ class FilterWorker(
     private var kept = 0L
 
 
-    override suspend fun onElement(element: JobMessage, emit: Emitter, control: JobControl) {
+    override suspend fun onElement(element: DataValue, emit: Emitter, control: JobControl) {
         seen += 1
 
         if (passThrough) {
@@ -65,8 +67,9 @@ class FilterWorker(
             return
         }
 
-        val flat = element.flatView()
-        val header = flat.header
+        val projection = JobDataValues.projection(element)
+        val header = projection.header
+        val record = JobDataValues.record(projection)
         if (header != compiledForHeader) {
             // The full expression scope: the lane's inferred payload type as receiver, the columns bare, and
             // the Job's declared parameters bare and typed — parameter values are run-constant, injected once
@@ -78,11 +81,11 @@ class FilterWorker(
                 calculatedColumnEval.create(
                     "filter", where, header, receiverType, classLoader, parameters)
             }
-            compiled!!.setParameters(parameters.components.map { control.parameter(it.name.value) })
+            compiled!!.setParameters(parameters.definitions.map { control.parameter(it.name.value) })
             compiledForHeader = header
         }
 
-        if (compiled!!.evaluate(element.payload, flat.record, header).truthy) {
+        if (compiled!!.evaluate(JobDataValues.native(element), record, header).truthy) {
             kept += 1
             emit.send(element)
         }
@@ -94,19 +97,19 @@ class FilterWorker(
     // static validation of [where] — a full compile where the effective column view is known (the same scope
     // the runtime compile will use, including the auto-flatten `value` column of a concrete payload lane),
     // and a syntax-only check where it is not, since malformed source cannot compile under any header.
-    override fun payloadFlow(input: WorkerLane, context: WorkerLaneContext): WorkerLaneAttempt {
+    override fun payloadFlow(input: JobLaneDescriptor, context: JobLaneContext): JobLaneAttempt {
         if (passThrough) {
-            return WorkerLaneAttempt(input, null)
+            return JobLaneAttempt(input, null)
         }
 
         val columns = input.consumerFlatColumns()
-            ?: return WorkerLaneAttempt(input, calculatedColumnEval.validateSyntax(where))
+            ?: return JobLaneAttempt(input, calculatedColumnEval.validateSyntax(where))
 
         val error = calculatedColumnEval.validate(
             "filter", where, columns,
             input.payloadType ?: TypeMetadata.anyNullable, context.classLoader, context.parameters)
 
-        return WorkerLaneAttempt(input, error)
+        return JobLaneAttempt(input, error)
     }
 
 

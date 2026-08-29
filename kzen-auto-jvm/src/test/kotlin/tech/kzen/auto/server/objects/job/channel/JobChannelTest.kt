@@ -5,6 +5,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
+import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.lib.common.exec.data.value.DataValue
 import kotlin.test.assertEquals
 
 
@@ -20,8 +22,8 @@ import kotlin.test.assertEquals
  */
 class JobChannelTest {
     // Emit one element as its own batch (send buffers; flush sends the batch, suspending under backpressure).
-    private suspend fun ChannelOutput<Any?>.emit(element: Any?) {
-        send(element)
+    private suspend fun ChannelOutput<DataValue>.emit(element: Any?) {
+        send(JobDataValues.lift(element))
         flush()
     }
 
@@ -35,9 +37,9 @@ class JobChannelTest {
         producer.emit("b")
         producer.emit("c")
 
-        assertEquals(listOf("a", "b", "c"), channel.drainBuffered())
+        assertEquals(listOf("a", "b", "c"), channel.drainBuffered().map(JobDataValues::boundary))
         // A drained channel holds nothing more.
-        assertEquals(listOf<Any?>(), channel.drainBuffered())
+        assertEquals(listOf<DataValue>(), channel.drainBuffered())
     }
 
 
@@ -55,7 +57,7 @@ class JobChannelTest {
             producer.emit(3)  // parks here: the buffer already holds batches [1], [2]
         }
 
-        assertEquals(listOf(1, 2, 3), channel.drainBuffered())
+        assertEquals(listOf(1, 2, 3), channel.drainBuffered().map(JobDataValues::boundary))
 
         sender.cancel()
     }
@@ -65,7 +67,7 @@ class JobChannelTest {
     @Test
     fun preloadDeliversCarryoverBeforeLiveStreamViaReceive() = runBlocking {
         val channel = JobChannel(capacity = 4, batchSize = 1)
-        channel.preload(listOf("x", "y"))
+        channel.preload(listOf("x", "y").map(JobDataValues::lift))
         val producer = channel.newProducer()
         producer.emit("live1")
         producer.emit("live2")
@@ -73,7 +75,7 @@ class JobChannelTest {
 
         val received = mutableListOf<Any?>()
         while (true) {
-            received.add(channel.input.receive() ?: break)
+            received.add(JobDataValues.boundary(channel.input.receive() ?: break))
         }
         assertEquals(listOf<Any?>("x", "y", "live1", "live2"), received)
     }
@@ -85,14 +87,14 @@ class JobChannelTest {
         // The framework consumer loops (Transform / Sink workers) drain batches, so the carryover must precede the
         // live channel on that path too.
         val channel = JobChannel(capacity = 4, batchSize = 1)
-        channel.preload(listOf("x", "y"))
+        channel.preload(listOf("x", "y").map(JobDataValues::lift))
         val producer = channel.newProducer()
         producer.emit("live1")
         producer.close()
 
         val received = mutableListOf<Any?>()
         for (item in channel.input) {
-            received.add(item)
+            received.add(JobDataValues.boundary(item))
         }
         assertEquals(listOf<Any?>("x", "y", "live1"), received)
     }
@@ -113,7 +115,7 @@ class JobChannelTest {
         }
         val carried = source.drainBuffered()
         sender.cancel()
-        assertEquals(listOf(1, 2, 3), carried)
+        assertEquals(listOf(1, 2, 3), carried.map(JobDataValues::boundary))
 
         val rebuilt = JobChannel(capacity = 2, batchSize = 1)
         rebuilt.preload(carried)
@@ -126,7 +128,7 @@ class JobChannelTest {
 
         val received = mutableListOf<Any?>()
         for (item in rebuilt.input) {
-            received.add(item)
+            received.add(JobDataValues.boundary(item))
         }
         rebuiltSender.join()
         assertEquals(listOf<Any?>(1, 2, 3, 4, 5), received)

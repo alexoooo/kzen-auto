@@ -1,0 +1,17 @@
+main:
+  is: Job
+
+main.workers/source:
+  is: FormulaSourceWorker
+  code: 'listOf(mapOf("qty" to 2, "price" to 3))'
+
+main.workers/transform:
+  is: FormulaWorker
+  formula:
+    total: qty.number * price.number
+  payload: 'mapOf("kind" to "sale")'
+  carry: all
+
+main.workers/write:
+  is: CsvWriterWorker
+  path: build/job-formula-carry/output.csv

@@ -9,11 +9,8 @@ import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.util.AutoTestUtils
-import tech.kzen.lib.common.exec.logic.model.LogicType
-import tech.kzen.lib.common.exec.tuple.TupleComponentDefinition
-import tech.kzen.lib.common.exec.tuple.TupleComponentName
-import tech.kzen.lib.common.exec.tuple.TupleDefinition
-import tech.kzen.lib.common.exec.tuple.TupleValue
+import tech.kzen.auto.server.exec.bindingSchemaOf
+import tech.kzen.lib.common.exec.data.binding.BindingSchema
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.platform.ClassName
@@ -65,7 +62,7 @@ class RunWorkerTest {
     fun runtimeRejectsMissingJobArgumentsBeforeHostEvenWhenStaticValidationIsBypassed() = runBlocking {
         if (!::context.isInitialized) context = KzenAutoContext.forTest()
         val missing = validArguments() - "prefix"
-        val input = SingleInput(JobMessage.ofPayload(DataUnit.of()))
+        val input = SingleInput(tech.kzen.auto.server.objects.job.value.JobDataValues.lift(DataUnit.of()))
         val output = CapturingOutput()
         val worker = RunWorker(input, output, child, missing, self, context.calculatedColumnEval)
 
@@ -88,30 +85,29 @@ class RunWorkerTest {
     private fun attempt(
         arguments: Map<String, String>,
         flatColumns: HeaderListing = HeaderListing.ofUnique(listOf("flatDate"))
-    ): WorkerLaneAttempt {
+    ): JobLaneAttempt {
         if (!::context.isInitialized) {
             context = KzenAutoContext.forTest()
         }
         val graph = AutoTestUtils.graphDefinitionAttempt(AutoTestUtils.readNotation()).transitiveSuccessful.graphStructure
         return RunWorker(
             EmptyInput, EmptyOutput, child, arguments, self, context.calculatedColumnEval)
-            .payloadFlow(lane(flatColumns), WorkerLaneContext(parameters(), graph, RunWorker::class.java.classLoader))
+            .payloadFlow(lane(flatColumns), JobLaneContext(parameters(), graph, RunWorker::class.java.classLoader))
     }
 
 
-    private fun lane(flatColumns: HeaderListing = HeaderListing.ofUnique(listOf("flatDate"))): WorkerLane = WorkerLane(
+    private fun lane(flatColumns: HeaderListing = HeaderListing.ofUnique(listOf("flatDate"))): JobLaneDescriptor = JobLaneDescriptor(
         TypeMetadata(ClassName(DataUnit::class.qualifiedName!!), emptyList(), false),
         flatColumns)
 
 
-    private fun parameters(): TupleDefinition = TupleDefinition(listOf(
-        TupleComponentDefinition(TupleComponentName("prefix"), LogicType(TypeMetadata.string))))
+    private fun parameters(): BindingSchema = bindingSchemaOf("prefix" to TypeMetadata.string)
 
 
-    private fun laneContext(): WorkerLaneContext {
+    private fun laneContext(): JobLaneContext {
         val graph = AutoTestUtils.graphDefinitionAttempt(AutoTestUtils.readNotation())
             .transitiveSuccessful.graphStructure
-        return WorkerLaneContext(parameters(), graph, RunWorker::class.java.classLoader)
+        return JobLaneContext(parameters(), graph, RunWorker::class.java.classLoader)
     }
 
 
@@ -159,7 +155,10 @@ class RunWorkerTest {
         override suspend fun <R> runBlockingIo(block: () -> R): R = block()
         override fun scratchDir(): String = error("unused")
         override fun publishProgress(location: ObjectLocation, value: Map<String, Any?>, force: Boolean) {}
-        override suspend fun host(instructions: ObjectLocation, input: Any?): TupleValue {
+        override suspend fun host(
+            instructions: ObjectLocation,
+            input: Any?
+        ): tech.kzen.lib.common.exec.data.binding.DataBindings {
             hostCalls += 1
             error("host must not be reached")
         }

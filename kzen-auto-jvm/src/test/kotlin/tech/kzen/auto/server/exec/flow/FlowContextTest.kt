@@ -9,7 +9,6 @@ import tech.kzen.auto.server.exec.script.test.ScriptStepTestModule
 import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.lib.common.exec.engine.Outcome
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
-import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
@@ -130,7 +129,7 @@ class FlowContextTest {
                 context.jobWorkPool,
                 LogicRunExecutionId.random()))
 
-        val engine = RunEngine(logic, context.objectStableMapper.objectStableId(mainLocation), TupleValue.empty)
+        val engine = RunEngine(logic, context.objectStableMapper.objectStableId(mainLocation))
         return try {
             runBlocking {
                 engine.resume()

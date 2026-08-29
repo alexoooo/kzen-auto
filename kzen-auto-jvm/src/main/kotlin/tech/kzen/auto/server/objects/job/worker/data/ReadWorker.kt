@@ -8,16 +8,18 @@ import tech.kzen.auto.common.data.model.DataRole
 import tech.kzen.auto.common.data.model.DataUnit
 import tech.kzen.auto.common.data.schema.DataShape
 import tech.kzen.auto.common.data.schema.HeaderListing
+import tech.kzen.auto.common.data.schema.LegacyDataShapeBridge
 import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.server.data.DataOpenerLookup
 import tech.kzen.auto.server.objects.job.worker.Emitter
-import tech.kzen.auto.server.objects.job.worker.JobMessage
+import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.auto.server.objects.job.worker.SourceWorker
-import tech.kzen.auto.server.objects.job.worker.WorkerLane
-import tech.kzen.auto.server.objects.job.worker.WorkerLaneAttempt
-import tech.kzen.auto.server.objects.job.worker.WorkerLaneContext
+import tech.kzen.auto.server.objects.job.worker.JobLaneDescriptor
+import tech.kzen.auto.server.objects.job.worker.JobLaneAttempt
+import tech.kzen.auto.server.objects.job.worker.JobLaneContext
 import tech.kzen.auto.server.objects.job.worker.definition.WorkerDefinitionContext
 import tech.kzen.auto.server.objects.job.worker.definition.WorkerDefinitionResolution
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -45,7 +47,7 @@ import tech.kzen.lib.platform.ClassName
  */
 @Reflect
 open class ReadWorker(
-    output: ChannelOutput<Any?>,
+    output: ChannelOutput<DataValue>,
     private val source: ObjectReference?,
     private val emit: String,
     private val role: String,
@@ -165,12 +167,16 @@ open class ReadWorker(
         for ((unitIndex, unit) in activeManifest.units.withIndex()) {
             val parts = DataReadCore.parts(unit, role, unitIndex)
             for ((partIndex, part) in parts.withIndex()) {
-                val shape = openerLookup.openerFor(part.ref).inspectShape(context, part)
+                val opener = openerLookup.openerFor(part.ref)
+                val shape = opener.inspectShape(context, part)
                     ?: throw IllegalStateException(
                         "Unable to inspect data shape at unit $unitIndex part $partIndex (${part.ref.display()})")
                 val origin = "unit $unitIndex part $partIndex (${part.ref.display()})"
                 inspected[partKey(unitIndex, partIndex)] = shape
-                candidates.add(DataReadCore.ShapeCandidate(shape, attributeValues(unit), origin))
+                candidates.add(DataReadCore.ShapeCandidate(
+                    shape,
+                    attributeValues(unit),
+                    origin))
             }
         }
         inspectedShapes = inspected
@@ -208,7 +214,7 @@ open class ReadWorker(
             val unit = activeManifest.units[unitIndex]
             unitIndex += 1
             emitted += 1
-            emitter.send(JobMessage.ofPayload(unit))
+            emitter.send(JobDataValues.lift(unit))
         }
     }
 
@@ -247,7 +253,9 @@ open class ReadWorker(
                 val origin = "unit $unitIndex part $partIndex (${part.ref.display()})"
                 val attributeValues = attributeValues(unit)
                 val candidate = DataReadCore.effectiveShape(
-                    activeCursor.shape, attributeValues, origin)
+                    activeCursor.shape,
+                    attributeValues,
+                    origin)
                 if (inspectedShapes == null) {
                     shapeBaseline = DataReadCore.establishShape(shapeBaseline, candidate)
                 }
@@ -321,39 +329,38 @@ open class ReadWorker(
     }
 
 
-    override fun payloadFlow(input: WorkerLane, context: WorkerLaneContext): WorkerLaneAttempt {
+    override fun payloadFlow(input: JobLaneDescriptor, context: JobLaneContext): JobLaneAttempt {
         val configError = configError()
         if (configError != null) {
-            return WorkerLaneAttempt(WorkerLane.unknown, configError)
+            return JobLaneAttempt(JobLaneDescriptor.unknown, configError)
         }
 
         val resolved = sourceResolution as? WorkerDefinitionResolution.Resolved
-            ?: return WorkerLaneAttempt(
-                WorkerLane.unknown,
+            ?: return JobLaneAttempt(
+                JobLaneDescriptor.unknown,
                 (sourceResolution as WorkerDefinitionResolution.Failed).message)
         val dataSource = resolved.value as DataSource
         if (emit == emitUnits) {
-            return WorkerLaneAttempt(
-                WorkerLane(dataUnitType, HeaderListing.empty), null)
+            return JobLaneAttempt(
+                JobLaneDescriptor(dataUnitType, HeaderListing.empty), null)
         }
 
         val staticShape = dataSource.staticShape(role.takeIf { it.isNotBlank() }?.let(::DataRole))
         if (attributes == attributesColumns) {
-            return when (staticShape) {
-                is DataShape.Payload -> WorkerLaneAttempt(
-                    WorkerLane.unknown,
-                    "attributes=columns requires tabular data, found payload ${staticShape.type}")
-                else -> WorkerLaneAttempt(WorkerLane.unknown, null)
+            return if (staticShape != null && LegacyDataShapeBridge.headerOrNull(staticShape) == null) {
+                JobLaneAttempt(
+                    JobLaneDescriptor.unknown,
+                    "attributes=columns requires record data, found ${staticShape.itemType.structural}")
+            }
+            else {
+                JobLaneAttempt(JobLaneDescriptor.unknown, null)
             }
         }
 
-        return when (staticShape) {
-            null -> WorkerLaneAttempt(WorkerLane.unknown, null)
-            is DataShape.Payload -> WorkerLaneAttempt(
-                WorkerLane(staticShape.type, HeaderListing.empty), null)
-            is DataShape.Tabular -> WorkerLaneAttempt(
-                WorkerLane(null, staticShape.header), null)
+        if (staticShape == null) {
+            return JobLaneAttempt(JobLaneDescriptor.unknown, null)
         }
+        return JobLaneAttempt(JobLaneDescriptor(staticShape.itemType), null)
     }
 
 

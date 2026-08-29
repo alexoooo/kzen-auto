@@ -2,7 +2,7 @@ package tech.kzen.auto.common.objects.document.script.model
 
 import tech.kzen.auto.common.objects.document.logic.ResultSignatureDefiner
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
-import tech.kzen.lib.common.exec.tuple.TupleComponentName
+import tech.kzen.lib.common.exec.data.binding.BindingName
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -38,7 +38,7 @@ data class ScriptResultAnalysis(
 
             val declaresMainResult = ResultSignatureDefiner
                 .parse(graphNotation.firstAttribute(mainLocation, ScriptConventions.resultsAttributePath))
-                .find(TupleComponentName.main) != null
+                .find(BindingName("main")) != null
 
             // A root-level Result step ends the Script, so everything after it never runs. Reachability only —
             // NOT a type exemption: the terminal below is held to the declared result type either way.

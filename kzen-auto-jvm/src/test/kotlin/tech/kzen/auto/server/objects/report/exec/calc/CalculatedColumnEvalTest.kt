@@ -8,10 +8,8 @@ import tech.kzen.auto.server.service.compile.KotlinSyntaxValidator
 import tech.kzen.auto.server.service.compile.ScriptKotlinCompiler
 import tech.kzen.auto.server.util.ClassLoaderUtils
 import tech.kzen.auto.server.util.WorkUtils
-import tech.kzen.lib.common.exec.logic.model.LogicType
-import tech.kzen.lib.common.exec.tuple.TupleComponentDefinition
-import tech.kzen.lib.common.exec.tuple.TupleComponentName
-import tech.kzen.lib.common.exec.tuple.TupleDefinition
+import tech.kzen.auto.server.exec.bindingSchemaOf
+import tech.kzen.lib.common.exec.data.binding.BindingSchema
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.platform.ClassName
 import java.nio.file.Path
@@ -485,7 +483,7 @@ class CalculatedColumnEvalTest {
         formula: String,
         aValue: String = "",
         bValue: String = "",
-        parameters: TupleDefinition = TupleDefinition.empty,
+        parameters: BindingSchema = BindingSchema.empty,
         parameterValues: List<Any?> = listOf()
     ) {
         val calculatedColumn = create(formula, parameters)
@@ -501,7 +499,7 @@ class CalculatedColumnEvalTest {
     }
 
 
-    private fun create(formula: String, parameters: TupleDefinition): CalculatedColumn<Any?> {
+    private fun create(formula: String, parameters: BindingSchema): CalculatedColumn<Any?> {
         val workUtils = WorkUtils(Path.of("../work/${CalculatedColumnEvalTest::class.simpleName}"))
         val calculatedColumnEval = calculatedColumnEval(workUtils)
 
@@ -515,12 +513,8 @@ class CalculatedColumnEvalTest {
     }
 
 
-    private fun intParameter(name: String): TupleDefinition {
-        return TupleDefinition(listOf(
-            TupleComponentDefinition(
-                TupleComponentName(name),
-                LogicType(TypeMetadata(ClassName("kotlin.Int"), listOf(), false)))))
-    }
+    private fun intParameter(name: String): BindingSchema = bindingSchemaOf(
+        name to TypeMetadata(ClassName("kotlin.Int"), listOf(), false))
 
 
     private fun calculatedColumnEval(workUtils: WorkUtils): CalculatedColumnEval {

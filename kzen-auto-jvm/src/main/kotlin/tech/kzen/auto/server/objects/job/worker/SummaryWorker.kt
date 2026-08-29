@@ -8,7 +8,8 @@ import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.api.ChannelServer
 import tech.kzen.auto.common.paradigm.job.control.JobControl
-import tech.kzen.auto.plugin.model.record.FlatFileRecordField
+import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.auto.server.objects.report.exec.input.model.header.RecordHeaderIndex
 import tech.kzen.auto.server.objects.report.exec.summary.model.ValueSummaryBuilder
 import tech.kzen.lib.common.exec.ExecutionResult
@@ -40,8 +41,8 @@ import tech.kzen.lib.common.reflect.Reflect
  */
 @Reflect
 class SummaryWorker(
-    input: ChannelInput<Any?>,
-    output: ChannelOutput<Any?>,
+    input: ChannelInput<*>,
+    output: ChannelOutput<DataValue>,
     serve: ChannelServer<Any?, Any?>,
     selfLocation: ObjectLocation
 ):
@@ -54,25 +55,19 @@ class SummaryWorker(
     private var builders: List<ValueSummaryBuilder> = listOf()
     private var count = 0L
 
-    // Reused across records to read a field without allocating (mirrors ReportSummary).
-    private val flyweight = FlatFileRecordField()
-
-
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun onElement(element: JobMessage, emit: Emitter, control: JobControl) {
-        val flat = element.flatView()
-        val header = flat.header
+    override suspend fun onElement(element: DataValue, emit: Emitter, control: JobControl) {
+        val projection = JobDataValues.projection(element)
+        val header = projection.header
         val index = ensureInitialized(header)
 
-        flyweight.selectHost(flat.record)
         val indices = index.indices(header)
         for (i in builders.indices) {
             val fieldIndex = indices[i]
             if (fieldIndex == -1) {
                 continue
             }
-            flyweight.selectField(fieldIndex)
-            builders[i].add(flyweight)
+            builders[i].add(projection.render(fieldIndex))
         }
         count += 1
 

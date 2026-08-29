@@ -4,6 +4,7 @@ import tech.kzen.auto.common.paradigm.flow.model.channel.FlowOutputKind
 import tech.kzen.auto.common.paradigm.flow.model.channel.MutableFlowOutput
 import tech.kzen.auto.common.paradigm.flow.model.channel.MutableOptionalInput
 import tech.kzen.auto.common.paradigm.flow.model.channel.MutableRequiredInput
+import tech.kzen.auto.common.objects.document.logic.BindingSignatureDefiner
 import tech.kzen.lib.common.api.AttributeDefiner
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.definition.AttributeDefinitionAttempt
@@ -15,6 +16,7 @@ import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.platform.ClassName
 import tech.kzen.lib.platform.ClassNames
+import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 
 
 /**
@@ -56,35 +58,45 @@ class FlowWiring: AttributeDefiner {
             partialGraphDefinition: GraphDefinition,
             partialGraphInstance: GraphInstance
     ): AttributeDefinitionAttempt {
-        val attributeClass: ClassName = graphStructure
+        val attributeType: TypeMetadata = graphStructure
                 .graphMetadata
                 .get(objectLocation)!!
                 .attributes[attributeName]
                 ?.type
-                ?.className
-                ?: ClassNames.kotlinAny
+                ?: TypeMetadata.anyNullable
+        val attributeClass: ClassName = attributeType.className
+        val payloadType = attributeType.generics.singleOrNull() ?: TypeMetadata.anyNullable
+        val structural = payloadType.className.asString() ==
+                "tech.kzen.lib.common.exec.data.value.DataValue"
+        val contract = if (structural) {
+            tech.kzen.lib.common.exec.data.type.DataContract(
+                tech.kzen.lib.common.exec.data.type.DataType.Dynamic(nullable = true))
+        }
+        else {
+            BindingSignatureDefiner.contract(payloadType)
+        }
 
         val channelLabel = "${attributeName.value} of $objectLocation"
 
         val value: Any? = when (attributeClass) {
             optionalInputClass ->
-                MutableOptionalInput<Any>()
+                MutableOptionalInput<Any>(contract, structural)
 
             requiredInputClass ->
-                MutableRequiredInput<Any>()
+                MutableRequiredInput<Any>(contract, structural)
 
 
             optionalOutputClass ->
-                MutableFlowOutput<Any>(FlowOutputKind.Optional, channelLabel)
+                MutableFlowOutput<Any>(FlowOutputKind.Optional, channelLabel, contract, structural)
 
             requiredOutputClass ->
-                MutableFlowOutput<Any>(FlowOutputKind.Required, channelLabel)
+                MutableFlowOutput<Any>(FlowOutputKind.Required, channelLabel, contract, structural)
 
             batchOutputClass ->
-                MutableFlowOutput<Any>(FlowOutputKind.Batch, channelLabel)
+                MutableFlowOutput<Any>(FlowOutputKind.Batch, channelLabel, contract, structural)
 
             streamOutputClass ->
-                MutableFlowOutput<Any>(FlowOutputKind.Stream, channelLabel)
+                MutableFlowOutput<Any>(FlowOutputKind.Stream, channelLabel, contract, structural)
 
 
             else ->

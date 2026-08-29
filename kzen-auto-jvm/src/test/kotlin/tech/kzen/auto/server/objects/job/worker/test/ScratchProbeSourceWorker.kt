@@ -3,7 +3,7 @@ package tech.kzen.auto.server.objects.job.worker.test
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.server.objects.job.worker.Emitter
-import tech.kzen.auto.server.objects.job.worker.JobMessage
+import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.auto.server.objects.job.worker.SourceWorker
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
@@ -30,6 +30,6 @@ class ScratchProbeSourceWorker(
 
     override suspend fun produce(emit: Emitter, control: JobControl) {
         ScratchProbeLog.probe(control, workerName)
-        emit.send(JobMessage.ofPayload("probe"))
+        emit.send(JobDataValues.lift("probe"))
     }
 }

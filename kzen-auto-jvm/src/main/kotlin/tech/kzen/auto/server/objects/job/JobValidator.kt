@@ -10,9 +10,9 @@ import tech.kzen.auto.common.objects.document.logic.StepValidation
 import tech.kzen.auto.common.objects.document.logic.ValidationDigestEcho
 import tech.kzen.auto.common.paradigm.detached.DetachedAction
 import tech.kzen.auto.server.objects.job.worker.WorkerBase
-import tech.kzen.auto.server.objects.job.worker.WorkerLane
-import tech.kzen.auto.server.objects.job.worker.WorkerLaneAttempt
-import tech.kzen.auto.server.objects.job.worker.WorkerLaneContext
+import tech.kzen.auto.server.objects.job.worker.JobLaneDescriptor
+import tech.kzen.auto.server.objects.job.worker.JobLaneAttempt
+import tech.kzen.auto.server.objects.job.worker.JobLaneContext
 import tech.kzen.auto.server.objects.job.worker.definition.WorkerDefinitionContext
 import tech.kzen.auto.server.util.ClassLoaderUtils
 import tech.kzen.lib.common.exec.ExecutionRequest
@@ -34,7 +34,7 @@ import tech.kzen.lib.common.service.store.LocalGraphStore
 
 /**
  * The Job document's server-side validation pass (the [tech.kzen.auto.server.objects.script.ScriptValidator]
- * analogue): the STATIC PAYLOAD-TYPE WALK. Worker lanes ([WorkerLane]) are folded along the order-driven
+ * analogue): the STATIC PAYLOAD-TYPE WALK. Job lane descriptors ([JobLaneDescriptor]) are folded along the order-driven
  * wiring ([JobChannelDerivation] — the same shared derivation the client draws pipes from) in document order,
  * each Worker mapping its input lane to its output lane via the [WorkerBase.payloadFlow] capability — an
  * instance method, so no general layer learns a Worker type (the extension rule; a third-party Worker
@@ -77,7 +77,7 @@ class JobValidator(
             }
 
             val jobMainLocation = documentPath.toObjectLocation(NotationConventions.mainObjectPath)
-            val context = WorkerLaneContext(
+            val context = JobLaneContext(
                 JobSignatureCapability.signature(graphStructure, jobMainLocation).inputs,
                 graphStructure,
                 ClassLoaderUtils.dynamicParentClassLoader())
@@ -94,7 +94,7 @@ class JobValidator(
             val signature = JobSignatureCapability.signature(graphStructure, jobMainLocation)
             val resultErrors = resultYielderErrors(workerPaths, documentPath, graphStructure.graphNotation, signature)
 
-            val outputLanes = mutableMapOf<ObjectPath, WorkerLane>()
+            val outputLanes = mutableMapOf<ObjectPath, JobLaneDescriptor>()
             val workerValidations = mutableMapOf<ObjectPath, StepValidation>()
 
             for (workerPath in workerPaths) {
@@ -105,7 +105,7 @@ class JobValidator(
 
                 val inputLane = upstreamByDownstream[workerPath]
                     ?.let { outputLanes[it] }
-                    ?: WorkerLane.unknown
+                    ?: JobLaneDescriptor.unknown
 
                 // Defensive: a misbehaving payloadFlow (a third-party override throwing on a half-edited
                 // config) degrades to an unknown lane with its message, never fails the whole pass.
@@ -114,7 +114,7 @@ class JobValidator(
                         worker.payloadFlow(inputLane, context)
                     }
                     catch (e: Exception) {
-                        WorkerLaneAttempt(WorkerLane.unknown, e.message ?: e.toString())
+                        JobLaneAttempt(JobLaneDescriptor.unknown, e.message ?: e.toString())
                     }
 
                 outputLanes[workerPath] = attempt.lane
@@ -165,7 +165,7 @@ class JobValidator(
 
             val errors = linkedMapOf<ObjectPath, MutableList<String>>()
             for ((path, component) in active) {
-                if (signature.outputs.find(tech.kzen.lib.common.exec.tuple.TupleComponentName(component)) == null) {
+                if (signature.outputs.find(tech.kzen.lib.common.exec.data.binding.BindingName(component)) == null) {
                     errors.getOrPut(path, ::mutableListOf)
                         .add("No result type declared in the Job signature for '$component'")
                 }

@@ -3,12 +3,11 @@ package tech.kzen.auto.server.exec.job
 import kotlinx.coroutines.runBlocking
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.exec.LogicCompilerServices
+import tech.kzen.auto.server.exec.bindingsOf
+import tech.kzen.auto.server.exec.mainBoundaryValue
 import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.lib.common.exec.engine.Outcome
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
-import tech.kzen.lib.common.exec.tuple.TupleComponentName
-import tech.kzen.lib.common.exec.tuple.TupleComponentValue
-import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
@@ -22,7 +21,7 @@ import kotlin.test.assertIs
 
 
 /**
- * End-to-end for the element model (`JobMessage` — see the model appendix of
+ * End-to-end for the Job `DataValue` element model — see the model appendix of
  * kzen/plans/2026-07-25_job-improvements.md; original design in
  * kzen/plans/sprint-2/2026-07-21_job-element-model.md): the
  * uniform message carrier crossing every Job channel, with the auto-flatten fallback bridging payload lanes
@@ -61,7 +60,7 @@ class JobElementModelTest {
         // record, and no cast failure occurs anywhere.
         val engine = newEngine(
             "test/job/message/job-message-parameter-test.yaml",
-            TupleValue(listOf(TupleComponentValue(TupleComponentName("number"), 13.0))))
+            mapOf("number" to 13.0))
         val outcome =
             try {
                 runBlocking {
@@ -74,7 +73,7 @@ class JobElementModelTest {
             }
 
         val success = assertIs<Outcome.Success>(outcome)
-        assertEquals(13.0, success.value.mainComponentValue())
+        assertEquals(13.0, success.value.mainBoundaryValue())
     }
 
 
@@ -95,7 +94,7 @@ class JobElementModelTest {
             }
 
         val success = assertIs<Outcome.Success>(outcome, "outcome: $outcome")
-        assertEquals(2.5, success.value.mainComponentValue())
+        assertEquals(2.5, success.value.mainBoundaryValue())
     }
 
 
@@ -105,7 +104,7 @@ class JobElementModelTest {
         // sink keeps as the result.
         val engine = newEngine(
             "test/job/message/job-parameter-scope-test.yaml",
-            TupleValue(listOf(TupleComponentValue(TupleComponentName("threshold"), 3))))
+            mapOf("threshold" to 3))
         val outcome =
             try {
                 runBlocking {
@@ -118,7 +117,7 @@ class JobElementModelTest {
             }
 
         val success = assertIs<Outcome.Success>(outcome, "outcome: $outcome")
-        assertEquals(30.0, success.value.mainComponentValue())
+        assertEquals(30.0, success.value.mainBoundaryValue())
     }
 
 
@@ -140,7 +139,7 @@ class JobElementModelTest {
             }
 
         val success = assertIs<Outcome.Success>(outcome, "outcome: $outcome")
-        assertEquals(30, success.value.mainComponentValue())
+        assertEquals(30, success.value.mainBoundaryValue())
     }
 
 
@@ -195,8 +194,32 @@ class JobElementModelTest {
     }
 
 
+    @Test
+    fun formulaReplacementCarriesThePrivateWideningInDeclaredOrder() {
+        val output = Path.of("build/job-formula-carry/output.csv")
+        Files.createDirectories(output.parent)
+        Files.deleteIfExists(output)
+
+        val engine = newEngine("test/job/message/job-formula-carry-test.yaml")
+        val outcome = try {
+            runBlocking {
+                engine.resume()
+                engine.await()
+            }
+        }
+        finally {
+            engine.close()
+        }
+
+        assertIs<Outcome.Success>(outcome, "outcome: $outcome")
+        assertEquals(
+            listOf("kind,qty,price,total", "sale,2,3,6"),
+            Files.readAllLines(output))
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
-    private fun newEngine(path: String, rootInputs: TupleValue = TupleValue.empty): RunEngine {
+    private fun newEngine(path: String, rootInputs: Map<String, Any?> = emptyMap()): RunEngine {
         context = KzenAutoContext.forTest()
 
         val documentPath = DocumentPath.parse(path)
@@ -219,6 +242,10 @@ class JobElementModelTest {
                 context.jobWorkPool,
                 LogicRunExecutionId.random()))
 
-        return RunEngine(jobLogic, context.objectStableMapper.objectStableId(jobLocation), rootInputs)
+        return RunEngine(
+            jobLogic,
+            context.objectStableMapper.objectStableId(jobLocation),
+            bindingsOf(jobLogic.signature().inputs,
+                *rootInputs.entries.map { it.key to it.value }.toTypedArray()))
     }
 }

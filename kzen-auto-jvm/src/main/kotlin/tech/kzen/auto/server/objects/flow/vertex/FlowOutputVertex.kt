@@ -3,7 +3,7 @@ package tech.kzen.auto.server.objects.flow.vertex
 import tech.kzen.auto.common.paradigm.flow.api.FlowRunOutput
 import tech.kzen.auto.common.paradigm.flow.api.StatelessFlowVertex
 import tech.kzen.auto.common.paradigm.flow.api.input.RequiredInput
-import tech.kzen.lib.common.exec.tuple.TupleComponentName
+import tech.kzen.lib.common.exec.data.binding.BindingName
 import tech.kzen.lib.common.reflect.Reflect
 
 
@@ -12,7 +12,7 @@ import tech.kzen.lib.common.reflect.Reflect
  *
  * The harvest is the [FlowRunOutput] capability contract: the runner captures the upstream input as this
  * vertex's message and puts that in the run's result
- * [tech.kzen.lib.common.exec.tuple.TupleValue] under [tupleComponentName], so [process] is never called. This
+ * [tech.kzen.lib.common.exec.data.binding.DataBindings] under [bindingName], so [process] is never called. This
  * archetype is also what puts the result in the Flow's declared signature, which
  * [FlowConventions][tech.kzen.auto.common.objects.document.flow.FlowConventions] derives from notation.
  */
@@ -24,7 +24,7 @@ class FlowOutputVertex(
     StatelessFlowVertex,
     FlowRunOutput
 {
-    override val tupleComponentName = TupleComponentName(result)
+    override val bindingName = BindingName(result)
 
 
     override fun process() {

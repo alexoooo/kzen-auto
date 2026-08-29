@@ -6,6 +6,7 @@ import tech.kzen.auto.common.data.model.DataRef
 import tech.kzen.auto.common.data.model.DataRole
 import tech.kzen.auto.common.data.schema.DataShape
 import tech.kzen.auto.common.data.schema.HeaderListing
+import tech.kzen.auto.common.data.schema.LegacyDataShapeBridge
 import tech.kzen.auto.common.objects.document.plugin.model.CommonDataEncodingSpec
 import tech.kzen.auto.common.objects.document.plugin.model.CommonPluginCoordinate
 import tech.kzen.auto.server.service.storage.SchemaCacheStorageArea
@@ -21,7 +22,7 @@ import kotlin.test.assertNull
 class SchemaCacheTest {
     private val format = CommonPluginCoordinate.ofString("CSV")
     private val encoding = CommonDataEncodingSpec.ofString("UTF-8")
-    private val shape = DataShape.Tabular(HeaderListing.ofUnique(listOf("a", "b")))
+    private val shape = LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("a", "b")))
 
 
     @Test
@@ -63,6 +64,22 @@ class SchemaCacheTest {
 
         assertNull(cache.get(key()))
         assertNull(cache.get(key()))
+    }
+
+
+    @Test
+    fun legacyDiskEntryIsAHarmlessMissAndCanBeReplaced() {
+        val work = WorkUtils.temporary("schema-cache-legacy")
+        val cache = SchemaCache(work)
+        val bundle = cache.bundleKey(key())
+        val shapeFile = work.resolve("${SchemaCache.indexDirName}/$bundle/shape.json")
+        Files.createDirectories(shapeFile.parent)
+        shapeFile.writeText("""{"kind":"tabular","header":["0|a","0|b"]}""")
+
+        assertNull(cache.get(key()))
+        cache.put(key(), shape)
+
+        assertEquals(shape, SchemaCache(work).get(key()))
     }
 
 

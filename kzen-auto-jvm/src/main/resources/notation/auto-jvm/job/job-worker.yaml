@@ -304,6 +304,9 @@ ValueSetFilterWorker:
 # flat part as received (no auto-flatten), so it can promote flat columns into a typed payload
 # (`payload: Amount.number`) or map a typed stream (`payload: payload * 10`). Both lanes evaluate against
 # the INCOMING message — formulas cannot see the new payload, nor each other's outputs.
+# `carry` applies only when `payload` replaces the value: blank/none drops the incoming fields, `all` retains
+# every field (including this Worker's calculated fields), and a map selects source FieldIds with an optional
+# renamed target (`city: ""`, `0|amount: total`).
 FormulaWorker:
   abstract: true
   is: Worker
@@ -313,6 +316,7 @@ FormulaWorker:
   output: ""
   formula: {}
   payload: ""
+  carry: ""
   meta:
     input:
       is: ChannelInput
@@ -328,9 +332,21 @@ FormulaWorker:
     payload:
       is: String
       multiline: true
+    carry:
+      is: FormulaCarrySpec
     selfLocation:
       is: ObjectLocation
       by: Self
+
+FormulaCarrySpec:
+  abstract: true
+  class: tech.kzen.auto.common.objects.document.job.FormulaCarrySpec
+  meta:
+    ref:
+      by: FormulaCarrySpecDefiner
+
+FormulaCarrySpecDefiner:
+  class: tech.kzen.auto.common.objects.document.job.FormulaCarrySpec$Definer
 
 
 # Passthrough analytics Worker: summarizes every record flowing through it (per-column count / numeric stats /

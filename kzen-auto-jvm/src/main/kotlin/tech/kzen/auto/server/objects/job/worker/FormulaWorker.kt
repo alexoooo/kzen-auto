@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.objects.job.worker
 
 import tech.kzen.auto.common.data.schema.HeaderListing
+import tech.kzen.auto.common.objects.document.job.FormulaCarrySpec
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
 import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
@@ -11,6 +12,17 @@ import tech.kzen.auto.server.objects.report.exec.calc.CalculatedColumn
 import tech.kzen.auto.server.objects.report.exec.calc.CalculatedColumnEval
 import tech.kzen.auto.server.objects.report.exec.calc.ColumnValue
 import tech.kzen.auto.server.util.ClassLoaderUtils
+import tech.kzen.auto.server.objects.job.value.CalculatedFieldValue
+import tech.kzen.auto.server.objects.job.value.CarriedField
+import tech.kzen.auto.server.objects.job.value.CarrySelection
+import tech.kzen.auto.server.objects.job.value.FormulaValueTransformer
+import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.auto.server.objects.job.value.JobValueClaim
+import tech.kzen.lib.common.exec.TextExecutionValue
+import tech.kzen.lib.common.exec.data.type.DataType
+import tech.kzen.lib.common.exec.data.type.DataTypePath
+import tech.kzen.lib.common.exec.data.type.FieldId
+import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.reflect.Reflect
@@ -27,7 +39,7 @@ import tech.kzen.lib.common.reflect.Service
  *
  * - **[formula] — flat value formulas**: appends one flat-part field per entry to every message, each an
  *   arbitrary Kotlin expression rendered to text ([ColumnValue.toText]). A payload-lane message
- *   auto-flattens first ([JobMessage.flatView]), so formulas over a scalar stream see a `value` column. The
+ *   projects first, so formulas over a scalar stream see a synthetic `value` column. The
  *   incoming message is mutated in place — the flat record grows the computed fields and the view's header
  *   reference swaps to the augmented one.
  * - **[payload] — the payload transform**: a single expression whose RAW value (no text coercion) REPLACES
@@ -43,22 +55,34 @@ import tech.kzen.lib.common.reflect.Service
  */
 @Reflect
 class FormulaWorker(
-    input: ChannelInput<Any?>,
-    output: ChannelOutput<Any?>,
+    input: ChannelInput<*>,
+    output: ChannelOutput<DataValue>,
 
     private val formula: FormulaSpec,
     private val payload: String,
+    private val carry: FormulaCarrySpec,
     private val selfLocation: ObjectLocation,
 
     @Service private val calculatedColumnEval: CalculatedColumnEval
 ):
     TransformWorker(input, output, selfLocation)
 {
+    companion object {
+        private val valueHeader = HeaderListing.ofUnique(listOf("value"))
+    }
+
     private val classLoader = ClassLoaderUtils.dynamicParentClassLoader()
     private val formulaEntries = formula.formulas.entries.toList()
     private val formulaNames = HeaderListing.ofUnique(formulaEntries.map { it.key })
     private val formulaValues = Array(formulaEntries.size) { "" }
     private val payloadTransform = payload.isNotBlank()
+    private val carrySelection = when {
+        carry.all -> CarrySelection.All()
+        carry.fields.isEmpty() -> CarrySelection.None
+        else -> CarrySelection.Selected(carry.fields.map {
+            CarriedField(parseFieldId(it.source), it.rename?.let(::parseFieldId))
+        })
+    }
 
     // The payload expression's record stand-in for a lane with no flat part (its compiled column scope is
     // empty there, so the record is never read).
@@ -69,51 +93,92 @@ class FormulaWorker(
     // not the auto-flattened view the formulas use.
     private var compiledForHeader: HeaderListing? = null
     private var compiledColumns: List<CalculatedColumn<Any?>> = listOf()
-    private var augmentedHeader: HeaderListing = HeaderListing.empty
     private var compiledPayloadForHeader: HeaderListing? = null
     private var compiledPayload: CalculatedColumn<Any?>? = null
 
     private var computed = 0L
 
 
-    override suspend fun onElement(element: JobMessage, emit: Emitter, control: JobControl) {
-        // The payload expression's column scope is the flat part AS RECEIVED — captured before the formulas'
-        // flatView() below can materialize one from the payload.
-        val receivedFlat = element.flat
-
-        var newPayload: Any? = null
-        if (payloadTransform) {
-            val payloadHeader = receivedFlat?.header ?: HeaderListing.empty
-            if (compiledPayload == null || payloadHeader != compiledPayloadForHeader) {
-                compilePayload(payloadHeader, control)
-            }
-            newPayload = compiledPayload!!.evaluateRaw(
-                element.payload, receivedFlat?.record ?: emptyRecord, payloadHeader)
+    override suspend fun onElement(element: DataValue, emit: Emitter, control: JobControl) {
+        if (!payloadTransform && formulaEntries.isEmpty()) {
+            emit.send(element)
+            return
         }
 
-        if (formulaEntries.isNotEmpty()) {
-            val flat = element.flatView()
-            val header = flat.header
-            if (header != compiledForHeader) {
-                compileFormulas(header, control)
+        val originalPayload = JobDataValues.native(element)
+        val previewProjection = JobDataValues.projection(element)
+        val nativeMetadata = element.contract.nativeByPath[DataTypePath.root]
+        val requiresSyntheticProjection =
+            nativeMetadata != null &&
+                element.access !is FlatFileRecord &&
+                previewProjection.descriptor.columns.any { it.contract.structural !is DataType.Scalar }
+        if (requiresSyntheticProjection) {
+            if (formulaEntries.isNotEmpty() && valueHeader != compiledForHeader) {
+                compileFormulas(valueHeader, control)
             }
-
-            val record = flat.record
-            for (i in compiledColumns.indices) {
-                // Formulas see the ORIGINAL columns and the ORIGINAL payload (values append together below).
-                formulaValues[i] = ColumnValue.toText(
-                    compiledColumns[i].evaluate(element.payload, record, header))
+            if (payloadTransform && (compiledPayload == null || HeaderListing.empty != compiledPayloadForHeader)) {
+                compilePayload(HeaderListing.empty, control)
             }
-            record.addAll(formulaValues)
-            flat.header = augmentedHeader
+            val formulaRecord = FlatFileRecord.of(ColumnValue.toText(originalPayload))
+            val calculated = formulaEntries.indices.map { index ->
+                ColumnValue.toText(compiledColumns[index].evaluate(originalPayload, formulaRecord, valueHeader))
+            }
+            val widened = JobDataValues.nativeRecord(
+                valueHeader.append(formulaNames),
+                FlatFileRecord.of(formulaRecord.toList() + calculated),
+                checkNotNull(originalPayload),
+                nativeMetadata)
+            val replacement = if (payloadTransform) {
+                JobDataValues.lift(compiledPayload!!.evaluateRaw(
+                    originalPayload, emptyRecord, HeaderListing.empty))
+            }
+            else null
+            val output = when {
+                replacement == null -> widened
+                carrySelection == CarrySelection.None -> replacement
+                else -> FormulaValueTransformer.transform(
+                    JobValueClaim(widened, exclusive = true),
+                    calculate = { emptyList() },
+                    replace = { replacement },
+                    carry = carrySelection).value
+            }
+            computed += 1
+            emit.send(output)
+            return
+        }
+        if (formulaEntries.isNotEmpty() && previewProjection.header != compiledForHeader) {
+            compileFormulas(previewProjection.header, control)
+        }
+        val structural = element.contract.structural
+        val projectedPayloadScope = structural is DataType.Record || structural is DataType.Mapping
+        val payloadHeader = if (projectedPayloadScope) previewProjection.header else HeaderListing.empty
+        if (payloadTransform && (compiledPayload == null || payloadHeader != compiledPayloadForHeader)) {
+            compilePayload(payloadHeader, control)
         }
 
-        if (payloadTransform) {
-            element.payload = newPayload
-        }
+        val result = FormulaValueTransformer.transform(
+            JobValueClaim(element, exclusive = true),
+            calculate = { projection ->
+                val header = projection.header
+                val record = JobDataValues.record(projection)
+                formulaEntries.indices.map { index ->
+                    formulaValues[index] = ColumnValue.toText(
+                        compiledColumns[index].evaluate(originalPayload, record, header))
+                    CalculatedFieldValue(
+                        FieldId(formulaNames.values[index].text, formulaNames.values[index].occurrence),
+                        DataType.Scalar(tech.kzen.lib.common.exec.data.type.ScalarKind.Text),
+                        TextExecutionValue(formulaValues[index]))
+                }
+            },
+            replace = if (payloadTransform) {{ projection ->
+                val record = if (projectedPayloadScope) JobDataValues.record(projection) else emptyRecord
+                JobDataValues.lift(compiledPayload!!.evaluateRaw(
+                    originalPayload, record, payloadHeader))
+            }} else null,
+            carry = carrySelection)
+
         computed += 1
-
-        emit.send(element)
+        emit.send(result.value)
     }
 
 
@@ -123,7 +188,7 @@ class FormulaWorker(
         // baked into the generated source).
         val parameters = control.parameters()
         val receiverType = control.payloadType() ?: TypeMetadata.anyNullable
-        val parameterValues = parameters.components.map { control.parameter(it.name.value) }
+        val parameterValues = parameters.definitions.map { control.parameter(it.name.value) }
         compiledColumns = control.runBlockingIo {
             formulaEntries.map { (name, expression) ->
                 calculatedColumnEval.create(
@@ -131,8 +196,19 @@ class FormulaWorker(
             }
         }
         compiledColumns.forEach { it.setParameters(parameterValues) }
-        augmentedHeader = header.append(formulaNames)
         compiledForHeader = header
+    }
+
+
+    private fun parseFieldId(encoded: String): FieldId {
+        val delimiter = encoded.indexOf('|')
+        if (delimiter > 0) {
+            val occurrence = encoded.substring(0, delimiter).toIntOrNull()
+            if (occurrence != null) {
+                return FieldId(encoded.substring(delimiter + 1), occurrence)
+            }
+        }
+        return FieldId(encoded, 0)
     }
 
 
@@ -143,7 +219,7 @@ class FormulaWorker(
             calculatedColumnEval.create(
                 selfLocation.objectPath.name.value, payload, header, receiverType, classLoader, parameters)
         }
-        compiled.setParameters(parameters.components.map { control.parameter(it.name.value) })
+        compiled.setParameters(parameters.definitions.map { control.parameter(it.name.value) })
         compiledPayload = compiled
         compiledPayloadForHeader = header
     }
@@ -154,7 +230,7 @@ class FormulaWorker(
     // expression re-types the lane's payload — inferred by the SAME (cached) compile the runtime will load,
     // where the static scope is known (input columns known; unknown approximates to nullable Any, validated
     // at run time as before). The first expression error becomes this Worker's validation error.
-    override fun payloadFlow(input: WorkerLane, context: WorkerLaneContext): WorkerLaneAttempt {
+    override fun payloadFlow(input: JobLaneDescriptor, context: JobLaneContext): JobLaneAttempt {
         val receiverType = input.payloadType ?: TypeMetadata.anyNullable
 
         // Flat value formulas: compile-check against the auto-flattened consumer view where it is known,
@@ -189,22 +265,22 @@ class FormulaWorker(
             }
 
         if (!payloadTransform) {
-            return WorkerLaneAttempt(WorkerLane(input.payloadType, outputColumns), errorMessage)
+            return JobLaneAttempt(JobLaneDescriptor(input.payloadType, outputColumns), errorMessage)
         }
 
         // An unknown flat part leaves the payload expression's scope unknown too, so it degrades to syntax
         // alone; the resulting payload type is whatever the run infers.
         val payloadColumns = input.flatColumns
-            ?: return WorkerLaneAttempt(
-                WorkerLane(TypeMetadata.anyNullable, outputColumns),
+            ?: return JobLaneAttempt(
+                JobLaneDescriptor(TypeMetadata.anyNullable, outputColumns),
                 errorMessage ?: calculatedColumnEval.validateSyntax(payload))
 
         val payloadError = calculatedColumnEval.validate(
             selfLocation.objectPath.name.value, payload, payloadColumns,
             receiverType, context.classLoader, context.parameters)
         if (payloadError != null) {
-            return WorkerLaneAttempt(
-                WorkerLane(null, outputColumns), errorMessage ?: payloadError)
+            return JobLaneAttempt(
+                JobLaneDescriptor(null, outputColumns), errorMessage ?: payloadError)
         }
 
         val compiled = calculatedColumnEval.create(
@@ -214,7 +290,7 @@ class FormulaWorker(
             ?.let(ExpressionReturnTypeInference::toTypeMetadata)
             ?: TypeMetadata.anyNullable
 
-        return WorkerLaneAttempt(WorkerLane(payloadType, outputColumns), errorMessage)
+        return JobLaneAttempt(JobLaneDescriptor(payloadType, outputColumns), errorMessage)
     }
 
 

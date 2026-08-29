@@ -12,7 +12,7 @@ import tech.kzen.lib.common.exec.engine.Address
 import tech.kzen.lib.common.exec.engine.Node
 import tech.kzen.lib.common.exec.engine.Outcome
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
-import tech.kzen.lib.common.exec.tuple.TupleValue
+import tech.kzen.auto.server.exec.mainBoundaryValue
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
@@ -106,15 +106,14 @@ class ScriptTraceBoundingTest {
 
     //--------------------------------------------------------------------------------------------- display truncation
     @Test
-    fun bigValueDisplayIsTruncatedWhileTheValueItselfIsNot() {
+    fun bigValueSnapshotRejectionIsDiagnosticWhileTheValueItselfIsNot() {
         runScript("test/script/engine/script-display-truncation-test.yaml") { engine, documentPath, outcome ->
             // The value graph is untouched: `Result` reads Big.length and sees the whole 10000 chars.
-            assertEquals(10_000, assertIs<Outcome.Success>(outcome).value.mainComponentValue())
+            assertEquals(10_000, assertIs<Outcome.Success>(outcome).value.mainBoundaryValue())
 
             val display = displayOf(engine, documentPath, "main.steps/Big")
-            val expectedRemaining = 10_000 - TraceDisplay.maxScriptTraceChars
             assertEquals(
-                "x".repeat(TraceDisplay.maxScriptTraceChars) + "… ($expectedRemaining more chars)",
+                "<preview unavailable: Text exceeds maximum length>",
                 display)
             assertTrue(
                 display.length < 10_000,
@@ -221,7 +220,7 @@ class ScriptTraceBoundingTest {
                 context.jobWorkPool,
                 LogicRunExecutionId.random()))
 
-        val engine = RunEngine(scriptLogic, context.objectStableMapper.objectStableId(scriptLocation), TupleValue.empty)
+        val engine = RunEngine(scriptLogic, context.objectStableMapper.objectStableId(scriptLocation))
         try {
             val outcome = runBlocking {
                 engine.resume()

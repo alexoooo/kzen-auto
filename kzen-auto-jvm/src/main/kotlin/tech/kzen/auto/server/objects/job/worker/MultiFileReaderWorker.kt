@@ -6,6 +6,8 @@ import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.exec.data.value.DataValue
+import tech.kzen.auto.server.objects.job.value.JobDataValues
 import java.nio.file.Files
 
 
@@ -19,7 +21,7 @@ import java.nio.file.Files
  * the shared schema. When [header] is false no row is a header — the schema is synthesized positionally
  * (`c0, c1, …`, field-count from the first file's first record, so the strictly-typed downstream stages can
  * still reference columns by name) and every row across every file is data. The same immutable [HeaderListing]
- * reference is shared by every emitted flat-part [JobMessage]. (Degenerate: an empty first file fixes an empty
+ * reference is shared by every emitted flat-backed `DataValue`. (Degenerate: an empty first file fixes an empty
  * schema — documented, mirrors [CsvReaderWorker]'s single-file empty behaviour.)
  *
  * Directory browse / glob discovery is the EDITOR's job (P4i `MultiFileInputEditor`, reusing Report's
@@ -38,7 +40,7 @@ import java.nio.file.Files
  */
 @Reflect
 class MultiFileReaderWorker(
-    output: ChannelOutput<Any?>,
+    output: ChannelOutput<DataValue>,
 
     private val paths: List<String>,
     private val delimiter: String,
@@ -72,7 +74,7 @@ class MultiFileReaderWorker(
 
             // header=false: the first file's first record was read to fix the schema and is itself data.
             pendingFirstRecord?.let {
-                emit.send(JobMessage.ofFlat(headers, it))
+                emit.send(JobDataValues.flat(headers, it))
                 count += 1
                 pendingFirstRecord = null
             }
@@ -80,7 +82,7 @@ class MultiFileReaderWorker(
             while (true) {
                 val record = control.runBlockingIo { reader.readRecord() }
                     ?: break
-                emit.send(JobMessage.ofFlat(headers, record))
+                emit.send(JobDataValues.flat(headers, record))
                 count += 1
             }
 

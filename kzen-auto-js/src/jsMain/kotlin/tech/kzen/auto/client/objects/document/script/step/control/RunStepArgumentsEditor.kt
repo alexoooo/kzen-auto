@@ -34,6 +34,7 @@ import tech.kzen.auto.common.objects.document.flow.FlowConventions
 import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.auto.common.objects.document.job.JobSignatureCapability
 import tech.kzen.auto.common.objects.document.logic.TypeMetadataDefiner
+import tech.kzen.auto.common.objects.document.logic.BindingSignatureDefiner
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.objects.document.script.model.RunStepInstructions
 import tech.kzen.lib.common.model.attribute.AttributeName
@@ -230,9 +231,9 @@ class RunStepArgumentsEditor(
             else if (documentNotation != null && JobConventions.isJob(documentNotation)) {
                 val signature = JobSignatureCapability.signature(
                     clientState.graphStructure(), instructionsObjectLocation)
-                instructionsParameters = signature.inputs.components.map { it.name.value }
-                for (component in signature.inputs.components) {
-                    val metadata = component.type.metadata
+                instructionsParameters = signature.inputs.definitions.map { it.name.value }
+                for (component in signature.inputs.definitions) {
+                    val metadata = BindingSignatureDefiner.metadata(component.contract)
                     newParameterTypes[component.name.value] =
                         LogicTypeOptions.simpleLabel(metadata.className.asString(), metadata.nullable)
                 }

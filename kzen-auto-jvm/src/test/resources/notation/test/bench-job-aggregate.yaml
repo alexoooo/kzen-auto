@@ -1,0 +1,21 @@
+main:
+  is: Job
+
+main.workers/reader:
+  is: CsvReaderWorker
+  path: build/bench/agg/input.csv
+
+main.workers/pivot:
+  is: PivotWorker
+  pivot:
+    rows:
+      - "0|station"
+    values:
+      "0|value":
+        - Min
+        - Average
+        - Max
+
+main.workers/writer:
+  is: CsvWriterWorker
+  path: build/bench/agg/job-output.csv

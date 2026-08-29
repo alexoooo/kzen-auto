@@ -5,6 +5,8 @@ import tech.kzen.auto.common.objects.document.report.output.OutputPreview
 import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.api.ChannelServer
 import tech.kzen.auto.common.paradigm.job.control.JobControl
+import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.auto.server.objects.report.exec.output.flat.IndexedCsvTable
 import tech.kzen.auto.server.util.WorkUtils
 import tech.kzen.lib.common.exec.ExecutionRequest
@@ -23,7 +25,7 @@ import java.nio.file.Path
  * Report's disruptor pipeline) and answers on-demand preview-slice queries (`offset` / `limit`) against the
  * live table in [onQuery]. The heavy-duty counterpart to [PreviewWorker]: where Preview keeps a bounded
  * in-memory tail, Explore indexes the full stream to disk so the user can page through all of it. Each
- * message's flat part is indexed ([JobMessage.flatView]), so a scalar stream browses as a `value` column.
+ * value's column projection is indexed, so a scalar stream browses as a `value` column.
  * Threading (single-threaded work/serve interleave) and lifecycle follow the base contract — see [WorkerBase]
  * and [SinkWorker].
  *
@@ -42,7 +44,7 @@ import java.nio.file.Path
  */
 @Reflect
 class ExploreWorker(
-    input: ChannelInput<Any?>,
+    input: ChannelInput<*>,
     serve: ChannelServer<Any?, Any?>,
     selfLocation: ObjectLocation
 ):
@@ -77,15 +79,15 @@ class ExploreWorker(
     }
 
 
-    override suspend fun onElement(element: JobMessage, control: JobControl) {
-        val flat = element.flatView()
-        val header = flat.header
+    override suspend fun onElement(element: DataValue, control: JobControl) {
+        val projection = JobDataValues.projection(element)
+        val header = projection.header
         val activeTable = table
             ?: control
                 .runBlockingIo { IndexedCsvTable(header, outputDir!!) }
                 .also { table = it }
 
-        activeTable.add(flat.record, header)
+        activeTable.add(JobDataValues.record(projection), header)
         count += 1
     }
 

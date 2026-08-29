@@ -3,17 +3,21 @@ package tech.kzen.auto.server.data
 import tech.kzen.auto.common.data.api.DataCursor
 import tech.kzen.auto.common.data.schema.DataShape
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
+import tech.kzen.auto.plugin.model.record.FlatRecordHeader
 import tech.kzen.auto.server.objects.plugin.model.ClassLoaderHandle
+import tech.kzen.lib.common.exec.data.value.DataNode
+import tech.kzen.lib.common.exec.data.value.DataValue
 import java.util.ArrayDeque
 import java.util.NoSuchElementException
 
 
 class FileDataCursor(
     private val inputChain: ReportInputChain<*>,
-    override val shape: DataShape.Tabular,
+    override val shape: DataShape,
     private val classLoaderHandle: ClassLoaderHandle
 ): DataCursor {
-    private val buffered = ArrayDeque<FlatFileRecord>()
+    private val header = FlatRecordHeader(shape.itemType)
+    private val buffered = ArrayDeque<DataValue>()
     private var endOfInput = false
     private var closed = false
 
@@ -24,7 +28,7 @@ class FileDataCursor(
     }
 
 
-    override fun next(): FlatFileRecord {
+    override fun next(): DataValue {
         fill()
         if (buffered.isEmpty()) {
             throw NoSuchElementException()
@@ -38,7 +42,9 @@ class FileDataCursor(
         while (buffered.isEmpty() && !endOfInput) {
             val hasMore = inputChain.poll { event ->
                 if (!event.skip) {
-                    buffered.addLast(event.row.prototype())
+                    val record = event.row.prototype()
+                    record.attachHeader(header)
+                    buffered.addLast(DataValue(record, DataNode(0)))
                 }
             }
             if (!hasMore) {

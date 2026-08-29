@@ -9,7 +9,7 @@ import tech.kzen.auto.server.exec.script.test.ScriptStepTestModule
 import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.lib.common.exec.engine.Outcome
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
-import tech.kzen.lib.common.exec.tuple.TupleValue
+import tech.kzen.auto.server.exec.mainBoundaryValue
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
@@ -67,7 +67,7 @@ class ContextStepRuntimeTest {
 
         assertEquals(
             "ambient value",
-            assertIs<Outcome.Success>(outcome).value.mainComponentValue(),
+            assertIs<Outcome.Success>(outcome).value.mainBoundaryValue(),
             "Bind publishes into ambient scope, Use reads it into the value graph, and a Formula consumes " +
                     "that by reference — the three-step composition the generic steps exist to allow")
     }
@@ -115,7 +115,7 @@ class ContextStepRuntimeTest {
 
         assertEquals(
             "beta",
-            assertIs<Outcome.Success>(outcome).value.mainComponentValue(),
+            assertIs<Outcome.Success>(outcome).value.mainBoundaryValue(),
             "`a` and `b` are independent registrations within one family, addressed by the steps' own " +
                     "qualifier attribute rather than by the declaration's")
     }
@@ -140,7 +140,7 @@ class ContextStepRuntimeTest {
             graphDefinition,
             compilerServices())
 
-        val engine = RunEngine(logic, context.objectStableMapper.objectStableId(scriptLocation), TupleValue.empty)
+        val engine = RunEngine(logic, context.objectStableMapper.objectStableId(scriptLocation))
         return try {
             runBlocking {
                 engine.resume()

@@ -1,26 +1,24 @@
 package tech.kzen.auto.server.exec.job
 
-import tech.kzen.lib.common.exec.tuple.TupleComponentName
-import tech.kzen.lib.common.exec.tuple.TupleComponentValue
-import tech.kzen.lib.common.exec.tuple.TupleValue
+import tech.kzen.lib.common.exec.data.binding.BindingName
+import tech.kzen.lib.common.exec.data.binding.BindingSchema
+import tech.kzen.lib.common.exec.data.binding.DataBindings
+import tech.kzen.lib.common.exec.data.binding.ProducedBindingsBuilder
+import tech.kzen.lib.common.exec.data.value.DataValue
 
 
 /**
  * Aggregates the components Job Workers yield ([tech.kzen.auto.common.paradigm.job.control.JobControl.yieldResult])
- * into the run's output [TupleValue] — owned per [JobRun] (a migrate rebuilds it empty; carried sinks re-yield at
+ * into the run's output [DataBindings] — owned per [JobRun] (a migrate rebuilds it empty; carried sinks re-yield at
  * their onComplete, which is why yield is last-write-wins). Synchronized: Workers yield concurrently from their own
- * engine nodes. First-yield order is the tuple's component order (a same-name overwrite keeps its position).
+ * engine nodes. First-yield order is the binding order (a same-name overwrite keeps its position).
  */
-class JobResultCollector {
-    private val components = LinkedHashMap<TupleComponentName, Any?>()
+class JobResultCollector(schema: BindingSchema) {
+    private val produced = ProducedBindingsBuilder(schema)
 
-    @Synchronized
-    fun yieldResult(component: TupleComponentName, value: Any?) {
-        components[component] = value
+    fun yieldResult(component: BindingName, value: DataValue) {
+        produced.set(component, value)
     }
 
-    @Synchronized
-    fun toTupleValue(): TupleValue {
-        return TupleValue(components.map { TupleComponentValue(it.key, it.value) })
-    }
+    fun settle(): DataBindings = produced.settle()
 }

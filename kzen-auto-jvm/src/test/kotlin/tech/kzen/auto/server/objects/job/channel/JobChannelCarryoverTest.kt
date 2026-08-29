@@ -5,6 +5,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
+import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.lib.common.exec.data.value.DataValue
 import kotlin.test.assertEquals
 
 
@@ -21,8 +23,8 @@ import kotlin.test.assertEquals
  * the full channel — so "channel full + one sender parked mid-flush" is reached with no wall-clock wait.
  */
 class JobChannelCarryoverTest {
-    private suspend fun ChannelOutput<Any?>.emit(element: Any?) {
-        send(element)
+    private suspend fun ChannelOutput<DataValue>.emit(element: Any?) {
+        send(JobDataValues.lift(element))
         flush()
     }
 
@@ -42,7 +44,9 @@ class JobChannelCarryoverTest {
 
         // Delivery order: buffered elements (FIFO) first, then the parked-mid-flush element (it would enter the
         // channel last), each exactly once.
-        assertEquals(listOf<Any?>("a", "b", "c"), channel.drainBuffered())
+        assertEquals(
+            listOf<Any?>("a", "b", "c"),
+            channel.drainBuffered().map(JobDataValues::boundary))
 
         parkedSend.cancel()
     }
@@ -51,7 +55,7 @@ class JobChannelCarryoverTest {
     @Test
     fun preloadDeliversCarryoverBeforeTheLiveStream() = runBlocking {
         val rebuilt = JobChannel(capacity = 4, batchSize = 1)
-        rebuilt.preload(listOf("a", "b", "c"))
+        rebuilt.preload(listOf("a", "b", "c").map(JobDataValues::lift))
 
         val producer = rebuilt.newProducer()
         producer.emit("d")
@@ -60,7 +64,7 @@ class JobChannelCarryoverTest {
         val received = mutableListOf<Any?>()
         val iterator = rebuilt.input.iterator()
         while (iterator.hasNext()) {
-            received.add(iterator.next())
+            received.add(JobDataValues.boundary(iterator.next()))
         }
 
         // The carryover from the torn-down channel is delivered first, then the live stream — so the rebuilt

@@ -8,6 +8,7 @@ import org.junit.Test
 import tech.kzen.auto.common.data.file.FileSelectionEntry
 import tech.kzen.auto.common.data.model.DataUnit
 import tech.kzen.auto.common.data.schema.DataShape
+import tech.kzen.auto.common.data.schema.LegacyDataShapeBridge
 import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
@@ -22,7 +23,11 @@ import tech.kzen.auto.server.data.FlatDataLocation
 import tech.kzen.auto.server.data.SchemaCache
 import tech.kzen.auto.server.objects.datasource.FileDataSource
 import tech.kzen.auto.server.objects.job.worker.CsvReaderWorker
-import tech.kzen.auto.server.objects.job.worker.JobMessage
+import tech.kzen.auto.server.objects.job.worker.testJobValue
+import tech.kzen.auto.server.objects.job.worker.testProjection
+import tech.kzen.auto.server.objects.job.worker.testRecord
+import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.auto.server.objects.job.worker.MultiFileReaderWorker
 import tech.kzen.auto.server.objects.job.worker.definition.WorkerDefinitionResolution
 import tech.kzen.auto.server.objects.report.exec.input.parse.csv.CsvReportDefiner
@@ -68,11 +73,11 @@ class ReadWorkerFileIntegrationTest {
                         "beta,\"line1\nline2\"\r\ngamma,\"quote \"\"inside\"\"\"\r\n")
             }
 
-            val legacy = mutableListOf<JobMessage>()
+            val legacy = mutableListOf<DataValue>()
             CsvReaderWorker(capturing(legacy), csv.toString(), ",", true, workerLocation)
                 .run(CountingControl())
 
-            val modern = mutableListOf<JobMessage>()
+            val modern = mutableListOf<DataValue>()
             readWorker(source(listOf(csv)), capturing(modern)).run(CountingControl())
 
             assertEquals(records(legacy), records(modern))
@@ -89,13 +94,13 @@ class ReadWorkerFileIntegrationTest {
             val second = directory.resolve("b.csv")
                 .also { it.writeText("city,amount\nOdesa,30\nDnipro,40\n") }
 
-            val legacy = mutableListOf<JobMessage>()
+            val legacy = mutableListOf<DataValue>()
             MultiFileReaderWorker(
                 capturing(legacy), listOf(first.toString(), second.toString()),
                 ",", true, workerLocation)
                 .run(CountingControl())
 
-            val modern = mutableListOf<JobMessage>()
+            val modern = mutableListOf<DataValue>()
             val control = CountingControl()
             readWorker(source(listOf(first, second)), capturing(modern)).run(control)
 
@@ -111,7 +116,7 @@ class ReadWorkerFileIntegrationTest {
         withTempDir { directory ->
             val first = directory.resolve("a.csv").also { it.writeText("left,shared\n1,A\n") }
             val second = directory.resolve("b.csv").also { it.writeText("shared,right\nB,2\n") }
-            val messages = mutableListOf<JobMessage>()
+            val messages = mutableListOf<DataValue>()
 
             readWorker(source(listOf(first, second)), capturing(messages)).run(CountingControl())
 
@@ -119,8 +124,8 @@ class ReadWorkerFileIntegrationTest {
             assertEquals(listOf(expected, expected), headers(messages))
             assertEquals(
                 listOf(
-                    listOf("1", "A", DataShape.missingCellValue),
-                    listOf(DataShape.missingCellValue, "B", "2")),
+                    listOf("1", "A", LegacyDataShapeBridge.missingCellValue),
+                    listOf(LegacyDataShapeBridge.missingCellValue, "B", "2")),
                 records(messages))
 
             val reportSuperset = DatasetInfo(listOf(
@@ -156,15 +161,15 @@ class ReadWorkerFileIntegrationTest {
         withTempDir { directory ->
             val file = directory.resolve("2026-08-sales.csv")
                 .also { it.writeText("amount\n10\n") }
-            val messages = mutableListOf<JobMessage>()
+            val messages = mutableListOf<DataValue>()
             readWorker(
                 source(listOf(file), "(?<year>\\d{4})-(?<month>\\d{2})"),
                 capturing(messages), ReadWorker.attributesColumns)
                 .run(CountingControl())
 
-            val flat = messages.single().flat!!
-            assertEquals(listOf("year", "month", "amount"), flat.header.values.map { it.text })
-            assertEquals(listOf("2026", "08", "10"), flat.record.toList())
+            val value = messages.single()
+            assertEquals(listOf("year", "month", "amount"), testProjection(value).header.values.map { it.text })
+            assertEquals(listOf("2026", "08", "10"), testRecord(value).toList())
         }
     }
 
@@ -175,7 +180,7 @@ class ReadWorkerFileIntegrationTest {
             val files = listOf("c.csv", "a.csv", "b.csv").mapIndexed { index, name ->
                 directory.resolve(name).also { it.writeText("value\n$index\n") }
             }
-            val messages = mutableListOf<JobMessage>()
+            val messages = mutableListOf<DataValue>()
             readWorker(
                 source(files), capturing(messages), emit = ReadWorker.emitUnits)
                 .run(CountingControl())
@@ -184,7 +189,7 @@ class ReadWorkerFileIntegrationTest {
                 files.sorted().map {
                     DataLocation.of(it.toAbsolutePath().normalize().toString()).asString()
                 },
-                messages.map { (it.payload as DataUnit).parts.single().ref.id })
+                messages.map { (JobDataValues.boundary(it) as DataUnit).parts.single().ref.id })
         }
     }
 
@@ -195,7 +200,7 @@ class ReadWorkerFileIntegrationTest {
             val original = directory.resolve("a.csv")
                 .also { it.writeText("value\none\ntwo\nthree\n") }
             val source = directorySource(directory)
-            val firstMessages = mutableListOf<JobMessage>()
+            val firstMessages = mutableListOf<DataValue>()
             val parked = CompletableDeferred<Unit>()
             val release = CompletableDeferred<Unit>()
             val first = readWorker(source, capturing(firstMessages, batchSize = 1))
@@ -210,7 +215,7 @@ class ReadWorkerFileIntegrationTest {
                 Files.delete(original)
                 directory.resolve("b.csv").writeText("value\nnew-file\n")
 
-                val resumedMessages = mutableListOf<JobMessage>()
+                val resumedMessages = mutableListOf<DataValue>()
                 val resumed = readWorker(source, capturing(resumedMessages, batchSize = 1))
                 resumed.loadMigrationState(captured)
                 resumed.run(CountingControl())
@@ -259,13 +264,13 @@ class ReadWorkerFileIntegrationTest {
     }
 
 
-    private fun records(messages: List<JobMessage>): List<List<String>> {
-        return messages.map { it.flat!!.record.toList() }
+    private fun records(messages: List<DataValue>): List<List<String>> {
+        return messages.map { testRecord(it).toList() }
     }
 
 
-    private fun headers(messages: List<JobMessage>): List<HeaderListing> {
-        return messages.map { it.flat!!.header }
+    private fun headers(messages: List<DataValue>): List<HeaderListing> {
+        return messages.map { testProjection(it).header }
     }
 
 
@@ -279,12 +284,12 @@ class ReadWorkerFileIntegrationTest {
 
 
     private fun capturing(
-        sink: MutableList<JobMessage>,
+        sink: MutableList<DataValue>,
         batchSize: Int = 1024
     ): ChannelOutput<Any?> {
         return object: ChannelOutput<Any?> {
             override suspend fun send(element: Any?) {
-                sink.add(element as JobMessage)
+                sink.add(testJobValue(element))
             }
             override suspend fun flush() {}
             override fun batchSize(): Int = batchSize

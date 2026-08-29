@@ -18,6 +18,7 @@ import tech.kzen.auto.common.paradigm.flow.model.structure.FlowMatrix
 import tech.kzen.auto.common.paradigm.flow.util.FlowUtils
 import tech.kzen.auto.common.util.TraceDisplay
 import tech.kzen.auto.server.exec.ContextCallSite
+import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.NullExecutionValue
 import tech.kzen.lib.common.exec.engine.Address
@@ -25,9 +26,18 @@ import tech.kzen.lib.common.exec.engine.Execution
 import tech.kzen.lib.common.exec.engine.LogicFailure
 import tech.kzen.lib.common.exec.engine.context.InitialBinding
 import tech.kzen.lib.common.exec.engine.restoredAs
-import tech.kzen.lib.common.exec.tuple.TupleComponentName
-import tech.kzen.lib.common.exec.tuple.TupleComponentValue
-import tech.kzen.lib.common.exec.tuple.TupleValue
+import tech.kzen.lib.common.exec.data.binding.BindingName
+import tech.kzen.lib.common.exec.data.binding.BindingSchema
+import tech.kzen.lib.common.exec.data.binding.BindingState
+import tech.kzen.lib.common.exec.data.binding.DataBindings
+import tech.kzen.lib.common.exec.data.binding.ProducedBindingsBuilder
+import tech.kzen.lib.common.exec.data.value.DataSnapshot
+import tech.kzen.lib.common.exec.data.value.DataValue
+import tech.kzen.lib.common.exec.data.value.SnapshotPolicy
+import tech.kzen.lib.common.exec.data.value.SnapshotResult
+import tech.kzen.lib.common.exec.data.type.DataContract
+import tech.kzen.lib.common.exec.data.type.DefaultNativeTypeResolver
+import tech.kzen.lib.common.exec.data.type.TypeAcceptance
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.instance.GraphInstance
@@ -49,7 +59,7 @@ import tech.kzen.lib.platform.collect.toPersistentMap
  *
  * Vertices are dispatched by the capability interfaces they implement ([FlowLogicHost], [FlowRunInput],
  * [FlowRunOutput]), never by concrete class, so a third-party vertex can seed from run arguments, host a child
- * Logic, or contribute to the result tuple without any edit here.
+ * Logic, or contribute to the result bindings without any edit here.
  *
  * Per vertex: inputs are populated from upstream messages, batch/stream output is drained across iterations, a
  * loop iteration is cleared to re-run downstream, and a [VisualVertexModel] is emitted with [Execution.emit] at
@@ -70,6 +80,7 @@ class FlowRun(
     private val documentPath: DocumentPath,
     private val graphDefinition: GraphDefinition,
     private val childLogics: Map<ObjectStableId, FlowChildLogic>,
+    private val outputSchema: BindingSchema,
     private val objectStableMapper: ObjectStableMapper,
     private val graphEnvironment: GraphEnvironment
 ) {
@@ -87,7 +98,7 @@ class FlowRun(
     //-----------------------------------------------------------------------------------------------------------------
     // Per-vertex runtime, keyed by stable id so it survives renames; output vertices' harvested values.
     private val activeVertices = mutableMapOf<ObjectStableId, ActiveVertexModel>()
-    private val outputAccumulator = mutableMapOf<TupleComponentName, Any?>()
+    private val outputAccumulator = mutableMapOf<BindingName, DataValue?>()
 
     // Per-vertex call-site context declarations, read from notation once per location — a host vertex inside a
     // stream/batch loop is re-visited every iteration. Confined to the run coroutine.
@@ -95,6 +106,7 @@ class FlowRun(
 
     // Wall-clock nanos of each vertex's last emitted trace, for throttling hot free-running loops.
     private val lastTraceNanos = mutableMapOf<ObjectStableId, Long>()
+    private val nativeTypeResolver = DefaultNativeTypeResolver()
 
     // The run's single graph instance — built once in run() and reused for every vertex execution and
     // retrace (a live edit builds a fresh FlowRun, so it stays valid for this run's whole lifetime).
@@ -102,7 +114,7 @@ class FlowRun(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun run(): TupleValue {
+    suspend fun run(): DataBindings {
         // Live-edit migration (logic-spec §5): adopt the predecessor run's DAG progress (read once at start) so
         // the walker continues from the carried frontier, and register the capture so a later edit carries this
         // run's progress forward. Null on a fresh run -> nothing to adopt, the DAG runs from the start.
@@ -138,7 +150,7 @@ class FlowRun(
                     // Run complete (nothing routable, no stream/batch remainder): clear lingering in-flight
                     // messages — keeping displayed state — and return the harvested output.
                     clearMessagesAtEnd(matrix)
-                    return outputTuple()
+                    return outputBindings()
                 }
 
                 // A source still has buffered items (stream/batch): start the next iteration, then re-select.
@@ -146,7 +158,7 @@ class FlowRun(
                 next = FlowUtils.next(matrix, dag, snapshotVisual(matrix))
                 if (next == null) {
                     clearMessagesAtEnd(matrix)
-                    return outputTuple()
+                    return outputBindings()
                 }
             }
 
@@ -193,7 +205,7 @@ class FlowRun(
             traceVertex(nextStableId, instance, running = false, force = pausedOrStepping || clearedError)
 
             if (reference is FlowRunOutput) {
-                outputAccumulator[reference.tupleComponentName] = activeVertices[nextStableId]?.message
+                outputAccumulator[reference.bindingName] = activeVertices[nextStableId]?.message
             }
         }
     }
@@ -236,7 +248,17 @@ class FlowRun(
                 initialBindings = callSiteBindings(vertexLocation))
         }
 
-        activeVertexModel.message = result.mainComponentValue()
+        val outputContract = (instance.constructorAttributes[FlowUtils.mainOutputAttributeName]
+                as? MutableFlowOutput<*>)?.contract
+            ?: DataContract(tech.kzen.lib.common.exec.data.type.DataType.Dynamic(nullable = true))
+        val mainName = BindingName("main")
+        activeVertexModel.message = if (result.schema.find(mainName) == null) {
+            JobDataValues.lift(null, outputContract)
+        }
+        else when (val main = result[mainName]) {
+            BindingState.Unbound -> JobDataValues.lift(null, outputContract)
+            is BindingState.Bound -> main.value
+        }
         activeVertexModel.epoch++
     }
 
@@ -268,37 +290,42 @@ class FlowRun(
         childLogic: FlowChildLogic,
         vertexLocation: ObjectLocation,
         matrix: FlowMatrix
-    ): TupleValue {
-        val parameterNames = childLogic.parameterNames
+    ): DataBindings {
+        val parameterDefinitions = childLogic.inputSchema.definitions
 
         val positional = wiredInputMessages(vertexLocation, matrix)
-            .take(parameterNames.size)
-            .mapIndexed { index, message -> TupleComponentValue(parameterNames[index], message) }
+            .take(parameterDefinitions.size)
+            .mapIndexed { index, message ->
+                val definition = parameterDefinitions[index]
+                definition.name to JobDataValues.lift(
+                    JobDataValues.boundary(message), definition.contract)
+            }
 
         val literals = host.arguments.map { (name, literal) ->
-            TupleComponentValue(TupleComponentName(name), literal)
+            val definition = childLogic.inputSchema[BindingName(name)]
+            definition.name to JobDataValues.lift(literal, definition.contract)
         }
 
-        return TupleValue(positional + literals)
+        return DataBindings.bind(childLogic.inputSchema, positional + literals)
     }
 
 
     // Each wired input's upstream message, in the vertex's declared input order — an input with no upstream is
     // skipped rather than contributing a null, so positional binding counts only what is actually connected.
-    private fun wiredInputMessages(vertexLocation: ObjectLocation, matrix: FlowMatrix): List<Any?> {
+    private fun wiredInputMessages(vertexLocation: ObjectLocation, matrix: FlowMatrix): List<DataValue> {
         val vertexDescriptor = matrix.verticesByLocation[vertexLocation]
             ?: return listOf()
 
         return vertexDescriptor
             .inputNames
             .mapNotNull { matrix.traceVertexBackFrom(vertexDescriptor, it) }
-            .map { activeVertices[stableId(it.objectLocation)]?.message }
+            .mapNotNull { activeVertices[stableId(it.objectLocation)]?.message }
     }
 
 
     // The single upstream input message for a sink vertex (its sole wired input); logic hosts bind via
     // wiredInputMessages instead. Null when nothing is wired / no message has arrived yet.
-    private fun singleInputMessage(vertexLocation: ObjectLocation, matrix: FlowMatrix): Any? {
+    private fun singleInputMessage(vertexLocation: ObjectLocation, matrix: FlowMatrix): DataValue? {
         val vertexDescriptor = matrix.verticesByLocation[vertexLocation]
             ?: return null
         val inputAttribute = vertexDescriptor.inputNames.firstOrNull()
@@ -329,13 +356,17 @@ class FlowRun(
 
         // Input vertices have no upstream; their message is the named run argument.
         if (reference is FlowRunInput) {
-            activeVertexModel.message = execution.inputs.find(reference.tupleComponentName)
+            activeVertexModel.message = when (
+                val input = execution.inputs[reference.bindingName]) {
+                BindingState.Unbound -> null
+                is BindingState.Bound -> input.value
+            }
             activeVertexModel.epoch++
             return
         }
 
         // Output (sink) vertices have no output channel: capture the single upstream input as this vertex's
-        // message, which the run loop then harvests into the result tuple.
+        // message, which the run loop then harvests into the result bindings.
         if (reference is FlowRunOutput) {
             activeVertexModel.message = singleInputMessage(vertexLocation, matrix)
             activeVertexModel.epoch++
@@ -377,23 +408,39 @@ class FlowRun(
             }
 
             if (output.bufferHasMultiple()) {
-                output.consumeAndClear {
+                output.consumeAndClear { payload ->
+                    val value = edgeValue(output.contract, payload)
                     if (activeVertexModel.message == null) {
-                        activeVertexModel.message = it
+                        activeVertexModel.message = value
                     }
                     else {
-                        activeVertexModel.remainingBatch.add(it!!)
+                        activeVertexModel.remainingBatch.add(value)
                     }
                 }
             }
             else {
-                activeVertexModel.message = output.getAndClear()
+                activeVertexModel.message = output.getAndClear()?.let {
+                    edgeValue(output.contract, it)
+                }
             }
             activeVertexModel.streamHasNext = output.streamHasNext()
         }
 
         activeVertexModel.state = nextState
         activeVertexModel.epoch++
+    }
+
+
+    private fun edgeValue(expected: DataContract, payload: Any?): DataValue {
+        if (payload is DataValue) {
+            when (val acceptance = tech.kzen.lib.common.exec.data.type.DataTypeAlgebra.isAssignable(
+                expected.structural, payload.type)) {
+                TypeAcceptance.Accepted -> return payload
+                is TypeAcceptance.Rejected -> throw LogicFailure(
+                    "Flow output is incompatible: ${acceptance.problem.message}")
+            }
+        }
+        return JobDataValues.lift(payload, expected)
     }
 
 
@@ -421,7 +468,8 @@ class FlowRun(
 
             val message = activeVertices[stableId(sourceVertex.objectLocation)]?.message
             if (message != null) {
-                input.set(message)
+                validatePort(input.contract, message, instance.reference::class.java.classLoader, inputAttribute.value)
+                input.set(message, JobDataValues.boundary(message))
             }
             else {
                 input.clear()
@@ -432,6 +480,21 @@ class FlowRun(
 
         check(populatedInputCount > 0) {
             "Vertex must receive at least one input: $vertexLocation"
+        }
+    }
+
+
+    private fun validatePort(
+        expected: DataContract,
+        actual: DataValue,
+        owner: ClassLoader,
+        label: String
+    ) {
+        val resolved = nativeTypeResolver.resolve(expected, owner)
+        when (val acceptance = nativeTypeResolver.isAssignable(resolved, actual)) {
+            TypeAcceptance.Accepted -> {}
+            is TypeAcceptance.Rejected -> throw LogicFailure(
+                "Flow input '$label' is incompatible: ${acceptance.problem.message}")
         }
     }
 
@@ -634,12 +697,11 @@ class FlowRun(
         val messageValue = model.message?.let { message ->
             try {
                 @Suppress("UNCHECKED_CAST")
-                (instance.reference as FlowVertex<Any?>).inspectMessage(message)
-                    ?: ExecutionValue.ofArbitrary(message)
-                    ?: truncatedToString(message)
+                (instance.reference as FlowVertex<Any?>).inspectMessage(JobDataValues.boundary(message) ?: message)
+                    ?: snapshotMessage(message)
             }
             catch (e: Exception) {
-                truncatedToString(message)
+                snapshotMessage(message)
             }
         }
 
@@ -665,9 +727,30 @@ class FlowRun(
     }
 
 
-    private fun outputTuple(): TupleValue {
-        return TupleValue(
-            outputAccumulator.map { TupleComponentValue(it.key, it.value) })
+    private fun snapshotMessage(value: DataValue): ExecutionValue {
+        return when (val snapshot = DataSnapshot.capture(value, SnapshotPolicy(
+            maximumDepth = 16,
+            maximumElements = 256,
+            maximumTextLength = TraceDisplay.maxFlowTraceChars,
+            maximumBinaryBytes = TraceDisplay.maxFlowTraceChars,
+            maximumDurationMillis = 100))) {
+            is SnapshotResult.Complete -> snapshot.snapshot.value
+            SnapshotResult.Redacted -> ExecutionValue.of("<redacted>")
+            is SnapshotResult.Rejected -> ExecutionValue.of(
+                "<preview unavailable: ${snapshot.problems.firstOrNull()?.message ?: "rejected"}>")
+        }
+    }
+
+
+    private fun outputBindings(): DataBindings {
+        val produced = ProducedBindingsBuilder(outputSchema)
+        for ((name, value) in outputAccumulator) {
+            val definition = outputSchema[name]
+            produced.set(
+                definition.name,
+                value ?: JobDataValues.lift(null, definition.contract))
+        }
+        return produced.settle()
     }
 
 

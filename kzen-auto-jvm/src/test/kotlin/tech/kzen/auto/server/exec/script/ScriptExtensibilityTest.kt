@@ -9,7 +9,7 @@ import tech.kzen.auto.server.exec.script.test.ScriptStepTestModule
 import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.lib.common.exec.engine.Outcome
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
-import tech.kzen.lib.common.exec.tuple.TupleValue
+import tech.kzen.auto.server.exec.mainBoundaryValue
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
@@ -67,7 +67,7 @@ class ScriptExtensibilityTest {
     @Test
     fun thirdPartyStepRunsWithNoCompilerChange() {
         val outcome = runScript("test/script/engine/script-extensibility-test.yaml")
-        assertEquals("HELLO!!!", assertIs<Outcome.Success>(outcome).value.mainComponentValue())
+        assertEquals("HELLO!!!", assertIs<Outcome.Success>(outcome).value.mainBoundaryValue())
     }
 
 
@@ -164,7 +164,7 @@ class ScriptExtensibilityTest {
             scriptLocation, graphNotation, graphDefinition, compilerServices())
 
         val engine = RunEngine(
-            compile(), context.objectStableMapper.objectStableId(scriptLocation), TupleValue.empty)
+            compile(), context.objectStableMapper.objectStableId(scriptLocation))
         return try {
             repeat(stepsToBarrier) {
                 engine.step()
@@ -182,7 +182,7 @@ class ScriptExtensibilityTest {
     }
 
 
-    private fun runScript(documentPathString: String, inputs: TupleValue = TupleValue.empty): Outcome {
+    private fun runScript(documentPathString: String): Outcome {
         ScriptStepTestModule.register()
         ResourceDisposalLog.reset()
 
@@ -200,7 +200,7 @@ class ScriptExtensibilityTest {
             graphDefinition,
             compilerServices())
 
-        val engine = RunEngine(logic, context.objectStableMapper.objectStableId(scriptLocation), inputs)
+        val engine = RunEngine(logic, context.objectStableMapper.objectStableId(scriptLocation))
         return try {
             runBlocking {
                 engine.resume()

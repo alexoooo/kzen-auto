@@ -11,7 +11,6 @@ import tech.kzen.auto.server.objects.script.step.eval.StepExpressionSupport
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.auto.server.util.ClassLoaderUtils
 import tech.kzen.lib.common.exec.logic.model.LogicType
-import tech.kzen.lib.common.exec.tuple.TupleDefinition
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -207,8 +206,7 @@ class IfStep(
         // joinBranchTypes is associative under its own semantics (Unit dominates; equal shape ORs nullability;
         // otherwise Any), so it folds over any number of terminals. Never empty: the else terminal is always
         // contributed, even for a hand-edited zero-branch If.
-        return ScriptStepDefinition.of(
-            TupleDefinition.ofMain(LogicType(terminalTypes.reduce(::joinBranchTypes))))
+        return ScriptStepDefinition.ofMain(terminalTypes.reduce(::joinBranchTypes))
     }
 
 

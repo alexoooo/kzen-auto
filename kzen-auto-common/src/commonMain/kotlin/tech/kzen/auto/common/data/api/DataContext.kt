@@ -1,6 +1,6 @@
 package tech.kzen.auto.common.data.api
 
-import tech.kzen.lib.common.exec.tuple.TupleValue
+import tech.kzen.lib.common.exec.data.binding.DataBindings
 import tech.kzen.lib.common.model.location.ObjectLocation
 
 
@@ -12,7 +12,7 @@ interface DataContext {
     fun argument(name: String): Any?
 
 
-    suspend fun host(instructions: ObjectLocation, arguments: TupleValue): TupleValue {
+    suspend fun host(instructions: ObjectLocation, arguments: DataBindings): DataBindings {
         throw UnsupportedOperationException("Hosting data-source logic requires an active run")
     }
 

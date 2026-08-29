@@ -1,15 +1,18 @@
 package tech.kzen.auto.server.exec.job
 
 import tech.kzen.auto.common.paradigm.job.control.JobControl
+import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.ListExecutionValue
 import tech.kzen.lib.common.exec.MapExecutionValue
 import tech.kzen.lib.common.exec.engine.Address
 import tech.kzen.lib.common.exec.engine.Execution
-import tech.kzen.lib.common.exec.tuple.TupleComponentName
-import tech.kzen.lib.common.exec.tuple.TupleComponentValue
-import tech.kzen.lib.common.exec.tuple.TupleDefinition
-import tech.kzen.lib.common.exec.tuple.TupleValue
+import tech.kzen.lib.common.exec.data.binding.BindingName
+import tech.kzen.lib.common.exec.data.binding.BindingSchema
+import tech.kzen.lib.common.exec.data.binding.BindingState
+import tech.kzen.lib.common.exec.data.binding.DataBindings
+import tech.kzen.lib.common.exec.data.value.DataValue
+import tech.kzen.lib.common.exec.engine.Logic
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
@@ -46,9 +49,9 @@ class EngineJobControl(
     private val objectStableMapper: ObjectStableMapper,
     private val workerScratchDir: Path,
     private val workerOutputDir: Path,
-    private val jobInputs: TupleValue,
+    private val jobInputs: DataBindings,
     private val jobParameters: JobParameters,
-    private val jobResults: TupleDefinition,
+    private val jobResults: BindingSchema,
     private val inputPayloadType: TypeMetadata?,
     private val resultCollector: JobResultCollector
 ): JobControl {
@@ -66,26 +69,20 @@ class EngineJobControl(
 
         internal fun normalizeArguments(
             instructions: ObjectLocation,
-            signature: TupleDefinition,
-            arguments: TupleValue
-        ): TupleValue {
-            val duplicate = arguments.components
-                .groupingBy { it.name }
-                .eachCount()
-                .entries
-                .firstOrNull { it.value > 1 }
-                ?.key
-            require(duplicate == null) {
-                "Duplicate child argument: ${duplicate?.value}"
+            signature: BindingSchema,
+            arguments: DataBindings
+        ): DataBindings {
+            val supplied = arguments.entries().mapNotNull { (definition, state) ->
+                val target = signature.find(definition.name)
+                require(target != null) {
+                    "Unknown child argument '${definition.name}' for $instructions"
+                }
+                val bound = state as? BindingState.Bound ?: return@mapNotNull null
+                definition.name to JobDataValues.lift(
+                    JobDataValues.boundary(bound.value),
+                    target.contract)
             }
-
-            val signatureNames = signature.components.map { it.name }
-            val supplied = arguments.components.associateBy { it.name }
-            val unknown = supplied.keys.firstOrNull { it !in signatureNames }
-            require(unknown == null) {
-                "Unknown child argument '${unknown?.value}' for $instructions"
-            }
-            return TupleValue(signatureNames.mapNotNull(supplied::get))
+            return DataBindings.bind(signature, supplied)
         }
     }
 
@@ -155,14 +152,14 @@ class EngineJobControl(
 
     // The Job's declared parameters (its typed input signature) — the scope a Worker's expression compilation
     // exposes by name (compiled by JobLogicCompiler, run-constant).
-    override fun parameters(): TupleDefinition {
+    override fun parameters(): BindingSchema {
         return jobParameters.declarations
     }
 
 
     // The Job's declared results (its typed output signature, from the document's `results` map) — a ResultSink
     // reads its component's declared type off it (nullability decides the empty-stream rule).
-    override fun results(): TupleDefinition {
+    override fun results(): BindingSchema {
         return jobResults
     }
 
@@ -174,20 +171,22 @@ class EngineJobControl(
     }
 
 
-    // The Job run's argument for [name], read off the root execution's typed inputs tuple (seeded by JobRun),
+    // The Job run's argument for [name], read off the root execution's typed inputs (seeded by JobRun),
     // falling back to the declaration's typed default (Script parity — ScriptLogic's binding seed). Null when
-    // neither exists (indistinguishable from a bound null — matching TupleValue.find, and acceptable: a bare run's
+    // neither exists (indistinguishable from a bound null, and acceptable: a bare run's
     // expressions see null).
     override fun parameter(name: String): Any? {
-        return jobInputs.find(TupleComponentName(name))
-            ?: jobParameters.defaults[TupleComponentName(name)]
+        return when (val state = jobInputs[BindingName(name)]) {
+            BindingState.Unbound -> null
+            is BindingState.Bound -> JobDataValues.boundary(state.value)
+        }
     }
 
 
-    // Contribute a ResultSink Worker's named component to the run's output tuple (harvested by JobRun once the run
+    // Contribute a ResultSink Worker's named binding to the run's output (harvested by JobRun once the run
     // settles). Last write per component wins, so a re-yield after a live-edit migrate is idempotent.
-    override fun yieldResult(component: String, value: Any?) {
-        resultCollector.yieldResult(TupleComponentName(component), value)
+    override fun yieldResult(component: String, value: DataValue) {
+        resultCollector.yieldResult(BindingName(component), value)
     }
 
 
@@ -209,18 +208,21 @@ class EngineJobControl(
     }
 
 
-    override suspend fun host(instructions: ObjectLocation, input: Any?): TupleValue {
+    override suspend fun host(instructions: ObjectLocation, input: Any?): DataBindings {
         val child = childLogicHost.compile(instructions)
+        val signature = child.signature()
 
         // Bind the single incoming element to the child's first declared parameter (empty when it declares
         // none) — the same positional convention a Flow Run-Logic vertex uses to pass its upstream message.
-        val firstParameter = child.signature().inputs.components.firstOrNull()?.name
+        val firstParameter = signature.inputs.definitions.firstOrNull()
         val arguments =
             if (firstParameter != null) {
-                TupleValue(listOf(TupleComponentValue(firstParameter, input)))
+                DataBindings.bind(
+                    signature.inputs,
+                    firstParameter.name to JobDataValues.lift(input, firstParameter.contract))
             }
             else {
-                TupleValue.empty
+                DataBindings.bind(BindingSchema.empty)
             }
 
         // Host under the child document's stable id (matching a Script RunStep), so the engine's execution tree
@@ -229,18 +231,19 @@ class EngineJobControl(
     }
 
 
-    override suspend fun host(instructions: ObjectLocation, arguments: TupleValue): TupleValue {
+    override suspend fun host(instructions: ObjectLocation, arguments: DataBindings): DataBindings {
         val child = childLogicHost.compile(instructions)
-        val ordered = normalizeArguments(instructions, child.signature().inputs, arguments)
+        val signature = child.signature()
+        val ordered = normalizeArguments(instructions, signature.inputs, arguments)
         return hostCompiled(instructions, child, ordered)
     }
 
 
     private suspend fun hostCompiled(
         instructions: ObjectLocation,
-        child: tech.kzen.lib.common.exec.engine.Logic,
-        arguments: TupleValue
-    ): TupleValue {
+        child: Logic,
+        arguments: DataBindings
+    ): DataBindings {
         return execution.host(
             stableId = objectStableMapper.objectStableId(instructions),
             child = child,

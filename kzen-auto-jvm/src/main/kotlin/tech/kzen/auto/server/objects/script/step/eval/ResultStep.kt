@@ -1,5 +1,7 @@
 package tech.kzen.auto.server.objects.script.step.eval
 
+import tech.kzen.auto.common.objects.document.logic.BindingSignatureDefiner
+import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.auto.server.objects.script.api.ScriptControlSignal
 import tech.kzen.auto.server.objects.script.api.ScriptStep
 import tech.kzen.auto.server.objects.script.api.ScriptStepDefinition
@@ -7,10 +9,9 @@ import tech.kzen.auto.server.objects.script.api.StepExecution
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.auto.server.util.ClassLoaderUtils
-import tech.kzen.lib.common.exec.logic.model.LogicType
-import tech.kzen.lib.common.exec.tuple.TupleComponentName
-import tech.kzen.lib.common.exec.tuple.TupleDefinition
-import tech.kzen.lib.common.exec.tuple.TupleValue
+import tech.kzen.lib.common.exec.data.binding.BindingName
+import tech.kzen.lib.common.exec.data.binding.BindingSchema
+import tech.kzen.lib.common.exec.data.binding.DataBindings
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.reflect.Reflect
@@ -59,7 +60,10 @@ class ResultStep(
             returnTypeMetadata = declaredType,
             instanceCache = { signature, factory -> execution.perRunSingleton(signature, factory) })
 
-        execution.setResult(TupleValue.ofMain(value))
+        val main = BindingName("main")
+        execution.setResult(DataBindings.bind(
+            execution.resultSignature,
+            main to JobDataValues.lift(value, execution.resultSignature[main].contract)))
 
         // `return` semantics: end the current Script document (see [ScriptControlSignal]). Must stay the
         // terminal action of the run — see [StepExecution.raiseControlSignal].
@@ -89,13 +93,15 @@ class ResultStep(
         val compileError = cachedKotlinCompiler.tryCompile(generatedCode, classLoader)
 
         return ScriptStepDefinition(
-            TupleDefinition.ofMain(LogicType(declaredType)),
+            ScriptStepDefinition.ofMain(declaredType).returnValueDefinition,
             compileError?.error,
             compileError?.userCodeOffset)
     }
 
 
-    private fun declaredMainType(resultSignature: TupleDefinition): TypeMetadata? {
-        return resultSignature.find(TupleComponentName.main)?.metadata
+    private fun declaredMainType(resultSignature: BindingSchema): TypeMetadata? {
+        return resultSignature.find(BindingName("main"))?.let {
+            BindingSignatureDefiner.metadata(it.contract)
+        }
     }
 }

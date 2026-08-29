@@ -10,9 +10,8 @@ import tech.kzen.auto.server.objects.script.ScriptValidator
 import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.lib.common.exec.engine.Outcome
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
-import tech.kzen.lib.common.exec.tuple.TupleComponentName
-import tech.kzen.lib.common.exec.tuple.TupleComponentValue
-import tech.kzen.lib.common.exec.tuple.TupleValue
+import tech.kzen.auto.server.exec.bindingsOf
+import tech.kzen.auto.server.exec.mainBoundaryValue
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
@@ -67,7 +66,7 @@ class ScriptIfChainTest {
         // n = 1 satisfies branch 1 (`n == 1`) AND branch 3 (`n > 0`). Branch 3's CountingStep proves the chain
         // stopped at the first match rather than running every true branch.
         val outcome = runChain(1)
-        assertEquals("one", assertIs<Outcome.Success>(outcome).value.mainComponentValue())
+        assertEquals("one", assertIs<Outcome.Success>(outcome).value.mainBoundaryValue())
         assertEquals(0, CountingStep.count.get())
     }
 
@@ -75,7 +74,7 @@ class ScriptIfChainTest {
     @Test
     fun aMiddleBranchRunsWhenItsConditionIsTheFirstToHold() {
         val outcome = runChain(2)
-        assertEquals("two", assertIs<Outcome.Success>(outcome).value.mainComponentValue())
+        assertEquals("two", assertIs<Outcome.Success>(outcome).value.mainBoundaryValue())
         assertEquals(0, CountingStep.count.get())
     }
 
@@ -83,7 +82,7 @@ class ScriptIfChainTest {
     @Test
     fun aLaterBranchRunsOnceTheEarlierConditionsAreFalse() {
         val outcome = runChain(3)
-        assertEquals("three", assertIs<Outcome.Success>(outcome).value.mainComponentValue())
+        assertEquals("three", assertIs<Outcome.Success>(outcome).value.mainBoundaryValue())
         assertEquals(1, CountingStep.count.get())
     }
 
@@ -91,7 +90,7 @@ class ScriptIfChainTest {
     @Test
     fun everyConditionFalseFallsThroughToTheElse() {
         val outcome = runChain(0)
-        assertEquals("other", assertIs<Outcome.Success>(outcome).value.mainComponentValue())
+        assertEquals("other", assertIs<Outcome.Success>(outcome).value.mainBoundaryValue())
         assertEquals(0, CountingStep.count.get())
     }
 
@@ -101,7 +100,7 @@ class ScriptIfChainTest {
         // No else section at all: the If runs an empty step list, so it yields no value and the run continues
         // to After (7) — the Script must not stall or fail on a chain that matched nothing.
         val outcome = runScript(noElsePath)
-        assertEquals(7, assertIs<Outcome.Success>(outcome).value.mainComponentValue())
+        assertEquals(7, assertIs<Outcome.Success>(outcome).value.mainBoundaryValue())
         assertEquals(0, CountingStep.count.get())
     }
 
@@ -142,7 +141,7 @@ class ScriptIfChainTest {
         // exactly the scope ScriptTree.inScopeReferencePaths gives the branch. Branch 2 (`n > 0`) also holds
         // at n = 1, so its CountingStep proves the later condition was never even evaluated.
         val outcome = runExpressionChain(1)
-        assertEquals("small", assertIs<Outcome.Success>(outcome).value.mainComponentValue())
+        assertEquals("small", assertIs<Outcome.Success>(outcome).value.mainBoundaryValue())
         assertEquals(0, CountingStep.count.get())
     }
 
@@ -152,7 +151,7 @@ class ScriptIfChainTest {
         // n = 5 fails branch 1 and takes branch 2, whose `n > 0` names nothing but the parameter — no Boolean
         // step has to exist anywhere in the document for the branch to test it.
         val outcome = runExpressionChain(5)
-        assertEquals("big", assertIs<Outcome.Success>(outcome).value.mainComponentValue())
+        assertEquals("big", assertIs<Outcome.Success>(outcome).value.mainBoundaryValue())
         assertEquals(1, CountingStep.count.get())
     }
 
@@ -160,7 +159,7 @@ class ScriptIfChainTest {
     @Test
     fun everyExpressionFalseFallsThroughToTheElse() {
         val outcome = runExpressionChain(0)
-        assertEquals("none", assertIs<Outcome.Success>(outcome).value.mainComponentValue())
+        assertEquals("none", assertIs<Outcome.Success>(outcome).value.mainBoundaryValue())
         assertEquals(0, CountingStep.count.get())
     }
 
@@ -200,18 +199,18 @@ class ScriptIfChainTest {
     private fun runChain(n: Int): Outcome {
         return runScript(
             chainPath,
-            TupleValue(listOf(TupleComponentValue(TupleComponentName("n"), n))))
+            mapOf("n" to n))
     }
 
 
     private fun runExpressionChain(n: Int): Outcome {
         return runScript(
             expressionPath,
-            TupleValue(listOf(TupleComponentValue(TupleComponentName("n"), n))))
+            mapOf("n" to n))
     }
 
 
-    private fun runScript(documentPath: DocumentPath, inputs: TupleValue = TupleValue.empty): Outcome {
+    private fun runScript(documentPath: DocumentPath, inputs: Map<String, Any?> = emptyMap()): Outcome {
         ScriptStepTestModule.register()
         CountingStep.reset()
 
@@ -236,7 +235,10 @@ class ScriptIfChainTest {
                 context.jobWorkPool,
                 LogicRunExecutionId.random()))
 
-        val engine = RunEngine(logic, context.objectStableMapper.objectStableId(scriptLocation), inputs)
+        val engine = RunEngine(
+            logic,
+            context.objectStableMapper.objectStableId(scriptLocation),
+            bindingsOf(logic.signature().inputs, *inputs.entries.map { it.key to it.value }.toTypedArray()))
         return try {
             runBlocking {
                 engine.resume()

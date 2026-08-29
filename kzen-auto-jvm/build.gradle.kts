@@ -213,6 +213,33 @@ tasks.test {
 }
 
 
+tasks.register<JavaExec>("benchJob") {
+    group = "verification"
+    description = "Run the Job/Report performance and allocation baseline"
+    dependsOn(tasks.testClasses)
+    mainClass.set("tech.kzen.auto.server.exec.job.bench.JobReportBenchmark")
+    classpath = sourceSets.test.get().runtimeClasspath
+    workingDir = rootProject.projectDir
+
+    listOf("benchRows", "benchRuns", "benchScenarios").forEach { propertyName ->
+        System.getProperty(propertyName)?.let { propertyValue ->
+            systemProperty(propertyName, propertyValue)
+        }
+    }
+
+    val epsilon = providers.gradleProperty("benchEpsilon").isPresent
+    if (epsilon) {
+        jvmArgs("-XX:+UnlockExperimentalVMOptions", "-XX:+UseEpsilonGC")
+        if (System.getProperty("benchRows") == null) {
+            systemProperty("benchRows", "250000")
+        }
+    }
+    maxHeapSize = providers.gradleProperty("benchMaxHeap")
+        .orElse(if (epsilon) "16g" else "4g")
+        .get()
+}
+
+
 ksp {
     arg("kzen.reflect.moduleClassName", "tech.kzen.auto.server.codegen.KzenAutoJvmModule")
 }

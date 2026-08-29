@@ -1,7 +1,7 @@
 package tech.kzen.auto.server.exec.flow
 
 import tech.kzen.lib.common.exec.engine.Logic
-import tech.kzen.lib.common.exec.tuple.TupleComponentName
+import tech.kzen.lib.common.exec.data.binding.BindingSchema
 import tech.kzen.lib.common.service.store.normal.ObjectStableId
 
 
@@ -16,5 +16,5 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableId
 class FlowChildLogic(
     val childStableId: ObjectStableId,
     val logic: Logic,
-    val parameterNames: List<TupleComponentName>
+    val inputSchema: BindingSchema
 )

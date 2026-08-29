@@ -1,0 +1,14 @@
+main:
+  is: Job
+
+main.workers/reader:
+  is: CsvReaderWorker
+  path: build/bench/slice/input.csv
+
+main.workers/filter:
+  is: FilterWorker
+  where: 'flag eq "yes"'
+
+main.workers/writer:
+  is: CsvWriterWorker
+  path: build/bench/slice/job-output.csv

@@ -9,6 +9,7 @@ import tech.kzen.auto.common.data.model.DataManifest
 import tech.kzen.auto.common.data.model.DataPart
 import tech.kzen.auto.common.data.schema.DataShape
 import tech.kzen.auto.common.data.schema.HeaderListing
+import tech.kzen.auto.common.data.schema.LegacyDataShapeBridge
 import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.exec.ExecutionSuccess
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -41,15 +42,15 @@ class DataSourceShapeStore(
 
 
     companion object {
-        internal fun aggregate(parts: Collection<PartState>): DataShape.Tabular? {
+        internal fun aggregate(parts: Collection<PartState>): HeaderListing? {
             val settled = parts.filterNot { it.inspecting }
-            val tabular = settled.mapNotNull { it.shape as? DataShape.Tabular }
-            if (settled.size != parts.size || settled.any { it.error != null } || tabular.size != settled.size) {
+            val headers = settled.mapNotNull { it.shape?.let(LegacyDataShapeBridge::headerOrNull) }
+            if (settled.size != parts.size || settled.any { it.error != null } || headers.size != settled.size) {
                 return null
             }
             val labels = linkedSetOf<tech.kzen.auto.common.data.schema.HeaderLabel>()
-            tabular.forEach { labels.addAll(it.header.values) }
-            return DataShape.Tabular(HeaderListing(labels.toList()))
+            headers.forEach { labels.addAll(it.values) }
+            return HeaderListing(labels.toList())
         }
     }
 
@@ -74,7 +75,7 @@ class DataSourceShapeStore(
 
     data class State(
         val parts: Map<DataPart, PartState>,
-        val aggregate: DataShape.Tabular?
+        val aggregate: HeaderListing?
     )
 
 

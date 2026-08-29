@@ -12,6 +12,8 @@ import tech.kzen.auto.common.paradigm.job.api.ChannelServerIterator
 import tech.kzen.auto.common.paradigm.job.api.ServedRequest
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
+import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.auto.server.objects.report.exec.output.flat.IndexedCsvTable
 import tech.kzen.auto.server.util.WorkUtils
 import tech.kzen.lib.common.exec.ExecutionRequest
@@ -30,7 +32,7 @@ import kotlin.test.assertTrue
 
 /**
  * Unit test for [ExploreWorker]: driven through its real [ExploreWorker.run] lifecycle over a fake input of
- * flat-part [JobMessage]s, it asserts the two things that make it a faithful, PERSISTENT browse operator —
+ * flat-backed values, it asserts the two things that make it a faithful, PERSISTENT browse operator —
  *
  * 1. **Serve A/B parity** — a random-access slice query (`offset` / `limit`) answered by the Worker's serve path
  *    is byte-identical to what a direct [IndexedCsvTable] produces over the same records and slice (the P4g
@@ -51,8 +53,8 @@ class ExploreWorkerTest {
     //-----------------------------------------------------------------------------------------------------------------
     private val header = HeaderListing.of(listOf("city", "amount"))
 
-    private fun record(city: String, amount: String): JobMessage =
-        JobMessage.ofFlat(header, FlatFileRecord.of(listOf(city, amount)))
+    private fun record(city: String, amount: String): DataValue =
+        JobDataValues.flat(header, FlatFileRecord.of(listOf(city, amount)))
 
     private val records = listOf(
         record("Lviv", "10"),
@@ -128,12 +130,12 @@ class ExploreWorkerTest {
 
     //-----------------------------------------------------------------------------------------------------------------
     // Runs `use` against a direct IndexedCsvTable built from `records` in a throwaway dir, then closes-and-deletes it.
-    private fun <R> withDirectTable(records: List<JobMessage>, use: (IndexedCsvTable) -> R): R {
+    private fun <R> withDirectTable(records: List<DataValue>, use: (IndexedCsvTable) -> R): R {
         val dir = Files.createTempDirectory("explore-direct")
         try {
-            val table = IndexedCsvTable(records.first().flat!!.header, dir)
+            val table = IndexedCsvTable(testProjection(records.first()).header, dir)
             try {
-                records.forEach { table.add(it.flat!!.record, it.flat!!.header) }
+                records.forEach { table.add(testRecord(it), testProjection(it).header) }
                 return use(table)
             }
             finally {
@@ -151,7 +153,7 @@ class ExploreWorkerTest {
     // published — releases the serve loop to answer its query and blocks until it has, so the query is guaranteed
     // to land against the fully populated table before the stream ends.
     private fun coordinatedInput(
-        records: List<JobMessage>,
+        records: List<DataValue>,
         readyForServe: CompletableDeferred<Unit>,
         serveAnswered: CompletableDeferred<Unit>
     ): ChannelInput<Any?> =

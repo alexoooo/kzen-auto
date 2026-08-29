@@ -1,0 +1,22 @@
+main:
+  is: Job
+
+main.workers/reader:
+  is: CsvReaderWorker
+  path: build/bench/agg/input-headerless.csv
+  header: false
+
+main.workers/pivot:
+  is: PivotWorker
+  pivot:
+    rows:
+      - "0|c0"
+    values:
+      "0|c1":
+        - Min
+        - Average
+        - Max
+
+main.workers/writer:
+  is: CsvWriterWorker
+  path: build/bench/agg/job-headerless-output.csv

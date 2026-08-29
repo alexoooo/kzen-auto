@@ -2,12 +2,14 @@ package tech.kzen.auto.common.objects.document.job
 
 import tech.kzen.auto.common.objects.document.logic.ResultSignatureDefiner
 import tech.kzen.auto.common.objects.document.logic.TypeMetadataDefiner
+import tech.kzen.auto.common.objects.document.logic.BindingSignatureDefiner
 import tech.kzen.auto.common.paradigm.logic.LogicConventions
 import tech.kzen.lib.common.exec.engine.LogicSignature
-import tech.kzen.lib.common.exec.logic.model.LogicType
-import tech.kzen.lib.common.exec.tuple.TupleComponentDefinition
-import tech.kzen.lib.common.exec.tuple.TupleComponentName
-import tech.kzen.lib.common.exec.tuple.TupleDefinition
+import tech.kzen.lib.common.exec.data.binding.BindingDefinition
+import tech.kzen.lib.common.exec.data.binding.BindingName
+import tech.kzen.lib.common.exec.data.binding.BindingSchema
+import tech.kzen.lib.common.exec.data.binding.DataPresence
+import tech.kzen.lib.common.exec.data.type.DataContract
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -76,25 +78,27 @@ object JobSignatureCapability {
             .directNestedObjectPaths(NotationConventions.mainObjectPath, LogicConventions.parametersAttributeName)
             .map { parameterPath ->
                 val parameterLocation = ObjectLocation(jobMainLocation.documentPath, parameterPath)
-                TupleComponentDefinition(
-                    TupleComponentName(parameterPath.name.value),
-                    declaredType(graphNotation, parameterLocation))
+                BindingDefinition(
+                    BindingName(parameterPath.name.value),
+                    declaredType(graphNotation, parameterLocation),
+                    DataPresence.Optional)
             }
 
         val outputs = ResultSignatureDefiner.parse(
             graphNotation.firstAttribute(jobMainLocation, LogicConventions.resultsAttributePath))
 
-        return LogicSignature(TupleDefinition(inputs), outputs)
+        return LogicSignature(BindingSchema.of(inputs), outputs)
     }
 
 
     // A ParameterBinding declaration's `type` as a LogicType; LogicType.any when absent / unparseable
     // (the archetype defaults the attribute to kotlin.Any anyway).
-    private fun declaredType(graphNotation: GraphNotation, parameterLocation: ObjectLocation): LogicType {
+    private fun declaredType(graphNotation: GraphNotation, parameterLocation: ObjectLocation): DataContract {
         val typeMetadata = graphNotation
             .firstAttribute(parameterLocation, typeAttributePath)
             ?.let { TypeMetadataDefiner.parse(it) }
-            ?: return LogicType.any
-        return LogicType(typeMetadata)
+            ?: return BindingSignatureDefiner.contract(
+                tech.kzen.lib.common.model.structure.metadata.TypeMetadata.any)
+        return BindingSignatureDefiner.contract(typeMetadata)
     }
 }

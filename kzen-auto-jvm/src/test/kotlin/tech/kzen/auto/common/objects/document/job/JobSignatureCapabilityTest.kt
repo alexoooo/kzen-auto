@@ -1,5 +1,6 @@
 package tech.kzen.auto.common.objects.document.job
 
+import tech.kzen.auto.common.objects.document.logic.BindingSignatureDefiner
 import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -78,7 +79,7 @@ class JobSignatureCapabilityTest {
     @Test
     fun inputParametersAreDeclaredInDocumentOrder() {
         val signature = JobSignatureCapability.signature(graphStructure, jobMainLocation)
-        assertEquals(listOf("items", "records", "counts"), signature.inputs.components.map { it.name.value })
+        assertEquals(listOf("items", "records", "counts"), signature.inputs.definitions.map { it.name.value })
     }
 
 
@@ -86,7 +87,7 @@ class JobSignatureCapabilityTest {
     fun outputComponentsComeFromDeclaredResultsInOrder() {
         val signature = JobSignatureCapability.signature(graphStructure, jobMainLocation)
         // The declared `results` map's components, in declaration order — independent of the sink Workers.
-        assertEquals(listOf("main", "summary", "typed"), signature.outputs.components.map { it.name.value })
+        assertEquals(listOf("main", "summary", "typed"), signature.outputs.definitions.map { it.name.value })
     }
 
 
@@ -94,35 +95,36 @@ class JobSignatureCapabilityTest {
     fun undeclaredParameterTypeYieldsAny() {
         // The `type` attribute resolves through the inheritance chain to the ParameterBinding archetype default.
         val signature = JobSignatureCapability.signature(graphStructure, jobMainLocation)
-        val items = signature.inputs.components.first { it.name.value == "items" }
-        assertEquals("kotlin.Any", items.type.metadata.className.asString())
+        val items = signature.inputs.definitions.first { it.name.value == "items" }
+        assertEquals("kotlin.Any", BindingSignatureDefiner.metadata(items.contract).className.asString())
     }
 
 
     @Test
     fun declaredParameterTypeCarriesIntoSignature() {
         val signature = JobSignatureCapability.signature(graphStructure, jobMainLocation)
-        val records = signature.inputs.components.first { it.name.value == "records" }
-        assertEquals("kotlin.String", records.type.metadata.className.asString())
+        val records = signature.inputs.definitions.first { it.name.value == "records" }
+        assertEquals("kotlin.String", BindingSignatureDefiner.metadata(records.contract).className.asString())
     }
 
 
     @Test
     fun genericParameterTypeIsPreserved() {
         val signature = JobSignatureCapability.signature(graphStructure, jobMainLocation)
-        val counts = signature.inputs.components.first { it.name.value == "counts" }
-        assertEquals("kotlin.collections.List", counts.type.metadata.className.asString())
+        val counts = signature.inputs.definitions.first { it.name.value == "counts" }
+        val countsType = BindingSignatureDefiner.metadata(counts.contract)
+        assertEquals("kotlin.collections.List", countsType.className.asString())
         assertEquals(
             listOf("kotlin.Int"),
-            counts.type.metadata.generics.map { it.className.asString() })
+            countsType.generics.map { it.className.asString() })
     }
 
 
     @Test
     fun declaredResultTypeCarriesIntoSignature() {
         val signature = JobSignatureCapability.signature(graphStructure, jobMainLocation)
-        val typed = signature.outputs.components.first { it.name.value == "typed" }
-        assertEquals("kotlin.String", typed.type.metadata.className.asString())
+        val typed = signature.outputs.definitions.first { it.name.value == "typed" }
+        assertEquals("kotlin.String", BindingSignatureDefiner.metadata(typed.contract).className.asString())
     }
 
 
@@ -131,7 +133,7 @@ class JobSignatureCapabilityTest {
         val scriptLocation = ObjectLocation(
             DocumentPath.parse("test/job/signature/job-signature-script-test.yaml"), ObjectPath.parse("main"))
         val signature = JobSignatureCapability.signature(graphStructure, scriptLocation)
-        assertEquals(0, signature.inputs.components.size)
-        assertEquals(0, signature.outputs.components.size)
+        assertEquals(0, signature.inputs.definitions.size)
+        assertEquals(0, signature.outputs.definitions.size)
     }
 }

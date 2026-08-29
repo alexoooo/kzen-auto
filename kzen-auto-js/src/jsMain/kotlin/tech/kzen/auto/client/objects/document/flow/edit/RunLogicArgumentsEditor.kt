@@ -62,7 +62,7 @@ external interface RunLogicArgumentsEditorState: State {
 
 
 internal fun jobRunArgumentNames(signature: LogicSignature, bindsFirstPositionally: Boolean): List<String> {
-    val names = signature.inputs.components.map { it.name.value }
+    val names = signature.inputs.definitions.map { it.name.value }
     return if (bindsFirstPositionally) names.drop(1) else names
 }
 

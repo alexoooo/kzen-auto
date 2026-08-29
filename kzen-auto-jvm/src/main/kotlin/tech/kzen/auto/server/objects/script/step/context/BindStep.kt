@@ -12,7 +12,6 @@ import tech.kzen.auto.server.objects.script.step.eval.StepExpressionSupport
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.auto.server.util.ClassLoaderUtils
 import tech.kzen.lib.common.exec.logic.model.LogicType
-import tech.kzen.lib.common.exec.tuple.TupleDefinition
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.reflect.Reflect
@@ -83,7 +82,7 @@ class BindStep(
         // The DECLARED type, not the inferred one. The declaration is the contract every downstream reader
         // was written against, so a narrower expression today must not silently narrow what they may assume
         // tomorrow — the assignability check above is what makes publishing the wider declared type sound.
-        return ScriptStepDefinition.of(TupleDefinition.ofMain(LogicType(descriptor.type)))
+        return ScriptStepDefinition.ofMain(descriptor.type)
     }
 
 

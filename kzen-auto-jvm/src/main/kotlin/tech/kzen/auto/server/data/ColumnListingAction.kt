@@ -3,6 +3,7 @@ package tech.kzen.auto.server.data
 import tech.kzen.auto.common.data.model.DataPart
 import tech.kzen.auto.common.data.schema.DataShape
 import tech.kzen.auto.common.data.schema.HeaderListing
+import tech.kzen.auto.common.data.schema.LegacyDataShapeBridge
 import tech.kzen.auto.common.objects.document.plugin.model.CommonDataEncodingSpec
 import tech.kzen.auto.common.objects.document.plugin.model.CommonPluginCoordinate
 
@@ -20,13 +21,13 @@ class ColumnListingAction(
         val key = SchemaCacheKey.of(part, effectiveFormat, effectiveEncoding)
         val cached = key?.let(schemaCache::get)
         if (cached != null) {
-            return (cached as? DataShape.Tabular)?.header
+            return LegacyDataShapeBridge.headerOrNull(cached)
                 ?: error("File schema cache entry is not tabular: $cached")
         }
 
         val header = extract()
         if (key != null) {
-            schemaCache.put(key, DataShape.Tabular(header))
+            schemaCache.put(key, LegacyDataShapeBridge.tabular(header))
         }
         return header
     }

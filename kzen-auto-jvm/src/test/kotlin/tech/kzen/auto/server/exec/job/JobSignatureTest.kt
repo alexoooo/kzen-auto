@@ -4,14 +4,16 @@ import kotlinx.coroutines.runBlocking
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.exec.LogicCompiler
 import tech.kzen.auto.server.exec.LogicCompilerServices
+import tech.kzen.auto.server.exec.mainBoundaryValue
 import tech.kzen.auto.server.objects.job.worker.test.RecordingSinkWorker
+import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.lib.common.exec.engine.Logic
 import tech.kzen.lib.common.exec.engine.Outcome
+import tech.kzen.lib.common.exec.data.problem.DataException
+import tech.kzen.lib.common.exec.data.binding.BindingName
+import tech.kzen.lib.common.exec.data.binding.DataBindings
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
-import tech.kzen.lib.common.exec.tuple.TupleComponentName
-import tech.kzen.lib.common.exec.tuple.TupleComponentValue
-import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
@@ -21,6 +23,7 @@ import tech.kzen.lib.server.exec.engine.RunEngine
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
@@ -54,21 +57,22 @@ class JobSignatureTest {
     @Test
     fun directRunSeedsParameterAndHarvestsResult() {
         val jobLogic = compile("test/job/signature/job-signature-child-test.yaml")
+        val signature = jobLogic.signature()
 
         assertEquals(
-            listOf("items"), jobLogic.signature().inputs.components.map { it.name.value },
+            listOf("items"), signature.inputs.definitions.map { it.name.value },
             "the `items` parameter declaration is the Job's input signature")
         assertEquals(
-            listOf("main"), jobLogic.signature().outputs.components.map { it.name.value },
+            listOf("main"), signature.outputs.definitions.map { it.name.value },
             "the document's declared `results` map declares the `main` output component")
 
         val outcome = runToCompletion(
             jobLogic, "test/job/signature/job-signature-child-test.yaml",
-            inputs("items" to listOf(1, 2, 3)))
+            inputs(jobLogic, "items" to listOf(1, 2, 3)))
 
         val success = assertIs<Outcome.Success>(outcome)
         assertEquals(
-            3, success.value.mainComponentValue(),
+            3, success.value.mainBoundaryValue(),
             "the argument reached the source stream AND the sink kept the LAST element (default `keep`)")
     }
 
@@ -79,11 +83,11 @@ class JobSignatureTest {
         // single-emits the bound value regardless of what it is.
         val jobLogic = compile("test/job/signature/job-signature-scalar-child-test.yaml")
         val outcome = runToCompletion(
-            jobLogic, "test/job/signature/job-signature-scalar-child-test.yaml", inputs("item" to 7))
+            jobLogic, "test/job/signature/job-signature-scalar-child-test.yaml", inputs(jobLogic, "item" to 7))
 
         val success = assertIs<Outcome.Success>(outcome)
         assertEquals(
-            7, success.value.mainComponentValue(),
+            7, success.value.mainBoundaryValue(),
             "a scalar-typed parameter emits one element, which the sink keeps (scalar-in / scalar-out)")
     }
 
@@ -92,14 +96,14 @@ class JobSignatureTest {
     fun unboundScalarParameterEmitsSingleNull() {
         val jobLogic = compile("test/job/signature/job-signature-scalar-child-test.yaml")
         val outcome = runToCompletion(
-            jobLogic, "test/job/signature/job-signature-scalar-child-test.yaml", TupleValue.empty)
+            jobLogic, "test/job/signature/job-signature-scalar-child-test.yaml", emptyInputs(jobLogic))
 
         val success = assertIs<Outcome.Success>(outcome)
         assertTrue(
-            success.value.components.any { it.name == TupleComponentName.main },
+            success.value.schema.find(BindingName("main")) != null,
             "the sink still yields a `main` component for a bare run")
         assertEquals(
-            null, success.value.mainComponentValue(),
+            null, success.value.mainBoundaryValue(),
             "an unbound scalar-typed parameter emits a single null, collected and unwrapped to null")
     }
 
@@ -111,14 +115,14 @@ class JobSignatureTest {
         // so the empty stream yields null instead of failing the run.
         val jobLogic = compile("test/job/signature/job-signature-child-test.yaml")
         val outcome = runToCompletion(
-            jobLogic, "test/job/signature/job-signature-child-test.yaml", TupleValue.empty)
+            jobLogic, "test/job/signature/job-signature-child-test.yaml", emptyInputs(jobLogic))
 
         val success = assertIs<Outcome.Success>(outcome)
         assertTrue(
-            success.value.components.any { it.name == TupleComponentName.main },
+            success.value.schema.find(BindingName("main")) != null,
             "the sink still yields the `main` component for an empty stream")
         assertEquals(
-            null, success.value.mainComponentValue(),
+            null, success.value.mainBoundaryValue(),
             "an empty stream under a NULLABLE declared result is a null result, not a failure")
     }
 
@@ -126,11 +130,12 @@ class JobSignatureTest {
     @Test
     fun keepFirstYieldsFirstElement() {
         val jobLogic = compile("test/job/signature/job-result-first-test.yaml")
-        val outcome = runToCompletion(jobLogic, "test/job/signature/job-result-first-test.yaml", TupleValue.empty)
+        val outcome = runToCompletion(
+            jobLogic, "test/job/signature/job-result-first-test.yaml", emptyInputs(jobLogic))
 
         val success = assertIs<Outcome.Success>(outcome)
         assertEquals(
-            1, success.value.mainComponentValue(),
+            1, success.value.mainBoundaryValue(),
             "`keep: first` yields the stream's first element (the stream still drains to completion)")
     }
 
@@ -140,7 +145,8 @@ class JobSignatureTest {
         // The empty-stream contract's strict half: the declared `main` result is NON-nullable, so an empty
         // stream at end-of-stream is a run failure (the sink's error names the component), never a silent null.
         val jobLogic = compile("test/job/signature/job-result-empty-test.yaml")
-        val outcome = runToCompletion(jobLogic, "test/job/signature/job-result-empty-test.yaml", TupleValue.empty)
+        val outcome = runToCompletion(
+            jobLogic, "test/job/signature/job-result-empty-test.yaml", emptyInputs(jobLogic))
 
         assertIs<Outcome.Failed>(
             outcome,
@@ -154,12 +160,11 @@ class JobSignatureTest {
         // `items` fails the cast when the expression reads it — a run failure naming the violation, never a
         // silent wrong-shaped stream (Script's typed-binding contract).
         val jobLogic = compile("test/job/signature/job-signature-child-test.yaml")
-        val outcome = runToCompletion(
-            jobLogic, "test/job/signature/job-signature-child-test.yaml", inputs("items" to 7))
-
-        assertIs<Outcome.Failed>(
-            outcome,
-            "a scalar bound to an Iterable-typed parameter is a type violation, rejected at the typed accessor")
+        assertFailsWith<DataException>(
+            "a scalar bound to an Iterable-typed parameter is rejected before child code") {
+            runToCompletion(
+                jobLogic, "test/job/signature/job-signature-child-test.yaml", inputs(jobLogic, "items" to 7))
+        }
     }
 
 
@@ -177,7 +182,7 @@ class JobSignatureTest {
 
         val success = assertIs<Outcome.Success>(outcome)
         assertEquals(
-            3, success.value.mainComponentValue(),
+            3, success.value.mainBoundaryValue(),
             "the RunStep's named-argument tuple seeds the hosted Job, whose harvested (kept-last) result is " +
                 "the Script result")
     }
@@ -250,12 +255,16 @@ class JobSignatureTest {
     }
 
 
-    private fun runToCompletion(jobLogic: JobLogic, path: String, inputs: TupleValue): Outcome {
+    private fun runToCompletion(jobLogic: JobLogic, path: String, inputs: DataBindings): Outcome {
         return runEngine(jobLogic, context.objectStableMapper.objectStableId(mainOf(path)), inputs)
     }
 
 
-    private fun runEngine(logic: Logic, rootStableId: ObjectStableId, inputs: TupleValue = TupleValue.empty): Outcome {
+    private fun runEngine(
+        logic: Logic,
+        rootStableId: ObjectStableId,
+        inputs: DataBindings = emptyInputs(logic)
+    ): Outcome {
         val engine = RunEngine(logic, rootStableId, inputs)
         return try {
             runBlocking {
@@ -274,9 +283,18 @@ class JobSignatureTest {
     }
 
 
-    private fun inputs(vararg components: Pair<String, Any?>): TupleValue {
-        return TupleValue(components.map { (name, value) -> TupleComponentValue(TupleComponentName(name), value) })
+    private fun inputs(logic: Logic, vararg components: Pair<String, Any?>): DataBindings {
+        val schema = logic.signature().inputs
+        return DataBindings.bind(schema, components.map { (name, value) ->
+            val bindingName = BindingName(name)
+            val definition = requireNotNull(schema.find(bindingName))
+            bindingName to JobDataValues.lift(value, definition.contract)
+        })
     }
+
+
+    private fun emptyInputs(logic: Logic): DataBindings =
+        DataBindings.bind(logic.signature().inputs)
 
 
     private fun definition(notation: GraphNotation) =

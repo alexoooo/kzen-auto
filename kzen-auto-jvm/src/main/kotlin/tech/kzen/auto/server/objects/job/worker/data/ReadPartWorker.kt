@@ -9,10 +9,11 @@ import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.server.data.DataOpenerLookup
 import tech.kzen.auto.server.objects.job.worker.Emitter
 import tech.kzen.auto.server.objects.job.worker.ExpandingTransformWorker
-import tech.kzen.auto.server.objects.job.worker.JobMessage
-import tech.kzen.auto.server.objects.job.worker.WorkerLane
-import tech.kzen.auto.server.objects.job.worker.WorkerLaneAttempt
-import tech.kzen.auto.server.objects.job.worker.WorkerLaneContext
+import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.lib.common.exec.data.value.DataValue
+import tech.kzen.auto.server.objects.job.worker.JobLaneDescriptor
+import tech.kzen.auto.server.objects.job.worker.JobLaneAttempt
+import tech.kzen.auto.server.objects.job.worker.JobLaneContext
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
@@ -29,8 +30,8 @@ import tech.kzen.lib.platform.ClassName
  */
 @Reflect
 class ReadPartWorker(
-    input: ChannelInput<Any?>,
-    output: ChannelOutput<Any?>,
+    input: ChannelInput<*>,
+    output: ChannelOutput<DataValue>,
     private val role: String,
     private val attributes: String,
     selfLocation: ObjectLocation,
@@ -63,11 +64,12 @@ class ReadPartWorker(
     }
 
 
-    override suspend fun onElement(element: JobMessage, emit: Emitter, control: JobControl) {
-        val incoming = element.payload as? DataUnit
+    override suspend fun onElement(element: DataValue, emit: Emitter, control: JobControl) {
+        val incomingValue = JobDataValues.native(element)
+        val incoming = incomingValue as? DataUnit
             ?: throw IllegalStateException(
                 "ReadPart requires a non-null DataUnit payload, but received " +
-                    (element.payload?.let { "${it::class.qualifiedName}: $it" } ?: "null"))
+                    (incomingValue?.let { "${it::class.qualifiedName}: $it" } ?: "null"))
 
         val activeUnit = currentUnit
         if (activeUnit == null) {
@@ -101,12 +103,16 @@ class ReadPartWorker(
         val inspected = linkedMapOf<Int, DataShape>()
         val candidates = mutableListOf<DataReadCore.ShapeCandidate>()
         for ((index, part) in parts.withIndex()) {
-            val shape = openerLookup.openerFor(part.ref).inspectShape(context, part)
+            val opener = openerLookup.openerFor(part.ref)
+            val shape = opener.inspectShape(context, part)
                 ?: throw IllegalStateException(
                     "Unable to inspect data shape at unit $completedUnits part $index (${part.ref.display()})")
             val origin = "unit $completedUnits part $index (${part.ref.display()})"
             inspected[index] = shape
-            candidates.add(DataReadCore.ShapeCandidate(shape, attributeValues(unit), origin))
+            candidates.add(DataReadCore.ShapeCandidate(
+                shape,
+                attributeValues(unit),
+                origin))
         }
         inspectedShapes = inspected
         if (candidates.isNotEmpty()) {
@@ -136,7 +142,9 @@ class ReadPartWorker(
 
                 val origin = "unit $completedUnits part $partIndex (${part.ref.display()})"
                 val candidate = DataReadCore.effectiveShape(
-                    activeCursor.shape, attributeValues(unit), origin)
+                    activeCursor.shape,
+                    attributeValues(unit),
+                    origin)
                 if (inspectedShapes == null) {
                     shapeBaseline = DataReadCore.establishShape(shapeBaseline, candidate)
                 }
@@ -246,14 +254,14 @@ class ReadPartWorker(
     }
 
 
-    override fun payloadFlow(input: WorkerLane, context: WorkerLaneContext): WorkerLaneAttempt {
+    override fun payloadFlow(input: JobLaneDescriptor, context: JobLaneContext): JobLaneAttempt {
         val configError = configError()
         if (configError != null) {
-            return WorkerLaneAttempt(WorkerLane.unknown, configError)
+            return JobLaneAttempt(JobLaneDescriptor.unknown, configError)
         }
 
         if (input.payloadType == null && input.flatColumns == null) {
-            return WorkerLaneAttempt(WorkerLane.unknown, null)
+            return JobLaneAttempt(JobLaneDescriptor.unknown, null)
         }
 
         val inputType = input.payloadType
@@ -264,12 +272,12 @@ class ReadPartWorker(
         if (!valid) {
             val description = inputType?.toSimple()
                 ?: "flat columns ${input.flatColumns?.render() ?: "unknown"}"
-            return WorkerLaneAttempt(
-                WorkerLane.unknown,
+            return JobLaneAttempt(
+                JobLaneDescriptor.unknown,
                 "ReadPart requires a non-null DataUnit payload, found $description")
         }
 
-        return WorkerLaneAttempt(WorkerLane.unknown, null)
+        return JobLaneAttempt(JobLaneDescriptor.unknown, null)
     }
 
 

@@ -17,7 +17,7 @@ import org.jetbrains.kotlin.psi.KtPsiFactory
  *
  * This is what makes an expression checkable where its scope is NOT statically known — a Job Worker reading a
  * CSV lane, whose columns exist only once the file is read (see
- * [tech.kzen.auto.server.objects.job.worker.WorkerLane]). A full compile
+ * [tech.kzen.auto.server.objects.job.worker.JobLaneDescriptor]). A full compile
  * ([tech.kzen.auto.server.objects.report.exec.calc.CalculatedColumnEval.validate]) cannot run there: with no
  * column accessors generated, every column reference resolves to nothing, so a perfectly good expression would
  * be reported as invalid. Parsing has no scope at all, so it reports only what holds under EVERY possible

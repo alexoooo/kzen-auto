@@ -1,0 +1,26 @@
+main:
+  is: Job
+
+main.workers/reader:
+  is: CsvReaderWorker
+  path: build/bench/exp/input.csv
+
+main.workers/filter:
+  is: ValueSetFilterWorker
+  filter:
+    "0|flag":
+      type: RequireAny
+      values:
+        - yes
+
+main.workers/formula:
+  is: FormulaWorker
+  formula:
+    total: "qty * price"
+
+main.workers/export:
+  is: ExportWriterWorker
+  export:
+    format: csv
+    compression: none
+    path: build/bench/exp/job-export.csv

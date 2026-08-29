@@ -5,10 +5,10 @@ import tech.kzen.auto.server.objects.report.model.ReportRunContext
 import tech.kzen.auto.server.objects.report.service.ReportWorkPool
 import tech.kzen.auto.server.data.ReportDefinitionRepository
 import tech.kzen.lib.common.exec.engine.Execution
+import tech.kzen.lib.common.exec.data.binding.DataBindings
 import tech.kzen.lib.common.exec.engine.Logic
 import tech.kzen.lib.common.exec.engine.LogicSignature
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
-import tech.kzen.lib.common.exec.tuple.TupleValue
 
 
 /**
@@ -18,7 +18,8 @@ import tech.kzen.lib.common.exec.tuple.TupleValue
  *
  * The signature mirrors [tech.kzen.auto.server.objects.report.ReportDocument.define] — **no declared inputs**,
  * because a Report is configured entirely from its own notation (its input selection, formulas and output
- * spec), not from an argument tuple. A caller therefore passes it nothing; it still returns a `main` component.
+ * spec), not from run inputs. A caller therefore passes it nothing and receives no result binding;
+ * the materialized report is observed through the existing inspection/download surfaces.
  *
  * **A Report IS hostable**, like every other [tech.kzen.auto.common.paradigm.logic.LogicDocument] — a `RunStep`
  * or a Flow's `RunLogic` vertex can target one, and [tech.kzen.auto.server.exec.LogicCompiler] reaches it by the
@@ -44,8 +45,8 @@ class ReportLogic(
     }
 
 
-    override suspend fun run(execution: Execution): TupleValue {
-        return ReportRun(
+    override suspend fun run(execution: Execution): DataBindings {
+        ReportRun(
             execution,
             reportRunContext,
             reportWorkPool,
@@ -53,5 +54,6 @@ class ReportLogic(
             definitionRepository,
             calculatedColumnEval
         ).run()
+        return DataBindings.bind(logicSignature.outputs)
     }
 }

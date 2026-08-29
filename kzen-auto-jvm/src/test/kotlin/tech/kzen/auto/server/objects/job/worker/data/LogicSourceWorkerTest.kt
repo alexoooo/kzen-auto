@@ -10,10 +10,15 @@ import tech.kzen.auto.common.objects.document.data.schema.DataSchemaFieldListSpe
 import tech.kzen.auto.common.objects.document.data.schema.DataSchemaFieldSpec
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
+import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.lib.common.exec.data.binding.BindingDefinition
+import tech.kzen.lib.common.exec.data.binding.BindingName
+import tech.kzen.lib.common.exec.data.binding.BindingSchema
+import tech.kzen.lib.common.exec.data.binding.DataBindings
 import tech.kzen.auto.server.data.DataOpenerLookup
 import tech.kzen.auto.server.objects.data.schema.DataSchemaDocument
-import tech.kzen.auto.server.objects.job.worker.JobMessage
-import tech.kzen.lib.common.exec.tuple.TupleValue
+import tech.kzen.auto.server.objects.job.worker.testJobValue
+import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import kotlin.test.assertEquals
@@ -27,7 +32,7 @@ class LogicSourceWorkerTest {
 
     @Test
     fun directlyOwnedLogicSourceHostsAndEmitsUnits() = runBlocking {
-        val messages = mutableListOf<JobMessage>()
+        val messages = mutableListOf<DataValue>()
         val control = HostingControl()
         LogicSourceWorker(
             capturing(messages), instructions, listOf("date"), null,
@@ -35,7 +40,7 @@ class LogicSourceWorkerTest {
             DataOpenerLookup(UnusedOpener))
             .run(control)
 
-        assertEquals(listOf(DataUnit.ofPath("result.csv")), messages.map { it.payload })
+        assertEquals(listOf(DataUnit.ofPath("result.csv")), messages.map(JobDataValues::boundary))
         assertEquals(instructions, control.instructions)
         assertEquals("2026-08-24", control.input)
     }
@@ -58,10 +63,10 @@ class LogicSourceWorkerTest {
     }
 
 
-    private fun capturing(messages: MutableList<JobMessage>): ChannelOutput<Any?> {
+    private fun capturing(messages: MutableList<DataValue>): ChannelOutput<Any?> {
         return object: ChannelOutput<Any?> {
             override suspend fun send(element: Any?) {
-                messages.add(element as JobMessage)
+                messages.add(testJobValue(element))
             }
             override suspend fun flush() {}
             override fun batchSize(): Int = 1024
@@ -90,10 +95,22 @@ class LogicSourceWorkerTest {
             value: Map<String, Any?>,
             force: Boolean
         ) {}
-        override suspend fun host(instructions: ObjectLocation, input: Any?): TupleValue {
+        override suspend fun host(instructions: ObjectLocation, input: Any?): DataBindings {
             this.instructions = instructions
             this.input = input
-            return TupleValue.ofMain(listOf(DataUnit.ofPath("result.csv")))
+            val main = BindingName("main")
+            val value = JobDataValues.lift(listOf(DataUnit.ofPath("result.csv")))
+            return DataBindings.bind(
+                BindingSchema.of(BindingDefinition(main, value.contract)),
+                main to value)
+        }
+
+        override suspend fun host(instructions: ObjectLocation, arguments: DataBindings): DataBindings {
+            val first = arguments.entries().firstOrNull()?.second
+            val input = (first as? tech.kzen.lib.common.exec.data.binding.BindingState.Bound)
+                ?.value
+                ?.let(JobDataValues::boundary)
+            return host(instructions, input)
         }
     }
 }

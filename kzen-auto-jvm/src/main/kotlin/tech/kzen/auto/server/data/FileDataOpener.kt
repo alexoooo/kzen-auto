@@ -5,6 +5,7 @@ import tech.kzen.auto.common.data.api.DataCursor
 import tech.kzen.auto.common.data.api.DataOpener
 import tech.kzen.auto.common.data.model.DataPart
 import tech.kzen.auto.common.data.schema.DataShape
+import tech.kzen.auto.common.data.schema.LegacyDataShapeBridge
 import tech.kzen.auto.common.objects.document.plugin.model.CommonDataEncodingSpec
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.plugin.definition.ReportDefinition
@@ -109,7 +110,7 @@ class FileDataOpener(
     }
 
 
-    private fun inspectBlocking(spec: EffectiveOpenSpec): DataShape.Tabular {
+    private fun inspectBlocking(spec: EffectiveOpenSpec): DataShape {
         val handle = definitionRepository.classLoaderHandle(
             setOf(spec.coordinate), ClassLoaderUtils.dynamicParentClassLoader())
         return handle.use {
@@ -121,10 +122,10 @@ class FileDataOpener(
     private fun <T> inspect(
         spec: EffectiveOpenSpec,
         definition: ReportDefinition<T>
-    ): DataShape.Tabular {
+    ): DataShape {
         val headerDefinition = FlatDataHeaderDefinition(
             FlatDataLocation(spec.location, spec.encoding), FileFlatDataSource.instance, definition)
-        return DataShape.Tabular(ReportHeaderReader().extract(headerDefinition))
+        return LegacyDataShapeBridge.tabular(ReportHeaderReader().extract(headerDefinition))
     }
 
 
@@ -167,15 +168,18 @@ class FileDataOpener(
         shape: DataShape,
         handle: ClassLoaderHandle
     ): FileDataCursor {
-        val tabular = shape as? DataShape.Tabular
-            ?: throw IllegalStateException("File data opener requires a tabular shape, found $shape")
+        check(LegacyDataShapeBridge.headerOrNull(shape) != null) {
+            "File data opener requires a record shape, found $shape"
+        }
         val headerDefinition = FlatDataHeaderDefinition(
             FlatDataLocation(spec.location, spec.encoding), FileFlatDataSource.instance, definition)
 
         val contentChain = headerDefinition.openInputChain(
             DataBlockBuffer.defaultBytesSize)
-        return FileDataCursor(contentChain, tabular, handle)
+        return FileDataCursor(contentChain, shape, handle)
     }
+
+
 
 
     private fun CommonDataEncodingSpec.asDataEncodingSpec(): DataEncodingSpec {

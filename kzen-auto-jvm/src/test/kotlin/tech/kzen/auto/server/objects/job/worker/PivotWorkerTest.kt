@@ -17,6 +17,8 @@ import tech.kzen.auto.common.paradigm.job.api.ChannelServerIterator
 import tech.kzen.auto.common.paradigm.job.api.ServedRequest
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
+import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.auto.server.objects.report.exec.output.pivot.PivotBuilder
 import tech.kzen.auto.server.util.WorkUtils
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -31,7 +33,7 @@ import kotlin.test.assertTrue
 
 /**
  * Unit test for [PivotWorker]: driven through its real [PivotWorker.run] lifecycle over a fake input of
- * flat-part [JobMessage]s, it asserts the two things that make it a faithful, self-cleaning pivot operator —
+ * flat-backed values, it asserts the two things that make it a faithful, self-cleaning pivot operator —
  *
  * 1. **A/B parity** — the pivot table it emits downstream is row-for-row identical, under the same output header,
  *    to what a direct [PivotBuilder] produces over the same records (the P4d A/B gate). This also transitively
@@ -45,8 +47,8 @@ class PivotWorkerTest {
     //-----------------------------------------------------------------------------------------------------------------
     private val header = HeaderListing.of(listOf("city", "amount"))
 
-    private fun record(city: String, amount: String): JobMessage =
-        JobMessage.ofFlat(header, FlatFileRecord.of(listOf(city, amount)))
+    private fun record(city: String, amount: String): DataValue =
+        JobDataValues.flat(header, FlatFileRecord.of(listOf(city, amount)))
 
     // Group by city; aggregate amount as Sum + Count.
     private fun pivotSpec(): PivotSpec =
@@ -78,16 +80,16 @@ class PivotWorkerTest {
 
         // The Worker, driven through its real run() lifecycle with a real scratch dir.
         val workerScratch = Files.createTempDirectory("pivot-worker-scratch")
-        val forwarded = mutableListOf<JobMessage>()
+        val forwarded = mutableListOf<DataValue>()
 
         val worker = PivotWorker(
             chunkedInput(listOf(records)), capturingOutput(forwarded), emptyServer, pivot, selfLocation)
         worker.run(ScratchJobControl(workerScratch))
 
         // A/B: the emitted pivot rows match the direct builder's, under the same output header.
-        assertEquals(expectedRows, forwarded.map { it.flat!!.record.toList() })
+        assertEquals(expectedRows, forwarded.map { testRecord(it).toList() })
         assertTrue(forwarded.isNotEmpty())
-        assertTrue(forwarded.all { it.flat!!.header == HeaderListing.of(expectedHeader) })
+        assertTrue(forwarded.all { testProjection(it).header == HeaderListing.of(expectedHeader) })
 
         // The scratch dir is closed-then-deleted once the run settles.
         assertFalse(Files.exists(workerScratch))
@@ -106,7 +108,7 @@ class PivotWorkerTest {
         val pivot = pivotSpec()
 
         val workerScratch = Files.createTempDirectory("pivot-worker-progress")
-        val forwarded = mutableListOf<JobMessage>()
+        val forwarded = mutableListOf<DataValue>()
         val control = ScratchJobControl(workerScratch)
 
         val worker = PivotWorker(
@@ -132,20 +134,20 @@ class PivotWorkerTest {
         assertTrue(finalForce)
         assertEquals(15L, finalPush[JobConventions.progressCountKey])
         assertEquals(
-            forwarded.map { it.flat!!.record.toList() },
+            forwarded.map { testRecord(it).toList() },
             finalPush[JobConventions.progressRowsKey])
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     // Runs `use` against a direct PivotBuilder built from `records` in a throwaway dir, then closes-and-deletes it.
-    private fun <R> withDirectPivot(pivot: PivotSpec, records: List<JobMessage>, use: (PivotBuilder) -> R): R {
+    private fun <R> withDirectPivot(pivot: PivotSpec, records: List<DataValue>, use: (PivotBuilder) -> R): R {
         val dir = Files.createTempDirectory("pivot-direct")
         try {
             return PivotBuilder
                 .create(pivot.rows, HeaderListing(pivot.values.columns.keys.toList()), dir)
                 .use { direct ->
-                    records.forEach { direct.add(it.flat!!.record, it.flat!!.header) }
+                    records.forEach { direct.add(testRecord(it), testProjection(it).header) }
                     use(direct)
                 }
         }
@@ -156,7 +158,7 @@ class PivotWorkerTest {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun chunkedInput(chunks: List<List<JobMessage>>): ChannelInput<Any?> =
+    private fun chunkedInput(chunks: List<List<DataValue>>): ChannelInput<Any?> =
         object: ChannelInput<Any?> {
             private var next = 0
 
@@ -172,10 +174,10 @@ class PivotWorkerTest {
         }
 
 
-    private fun capturingOutput(sink: MutableList<JobMessage>): ChannelOutput<Any?> =
+    private fun capturingOutput(sink: MutableList<DataValue>): ChannelOutput<Any?> =
         object: ChannelOutput<Any?> {
             override suspend fun send(element: Any?) {
-                sink.add(element as JobMessage)
+                sink.add(testJobValue(element))
             }
             override suspend fun flush() {}
             override fun batchSize(): Int = 1024

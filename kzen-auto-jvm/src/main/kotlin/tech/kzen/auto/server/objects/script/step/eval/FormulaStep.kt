@@ -7,8 +7,6 @@ import tech.kzen.auto.server.objects.script.api.StepExecution
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.auto.server.util.ClassLoaderUtils
-import tech.kzen.lib.common.exec.logic.model.LogicType
-import tech.kzen.lib.common.exec.tuple.TupleDefinition
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.reflect.Reflect
@@ -68,13 +66,11 @@ class FormulaStep(
 
         val clazz = cachedKotlinCompiler.tryLoad(generatedCode, classLoader)
             ?: return ScriptStepDefinition(
-                TupleDefinition.ofMain(LogicType(TypeMetadata.anyNullable)),
+                ScriptStepDefinition.ofMain(TypeMetadata.anyNullable).returnValueDefinition,
                 "Unable to load: $generatedCode")
 
         val typeMetadata = ExpressionReturnTypeInference.inferReturnType(clazz)
 
-        return ScriptStepDefinition(
-            TupleDefinition.ofMain(LogicType(typeMetadata)),
-            null)
+        return ScriptStepDefinition.ofMain(typeMetadata)
     }
 }

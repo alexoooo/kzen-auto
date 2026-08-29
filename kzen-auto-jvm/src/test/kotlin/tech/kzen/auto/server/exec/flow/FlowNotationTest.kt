@@ -4,6 +4,8 @@ import kotlinx.coroutines.runBlocking
 import tech.kzen.auto.common.paradigm.flow.model.exec.VisualVertexModel
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.exec.LogicCompilerServices
+import tech.kzen.auto.server.exec.bindingsOf
+import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.auto.server.exec.flow.test.FlakyProcessorVertex
 import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.lib.common.exec.engine.Address
@@ -12,9 +14,7 @@ import tech.kzen.lib.common.exec.engine.NodeStatus
 import tech.kzen.lib.common.exec.engine.Outcome
 import tech.kzen.lib.common.exec.engine.PauseReason
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
-import tech.kzen.lib.common.exec.tuple.TupleComponentName
-import tech.kzen.lib.common.exec.tuple.TupleComponentValue
-import tech.kzen.lib.common.exec.tuple.TupleValue
+import tech.kzen.lib.common.exec.data.binding.BindingName
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
@@ -56,21 +56,21 @@ class FlowNotationTest {
     @Test
     fun inputArgumentFlowsToOutputResult() {
         val outcome = runFlow("test/flow/flow-execution-test.yaml", argument("x", 42))
-        assertEquals(42, assertIs<Outcome.Success>(outcome).value.find(TupleComponentName("out")))
+        assertEquals(42, result(outcome, "out"))
     }
 
 
     @Test
     fun replaceProcessorProducesConstant() {
         val outcome = runFlow("test/flow/flow-step-test.yaml", argument("x", "ignored-by-replace"))
-        assertEquals("Z", assertIs<Outcome.Success>(outcome).value.find(TupleComponentName("out")))
+        assertEquals("Z", result(outcome, "out"))
     }
 
 
     @Test
     fun streamSourceDrivesIterationsToLastValue() {
         val outcome = runFlow("test/flow/flow-stream-test.yaml")
-        assertEquals(3, assertIs<Outcome.Success>(outcome).value.find(TupleComponentName("last")))
+        assertEquals(3, result(outcome, "last"))
     }
 
 
@@ -128,7 +128,7 @@ class FlowNotationTest {
                 engine.await()
             }
 
-            assertEquals(5, assertIs<Outcome.Success>(outcome).value.find(TupleComponentName("out")))
+            assertEquals(5, result(outcome, "out"))
             assertNull(
                 assertNotNull(tracedVertex(engine, "test/flow/flow-flaky-test.yaml", "FflkFlaky")).error)
         }
@@ -144,7 +144,7 @@ class FlowNotationTest {
         // its column). Its "possibly one" contract holds: the vertex runs with `prefix` empty and
         // emits the suffix text alone.
         val outcome = runFlow("test/flow/flow-optional-input-test.yaml", argument("x", "hello"))
-        assertEquals("hello", assertIs<Outcome.Success>(outcome).value.find(TupleComponentName("out")))
+        assertEquals("hello", result(outcome, "out"))
     }
 
 
@@ -155,7 +155,7 @@ class FlowNotationTest {
         // wired optional must not gate readiness — SelectLast runs every iteration with
         // whichever branch produced (1 -> 1, 2 -> "Even", 3 -> 3; the loop keeps the last).
         val outcome = runFlow("test/flow/flow-select-last-test.yaml")
-        assertEquals(3, assertIs<Outcome.Success>(outcome).value.find(TupleComponentName("last")))
+        assertEquals(3, result(outcome, "last"))
     }
 
 
@@ -184,7 +184,7 @@ class FlowNotationTest {
         // vertex message — exercising FlowRun.runChildVertex's Execution.host + cross-flavour LogicCompiler
         // dispatch (a Flow hosting a Script).
         val outcome = runFlow("test/flow/flow-run-test.yaml", argument("x", 6))
-        assertEquals(7, assertIs<Outcome.Success>(outcome).value.find(TupleComponentName("out")))
+        assertEquals(7, result(outcome, "out"))
     }
 
 
@@ -194,10 +194,8 @@ class FlowNotationTest {
         // second column's message reaches the second parameter rather than being dropped.
         val outcome = runFlow(
             "test/flow/flow-run-two-param-test.yaml",
-            TupleValue(listOf(
-                TupleComponentValue(TupleComponentName("x"), 6),
-                TupleComponentValue(TupleComponentName("y"), "!"))))
-        assertEquals("6!", assertIs<Outcome.Success>(outcome).value.find(TupleComponentName("out")))
+            mapOf("x" to 6, "y" to "!"))
+        assertEquals("6!", result(outcome, "out"))
     }
 
 
@@ -205,7 +203,7 @@ class FlowNotationTest {
     fun runLogicArgumentsLiteralBindsNamedParameter() {
         // The single wired input takes `number` by position; the `arguments` literal takes `label` by name.
         val outcome = runFlow("test/flow/flow-run-arguments-test.yaml", argument("x", 6))
-        assertEquals("6!", assertIs<Outcome.Success>(outcome).value.find(TupleComponentName("out")))
+        assertEquals("6!", result(outcome, "out"))
     }
 
 
@@ -220,9 +218,8 @@ class FlowNotationTest {
 
     @Test
     fun arbitraryDomainObjectMessageDoesNotKillRun() {
-        // Tracing is non-fatal: a non-basic message (a data class ExecutionValue.ofArbitrary can't render)
-        // is rendered via toString instead of failing the run, even though inspection runs outside
-        // pause-on-error's reach.
+        // Tracing is non-fatal: a non-basic message is rendered through its bounded structural snapshot
+        // instead of failing the run, even though inspection runs outside pause-on-error's reach.
         val widget = ArbitraryMessage(7)
         val engine = engineFor("test/flow/flow-execution-test.yaml", argument("x", widget))
         try {
@@ -230,12 +227,12 @@ class FlowNotationTest {
                 engine.resume()
                 engine.await()
             }
-            assertEquals(widget, assertIs<Outcome.Success>(outcome).value.find(TupleComponentName("out")))
+            assertEquals(widget, result(outcome, "out"))
 
             // History retains every frame (the run-end flush clears the latest live message), so the input
-            // vertex's toString rendering is present.
+            // vertex's structural snapshot is present.
             val rendered = tracedMessages(engine, "test/flow/flow-execution-test.yaml", "FxAlpha")
-            assertTrue(rendered.contains(widget.toString()), "traced messages: $rendered")
+            assertTrue(rendered.any { it.toString() == "{id=7}" }, "traced messages: $rendered")
         }
         finally {
             engine.close()
@@ -283,13 +280,14 @@ class FlowNotationTest {
     }
 
 
-    private fun argument(name: String, value: Any?): TupleValue {
-        return TupleValue(listOf(
-            TupleComponentValue(TupleComponentName(name), value)))
-    }
+    private fun result(outcome: Outcome, name: String): Any? = JobDataValues.boundary(
+        assertIs<Outcome.Success>(outcome).value.requireValue(BindingName(name)))
 
 
-    private fun runFlow(documentPathString: String, inputs: TupleValue = TupleValue.empty): Outcome {
+    private fun argument(name: String, value: Any?): Map<String, Any?> = mapOf(name to value)
+
+
+    private fun runFlow(documentPathString: String, inputs: Map<String, Any?> = emptyMap()): Outcome {
         val engine = engineFor(documentPathString, inputs)
         return try {
             runBlocking {
@@ -303,7 +301,7 @@ class FlowNotationTest {
     }
 
 
-    private fun engineFor(documentPathString: String, inputs: TupleValue = TupleValue.empty): RunEngine {
+    private fun engineFor(documentPathString: String, inputs: Map<String, Any?> = emptyMap()): RunEngine {
         context = KzenAutoContext.forTest()
 
         val documentPath = DocumentPath.parse(documentPathString)
@@ -326,7 +324,10 @@ class FlowNotationTest {
                 context.jobWorkPool,
                 LogicRunExecutionId.random()))
 
-        return RunEngine(flowLogic, context.objectStableMapper.objectStableId(flowLocation), inputs)
+        return RunEngine(
+            flowLogic,
+            context.objectStableMapper.objectStableId(flowLocation),
+            bindingsOf(flowLogic.signature().inputs, *inputs.entries.map { it.key to it.value }.toTypedArray()))
     }
 
 

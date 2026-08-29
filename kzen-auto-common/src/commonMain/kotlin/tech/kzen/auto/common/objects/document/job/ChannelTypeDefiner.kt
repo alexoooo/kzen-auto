@@ -26,7 +26,7 @@ import tech.kzen.lib.platform.ClassNames
  * via `by: ChannelTypeDefiner` (see job-jvm.yaml).
  *
  * A Channel carries one declared type — a [TypeMetadata], `Any` when undeclared (an untyped channel). At run
- * time every channel element is a `JobMessage` (the uniform carrier), so the declared type describes the
+ * time every channel element is a `DataValue` (the uniform carrier), so the declared type describes the
  * message's PAYLOAD — the strongly typed value a source / Run lane streams — not the physical element. A
  * Worker port referencing the channel may declare its own payload type via the `of:` generic, so the port's
  * metadata type is e.g. `ChannelOutput<String>`. This definer cross-checks them:
@@ -45,7 +45,7 @@ import tech.kzen.lib.platform.ClassNames
  * -> StageController path as any other definition error — a pre-run, in-context message rather than a
  * run-time failure. (Element-level safety no longer rests on this check at all: the framework dispatch in
  * [tech.kzen.auto.server.objects.job.worker.TransformWorker] / `SinkWorker` receives the uniform
- * `JobMessage`, failing descriptively on a raw element.) Payload-type FLOW — inferring undeclared types
+ * `DataValue`, failing descriptively on a raw element.) Payload-type FLOW — inferring undeclared types
  * through the graph — is the separate static walk (the server-side JobValidator: inferred types thread into
  * each Worker's expression receiver and display on its card); this definer stays the DECLARED-type check.
  *

@@ -1,10 +1,11 @@
 package tech.kzen.auto.common.paradigm.flow.model.exec
 
+import tech.kzen.lib.common.exec.data.value.DataValue
 
 class ActiveVertexModel(
         var state: Any?,
-        var message: Any?,
-        val remainingBatch: MutableList<Any>,
+        var message: DataValue?,
+        val remainingBatch: MutableList<DataValue>,
         var streamHasNext: Boolean,
         var epoch: Int,
 

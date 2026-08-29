@@ -2,11 +2,11 @@ package tech.kzen.auto.server.exec.job
 
 import tech.kzen.auto.common.paradigm.job.api.Worker
 import tech.kzen.auto.server.objects.job.worker.WorkerBase
+import tech.kzen.lib.common.exec.data.binding.BindingSchema
+import tech.kzen.lib.common.exec.data.binding.DataBindings
 import tech.kzen.lib.common.exec.engine.Execution
 import tech.kzen.lib.common.exec.engine.Logic
 import tech.kzen.lib.common.exec.engine.LogicSignature
-import tech.kzen.lib.common.exec.tuple.TupleDefinition
-import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import java.nio.file.Path
@@ -18,7 +18,7 @@ import java.nio.file.Path
  * Worker's only framework contact is [tech.kzen.auto.common.paradigm.job.control.JobControl], so the whole
  * Worker SPI (WorkerBase / Source / Transform / Sink, channels) is reused unchanged: this just adapts the node's
  * [Execution] into an [EngineJobControl] and runs the Worker to completion. A Worker has no Logic output — it
- * communicates over channels — so the result is the empty tuple.
+ * communicates over channels — so the result has no bindings.
  *
  * LIVE-EDIT MIGRATION (logic-spec §5): a Worker's run-scoped state IS this node's migratable state, so the two
  * are bridged directly onto the node's [Execution] capture/restore contract (the engine carries it by the
@@ -45,9 +45,9 @@ class WorkerLogic(
     private val objectStableMapper: ObjectStableMapper,
     private val scratchDir: Path,
     private val outputDir: Path,
-    private val jobInputs: TupleValue,
+    private val jobInputs: DataBindings,
     private val jobParameters: JobParameters,
-    private val jobResults: TupleDefinition,
+    private val jobResults: BindingSchema,
     private val inputPayloadType: TypeMetadata?,
     private val resultCollector: JobResultCollector
 ): Logic {
@@ -56,7 +56,7 @@ class WorkerLogic(
     }
 
 
-    override suspend fun run(execution: Execution): TupleValue {
+    override suspend fun run(execution: Execution): DataBindings {
         val workerBase = worker as? WorkerBase
         if (workerBase != null) {
             execution.restored?.let { workerBase.loadMigrationState(it) }
@@ -72,6 +72,6 @@ class WorkerLogic(
         execution.recoverable({ }) {
             worker.run(control)
         }
-        return TupleValue.empty
+        return DataBindings.bind(BindingSchema.empty)
     }
 }

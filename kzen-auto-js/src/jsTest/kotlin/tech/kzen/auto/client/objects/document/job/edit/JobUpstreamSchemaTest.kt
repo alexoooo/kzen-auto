@@ -11,6 +11,7 @@ import tech.kzen.auto.common.data.model.DataRole
 import tech.kzen.auto.common.data.model.DataUnit
 import tech.kzen.auto.common.data.schema.DataShape
 import tech.kzen.auto.common.data.schema.HeaderListing
+import tech.kzen.auto.common.data.schema.LegacyDataShapeBridge
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.document.DocumentPathMap
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -305,7 +306,7 @@ class JobUpstreamSchemaTest {
     }
 
 
-    private fun tabular(vararg columns: String): DataShape.Tabular {
-        return DataShape.Tabular(HeaderListing.ofUnique(columns.toList()))
+    private fun tabular(vararg columns: String): DataShape {
+        return LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(columns.toList()))
     }
 }

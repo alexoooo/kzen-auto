@@ -19,18 +19,26 @@ import tech.kzen.auto.common.data.model.DataRole
 import tech.kzen.auto.common.data.model.DataUnit
 import tech.kzen.auto.common.data.schema.DataShape
 import tech.kzen.auto.common.data.schema.HeaderListing
+import tech.kzen.auto.common.data.schema.LegacyDataShapeBridge
 import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.api.ChannelInputIterator
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
+import tech.kzen.auto.plugin.model.record.FlatRecordHeader
 import tech.kzen.auto.server.data.DataOpenerLookup
 import tech.kzen.auto.server.objects.job.channel.JobChannel
-import tech.kzen.auto.server.objects.job.worker.JobMessage
-import tech.kzen.auto.server.objects.job.worker.WorkerLane
-import tech.kzen.auto.server.objects.job.worker.WorkerLaneContext
+import tech.kzen.auto.server.objects.job.worker.testJobValue
+import tech.kzen.auto.server.objects.job.worker.testProjection
+import tech.kzen.auto.server.objects.job.worker.testRecord
+import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.auto.server.objects.job.worker.JobLaneDescriptor
+import tech.kzen.auto.server.objects.job.worker.JobLaneContext
 import tech.kzen.auto.server.objects.job.worker.definition.WorkerDefinitionResolution
-import tech.kzen.lib.common.exec.tuple.TupleDefinition
+import tech.kzen.lib.common.exec.data.binding.BindingSchema
+import tech.kzen.lib.common.exec.data.value.DataNode
+import tech.kzen.lib.common.exec.data.value.DataValue
+import tech.kzen.lib.common.exec.data.value.DefaultDataAdapterRegistry
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.location.ObjectReference
@@ -60,19 +68,19 @@ class ReadPartWorkerTest {
             part("reference-a", "reference"),
             part("reference-b", "reference"))
         val opener = FakeOpener(mapOf(
-            "main" to { FakeCursor(DataShape.Payload(TypeMetadata.string), listOf("ignored")) },
+            "main" to { FakeCursor(LegacyDataShapeBridge.payload(TypeMetadata.string), listOf("ignored")) },
             "reference-a" to {
-                FakeCursor(DataShape.Payload(TypeMetadata.anyNullable), listOf(null, "a"))
+                FakeCursor(LegacyDataShapeBridge.payload(TypeMetadata.anyNullable), listOf(null, "a"))
             },
             "reference-b" to {
-                FakeCursor(DataShape.Payload(TypeMetadata.anyNullable), listOf("b"))
+                FakeCursor(LegacyDataShapeBridge.payload(TypeMetadata.anyNullable), listOf("b"))
             }))
-        val messages = mutableListOf<JobMessage>()
+        val messages = mutableListOf<DataValue>()
         val control = CountingControl()
         worker(BatchInput(listOf(unit)), opener, CapturingOutput(messages), role = "reference")
             .run(control)
 
-        assertEquals(listOf<Any?>(null, "a", "b"), messages.map { it.payload })
+        assertEquals(listOf<Any?>(null, "a", "b"), messages.map(JobDataValues::boundary))
         assertEquals(listOf("reference-a", "reference-b"), opener.opened)
         assertEquals(7, control.blockingCount, "three items, two exhausted pulls, and two closes")
         assertEquals(1L, control.progressValues.last()["units"])
@@ -103,10 +111,10 @@ class ReadPartWorkerTest {
 
     @Test
     fun attributesPrependInOrderAndCollisionClosesCursor() = runBlocking {
-        val shape = DataShape.Tabular(HeaderListing.ofUnique(listOf("value")))
+        val shape = LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("value")))
         val attributes = linkedMapOf("date" to "2026-08-24", "group" to "A")
         val unit = DataUnit(attributes, listOf(part("ok")))
-        val messages = mutableListOf<JobMessage>()
+        val messages = mutableListOf<DataValue>()
         worker(
             BatchInput(listOf(unit)),
             FakeOpener(mapOf("ok" to { FakeCursor(shape, listOf(FlatFileRecord.of("7"))) })),
@@ -115,8 +123,8 @@ class ReadPartWorkerTest {
             .run(CountingControl())
 
         assertEquals(listOf("date", "group", "value"),
-            messages.single().flat!!.header.values.map { it.text })
-        assertEquals(listOf("2026-08-24", "A", "7"), messages.single().flat!!.record.toList())
+            testProjection(messages.single()).header.values.map { it.text })
+        assertEquals(listOf("2026-08-24", "A", "7"), testRecord(messages.single()).toList())
 
         val collisionCursor = FakeCursor(shape, listOf(FlatFileRecord.of("8")))
         val collision = DataUnit(mapOf("value" to "collision"), listOf(part("bad")))
@@ -136,15 +144,15 @@ class ReadPartWorkerTest {
     fun rejectsNonDataUnitPayloadAndShapeMismatchClosesCursor() = runBlocking {
         val payloadFailure = assertFailsWith<IllegalStateException> {
             worker(
-                BatchInput.messages(listOf(JobMessage.ofPayload(42))),
+                BatchInput.messages(listOf(JobDataValues.lift(42))),
                 FakeOpener(emptyMap()), CapturingOutput())
                 .run(CountingControl())
         }
         assertContains(payloadFailure.message!!, "DataUnit")
         assertContains(payloadFailure.message!!, "kotlin.Int")
 
-        val firstShape = DataShape.Tabular(HeaderListing.ofUnique(listOf("a")))
-        val secondShape = DataShape.Tabular(HeaderListing.ofUnique(listOf("b")))
+        val firstShape = LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("a")))
+        val secondShape = LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("b")))
         val second = FakeCursor(secondShape, listOf(FlatFileRecord.of("2")))
         val mismatch = assertFailsWith<IllegalStateException> {
             worker(
@@ -164,16 +172,16 @@ class ReadPartWorkerTest {
     @Test
     fun cadenceCheckpointsThroughoutOneThousandItemExpansion() = runBlocking {
         val items = (0 until 1000).map { "row-$it" }
-        val cursor = FakeCursor(DataShape.Payload(TypeMetadata.string), items)
+        val cursor = FakeCursor(LegacyDataShapeBridge.payload(TypeMetadata.string), items)
         val control = CountingControl()
-        val messages = mutableListOf<JobMessage>()
+        val messages = mutableListOf<DataValue>()
         worker(
             BatchInput(listOf(DataUnit.of(part("large")))),
             FakeOpener(mapOf("large" to { cursor })),
             CapturingOutput(messages, batchSize = 10))
             .run(control)
 
-        assertEquals(items, messages.map { it.payload })
+        assertEquals(items, messages.map(JobDataValues::boundary))
         assertTrue(control.checkpointCount >= 101, "leading checkpoint plus 100 output cadence checkpoints")
         assertEquals(1002, control.blockingCount)
         assertTrue(cursor.closed)
@@ -183,7 +191,7 @@ class ReadPartWorkerTest {
     @Test
     fun cancellationAtCadenceCheckpointClosesActiveCursor() = runBlocking {
         val cursor = FakeCursor(
-            DataShape.Payload(TypeMetadata.string), (0 until 100).map { it })
+            LegacyDataShapeBridge.payload(TypeMetadata.string), (0 until 100).map { it })
         val parked = CompletableDeferred<Unit>()
         val release = CompletableDeferred<Unit>()
         val output = CapturingOutput(batchSize = 2)
@@ -221,7 +229,7 @@ class ReadPartWorkerTest {
     @Test
     fun unadoptedCompositeMigrationStateOwnsAndClosesDetachedCursor() = runBlocking {
         val cursor = FakeCursor(
-            DataShape.Payload(TypeMetadata.string), (0 until 10).map { it })
+            LegacyDataShapeBridge.payload(TypeMetadata.string), (0 until 10).map { it })
         val parked = CompletableDeferred<Unit>()
         val release = CompletableDeferred<Unit>()
         val running = worker(
@@ -243,7 +251,7 @@ class ReadPartWorkerTest {
     @Test
     fun readWorkerSnapshotIsClosedWhenWorkerIsReplacedByReadPart() = runBlocking {
         val cursor = FakeCursor(
-            DataShape.Payload(TypeMetadata.string), (0 until 10).map { it })
+            LegacyDataShapeBridge.payload(TypeMetadata.string), (0 until 10).map { it })
         val source = object: DataSource {
             override suspend fun resolve(context: DataContext): DataResolveResult =
                 DataResolveResult(DataManifest(listOf(DataUnit.of(part("items")))), emptyList())
@@ -276,7 +284,7 @@ class ReadPartWorkerTest {
     @Test
     fun readPartSnapshotIsClosedWhenWorkerIsReplacedByReadWorker() = runBlocking {
         val cursor = FakeCursor(
-            DataShape.Payload(TypeMetadata.string), (0 until 10).map { it })
+            LegacyDataShapeBridge.payload(TypeMetadata.string), (0 until 10).map { it })
         val readPart = worker(
             BatchInput(listOf(DataUnit.of(part("items")))),
             FakeOpener(mapOf("items" to { cursor })),
@@ -305,11 +313,11 @@ class ReadPartWorkerTest {
             DataUnit.of(part("unit-1")),
             DataUnit.of(part("unit-2")),
             DataUnit.of(part("unit-3")))
-        val firstCursor = FakeCursor(DataShape.Payload(TypeMetadata.string), listOf("u1"))
+        val firstCursor = FakeCursor(LegacyDataShapeBridge.payload(TypeMetadata.string), listOf("u1"))
         val secondCursor = FakeCursor(
-            DataShape.Payload(TypeMetadata.string), listOf("u2-0", "u2-1", "u2-2", "u2-3", "u2-4"))
+            LegacyDataShapeBridge.payload(TypeMetadata.string), listOf("u2-0", "u2-1", "u2-2", "u2-3", "u2-4"))
         val input = BatchInput(units)
-        val firstMessages = mutableListOf<JobMessage>()
+        val firstMessages = mutableListOf<DataValue>()
         val parked = CompletableDeferred<Unit>()
         val release = CompletableDeferred<Unit>()
         val first = worker(
@@ -325,11 +333,11 @@ class ReadPartWorkerTest {
         assertTrue(firstCursor.closed)
         assertTrue(!secondCursor.closed, "the active cursor ownership was detached")
 
-        val resumedMessages = mutableListOf<JobMessage>()
+        val resumedMessages = mutableListOf<DataValue>()
         val resumedOpener = FakeOpener(mapOf(
             "unit-2" to { error("active cursor must be adopted") },
             "unit-3" to {
-                FakeCursor(DataShape.Payload(TypeMetadata.string), listOf("u3"))
+                FakeCursor(LegacyDataShapeBridge.payload(TypeMetadata.string), listOf("u3"))
             }))
         val resumed = worker(
             BatchInput(emptyList()), resumedOpener,
@@ -340,7 +348,7 @@ class ReadPartWorkerTest {
 
         assertEquals(
             listOf("u1", "u2-0", "u2-1", "u2-2", "u2-3", "u2-4", "u3"),
-            (firstMessages + resumedMessages).map { it.payload })
+            (firstMessages + resumedMessages).map(JobDataValues::boundary))
         assertEquals(listOf("unit-3"), resumedOpener.opened)
         assertTrue(secondCursor.closed)
         assertTrue(resumedControl.blockingCount > 0)
@@ -356,13 +364,13 @@ class ReadPartWorkerTest {
         val inputChannel = JobChannel(capacity = 1, batchSize = 3)
         val inputProducer = inputChannel.newProducer()
         for (unit in units) {
-            inputProducer.send(JobMessage.ofPayload(unit))
+            inputProducer.send(JobDataValues.lift(unit))
         }
         inputProducer.flush()
         inputProducer.close()
 
         val activeSecond = FakeCursor(
-            DataShape.Payload(TypeMetadata.string),
+            LegacyDataShapeBridge.payload(TypeMetadata.string),
             listOf("u2-0", "u2-1", "u2-2", "u2-3", "u2-4"))
         val outputChannel = JobChannel(capacity = 0, batchSize = 3)
         val parked = CompletableDeferred<Unit>()
@@ -371,7 +379,7 @@ class ReadPartWorkerTest {
             inputChannel.input,
             FakeOpener(mapOf(
                 "unit-1" to {
-                    FakeCursor(DataShape.Payload(TypeMetadata.string), listOf("u1"))
+                    FakeCursor(LegacyDataShapeBridge.payload(TypeMetadata.string), listOf("u1"))
                 },
                 "unit-2" to { activeSecond })),
             outputChannel.newProducer())
@@ -397,7 +405,7 @@ class ReadPartWorkerTest {
         val resumedOpener = FakeOpener(mapOf(
             "unit-2" to { error("the active cursor must be adopted") },
             "unit-3" to {
-                FakeCursor(DataShape.Payload(TypeMetadata.string), listOf("u3"))
+                FakeCursor(LegacyDataShapeBridge.payload(TypeMetadata.string), listOf("u3"))
             }))
         val resumed = worker(
             resumedInput.input, resumedOpener, resumedOutput.newProducer())
@@ -416,8 +424,8 @@ class ReadPartWorkerTest {
     fun migrationAfterExactFinalItemObservesEofThenAdvancesCarriedUnit() = runBlocking {
         val units = listOf(DataUnit.of(part("first")), DataUnit.of(part("second")))
         val firstCursor = FakeCursor(
-            DataShape.Payload(TypeMetadata.string), listOf("a", "b", "c"))
-        val firstMessages = mutableListOf<JobMessage>()
+            LegacyDataShapeBridge.payload(TypeMetadata.string), listOf("a", "b", "c"))
+        val firstMessages = mutableListOf<DataValue>()
         val parked = CompletableDeferred<Unit>()
         val release = CompletableDeferred<Unit>()
         val first = worker(
@@ -428,11 +436,11 @@ class ReadPartWorkerTest {
         val captured = first.captureMigrationState()
         job.cancelAndJoin()
 
-        val resumedMessages = mutableListOf<JobMessage>()
+        val resumedMessages = mutableListOf<DataValue>()
         val resumedOpener = FakeOpener(mapOf(
             "first" to { error("the exhausted cursor must be adopted to observe EOF") },
             "second" to {
-                FakeCursor(DataShape.Payload(TypeMetadata.string), listOf("next"))
+                FakeCursor(LegacyDataShapeBridge.payload(TypeMetadata.string), listOf("next"))
             }))
         val resumedControl = CountingControl()
         val resumed = worker(
@@ -441,7 +449,7 @@ class ReadPartWorkerTest {
         resumed.run(resumedControl)
 
         assertEquals(listOf("a", "b", "c", "next"),
-            (firstMessages + resumedMessages).map { it.payload })
+            (firstMessages + resumedMessages).map(JobDataValues::boundary))
         assertEquals(listOf("second"), resumedOpener.opened)
         assertTrue(firstCursor.closed)
         assertTrue(resumedControl.blockingCount >= 4,
@@ -451,8 +459,8 @@ class ReadPartWorkerTest {
 
     @Test
     fun shapeBaselineRejectsMismatchAcrossUnitsAndClosesSecondCursor() = runBlocking {
-        val shapeA = DataShape.Tabular(HeaderListing.ofUnique(listOf("a")))
-        val shapeB = DataShape.Tabular(HeaderListing.ofUnique(listOf("b")))
+        val shapeA = LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("a")))
+        val shapeB = LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("b")))
         val secondCursor = FakeCursor(shapeB, listOf(FlatFileRecord.of("2")))
         val failure = assertFailsWith<IllegalStateException> {
             worker(
@@ -472,8 +480,8 @@ class ReadPartWorkerTest {
 
     @Test
     fun sameConfigMigrationPreservesWorkerWideShapeBaseline() = runBlocking {
-        val shapeA = DataShape.Tabular(HeaderListing.ofUnique(listOf("a")))
-        val shapeB = DataShape.Tabular(HeaderListing.ofUnique(listOf("b")))
+        val shapeA = LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("a")))
+        val shapeB = LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("b")))
         val firstCursor = FakeCursor(shapeA, listOf(FlatFileRecord.of("1")))
         val units = listOf(DataUnit.of(part("first")), DataUnit.of(part("second")))
         val parked = CompletableDeferred<Unit>()
@@ -512,13 +520,13 @@ class ReadPartWorkerTest {
             part("ref-a", "reference"), part("ref-b", "reference"))
         val parked = CompletableDeferred<Unit>()
         val release = CompletableDeferred<Unit>()
-        val firstMessages = mutableListOf<JobMessage>()
-        val activeMain = FakeCursor(DataShape.Payload(TypeMetadata.string), listOf("m2", "m3"))
+        val firstMessages = mutableListOf<DataValue>()
+        val activeMain = FakeCursor(LegacyDataShapeBridge.payload(TypeMetadata.string), listOf("m2", "m3"))
         val first = worker(
             BatchInput(listOf(unit)),
             FakeOpener(mapOf(
                 "main-a" to {
-                    FakeCursor(DataShape.Payload(TypeMetadata.string), listOf("m0", "m1"))
+                    FakeCursor(LegacyDataShapeBridge.payload(TypeMetadata.string), listOf("m0", "m1"))
                 },
                 "main-b" to { activeMain })),
             CapturingOutput(firstMessages, batchSize = 3), role = "main")
@@ -527,13 +535,13 @@ class ReadPartWorkerTest {
         val captured = first.captureMigrationState()
         job.cancelAndJoin()
 
-        val resumedMessages = mutableListOf<JobMessage>()
+        val resumedMessages = mutableListOf<DataValue>()
         val resumedOpener = FakeOpener(mapOf(
             "ref-a" to {
-                FakeCursor(DataShape.Payload(TypeMetadata.string), listOf("r0", "r1"))
+                FakeCursor(LegacyDataShapeBridge.payload(TypeMetadata.string), listOf("r0", "r1"))
             },
             "ref-b" to {
-                FakeCursor(DataShape.Payload(TypeMetadata.string), listOf("r2", "r3"))
+                FakeCursor(LegacyDataShapeBridge.payload(TypeMetadata.string), listOf("r2", "r3"))
             }))
         val resumed = worker(
             BatchInput(emptyList()), resumedOpener,
@@ -542,7 +550,7 @@ class ReadPartWorkerTest {
         resumed.run(CountingControl())
 
         assertEquals(listOf("m0", "m1", "m2", "r3"),
-            (firstMessages + resumedMessages).map { it.payload })
+            (firstMessages + resumedMessages).map(JobDataValues::boundary))
         assertEquals(listOf("ref-a", "ref-b"), resumedOpener.opened)
         assertTrue(activeMain.closed, "changed config closes rather than adopts the detached cursor")
     }
@@ -550,11 +558,11 @@ class ReadPartWorkerTest {
 
     @Test
     fun changedAttributesWithEmptyAttributesReopensAndSkipsTheEmittedPrefix() = runBlocking {
-        val shape = DataShape.Tabular(HeaderListing.ofUnique(listOf("value")))
+        val shape = LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("value")))
         val unit = DataUnit.of(part("items"))
         val oldCursor = FakeCursor(
             shape, listOf(FlatFileRecord.of("1"), FlatFileRecord.of("2")))
-        val firstMessages = mutableListOf<JobMessage>()
+        val firstMessages = mutableListOf<DataValue>()
         val parked = CompletableDeferred<Unit>()
         val release = CompletableDeferred<Unit>()
         val first = worker(
@@ -567,7 +575,7 @@ class ReadPartWorkerTest {
 
         val reopened = FakeCursor(
             shape, listOf(FlatFileRecord.of("1"), FlatFileRecord.of("2")))
-        val resumedMessages = mutableListOf<JobMessage>()
+        val resumedMessages = mutableListOf<DataValue>()
         val resumed = worker(
             BatchInput(emptyList()), FakeOpener(mapOf("items" to { reopened })),
             CapturingOutput(resumedMessages), attributes = ReadPartWorker.attributesColumns)
@@ -577,14 +585,14 @@ class ReadPartWorkerTest {
         assertTrue(oldCursor.closed)
         assertTrue(reopened.closed)
         assertEquals(listOf("1", "2"),
-            (firstMessages + resumedMessages).map { it.flat!!.record.getString(0) })
+            (firstMessages + resumedMessages).map { testRecord(it).getString(0) })
     }
 
 
     @Test
     fun changedAttributesWithNonemptyAttributesFailsOnEffectiveShapeBeforeNextSend() = runBlocking {
         val unit = DataUnit(mapOf("group" to "A"), listOf(part("items")))
-        val shape = DataShape.Tabular(HeaderListing.ofUnique(listOf("value")))
+        val shape = LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("value")))
         val oldCursor = FakeCursor(
             shape,
             listOf(FlatFileRecord.of("1"), FlatFileRecord.of("2")))
@@ -600,7 +608,7 @@ class ReadPartWorkerTest {
 
         val reopened = FakeCursor(
             shape, listOf(FlatFileRecord.of("1"), FlatFileRecord.of("2")))
-        val resumedMessages = mutableListOf<JobMessage>()
+        val resumedMessages = mutableListOf<DataValue>()
         val resumed = worker(
             BatchInput(emptyList()), FakeOpener(mapOf("items" to { reopened })),
             CapturingOutput(resumedMessages),
@@ -619,86 +627,89 @@ class ReadPartWorkerTest {
     @Test
     fun itemPositionIsClaimedBeforeSendAndReopenedCursorSkipsIt() = runBlocking {
         val unit = DataUnit.of(part("items"))
-        val firstCursor = FakeCursor(DataShape.Payload(TypeMetadata.string), listOf("first", "second"))
+        val firstCursor = FakeCursor(LegacyDataShapeBridge.payload(TypeMetadata.string), listOf("first", "second"))
         val first = worker(
             BatchInput(listOf(unit)), FakeOpener(mapOf("items" to { firstCursor })), ThrowingOutput())
         assertFailsWith<IllegalStateException> { first.run(CountingControl()) }
         assertTrue(firstCursor.closed)
 
-        val resumedMessages = mutableListOf<JobMessage>()
+        val resumedMessages = mutableListOf<DataValue>()
         val resumed = worker(
             BatchInput(emptyList()),
             FakeOpener(mapOf("items" to {
-                FakeCursor(DataShape.Payload(TypeMetadata.string), listOf("first", "second"))
+                FakeCursor(LegacyDataShapeBridge.payload(TypeMetadata.string), listOf("first", "second"))
             })),
             CapturingOutput(resumedMessages))
         resumed.loadMigrationState(first.captureMigrationState())
         resumed.run(CountingControl())
-        assertEquals(listOf("second"), resumedMessages.map { it.payload })
+        assertEquals(listOf("second"), resumedMessages.map(JobDataValues::boundary))
     }
 
 
     @Test
     fun payloadFlowAcceptsOnlyUnknownOrNonNullableDataUnitAndNeverInfersOutput() {
         val worker = worker(BatchInput(emptyList()), FakeOpener(emptyMap()), CapturingOutput())
-        val unknown = worker.payloadFlow(WorkerLane.unknown, laneContext())
+        val unknown = worker.payloadFlow(JobLaneDescriptor.unknown, laneContext())
         assertNull(unknown.errorMessage)
         assertNull(unknown.lane.payloadType)
 
         val dataUnit = TypeMetadata(dataUnitClassName(), emptyList(), false)
-        val valid = worker.payloadFlow(WorkerLane(dataUnit, HeaderListing.empty), laneContext())
+        val valid = worker.payloadFlow(JobLaneDescriptor(dataUnit, HeaderListing.empty), laneContext())
         assertNull(valid.errorMessage)
         assertNull(valid.lane.payloadType)
         assertNull(valid.lane.flatColumns)
 
         val nullable = worker.payloadFlow(
-            WorkerLane(dataUnit.copy(nullable = true), HeaderListing.empty), laneContext())
+            JobLaneDescriptor(
+                TypeMetadata(dataUnit.className, dataUnit.generics, true),
+                HeaderListing.empty),
+            laneContext())
         assertContains(nullable.errorMessage!!, "DataUnit?")
 
         val wrong = worker.payloadFlow(
-            WorkerLane(TypeMetadata.int, HeaderListing.empty), laneContext())
+            JobLaneDescriptor(TypeMetadata.int, HeaderListing.empty), laneContext())
         assertContains(wrong.errorMessage!!, "Int")
 
         val flat = worker.payloadFlow(
-            WorkerLane(null, HeaderListing.ofUnique(listOf("value"))), laneContext())
+            JobLaneDescriptor(null, HeaderListing.ofUnique(listOf("value"))), laneContext())
         assertContains(flat.errorMessage!!, "flat columns")
     }
 
 
     @Test
     fun supersetPlansCurrentUnitAcrossAllPartsAndProjectsMissingCells() = runBlocking {
-        val aShape = DataShape.Tabular(HeaderListing.ofUnique(listOf("a")))
-        val bShape = DataShape.Tabular(HeaderListing.ofUnique(listOf("b")))
+        val aShape = LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("a")))
+        val bShape = LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("b")))
         val unit = DataUnit.of(part("a"), part("b"))
         val opener = FakeOpener(
             mapOf(
                 "a" to { FakeCursor(aShape, listOf(FlatFileRecord.of("A"))) },
                 "b" to { FakeCursor(bShape, listOf(FlatFileRecord.of("B"))) }),
             mapOf("a" to aShape, "b" to bShape))
-        val messages = mutableListOf<JobMessage>()
+        val messages = mutableListOf<DataValue>()
 
         worker(
             BatchInput(listOf(unit)), opener, CapturingOutput(messages),
             schemaMode = DataReadCore.schemaSuperset).run(CountingControl())
 
         assertEquals(2, opener.inspectCount)
-        assertEquals(listOf("a", "b"), messages.first().flat!!.header.values.map { it.text })
-        assertEquals(listOf("A", DataShape.missingCellValue), messages[0].flat!!.record.toList())
-        assertEquals(listOf(DataShape.missingCellValue, "B"), messages[1].flat!!.record.toList())
+        assertEquals(listOf("a", "b"), testProjection(messages.first()).header.values.map { it.text })
+        assertEquals(listOf("A", LegacyDataShapeBridge.missingCellValue), testRecord(messages[0]).toList())
+        assertEquals(listOf(LegacyDataShapeBridge.missingCellValue, "B"), testRecord(messages[1]).toList())
     }
 
 
     @Test
     fun supersetRetainsWorkerWideBaselineAndRejectsDifferentLaterUnitPlan() = runBlocking {
-        val aShape = DataShape.Tabular(HeaderListing.ofUnique(listOf("a")))
-        val bShape = DataShape.Tabular(HeaderListing.ofUnique(listOf("b")))
+        val aShape = LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("a")))
+        val bShape = LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("b")))
         val aCursor = FakeCursor(aShape, listOf(FlatFileRecord.of("A")))
         val opener = FakeOpener(
             mapOf(
                 "a" to { aCursor },
                 "b" to { FakeCursor(bShape, listOf(FlatFileRecord.of("B"))) }),
             mapOf("a" to aShape, "b" to bShape))
-        val messages = mutableListOf<JobMessage>()
+        val messages = mutableListOf<DataValue>()
 
         val failure = assertFailsWith<IllegalStateException> {
             worker(
@@ -715,9 +726,9 @@ class ReadPartWorkerTest {
 
 
     private fun worker(
-        input: ChannelInput<Any?>,
+        input: ChannelInput<*>,
         opener: DataOpener,
-        output: ChannelOutput<Any?>,
+        output: ChannelOutput<DataValue>,
         role: String = "",
         attributes: String = ReadPartWorker.attributesIgnore,
         schemaMode: String = DataReadCore.schemaStrict
@@ -735,13 +746,18 @@ class ReadPartWorkerTest {
     private fun dataUnitClassName(): ClassName = ClassName(DataUnit::class.qualifiedName!!)
 
 
-    private fun payloads(elements: List<Any?>): List<Any?> =
-        elements.map { assertIs<JobMessage>(it).payload }
+    private fun payloads(elements: List<*>): List<Any?> =
+        elements.map {
+            when (it) {
+                is DataValue -> JobDataValues.boundary(it)
+                else -> error("Unexpected test element: $it")
+            }
+        }
 
 
-    private fun laneContext(): WorkerLaneContext {
-        return WorkerLaneContext(
-            TupleDefinition.empty, GraphStructure.empty, ReadPartWorker::class.java.classLoader)
+    private fun laneContext(): JobLaneContext {
+        return JobLaneContext(
+            BindingSchema.empty, GraphStructure.empty, ReadPartWorker::class.java.classLoader)
     }
 
 
@@ -749,11 +765,11 @@ class ReadPartWorkerTest {
         private val batches: ArrayDeque<List<Any?>>
     ): ChannelInput<Any?> {
         constructor(units: List<DataUnit>): this(
-            ArrayDeque(listOf(units.map(JobMessage::ofPayload))))
+            ArrayDeque(listOf(units.map(JobDataValues::lift))))
 
 
         companion object {
-            fun messages(messages: List<JobMessage>): BatchInput =
+            fun messages(messages: List<DataValue>): BatchInput =
                 BatchInput(ArrayDeque(listOf(messages)))
         }
 
@@ -790,15 +806,28 @@ class ReadPartWorkerTest {
 
 
     private class FakeCursor(
-        override val shape: DataShape?,
+        shape: DataShape?,
         items: List<Any?>
     ): DataCursor {
-        private val iterator = items.iterator()
+        override val shape: DataShape = shape ?: LegacyDataShapeBridge.runtimeUnknown()
+        private val registry = DefaultDataAdapterRegistry()
+        private val iterator = items.map { item ->
+            if (item is DataValue) {
+                item
+            }
+            else if (item is FlatFileRecord) {
+                item.attachHeader(FlatRecordHeader(this.shape.itemType))
+                DataValue(item, DataNode(0))
+            }
+            else {
+                registry.lift(item)
+            }
+        }.iterator()
         var closed = false
 
 
         override fun hasNext(): Boolean = iterator.hasNext()
-        override fun next(): Any? = iterator.next()
+        override fun next(): DataValue = iterator.next()
         override fun close() {
             closed = true
         }
@@ -846,14 +875,14 @@ class ReadPartWorkerTest {
 
 
     private class CapturingOutput(
-        private val sink: MutableList<JobMessage> = mutableListOf(),
+        private val sink: MutableList<DataValue> = mutableListOf(),
         private val batchSize: Int = 1024
     ): ChannelOutput<Any?> {
         var closeCount = 0
 
 
         override suspend fun send(element: Any?) {
-            sink.add(assertIs<JobMessage>(element))
+            sink.add(testJobValue(element))
         }
         override suspend fun flush() {}
         override fun batchSize(): Int = batchSize

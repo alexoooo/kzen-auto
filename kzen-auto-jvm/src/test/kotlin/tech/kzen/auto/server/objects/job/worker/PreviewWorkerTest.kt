@@ -18,8 +18,8 @@ import kotlin.test.assertTrue
 
 /**
  * Unit test for [PreviewWorker]'s SCALAR (payload) lane in isolation: drives the sink's full [PreviewWorker.run]
- * lifecycle over a fake [ChannelInput] of payload [JobMessage]s — the shape a FormulaSource / Run
- * pipeline emits — and asserts each auto-flattens ([JobMessage.flatView]) to a single `value` column. The
+ * lifecycle over a fake [ChannelInput] of native-backed values — the shape a FormulaSource / Run
+ * pipeline emits — and asserts each projects to a single synthetic `value` column. The
  * record lane and the duplex serve path are already covered end-to-end by
  * [tech.kzen.auto.server.objects.job.JobExecutionTest]; this isolates the payload lane so one Preview view
  * serves both.
@@ -104,7 +104,7 @@ class PreviewWorkerTest {
                 if (next >= chunks.size) {
                     return null
                 }
-                return chunks[next++].map { JobMessage.ofPayload(it) }
+                return chunks[next++].map(tech.kzen.auto.server.objects.job.value.JobDataValues::lift)
             }
 
             override suspend fun receive(): Any? = error("unused")

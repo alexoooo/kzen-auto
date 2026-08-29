@@ -7,7 +7,8 @@ import tech.kzen.auto.server.exec.LogicCompilerServices
 import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.lib.common.exec.engine.Outcome
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
-import tech.kzen.lib.common.exec.tuple.TupleComponentName
+import tech.kzen.lib.common.exec.data.binding.BindingName
+import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
@@ -91,7 +92,8 @@ class JobDatedEtlNotationTest {
 
         val success = assertIs<Outcome.Success>(outcome, "outcome: $outcome")
         @Suppress("UNCHECKED_CAST")
-        val refs = success.value.find(TupleComponentName("outputs")) as List<DataRef>
+        val refs = JobDataValues.boundary(
+            success.value.requireValue(BindingName("outputs"))) as List<DataRef>
         assertEquals(dates, refs.map { Path.of(it.id).fileName.toString().removeSuffix(".csv") })
         for ((index, ref) in refs.withIndex()) {
             assertNull(ref.source)

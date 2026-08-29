@@ -4,6 +4,7 @@ import tech.kzen.auto.common.paradigm.flow.api.output.BatchOutput
 import tech.kzen.auto.common.paradigm.flow.api.output.OptionalOutput
 import tech.kzen.auto.common.paradigm.flow.api.output.RequiredOutput
 import tech.kzen.auto.common.paradigm.flow.api.output.StreamOutput
+import tech.kzen.lib.common.exec.data.type.DataContract
 
 
 /**
@@ -17,7 +18,10 @@ import tech.kzen.auto.common.paradigm.flow.api.output.StreamOutput
  */
 class MutableFlowOutput<T>(
     val kind: FlowOutputKind,
-    private val label: String
+    private val label: String,
+    override val contract: DataContract = DataContract(
+        tech.kzen.lib.common.exec.data.type.DataType.Dynamic(nullable = true)),
+    private val structural: Boolean = false
 ):
     OptionalOutput<T>,
     RequiredOutput<T>,

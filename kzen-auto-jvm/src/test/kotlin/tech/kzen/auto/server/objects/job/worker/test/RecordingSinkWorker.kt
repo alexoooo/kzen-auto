@@ -2,8 +2,9 @@ package tech.kzen.auto.server.objects.job.worker.test
 
 import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
-import tech.kzen.auto.server.objects.job.worker.JobMessage
 import tech.kzen.auto.server.objects.job.worker.SinkWorker
+import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 import java.util.concurrent.CopyOnWriteArrayList
@@ -43,7 +44,7 @@ class RecordingSinkWorker(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun onElement(element: JobMessage, control: JobControl) {
-        recordedInternal.add(element.payload)
+    override suspend fun onElement(element: DataValue, control: JobControl) {
+        recordedInternal.add(JobDataValues.boundary(element))
     }
 }

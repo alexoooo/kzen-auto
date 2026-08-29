@@ -8,7 +8,7 @@ import tech.kzen.auto.server.exec.script.test.ScriptStepTestModule
 import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.lib.common.exec.engine.Outcome
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
-import tech.kzen.lib.common.exec.tuple.TupleValue
+import tech.kzen.auto.server.exec.mainBoundaryValue
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
@@ -46,7 +46,7 @@ class ScriptControlFlowTest {
         // The signal is raised under an If (verify case 5 — it passes through the container), the Item == 2
         // iteration collects nothing, and iterations 1 and 3 run their Tail (CountingStep). Result = [1, 2].sum().
         val outcome = runScript("test/script/control/script-control-foreach-skip-test.yaml")
-        assertEquals(3, assertIs<Outcome.Success>(outcome).value.mainComponentValue())
+        assertEquals(3, assertIs<Outcome.Success>(outcome).value.mainBoundaryValue())
         assertEquals(2, CountingStep.count.get())
     }
 
@@ -55,7 +55,7 @@ class ScriptControlFlowTest {
     fun finishLoopInForEachExitsWithOutputsSoFarAndContinuesAfterTheLoop() {
         val outcome = runScript("test/script/control/script-control-foreach-finish-test.yaml")
         // Loop.sum() = [1, 2].sum() = 3 (Finish at Item == 3), and the post-loop After (10) still runs.
-        assertEquals(13, assertIs<Outcome.Success>(outcome).value.mainComponentValue())
+        assertEquals(13, assertIs<Outcome.Success>(outcome).value.mainBoundaryValue())
     }
 
 
@@ -91,7 +91,7 @@ class ScriptControlFlowTest {
     @Test
     fun endScriptAtRootEndsTheRunAndLaterStepsNeverRun() {
         val outcome = runScript("test/script/control/script-control-endscript-test.yaml")
-        assertEquals(1, assertIs<Outcome.Success>(outcome).value.mainComponentValue())
+        assertEquals(1, assertIs<Outcome.Success>(outcome).value.mainBoundaryValue())
         assertEquals(0, CountingStep.count.get())
     }
 
@@ -101,7 +101,7 @@ class ScriptControlFlowTest {
         // Two root Result steps: the FIRST one to run ends the Script, so Second (2) is unreachable and the
         // result is First's 1.
         val outcome = runScript("test/script/result/result-step-first-ends-test.yaml")
-        assertEquals(1, assertIs<Outcome.Success>(outcome).value.mainComponentValue())
+        assertEquals(1, assertIs<Outcome.Success>(outcome).value.mainBoundaryValue())
     }
 
 
@@ -111,7 +111,7 @@ class ScriptControlFlowTest {
         // and the caller continues past the RunStep to compute Call + 1 = 6 — proving End Script never crosses
         // the host() boundary.
         val outcome = runScript("test/script/control/script-control-endscript-parent-test.yaml")
-        assertEquals(6, assertIs<Outcome.Success>(outcome).value.mainComponentValue())
+        assertEquals(6, assertIs<Outcome.Success>(outcome).value.mainBoundaryValue())
         assertEquals(0, CountingStep.count.get())
     }
 
@@ -129,7 +129,7 @@ class ScriptControlFlowTest {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun runScript(documentPathString: String, inputs: TupleValue = TupleValue.empty): Outcome {
+    private fun runScript(documentPathString: String): Outcome {
         ScriptStepTestModule.register()
         CountingStep.reset()
 
@@ -147,7 +147,7 @@ class ScriptControlFlowTest {
             graphDefinition,
             compilerServices())
 
-        val engine = RunEngine(logic, context.objectStableMapper.objectStableId(scriptLocation), inputs)
+        val engine = RunEngine(logic, context.objectStableMapper.objectStableId(scriptLocation))
         return try {
             runBlocking {
                 engine.resume()

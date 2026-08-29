@@ -17,6 +17,7 @@ kotlin {
 
 
 dependencies {
+    api("tech.kzen.lib:kzen-lib-common-jvm:$kzenLibVersion")
     api("net.openhft:zero-allocation-hashing:$zeroAllocationHashingVersion")
 
     testImplementation("org.junit.jupiter:junit-jupiter:$junitJupiterVersion")

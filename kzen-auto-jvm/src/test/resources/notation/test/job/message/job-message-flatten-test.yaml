@@ -1,5 +1,5 @@
 # A pure-payload (scalar Double) stream through the column-based stages: FormulaSource emits Doubles, the
-# Filter's expression references the auto-flattened `value` column (JobMessage.flatView), and the CsvWriter
+# Filter's expression references the synthetic `value` projection column, and the CsvWriter
 # writes the flat part — palette-insert-and-it-works over a payload lane, no explicit conversion anywhere.
 # All ports BLANK -> JobChannelSynthesis derives the channels from Worker document order.
 main:

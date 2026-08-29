@@ -47,7 +47,8 @@ import tech.kzen.lib.common.exec.ExecutionResult
 import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.engine.Execution
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
-import tech.kzen.lib.common.exec.tuple.TupleValue
+import tech.kzen.lib.common.exec.data.binding.BindingSchema
+import tech.kzen.lib.common.exec.data.binding.DataBindings
 import java.nio.file.Files
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -61,7 +62,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  * - **Cancellation / pause** — the input poll loop calls [Execution.checkpoint] each iteration (instead of the
  *   old `LogicControl.pollCommand() == Cancel`). It suspends while the run is paused and throws
  *   [CancellationException] on cancel; the run then settles Cancelled (status persisted to the run dir).
- * - **Result** — returns [TupleValue.empty] on success (run dir → Done) and throws on failure (→ Failed),
+ * - **Result** — returns empty [DataBindings] on success (run dir → Done) and throws on failure (→ Failed),
  *   rather than returning a `LogicResult`.
  * - **Trace** — input / output progress is written through an [ExecutionLogicTraceHandle] (literal trace paths
  *   bridged via [Execution.emit]) rather than a [tech.kzen.lib.common.exec.logic.trace.LogicTraceHandle] handed
@@ -165,7 +166,7 @@ class ReportRun(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun run(): TupleValue {
+    suspend fun run(): DataBindings {
         prepareRunDir()
 
         if (reportRunContext.output.type == OutputType.Explore) {
@@ -191,7 +192,7 @@ class ReportRun(
 
                 else -> {
                     reportWorkPool.updateRunStatus(reportRunContext.runDir, OutputStatus.Done)
-                    TupleValue.empty
+                    DataBindings.bind(BindingSchema.empty)
                 }
             }
         }

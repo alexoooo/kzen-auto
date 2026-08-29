@@ -55,6 +55,14 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 
 > **Flow.** The former **Graph** / "Time Series" visual document (`GraphDocument`, driven by the bespoke `/dataflow/*` engine) was modernized into **Flow** (`server/objects/flow/FlowDocument`), a `LogicDocument` compiling to `FlowLogic`: one vertex execution = one step, run through `ServerLogicController` + `/logic/*`, with dedicated input/output vertices supplying parameters and a return value. The standalone dataflow execution engine — `ActiveDataflowRepository`, `VisualDataflowRepository`, `VisualDataflowLoop`, the `ActiveVisualProvider`/`VisualDataflowProvider`, and the `/dataflow/*` routes — was **retired** (clean rename, no `Graph` compat archetype). The low-level vertex/topology SPI (`FlowVertex`, `FlowMatrix`, `FlowDag`, `FlowUtils`, `VisualVertexModel`) and the vertex/edge rendering (`CellController`, `EdgeController`, `VertexController`) are **reused** by Flow — only the execution and visual-service layers were removed. The client `document/flow/FlowController` rebuilds per-vertex visual state from the logic trace (`FlowProgressStore`), like `ScriptProgressStore`. **Full rename:** the `paradigm.dataflow` and `objects.document.graph` / `server.objects.graph` packages and all `Dataflow*` class names were renamed to `paradigm.flow` / `objects.document.flow` / `server.objects.flow.vertex` and `Flow*` (`Dataflow`→`FlowVertex`, `DataflowMatrix`→`FlowMatrix`, `DataflowWiring`→`FlowWiring`, `VisualDataflowModel`→`VisualFlowModel`, etc.); notation archetype `Dataflow`→`FlowVertex`, `StreamDataflow`→`StreamFlowVertex`, `DataflowWiring`→`FlowWiring`. The unused `FolderDocument` was also removed.
 
+> **Unified Logic data boundary.** All four flavours publish `BindingSchema` signatures and exchange
+> `DataBindings` across `Logic`/`Execution`. Script step bodies remain ordinary Kotlin, but the replay,
+> migration, and inter-step handoff layers lift completed results to `DataValue`; native consumers recover the
+> original object where the contract permits it. Flow ports declare `DataContract`, edges and queued messages
+> carry `DataValue`, native `RequiredInput<T>`/`OptionalInput<T>` project back to `T`, and structural ports retain
+> the wrapper. Job channels use the same carrier and bind column projections only at Worker seams. Trace previews
+> capture bounded `DataSnapshot`s; redaction or rejection records a diagnostic without changing the run outcome.
+
 > **Job.** The third flavour: a graph of **concurrently-running Workers connected by
 > Channels** (`server/objects/job/`, engine side `server/exec/job/`), as opposed to Script's sequential
 > steps and Flow's synchronous DAG. `JobLogic` is thin and immutable — `JobLogicCompiler` compiles the
@@ -83,8 +91,13 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > deliberately undeclared in the Worker base's `meta` (no card editor, no "Missing" definition drop,
 > still persisted in notation) so it follows the Worker across rename and reorder; precedence is Worker
 > value > Job-wide default on `main` (`main.batchSize` / `main.capacity`) > archetype default, with the
-> shared path builders in `JobConventions` keeping server synthesis and client editors agreeing. Two
-> things about Job are worth knowing generally, because they are where
+> shared path builders in `JobConventions` keeping server synthesis and client editors agreeing. Every Job
+> channel carries one `DataValue`: flat files keep their direct `FlatFileRecord` `ValueAccess`, native values
+> retain their native root, and literal/projected values use the same structural access ABI. Column Workers bind
+> a `ColumnProjection` only when needed, while Formula/output Workers use exclusive `RecordOutputBuilder` claims
+> for widening and replacement. The static wiring walk uses `JobLaneDescriptor` as its sole type authority.
+> Logic boundaries materialize through the explicit `JobDataValues.boundary` policy; the former payload/flat
+> carrier and lane façades were deleted. Two things about Job are worth knowing generally, because they are where
 > concurrency stops being free: quiescence (what pause / step / edit act on) is **not** liveness, so
 > deadlock detection is deliberately flavour-owned — `JobDeadlockMonitor` reads channel state and runs
 > **off** the engine dispatcher, since running on it would deadlock `awaitQuiescent`. And the run-level
@@ -99,20 +112,19 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > **deleted** in favour of the coroutine-shaped `ReportRun`. The entire Disruptor record pipeline is
 > reused verbatim (§ 5); only four seams were swapped onto `Execution`: the input poll loop calls
 > `Execution.checkpoint` each iteration instead of polling a cancel command; the result is a returned
-> `TupleValue` or a thrown failure instead of a `LogicResult`; progress is written through
+> `DataBindings` or a thrown failure instead of a `LogicResult`; progress is written through
 > `ExecutionLogicTraceHandle` (literal trace paths bridged onto `Execution.emit`) instead of a
 > framework-supplied trace handle; and the online preview handler registers via `Execution.onRequest`.
 > **A Report is hostable like any other Logic document** — a `RunStep` or a Flow `RunLogic` vertex can target
 > one, and `LogicCompiler`'s flavour-blind dispatch reaches it the same way it reaches the other three
 > (`ReportHostedTest`). Two KDocs used to assert a Report was "always top-level (never hosted)"; nothing ever
 > enforced it and the claim was simply wrong (corrected 2026-08-03).
-> ⚠ **But three things still assume the root frame when it is hosted, all failing quietly** (ledger row 45):
+> ⚠ **Two things still assume the root frame when it is hosted, both failing quietly** (ledger row 45):
 > that `Execution.onRequest` handler is registered on the Report's OWN node while the client addresses the run
 > ROOT, so online output info silently answers nothing; the run dir is stamped with the *compiling* run's
-> `LogicRunExecutionId`, which when hosted is the host's; and `ReportLogicCompiler` declares an output of
-> `ofMain(LogicType.string)` while `ReportRun.run` returns `TupleValue.empty`, so a caller declaring a
-> non-nullable result fails the cast *after* the report has run correctly. Execution itself is unaffected in
-> all three.
+> `LogicRunExecutionId`, which when hosted is the host's. Report's signature and settled result both have an
+> empty output schema, so hosted callers no longer encounter a post-run output mismatch. Execution itself is
+> unaffected by the two remaining issues.
 > **Known parity gap:** `ReportLogic` registers no `Execution.onCapture`, so a live edit cleanly
 > *restarts* the report on the edited definition rather than migrating it — the safe default
 > (`logic-spec.md` §5), and the same first-port state Flow and Job began in.
@@ -614,7 +626,10 @@ The raw-editing stack is document-agnostic and lives under `objects/document/com
 
 ## 8. Plugin SPI
 
-Subpackage: `kzen-auto-plugin/src/main/kotlin/tech/kzen/auto/plugin/`. **This is the public contract** for third-party plugins. Don't break it casually.
+Subpackage: `kzen-auto-plugin/src/main/kotlin/tech/kzen/auto/plugin/`. This is the public, in-development contract
+for third-party plugins, versioned with the coordinated release train. It deliberately depends on
+`kzen-lib-common-jvm`: plugin records and readers use the same `DataValue` / `ValueAccess` vocabulary as the host,
+and the parent-first plugin loader preserves that class identity.
 
 The plugin model is JAR-based, reflection-loaded:
 

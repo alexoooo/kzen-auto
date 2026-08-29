@@ -19,7 +19,7 @@ import java.io.Reader
  *
  * Records are built into a freshly-allocated [FlatFileRecord] via the safe `addToField` / `commitField`
  * API. The `FlatFileRecord()` allocation in [readRecord] is the single allocation seam a future record pool
- * would slot into (see [JobMessage] — memory-reuse is a documented design seam, not yet implemented).
+ * would slot into (memory reuse remains a documented design seam, not yet implemented).
  */
 class CsvRecordReader(
     private val reader: Reader,

@@ -15,6 +15,7 @@ import tech.kzen.auto.common.data.model.DataRef
 import tech.kzen.auto.common.data.model.DataRole
 import tech.kzen.auto.common.data.model.DataSourceId
 import tech.kzen.auto.common.data.schema.DataShape
+import tech.kzen.auto.common.data.schema.LegacyDataShapeBridge
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.server.context.KzenAutoConfig
 import tech.kzen.auto.server.context.KzenAutoContext
@@ -217,8 +218,8 @@ class DataSourceActionsTest {
         val declared = assertIs<ExecutionSuccess>(declaredOutcome, declaredOutcome.toString())
         assertEquals(
             listOf("city", "amount"),
-            assertIs<DataShape.Tabular>(DataShape.ofExecutionValue(declared.value))
-                .header.values.map { it.text })
+            LegacyDataShapeBridge.headerOrNull(DataShape.ofExecutionValue(declared.value))!!
+                .values.map { it.text })
 
         val resolved = DataResolveResult.ofExecutionValue(
             assertIs<ExecutionSuccess>(execute(validSource)).value)
@@ -226,7 +227,7 @@ class DataSourceActionsTest {
             executeShape(validSource, resolved.manifest.units.single().parts.single()))
         assertEquals(
             listOf("name"),
-            assertIs<DataShape.Tabular>(DataShape.ofExecutionValue(inspected.value))
-                .header.values.map { it.text })
+            LegacyDataShapeBridge.headerOrNull(DataShape.ofExecutionValue(inspected.value))!!
+                .values.map { it.text })
     }
 }

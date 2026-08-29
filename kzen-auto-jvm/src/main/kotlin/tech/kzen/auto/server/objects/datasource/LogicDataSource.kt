@@ -8,9 +8,14 @@ import tech.kzen.auto.common.data.model.DataRole
 import tech.kzen.auto.common.data.model.DataUnit
 import tech.kzen.auto.common.data.schema.DataShape
 import tech.kzen.auto.server.objects.data.schema.DataSchemaDocument
-import tech.kzen.lib.common.exec.tuple.TupleComponentName
-import tech.kzen.lib.common.exec.tuple.TupleComponentValue
-import tech.kzen.lib.common.exec.tuple.TupleValue
+import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.lib.common.exec.data.binding.BindingDefinition
+import tech.kzen.lib.common.exec.data.binding.BindingName
+import tech.kzen.lib.common.exec.data.binding.BindingSchema
+import tech.kzen.lib.common.exec.data.binding.BindingState
+import tech.kzen.lib.common.exec.data.binding.DataBindings
+import tech.kzen.lib.common.exec.data.type.DataContract
+import tech.kzen.lib.common.exec.data.type.DataType
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 
@@ -42,11 +47,21 @@ class LogicDataSource(
         val target = requireNotNull(instructions) {
             "Logic data source instructions are not configured"
         }
-        val components = arguments.map { name ->
-            TupleComponentValue(TupleComponentName(name), context.argument(name))
+        val schema = BindingSchema.of(arguments.map { name ->
+            BindingDefinition(BindingName(name), DataContract(DataType.Dynamic(nullable = true)))
+        })
+        val components = schema.definitions.map { definition ->
+            definition.name to JobDataValues.lift(context.argument(definition.name.value))
         }
-        val main = context.host(target, TupleValue(components)).mainComponentValue()
-            ?: return DataResolveResult(DataManifest(emptyList()), emptyList())
+        val result = context.host(target, DataBindings.bind(schema, components))
+        val mainName = BindingName("main")
+        val main = when {
+            result.schema.find(mainName) == null -> null
+            else -> when (val state = result[mainName]) {
+                BindingState.Unbound -> null
+                is BindingState.Bound -> JobDataValues.boundary(state.value)
+            }
+        } ?: return DataResolveResult(DataManifest(emptyList()), emptyList())
 
         require(main is Iterable<*>) {
             "Logic data source main result must be an eager Iterable<DataUnit>; found ${typeName(main)}"

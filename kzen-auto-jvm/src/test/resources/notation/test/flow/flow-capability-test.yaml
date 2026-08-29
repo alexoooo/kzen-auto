@@ -2,7 +2,7 @@
 # entirely in the test source set and implementing only the capability interfaces — no product archetype, no
 # entry in any registry, no branch in FlowRun / FlowLogicCompiler. The run seeds `aliased-x`, hosts the child
 # Script (`number * 2`), and harvests `aliased-out`; each of those names comes from the interface's own
-# tupleComponentName, so nothing but the capability could have supplied it.
+# bindingName, so nothing but the capability could have supplied it.
 
 
 #######################################################################################################################

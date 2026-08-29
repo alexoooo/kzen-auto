@@ -3,15 +3,20 @@ package tech.kzen.auto.server.exec.flow
 import tech.kzen.auto.common.objects.document.flow.FlowConventions
 import tech.kzen.auto.common.objects.document.flow.FlowStructureValidator
 import tech.kzen.auto.common.paradigm.flow.api.FlowLogicHost
+import tech.kzen.auto.common.paradigm.flow.api.FlowRunInput
+import tech.kzen.auto.common.paradigm.flow.api.FlowRunOutput
 import tech.kzen.auto.common.paradigm.flow.model.structure.FlowMatrix
 import tech.kzen.auto.server.exec.LogicCompiler
 import tech.kzen.auto.server.exec.LogicCompilerServices
-import tech.kzen.lib.common.exec.engine.LogicFailure
+import tech.kzen.lib.common.exec.data.binding.BindingDefinition
+import tech.kzen.lib.common.exec.data.binding.BindingName
+import tech.kzen.lib.common.exec.data.binding.BindingSchema
+import tech.kzen.lib.common.exec.data.binding.DataPresence
+import tech.kzen.lib.common.exec.data.type.DataContract
+import tech.kzen.lib.common.exec.data.type.DataType
+import tech.kzen.lib.common.exec.engine.Logic
 import tech.kzen.lib.common.exec.engine.LogicSignature
-import tech.kzen.lib.common.exec.logic.model.LogicType
-import tech.kzen.lib.common.exec.tuple.TupleComponentDefinition
-import tech.kzen.lib.common.exec.tuple.TupleComponentName
-import tech.kzen.lib.common.exec.tuple.TupleDefinition
+import tech.kzen.lib.common.exec.engine.LogicFailure
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
@@ -58,10 +63,12 @@ object FlowLogicCompiler {
 
         val inputs = FlowConventions
             .inputParameterNames(graphNotation, flowLocation)
-            .map { TupleComponentDefinition(TupleComponentName(it), LogicType.any) }
+            .map { dynamicBinding(it, DataPresence.Optional) }
+            .toMutableList()
         val outputs = FlowConventions
             .outputResultNames(graphNotation, flowLocation)
-            .map { TupleComponentDefinition(TupleComponentName(it), LogicType.any) }
+            .map { dynamicBinding(it, DataPresence.Required) }
+            .toMutableList()
 
         val childLogics = mutableMapOf<ObjectStableId, FlowChildLogic>()
 
@@ -71,6 +78,13 @@ object FlowLogicCompiler {
 
         for (vertexLocation in orderedVertexLocations) {
             val reference = graphInstance[vertexLocation]?.reference
+
+            if (reference is FlowRunInput && inputs.none { it.name == reference.bindingName }) {
+                inputs.add(dynamicBinding(reference.bindingName.value, DataPresence.Optional))
+            }
+            if (reference is FlowRunOutput && outputs.none { it.name == reference.bindingName }) {
+                outputs.add(dynamicBinding(reference.bindingName.value, DataPresence.Required))
+            }
             if (reference !is FlowLogicHost) {
                 continue
             }
@@ -78,20 +92,22 @@ object FlowLogicCompiler {
             val childLogic = LogicCompiler.compile(
                 reference.instructions, graphNotation, graphDefinition, services)
 
-            val parameterNames = childLogic.signature().inputs.components.map { it.name }
+            val childSignature = (childLogic as? Logic)?.signature()
+                ?: throw LogicFailure("Child Logic is not binding-native: ${reference.instructions}")
+            val parameterNames = childSignature.inputs.definitions.map { it.name }
             validateArguments(vertexLocation, reference, parameterNames, matrix)
 
             childLogics[services.objectStableMapper.objectStableId(vertexLocation)] = FlowChildLogic(
                 services.objectStableMapper.objectStableId(reference.instructions),
                 childLogic,
-                parameterNames)
+                childSignature.inputs)
         }
 
         return FlowLogic(
             documentPath,
             graphDefinition,
             childLogics,
-            LogicSignature(TupleDefinition(inputs), TupleDefinition(outputs)),
+            LogicSignature(BindingSchema.of(inputs), BindingSchema.of(outputs)),
             services.objectStableMapper,
             services.graphEnvironment)
     }
@@ -105,7 +121,7 @@ object FlowLogicCompiler {
     private fun validateArguments(
         vertexLocation: ObjectLocation,
         host: FlowLogicHost,
-        parameterNames: List<TupleComponentName>,
+        parameterNames: List<BindingName>,
         matrix: FlowMatrix
     ) {
         if (host.arguments.isEmpty()) {
@@ -118,7 +134,7 @@ object FlowLogicCompiler {
             .toSet()
 
         for (argumentName in host.arguments.keys) {
-            val parameterName = TupleComponentName(argumentName)
+            val parameterName = BindingName(argumentName)
 
             if (parameterName !in parameterNames) {
                 throw LogicFailure(
@@ -143,4 +159,11 @@ object FlowLogicCompiler {
             matrix.traceVertexBackFrom(vertexDescriptor, it) != null
         }
     }
+
+
+    private fun dynamicBinding(name: String, presence: DataPresence): BindingDefinition =
+        BindingDefinition(
+            BindingName(name),
+            DataContract(DataType.Dynamic(nullable = true)),
+            presence)
 }

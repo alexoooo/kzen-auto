@@ -4,14 +4,14 @@ import tech.kzen.auto.common.paradigm.flow.api.FlowRunInput
 import tech.kzen.auto.common.paradigm.flow.api.StatelessFlowVertex
 import tech.kzen.auto.common.paradigm.flow.api.output.RequiredOutput
 import tech.kzen.lib.common.exec.ExecutionValue
-import tech.kzen.lib.common.exec.tuple.TupleComponentName
+import tech.kzen.lib.common.exec.data.binding.BindingName
 import tech.kzen.lib.common.reflect.Reflect
 
 
 /**
  * Test-only [FlowRunInput]: seeds its message from the run argument named `aliased-<alias>` rather than from
  * the [alias] verbatim, so the run can only find the value by reading the interface's own
- * [tupleComponentName] — no notation convention could supply it. Its [inspectMessage] override likewise pins
+ * [bindingName] — no notation convention could supply it. Its [inspectMessage] override likewise pins
  * that the runner asks the vertex to render its message.
  *
  * The archetype is declared in the test notation only; the class is unknown to any product registry, so it
@@ -25,7 +25,7 @@ class AliasInputVertex(
     StatelessFlowVertex,
     FlowRunInput
 {
-    override val tupleComponentName = TupleComponentName("aliased-$alias")
+    override val bindingName = BindingName("aliased-$alias")
 
 
     override fun inspectMessage(message: Any): ExecutionValue {

@@ -1,8 +1,7 @@
 package tech.kzen.auto.server.exec.job
 
 import tech.kzen.auto.server.exec.LogicParameter
-import tech.kzen.lib.common.exec.tuple.TupleComponentName
-import tech.kzen.lib.common.exec.tuple.TupleDefinition
+import tech.kzen.lib.common.exec.data.binding.BindingSchema
 
 
 /**
@@ -14,14 +13,10 @@ import tech.kzen.lib.common.exec.tuple.TupleDefinition
  * returns when the run binds no argument (Script parity).
  */
 class JobParameters(
-    val declarations: TupleDefinition,
+    val declarations: BindingSchema,
     val bindings: List<LogicParameter>
 ) {
     companion object {
-        val empty = JobParameters(TupleDefinition.empty, listOf())
+        val empty = JobParameters(BindingSchema.empty, listOf())
     }
-
-
-    val defaults: Map<TupleComponentName, Any?> =
-        bindings.associate { it.name to it.default }
 }

@@ -11,11 +11,12 @@ import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.util.digest.Digest
+import tech.kzen.lib.common.exec.data.value.DataValue
 
 
 @Reflect
 class FileSourceWorker(
-    output: ChannelOutput<Any?>,
+    output: ChannelOutput<DataValue>,
     directory: String,
     filter: String,
     files: List<Map<String, String>>,
@@ -55,7 +56,7 @@ class FileSourceWorker(
             addUtf8(encoding)
             addUtf8(groupPattern)
             addUtf8(missing)
-            addDigestibleNullable(schema?.shape()?.header)
+            addDigestibleNullable(schema?.shape()?.asExecutionValue())
         }
     }
 }

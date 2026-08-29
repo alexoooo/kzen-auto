@@ -6,7 +6,6 @@ import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
 import tech.kzen.auto.server.objects.script.step.control.foreach.ForEachItemsExpression
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.lib.common.exec.logic.model.LogicType
-import tech.kzen.lib.common.exec.tuple.TupleDefinition
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.reflect.Reflect
@@ -34,7 +33,7 @@ class ForEachItemBinding(
 {
     override fun definition(scriptDefinitionContext: ScriptDefinitionContext): ScriptStepDefinition? {
         val forEachLocation = selfLocation.parent()
-            ?: return ScriptStepDefinition.of(TupleDefinition.ofMain(LogicType.anyNullable))
+            ?: return ScriptStepDefinition.ofMain(LogicType.anyNullable.metadata)
 
         val code = ForEachItemsExpression.code(
             forEachLocation, scriptDefinitionContext.graphNotation)
@@ -56,7 +55,6 @@ class ForEachItemBinding(
                 attempt.elementType
         }
 
-        return ScriptStepDefinition.of(
-            TupleDefinition.ofMain(LogicType(elementType)))
+        return ScriptStepDefinition.ofMain(elementType)
     }
 }

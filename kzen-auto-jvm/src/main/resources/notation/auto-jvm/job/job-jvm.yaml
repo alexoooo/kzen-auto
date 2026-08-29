@@ -60,7 +60,7 @@ NominalReferenceCreator:
 
 # Parses a Channel's `elementType` and validates channel wiring (port type compatibility + single-reader) at
 # definition time. Bound via the Channel's `elementType` meta (mirrors how TypeMetadataDefiner is bound).
-# Every channel element is a JobMessage at run time; `elementType` / a port's `of:` describe the message's
+# Every channel element is a DataValue at run time; `elementType` / a port's `of:` describe the value's
 # PAYLOAD type (the built-in Workers ship untyped — flat-consuming stages accept any payload via auto-flatten).
 ChannelTypeDefiner:
   class: tech.kzen.auto.common.objects.document.job.ChannelTypeDefiner

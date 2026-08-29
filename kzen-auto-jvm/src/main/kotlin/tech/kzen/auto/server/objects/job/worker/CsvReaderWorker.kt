@@ -6,13 +6,15 @@ import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
+import tech.kzen.lib.common.exec.data.value.DataValue
+import tech.kzen.auto.server.objects.job.value.JobDataValues
 import java.nio.file.Files
 
 
 /**
  * The CSV input stage as a Job Worker (analogue of `ReportInputReader`, reimplemented Job-native). Reads a
  * delimited text file with full RFC-4180 parsing (quoted fields, embedded delimiters / newlines, doubled
- * quotes) via [CsvRecordReader], emitting one flat-part [JobMessage] per row (payload null — the pure-flat
+ * quotes) via [CsvRecordReader], emitting one flat-backed `DataValue` per row (no native receiver — the pure-flat
  * lane). Batching for transfer is the framework's job (the referenced Channel's batch size), so this Worker no
  * longer carries a `batch` attribute — it just emits records and the [SourceWorker] cadence batches +
  * checkpoints + publishes progress per batch.
@@ -35,7 +37,7 @@ import java.nio.file.Files
  */
 @Reflect
 class CsvReaderWorker(
-    output: ChannelOutput<Any?>,
+    output: ChannelOutput<DataValue>,
 
     private val path: String,
     private val delimiter: String,
@@ -65,7 +67,7 @@ class CsvReaderWorker(
         val headers = headerListing!!
 
         pendingFirstRecord?.let {
-            emit.send(JobMessage.ofFlat(headers, it))
+            emit.send(JobDataValues.flat(headers, it))
             count += 1
             pendingFirstRecord = null
         }
@@ -73,7 +75,7 @@ class CsvReaderWorker(
         while (true) {
             val record = control.runBlockingIo { reader.readRecord() }
                 ?: break
-            emit.send(JobMessage.ofFlat(headers, record))
+            emit.send(JobDataValues.flat(headers, record))
             count += 1
         }
 

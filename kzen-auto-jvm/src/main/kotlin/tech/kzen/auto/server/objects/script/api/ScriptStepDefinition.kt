@@ -1,6 +1,10 @@
 package tech.kzen.auto.server.objects.script.api
 
-import tech.kzen.lib.common.exec.tuple.TupleDefinition
+import tech.kzen.auto.common.objects.document.logic.BindingSignatureDefiner
+import tech.kzen.lib.common.exec.data.binding.BindingDefinition
+import tech.kzen.lib.common.exec.data.binding.BindingName
+import tech.kzen.lib.common.exec.data.binding.BindingSchema
+import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 
 
 /**
@@ -9,15 +13,18 @@ import tech.kzen.lib.common.exec.tuple.TupleDefinition
  * derives itself, a diagnostic that landed in generated code, or an error attributed from another object.
  */
 data class ScriptStepDefinition(
-    val returnValueDefinition: TupleDefinition?,
+    val returnValueDefinition: BindingSchema?,
     val validationError: String?,
     val errorOffset: Int? = null
 ) {
     companion object {
-        val empty = of(TupleDefinition.empty)
+        val empty = of(BindingSchema.empty)
 
-        fun of(returnValueDefinition: TupleDefinition): ScriptStepDefinition {
+        fun of(returnValueDefinition: BindingSchema): ScriptStepDefinition {
             return ScriptStepDefinition(returnValueDefinition, null)
         }
+
+        fun ofMain(type: TypeMetadata): ScriptStepDefinition = of(BindingSchema.of(
+            BindingDefinition(BindingName("main"), BindingSignatureDefiner.contract(type))))
     }
 }

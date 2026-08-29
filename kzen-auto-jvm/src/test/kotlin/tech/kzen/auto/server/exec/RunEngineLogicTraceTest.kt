@@ -11,7 +11,7 @@ import tech.kzen.lib.common.exec.engine.OutcomeTrace
 import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
-import tech.kzen.lib.common.exec.tuple.TupleValue
+import tech.kzen.lib.common.exec.data.binding.DataBindings
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceQuery
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -58,7 +58,7 @@ class RunEngineLogicTraceTest {
 
         val engine = runToCompletion(mapper, RunEngine(logic { execution ->
             execution.emit(Address.of(stepStableId.value), ExecutionValue.of("done"))
-            TupleValue.ofMain("ok")
+            bindingsOfMain("ok")
         }, mapper.objectStableId(rootLocation)))
         try {
             val trace = traceFor(mapper, engine)
@@ -90,7 +90,7 @@ class RunEngineLogicTraceTest {
 
         val engine = runToCompletion(mapper, RunEngine(logic { execution ->
             execution.emit(Address.of(stepStableId.value), ExecutionValue.of("done"))
-            TupleValue.ofMain("ok")
+            bindingsOfMain("ok")
         }, mapper.objectStableId(rootLocation)))
         try {
             val trace = traceFor(mapper, engine)
@@ -113,7 +113,7 @@ class RunEngineLogicTraceTest {
         val mapper = ObjectStableMapper()
         val rootStableId = mapper.objectStableId(rootLocation)
 
-        val engine = runToCompletion(mapper, RunEngine(logic { TupleValue.ofMain("ok") }, rootStableId))
+        val engine = runToCompletion(mapper, RunEngine(logic { bindingsOfMain("ok") }, rootStableId))
         try {
             val handle = FakeRun(runId, engine)
             val trace = traceFor(mapper, handle)
@@ -143,9 +143,9 @@ class RunEngineLogicTraceTest {
         val callB = mapper.objectStableId(objectLocation("a.yaml", "RunB"))
 
         val engine = runToCompletion(mapper, RunEngine(logic { execution ->
-            execution.host(subStableId, logic { TupleValue.ofMain("a") }, callerStableId = callA)
-            execution.host(subStableId, logic { TupleValue.ofMain("b") }, callerStableId = callB)
-            TupleValue.ofMain("ok")
+            execution.host(subStableId, logic { bindingsOfMain("a") }, callerStableId = callA)
+            execution.host(subStableId, logic { bindingsOfMain("b") }, callerStableId = callB)
+            bindingsOfMain("ok")
         }, rootStableId))
         try {
             val trace = traceFor(mapper, engine)
@@ -185,14 +185,14 @@ class RunEngineLogicTraceTest {
                 child.emit(Address.of(subStep.value), ExecutionValue.of("iter1"))
                 child.emit(Address.of(onlyInFirst.value), ExecutionValue.of("extra"))
                 child.log(ExecutionValue.of("hist1"))
-                TupleValue.ofMain("c1")
+                bindingsOfMain("c1")
             })
             // Second invocation (node n2): re-emits only the shared step value.
             execution.host(subStableId, logic { child ->
                 child.emit(Address.of(subStep.value), ExecutionValue.of("iter2"))
-                TupleValue.ofMain("c2")
+                bindingsOfMain("c2")
             })
-            TupleValue.ofMain("ok")
+            bindingsOfMain("ok")
         }, rootStableId))
         try {
             val trace = traceFor(mapper, engine)
@@ -229,7 +229,7 @@ class RunEngineLogicTraceTest {
     fun `a stale run id resolves to nothing`() = runBlocking {
         val mapper = ObjectStableMapper()
         val engine = runToCompletion(mapper, RunEngine(
-            logic { TupleValue.ofMain("ok") }, mapper.objectStableId(rootLocation)))
+            logic { bindingsOfMain("ok") }, mapper.objectStableId(rootLocation)))
         try {
             val trace = traceFor(mapper, engine)
             assertNull(trace.lookupRun(LogicRunId("other-run"), LogicTraceQuery(LogicTracePath.root)))
@@ -248,8 +248,8 @@ class RunEngineLogicTraceTest {
         val subStableId = mapper.objectStableId(objectLocation("sub.yaml", "Sub"))
 
         val engine = runToCompletion(mapper, RunEngine(logic { execution ->
-            execution.host(subStableId, logic { TupleValue.ofMain("child") })
-            TupleValue.ofMain("ok")
+            execution.host(subStableId, logic { bindingsOfMain("child") })
+            bindingsOfMain("ok")
         }, rootStableId))
         try {
             val trace = traceFor(mapper, engine)
@@ -325,10 +325,12 @@ class RunEngineLogicTraceTest {
     }
 
 
-    private fun logic(block: suspend (Execution) -> TupleValue): Logic =
+    private fun logic(block: suspend (Execution) -> DataBindings): Logic =
         object : Logic {
-            override fun signature() = LogicSignature.empty
-            override suspend fun run(execution: Execution): TupleValue = block(execution)
+            override fun signature() = LogicSignature(
+                tech.kzen.lib.common.exec.data.binding.BindingSchema.empty,
+                mainBindingSchema)
+            override suspend fun run(execution: Execution): DataBindings = block(execution)
         }
 
 

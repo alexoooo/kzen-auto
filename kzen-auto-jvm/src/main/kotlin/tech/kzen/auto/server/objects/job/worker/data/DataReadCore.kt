@@ -7,10 +7,18 @@ import tech.kzen.auto.common.data.model.DataRole
 import tech.kzen.auto.common.data.model.DataUnit
 import tech.kzen.auto.common.data.schema.DataShape
 import tech.kzen.auto.common.data.schema.HeaderListing
+import tech.kzen.auto.common.data.schema.LegacyDataShapeBridge
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.auto.server.data.DataOpenerLookup
-import tech.kzen.auto.server.objects.job.worker.JobMessage
+import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.lib.common.exec.data.type.DataType
+import tech.kzen.lib.common.exec.data.type.DataContract
+import tech.kzen.lib.common.exec.data.type.DataField
+import tech.kzen.lib.common.exec.data.type.FieldId
+import tech.kzen.lib.common.exec.data.type.ScalarKind
+import tech.kzen.lib.common.exec.data.value.DataState
+import tech.kzen.lib.common.exec.data.value.DataValue
 
 
 /**
@@ -23,18 +31,18 @@ object DataReadCore {
 
     data class Pull(
         val hasItem: Boolean,
-        val item: Any?
+        val item: DataValue?
     )
 
 
     data class ShapeBaseline(
-        val shape: DataShape?,
+        val shape: DataShape,
         val origin: String
     )
 
 
     data class ShapeCandidate(
-        val shape: DataShape?,
+        val shape: DataShape,
         val attributes: Map<String, String>?,
         val origin: String
     )
@@ -115,14 +123,18 @@ object DataReadCore {
         effectiveShape: ShapeBaseline,
         unitAttributes: Map<String, String>?,
         claimBeforeSend: () -> Unit,
-        send: suspend (JobMessage) -> Unit
+        send: suspend (DataValue) -> Unit
     ): Boolean {
         val pull = pull(control, cursor)
         if (!pull.hasItem) {
             return false
         }
 
-        val message = message(cursor.shape, effectiveShape, pull.item, unitAttributes)
+        val message = message(
+            cursor.shape,
+            effectiveShape,
+            requireNotNull(pull.item),
+            unitAttributes)
         claimBeforeSend()
         send(message)
         return true
@@ -168,7 +180,7 @@ object DataReadCore {
 
 
     fun effectiveShape(
-        cursorShape: DataShape?,
+        cursorShape: DataShape,
         unitAttributes: Map<String, String>?,
         origin: String
     ): ShapeBaseline {
@@ -176,10 +188,10 @@ object DataReadCore {
             return ShapeBaseline(cursorShape, origin)
         }
 
-        val tabular = cursorShape as? DataShape.Tabular
+        val header = LegacyDataShapeBridge.headerOrNull(cursorShape)
             ?: throw IllegalStateException(
-                "attributes=columns requires tabular data at $origin, found ${describe(cursorShape)}")
-        val columnNames = tabular.header.values.map { it.text }.toSet()
+                "attributes=columns requires record data at $origin, found ${describe(cursorShape)}")
+        val columnNames = header.values.map { it.text }.toSet()
         val collisions = unitAttributes.keys.filter { it in columnNames }
         check(collisions.isEmpty()) {
             "Data attributes collide with columns at $origin: ${collisions.joinToString()}"
@@ -187,7 +199,8 @@ object DataReadCore {
 
         val attributeHeader = HeaderListing.ofUnique(unitAttributes.keys.toList())
         return ShapeBaseline(
-            DataShape.Tabular(attributeHeader.append(tabular.header)), origin)
+            LegacyDataShapeBridge.tabular(attributeHeader.append(header)),
+            origin)
     }
 
 
@@ -198,7 +211,7 @@ object DataReadCore {
         if (baseline == null) {
             return candidate
         }
-        check(baseline.shape == candidate.shape) {
+        check(baseline.shape.itemType == candidate.shape.itemType) {
             "Data shape mismatch between ${baseline.origin} (${describe(baseline.shape)}) and " +
                 "${candidate.origin} (${describe(candidate.shape)})"
         }
@@ -216,64 +229,78 @@ object DataReadCore {
             for (candidate in candidates) {
                 baseline = establishShape(
                     baseline,
-                    effectiveShape(candidate.shape, candidate.attributes, candidate.origin))
+                    effectiveShape(
+                        candidate.shape,
+                        candidate.attributes,
+                        candidate.origin))
             }
             return requireNotNull(baseline)
         }
         check(schemaMode == schemaSuperset) { "Unknown schema mode: $schemaMode" }
-        val unknown = candidates.firstOrNull { it.shape == null }
-        check(unknown == null) { "Unable to inspect data shape at ${unknown?.origin}" }
-
-        val tabular = candidates.mapNotNull { it.shape as? DataShape.Tabular }
-        if (tabular.size == candidates.size) {
+        val flat = candidates.filter { it.shape.itemType.structural is DataType.Record }
+        if (flat.size == candidates.size) {
+            val headers = candidates.map { candidate ->
+                LegacyDataShapeBridge.headerOrNull(candidate.shape)
+                    ?: error("Flat-record shape at ${candidate.origin} is not a record")
+            }
             val attributeNames = linkedSetOf<String>()
             candidates.forEach { attributeNames.addAll(it.attributes?.keys.orEmpty()) }
             val dataLabels = linkedSetOf<tech.kzen.auto.common.data.schema.HeaderLabel>()
-            tabular.forEach { dataLabels.addAll(it.header.values) }
+            headers.forEach { dataLabels.addAll(it.values) }
             val dataNames = dataLabels.mapTo(linkedSetOf()) { it.text }
             val collisions = attributeNames.filter { it in dataNames }
             check(collisions.isEmpty()) {
                 "Data attributes collide with columns across the selected data: ${collisions.joinToString()}"
             }
             val attributes = HeaderListing.ofUnique(attributeNames.toList())
+            val combined = attributes.append(HeaderListing(dataLabels.toList()))
+            val firstShape = candidates.first().shape
             return ShapeBaseline(
-                DataShape.Tabular(attributes.append(HeaderListing(dataLabels.toList()))),
+                DataShape(
+                    DataContract(DataType.Record(combined.values.map { label ->
+                        DataField(
+                            FieldId(label.text, label.occurrence),
+                            DataType.Scalar(ScalarKind.Text),
+                            optional = true)
+                    })),
+                    firstShape.provenance,
+                    firstShape.stability,
+                    firstShape.diagnostics),
                 candidates.first().origin)
         }
 
-        val payload = candidates.mapNotNull { it.shape as? DataShape.Payload }
-        check(payload.size == candidates.size) {
-            "Mixed tabular and payload data between ${candidates.first().origin} and " +
-                candidates.first { it.shape!!::class != candidates.first().shape!!::class }.origin
+        check(candidates.none { it.shape.itemType.structural is DataType.Record }) {
+            "Mixed record and non-record data beginning at ${candidates.first().origin}"
         }
-        val first = payload.first()
-        val mismatch = candidates.zip(payload).firstOrNull { it.second != first }
+        val first = candidates.first().shape
+        val mismatch = candidates.firstOrNull { it.shape.itemType != first.itemType }
         check(mismatch == null) {
-            "Payload shape mismatch between ${candidates.first().origin} (${first.type}) and " +
-                "${mismatch?.first?.origin} (${mismatch?.second?.type})"
+            "Payload shape mismatch between ${candidates.first().origin} (${first.itemType}) and " +
+                    "${mismatch?.origin} (${mismatch?.shape?.itemType})"
         }
         val attributes = candidates.firstNotNullOfOrNull { it.attributes }
         check(attributes == null) {
-            "attributes=columns requires tabular data at ${candidates.first().origin}, found payload ${first.type}"
+            "attributes=columns requires flat-record data at ${candidates.first().origin}, " +
+                    "found payload ${first.itemType}"
         }
         return ShapeBaseline(first, candidates.first().origin)
     }
 
 
     fun message(
-        cursorShape: DataShape?,
+        cursorShape: DataShape,
         effectiveShape: ShapeBaseline,
-        item: Any?,
+        item: DataValue,
         unitAttributes: Map<String, String>?
-    ): JobMessage {
-        if (cursorShape !is DataShape.Tabular) {
-            return JobMessage.ofPayload(item)
+    ): DataValue {
+        if (cursorShape.itemType.structural !is DataType.Record) {
+            return item
         }
 
-        val record = item as? FlatFileRecord
+        val record = item.access as? FlatFileRecord
             ?: throw IllegalStateException(
                 "Tabular cursor at ${effectiveShape.origin} emitted " +
-                    (item?.let { it::class.qualifiedName } ?: "null") +
+                    item.access::class.qualifiedName +
                     "; expected ${FlatFileRecord::class.qualifiedName}")
         val candidateRecord =
             if (unitAttributes == null) {
@@ -282,27 +309,35 @@ object DataReadCore {
             else {
                 FlatFileRecord.of(unitAttributes.values + record.toList())
             }
+        val cursorHeader = LegacyDataShapeBridge.headerOrNull(cursorShape)
+            ?: throw IllegalStateException(
+                "Flat-record cursor at ${effectiveShape.origin} has non-record shape ${cursorShape.itemType}")
         val candidateHeader =
             if (unitAttributes == null) {
-                cursorShape.header
+                cursorHeader
             }
             else {
-                HeaderListing.ofUnique(unitAttributes.keys.toList()).append(cursorShape.header)
+                HeaderListing.ofUnique(unitAttributes.keys.toList()).append(cursorHeader)
             }
-        val header = (effectiveShape.shape as DataShape.Tabular).header
-        val projected = FlatFileRecord.of(header.values.map { label ->
-            val index = candidateHeader.values.indexOf(label)
-            if (index == -1) DataShape.missingCellValue else candidateRecord.getString(index)
-        })
-        return JobMessage.ofFlat(header, projected)
-    }
-
-
-    private fun describe(shape: DataShape?): String {
-        return when (shape) {
-            null -> "unknown payload"
-            is DataShape.Payload -> "payload ${shape.type}"
-            is DataShape.Tabular -> "columns ${shape.header.render()}"
+        val header = LegacyDataShapeBridge.headerOrNull(effectiveShape.shape)
+            ?: error("Effective flat-record shape is not a record: ${effectiveShape.shape}")
+        if (unitAttributes == null && cursorHeader == header) {
+            return item
         }
+        val states = header.values.map { label ->
+            val index = candidateHeader.values.indexOf(label)
+            if (index == -1) DataState.Absent else DataState.Present
+        }
+        val projected = FlatFileRecord.of(header.values.mapIndexed { index, label ->
+            val candidateIndex = candidateHeader.values.indexOf(label)
+            if (states[index] == DataState.Absent) "" else candidateRecord.getString(candidateIndex)
+        })
+        return JobDataValues.projectedRecord(effectiveShape.shape.itemType, projected, states)
     }
+
+
+    private fun describe(shape: DataShape): String =
+        LegacyDataShapeBridge.headerOrNull(shape)?.let { "record ${it.render()}" }
+            ?: "value ${shape.itemType.structural}"
+
 }

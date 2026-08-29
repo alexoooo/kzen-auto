@@ -7,7 +7,6 @@ import tech.kzen.auto.server.objects.script.api.ScriptStepDefinition
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
 import tech.kzen.auto.server.service.target.TargetLocator
 import tech.kzen.lib.common.exec.logic.model.LogicType
-import tech.kzen.lib.common.exec.tuple.TupleDefinition
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
 
@@ -23,8 +22,7 @@ class BrowserReadStep(
 {
     //-----------------------------------------------------------------------------------------------------------------
     override fun definition(scriptDefinitionContext: ScriptDefinitionContext): ScriptStepDefinition {
-        return ScriptStepDefinition.of(
-            TupleDefinition.ofMain(LogicType.string))
+        return ScriptStepDefinition.ofMain(LogicType.string.metadata)
     }
 
 

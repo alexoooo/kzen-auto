@@ -1,6 +1,10 @@
 package tech.kzen.auto.server.objects.job.worker
 
 import org.junit.Test
+import tech.kzen.auto.common.data.schema.HeaderListing
+import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.lib.common.exec.data.type.FieldId
+import tech.kzen.lib.common.exec.data.value.DataNode
 import java.io.StringReader
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -111,5 +115,17 @@ class CsvRecordReaderTest {
             assertEquals(listOf("only", "row"), reader.readRecord()?.toList())
             assertNull(reader.readRecord())
         }
+    }
+
+
+    @Test
+    fun emittedRecordRemainsReadableAfterReaderCloses() {
+        val reader = CsvRecordReader(StringReader("left,right"), ",")
+        val record = requireNotNull(reader.readRecord())
+        reader.close()
+
+        JobDataValues.flat(HeaderListing.ofUnique(listOf("first", "second")), record)
+        val second = record.field(DataNode(0), FieldId("second"))
+        assertEquals("right", record.readText(second))
     }
 }

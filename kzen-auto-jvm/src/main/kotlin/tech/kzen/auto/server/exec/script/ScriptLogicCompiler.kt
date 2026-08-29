@@ -1,16 +1,17 @@
 package tech.kzen.auto.server.exec.script
 
 import tech.kzen.auto.common.objects.document.logic.ResultSignatureDefiner
+import tech.kzen.auto.common.objects.document.logic.BindingSignatureDefiner
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.objects.document.script.model.ScriptResultAnalysis
 import tech.kzen.auto.common.objects.document.script.model.ScriptTree
 import tech.kzen.auto.server.exec.LogicCompilerServices
 import tech.kzen.auto.server.exec.LogicParameter
 import tech.kzen.auto.server.objects.script.ScriptValidator
+import tech.kzen.lib.common.exec.engine.LogicFailure
+import tech.kzen.lib.common.exec.data.binding.BindingSchema
 import tech.kzen.lib.common.exec.engine.LogicSignature
-import tech.kzen.lib.common.exec.logic.model.LogicType
-import tech.kzen.lib.common.exec.tuple.TupleComponentDefinition
-import tech.kzen.lib.common.exec.tuple.TupleDefinition
+import tech.kzen.lib.common.exec.data.binding.BindingName
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -50,6 +51,13 @@ object ScriptLogicCompiler {
         }
         val resultSignature = ResultSignatureDefiner.parse(
             graphNotation.firstAttribute(scriptLocation, ScriptConventions.resultsAttributePath))
+        val unsupportedResult = resultSignature.definitions.firstOrNull {
+            it.name != BindingName("main")
+        }
+        if (unsupportedResult != null) {
+            throw LogicFailure(
+                "Script supports only the 'main' result; found '${unsupportedResult.name.value}'")
+        }
 
         val rootStepLocations = ScriptConventions.orderedDirectChildLocations(
             graphNotation, AttributeLocation(scriptLocation, ScriptConventions.stepsAttributePath))
@@ -74,10 +82,10 @@ object ScriptLogicCompiler {
         // The signature's inputs are the declared parameters (in order); a caller binding by signature — e.g. a
         // Flow logic-host vertex binding its wired inputs to the leading parameters — resolves the right name.
         // Types stay `any` (the binding is by name).
-        val inputSignature = TupleDefinition(
-            parameters.map { TupleComponentDefinition(it.name, LogicType.any) })
+        val inputSignature = BindingSchema.of(parameters.map(LogicParameter::definition))
+        val outputSignature = resultSignature
 
         return ScriptLogic(
-            rootStepLocations, parameters, structure, LogicSignature(inputSignature, resultSignature))
+            rootStepLocations, parameters, structure, LogicSignature(inputSignature, outputSignature))
     }
 }

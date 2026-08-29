@@ -6,9 +6,9 @@ import tech.kzen.auto.common.objects.document.script.model.ScriptValidation
 import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.engine.disposal.SettleDisposalPolicy
 import tech.kzen.lib.common.exec.logic.ResourceClosePolicy
-import tech.kzen.lib.common.exec.tuple.TupleComponentName
-import tech.kzen.lib.common.exec.tuple.TupleDefinition
-import tech.kzen.lib.common.exec.tuple.TupleValue
+import tech.kzen.lib.common.exec.data.binding.BindingName
+import tech.kzen.lib.common.exec.data.binding.BindingSchema
+import tech.kzen.lib.common.exec.data.binding.DataBindings
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
 
@@ -30,7 +30,7 @@ interface StepExecution {
     // resolve its own nested objects (a loop's item binding, a RunStep's instructions link).
     val scriptTree: ScriptTree
     val scriptValidation: ScriptValidation
-    val resultSignature: TupleDefinition
+    val resultSignature: BindingSchema
     val graphNotation: GraphNotation
 
 
@@ -76,7 +76,7 @@ interface StepExecution {
      * A named argument this Script invocation was called with — the run inputs a hosting
      * [RunStep][tech.kzen.auto.server.objects.script.step.control.RunStep] passed, resolved by component name.
      */
-    fun argument(name: TupleComponentName): Any?
+    fun argument(name: BindingName): Any?
 
     /**
      * Record a value for downstream reference WITHOUT a step-trace entry — a binding (loop item) that is
@@ -89,7 +89,7 @@ interface StepExecution {
     fun recordValue(location: ObjectLocation, value: Any?)
 
     /** Capture the Script's result; the Result step then raises [ScriptControlSignal.EndScript]. */
-    fun setResult(value: TupleValue)
+    fun setResult(value: DataBindings)
 
 
     //------------------------------------------------------------------------------------ StepExecution: control flow
@@ -296,7 +296,7 @@ interface StepExecution {
      * The child is compiled on demand (cached for this run) and driven by the engine, so stepping crosses the
      * boundary uniformly.
      */
-    suspend fun host(instructions: ObjectLocation, arguments: TupleValue): TupleValue
+    suspend fun host(instructions: ObjectLocation, arguments: DataBindings): DataBindings
 }
 
 

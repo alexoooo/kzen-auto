@@ -5,7 +5,8 @@ import tech.kzen.auto.common.objects.document.report.spec.sort.SortSpec
 import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
-import tech.kzen.auto.plugin.model.record.FlatFileRecordField
+import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 
@@ -40,8 +41,8 @@ import tech.kzen.lib.common.reflect.Reflect
  */
 @Reflect
 class SortWorker(
-    input: ChannelInput<Any?>,
-    output: ChannelOutput<Any?>,
+    input: ChannelInput<*>,
+    output: ChannelOutput<DataValue>,
 
     private val sort: SortSpec,
     selfLocation: ObjectLocation
@@ -54,7 +55,7 @@ class SortWorker(
 
     // Every buffered message (whole stream); replaced with a fresh empty list once emitted in onComplete, and
     // carried across a live edit by capture/loadMigrationState.
-    private var buffer = ArrayList<JobMessage>()
+    private var buffer = ArrayList<DataValue>()
     private var buffered = 0L
     private var emitted = 0L
 
@@ -62,12 +63,8 @@ class SortWorker(
     private var indexedForHeader: HeaderListing? = null
     private var columnIndices = IntArray(0)
 
-    // Reused across records to read a field without allocating (mirrors the other record workers).
-    private val flyweight = FlatFileRecordField()
-
-
     //-----------------------------------------------------------------------------------------------------------------
-    override suspend fun onElement(element: JobMessage, emit: Emitter, control: JobControl) {
+    override suspend fun onElement(element: DataValue, emit: Emitter, control: JobControl) {
         // Accumulate only: the sorted stream is emitted once, at end-of-stream (onComplete).
         buffer.add(element)
         buffered += 1
@@ -95,21 +92,18 @@ class SortWorker(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun decorate(message: JobMessage): Decorated {
-        val flat = message.flatView()
-        val indices = indicesFor(flat.header)
-        val record = flat.record
-        flyweight.selectHost(record)
+    private fun decorate(message: DataValue): Decorated {
+        val projection = JobDataValues.projection(message)
+        val indices = indicesFor(projection.header)
 
         val texts = Array(ascending.size) { "" }
         val numbers = DoubleArray(ascending.size) { Double.NaN }
 
         for (i in ascending.indices) {
             val fieldIndex = indices[i]
-            if (fieldIndex in 0 until record.fieldCount()) {
-                flyweight.selectField(fieldIndex)
-                texts[i] = flyweight.toString()
-                numbers[i] = flyweight.toDoubleOrNan()
+            if (fieldIndex in 0 until projection.size) {
+                texts[i] = projection.render(fieldIndex)
+                numbers[i] = texts[i].toDoubleOrNull()?.takeIf(Double::isFinite) ?: Double.NaN
             }
         }
 
@@ -179,14 +173,14 @@ class SortWorker(
     //-----------------------------------------------------------------------------------------------------------------
     // The carried run-scoped state: the accumulated input buffer (pure data, no live handle) + its running count.
     private class BufferState(
-        val buffer: ArrayList<JobMessage>,
+        val buffer: ArrayList<DataValue>,
         val buffered: Long
     )
 
 
     // A buffered message decorated with its precomputed sort key (per-column text + numeric value).
     private class Decorated(
-        val message: JobMessage,
+        val message: DataValue,
         val texts: Array<String>,
         val numbers: DoubleArray
     )

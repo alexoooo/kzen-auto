@@ -3,13 +3,12 @@ package tech.kzen.auto.server.exec.job
 import kotlinx.coroutines.runBlocking
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.exec.LogicCompilerServices
+import tech.kzen.auto.server.exec.bindingsOf
+import tech.kzen.auto.server.exec.mainBoundaryValue
 import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.lib.common.exec.engine.Address
 import tech.kzen.lib.common.exec.engine.Outcome
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
-import tech.kzen.lib.common.exec.tuple.TupleComponentName
-import tech.kzen.lib.common.exec.tuple.TupleComponentValue
-import tech.kzen.lib.common.exec.tuple.TupleValue
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -65,8 +64,9 @@ class JobSignatureMigrationTest {
         // cursor, the in-flight channel payloads, AND the sink's accumulation across the cut.
         val editedLogic = compile(edit(notation, sinkLocation, "result", "main"))
 
-        val rootInputs = TupleValue(listOf(
-            TupleComponentValue(TupleComponentName("items"), (0 until total).toList())))
+        val rootInputs = bindingsOf(
+            baseLogic.signature().inputs,
+            "items" to (0 until total).toList())
 
         val engine = RunEngine(baseLogic, context.objectStableMapper.objectStableId(jobLocation), rootInputs)
         try {
@@ -89,7 +89,7 @@ class JobSignatureMigrationTest {
 
             val success = assertIs<Outcome.Success>(outcome)
             assertEquals(
-                total - 1, success.value.mainComponentValue(),
+                total - 1, success.value.mainBoundaryValue(),
                 "the kept-last result is the stream's final element")
             assertEquals(
                 total.toLong(), collectedCount(engine),

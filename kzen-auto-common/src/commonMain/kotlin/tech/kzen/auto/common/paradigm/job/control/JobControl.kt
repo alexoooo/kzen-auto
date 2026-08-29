@@ -1,7 +1,8 @@
 package tech.kzen.auto.common.paradigm.job.control
 
-import tech.kzen.lib.common.exec.tuple.TupleDefinition
-import tech.kzen.lib.common.exec.tuple.TupleValue
+import tech.kzen.lib.common.exec.data.binding.BindingSchema
+import tech.kzen.lib.common.exec.data.binding.DataBindings
+import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 
@@ -78,7 +79,7 @@ interface JobControl {
      * read via [parameter] — generic, so a third-party Worker gets the same scope with no framework change.
      * Default empty: an environment without argument binding.
      */
-    fun parameters(): TupleDefinition = TupleDefinition.empty
+    fun parameters(): BindingSchema = BindingSchema.empty
 
 
     /**
@@ -88,7 +89,7 @@ interface JobControl {
      * stream is a failure or a null result) — generic, so a third-party sink gets the same contract with no
      * framework change. Default empty: an environment without result harvesting.
      */
-    fun results(): TupleDefinition = TupleDefinition.empty
+    fun results(): BindingSchema = BindingSchema.empty
 
 
     /**
@@ -114,13 +115,13 @@ interface JobControl {
 
 
     /**
-     * Contribute a named component to this Job run's output tuple (the result a host — a Script RunStep, a Flow
+     * Contribute a named binding to this Job run's output (the result a host — a Script RunStep, a Flow
      * Run vertex, a Job RunWorker — receives when the run completes). Harvested once the run settles; last write
      * per [component] wins, so a re-yield after a live-edit migrate is idempotent. The conventional component is
      * "main" (the hosts' single-positional harvest reads it); a Job with several result sinks yields several named
      * components. Default no-op: an environment without result harvesting.
      */
-    fun yieldResult(component: String, value: Any?) {}
+    fun yieldResult(component: String, value: DataValue) {}
 
 
     /** Append one immutable structured event to this Worker's run history. */
@@ -130,7 +131,7 @@ interface JobControl {
     /**
      * Invoke another Logic ([instructions] — a Script / Flow / Job) as a confined child, binding [input] as its
      * first declared parameter (the single-positional convention shared with a Script Run step and a Flow
-     * Run-Logic vertex), and return its output tuple. The seam that lets a Worker compose reusable sub-Logics
+     * Run-Logic vertex), and return its output bindings. The seam that lets a Worker compose reusable sub-Logics
      * into a Job's dataflow — a Run Worker running a child per incoming element.
      *
      * The engine drives the child's stepping and coordinates pause / cancel centrally across the whole run, so
@@ -140,17 +141,14 @@ interface JobControl {
      * a child breakpoint IS a run-wide pause. Only nested-Logic Workers (e.g.
      * [RunWorker][tech.kzen.auto.server.objects.job.worker.RunWorker]) call this.
      */
-    suspend fun host(instructions: ObjectLocation, input: Any?): TupleValue
+    suspend fun host(instructions: ObjectLocation, input: Any?): DataBindings
 
 
     /**
      * Invoke a child with named arguments. Compatibility controls can support a single component by delegating
-     * to the positional overload; a real engine overrides this for arbitrary named tuples.
+     * to the positional overload; a real engine overrides this for arbitrary named bindings.
      */
-    suspend fun host(instructions: ObjectLocation, arguments: TupleValue): TupleValue {
-        check(arguments.components.size == 1) {
-            "Named child hosting is unsupported by this JobControl for ${arguments.components.size} arguments"
-        }
-        return host(instructions = instructions, input = arguments.components.single().value)
+    suspend fun host(instructions: ObjectLocation, arguments: DataBindings): DataBindings {
+        throw UnsupportedOperationException("Named child hosting requires an active binding-native engine")
     }
 }

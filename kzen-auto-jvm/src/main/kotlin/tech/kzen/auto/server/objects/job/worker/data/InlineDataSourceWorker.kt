@@ -7,11 +7,12 @@ import tech.kzen.auto.server.objects.job.worker.definition.WorkerDefinitionConte
 import tech.kzen.auto.server.objects.job.worker.definition.WorkerDefinitionResolution
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.util.digest.Digest
+import tech.kzen.lib.common.exec.data.value.DataValue
 
 
 /** Reader whose DataSource configuration is owned by the Worker rather than referenced as a graph object. */
 abstract class InlineDataSourceWorker(
-    output: ChannelOutput<Any?>,
+    output: ChannelOutput<DataValue>,
     emit: String,
     role: String,
     attributes: String,

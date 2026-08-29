@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.objects.script.step.control
 
 import tech.kzen.auto.common.objects.document.logic.ResultSignatureDefiner
+import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.auto.common.objects.document.logic.context.LogicContextConventions
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.server.objects.logic.TypeAssignability
@@ -10,11 +11,14 @@ import tech.kzen.auto.server.objects.script.api.StepExecution
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.auto.server.util.ClassLoaderUtils
-import tech.kzen.lib.common.exec.logic.model.LogicType
-import tech.kzen.lib.common.exec.tuple.TupleComponentName
-import tech.kzen.lib.common.exec.tuple.TupleComponentValue
-import tech.kzen.lib.common.exec.tuple.TupleDefinition
-import tech.kzen.lib.common.exec.tuple.TupleValue
+import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.lib.common.exec.data.binding.BindingDefinition
+import tech.kzen.lib.common.exec.data.binding.BindingName
+import tech.kzen.lib.common.exec.data.binding.BindingSchema
+import tech.kzen.lib.common.exec.data.binding.BindingState
+import tech.kzen.lib.common.exec.data.binding.DataBindings
+import tech.kzen.lib.common.exec.data.type.DataContract
+import tech.kzen.lib.common.exec.data.type.DataType
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.reflect.Reflect
@@ -40,13 +44,20 @@ class RunStep(
     // the child's frame itself (`ScriptRunContext.callSiteBindings`). Arguments are values this step computes;
     // contexts are a declaration it merely holds.
     override suspend fun run(execution: StepExecution): Any? {
-        val argumentValues = TupleValue(
-            arguments.map { (name, argumentLocation) ->
-                TupleComponentValue(TupleComponentName(name), execution.referencedValue(argumentLocation))
-            })
+        val schema = BindingSchema.of(arguments.keys.map { name ->
+            BindingDefinition(BindingName(name), DataContract(DataType.Dynamic(nullable = true)))
+        })
+        val argumentValues = DataBindings.bind(schema, arguments.map { (name, argumentLocation) ->
+            BindingName(name) to JobDataValues.lift(execution.referencedValue(argumentLocation))
+        })
 
-        return execution.host(instructions, argumentValues)
-            .mainComponentValue()
+        val result = execution.host(instructions, argumentValues)
+        val main = BindingName("main")
+        return if (result.schema.find(main) == null) null
+        else when (val state = result[main]) {
+            BindingState.Unbound -> null
+            is BindingState.Bound -> JobDataValues.boundary(state.value)
+        }
     }
 
 
@@ -64,8 +75,15 @@ class RunStep(
                 ResultSignatureDefiner.parse(
                     graphNotation.firstAttribute(instructions, ScriptConventions.resultsAttributePath))
             }
+            else if (instructionsDocument != null && JobConventions.isJob(instructionsDocument)) {
+                BindingSchema.of(BindingDefinition(
+                    BindingName("main"),
+                    DataContract(DataType.Dynamic(nullable = false))))
+            }
             else {
-                TupleDefinition.ofMain(LogicType.any)
+                BindingSchema.of(BindingDefinition(
+                    BindingName("main"),
+                    DataContract(DataType.Dynamic(nullable = true))))
             }
 
         val mismatch = callBindingMismatch(graphNotation)

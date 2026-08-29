@@ -7,6 +7,7 @@ import tech.kzen.auto.common.objects.document.report.summary.NominalValueSummary
 import tech.kzen.auto.common.objects.document.report.summary.OpaqueValueSummary
 import tech.kzen.auto.common.objects.document.report.summary.StatisticValueSummary
 import tech.kzen.auto.plugin.model.record.FlatFileRecordField
+import net.openhft.hashing.LongHashFunction
 import kotlin.random.Random
 
 
@@ -134,6 +135,47 @@ class ValueSummaryBuilder {
                 addSample(value)
             }
         }
+    }
+
+
+    fun add(value: String) {
+        valueCount++
+        if (value.isEmpty()) {
+            emptyCount++
+            if (!histogramOverflow) addTextHistogram(value)
+            return
+        }
+
+        val doubleValue = value.toDoubleOrNull()?.takeIf(Double::isFinite) ?: Double.NaN
+        if (!doubleValue.isNaN()) {
+            numberCount++
+            sum += doubleValue
+            min = min.coerceAtMost(doubleValue)
+            max = max.coerceAtLeast(doubleValue)
+            addSample(value)
+            return
+        }
+
+        textCount++
+        if (!histogramOverflow && value.length < histogramLengthThreshold) {
+            addTextHistogram(value)
+            if (histogramValues.size > sampleThreshold) {
+                histogramValues.values.forEach(this::addSample)
+                textHistogram.clear()
+                histogramValues.clear()
+                histogramOverflow = true
+            }
+        }
+        else {
+            addSample(value)
+        }
+    }
+
+
+    private fun addTextHistogram(value: String) {
+        val signature = LongHashFunction.murmur_3().hashChars(value)
+        val previousCount = textHistogram.addTo(signature, 1)
+        if (previousCount == 0L) histogramValues[signature] = value
     }
 
 

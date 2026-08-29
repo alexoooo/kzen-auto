@@ -6,7 +6,8 @@ import org.junit.Test
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.server.objects.job.worker.Emitter
-import tech.kzen.auto.server.objects.job.worker.JobMessage
+import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.lib.common.model.location.ObjectLocation
 import kotlin.test.assertEquals
 
@@ -30,13 +31,13 @@ class JobBatchingTest {
 
         val sender = launch {
             for (i in 0 until 7) {
-                emitter.send(JobMessage.ofPayload(i))
+                emitter.send(JobDataValues.lift(i))
             }
             emitter.flush()   // trailing partial batch, exactly as SourceWorker flushes after produce returns
             producer.close()
         }
 
-        val batches = mutableListOf<List<Any?>>()
+        val batches = mutableListOf<List<DataValue>>()
         while (true) {
             batches.add(channel.input.receiveBatch() ?: break)
         }
@@ -45,7 +46,7 @@ class JobBatchingTest {
         // 7 scalar elements at batch size 3 → full batches [0,1,2], [3,4,5], then the trailing [6].
         assertEquals(
             listOf<List<Any?>>(listOf(0, 1, 2), listOf(3, 4, 5), listOf(6)),
-            batches.map { batch -> batch.map { (it as JobMessage).payload } })
+            batches.map { batch -> batch.map(JobDataValues::boundary) })
     }
 
 
@@ -56,14 +57,14 @@ class JobBatchingTest {
         val emitter = Emitter(output)
         emitter.flushCadence(control) {}
 
-        emitter.send(JobMessage.ofPayload(0))
-        emitter.send(JobMessage.ofPayload(1))
+        emitter.send(JobDataValues.lift(0))
+        emitter.send(JobDataValues.lift(1))
         emitter.flush()
-        emitter.send(JobMessage.ofPayload(2))
-        emitter.send(JobMessage.ofPayload(3))
+        emitter.send(JobDataValues.lift(2))
+        emitter.send(JobDataValues.lift(3))
         assertEquals(0, control.checkpoints)
 
-        emitter.send(JobMessage.ofPayload(4))
+        emitter.send(JobDataValues.lift(4))
         assertEquals(1, control.checkpoints)
         assertEquals(2, output.flushes)
     }
@@ -92,11 +93,11 @@ class JobBatchingTest {
 
     private class CountingOutput(
         private val size: Int
-    ): ChannelOutput<Any?> {
+    ): ChannelOutput<DataValue> {
         var flushes = 0
 
 
-        override suspend fun send(element: Any?) {}
+        override suspend fun send(element: DataValue) {}
         override suspend fun flush() {
             flushes += 1
         }

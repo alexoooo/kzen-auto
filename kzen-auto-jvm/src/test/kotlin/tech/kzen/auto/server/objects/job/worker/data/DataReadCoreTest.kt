@@ -10,8 +10,16 @@ import tech.kzen.auto.common.data.model.DataRole
 import tech.kzen.auto.common.data.model.DataUnit
 import tech.kzen.auto.common.data.schema.DataShape
 import tech.kzen.auto.common.data.schema.HeaderListing
+import tech.kzen.auto.common.data.schema.LegacyDataShapeBridge
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
+import tech.kzen.auto.plugin.model.record.FlatRecordHeader
+import tech.kzen.lib.common.exec.data.value.DataNode
+import tech.kzen.lib.common.exec.data.value.DataState
+import tech.kzen.lib.common.exec.data.value.DataValue
+import tech.kzen.lib.common.exec.data.value.DefaultDataAdapterRegistry
+import tech.kzen.lib.common.exec.data.value.LiteralDataValues
+import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import kotlin.test.assertEquals
@@ -30,7 +38,9 @@ class DataReadCoreTest {
         val control = TrackingControl()
         val cursor = TrackingCursor(listOf("first"), null) { assertTrue(control.inBlockingIo) }
 
-        assertEquals(DataReadCore.Pull(true, "first"), DataReadCore.pull(control, cursor))
+        val first = DataReadCore.pull(control, cursor)
+        assertTrue(first.hasItem)
+        assertEquals("first", first.item!!.access.readText(first.item.root))
         assertEquals(DataReadCore.Pull(false, null), DataReadCore.pull(control, cursor))
 
         assertEquals(2, control.blockingCalls)
@@ -45,7 +55,7 @@ class DataReadCoreTest {
 
         val item = DataReadCore.pull(TrackingControl(), cursor)
         assertTrue(item.hasItem)
-        assertNull(item.item)
+        assertEquals(DataState.Null, item.item!!.access.state(item.item.root))
 
         assertFalse(DataReadCore.pull(TrackingControl(), cursor).hasItem)
     }
@@ -53,7 +63,7 @@ class DataReadCoreTest {
 
     @Test
     fun emitNextClaimsImmediatelyBeforeSend() = runBlocking {
-        val cursor = TrackingCursor(listOf("value"), DataShape.Payload(TypeMetadata.string))
+        val cursor = TrackingCursor(listOf("value"), LegacyDataShapeBridge.payload(TypeMetadata.string))
         val baseline = DataReadCore.ShapeBaseline(cursor.shape, "unit 0 part 0")
         val events = mutableListOf<String>()
 
@@ -62,7 +72,7 @@ class DataReadCoreTest {
             claimBeforeSend = { events.add("claim") },
             send = {
                 events.add("send")
-                assertEquals("value", it.payload)
+                assertEquals("value", JobDataValues.boundary(it))
             })
 
         assertTrue(emitted)
@@ -83,7 +93,8 @@ class DataReadCoreTest {
         DataReadCore.skipItems(control, cursor, 2)
 
         assertEquals(2, control.blockingCalls)
-        assertEquals(DataReadCore.Pull(true, "two"), DataReadCore.pull(control, cursor))
+        val third = DataReadCore.pull(control, cursor)
+        assertEquals("two", third.item!!.access.readText(third.item.root))
 
         val exhausted = assertFailsWith<IllegalStateException> {
             DataReadCore.skipItems(control, cursor, 1)
@@ -136,7 +147,7 @@ class DataReadCoreTest {
     //-----------------------------------------------------------------------------------------------------------------
     @Test
     fun shapeBaselineIsSharedAcrossPartsAndUnits() {
-        val shape = DataShape.Tabular(HeaderListing.ofUnique(listOf("id", "value")))
+        val shape = LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("id", "value")))
         val first = DataReadCore.establishShape(
             null, DataReadCore.ShapeBaseline(shape, "unit 0 part 0"))
 
@@ -153,56 +164,58 @@ class DataReadCoreTest {
 
     @Test
     fun unknownAndKnownShapesMismatchWithBothOriginsNamed() {
-        val baseline = DataReadCore.ShapeBaseline(null, "unit 0 part 0")
+        val baseline = DataReadCore.ShapeBaseline(
+            LegacyDataShapeBridge.runtimeUnknown(), "unit 0 part 0")
         val known = DataReadCore.ShapeBaseline(
-            DataShape.Tabular(HeaderListing.ofUnique(listOf("value"))),
+            LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("value"))),
             "unit 1 part 0")
 
         val mismatch = assertFailsWith<IllegalStateException> {
             DataReadCore.establishShape(baseline, known)
         }
-        assertTrue(mismatch.message.orEmpty().contains("unit 0 part 0 (unknown payload)"))
-        assertTrue(mismatch.message.orEmpty().contains("unit 1 part 0 (columns [value])"))
+        assertTrue(mismatch.message.orEmpty().contains("unit 0 part 0"))
+        assertTrue(mismatch.message.orEmpty().contains("unit 1 part 0"))
     }
 
 
     @Test
     fun differentPayloadTypesMismatch() {
         val baseline = DataReadCore.ShapeBaseline(
-            DataShape.Payload(TypeMetadata.string), "unit 0 part 0")
+            LegacyDataShapeBridge.payload(TypeMetadata.string), "unit 0 part 0")
         val candidate = DataReadCore.ShapeBaseline(
-            DataShape.Payload(TypeMetadata.int), "unit 0 part 1")
+            LegacyDataShapeBridge.payload(TypeMetadata.int), "unit 0 part 1")
 
         val mismatch = assertFailsWith<IllegalStateException> {
             DataReadCore.establishShape(baseline, candidate)
         }
-        assertTrue(mismatch.message.orEmpty().contains(TypeMetadata.string.toString()))
-        assertTrue(mismatch.message.orEmpty().contains(TypeMetadata.int.toString()))
+        assertTrue(mismatch.message.orEmpty().contains("Text"))
+        assertTrue(mismatch.message.orEmpty().contains("Integer"))
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     @Test
     fun attributesArePrependedToHeaderAndRecordInDisplayOrder() {
-        val cursorShape = DataShape.Tabular(HeaderListing.ofUnique(listOf("name", "amount")))
+        val cursorShape = LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("name", "amount")))
         val attributes = linkedMapOf("date" to "2026-08-23", "region" to "east")
-        val effective = DataReadCore.effectiveShape(cursorShape, attributes, "unit 0 part 0")
+        val effective = DataReadCore.effectiveShape(
+            cursorShape, attributes, "unit 0 part 0")
 
         val message = DataReadCore.message(
-            cursorShape, effective, FlatFileRecord.of("Alice", "12"), attributes)
+            cursorShape, effective, flatValue(cursorShape, "Alice", "12"), attributes)
 
         assertEquals(
             listOf("date", "region", "name", "amount"),
-            message.flat!!.header.values.map { it.text })
+            JobDataValues.projection(message).header.values.map { it.text })
         assertEquals(
             listOf("2026-08-23", "east", "Alice", "12"),
-            message.flat!!.record.toList())
+            JobDataValues.record(JobDataValues.projection(message)).toList())
     }
 
 
     @Test
     fun attributeColumnCollisionNamesTheOriginAndColumn() {
-        val shape = DataShape.Tabular(HeaderListing.ofUnique(listOf("date", "amount")))
+        val shape = LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("date", "amount")))
 
         val collision = assertFailsWith<IllegalStateException> {
             DataReadCore.effectiveShape(
@@ -216,7 +229,7 @@ class DataReadCoreTest {
 
     @Test
     fun attributesRequireTabularShape() {
-        val payload = DataShape.Payload(TypeMetadata.string)
+        val payload = LegacyDataShapeBridge.payload(TypeMetadata.string)
 
         val failure = assertFailsWith<IllegalStateException> {
             DataReadCore.effectiveShape(
@@ -224,28 +237,28 @@ class DataReadCoreTest {
         }
         assertTrue(failure.message.orEmpty().contains("attributes=columns"))
         assertTrue(failure.message.orEmpty().contains("unit 0 part 0"))
-        assertTrue(failure.message.orEmpty().contains("payload"))
+        assertTrue(failure.message.orEmpty().contains("value"))
     }
 
 
     @Test
     fun tabularMessageRequiresFlatFileRecord() {
-        val shape = DataShape.Tabular(HeaderListing.ofUnique(listOf("value")))
+        val shape = LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("value")))
         val effective = DataReadCore.ShapeBaseline(shape, "unit 5 part 6")
 
         val failure = assertFailsWith<IllegalStateException> {
-            DataReadCore.message(shape, effective, "not a record", null)
+            DataReadCore.message(
+                shape, effective, LiteralDataValues.lift("not a record"), null)
         }
         assertTrue(failure.message.orEmpty().contains("unit 5 part 6"))
-        assertTrue(failure.message.orEmpty().contains("kotlin.String"))
         assertTrue(failure.message.orEmpty().contains(FlatFileRecord::class.qualifiedName!!))
     }
 
 
     @Test
     fun supersetPlansAllAttributesBeforeOrderedDataAndProjectsMissingCells() {
-        val firstShape = DataShape.Tabular(HeaderListing.ofUnique(listOf("a")))
-        val secondShape = DataShape.Tabular(HeaderListing.ofUnique(listOf("b")))
+        val firstShape = LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("a")))
+        val secondShape = LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("b")))
         val plan = DataReadCore.planShape(listOf(
             DataReadCore.ShapeCandidate(
                 firstShape, linkedMapOf("date" to "one"), "unit 0 part 0"),
@@ -255,12 +268,14 @@ class DataReadCoreTest {
 
         assertEquals(
             listOf("date", "group", "a", "b"),
-            assertIs<DataShape.Tabular>(plan.shape).header.values.map { it.text })
+            LegacyDataShapeBridge.headerOrNull(plan.shape)!!.values.map { it.text })
         assertEquals(
-            listOf("one", DataShape.missingCellValue, "A", DataShape.missingCellValue),
+            listOf("one", LegacyDataShapeBridge.missingCellValue, "A", LegacyDataShapeBridge.missingCellValue),
             DataReadCore.message(
-                firstShape, plan, FlatFileRecord.of("A"), linkedMapOf("date" to "one"))
-                .flat!!.record.toList())
+                firstShape, plan, flatValue(firstShape, "A"), linkedMapOf("date" to "one"))
+                .let(JobDataValues::projection)
+                .let(JobDataValues::record)
+                .toList())
     }
 
 
@@ -269,9 +284,9 @@ class DataReadCoreTest {
         val failure = assertFailsWith<IllegalStateException> {
             DataReadCore.planShape(listOf(
                 DataReadCore.ShapeCandidate(
-                    DataShape.Tabular(HeaderListing.ofUnique(listOf("group"))), null, "unit 0 part 0"),
+                    LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("group"))), null, "unit 0 part 0"),
                 DataReadCore.ShapeCandidate(
-                    DataShape.Tabular(HeaderListing.ofUnique(listOf("value"))),
+                    LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("value"))),
                     linkedMapOf("group" to "west"), "unit 1 part 0")
             ), DataReadCore.schemaSuperset)
         }
@@ -283,9 +298,9 @@ class DataReadCoreTest {
     @Test
     fun strictPlanStillRejectsDifferentHeadersAndSupersetRejectsUnknownAndMixed() {
         val a = DataReadCore.ShapeCandidate(
-            DataShape.Tabular(HeaderListing.ofUnique(listOf("a"))), null, "first")
+            LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("a"))), null, "first")
         val b = DataReadCore.ShapeCandidate(
-            DataShape.Tabular(HeaderListing.ofUnique(listOf("b"))), null, "second")
+            LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("b"))), null, "second")
         val strict = assertFailsWith<IllegalStateException> {
             DataReadCore.planShape(listOf(a, b), DataReadCore.schemaStrict)
         }
@@ -294,13 +309,14 @@ class DataReadCoreTest {
 
         assertFailsWith<IllegalStateException> {
             DataReadCore.planShape(
-                listOf(a, DataReadCore.ShapeCandidate(null, null, "unknown")),
+                listOf(a, DataReadCore.ShapeCandidate(
+                    LegacyDataShapeBridge.runtimeUnknown(), null, "unknown")),
                 DataReadCore.schemaSuperset)
         }
         assertFailsWith<IllegalStateException> {
             DataReadCore.planShape(
                 listOf(a, DataReadCore.ShapeCandidate(
-                    DataShape.Payload(TypeMetadata.string), null, "payload")),
+                    LegacyDataShapeBridge.payload(TypeMetadata.string), null, "payload")),
                 DataReadCore.schemaSuperset)
         }
     }
@@ -341,9 +357,9 @@ class DataReadCoreTest {
     fun detachedCursorRelinquishesOwnershipEvenWhenCloseThrows() {
         var closeCalls = 0
         val throwing = object: DataCursor {
-            override val shape: DataShape? = null
+            override val shape: DataShape = LegacyDataShapeBridge.runtimeUnknown()
             override fun hasNext(): Boolean = false
-            override fun next(): Any? = error("empty")
+            override fun next(): DataValue = error("empty")
             override fun close() {
                 closeCalls += 1
                 error("close failed")
@@ -386,9 +402,12 @@ class DataReadCoreTest {
 
     private class TrackingCursor(
         private val items: List<Any?>,
-        override val shape: DataShape?,
+        shape: DataShape?,
         private val onAccess: () -> Unit = {}
     ): DataCursor {
+        override val shape: DataShape = shape ?: LegacyDataShapeBridge.runtimeUnknown()
+        private val registry = DefaultDataAdapterRegistry()
+        private val values = items.map { item -> registry.lift(item, this.shape.itemType) }
         var hasNextCalls = 0
         var nextCalls = 0
         var closeCalls = 0
@@ -403,10 +422,10 @@ class DataReadCoreTest {
         }
 
 
-        override fun next(): Any? {
+        override fun next(): DataValue {
             onAccess()
             nextCalls += 1
-            return items[index++]
+            return values[index++]
         }
 
 
@@ -414,6 +433,13 @@ class DataReadCoreTest {
             closeCalls += 1
             closed = true
         }
+    }
+
+
+    private fun flatValue(shape: DataShape, vararg fields: String): DataValue {
+        val record = FlatFileRecord.of(*fields)
+        record.attachHeader(FlatRecordHeader(shape.itemType))
+        return DataValue(record, DataNode(0))
     }
 
 

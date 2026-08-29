@@ -1,7 +1,8 @@
 package tech.kzen.auto.server.exec.flow
 
 import tech.kzen.auto.common.paradigm.flow.model.exec.ActiveVertexModel
-import tech.kzen.lib.common.exec.tuple.TupleComponentName
+import tech.kzen.lib.common.exec.data.binding.BindingName
+import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.lib.common.service.store.normal.ObjectStableId
 
 
@@ -23,5 +24,5 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableId
  */
 data class FlowMigrationState(
     val activeVertices: Map<ObjectStableId, ActiveVertexModel>,
-    val outputAccumulator: Map<TupleComponentName, Any?>
+    val outputAccumulator: Map<BindingName, DataValue?>
 )

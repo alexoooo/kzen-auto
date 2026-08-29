@@ -16,7 +16,10 @@ import tech.kzen.auto.server.data.FileListingAction
 import tech.kzen.auto.server.data.SchemaCache
 import tech.kzen.auto.server.objects.data.schema.DataSchemaDocument
 import tech.kzen.auto.server.objects.datasource.FileDataSource
-import tech.kzen.auto.server.objects.job.worker.JobMessage
+import tech.kzen.auto.server.objects.job.worker.testJobValue
+import tech.kzen.auto.server.objects.job.worker.testProjection
+import tech.kzen.auto.server.objects.job.worker.testRecord
+import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.auto.server.objects.job.worker.definition.WorkerDefinitionResolution
 import tech.kzen.auto.server.objects.report.exec.input.parse.csv.CsvReportDefiner
 import tech.kzen.auto.server.service.plugin.HostReportDefinitionRepository
@@ -57,7 +60,7 @@ class FileSourceWorkerTest {
             val opener = DataOpenerLookup(FileDataOpener(
                 repository, SchemaCache(WorkUtils(directory.resolve("cache")))))
 
-            val directMessages = mutableListOf<JobMessage>()
+            val directMessages = mutableListOf<DataValue>()
             FileSourceWorker(
                 capturing(directMessages), "", "", files, "", "", "(?<year>\\d{4})", "fail", null,
                 ReadWorker.emitItems, "", ReadWorker.attributesColumns, workerLocation, opener, listing)
@@ -65,7 +68,7 @@ class FileSourceWorkerTest {
 
             val source = FileDataSource(
                 "", "", files, "", "", "(?<year>\\d{4})", "fail", listing)
-            val nominalMessages = mutableListOf<JobMessage>()
+            val nominalMessages = mutableListOf<DataValue>()
             val nominal = ReadWorker(
                 capturing(nominalMessages), ObjectReference.parse("files"), ReadWorker.emitItems, "",
                 ReadWorker.attributesColumns, workerLocation, opener)
@@ -77,7 +80,7 @@ class FileSourceWorkerTest {
             assertEquals(nominalMessages.map(::messageValue), directMessages.map(::messageValue))
             assertEquals(
                 listOf("year", "left", "shared", "right"),
-                directMessages.first().flat!!.header.values.map { it.text })
+                testProjection(directMessages.first()).header.values.map { it.text })
         }
         finally {
             WorkUtils.recursivelyDeleteDir(directory)
@@ -163,16 +166,15 @@ class FileSourceWorkerTest {
         DataSchemaFieldListSpec(linkedMapOf(name to DataSchemaFieldSpec(TypeMetadata.string))))
 
 
-    private fun messageValue(message: JobMessage): Pair<HeaderListing, List<String>> {
-        val flat = message.flat!!
-        return flat.header to flat.record.toList()
+    private fun messageValue(message: DataValue): Pair<HeaderListing, List<String>> {
+        return testProjection(message).header to testRecord(message).toList()
     }
 
 
-    private fun capturing(messages: MutableList<JobMessage>): ChannelOutput<Any?> {
+    private fun capturing(messages: MutableList<DataValue>): ChannelOutput<Any?> {
         return object: ChannelOutput<Any?> {
             override suspend fun send(element: Any?) {
-                messages.add(element as JobMessage)
+                messages.add(testJobValue(element))
             }
             override suspend fun flush() {}
             override fun batchSize(): Int = 1024

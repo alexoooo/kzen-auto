@@ -10,7 +10,7 @@ import tech.kzen.auto.server.objects.script.ScriptValidator
 import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.lib.common.exec.engine.Outcome
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
-import tech.kzen.lib.common.exec.tuple.TupleValue
+import tech.kzen.auto.server.exec.mainBoundaryValue
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
@@ -195,28 +195,28 @@ class ForEachItemsTest {
         // 1 + (1+2) + (1+2+3) — proves the expression is evaluated at each loop ENTRY against the current
         // outer item, not once for the whole run.
         val outcome = runScript(outerItemPath)
-        assertEquals(10, assertIs<Outcome.Success>(outcome).value.mainComponentValue())
+        assertEquals(10, assertIs<Outcome.Success>(outcome).value.mainBoundaryValue())
     }
 
 
     @Test
     fun anOpaquelyTypedItemsValueIteratesAtRunTime() {
         val outcome = runScript(opaquePath)
-        assertEquals(12, assertIs<Outcome.Success>(outcome).value.mainComponentValue())
+        assertEquals(12, assertIs<Outcome.Success>(outcome).value.mainBoundaryValue())
     }
 
 
     @Test
     fun aSequenceValueIteratesAtRunTime() {
         val outcome = runScript(sequencePath)
-        assertEquals(12, assertIs<Outcome.Success>(outcome).value.mainComponentValue())
+        assertEquals(12, assertIs<Outcome.Success>(outcome).value.mainBoundaryValue())
     }
 
 
     @Test
     fun anIteratorValueIteratesAtRunTime() {
         val outcome = runScript(iteratorPath)
-        assertEquals(9, assertIs<Outcome.Success>(outcome).value.mainComponentValue())
+        assertEquals(9, assertIs<Outcome.Success>(outcome).value.mainBoundaryValue())
     }
 
 
@@ -281,7 +281,7 @@ class ForEachItemsTest {
                 LogicRunExecutionId.random()))
 
         val engine = RunEngine(
-            logic, context.objectStableMapper.objectStableId(scriptLocation), TupleValue.empty)
+            logic, context.objectStableMapper.objectStableId(scriptLocation))
         return try {
             runBlocking {
                 engine.resume()

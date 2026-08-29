@@ -8,6 +8,12 @@ import tech.kzen.auto.common.data.model.DataRef
 import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.api.ChannelInputIterator
 import tech.kzen.auto.common.paradigm.job.control.JobControl
+import tech.kzen.auto.common.objects.document.logic.BindingSignatureDefiner
+import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.lib.common.exec.data.binding.BindingDefinition
+import tech.kzen.lib.common.exec.data.binding.BindingName
+import tech.kzen.lib.common.exec.data.binding.BindingSchema
+import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.auto.server.data.FileListingAction
 import tech.kzen.auto.server.context.KzenAutoContext
@@ -15,10 +21,6 @@ import tech.kzen.auto.server.service.plugin.HostReportDefinitionRepository
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
-import tech.kzen.lib.common.exec.logic.model.LogicType
-import tech.kzen.lib.common.exec.tuple.TupleComponentDefinition
-import tech.kzen.lib.common.exec.tuple.TupleComponentName
-import tech.kzen.lib.common.exec.tuple.TupleDefinition
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import java.io.ByteArrayInputStream
 import java.io.InputStream
@@ -38,7 +40,7 @@ import kotlin.test.AfterTest
 
 /**
  * Round-trip test for [ExportWriterWorker]: drives the sink's real [ExportWriterWorker.run] lifecycle over a fake
- * [ChannelInput] of flat-part [JobMessage]s writing to a temp file, then reads the file back — DECOMPRESSING per the
+ * [ChannelInput] of flat-backed values writing to a temp file, then reads the file back — DECOMPRESSING per the
  * configured compression and re-parsing with the Job's own [CsvRecordReader] — and asserts the records survive
  * exactly (the P4f "gz|zip|none → read back == input" gate).
  *
@@ -61,8 +63,8 @@ class ExportWriterWorkerTest {
     //-----------------------------------------------------------------------------------------------------------------
     private val header = HeaderListing.of(listOf("city", "amount"))
 
-    private fun record(city: String, amount: String): JobMessage =
-        JobMessage.ofFlat(header, FlatFileRecord.of(listOf(city, amount)))
+    private fun record(city: String, amount: String): DataValue =
+        JobDataValues.flat(header, FlatFileRecord.of(listOf(city, amount)))
 
     // Rows with a comma and an embedded quote, so RFC-4180 quoting has to survive the compression round-trip.
     private val records = listOf(
@@ -170,7 +172,7 @@ class ExportWriterWorkerTest {
         format: String,
         compression: String,
         readDelimiter: String,
-        input: List<JobMessage> = records
+        input: List<DataValue> = records
     ): List<List<String>> {
         val file = Files.createTempFile("exportworker", ".out")
         try {
@@ -223,7 +225,7 @@ class ExportWriterWorkerTest {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun chunkedInput(input: List<JobMessage>): ChannelInput<Any?> =
+    private fun chunkedInput(input: List<DataValue>): ChannelInput<Any?> =
         object: ChannelInput<Any?> {
             private var delivered = false
 
@@ -271,11 +273,11 @@ class ExportWriterWorkerTest {
         override suspend fun <R> runBlockingIo(block: () -> R): R = block()
         override fun scratchDir(): String = error("unused")
         override fun publishProgress(location: ObjectLocation, value: Map<String, Any?>, force: Boolean) {}
-        override fun results(): TupleDefinition = TupleDefinition(listOf(
-            TupleComponentDefinition(TupleComponentName("artifact"), LogicType(resultType))))
-        override fun yieldResult(component: String, value: Any?) {
+        override fun results(): BindingSchema = BindingSchema.of(
+            BindingDefinition(BindingName("artifact"), BindingSignatureDefiner.contract(resultType)))
+        override fun yieldResult(component: String, value: DataValue) {
             assertEquals("artifact", component)
-            yielded = value
+            yielded = JobDataValues.boundary(value)
         }
         override suspend fun host(instructions: ObjectLocation, input: Any?) = error("unused")
     }
