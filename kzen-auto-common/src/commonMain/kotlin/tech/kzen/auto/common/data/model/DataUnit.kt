@@ -40,11 +40,6 @@ data class DataUnit(
         fun of(attributes: Map<String, String>, parts: List<DataPart>): DataUnit {
             return DataUnit(attributes, parts)
         }
-
-
-        fun ofPath(path: String): DataUnit {
-            return of(DataPart.ofPath(DataRole.main, path))
-        }
     }
 
 

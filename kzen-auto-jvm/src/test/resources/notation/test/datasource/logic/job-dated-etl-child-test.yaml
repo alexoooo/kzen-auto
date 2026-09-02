@@ -72,7 +72,7 @@ main.workers/referenceTransform:
   input: main.channels/referenceItems
   output: main.channels/referenceTransformed
   formula:
-    observed: '"seen-" + code.text'
+    observed: '"seen-" + code'
 
 main.workers/referenceWrite:
   is: ExportWriterWorker

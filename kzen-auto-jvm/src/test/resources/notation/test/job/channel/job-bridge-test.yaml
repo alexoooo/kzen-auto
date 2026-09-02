@@ -1,4 +1,4 @@
-# External duplex request bridge fixture (JobExternalBridgeTest): a CsvReader streams rows into a Preview sink
+# External duplex request bridge fixture (JobExternalBridgeTest): a file source streams rows into a Preview sink
 # whose `serve` port is an EXTERNAL duplex Channel (the UI bridge). While the run is mid-stream, a UI request
 # addressed by the channel name ("queries") must reach the Preview's serve loop through JobRun's bridge and come
 # back with the live slice — the browser->worker pull path (logic-spec §4). The serve channel is marked external
@@ -17,9 +17,10 @@ main.channels/queries:
   external: true
 
 main.workers/reader:
-  is: CsvReaderWorker
+  is: FileSourceWorker
   output: main.channels/raw
-  path: build/job-bridge/input.csv
+  files:
+    - location: build/job-bridge/input.csv
 
 main.workers/preview:
   is: PreviewWorker

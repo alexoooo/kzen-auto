@@ -13,9 +13,10 @@ main.channels/queries:
   is: DuplexChannel
 
 main.workers/reader:
-  is: CsvReaderWorker
+  is: FileSourceWorker
   output: main.channels/raw
-  path: build/job-migration/input.csv
+  files:
+    - location: build/job-migration/input.csv
 
 main.workers/preview:
   is: PreviewWorker

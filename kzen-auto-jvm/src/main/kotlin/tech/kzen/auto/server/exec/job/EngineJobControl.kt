@@ -11,6 +11,7 @@ import tech.kzen.lib.common.exec.data.binding.BindingName
 import tech.kzen.lib.common.exec.data.binding.BindingSchema
 import tech.kzen.lib.common.exec.data.binding.BindingState
 import tech.kzen.lib.common.exec.data.binding.DataBindings
+import tech.kzen.lib.common.exec.data.type.DataContract
 import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.lib.common.exec.engine.Logic
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -53,6 +54,7 @@ class EngineJobControl(
     private val jobParameters: JobParameters,
     private val jobResults: BindingSchema,
     private val inputPayloadType: TypeMetadata?,
+    private val inputContract: DataContract?,
     private val resultCollector: JobResultCollector
 ): JobControl {
     //-----------------------------------------------------------------------------------------------------------------
@@ -168,6 +170,11 @@ class EngineJobControl(
     // untyped/flat lane) — the receiver scope for runtime expression compiles, matching the editor's display.
     override fun payloadType(): TypeMetadata? {
         return inputPayloadType
+    }
+
+
+    override fun inputContract(): DataContract? {
+        return inputContract
     }
 
 

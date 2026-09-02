@@ -8,9 +8,9 @@ import kotlin.test.assertTrue
 
 
 class DataUnitTest {
-    private val mainFirst = DataPart.ofPath(DataRole.main, "/data/main-1.csv")
-    private val reference = DataPart.ofPath(DataRole("reference"), "/data/reference.csv")
-    private val mainSecond = DataPart.ofPath(DataRole.main, "/data/main-2.csv")
+    private val mainFirst = testDataPart(DataRole.main, DataRef(null, "/data/main-1.csv"))
+    private val reference = testDataPart(DataRole("reference"), DataRef(null, "/data/reference.csv"))
+    private val mainSecond = testDataPart(DataRole.main, DataRef(null, "/data/main-2.csv"))
 
 
     @Test
@@ -50,15 +50,10 @@ class DataUnitTest {
 
     @Test
     fun constructionHelpersMatchConstructors() {
-        val explicitMainPart = DataPart(
-            DataRole.main,
-            DataRef(null, "/data/main.csv"),
-            null,
-            null
-        )
+        val explicitMainPart = testDataPart(DataRole.main, DataRef(null, "/data/main.csv"))
         assertEquals(
             explicitMainPart,
-            DataPart.ofPath(DataRole.main, "/data/main.csv")
+            testDataPart(DataRole.main, DataRef(null, "/data/main.csv"))
         )
 
         assertEquals(
@@ -74,7 +69,7 @@ class DataUnitTest {
 
         assertEquals(
             DataUnit(emptyMap(), listOf(explicitMainPart)),
-            DataUnit.ofPath("/data/main.csv")
+            testDataUnit("/data/main.csv")
         )
     }
 }

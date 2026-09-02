@@ -25,7 +25,7 @@ main.workers/source:
 
 main.workers/filter:
   is: FilterWorker
-  where: value.number > threshold
+  where: value > threshold
 
 main.workers/collect:
   is: ResultSinkWorker

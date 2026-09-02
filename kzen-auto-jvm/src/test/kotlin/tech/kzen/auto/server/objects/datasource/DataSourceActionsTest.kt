@@ -19,6 +19,7 @@ import tech.kzen.auto.common.data.schema.LegacyDataShapeBridge
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.server.context.KzenAutoConfig
 import tech.kzen.auto.server.context.KzenAutoContext
+import tech.kzen.auto.server.data.configuredTestDataPart
 import tech.kzen.auto.server.util.WorkUtils
 import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.exec.ExecutionRequest
@@ -37,6 +38,7 @@ class DataSourceActionsTest {
     companion object {
         private lateinit var moduleRoot: Path
         private lateinit var existing: Path
+        private lateinit var declaredExisting: Path
         private lateinit var missing: Path
         private lateinit var context: KzenAutoContext
 
@@ -52,8 +54,10 @@ class DataSourceActionsTest {
         fun setUp() {
             moduleRoot = Files.createTempDirectory("data-source-actions-test")
             existing = moduleRoot.resolve("existing.csv")
+            declaredExisting = moduleRoot.resolve("declared.csv")
             missing = moduleRoot.resolve("missing.csv")
             Files.writeString(existing, "name\nvalue\n")
+            Files.writeString(declaredExisting, "city,amount\nToronto,1\n")
 
             val notationDir = moduleRoot.resolve("src/main/resources/notation/main")
             Files.createDirectories(notationDir)
@@ -75,6 +79,12 @@ class DataSourceActionsTest {
 
                 main.sources/declared:
                   is: FileDataSource
+                  format: main/data-source-actions-test.yaml#main.declaredFormat
+                  files:
+                    - location: '${declaredExisting.toString().replace('\\', '/')}'
+
+                main.declaredFormat:
+                  is: ConfiguredCsv
                   schema: main/data-source-actions-schema.yaml#main
 
                 main.sources/logic:
@@ -199,10 +209,12 @@ class DataSourceActionsTest {
         @Suppress("UNCHECKED_CAST")
         val catalog = FileFormatCatalog.ofCollection(success.value.get() as Map<String, Any?>)
 
-        val formatNames = catalog.formats.map { it.coordinate.asString() }
-        assertTrue(formatNames.containsAll(listOf("CSV", "TSV", "Text")), formatNames.toString())
-        assertEquals(formatNames.sorted(), formatNames)
-        assertTrue(catalog.formats.single { it.coordinate.asString() == "CSV" }.extensions.contains("csv"))
+        val formatReferences = catalog.formats.map { it.reference }
+        assertTrue(formatReferences.any { it.endsWith("#ConfiguredCsv") }, formatReferences.toString())
+        assertTrue(formatReferences.any { it.endsWith("#ConfiguredTsv") }, formatReferences.toString())
+        assertEquals(formatReferences.sorted(), formatReferences)
+        assertTrue(catalog.formats.single { it.reference.endsWith("#ConfiguredCsv") }
+            .extensions.contains("csv"))
 
         // UTF-8 leads because the ordering is by how often a real file turns out to be in one, not alphabetical.
         assertEquals("UTF-8", catalog.encodings.first())
@@ -211,10 +223,15 @@ class DataSourceActionsTest {
 
 
     @Test
-    fun declaredShapeWinsBeforeOpenerLookupAndUndeclaredFallsBack() {
-        val impossiblePart = DataPart(
-            DataRole.main, DataRef(DataSourceId("no-opener"), "opaque"), null, null)
-        val declaredOutcome = executeShape(declaredSource, impossiblePart)
+    fun explicitShapeAlwaysInspectsResolvedContent() {
+        val impossiblePart = configuredTestDataPart(
+            DataRole.main, DataRef(DataSourceId("no-opener"), "opaque"), null)
+        assertIs<ExecutionFailure>(executeShape(declaredSource, impossiblePart))
+
+        val declaredResolved = DataResolveResult.ofExecutionValue(
+            assertIs<ExecutionSuccess>(execute(declaredSource)).value)
+        val declaredOutcome = executeShape(
+            declaredSource, declaredResolved.manifest.units.single().parts.single())
         val declared = assertIs<ExecutionSuccess>(declaredOutcome, declaredOutcome.toString())
         assertEquals(
             listOf("city", "amount"),

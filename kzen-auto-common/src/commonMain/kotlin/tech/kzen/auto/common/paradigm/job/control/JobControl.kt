@@ -2,6 +2,7 @@ package tech.kzen.auto.common.paradigm.job.control
 
 import tech.kzen.lib.common.exec.data.binding.BindingSchema
 import tech.kzen.lib.common.exec.data.binding.DataBindings
+import tech.kzen.lib.common.exec.data.type.DataContract
 import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
@@ -102,6 +103,10 @@ interface JobControl {
      * an environment without inference.
      */
     fun payloadType(): TypeMetadata? = null
+
+
+    /** Canonical static contract of this Worker's input lane; null only when inference is unavailable. */
+    fun inputContract(): DataContract? = null
 
 
     /**

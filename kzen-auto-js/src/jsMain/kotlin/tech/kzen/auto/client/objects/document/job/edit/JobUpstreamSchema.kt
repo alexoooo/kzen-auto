@@ -7,12 +7,18 @@ import tech.kzen.auto.common.data.model.DataManifest
 import tech.kzen.auto.common.data.model.DataPart
 import tech.kzen.auto.common.data.model.DataRole
 import tech.kzen.auto.common.data.schema.DataShape
-import tech.kzen.auto.common.data.schema.HeaderLabel
 import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.auto.common.data.schema.LegacyDataShapeBridge
 import tech.kzen.auto.common.objects.document.job.JobChannelDerivation
 import tech.kzen.auto.common.objects.document.job.JobServeCapability
 import tech.kzen.auto.common.objects.document.report.summary.TableSummary
+import tech.kzen.lib.common.exec.data.type.DataContract
+import tech.kzen.lib.common.exec.data.type.DataField
+import tech.kzen.lib.common.exec.data.type.DataPathSegment
+import tech.kzen.lib.common.exec.data.type.DataType
+import tech.kzen.lib.common.exec.data.type.DataTypePath
+import tech.kzen.lib.common.exec.data.type.FieldId
+import tech.kzen.lib.common.exec.data.type.ScalarKind
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.location.ObjectReference
 import tech.kzen.lib.common.model.location.ObjectReferenceHost
@@ -34,10 +40,28 @@ object JobUpstreamSchema {
     }
 
 
+    sealed interface ContractResult {
+        data class Available(val contract: DataContract): ContractResult
+        data object Unavailable: ContractResult
+        data class Error(val message: String): ContractResult
+    }
+
+
     data class Result(
         val provider: Provider,
-        val columns: HeaderListing
-    )
+        val result: ContractResult
+    ) {
+        val contract: DataContract?
+            get() = (result as? ContractResult.Available)?.contract
+
+        /** Legacy editor boundary; the upstream walk itself remains contract-native. */
+        val columns: HeaderListing?
+            get() = contract?.let { LegacyDataShapeBridge.headerOrNull(
+                DataShape(
+                    it,
+                    tech.kzen.lib.common.exec.data.shape.ShapeProvenance.Carried,
+                    tech.kzen.lib.common.exec.data.shape.ShapeStability.Stable)) }
+    }
 
 
     internal data class ReadProjectionConfig(
@@ -50,11 +74,12 @@ object JobUpstreamSchema {
 
 
     internal fun choose(
-        liveSummary: HeaderListing?,
-        inspectedSource: HeaderListing?
+        liveSummary: DataContract?,
+        inspectedSource: ContractResult?
     ): Result? = when {
-        liveSummary != null -> Result(Provider.LiveSummary, liveSummary)
-        inspectedSource != null -> Result(Provider.InspectedSource, inspectedSource)
+        liveSummary != null -> Result(Provider.LiveSummary, ContractResult.Available(liveSummary))
+        inspectedSource != null && inspectedSource != ContractResult.Unavailable ->
+            Result(Provider.InspectedSource, inspectedSource)
         else -> null
     }
 
@@ -96,7 +121,9 @@ object JobUpstreamSchema {
                 val summary = summaries[current]
                 if (summary != null) {
                     return choose(
-                        HeaderListing(summary.columnSummaries.map.keys.toList()), null)
+                        LegacyDataShapeBridge.tabular(
+                            HeaderListing(summary.columnSummaries.map.keys.toList())).itemType,
+                        null)
                 }
             }
 
@@ -109,14 +136,14 @@ object JobUpstreamSchema {
                     val inspected = shapeStore.state(
                         DataSourceShapeStore.Key.of(config.source, manifest))
                     if (inspected != null) {
-                        val columns = ReadShapeProjection.project(
+                        val projection = ReadShapeProjection.project(
                             manifest,
                             inspected.parts.mapValues { (_, state) ->
                                 state.shape.takeIf { !state.inspecting && state.error == null }
                             },
                             config)
-                        if (columns != null) {
-                            return choose(null, columns)
+                        if (projection != ContractResult.Unavailable) {
+                            return choose(null, projection)
                         }
                     }
                 }
@@ -132,8 +159,8 @@ object JobUpstreamSchema {
         provider: ObjectLocation,
         manifest: DataManifest,
         shapes: Map<DataPart, DataShape?>
-    ): HeaderListing? {
-        val config = readProjectionConfig(graphStructure, provider) ?: return null
+    ): ContractResult {
+        val config = readProjectionConfig(graphStructure, provider) ?: return ContractResult.Unavailable
         return ReadShapeProjection.project(manifest, shapes, config)
     }
 
@@ -201,11 +228,11 @@ internal object ReadShapeProjection {
         manifest: DataManifest,
         shapes: Map<DataPart, DataShape?>,
         config: JobUpstreamSchema.ReadProjectionConfig
-    ): HeaderListing? {
+    ): JobUpstreamSchema.ContractResult {
         if (config.emit != emitItems ||
             (config.attributes != attributesIgnore && config.attributes != attributesColumns) ||
             (config.schemaMode != schemaStrict && config.schemaMode != schemaSuperset)) {
-            return null
+            return JobUpstreamSchema.ContractResult.Unavailable
         }
 
         val candidates = mutableListOf<Candidate>()
@@ -216,15 +243,17 @@ internal object ReadShapeProjection {
             else {
                 val roles = unit.parts.map { it.role }.distinct()
                 roles.singleOrNull()?.let(unit::partsOf)
-            } ?: return null
+            } ?: return JobUpstreamSchema.ContractResult.Unavailable
 
             val attributes = if (config.attributes == attributesColumns) unit.attributes else null
             for (part in selected) {
-                candidates.add(Candidate(shapes[part] ?: return null, attributes))
+                candidates.add(Candidate(
+                    shapes[part] ?: return JobUpstreamSchema.ContractResult.Unavailable,
+                    attributes))
             }
         }
         if (candidates.isEmpty()) {
-            return null
+            return JobUpstreamSchema.ContractResult.Unavailable
         }
 
         return if (config.schemaMode == schemaStrict) {
@@ -236,43 +265,131 @@ internal object ReadShapeProjection {
     }
 
 
-    private fun strict(candidates: List<Candidate>): HeaderListing? {
-        var baseline: HeaderListing? = null
+    private fun strict(candidates: List<Candidate>): JobUpstreamSchema.ContractResult {
+        var baseline: DataContract? = null
         for (candidate in candidates) {
-            val header = effectiveHeader(candidate) ?: return null
-            if (baseline != null && baseline != header) {
-                return null
+            val effective = effectiveContract(candidate)
+            if (effective !is JobUpstreamSchema.ContractResult.Available) {
+                return effective
             }
-            baseline = header
+            val contract = effective.contract
+            if (baseline != null && baseline != contract) {
+                return conflict("Strict read requires equal contracts", baseline, contract)
+            }
+            baseline = contract
         }
         return baseline
+            ?.let(JobUpstreamSchema.ContractResult::Available)
+            ?: JobUpstreamSchema.ContractResult.Unavailable
     }
 
 
-    private fun superset(candidates: List<Candidate>): HeaderListing? {
-        val headers = candidates.map { LegacyDataShapeBridge.headerOrNull(it.shape) ?: return null }
+    private fun superset(candidates: List<Candidate>): JobUpstreamSchema.ContractResult {
+        val contracts = mutableListOf<DataContract>()
         val attributeNames = linkedSetOf<String>()
-        candidates.forEach { attributeNames.addAll(it.attributes?.keys.orEmpty()) }
-        val dataLabels = linkedSetOf<HeaderLabel>()
-        headers.forEach { dataLabels.addAll(it.values) }
-        val dataNames = dataLabels.mapTo(linkedSetOf()) { it.text }
-        if (attributeNames.any { it in dataNames }) {
-            return null
+        for (candidate in candidates) {
+            val contract = candidate.shape.itemType
+            val record = contract.structural as? DataType.Record
+                ?: return JobUpstreamSchema.ContractResult.Unavailable
+            attributeNames.addAll(candidate.attributes?.keys.orEmpty())
+            val collision = candidate.attributes?.keys?.firstOrNull { attribute ->
+                candidates.any { other ->
+                    (other.shape.itemType.structural as? DataType.Record)
+                        ?.fields
+                        ?.any { it.id.name == attribute } == true
+                }
+            }
+            if (collision != null) {
+                return JobUpstreamSchema.ContractResult.Error(
+                    "Read attribute '$collision' conflicts with a data field in $contract")
+            }
+            contracts.add(contract)
         }
-        return HeaderListing.ofUnique(attributeNames.toList())
-            .append(HeaderListing(dataLabels.toList()))
+        if (contracts.isEmpty()) {
+            return JobUpstreamSchema.ContractResult.Unavailable
+        }
+
+        val records = contracts.map { it.structural as DataType.Record }
+        val nameOrder = linkedSetOf<String>()
+        val exemplarById = linkedMapOf<FieldId, Pair<DataField, DataContract>>()
+        val presenceById = mutableMapOf<FieldId, Int>()
+        val optionalById = mutableMapOf<FieldId, Boolean>()
+        for (contract in contracts) {
+            val record = contract.structural as DataType.Record
+            for (field in record.fields) {
+                nameOrder.add(field.id.name)
+                presenceById[field.id] = (presenceById[field.id] ?: 0) + 1
+                optionalById[field.id] = optionalById[field.id] == true || field.optional
+                val child = contract.child(DataPathSegment.Field(field.id))
+                val previous = exemplarById[field.id]
+                if (previous == null) {
+                    exemplarById[field.id] = field to child
+                }
+                else if (previous.second != child) {
+                    return conflict(
+                        "Superset read has conflicting field '${field.id.name}#${field.id.occurrence}'",
+                        previous.second,
+                        child)
+                }
+            }
+        }
+
+        val dataFields = nameOrder.flatMap { name ->
+            exemplarById.entries
+                .filter { it.key.name == name }
+                .sortedBy { it.key.occurrence }
+                .map { (id, exemplar) ->
+                    exemplar.first.copy(
+                        optional = optionalById[id] == true || presenceById[id] != contracts.size)
+                }
+        }
+        val attributeFields = attributeNames.map { name ->
+            DataField(
+                FieldId(name),
+                DataType.Scalar(ScalarKind.Text),
+                optional = candidates.any { name !in it.attributes.orEmpty() })
+        }
+        val nativeByPath = linkedMapOf<DataTypePath, tech.kzen.lib.common.model.structure.metadata.TypeMetadata>()
+        contracts.forEach { contract ->
+            contract.nativeByPath.forEach { (path, metadata) ->
+                if (path != DataTypePath.root) {
+                    nativeByPath[path] = metadata
+                }
+            }
+        }
+        return JobUpstreamSchema.ContractResult.Available(DataContract(
+            DataType.Record(attributeFields + dataFields, records.any { it.nullable }),
+            nativeByPath))
     }
 
 
-    private fun effectiveHeader(candidate: Candidate): HeaderListing? {
-        val header = LegacyDataShapeBridge.headerOrNull(candidate.shape) ?: return null
-        val attributes = candidate.attributes ?: return header
-        val dataNames = header.values.mapTo(linkedSetOf()) { it.text }
-        if (attributes.keys.any { it in dataNames }) {
-            return null
+    private fun effectiveContract(candidate: Candidate): JobUpstreamSchema.ContractResult {
+        val contract = candidate.shape.itemType
+        val record = contract.structural as? DataType.Record
+            ?: return JobUpstreamSchema.ContractResult.Unavailable
+        val attributes = candidate.attributes
+            ?: return JobUpstreamSchema.ContractResult.Available(contract)
+        val dataNames = record.fields.mapTo(linkedSetOf()) { it.id.name }
+        val collision = attributes.keys.firstOrNull { it in dataNames }
+        if (collision != null) {
+            return JobUpstreamSchema.ContractResult.Error(
+                "Read attribute '$collision' conflicts with a data field in $contract")
         }
-        return HeaderListing.ofUnique(attributes.keys.toList()).append(header)
+        val attributeFields = attributes.keys.map { name ->
+            DataField(FieldId(name), DataType.Scalar(ScalarKind.Text))
+        }
+        return JobUpstreamSchema.ContractResult.Available(DataContract(
+            DataType.Record(attributeFields + record.fields, record.nullable),
+            contract.nativeByPath))
     }
+
+
+    private fun conflict(
+        reason: String,
+        first: DataContract,
+        second: DataContract
+    ): JobUpstreamSchema.ContractResult.Error =
+        JobUpstreamSchema.ContractResult.Error("$reason: first=$first; second=$second")
 
 
     private data class Candidate(

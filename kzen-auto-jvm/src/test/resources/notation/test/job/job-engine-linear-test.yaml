@@ -13,12 +13,13 @@ main.sources/unused:
   is: FileDataSource
 
 main.workers/reader:
-  is: CsvReaderWorker
-  path: build/job-engine-linear/input.csv
+  is: FileSourceWorker
+  files:
+    - location: build/job-engine-linear/input.csv
 
 main.workers/filter:
   is: FilterWorker
-  where: 'flag eq "yes"'
+  where: 'flag == "yes"'
 
 main.workers/writer:
   is: CsvWriterWorker

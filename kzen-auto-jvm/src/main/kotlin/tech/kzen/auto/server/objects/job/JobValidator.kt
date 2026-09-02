@@ -124,7 +124,8 @@ class JobValidator(
                     .ifBlank { null }
                 workerValidations[workerPath] = StepValidation(
                     attempt.lane.payloadType, joinedError,
-                    flatColumns = attempt.lane.flatColumns)
+                    flatColumns = attempt.lane.flatColumns,
+                    contract = attempt.lane.contract)
             }
 
             for ((path, error) in resultErrors) {

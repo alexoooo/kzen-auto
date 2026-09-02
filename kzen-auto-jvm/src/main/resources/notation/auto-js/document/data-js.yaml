@@ -3,3 +3,7 @@ DataSchemaController:
   is: DocumentController
   class: tech.kzen.auto.client.objects.document.data.schema.DataSchemaController$Wrapper
   archetype: DataSchema
+
+DataSchemaFieldsEditor:
+  is: AttributeEditor
+  class: tech.kzen.auto.client.objects.document.data.schema.DataSchemaFieldsEditor$Wrapper

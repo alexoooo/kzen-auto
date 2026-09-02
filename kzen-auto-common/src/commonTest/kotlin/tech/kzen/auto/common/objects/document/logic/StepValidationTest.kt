@@ -5,6 +5,11 @@ import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.MapExecutionValue
 import tech.kzen.lib.common.exec.NullExecutionValue
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
+import tech.kzen.lib.common.exec.data.type.DataContract
+import tech.kzen.lib.common.exec.data.type.DataField
+import tech.kzen.lib.common.exec.data.type.DataType
+import tech.kzen.lib.common.exec.data.type.FieldId
+import tech.kzen.lib.common.exec.data.type.ScalarKind
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -22,7 +27,10 @@ class StepValidationTest {
     fun everyFieldSurvivesTheRoundTrip() {
         val stepValidation = StepValidation(
             TypeMetadata.unit, "Expecting an element", "Never runs", 6,
-            HeaderListing.ofUnique(listOf("city", "amount")))
+            HeaderListing.ofUnique(listOf("city", "amount")),
+            DataContract(DataType.Record(listOf(
+                DataField(FieldId("city"), DataType.Scalar(ScalarKind.Text)),
+                DataField(FieldId("amount"), DataType.Scalar(ScalarKind.Decimal))))))
 
         assertEquals(stepValidation, roundTrip(stepValidation))
     }

@@ -9,66 +9,6 @@
 # job-*-test.yaml fixtures under src/test/resources/notation/test/job/.
 
 
-# Reads a delimited text file (full RFC-4180 parsing: quoted fields, embedded delimiters / newlines, doubled
-# quotes) and emits batched records. With header=false (a headerless file, e.g. the 1BRC measurement set)
-# the schema is synthesized as positional names c0, c1, … so the column-based downstream stages can still
-# reference columns by name over headerless data.
-CsvReaderWorker:
-  abstract: true
-  is: Worker
-  title: "CSV Reader"
-  class: tech.kzen.auto.server.objects.job.worker.CsvReaderWorker
-  output: ""
-  path: ""
-  delimiter: ","
-  header: true
-  meta:
-    output:
-      is: ChannelOutput
-      creator: JobChannelCreator
-      editor: SelectChannelEditor
-    path: String
-    delimiter: String
-    header: Boolean
-    selfLocation:
-      is: ObjectLocation
-      by: Self
-
-
-# Reads MULTIPLE delimited text files as one combined stream (same RFC-4180 parsing as CsvReaderWorker),
-# emitting their records concatenated in `paths` order — the multi-file generalization of CsvReaderWorker, the
-# Job analogue of Report's multi-location input. The column schema is taken from the FIRST file; with header=true
-# each subsequent file's header row is skipped and its data emitted under the shared schema, with header=false
-# the schema is synthesized positionally (c0, c1, …) from the first file's first record and every row is data.
-# State migration carries a `(fileIndex, open-reader-position)` cursor, so a pause / edit / resume continues from
-# the exact spot in the current file (when paths / delimiter / header are unchanged) rather than re-reading from
-# the top. `paths` is a resolved, ordered list of concrete file paths — directory browse / glob discovery is the
-# editor's job (P4i MultiFileInputEditor), keeping the resume cursor deterministic.
-MultiFileReaderWorker:
-  abstract: true
-  is: Worker
-  title: "Multi-File Reader"
-  class: tech.kzen.auto.server.objects.job.worker.MultiFileReaderWorker
-  output: ""
-  paths: []
-  delimiter: ","
-  header: true
-  meta:
-    output:
-      is: ChannelOutput
-      creator: JobChannelCreator
-      editor: SelectChannelEditor
-    paths:
-      is: List
-      of: String
-      editor: MultiFileInputEditor
-    delimiter: String
-    header: Boolean
-    selfLocation:
-      is: ObjectLocation
-      by: Self
-
-
 DataReadWorkerConfig:
   abstract: true
   emit: items
@@ -212,7 +152,7 @@ ReadPartWorker:
 
 # Generates a stream from a single Kotlin expression — THE parameterized source: the Job's declared parameters
 # are in `code`'s scope, bare by name and typed (`number`, `(1..number)`, `listOf("a", "b")`), compiled by the
-# genuine CalculatedColumnEval / Kotlin compiler (same engine as Filter / Formula). Dispatch is STATIC, from
+# contract-native Job expression compiler shared with Filter and Formula. Dispatch is STATIC, from
 # the expression's INFERRED type (the same inference the worker card displays): an Iterable, Sequence, or
 # Iterator expression is streamed element-by-element (resuming from its position across a live edit; a null
 # value under a nullable stream type is empty), any other type — including an untyped Any — is emitted as a
@@ -238,11 +178,11 @@ FormulaSourceWorker:
       by: Self
 
 
-# Keeps each message for which the Kotlin boolean expression `where` is truthy, compiled by the genuine
-# CalculatedColumnEval engine with the full scope: the lane's inferred payload type as the RECEIVER (a typed
+# Keeps each message for which the Kotlin boolean expression `where` is truthy, compiled against the complete
+# lane contract: the lane's inferred payload type is the RECEIVER (a typed
 # payload's members are bare, e.g. `age > 30`, shadowing same-named columns; `payload` is the explicit alias),
-# columns referenced by name (`City eq "Lviv"`, `temp.number > 30`), and the Job's declared parameters bare
-# and typed (`value.number > threshold`). An empty `where` keeps every message.
+# typed fields are referenced by name (`City == "Lviv"`, `temperature > 30`), and the Job's declared parameters
+# are bare and typed (`value > threshold`). An empty `where` keeps every message.
 FilterWorker:
   abstract: true
   is: Worker
@@ -298,11 +238,11 @@ ValueSetFilterWorker:
 
 # Appends one calculated column per `formula` entry (arbitrary Kotlin expression over the record's columns,
 # with the lane's inferred payload type as the RECEIVER — members bare, `payload` alias — and the Job's
-# declared parameters also in scope, bare and typed), reusing the genuine CalculatedColumnEval engine.
+# declared parameters also in scope, bare and typed), using the contract-native Job expression compiler.
 # `formula` is a column-name -> Kotlin map (FormulaSpec). The separate `payload` expression TRANSFORMS the
 # message's payload (its raw value replaces it; empty = pass-through): same scope, but its columns are the
 # flat part as received (no auto-flatten), so it can promote flat columns into a typed payload
-# (`payload: Amount.number`) or map a typed stream (`payload: payload * 10`). Both lanes evaluate against
+# (`payload: Amount`) or map a typed stream (`payload: payload * 10`). Both lanes evaluate against
 # the INCOMING message — formulas cannot see the new payload, nor each other's outputs.
 # `carry` applies only when `payload` replaces the value: blank/none drops the incoming fields, `all` retains
 # every field (including this Worker's calculated fields), and a map selects source FieldIds with an optional
@@ -590,7 +530,8 @@ ResultSinkWorker:
 # Runs another Logic (a Script / Flow / Job, referenced by `instructions`) as a child once per incoming
 # element: the element is passed as the child's first parameter and the child's main result is emitted
 # downstream. The seam for composing reusable sub-Logics into a Job's dataflow — the Job analogue of a Script
-# Run step. Untyped ports (`Any?`): what flows is whatever the child consumes / produces.
+# Run step. Named arguments compile against the incoming lane contract with the same typed fields and outer-Job
+# parameters as Formula. The output lane carries the child's declared main-result contract.
 RunWorker:
   abstract: true
   is: Worker

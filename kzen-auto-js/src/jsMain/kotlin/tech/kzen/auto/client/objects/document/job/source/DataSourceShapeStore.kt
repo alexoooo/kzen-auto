@@ -8,10 +8,9 @@ import tech.kzen.auto.common.data.DataSourceConventions
 import tech.kzen.auto.common.data.model.DataManifest
 import tech.kzen.auto.common.data.model.DataPart
 import tech.kzen.auto.common.data.schema.DataShape
-import tech.kzen.auto.common.data.schema.HeaderListing
-import tech.kzen.auto.common.data.schema.LegacyDataShapeBridge
 import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.exec.ExecutionSuccess
+import tech.kzen.lib.common.exec.data.shape.DataShapeResult
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.util.digest.Digest
 
@@ -42,15 +41,25 @@ class DataSourceShapeStore(
 
 
     companion object {
-        internal fun aggregate(parts: Collection<PartState>): HeaderListing? {
+        internal fun aggregate(parts: Collection<PartState>): DataShapeResult? {
             val settled = parts.filterNot { it.inspecting }
-            val headers = settled.mapNotNull { it.shape?.let(LegacyDataShapeBridge::headerOrNull) }
-            if (settled.size != parts.size || settled.any { it.error != null } || headers.size != settled.size) {
+            if (settled.size != parts.size || settled.any { it.error != null }) {
                 return null
             }
-            val labels = linkedSetOf<tech.kzen.auto.common.data.schema.HeaderLabel>()
-            headers.forEach { labels.addAll(it.values) }
-            return HeaderListing(labels.toList())
+            val results = settled.mapNotNull { it.result }
+            if (results.size != settled.size || results.any { it == DataShapeResult.Unavailable }) {
+                return DataShapeResult.Unavailable
+            }
+            val shapes = results.map { (it as DataShapeResult.Observed).shape }
+            val first = shapes.firstOrNull() ?: return DataShapeResult.Unavailable
+            return if (shapes.all { it == first }) {
+                DataShapeResult.Observed(first)
+            }
+            else {
+                // A source-wide summary must not erase incompatible field types into a legacy text header.
+                // Per-lane strict/superset projection combines the complete contracts with its configured policy.
+                DataShapeResult.Unavailable
+            }
         }
     }
 
@@ -68,14 +77,17 @@ class DataSourceShapeStore(
 
     data class PartState(
         val inspecting: Boolean,
-        val shape: DataShape?,
+        val result: DataShapeResult?,
         val error: String?
-    )
+    ) {
+        val shape: DataShape?
+            get() = (result as? DataShapeResult.Observed)?.shape
+    }
 
 
     data class State(
         val parts: Map<DataPart, PartState>,
-        val aggregate: HeaderListing?
+        val aggregate: DataShapeResult?
     )
 
 
@@ -172,7 +184,10 @@ class DataSourceShapeStore(
                 DataSourceConventions.sourceParameter to source.asString(),
                 DataSourceConventions.actionParameter to DataSourceConventions.shapeAction
             )) {
-                is ExecutionSuccess -> PartState(false, DataShape.ofExecutionValue(result.value), null)
+                is ExecutionSuccess -> PartState(
+                    false,
+                    DataShapeResult.Observed(DataShape.ofExecutionValue(result.value)),
+                    null)
                 is ExecutionFailure -> PartState(false, null, result.errorMessage)
             }
         }

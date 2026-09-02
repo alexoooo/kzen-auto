@@ -1,6 +1,6 @@
 package tech.kzen.auto.server.data
 
-import tech.kzen.auto.common.data.model.DataPart
+import tech.kzen.auto.common.data.model.DataRef
 import tech.kzen.auto.common.data.schema.DataShape
 import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.auto.common.data.schema.LegacyDataShapeBridge
@@ -13,12 +13,12 @@ class ColumnListingAction(
     private val schemaCache: SchemaCache
 ) {
     fun headerListing(
-        part: DataPart,
+        ref: DataRef,
         effectiveFormat: CommonPluginCoordinate,
         effectiveEncoding: CommonDataEncodingSpec,
         extract: () -> HeaderListing
     ): HeaderListing {
-        val key = SchemaCacheKey.of(part, effectiveFormat, effectiveEncoding)
+        val key = SchemaCacheKey.ofReport(ref, effectiveFormat, effectiveEncoding)
         val cached = key?.let(schemaCache::get)
         if (cached != null) {
             return LegacyDataShapeBridge.headerOrNull(cached)

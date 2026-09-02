@@ -18,6 +18,7 @@ import tech.kzen.auto.client.objects.document.bridge.InsertionKey
 import tech.kzen.auto.client.objects.document.common.dragdrop.dropZoneRegion
 import tech.kzen.auto.client.objects.document.common.signature.LogicSignatureEditor
 import tech.kzen.auto.client.objects.document.common.signature.ResultSignatureEditor
+import tech.kzen.auto.client.objects.document.job.display.DataContractDisplay
 import tech.kzen.auto.client.objects.document.job.display.WorkerDisplayManager
 import tech.kzen.auto.client.objects.document.job.display.WorkerDisplayPropsCommon
 import tech.kzen.auto.client.objects.document.job.source.DataFormatStore
@@ -904,6 +905,9 @@ class JobController(
                     outputPort = connection.outputPort
                     this.batchSizeOverride = batchSizeOverride
                     this.capacityOverride = capacityOverride
+                    contractDisplay = DataContractDisplay.of(
+                        state.workerValidations?.workerValidations?.get(
+                            connection.upstreamWorker.objectPath))
                     batchSize = JobChannelDisplay.effectiveChannelValue(
                         graphNotation, connection.upstreamWorker, mainLocation,
                         connection.outputPort, JobConventions.batchSizeAttributeName, "1024")

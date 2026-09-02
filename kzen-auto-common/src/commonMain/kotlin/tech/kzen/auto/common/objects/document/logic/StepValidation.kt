@@ -10,6 +10,7 @@ import tech.kzen.lib.common.exec.NullExecutionValue
 import tech.kzen.lib.common.exec.NumberExecutionValue
 import tech.kzen.lib.common.exec.TextExecutionValue
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
+import tech.kzen.lib.common.exec.data.type.DataContract
 
 
 /**
@@ -37,7 +38,8 @@ data class StepValidation(
     val errorMessage: String?,
     val warningMessage: String? = null,
     val errorOffset: Int? = null,
-    val flatColumns: HeaderListing? = null
+    val flatColumns: HeaderListing? = null,
+    val contract: DataContract? = null
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -46,6 +48,7 @@ data class StepValidation(
         private const val warningMessageKey = "warning"
         private const val errorOffsetKey = "errorOffset"
         private const val flatColumnsKey = "flatColumns"
+        private const val contractKey = "contract"
 
         fun ofMapExecutionValue(executionValue: MapExecutionValue): StepValidation {
             val typeExecutionValue = executionValue[typeMetadataKey]
@@ -113,7 +116,11 @@ data class StepValidation(
                 else -> throw IllegalArgumentException("'$flatColumnsKey' list expected: $executionValue")
             }
 
-            return StepValidation(typeMetadata, errorMessage, warningMessage, errorOffset, flatColumns)
+            val contract = executionValue[contractKey]
+                ?.takeUnless { it == NullExecutionValue }
+                ?.let(DataContract::ofExecutionValue)
+
+            return StepValidation(typeMetadata, errorMessage, warningMessage, errorOffset, flatColumns, contract)
         }
     }
 
@@ -129,7 +136,8 @@ data class StepValidation(
             errorOffsetKey to ExecutionValue.of(errorOffset),
             flatColumnsKey to (flatColumns?.let {
                 ListExecutionValue(it.asCollection().map(::TextExecutionValue))
-            } ?: NullExecutionValue)
+            } ?: NullExecutionValue),
+            contractKey to (contract?.asExecutionValue() ?: NullExecutionValue)
         ))
     }
 }

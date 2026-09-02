@@ -8,11 +8,17 @@
 main:
   is: Job
 
-main.workers/CSV Reader:
-  is: CsvReaderWorker
-  path: build/job-synth-spaced/input.csv
+main.formats/input:
+  is: ConfiguredCsv
+  catalogVisible: false
   delimiter: ";"
-  header: false
+  header: infer-labels
+
+main.workers/CSV Reader:
+  is: FileSourceWorker
+  files:
+    - location: build/job-synth-spaced/input.csv
+  format: main.formats/input
 
 main.workers/Formula:
   is: FormulaWorker

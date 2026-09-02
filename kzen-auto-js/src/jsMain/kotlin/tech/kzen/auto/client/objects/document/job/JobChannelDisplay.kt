@@ -8,6 +8,8 @@ import react.ChildrenBuilder
 import react.Props
 import react.State
 import react.dom.html.ReactHTML.div
+import tech.kzen.auto.client.objects.document.job.display.DataContractDisplay
+import tech.kzen.auto.client.objects.document.job.display.DataContractView
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.iconify.icon
@@ -68,6 +70,10 @@ external interface JobChannelDisplayProps: Props {
     // (an inherited knob is omitted) so a customized channel's actual overrides are visible without expanding.
     var batchSizeOverride: String?
     var capacityOverride: String?
+
+    // Canonical output contract of the upstream Worker. The shared renderer owns loading / unavailable /
+    // dynamic / error distinctions and the expandable field details.
+    var contractDisplay: DataContractDisplay
 
     // Local UI toggle from JobController: collapsed chevron vs the inline config card.
     var expanded: Boolean
@@ -209,6 +215,10 @@ class JobChannelDisplay(
                 icon("material-symbols:keyboard-arrow-down") {}
             }
 
+            DataContractView::class.react {
+                display = props.contractDisplay
+            }
+
             // The overridden values, visible while collapsed so a customized channel doesn't have to be opened
             // to read what it overrides (defaulted knobs are omitted).
             if (customized) {
@@ -283,6 +293,10 @@ class JobChannelDisplay(
                             fontWeight = FontWeight.bold
                         }
                         +routeTitle
+                    }
+
+                    DataContractView::class.react {
+                        display = props.contractDisplay
                     }
 
                     div {

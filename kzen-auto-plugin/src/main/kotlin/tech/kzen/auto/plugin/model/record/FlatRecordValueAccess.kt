@@ -97,7 +97,7 @@ abstract class FlatRecordValueAccess: ValueAccess {
 
     override fun readDouble(node: DataNode): Double {
         val kind = scalarType(node).kind
-        if (kind !is ScalarKind.Floating && kind !is ScalarKind.Integer && kind != ScalarKind.Decimal) {
+        if (kind !is ScalarKind.Floating && kind !is ScalarKind.Integer) {
             invalid("Numeric scalar required")
         }
         return dataDoubleOrNan(fieldIndex(node), numberScratch.get()).takeIf { it.isFinite() }

@@ -10,16 +10,17 @@ main.channels/computed:
   capacity: 8
 
 main.workers/reader:
-  is: CsvReaderWorker
+  is: FileSourceWorker
   output: main.channels/raw
-  path: build/job-formula-test/input.csv
+  files:
+    - location: build/job-formula-test/input.csv
 
 main.workers/formula:
   is: FormulaWorker
   input: main.channels/raw
   output: main.channels/computed
   formula:
-    total: "qty * price"
+    total: "qty.toBigDecimal() * price.toBigDecimal()"
 
 main.workers/writer:
   is: CsvWriterWorker

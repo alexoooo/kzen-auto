@@ -14,7 +14,7 @@ import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
  * `FileDataSourceConfig` declares it once, so every file source and source Worker inherits it.
  *
  * An absent marker means the editor keeps navigation in component state and persists only the selection — the safe
- * default for the legacy `MultiFileReaderWorker.paths` attribute and for any third-party attribute that has not
+ * default for any third-party attribute that has not
  * opted in.
  */
 object FileSelectionBrowserConventions {

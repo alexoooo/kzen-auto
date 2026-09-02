@@ -9,9 +9,19 @@ import tech.kzen.auto.common.data.model.DataRef
 import tech.kzen.auto.common.data.model.DataResolveResult
 import tech.kzen.auto.common.data.model.DataRole
 import tech.kzen.auto.common.data.model.DataUnit
+import tech.kzen.auto.common.data.read.ContentCodingSpec
+import tech.kzen.auto.common.data.read.ReaderCapabilityIdentity
+import tech.kzen.auto.common.data.read.ResolvedReadSpec
 import tech.kzen.auto.common.data.schema.DataShape
 import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.auto.common.data.schema.LegacyDataShapeBridge
+import tech.kzen.lib.common.exec.data.shape.DataShapeResult
+import tech.kzen.lib.common.exec.MapExecutionValue
+import tech.kzen.lib.common.exec.data.type.DataContract
+import tech.kzen.lib.common.exec.data.type.DataField
+import tech.kzen.lib.common.exec.data.type.DataType
+import tech.kzen.lib.common.exec.data.type.FieldId
+import tech.kzen.lib.common.exec.data.type.ScalarKind
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.document.DocumentPathMap
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -23,6 +33,7 @@ import tech.kzen.lib.common.service.parse.YamlNotationParser
 import tech.kzen.lib.platform.collect.toPersistentMap
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertNull
 
 
@@ -35,23 +46,25 @@ class JobUpstreamSchemaTest {
 
     @Test
     fun liveSummaryPrecedesInspectedSource() {
-        val live = HeaderListing.ofUnique(listOf("live"))
-        val inspected = HeaderListing.ofUnique(listOf("inspected"))
+        val live = tabular("live").itemType
+        val inspected = JobUpstreamSchema.ContractResult.Available(tabular("inspected").itemType)
 
         assertEquals(
-            JobUpstreamSchema.Result(JobUpstreamSchema.Provider.LiveSummary, live),
+            JobUpstreamSchema.Result(
+                JobUpstreamSchema.Provider.LiveSummary,
+                JobUpstreamSchema.ContractResult.Available(live)),
             JobUpstreamSchema.choose(live, inspected))
     }
 
 
     @Test
     fun inspectedSourceIsFallbackBeforeNoProvider() {
-        val inspected = HeaderListing.ofUnique(listOf("inspected"))
+        val inspected = JobUpstreamSchema.ContractResult.Available(tabular("inspected").itemType)
 
         assertEquals(
             JobUpstreamSchema.Result(JobUpstreamSchema.Provider.InspectedSource, inspected),
             JobUpstreamSchema.choose(null, inspected))
-        assertNull(JobUpstreamSchema.choose(null, null))
+        assertNull(JobUpstreamSchema.choose(null, JobUpstreamSchema.ContractResult.Unavailable))
     }
 
 
@@ -106,7 +119,48 @@ class JobUpstreamSchemaTest {
 
         assertEquals(
             listOf("date", "group", "a", "shared", "b"),
-            projected?.values?.map { it.text })
+            columns(projected))
+    }
+
+
+    @Test
+    fun supersetPreservesFieldTypesAndMarksMissingFieldsOptional() {
+        val first = part("first")
+        val second = part("second")
+        val manifest = DataManifest(listOf(DataUnit.of(first), DataUnit.of(second)))
+        val firstShape = shape(DataField(FieldId("key"), DataType.Scalar(ScalarKind.Text)))
+        val secondShape = shape(
+            DataField(FieldId("key"), DataType.Scalar(ScalarKind.Text)),
+            DataField(FieldId("value"), DataType.Scalar(ScalarKind.Decimal)))
+
+        val projection = JobUpstreamSchema.projectInspectedLane(
+            graph("ReadWorker"), provider, manifest, mapOf(first to firstShape, second to secondShape))
+        val contract = assertIs<JobUpstreamSchema.ContractResult.Available>(projection).contract
+        val fields = (contract.structural as DataType.Record).fields
+
+        assertEquals(DataType.Scalar(ScalarKind.Text), fields[0].type)
+        assertEquals(DataType.Scalar(ScalarKind.Decimal), fields[1].type)
+        assertEquals(false, fields[0].optional)
+        assertEquals(true, fields[1].optional)
+    }
+
+
+    @Test
+    fun supersetReportsTypedFieldConflictWithBothContracts() {
+        val first = part("first")
+        val second = part("second")
+        val manifest = DataManifest(listOf(DataUnit.of(first), DataUnit.of(second)))
+        val projection = JobUpstreamSchema.projectInspectedLane(
+            graph("ReadWorker"),
+            provider,
+            manifest,
+            mapOf(
+                first to shape(DataField(FieldId("value"), DataType.Scalar(ScalarKind.Text))),
+                second to shape(DataField(FieldId("value"), DataType.Scalar(ScalarKind.Decimal)))))
+
+        val error = assertIs<JobUpstreamSchema.ContractResult.Error>(projection)
+        assertEquals(true, error.message.contains("first=DataContract"))
+        assertEquals(true, error.message.contains("second=DataContract"))
     }
 
 
@@ -116,7 +170,7 @@ class JobUpstreamSchemaTest {
         val manifest = DataManifest(listOf(
             DataUnit(linkedMapOf("column" to "attribute"), listOf(item))))
 
-        assertNull(JobUpstreamSchema.projectInspectedLane(
+        assertIs<JobUpstreamSchema.ContractResult.Error>(JobUpstreamSchema.projectInspectedLane(
             graph("ReadColumnsWorker"),
             provider,
             manifest,
@@ -131,12 +185,12 @@ class JobUpstreamSchemaTest {
         val manifest = DataManifest(listOf(DataUnit.of(main, reference)))
         val shapes = mapOf(main to tabular("main-column"), reference to tabular("reference-column"))
 
-        assertNull(JobUpstreamSchema.projectInspectedLane(
+        assertEquals(JobUpstreamSchema.ContractResult.Unavailable, JobUpstreamSchema.projectInspectedLane(
             graph("ReadWorker"), provider, manifest, shapes))
         assertEquals(
             listOf("main-column"),
-            JobUpstreamSchema.projectInspectedLane(
-                graph("ReadMainWorker"), provider, manifest, shapes)?.values?.map { it.text })
+            columns(JobUpstreamSchema.projectInspectedLane(
+                graph("ReadMainWorker"), provider, manifest, shapes)))
     }
 
 
@@ -147,9 +201,9 @@ class JobUpstreamSchemaTest {
         val manifest = DataManifest(listOf(DataUnit.of(first), DataUnit.of(second)))
         val shapes = mapOf(first to tabular("a"), second to tabular("b"))
 
-        assertNull(JobUpstreamSchema.projectInspectedLane(
+        assertIs<JobUpstreamSchema.ContractResult.Error>(JobUpstreamSchema.projectInspectedLane(
             graph("ReadStrictWorker"), provider, manifest, shapes))
-        assertNull(JobUpstreamSchema.projectInspectedLane(
+        assertEquals(JobUpstreamSchema.ContractResult.Unavailable, JobUpstreamSchema.projectInspectedLane(
             graph("ReadUnitsWorker"), provider, manifest, shapes))
     }
 
@@ -161,7 +215,7 @@ class JobUpstreamSchemaTest {
         val shapes = mapOf(item to tabular("column"))
         val structure = graph("ReadWorker")
 
-        assertNull(JobUpstreamSchema.projectInspectedLane(
+        assertEquals(JobUpstreamSchema.ContractResult.Unavailable, JobUpstreamSchema.projectInspectedLane(
             structure, unrelated, manifest, shapes))
         assertNull(JobUpstreamSchema.readProjectionConfig(
             structure, ObjectLocation.parse("job.yaml#incomplete")))
@@ -297,16 +351,40 @@ class JobUpstreamSchemaTest {
 
 
     private fun settled(shape: DataShape): DataSourceShapeStore.PartState {
-        return DataSourceShapeStore.PartState(false, shape, null)
+        return DataSourceShapeStore.PartState(false, DataShapeResult.Observed(shape), null)
     }
 
 
     private fun part(id: String, role: String = "main"): DataPart {
-        return DataPart(DataRole(role), DataRef(null, id), null, null)
+        return DataPart(
+            DataRole(role),
+            DataRef(null, id),
+            null,
+            ResolvedReadSpec(
+                ReaderCapabilityIdentity("test", "delimited", "1"),
+                listOf(ContentCodingSpec.identity),
+                MapExecutionValue(emptyMap())))
     }
 
 
     private fun tabular(vararg columns: String): DataShape {
         return LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(columns.toList()))
+    }
+
+
+    private fun shape(vararg fields: DataField): DataShape {
+        return DataShape(
+            DataContract(DataType.Record(fields.toList())),
+            tech.kzen.lib.common.exec.data.shape.ShapeProvenance.ProviderReported,
+            tech.kzen.lib.common.exec.data.shape.ShapeStability.Stable)
+    }
+
+
+    private fun columns(result: JobUpstreamSchema.ContractResult): List<String>? {
+        val contract = (result as? JobUpstreamSchema.ContractResult.Available)?.contract
+            ?: return null
+        val record = contract.structural as? DataType.Record
+            ?: return null
+        return record.fields.map { it.id.name }
     }
 }

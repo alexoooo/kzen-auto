@@ -5,7 +5,7 @@ import tech.kzen.auto.server.objects.report.exec.input.connect.InputStreamFlatDa
 
 
 /**
- * JVM byte-stream seam consumed by [FileDataOpener] for Report format parsing. This is not
+ * JVM byte-stream seam consumed by the legacy Report parsing stack. This is not
  * [tech.kzen.auto.common.data.api.DataSource], the notation-discovered query capability that resolves manifests.
  */
 interface FlatDataSource {

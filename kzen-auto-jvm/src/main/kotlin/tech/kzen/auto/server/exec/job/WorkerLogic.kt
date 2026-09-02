@@ -4,6 +4,7 @@ import tech.kzen.auto.common.paradigm.job.api.Worker
 import tech.kzen.auto.server.objects.job.worker.WorkerBase
 import tech.kzen.lib.common.exec.data.binding.BindingSchema
 import tech.kzen.lib.common.exec.data.binding.DataBindings
+import tech.kzen.lib.common.exec.data.type.DataContract
 import tech.kzen.lib.common.exec.engine.Execution
 import tech.kzen.lib.common.exec.engine.Logic
 import tech.kzen.lib.common.exec.engine.LogicSignature
@@ -49,6 +50,7 @@ class WorkerLogic(
     private val jobParameters: JobParameters,
     private val jobResults: BindingSchema,
     private val inputPayloadType: TypeMetadata?,
+    private val inputContract: DataContract?,
     private val resultCollector: JobResultCollector
 ): Logic {
     override fun signature(): LogicSignature {
@@ -65,7 +67,7 @@ class WorkerLogic(
 
         val control = EngineJobControl(
             execution, childLogicHost, objectStableMapper, scratchDir, outputDir,
-            jobInputs, jobParameters, jobResults, inputPayloadType, resultCollector)
+            jobInputs, jobParameters, jobResults, inputPayloadType, inputContract, resultCollector)
 
         // The engine renders the failure (the run settles / parks per pause-on-error); the run-level ErrorPaused
         // state already surfaces which Worker halted (per-Worker error chips are a separate display gap).

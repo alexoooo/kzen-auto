@@ -16,6 +16,7 @@ import tech.kzen.auto.server.codegen.KzenAutoJvmModule
 import tech.kzen.auto.server.exec.job.JobTraceAddressRouting
 import tech.kzen.auto.server.exec.report.ReportTraceAddressRouting
 import tech.kzen.auto.server.objects.job.JobValidationCache
+import tech.kzen.auto.server.objects.job.expression.JobExpressionCompiler
 import tech.kzen.auto.server.objects.job.service.JobWorkPool
 import tech.kzen.auto.server.objects.plugin.PluginReportDefinitionRepository
 import tech.kzen.auto.server.objects.report.exec.calc.CalculatedColumnEval
@@ -25,8 +26,12 @@ import tech.kzen.auto.server.objects.report.exec.input.parse.tsv.TsvReportDefine
 import tech.kzen.auto.server.data.ColumnListingAction
 import tech.kzen.auto.server.data.DataOpenerLookup
 import tech.kzen.auto.server.data.FileListingAction
-import tech.kzen.auto.server.data.FileDataOpener
+import tech.kzen.auto.server.data.ConfiguredDataOpener
 import tech.kzen.auto.server.data.SchemaCache
+import tech.kzen.auto.server.data.content.SequentialContentStack
+import tech.kzen.auto.server.data.content.local.LocalDataContentProvider
+import tech.kzen.auto.server.data.content.provider.DataContentProviderLookup
+import tech.kzen.auto.server.data.read.ReaderCapabilityRegistry
 import tech.kzen.auto.server.objects.report.service.ReportWorkPool
 import tech.kzen.auto.server.objects.script.ScriptValidationCache
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
@@ -159,6 +164,7 @@ class KzenAutoContext(
     val cachedKotlinCompiler = CachedKotlinCompiler(kotlinCompiler, workUtils)
     val kotlinSyntaxValidator = KotlinSyntaxValidator()
     val calculatedColumnEval = CalculatedColumnEval(cachedKotlinCompiler, kotlinSyntaxValidator)
+    val jobExpressionCompiler = JobExpressionCompiler(cachedKotlinCompiler, kotlinSyntaxValidator)
     val scriptValidationCache = ScriptValidationCache()
     val jobValidationCache = JobValidationCache()
 
@@ -177,8 +183,13 @@ class KzenAutoContext(
 
     val fileListingAction = FileListingAction(definitionRepository)
     val schemaCache = SchemaCache(workUtils)
-    val fileDataOpener = FileDataOpener(definitionRepository, schemaCache)
-    val dataOpenerLookup = DataOpenerLookup(fileDataOpener)
+    val contentProviderLookup = DataContentProviderLookup(LocalDataContentProvider(), emptyMap())
+    val sequentialContentStack = SequentialContentStack(contentProviderLookup)
+    val readerCapabilityRegistry = ReaderCapabilityRegistry.withConfiguredReaders(
+        Thread.currentThread().contextClassLoader)
+    val configuredDataOpener = ConfiguredDataOpener(
+        schemaCache, readerCapabilityRegistry, sequentialContentStack)
+    val dataOpenerLookup = DataOpenerLookup(configuredDataOpener)
     val columnListingAction = ColumnListingAction(schemaCache)
 
 
@@ -202,6 +213,7 @@ class KzenAutoContext(
         .put(ClassName(ReportWorkPool::class.qualifiedName!!), reportWorkPool)
         .put(ClassName(ReportDefinitionRepository::class.qualifiedName!!), definitionRepository)
         .put(ClassName(CalculatedColumnEval::class.qualifiedName!!), calculatedColumnEval)
+        .put(ClassName(JobExpressionCompiler::class.qualifiedName!!), jobExpressionCompiler)
         .put(ClassName(FileListingAction::class.qualifiedName!!), fileListingAction)
         .put(ClassName(ColumnListingAction::class.qualifiedName!!), columnListingAction)
         .put(ClassName(SchemaCache::class.qualifiedName!!), schemaCache)

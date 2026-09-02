@@ -2,12 +2,9 @@ package tech.kzen.auto.client.objects.document.job.display
 
 import emotion.react.css
 import js.objects.unsafeJso
-import mui.material.Chip
-import mui.material.ChipVariant
 import mui.material.IconButton
 import mui.material.Size
 import mui.material.Tooltip
-import mui.system.sx
 import react.ChildrenBuilder
 import react.Key
 import react.ReactNode
@@ -319,18 +316,8 @@ class WorkerDisplayDefault(
             }
         }
 
-        // Inferred output payload type chip, but not for Unit — a "[Unit]" badge conveys nothing (a lane
-        // with no payload has null typeMetadata and shows nothing at all).
-        val typeSimple = validation.typeMetadata?.toSimple()
-        if (typeSimple != null && typeSimple != "Unit") {
-            Chip {
-                sx {
-                    marginLeft = 0.5.em
-                }
-                size = Size.small
-                label = ReactNode(typeSimple)
-                variant = ChipVariant.outlined
-            }
+        DataContractView::class.react {
+            display = DataContractDisplay.of(validation)
         }
     }
 

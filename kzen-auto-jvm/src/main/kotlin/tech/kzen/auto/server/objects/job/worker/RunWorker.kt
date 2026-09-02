@@ -2,18 +2,14 @@ package tech.kzen.auto.server.objects.job.worker
 
 import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.auto.common.objects.document.job.JobSignatureCapability
-import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.auto.common.objects.document.logic.ResultSignatureDefiner
-import tech.kzen.auto.common.objects.document.logic.BindingSignatureDefiner
 import tech.kzen.auto.common.objects.document.flow.FlowConventions
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
-import tech.kzen.auto.plugin.model.record.FlatFileRecord
+import tech.kzen.auto.server.objects.job.expression.JobExpressionCompiler
 import tech.kzen.auto.server.objects.job.worker.definition.WorkerDefinitionContext
-import tech.kzen.auto.server.objects.report.exec.calc.CalculatedColumn
-import tech.kzen.auto.server.objects.report.exec.calc.CalculatedColumnEval
 import tech.kzen.auto.server.util.ClassLoaderUtils
 import tech.kzen.lib.common.exec.engine.LogicSignature
 import tech.kzen.lib.common.exec.data.binding.BindingName
@@ -25,7 +21,6 @@ import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.lib.common.exec.data.type.DataContract
 import tech.kzen.lib.common.exec.data.type.DataType
 import tech.kzen.auto.server.objects.job.value.JobDataValues
-import tech.kzen.auto.server.objects.job.value.ProjectedRecordValueAccess
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
@@ -40,8 +35,8 @@ import tech.kzen.lib.common.reflect.Service
  * Run-Logic vertex ([tech.kzen.auto.server.objects.flow.vertex.RunLogicVertex]) — the seam that lets a Job
  * compose reusable sub-Logics into its dataflow rather than only built-in stages.
  * When [arguments] is non-empty, the incoming boundary value still binds the child's first input and every
- * additional Job input must have one Kotlin expression. Expressions share Formula's received payload, received
- * flat columns, and outer-Job parameter scope; their raw scalar values keep their runtime types.
+ * additional Job input must have one Kotlin expression. Expressions share Formula's received payload, typed
+ * record fields, and outer-Job parameter scope; their raw scalar values keep their runtime types.
  *
  * A LOGIC-BOUNDARY worker: transport values never cross into the child, so each incoming value materializes via
  * the explicit boundary policy (native value when present, else columns as an ordered Map) and the child's main
@@ -63,16 +58,15 @@ class RunWorker(
     private val instructions: ObjectLocation,
     private val arguments: Map<String, String>,
     private val selfLocation: ObjectLocation,
-    @Service private val calculatedColumnEval: CalculatedColumnEval
+    @Service private val jobExpressionCompiler: JobExpressionCompiler
 ):
     TransformWorker(input, output, selfLocation)
 {
     private val classLoader = ClassLoaderUtils.dynamicParentClassLoader()
-    private val emptyRecord = FlatFileRecord()
     private var childSignature: LogicSignature? = null
     private var childIsJob = false
-    private var compiledForHeader: HeaderListing? = null
-    private var compiledArguments: List<Pair<String, CalculatedColumn<Any?>>> = listOf()
+    private var compiledForContract: DataContract? = null
+    private var compiledArguments: List<Pair<String, JobExpressionCompiler.Compiled>> = listOf()
     private var ran = 0L
 
 
@@ -86,30 +80,26 @@ class RunWorker(
         val values = mutableListOf(
             first.name to JobDataValues.lift(JobDataValues.boundary(element), first.contract))
         if (arguments.isNotEmpty()) {
-                val receivedFlat = when (element.access) {
-                    is FlatFileRecord,
-                    is ProjectedRecordValueAccess -> {
-                        val projection = JobDataValues.projection(element)
-                        ExpressionFlat(projection.header, JobDataValues.record(projection))
-                    }
-                    else -> null
-                }
-                val header = receivedFlat?.header ?: HeaderListing.empty
-                if (header != compiledForHeader) {
-                    compileArguments(header, control)
-                }
+            val inputContract = control.inputContract() ?: element.contract
+            if (inputContract != compiledForContract) {
+                compileArguments(inputContract, control)
+            }
+            val projection = when (inputContract.structural) {
+                is DataType.Record, is DataType.Scalar -> JobDataValues.projection(element)
+                else -> null
+            }
 
-                for ((name, compiled) in compiledArguments) {
-                    val value = compiled.evaluateRaw(
-                        JobDataValues.native(element), receivedFlat?.record ?: emptyRecord, header)
-                    require(value is String || value is Char || value is Boolean || value is Number) {
-                        "Run argument '$name' must evaluate to String, Char, Boolean, or Number; found " +
-                            (value?.let { it::class.qualifiedName } ?: "null")
-                    }
-                    val definition = inputSchema.find(BindingName(name))
-                        ?: error("Unknown Run argument '$name' for $instructions")
-                    values.add(definition.name to JobDataValues.lift(value, definition.contract))
+            for ((name, compiled) in compiledArguments) {
+                val value = compiled.expression.evaluate(
+                    JobDataValues.native(element), element, projection)
+                require(value is String || value is Char || value is Boolean || value is Number) {
+                    "Run argument '$name' must evaluate to String, Char, Boolean, or Number; found " +
+                        (value?.let { it::class.qualifiedName } ?: "null")
                 }
+                val definition = inputSchema.find(BindingName(name))
+                    ?: error("Unknown Run argument '$name' for $instructions")
+                values.add(definition.name to JobDataValues.lift(value, definition.contract))
+            }
         }
         val result = control.host(
             instructions = instructions,
@@ -127,11 +117,6 @@ class RunWorker(
     }
 
 
-    private data class ExpressionFlat(
-        val header: HeaderListing,
-        val record: FlatFileRecord)
-
-
     private fun requireCompleteJobArguments(signature: LogicSignature) {
         if (!childIsJob) {
             return
@@ -142,20 +127,21 @@ class RunWorker(
     }
 
 
-    private suspend fun compileArguments(header: HeaderListing, control: JobControl) {
+    private suspend fun compileArguments(contract: DataContract, control: JobControl) {
         val parameters = control.parameters()
         val receiverType = control.payloadType() ?: TypeMetadata.anyNullable
         val compiled = control.runBlockingIo {
             arguments.map { (name, expression) ->
-                name to calculatedColumnEval.create(
-                    "argument_$name", expression, header, receiverType,
-                    classLoader, parameters)
+                val attempt = jobExpressionCompiler.compile(
+                    "argument_$name", expression, contract, receiverType, classLoader, parameters)
+                check(attempt.error == null) { "$name: ${attempt.error ?: "Unable to compile"}" }
+                name to checkNotNull(attempt.compiled)
             }
         }
         val parameterValues = parameters.definitions.map { control.parameter(it.name.value) }
-        compiled.forEach { it.second.setParameters(parameterValues) }
+        compiled.forEach { it.second.expression.setParameters(parameterValues) }
         compiledArguments = compiled
-        compiledForHeader = header
+        compiledForContract = contract
     }
 
 
@@ -181,10 +167,10 @@ class RunWorker(
         childSignature = signature
         val argumentError = validateArguments(input, context, signature)
 
-        val childMainType: TypeMetadata =
+        val childMainContract: DataContract =
             when {
                 instructionsDocument == null ->
-                    TypeMetadata.anyNullable
+                    DataContract(DataType.Dynamic(nullable = true))
 
                 ScriptConventions.isScript(instructionsDocument) ->
                     ResultSignatureDefiner
@@ -192,22 +178,20 @@ class RunWorker(
                             instructions, ScriptConventions.resultsAttributePath))
                         .find(BindingName("main"))
                         ?.contract
-                        ?.let(BindingSignatureDefiner::metadata)
-                        ?: TypeMetadata.anyNullable
+                        ?: DataContract(DataType.Dynamic(nullable = true))
 
                 JobConventions.isJob(instructionsDocument) ->
                     signature!!
                         .outputs
                         .find(BindingName("main"))
                         ?.contract
-                        ?.let(BindingSignatureDefiner::metadata)
-                        ?: TypeMetadata.anyNullable
+                        ?: DataContract(DataType.Dynamic(nullable = true))
 
                 else ->
-                    TypeMetadata.anyNullable
+                    DataContract(DataType.Dynamic(nullable = true))
             }
 
-        return JobLaneAttempt(JobLaneDescriptor(childMainType, HeaderListing.empty), argumentError)
+        return JobLaneAttempt(JobLaneDescriptor(childMainContract), argumentError)
     }
 
 
@@ -267,20 +251,13 @@ class RunWorker(
             }
         }
 
-        val columns = input.flatColumns
         val receiverType = input.payloadType ?: TypeMetadata.anyNullable
         for ((name, expression) in arguments) {
-            val error =
-                if (columns == null && input.payloadType == null) {
-                    calculatedColumnEval.validateSyntax(expression)
-                }
-                else {
-                    calculatedColumnEval.validate(
-                        "argument_$name", expression, columns ?: HeaderListing.empty, receiverType,
-                        context.classLoader, context.parameters)
-                }
-            if (error != null) {
-                return "$name: $error"
+            val attempt = jobExpressionCompiler.compile(
+                "argument_$name", expression, input.contract, receiverType,
+                context.classLoader, context.parameters)
+            if (attempt.error != null) {
+                return "$name: ${attempt.error}"
             }
         }
         return null

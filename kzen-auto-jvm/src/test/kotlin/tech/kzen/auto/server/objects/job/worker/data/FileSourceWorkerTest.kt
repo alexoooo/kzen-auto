@@ -11,11 +11,12 @@ import tech.kzen.auto.common.objects.document.data.schema.DataSchemaFieldSpec
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.server.data.DataOpenerLookup
-import tech.kzen.auto.server.data.FileDataOpener
+import tech.kzen.auto.server.data.ConfiguredDataOpener
 import tech.kzen.auto.server.data.FileListingAction
 import tech.kzen.auto.server.data.SchemaCache
 import tech.kzen.auto.server.objects.data.schema.DataSchemaDocument
 import tech.kzen.auto.server.objects.datasource.FileDataSource
+import tech.kzen.auto.server.objects.datasource.format.ConfiguredDelimitedTestFormats
 import tech.kzen.auto.server.objects.job.worker.testJobValue
 import tech.kzen.auto.server.objects.job.worker.testProjection
 import tech.kzen.auto.server.objects.job.worker.testRecord
@@ -57,17 +58,18 @@ class FileSourceWorkerTest {
             }
             val repository = HostReportDefinitionRepository(listOf(CsvReportDefiner()))
             val listing = FileListingAction(repository)
-            val opener = DataOpenerLookup(FileDataOpener(
-                repository, SchemaCache(WorkUtils(directory.resolve("cache")))))
+            val opener = DataOpenerLookup(ConfiguredDataOpener(
+                SchemaCache(WorkUtils(directory.resolve("cache")))))
 
             val directMessages = mutableListOf<DataValue>()
+            val format = ConfiguredDelimitedTestFormats.csv()
             FileSourceWorker(
-                capturing(directMessages), "", "", files, "", "", "(?<year>\\d{4})", "fail", null,
+                capturing(directMessages), "", "", files, format, "(?<year>\\d{4})", "fail",
                 ReadWorker.emitItems, "", ReadWorker.attributesColumns, workerLocation, opener, listing)
                 .run(DirectControl)
 
             val source = FileDataSource(
-                "", "", files, "", "", "(?<year>\\d{4})", "fail", listing)
+                "", "", files, format, "(?<year>\\d{4})", "fail", listing)
             val nominalMessages = mutableListOf<DataValue>()
             val nominal = ReadWorker(
                 capturing(nominalMessages), ObjectReference.parse("files"), ReadWorker.emitItems, "",
@@ -92,30 +94,34 @@ class FileSourceWorkerTest {
     fun compatibilityKeyCoversOnlyEffectiveFileSourceConfiguration() {
         val files = listOf(mapOf(FileSelectionEntry.locationKey to "a.csv"))
         val schema = schema("a")
+        val format = ConfiguredDelimitedTestFormats.csv(schema)
         val base = FileSourceWorker.compatibilityKey(
-            "dir", "filter", files, "Csv", "UTF-8", "group", "fail", schema)
+            "dir", "filter", files, format, "group", "fail")
         val variants = listOf(
             FileSourceWorker.compatibilityKey(
-                "other", "filter", files, "Csv", "UTF-8", "group", "fail", schema),
+                "other", "filter", files, format, "group", "fail"),
             FileSourceWorker.compatibilityKey(
-                "dir", "other", files, "Csv", "UTF-8", "group", "fail", schema),
+                "dir", "other", files, format, "group", "fail"),
             FileSourceWorker.compatibilityKey(
                 "dir", "filter", listOf(mapOf(FileSelectionEntry.locationKey to "b.csv")),
-                "Csv", "UTF-8", "group", "fail", schema),
+                format, "group", "fail"),
             FileSourceWorker.compatibilityKey(
-                "dir", "filter", files, "Tsv", "UTF-8", "group", "fail", schema),
+                "dir", "filter", files, ConfiguredDelimitedTestFormats.csv(schema, delimiter = "\t"),
+                "group", "fail"),
             FileSourceWorker.compatibilityKey(
-                "dir", "filter", files, "Csv", "ISO-8859-1", "group", "fail", schema),
+                "dir", "filter", files, ConfiguredDelimitedTestFormats.csv(schema, "ISO-8859-1"),
+                "group", "fail"),
             FileSourceWorker.compatibilityKey(
-                "dir", "filter", files, "Csv", "UTF-8", "other", "fail", schema),
+                "dir", "filter", files, format, "other", "fail"),
             FileSourceWorker.compatibilityKey(
-                "dir", "filter", files, "Csv", "UTF-8", "group", "skip", schema),
+                "dir", "filter", files, format, "group", "skip"),
             FileSourceWorker.compatibilityKey(
-                "dir", "filter", files, "Csv", "UTF-8", "group", "fail", schema("b")))
+                "dir", "filter", files, ConfiguredDelimitedTestFormats.csv(schema("b")),
+                "group", "fail"))
 
         assertTrue(variants.all { it != base })
         assertEquals(base, FileSourceWorker.compatibilityKey(
-            "dir", "filter", files, "Csv", "UTF-8", "group", "fail", schema))
+            "dir", "filter", files, format, "group", "fail"))
     }
 
 

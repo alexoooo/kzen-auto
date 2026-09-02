@@ -8,12 +8,13 @@ main:
   is: Job
 
 main.workers/reader:
-  is: CsvReaderWorker
-  path: build/job-synth-linear/input.csv
+  is: FileSourceWorker
+  files:
+    - location: build/job-synth-linear/input.csv
 
 main.workers/filter:
   is: FilterWorker
-  where: 'flag eq "yes"'
+  where: 'flag == "yes"'
 
 main.workers/writer:
   is: CsvWriterWorker

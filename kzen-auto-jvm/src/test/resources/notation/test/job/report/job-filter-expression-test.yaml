@@ -10,15 +10,16 @@ main.channels/kept:
   capacity: 8
 
 main.workers/reader:
-  is: CsvReaderWorker
+  is: FileSourceWorker
   output: main.channels/raw
-  path: build/job-filter-expr/input.csv
+  files:
+    - location: build/job-filter-expr/input.csv
 
 main.workers/filter:
   is: FilterWorker
   input: main.channels/raw
   output: main.channels/kept
-  where: 'amount.number > 2'
+  where: 'amount.toBigDecimal() > BigDecimal("2")'
 
 main.workers/writer:
   is: CsvWriterWorker

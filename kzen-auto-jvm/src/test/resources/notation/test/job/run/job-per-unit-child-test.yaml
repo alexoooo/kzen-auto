@@ -46,7 +46,7 @@ main.workers/items:
 main.workers/copy:
   is: FormulaWorker
   formula:
-    copied: 'prefix + value.text'
+    copied: 'prefix + value'
 
 main.workers/write:
   is: CsvWriterWorker

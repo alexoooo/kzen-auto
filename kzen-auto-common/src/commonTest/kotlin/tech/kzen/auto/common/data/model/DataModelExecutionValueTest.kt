@@ -1,7 +1,5 @@
 package tech.kzen.auto.common.data.model
 
-import tech.kzen.auto.common.objects.document.plugin.model.CommonDataEncodingSpec
-import tech.kzen.auto.common.objects.document.plugin.model.CommonPluginCoordinate
 import tech.kzen.lib.common.exec.MapExecutionValue
 import tech.kzen.lib.common.exec.NullExecutionValue
 import kotlin.test.Test
@@ -23,14 +21,11 @@ class DataModelExecutionValueTest {
         attributes
     )
 
-    private val sourcedPart = DataPart(
+    private val sourcedPart = testDataPart(
         DataRole("reference"),
-        sourcedRef,
-        CommonPluginCoordinate("csv"),
-        CommonDataEncodingSpec.ofString("UTF-8")
-    )
+        sourcedRef)
 
-    private val plainPart = DataPart.ofPath(DataRole.main, "/data/main.csv")
+    private val plainPart = testDataPart(DataRole.main, DataRef(null, "/data/main.csv"))
     private val unit = DataUnit(attributes, listOf(sourcedPart, plainPart))
     private val manifest = DataManifest(listOf(unit))
 
@@ -59,7 +54,7 @@ class DataModelExecutionValueTest {
     @Test
     fun nullableValuesRoundTrip() {
         val ref = DataRef(null, "/data/plain.csv")
-        val part = DataPart(DataRole.main, ref, null, null)
+        val part = testDataPart(DataRole.main, ref)
 
         assertEquals(ref, DataRef.ofExecutionValue(ref.asExecutionValue()))
         assertEquals(part, DataPart.ofExecutionValue(part.asExecutionValue()))

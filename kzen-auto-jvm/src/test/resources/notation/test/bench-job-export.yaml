@@ -2,8 +2,9 @@ main:
   is: Job
 
 main.workers/reader:
-  is: CsvReaderWorker
-  path: build/bench/exp/input.csv
+  is: FileSourceWorker
+  files:
+    - location: build/bench/exp/input.csv
 
 main.workers/filter:
   is: ValueSetFilterWorker
@@ -16,7 +17,7 @@ main.workers/filter:
 main.workers/formula:
   is: FormulaWorker
   formula:
-    total: "qty * price"
+    total: "qty.toBigDecimal() * price.toBigDecimal()"
 
 main.workers/export:
   is: ExportWriterWorker

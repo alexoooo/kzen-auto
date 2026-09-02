@@ -10,8 +10,9 @@ main:
   is: Job
 
 main.workers/reader:
-  is: CsvReaderWorker
-  path: build/job-synth-dangling-serve/input.csv
+  is: FileSourceWorker
+  files:
+    - location: build/job-synth-dangling-serve/input.csv
 
 main.workers/preview:
   is: PreviewWorker

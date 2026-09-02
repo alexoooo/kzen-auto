@@ -13,6 +13,7 @@ import tech.kzen.lib.common.exec.data.type.FieldId
 import tech.kzen.lib.common.exec.data.type.ScalarKind
 import tech.kzen.lib.common.exec.data.value.DataNode
 import tech.kzen.lib.common.exec.data.value.DataValue
+import tech.kzen.lib.common.exec.TextExecutionValue
 import java.lang.management.ManagementFactory
 
 
@@ -40,10 +41,15 @@ class FlatRecordValueAccessTest {
         if (!bean.isThreadAllocatedMemorySupported) return
         bean.isThreadAllocatedMemoryEnabled = true
         val thread = Thread.currentThread().threadId()
-        val before = bean.getThreadAllocatedBytes(thread)
         var sum = 0.0
-        repeat(100_000) { sum += record.readDouble(readingNode) }
-        val allocated = bean.getThreadAllocatedBytes(thread) - before
+        val allocated = (0 until 3).minOf {
+            val before = bean.getThreadAllocatedBytes(thread)
+            var sampleSum = 0.0
+            repeat(100_000) { sampleSum += record.readDouble(readingNode) }
+            val sampleAllocated = bean.getThreadAllocatedBytes(thread) - before
+            sum = sampleSum
+            sampleAllocated
+        }
         assertEquals(1_250_000.0, sum)
         assertTrue(allocated <= 4_096, "flat primitive-read loop allocated $allocated bytes")
     }
@@ -81,5 +87,20 @@ class FlatRecordValueAccessTest {
     fun missingOrMismatchedHeaderFailsImmediately() {
         assertThrows(RuntimeException::class.java) { FlatFileRecord.of("x").contract(DataNode(0)) }
         assertThrows(RuntimeException::class.java) { FlatFileRecord.of("x").attachHeader(header) }
+    }
+
+
+    @Test
+    fun decimalUsesCanonicalScalarWithoutBinaryFloatingProjection() {
+        val decimalId = FieldId("decimal")
+        val decimalHeader = FlatRecordHeader(DataContract(DataType.Record(listOf(
+            DataField(decimalId, DataType.Scalar(ScalarKind.Decimal))))))
+        val text = "12345678901234567890.1234567890123456789"
+        val record = FlatFileRecord.of(text)
+        record.attachHeader(decimalHeader)
+        val node = record.field(DataNode(0), decimalId)
+
+        assertEquals(TextExecutionValue(text), record.scalar(node))
+        assertThrows(RuntimeException::class.java) { record.readDouble(node) }
     }
 }

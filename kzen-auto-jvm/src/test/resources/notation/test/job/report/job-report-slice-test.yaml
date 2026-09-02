@@ -10,15 +10,16 @@ main.channels/filtered:
   capacity: 8
 
 main.workers/reader:
-  is: CsvReaderWorker
+  is: FileSourceWorker
   output: main.channels/raw
-  path: build/job-slice-test/input.csv
+  files:
+    - location: build/job-slice-test/input.csv
 
 main.workers/filter:
   is: FilterWorker
   input: main.channels/raw
   output: main.channels/filtered
-  where: 'flag eq "yes"'
+  where: 'flag == "yes"'
 
 main.workers/writer:
   is: CsvWriterWorker

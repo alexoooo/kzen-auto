@@ -11,9 +11,10 @@ main.channels/queries:
   external: true
 
 main.workers/reader:
-  is: CsvReaderWorker
+  is: FileSourceWorker
   output: main.channels/raw
-  path: build/job-preview/input.csv
+  files:
+    - location: build/job-preview/input.csv
 
 main.workers/preview:
   is: PreviewWorker

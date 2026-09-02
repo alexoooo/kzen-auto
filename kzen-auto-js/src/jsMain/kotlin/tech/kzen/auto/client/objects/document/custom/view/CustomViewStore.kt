@@ -7,6 +7,7 @@ import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.service.rest.ClientRestTaskRepository
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.common.objects.document.custom.CustomConventions
+import tech.kzen.auto.common.objects.document.custom.create.CustomCreation
 import tech.kzen.auto.common.objects.document.custom.model.CustomObjectInfo
 import tech.kzen.auto.common.objects.document.custom.model.CustomViewExports
 import tech.kzen.auto.common.objects.document.custom.model.CustomViewExportsState
@@ -54,14 +55,15 @@ class CustomViewStore(
     }
 
 
-    fun createObject(prototype: ObjectLocation, onResult: (String?) -> Unit) {
+    fun createObject(creation: CustomCreation, onResult: (String?) -> Unit) {
         val snapshot = snapshot()
+        val prototype = creation.prototype
         val newName = nextAvailableObjectName(snapshot.state, prototype.objectPath.name)
         val newPath = NotationConventions.mainObjectPath.nest(
             CustomConventions.objectsAttributePath, newName)
         val newLocation = ObjectLocation(snapshot.state.documentPath, newPath)
         val endOfDocument = PositionRelation.at(snapshot.state.serverNotation.notations.map.size)
-        val command = AddObjectCommand.ofParent(newLocation, endOfDocument, prototype.objectPath.name)
+        val command = AddObjectCommand(newLocation, endOfDocument, creation.body)
 
         async {
             val result = parent.mirroredGraphStore.apply(command)

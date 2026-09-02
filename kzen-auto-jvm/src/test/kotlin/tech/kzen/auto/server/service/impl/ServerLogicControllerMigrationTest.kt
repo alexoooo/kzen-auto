@@ -37,7 +37,7 @@ import kotlin.test.fail
  * barrier — the production path on top of the migration mechanics proven in isolation by
  * [tech.kzen.auto.server.exec.job.JobMigrationTest].
  *
- * Uses the Job preview fixture (CsvReaderWorker -> channel -> PreviewWorker). Editing a NON-reader attribute (the
+ * Uses the Job preview fixture (file source -> channel -> PreviewWorker). Editing a NON-reader attribute (the
  * Preview's sample size) leaves the reader's config unchanged, so on migrate the reader RESUMES from its file
  * position and the Preview ADOPTS its carried count while the channel carries any in-flight batch — every row
  * counted exactly once, so the final count equals the row total. The step ticks before the edit pass the SAME
@@ -64,10 +64,10 @@ class ServerLogicControllerMigrationTest {
         Files.createDirectories(dir)
         Files.newBufferedWriter(input).use { writer ->
             writer.write("id,name")
-            writer.newLine()
+            writer.append('\n')
             for (i in 0 until rows) {
                 writer.write("$i,n$i")
-                writer.newLine()
+                writer.append('\n')
             }
         }
         context = KzenAutoContext.forTest()

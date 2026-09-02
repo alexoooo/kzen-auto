@@ -10,6 +10,7 @@ import tech.kzen.auto.common.data.schema.LegacyDataShapeBridge
 import tech.kzen.auto.common.objects.document.plugin.model.CommonDataEncodingSpec
 import tech.kzen.auto.common.objects.document.plugin.model.CommonPluginCoordinate
 import tech.kzen.auto.server.service.storage.SchemaCacheStorageArea
+import tech.kzen.auto.server.objects.datasource.format.ConfiguredDelimitedTestFormats
 import tech.kzen.auto.server.util.WorkUtils
 import java.nio.file.Files
 import kotlin.io.path.writeText
@@ -29,11 +30,11 @@ class SchemaCacheTest {
     fun exactKeyIncludesEveryEffectiveDimension() {
         val base = key()
         val variants = listOf(
-            base.copy(refId = "other"),
-            base.copy(format = CommonPluginCoordinate.ofString("TSV")),
-            base.copy(encoding = CommonDataEncodingSpec.ofString("UTF-16")),
-            base.copy(size = "11"),
-            base.copy(modified = "21"))
+            key(refId = "other"),
+            key(format = CommonPluginCoordinate.ofString("TSV")),
+            key(encoding = CommonDataEncodingSpec.ofString("UTF-16")),
+            key(size = "11"),
+            key(modified = "21"))
 
         for (variant in variants) {
             assertNotEquals(base.digest(), variant.digest())
@@ -85,8 +86,9 @@ class SchemaCacheTest {
 
     @Test
     fun unfingerprintedPartHasNoCacheKey() {
-        val part = DataPart(DataRole.main, DataRef(null, "plain.csv"), null, null)
-        assertNull(SchemaCacheKey.of(part, format, encoding))
+        val ref = DataRef(null, "plain.csv")
+        val part = configuredTestDataPart(DataRole.main, ref, null)
+        assertNull(SchemaCacheKey.of(part))
     }
 
 
@@ -105,5 +107,16 @@ class SchemaCacheTest {
     }
 
 
-    private fun key() = SchemaCacheKey("ref", format, encoding, "10", "20")
+    private fun key(
+        refId: String = "ref",
+        format: CommonPluginCoordinate = this.format,
+        encoding: CommonDataEncodingSpec = this.encoding,
+        size: String = "10",
+        modified: String = "20"
+    ): SchemaCacheKey = SchemaCacheKey.ofReport(
+        DataRef(null, refId, mapOf(
+            DataRef.sizeKey to size,
+            DataRef.modifiedKey to modified)),
+        format,
+        encoding)!!
 }

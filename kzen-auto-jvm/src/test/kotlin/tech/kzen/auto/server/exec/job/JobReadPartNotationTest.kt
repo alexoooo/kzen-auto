@@ -35,8 +35,8 @@ class JobReadPartNotationTest {
     @Test
     fun readUnitsThenReadPartConcatenatesTwoRealCsvFiles() {
         Files.createDirectories(directory)
-        Files.write(directory.resolve("input-a.csv"), listOf("name,value", "alpha,1", "beta,2"))
-        Files.write(directory.resolve("input-b.csv"), listOf("name,value", "gamma,3"))
+        Files.writeString(directory.resolve("input-a.csv"), "name,value\nalpha,1\nbeta,2\n")
+        Files.writeString(directory.resolve("input-b.csv"), "name,value\ngamma,3\n")
         val output = directory.resolve("output.csv")
         Files.deleteIfExists(output)
 
@@ -53,7 +53,9 @@ class JobReadPartNotationTest {
     fun hostedChildReadsDataUnitParameterWithoutExpressionIo() {
         Files.createDirectories(directory)
         val lines = listOf("name,value", "child,7", "boundary,8")
-        Files.write(directory.resolve("child-input.csv"), lines)
+        Files.writeString(
+            directory.resolve("child-input.csv"),
+            lines.joinToString(separator = "\n", postfix = "\n"))
         val output = directory.resolve("child-output.csv")
         Files.deleteIfExists(output)
 

@@ -2,8 +2,9 @@ main:
   is: Job
 
 main.workers/reader:
-  is: CsvReaderWorker
-  path: build/bench/agg/input.csv
+  is: FileSourceWorker
+  files:
+    - location: build/bench/agg/input.csv
 
 main.workers/pivot:
   is: PivotWorker

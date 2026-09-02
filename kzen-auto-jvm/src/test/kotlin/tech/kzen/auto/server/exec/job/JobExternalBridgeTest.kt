@@ -145,10 +145,10 @@ class JobExternalBridgeTest {
         Files.createDirectories(path.parent)
         Files.newBufferedWriter(path).use { writer ->
             writer.write("id,name")
-            writer.newLine()
+            writer.append('\n')
             for (i in 0 until rows) {
                 writer.write("$i,n$i")
-                writer.newLine()
+                writer.append('\n')
             }
         }
     }

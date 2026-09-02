@@ -10,7 +10,8 @@ import tech.kzen.lib.common.exec.data.value.DataValue
 internal data class CalculatedFieldValue(
     val field: FieldId,
     val type: DataType.Scalar,
-    val value: ScalarExecutionValue
+    val value: ScalarExecutionValue?,
+    val state: DataState = DataState.Present
 )
 
 
@@ -83,7 +84,7 @@ internal object FormulaValueTransformer {
         calculated: List<CalculatedFieldValue>
     ) {
         for (field in calculated) {
-            builder.append(field.field, field.type, DataState.Present, field.value)
+            builder.append(field.field, field.type, field.state, field.value)
         }
     }
 

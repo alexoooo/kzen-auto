@@ -21,6 +21,8 @@ import tech.kzen.lib.common.exec.LongExecutionValue
 import tech.kzen.lib.common.exec.NumberExecutionValue
 import tech.kzen.lib.common.exec.TextExecutionValue
 import tech.kzen.lib.common.exec.data.type.FieldId
+import tech.kzen.lib.common.exec.ScalarExecutionValue
+import java.math.BigDecimal
 import java.util.concurrent.ConcurrentHashMap
 
 
@@ -106,7 +108,7 @@ internal object JobDataValues {
             is DataType.Scalar -> when (type.kind) {
                 ScalarKind.Boolean -> value.access.readBoolean(value.root)
                 is ScalarKind.Integer -> value.access.readLong(value.root)
-                ScalarKind.Decimal,
+                ScalarKind.Decimal -> exactDecimal(value.access.scalar(value.root))
                 is ScalarKind.Floating -> value.access.readDouble(value.root)
                 ScalarKind.Binary -> value.access.readBinary(value.root)
                 else -> value.access.readText(value.root)
@@ -139,6 +141,7 @@ internal object JobDataValues {
             "kotlin.Long", "java.lang.Long" -> value.access.readLong(value.root)
             "kotlin.Float", "java.lang.Float" -> value.access.readDouble(value.root).toFloat()
             "kotlin.Double", "java.lang.Double" -> value.access.readDouble(value.root)
+            "java.math.BigDecimal" -> exactDecimal(value.access.scalar(value.root))
             "kotlin.String", "java.lang.String" -> value.access.readText(value.root)
             "kotlin.ByteArray", "byte[]" -> value.access.readBinary(value.root)
             else -> null
@@ -201,9 +204,21 @@ internal object JobDataValues {
                     else -> value
                 }
             }
-            ScalarKind.Decimal,
+            ScalarKind.Decimal -> exactDecimal(access.scalar(node))
             is ScalarKind.Floating -> access.readDouble(node)
             ScalarKind.Binary -> access.readBinary(node)
             else -> access.readText(node)
+        }
+
+
+    private fun exactDecimal(value: ScalarExecutionValue): BigDecimal =
+        when (value) {
+            is TextExecutionValue -> BigDecimal(value.value)
+            is LongExecutionValue -> BigDecimal.valueOf(value.value)
+            is NumberExecutionValue -> BigDecimal(value.value.toString())
+            else -> throw DataAccessException(
+                tech.kzen.lib.common.exec.data.problem.DataProblem(
+                    tech.kzen.lib.common.exec.data.problem.DataProblem.invalidOperation,
+                    "Decimal scalar must use a canonical numeric execution value"))
         }
 }

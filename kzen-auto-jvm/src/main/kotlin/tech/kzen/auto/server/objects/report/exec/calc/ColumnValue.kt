@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.objects.report.exec.calc
 
 import tech.kzen.auto.plugin.util.NumberParseUtils
+import java.math.BigDecimal
 import kotlin.math.abs
 
 
@@ -73,6 +74,7 @@ class ColumnValue(
                 null -> nullText
                 is String -> value
                 is ColumnValue -> value.toString()
+                is BigDecimal -> canonicalDecimal(value)
                 is Number -> ofNumber(value.toDouble()).toString()
                 else -> value.toString()
             }
@@ -83,9 +85,16 @@ class ColumnValue(
             return when (value) {
                 null -> nullValue
                 is ColumnValue -> value
+                is BigDecimal -> ofText(canonicalDecimal(value))
                 is Number -> ofNumber(value.toDouble())
                 else -> ofText(value.toString())
             }
+        }
+
+
+        private fun canonicalDecimal(value: BigDecimal): String {
+            val stripped = value.stripTrailingZeros()
+            return if (stripped.signum() == 0) zeroText else stripped.toString()
         }
 
 

@@ -11,11 +11,13 @@ import tech.kzen.lib.common.exec.data.binding.BindingDefinition
 import tech.kzen.lib.common.exec.data.binding.BindingName
 import tech.kzen.lib.common.exec.data.binding.BindingSchema
 import tech.kzen.auto.server.context.KzenAutoContext
+import tech.kzen.auto.server.objects.job.expression.JobExpressionCompiler
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.platform.ClassNames
+import java.math.BigDecimal
 import kotlin.test.assertEquals
 
 
@@ -23,8 +25,9 @@ import kotlin.test.assertEquals
  * Unit test for [FormulaSourceWorker] in isolation: drives the Worker's full [FormulaSourceWorker.run]
  * lifecycle (compile the Kotlin expression -> evaluate -> STRICT-STATIC dispatch on the INFERRED type: an
  * Iterable, Sequence, or Iterator expression streams element-by-element — a null value under a nullable
- * stream type, or a mistyped binding, is empty — anything else, including untyped `Any`, emits once) against a
- * capturing [ChannelOutput] and a no-op [JobControl], using the real [CalculatedColumnEval] engine from a
+ * stream type is empty, while a mistyped binding fails its typed accessor — anything else, including untyped
+ * `Any`, emits once) against a
+ * capturing [ChannelOutput] and a no-op [JobControl], using the real [JobExpressionCompiler] from a
  * test context. Also covers the declared-parameter scope (bare typed accessor, value via
  * [JobControl.parameter]) and the live-edit stream cursor (a same-code resume skips the delivered prefix; an
  * edited expression restarts). The archetype wiring (JobChannelCreator handing the Worker a real channel
@@ -88,6 +91,15 @@ class FormulaSourceWorkerTest {
     fun scalarExpressionEmitsSingleElement() = runBlocking {
         val emitted = runSource("6 * 7")
         assertEquals(listOf(42), emitted)
+    }
+
+
+    @Test
+    fun decimalStreamPreservesExactValues() = runBlocking {
+        val value = "12345678901234567890.12345678901234567890"
+        val emitted = runSource("listOf(BigDecimal(\"$value\"))")
+
+        assertEquals(listOf(BigDecimal("12345678901234567890.1234567890123456789")), emitted)
     }
 
 
@@ -189,7 +201,7 @@ class FormulaSourceWorkerTest {
             ObjectPath.parse("main.workers/source"))
 
         return FormulaSourceWorker(
-            output, code, selfLocation, context.calculatedColumnEval)
+            output, code, selfLocation, context.jobExpressionCompiler)
     }
 
 

@@ -149,14 +149,14 @@ class JobNotationTest {
         var kept = 0
         Files.newBufferedWriter(input).use { writer ->
             writer.write("id,flag,value")
-            writer.newLine()
+            writer.append('\n')
             for (i in 0 until rows) {
                 val flag = if (i % 2 == 0) "yes" else "no"
                 if (flag == "yes") {
                     kept += 1
                 }
                 writer.write("$i,$flag,v$i")
-                writer.newLine()
+                writer.append('\n')
             }
         }
         Files.deleteIfExists(output)

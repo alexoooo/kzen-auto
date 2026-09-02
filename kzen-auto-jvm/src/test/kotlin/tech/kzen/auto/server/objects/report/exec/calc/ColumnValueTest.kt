@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.objects.report.exec.calc
 
 import org.junit.Test
+import java.math.BigDecimal
 import kotlin.test.assertEquals
 
 
@@ -38,5 +39,13 @@ class ColumnValueTest {
     fun numberPlusNumberAdds() {
         val sum = ColumnValue.ofNumber(2.0) + ColumnValue.ofNumber(3.0)
         assertEquals("5", sum.text)
+    }
+
+
+    @Test
+    fun decimalScalarRetainsBoundedExactCanonicalText() {
+        assertEquals("69.39", ColumnValue.ofScalar(BigDecimal("69.3900")).text)
+        assertEquals("1E+1000000000", ColumnValue.ofScalar(BigDecimal("1e1000000000")).text)
+        assertEquals("0", ColumnValue.toText(BigDecimal("0.000")))
     }
 }

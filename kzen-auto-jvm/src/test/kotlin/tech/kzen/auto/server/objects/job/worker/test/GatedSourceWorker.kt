@@ -14,7 +14,7 @@ import java.util.concurrent.atomic.AtomicInteger
  * Test-only source Worker for the deterministic channel-carryover migration test
  * ([tech.kzen.auto.server.objects.job.JobMigrationCarryoverTest]): emits `row0`..`row(total-1)` as plain
  * Strings, one per send, and RESUMES rather than restarts across a state migration (mirrors
- * [tech.kzen.auto.server.objects.job.worker.CsvReaderWorker]'s file-position resume).
+ * a configured source's cursor resume).
  *
  * Two properties make the migration's channel carryover testable end-to-end and deterministically:
  *

@@ -220,6 +220,8 @@ class JobRun(
                         // the walk (null = untyped/flat — the expression receiver falls back to nullable Any).
                         val inputPayloadType = upstreamByDownstream[location.objectPath]
                             ?.let { jobValidation.workerValidations[it]?.typeMetadata }
+                        val inputContract = upstreamByDownstream[location.objectPath]
+                            ?.let { jobValidation.workerValidations[it]?.contract }
                         async {
                             try {
                                 execution.host(
@@ -228,7 +230,7 @@ class JobRun(
                                         worker, childLogicHost, objectStableMapper,
                                         workerScratchDir, workerOutputDir,
                                         execution.inputs, jobParameters, jobResults,
-                                        inputPayloadType, resultCollector),
+                                        inputPayloadType, inputContract, resultCollector),
                                     inputs = DataBindings.bind(BindingSchema.empty),
                                     // These frames are live SIMULTANEOUSLY, which is the one shape the engine's
                                     // ambient-context model is not specified for (logic-spec §6): two Workers

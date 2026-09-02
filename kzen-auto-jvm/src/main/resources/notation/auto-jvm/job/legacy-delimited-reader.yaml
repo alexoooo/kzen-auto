@@ -1,0 +1,45 @@
+# Existing documents can still resolve these nominal names, but both implementations delegate to FileDataSource
+# and the configured reader stack. New documents use FileSourceWorker or ReadWorker.
+CsvReaderWorker:
+  abstract: true
+  is: Worker
+  class: tech.kzen.auto.server.objects.job.worker.compatibility.LegacyCsvSourceWorker
+  output: ""
+  path: ""
+  delimiter: ","
+  header: true
+  meta:
+    output:
+      is: ChannelOutput
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    path: String
+    delimiter: String
+    header: Boolean
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
+MultiFileReaderWorker:
+  abstract: true
+  is: Worker
+  class: tech.kzen.auto.server.objects.job.worker.compatibility.LegacyMultiFileSourceWorker
+  output: ""
+  paths: []
+  delimiter: ","
+  header: true
+  meta:
+    output:
+      is: ChannelOutput
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    paths:
+      is: List
+      of: String
+      editor: MultiFileInputEditor
+    delimiter: String
+    header: Boolean
+    selfLocation:
+      is: ObjectLocation
+      by: Self

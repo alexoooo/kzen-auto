@@ -112,7 +112,7 @@ ExportSpecEditor:
 
 
 # File-selection editor: writes FileSelectionSpec for FileDataSource.files. The legacy registration points at the
-# same wrapper and keeps MultiFileReaderWorker.paths as an ordered List<String>.
+# same wrapper and keeps multi-file selections as an ordered List<String>.
 FileSelectionEditor:
   is: AttributeEditor
   class: tech.kzen.auto.client.objects.document.job.edit.FileSelectionEditor$Wrapper

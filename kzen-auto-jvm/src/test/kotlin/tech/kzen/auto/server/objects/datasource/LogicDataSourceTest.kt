@@ -5,6 +5,7 @@ import org.junit.Test
 import tech.kzen.auto.common.data.api.DataContext
 import tech.kzen.auto.common.data.DataSourceConventions
 import tech.kzen.auto.common.data.model.DataPart
+import tech.kzen.auto.common.data.model.DataRef
 import tech.kzen.auto.common.data.model.DataRole
 import tech.kzen.auto.common.data.model.DataUnit
 import tech.kzen.auto.common.data.schema.DataShape
@@ -13,10 +14,11 @@ import tech.kzen.auto.common.objects.document.data.schema.DataSchemaFieldListSpe
 import tech.kzen.auto.common.objects.document.data.schema.DataSchemaFieldSpec
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
-import tech.kzen.auto.server.data.FileDataOpener
 import tech.kzen.auto.server.data.FileListingAction
+import tech.kzen.auto.server.data.configuredTestDataPart
 import tech.kzen.auto.server.data.SchemaCache
 import tech.kzen.auto.server.objects.data.schema.DataSchemaDocument
+import tech.kzen.auto.server.objects.datasource.format.ConfiguredDelimitedTestFormats
 import tech.kzen.auto.server.objects.job.worker.data.WorkerDataContext
 import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.auto.server.objects.report.exec.input.parse.csv.CsvReportDefiner
@@ -49,7 +51,7 @@ class LogicDataSourceTest {
 
     @Test
     fun forwardsArgumentsInDeclaredOrderIncludingNullAndHostsExactlyOnce() {
-        val unit = DataUnit.ofPath("first.csv")
+        val unit = unit("first.csv")
         val context = RecordingContext(
             linkedMapOf("to" to "2026-01-03", "from" to "2026-01-01"),
             result(listOf(unit)))
@@ -105,7 +107,7 @@ class LogicDataSourceTest {
 
     @Test
     fun eagerIterableIsMaterializedOnceAndPreservesUnitsAndPlainReferences() {
-        val units = listOf(DataUnit.ofPath("a.csv"), DataUnit.ofPath("b.csv"))
+        val units = listOf(unit("a.csv"), unit("b.csv"))
         var iteratorCount = 0
         val eager = object: Iterable<DataUnit> {
             override fun iterator(): Iterator<DataUnit> {
@@ -128,8 +130,8 @@ class LogicDataSourceTest {
     @Test
     fun rejectsLazySequenceIteratorScalarAndIndexedWrongElement() {
         val invalid = listOf(
-            sequenceOf(DataUnit.ofPath("a.csv")),
-            listOf(DataUnit.ofPath("a.csv")).iterator(),
+            sequenceOf(unit("a.csv")),
+            listOf(unit("a.csv")).iterator(),
             "not units")
         for (value in invalid) {
             val failure = assertFailsWith<IllegalArgumentException> {
@@ -148,7 +150,7 @@ class LogicDataSourceTest {
                 LogicDataSource(instructions, emptyList()).resolve(
                     RecordingContext(
                         emptyMap(),
-                        result(listOf(DataUnit.ofPath("a.csv"), 42))))
+                        result(listOf(unit("a.csv"), 42))))
             }
         }
         assertTrue(wrongElement.message!!.contains("element[1]"), wrongElement.message)
@@ -210,40 +212,6 @@ class LogicDataSourceTest {
     }
 
 
-    @Test
-    fun plainRefFromLogicAndFileSourcesUseTheSameFileOpener() {
-        val file = Files.createTempFile("logic-source-opener", ".csv")
-            .also { it.writeText("name,amount\nalpha,1\n") }
-        val logicPart = DataUnit.ofPath(file.toString()).parts.single()
-        val repository = HostReportDefinitionRepository(listOf(CsvReportDefiner()))
-        val filePart = runBlocking {
-            FileDataSource(
-                "", "", listOf(mapOf("location" to file.toString())), "", "", "", "fail",
-                FileListingAction(repository))
-                .resolve(RecordingContext(emptyMap(), DataBindings.bind(BindingSchema.empty)))
-                .manifest.units.single().parts.single()
-        }
-        val cacheRoot = Files.createTempDirectory("logic-source-opener-cache")
-        val opener = FileDataOpener(repository, SchemaCache(WorkUtils(cacheRoot)))
-
-        assertEquals(readRows(opener, logicPart), readRows(opener, filePart))
-    }
-
-
-    private fun readRows(opener: FileDataOpener, part: DataPart): List<List<String>> {
-        val cursor = runBlocking {
-            opener.open(RecordingContext(emptyMap(), DataBindings.bind(BindingSchema.empty)), part)
-        }
-        return cursor.use {
-            buildList {
-                while (cursor.hasNext()) {
-                    add(assertIs<FlatFileRecord>(cursor.next().access).toList())
-                }
-            }
-        }
-    }
-
-
     private class RecordingContext(
         private val values: Map<String, Any?>,
         private val result: DataBindings
@@ -288,6 +256,10 @@ class LogicDataSourceTest {
             schema,
             BindingName("main") to data)
     }
+
+
+    private fun unit(path: String): DataUnit = DataUnit.of(
+        configuredTestDataPart(DataRole.main, DataRef(null, path), null))
 
 
     private fun arguments(vararg values: Pair<String, Any?>): DataBindings {

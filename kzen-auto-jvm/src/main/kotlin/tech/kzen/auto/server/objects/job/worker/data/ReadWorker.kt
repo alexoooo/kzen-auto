@@ -242,7 +242,7 @@ open class ReadWorker(
                 cursor = activeCursor
                 val inspected = inspectedShapes?.get(partKey(unitIndex, partIndex))
                 if (inspected != null) {
-                    check(activeCursor.shape == inspected) {
+                    check(activeCursor.shape.itemType == inspected.itemType) {
                         "Data shape changed after inspection at unit $unitIndex part $partIndex " +
                             "(${part.ref.display()}): inspected $inspected, opened ${activeCursor.shape}"
                     }
@@ -325,8 +325,15 @@ open class ReadWorker(
         itemIndex = state.itemIndex
         shapeBaseline = state.shapeBaseline
         inspectedShapes = state.inspectedShapes
-        cursor = state.adoptCursor()
+        cursor = state.adoptCursor(currentAdoptionIdentity())
     }
+
+
+    private fun currentAdoptionIdentity() = manifest
+        ?.units
+        ?.getOrNull(unitIndex)
+        ?.let { unit -> DataReadCore.parts(unit, role, unitIndex).getOrNull(partIndex) }
+        ?.let(openerLookup::adoptionIdentity)
 
 
     override fun payloadFlow(input: JobLaneDescriptor, context: JobLaneContext): JobLaneAttempt {
@@ -403,8 +410,10 @@ open class ReadWorker(
         val inspectedShapes: Map<String, DataShape>?,
         private val detachedCursor: DataReadCore.DetachedCursor?
     ): AutoCloseable {
-        fun adoptCursor(): DataCursor? {
-            return DataReadCore.adopt(detachedCursor)
+        fun adoptCursor(
+            expectedIdentity: tech.kzen.auto.common.data.read.CursorAdoptionIdentity?
+        ): DataCursor? {
+            return DataReadCore.adopt(detachedCursor, expectedIdentity)
         }
 
 

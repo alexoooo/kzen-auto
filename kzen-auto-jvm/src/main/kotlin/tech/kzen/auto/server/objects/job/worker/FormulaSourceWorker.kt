@@ -1,14 +1,13 @@
 package tech.kzen.auto.server.objects.job.worker
 
-import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
-import tech.kzen.auto.plugin.model.record.FlatFileRecord
+import tech.kzen.auto.server.objects.job.expression.JobExpressionCompiler
 import tech.kzen.auto.server.objects.logic.ExpressionReturnTypeInference
-import tech.kzen.auto.server.objects.report.exec.calc.CalculatedColumnEval
 import tech.kzen.auto.server.util.ClassLoaderUtils
 import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.lib.common.exec.data.type.DefaultNativeTypeResolver
+import tech.kzen.lib.common.exec.data.type.DataContract
+import tech.kzen.lib.common.exec.data.type.toDataContract
 import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
@@ -20,8 +19,8 @@ import tech.kzen.lib.common.reflect.Service
  * A SOURCE Worker that generates its output stream from a single Kotlin expression — THE parameterized source:
  * the Job's declared parameters are in [code]'s scope, bare by name and typed (their run-constant values read
  * via [JobControl.parameter], run-argument falling back to declared default), so `number`, `(1..number)` or
- * `listOf("a", "b")` are all valid expressions. Compiled via the shared [CalculatedColumnEval] engine (the same
- * `@Service` Filter / Formula use; no columns in scope — a source has no incoming flat part), evaluated once,
+ * `listOf("a", "b")` are all valid expressions. Compiled via the shared [JobExpressionCompiler] (the same
+ * contract-native service Filter and Formula use; a source has no incoming value), evaluated once,
  * and dispatched STATICALLY on the expression's INFERRED type (the same inference the editor's worker card and
  * the payload-type walk display, so the runtime always matches them): an `Iterable`, `Sequence`, or `Iterator`
  * expression is streamed element-by-element (a null value under a nullable stream type is empty), any other
@@ -41,7 +40,7 @@ import tech.kzen.lib.common.reflect.Service
  * the same run-constant parameters — but the STREAM POSITION must carry, or a mid-stream migrate re-emits
  * already-delivered elements while the carried ResultSink accumulation keeps the old ones (duplicates). So
  * [nextIndex] is captured / restored (the claim-before-send cursor precedent of
- * [tech.kzen.auto.server.objects.job.worker.test.GatedSourceWorker] / [CsvReaderWorker]'s file-position
+ * [tech.kzen.auto.server.objects.job.worker.test.GatedSourceWorker]'s source-position
  * resume): the index is claimed BEFORE [Emitter.send], because a send parked mid-flush holds its payload in the
  * channel's in-flight buffer (carried by the migration's
  * [tech.kzen.auto.server.objects.job.channel.JobChannel.drainBuffered]) — so the resumed source must not
@@ -56,11 +55,13 @@ class FormulaSourceWorker(
     private val code: String,
     private val selfLocation: ObjectLocation,
 
-    @Service private val calculatedColumnEval: CalculatedColumnEval
+    @Service private val jobExpressionCompiler: JobExpressionCompiler
 ):
     SourceWorker(output, selfLocation)
 {
     private val classLoader = ClassLoaderUtils.dynamicParentClassLoader()
+    private val sourceInput: DataContract = TypeMetadata.unit.toDataContract()
+    private val sourceValue = JobDataValues.lift(Unit, sourceInput)
 
     // Next element index to emit; claimed BEFORE send (a send parked mid-flush holds its payload in the channel's
     // in-flight buffer, carried by the migration's drainBuffered — the resumed source must not re-send it).
@@ -80,20 +81,17 @@ class FormulaSourceWorker(
         val parameters = control.parameters()
         val parameterValues = parameters.definitions.map { control.parameter(it.name.value) }
 
-        val (streams, value) = control.runBlockingIo {
-            val compiled = calculatedColumnEval.create(
+        val (compiled, value) = control.runBlockingIo {
+            val attempt = jobExpressionCompiler.compile(
                 selfLocation.objectPath.name.value, code,
-                HeaderListing.empty, TypeMetadata.anyNullable, classLoader, parameters)
-            compiled.setParameters(parameterValues)
-
-            // Strict-static dispatch: the INFERRED type alone decides stream-vs-single (never the value).
-            val inferredType = calculatedColumnEval.inferredReturnKType(compiled)
-            val streams = inferredType != null && ExpressionReturnTypeInference.isStreamType(inferredType)
-
-            streams to compiled.evaluateRaw(Unit, FlatFileRecord(), HeaderListing.empty)
+                sourceInput, TypeMetadata.unit, classLoader, parameters)
+            check(attempt.error == null) { attempt.error ?: "Unable to compile source expression" }
+            val compiled = checkNotNull(attempt.compiled)
+            compiled.expression.setParameters(parameterValues)
+            compiled to compiled.expression.evaluate(Unit, sourceValue, null)
         }
 
-        if (streams) {
+        if (compiled.streams) {
             // A null value under a nullable stream type is empty (there is nothing to iterate;
             // the static contract stays "this lane streams"). A mistyped binding never reaches here — the
             // typed parameter accessor's cast rejects it during evaluation (a run failure naming the
@@ -113,12 +111,12 @@ class FormulaSourceWorker(
                 // The SourceWorker cadence checkpoints + flushes + publishes per batch, so this loop just emits.
                 val element = iterator.next()
                 nextIndex += 1
-                emit.send(JobDataValues.lift(element))
+                emit.send(JobDataValues.lift(element, checkNotNull(compiled.streamElementContract)))
             }
         }
         else if (nextIndex == 0) {
             nextIndex = 1
-            emit.send(JobDataValues.lift(value))
+            emit.send(JobDataValues.lift(value, compiled.contract))
         }
     }
 
@@ -129,33 +127,21 @@ class FormulaSourceWorker(
     // whole type otherwise (the single-emission lane). A compile error becomes this Worker's validation error.
     override fun payloadFlow(input: JobLaneDescriptor, context: JobLaneContext): JobLaneAttempt {
         if (code.isBlank()) {
-            return JobLaneAttempt(JobLaneDescriptor(null, HeaderListing.empty), null)
+            return JobLaneAttempt(JobLaneDescriptor.unknown, null)
         }
 
-        val error = calculatedColumnEval.validate(
+        val attempt = jobExpressionCompiler.compile(
             selfLocation.objectPath.name.value, code,
-            HeaderListing.empty, TypeMetadata.anyNullable, context.classLoader, context.parameters)
-        if (error != null) {
-            return JobLaneAttempt(JobLaneDescriptor.unknown, error)
+            sourceInput, TypeMetadata.unit, context.classLoader, context.parameters)
+        val compiled = attempt.compiled
+            ?: return JobLaneAttempt(JobLaneDescriptor.unknown, attempt.error)
+        val outputContract = if (compiled.streams) {
+            checkNotNull(compiled.streamElementContract)
         }
-
-        val compiled = calculatedColumnEval.create(
-            selfLocation.objectPath.name.value, code,
-            HeaderListing.empty, TypeMetadata.anyNullable, context.classLoader, context.parameters)
-        val inferredType = calculatedColumnEval.inferredReturnKType(compiled)
-            ?: return JobLaneAttempt(JobLaneDescriptor(null, HeaderListing.empty), null)
-
-        val payloadType =
-            if (ExpressionReturnTypeInference.isStreamType(inferredType)) {
-                ExpressionReturnTypeInference.streamElementType(inferredType)
-                    ?: return JobLaneAttempt(JobLaneDescriptor.unknown, null)
-            }
-            else {
-                inferredType
-            }
-
-        val resolved = DefaultNativeTypeResolver().use { it.describe(payloadType) }
-        return JobLaneAttempt(JobLaneDescriptor(resolved.contract, resolved), null)
+        else {
+            compiled.contract
+        }
+        return JobLaneAttempt(JobLaneDescriptor(outputContract), null)
     }
 
 

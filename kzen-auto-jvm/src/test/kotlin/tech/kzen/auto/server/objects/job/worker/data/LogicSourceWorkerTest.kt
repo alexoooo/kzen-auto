@@ -5,6 +5,8 @@ import org.junit.Test
 import tech.kzen.auto.common.data.api.DataCursor
 import tech.kzen.auto.common.data.api.DataOpener
 import tech.kzen.auto.common.data.model.DataPart
+import tech.kzen.auto.common.data.model.DataRef
+import tech.kzen.auto.common.data.model.DataRole
 import tech.kzen.auto.common.data.model.DataUnit
 import tech.kzen.auto.common.objects.document.data.schema.DataSchemaFieldListSpec
 import tech.kzen.auto.common.objects.document.data.schema.DataSchemaFieldSpec
@@ -16,6 +18,7 @@ import tech.kzen.lib.common.exec.data.binding.BindingName
 import tech.kzen.lib.common.exec.data.binding.BindingSchema
 import tech.kzen.lib.common.exec.data.binding.DataBindings
 import tech.kzen.auto.server.data.DataOpenerLookup
+import tech.kzen.auto.server.data.configuredTestDataPart
 import tech.kzen.auto.server.objects.data.schema.DataSchemaDocument
 import tech.kzen.auto.server.objects.job.worker.testJobValue
 import tech.kzen.lib.common.exec.data.value.DataValue
@@ -40,7 +43,7 @@ class LogicSourceWorkerTest {
             DataOpenerLookup(UnusedOpener))
             .run(control)
 
-        assertEquals(listOf(DataUnit.ofPath("result.csv")), messages.map(JobDataValues::boundary))
+        assertEquals(listOf(unit("result.csv")), messages.map(JobDataValues::boundary))
         assertEquals(instructions, control.instructions)
         assertEquals("2026-08-24", control.input)
     }
@@ -81,7 +84,7 @@ class LogicSourceWorkerTest {
     }
 
 
-    private class HostingControl: JobControl {
+    private inner class HostingControl: JobControl {
         var instructions: ObjectLocation? = null
         var input: Any? = null
 
@@ -99,7 +102,7 @@ class LogicSourceWorkerTest {
             this.instructions = instructions
             this.input = input
             val main = BindingName("main")
-            val value = JobDataValues.lift(listOf(DataUnit.ofPath("result.csv")))
+            val value = JobDataValues.lift(listOf(unit("result.csv")))
             return DataBindings.bind(
                 BindingSchema.of(BindingDefinition(main, value.contract)),
                 main to value)
@@ -113,4 +116,8 @@ class LogicSourceWorkerTest {
             return host(instructions, input)
         }
     }
+
+
+    private fun unit(path: String): DataUnit = DataUnit.of(
+        configuredTestDataPart(DataRole.main, DataRef(null, path), null))
 }

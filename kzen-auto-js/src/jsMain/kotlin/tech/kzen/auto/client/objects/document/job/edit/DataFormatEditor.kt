@@ -1,7 +1,11 @@
 package tech.kzen.auto.client.objects.document.job.edit
 
+import emotion.react.css
+import mui.material.Button
+import mui.material.ButtonVariant
+import mui.material.Size
 import react.ChildrenBuilder
-import react.State
+import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
 import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor
@@ -20,41 +24,29 @@ import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.select.SelectOption
 import tech.kzen.auto.client.wrap.select.muiAutocompleteField
 import tech.kzen.auto.client.wrap.setState
-import tech.kzen.auto.common.data.format.FileFormatCatalog
+import tech.kzen.auto.common.objects.document.custom.CustomConventions
+import tech.kzen.auto.common.objects.document.custom.create.SharedCustomDocument
 import tech.kzen.lib.common.model.attribute.AttributePath
+import tech.kzen.lib.common.model.document.DocumentName
+import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.model.location.ObjectReference
+import tech.kzen.lib.common.model.location.ObjectReferenceHost
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
+import tech.kzen.lib.common.model.structure.notation.cqrs.CreateDocumentCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.UpsertAttributeCommand
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
+import tech.kzen.lib.common.service.notation.NotationConventions
+import tech.kzen.lib.common.service.store.MirroredGraphError
 import tech.kzen.lib.common.service.store.MirroredGraphStore
+import tech.kzen.lib.common.util.naming.NextAvailableName
+import web.cssom.Color
+import web.cssom.em
 
 
 //---------------------------------------------------------------------------------------------------------------------
-external interface DataFormatEditorProps: AttributeEditorProps {
-    var kind: DataFormatEditor.Kind
-}
-
-
-external interface DataFormatEditorState: State {
-    var catalog: FileFormatCatalog?
-    var value: String?
-}
-
-
-//---------------------------------------------------------------------------------------------------------------------
-/**
- * Select for a data source's default format or text encoding, offering what the server actually has installed.
- *
- * These were free-text fields, which asked the user to know a format coordinate or a charset name by heart and
- * turned a typo into a run-time failure with no hint of the spelling that would have worked. The option lists
- * come from the document's shared [DataFormatStore] — the same catalogue the per-file overrides under a
- * selection's Details use, so a Worker's default and a file's override always name formats the same way.
- *
- * One component behind two notation registrations: the two attributes differ only in which half of the catalogue
- * they read, and splitting that into two near-identical classes would only duplicate the notation reading, the
- * store subscription and the write.
- */
+/** Selects an explicit shared format or one format-owned text encoding from the server catalogue. */
 @Suppress("unused")
 class DataFormatEditor(
     props: DataFormatEditorProps
@@ -117,6 +109,8 @@ class DataFormatEditor(
     override fun DataFormatEditorState.init(props: DataFormatEditorProps) {
         catalog = null
         value = null
+        creating = false
+        createError = null
     }
 
 
@@ -132,8 +126,7 @@ class DataFormatEditor(
     }
 
 
-    // Absent when this attribute is edited outside a Job stage: the select then offers Default plus whatever is
-    // already configured, which is also what a failed fetch leaves — never an empty, uneditable field.
+    // Absent outside a Job stage; the field still preserves and displays its current authored value.
     private fun dataFormatStore(): DataFormatStore? {
         return contextValue<DocumentBridge?>()?.lookup(DataFormatStoreKey)
     }
@@ -185,6 +178,74 @@ class DataFormatEditor(
     }
 
 
+    private fun onCreateFormat() {
+        if (state.creating) {
+            return
+        }
+        val graphStructure = props.clientStateGlobal.current()?.graphStructure()
+            ?: return
+        val graphNotation = graphStructure.graphNotation
+        val metadata = graphStructure.graphMetadata.get(props.objectLocation)
+            ?.attributes
+            ?.get(props.attributeName)
+            ?: return
+        val constraintText = metadata.attributeMetadataNotation
+            .get(NotationConventions.isAttributePath.toNesting())
+            ?.asString()
+            ?: return
+        val constraint = graphNotation.coalesce.locateOptional(
+            ObjectReference.parse(constraintText),
+            ObjectReferenceHost.ofLocation(props.objectLocation))
+            ?: return
+        val creation = CustomConventions.listPrototypes(graphStructure).firstOrNull { candidate ->
+            constraint in graphNotation.inheritanceChain(candidate.prototype)
+        } ?: return
+        val customDocument = graphNotation.coalesce.locateOptional(
+            ObjectReference.ofRootName(CustomConventions.customDocumentObjectName))
+            ?: return
+        val existingNames = graphNotation.documents.map.keys
+            .filter { it.nesting == props.objectLocation.documentPath.nesting }
+            .map { it.name.value }
+            .toSet()
+        val documentName = NextAvailableName.find(
+            creation.label,
+            separator = "-",
+            range = 2 .. 1000) { it !in existingNames }
+            ?: return
+        val documentPath = DocumentPath(
+            DocumentName(documentName),
+            props.objectLocation.documentPath.nesting,
+            false)
+        val createdLocation = documentPath.toObjectLocation(
+            SharedCustomDocument.objectPath(creation))
+
+        setState {
+            creating = true
+            createError = null
+        }
+        async {
+            val created = props.mirroredGraphStore.apply(CreateDocumentCommand(
+                documentPath,
+                SharedCustomDocument.create(customDocument, creation)))
+            if (created is MirroredGraphError) {
+                setState {
+                    creating = false
+                    createError = created.error.message ?: created.error.toString()
+                }
+                return@async
+            }
+            val selected = props.mirroredGraphStore.apply(UpsertAttributeCommand(
+                props.objectLocation,
+                props.attributeName,
+                ScalarAttributeNotation(createdLocation.toReference().asString())))
+            setState {
+                creating = false
+                createError = (selected as? MirroredGraphError)?.error?.message
+            }
+        }
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
         val value = state.value
@@ -195,11 +256,30 @@ class DataFormatEditor(
             Kind.Encoding -> DataFormatOptions.encodings(state.catalog, value)
         }
 
-        muiAutocompleteField(
-            label = CommonEditUtils.formattedLabel(AttributePath.ofName(props.attributeName)),
-            options = options,
-            selectedOption = options.find { it.value == value },
-            onSelect = { option: SelectOption -> onValueChange(option.value) },
-            disableClearable = true)
+        div {
+            muiAutocompleteField(
+                label = CommonEditUtils.formattedLabel(AttributePath.ofName(props.attributeName)),
+                options = options,
+                selectedOption = options.find { it.value == value },
+                onSelect = { option: SelectOption -> onValueChange(option.value) },
+                disableClearable = true)
+
+            if (props.kind == Kind.Format) {
+                Button {
+                    css { marginTop = 0.4.em }
+                    variant = ButtonVariant.outlined
+                    size = Size.small
+                    disabled = state.creating
+                    onClick = { onCreateFormat() }
+                    +(if (state.creating) "Creating…" else "Create shared format")
+                }
+                state.createError?.let { error ->
+                    div {
+                        css { color = Color("#c62828") }
+                        +error
+                    }
+                }
+            }
+        }
     }
 }

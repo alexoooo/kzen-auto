@@ -9,12 +9,13 @@ main:
   capacity: 4
 
 main.workers/reader:
-  is: CsvReaderWorker
-  path: build/job-batchsize-default/input.csv
+  is: FileSourceWorker
+  files:
+    - location: build/job-batchsize-default/input.csv
 
 main.workers/filter:
   is: FilterWorker
-  where: 'flag eq "yes"'
+  where: 'flag == "yes"'
 
 main.workers/writer:
   is: CsvWriterWorker

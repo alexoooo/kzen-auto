@@ -8,7 +8,27 @@ main:
 
 main.workers/source:
   is: FormulaSourceWorker
-  code: 'tech.kzen.auto.common.data.model.DataUnit.ofPath("input.csv")'
+  code: |
+    run {
+        val ref = tech.kzen.auto.common.data.model.DataRef(null, "input.csv")
+        val config = tech.kzen.auto.common.data.read.DelimitedReadConfig(
+            tech.kzen.auto.common.data.read.RecordFramingSpec("lf"),
+            tech.kzen.auto.common.data.read.DelimitedDialectSpec(",", "\"", "double-quote", "empty", "none"),
+            tech.kzen.auto.common.data.read.HeaderReadSpec("present", "exact-name"),
+            tech.kzen.auto.common.data.read.CharacterDecodingSpec("UTF-8", "permit", "report", "report"),
+            null,
+            tech.kzen.auto.common.data.read.TypedDecodePolicy(null, "fail-part", emptyList()))
+        tech.kzen.auto.common.data.model.DataUnit.of(
+            tech.kzen.auto.common.data.model.DataPart(
+                tech.kzen.auto.common.data.model.DataRole.main,
+                ref,
+                null,
+                tech.kzen.auto.common.data.read.ResolvedReadSpec(
+                    tech.kzen.auto.common.data.read.ReaderCapabilityIdentity(
+                        "tech.kzen.auto", "configured-delimited", "1"),
+                    listOf(tech.kzen.auto.common.data.read.ContentCodingSpec.identity),
+                    config.asExecutionValue())))
+    }
 
 main.workers/collect:
   is: ResultSinkWorker

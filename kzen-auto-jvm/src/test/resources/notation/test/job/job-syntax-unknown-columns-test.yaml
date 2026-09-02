@@ -7,10 +7,16 @@
 main:
   is: Job
 
+main.formats/input:
+  is: ConfiguredCsv
+  catalogVisible: false
+  header: infer-labels
+
 main.workers/reader:
-  is: CsvReaderWorker
-  path: build/job-syntax-unknown-columns/input.csv
-  header: false
+  is: FileSourceWorker
+  files:
+    - location: build/job-syntax-unknown-columns/input.csv
+  format: main.formats/input
 
 main.workers/formula:
   is: FormulaWorker

@@ -12,11 +12,11 @@ class DataModelDigestTest {
         val secondRef = DataRef(null, "/data/main.csv", linkedMapOf("a" to "1", "b" to "2"))
         val firstUnit = DataUnit(
             linkedMapOf("z" to "last", "a" to "first"),
-            listOf(DataPart(DataRole.main, firstRef, null, null))
+            listOf(testDataPart(DataRole.main, firstRef))
         )
         val secondUnit = DataUnit(
             linkedMapOf("a" to "first", "z" to "last"),
-            listOf(DataPart(DataRole.main, secondRef, null, null))
+            listOf(testDataPart(DataRole.main, secondRef))
         )
 
         assertEquals(firstRef, secondRef)

@@ -1,6 +1,8 @@
 package tech.kzen.auto.common.objects.document.custom
 
 import tech.kzen.auto.common.util.AutoConventions
+import tech.kzen.auto.common.objects.document.custom.create.CustomCreation
+import tech.kzen.auto.common.objects.document.custom.create.CustomCreationSpec
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -8,19 +10,20 @@ import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.location.ObjectReference
 import tech.kzen.lib.common.model.location.ObjectReferenceHost
 import tech.kzen.lib.common.model.obj.ObjectName
+import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.metadata.GraphMetadata
 import tech.kzen.lib.common.model.structure.metadata.tag.ObjectTag
 import tech.kzen.lib.common.model.structure.notation.DocumentNotation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
+import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
+import tech.kzen.lib.common.model.structure.notation.ObjectNotation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.service.notation.NotationConventions
 
 
 object CustomConventions {
-    private val customDocumentObjectName = ObjectName("CustomDocument")
-
-    val prototypeObjectName: ObjectName = ObjectName("Prototype")
+    val customDocumentObjectName = ObjectName("CustomDocument")
 
     val logicTag = ObjectTag("logic")
     val detachedTag = ObjectTag("detached")
@@ -53,13 +56,64 @@ object CustomConventions {
     }
 
 
-    fun listPrototypes(graphNotation: GraphNotation): List<ObjectLocation> {
-        return graphNotation.objectLocations.filter { location ->
-            val isAttribute = graphNotation
-                .directAttribute(location, NotationConventions.isAttributePath)
-                ?.asString()
-            isAttribute == prototypeObjectName.value
+    fun listPrototypes(graphStructure: GraphStructure): List<CustomCreation> {
+        val graphNotation = graphStructure.graphNotation
+        val marker = graphNotation.coalesce.locateOptional(
+            ObjectReference.ofRootName(CustomCreation.customCreatableObjectName))
+            ?: return emptyList()
+
+        return graphNotation.objectLocations.mapNotNull { location ->
+            val isAbstract = graphNotation
+                .directAttribute(location, NotationConventions.abstractAttributePath)
+                ?.asString() == "true"
+            if (!isAbstract) {
+                return@mapNotNull null
+            }
+
+            val chain = graphNotation.inheritanceChain(location)
+            val markerIndex = chain.indexOf(marker)
+            if (markerIndex < 1) {
+                return@mapNotNull null
+            }
+            val contributionChain = chain.take(markerIndex)
+            if (contributionChain.none {
+                    graphNotation.directAttribute(it, NotationConventions.classAttributePath) != null
+                }) {
+                return@mapNotNull null
+            }
+
+            if (graphStructure.graphMetadata.objectMetadata[location]
+                    ?.attributes?.map?.get(CustomCreation.customCreateAttributeName) == null) {
+                return@mapNotNull null
+            }
+            val customCreateNotation = graphNotation.firstAttribute(
+                location, CustomCreation.customCreateAttributeName) as? MapAttributeNotation
+                ?: return@mapNotNull null
+            val spec = CustomCreationSpec.ofNotation(customCreateNotation)
+            val body = creationBody(location, spec, graphNotation)
+            CustomCreation(
+                location,
+                spec.category,
+                spec.label.ifBlank { location.objectPath.name.value },
+                body)
+        }.sortedWith(compareBy<CustomCreation>(
+            { it.category },
+            { it.label },
+            { it.prototype.asString() }))
+    }
+
+
+    private fun creationBody(
+        prototype: ObjectLocation,
+        spec: CustomCreationSpec,
+        graphNotation: GraphNotation
+    ): ObjectNotation {
+        var body = ObjectNotation.ofParent(prototype.toReference())
+        for (attributeName in spec.defaults) {
+            val value = graphNotation.firstAttribute(prototype, attributeName)
+            body = body.upsertAttribute(attributeName, value)
         }
+        return body
     }
 
 

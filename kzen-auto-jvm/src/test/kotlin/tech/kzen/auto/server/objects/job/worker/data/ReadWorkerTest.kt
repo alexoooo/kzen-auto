@@ -15,6 +15,7 @@ import tech.kzen.auto.common.data.model.DataRef
 import tech.kzen.auto.common.data.model.DataResolveResult
 import tech.kzen.auto.common.data.model.DataRole
 import tech.kzen.auto.common.data.model.DataUnit
+import tech.kzen.auto.common.data.read.CursorAdoptionIdentity
 import tech.kzen.auto.common.data.schema.DataShape
 import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.auto.common.data.schema.LegacyDataShapeBridge
@@ -23,6 +24,9 @@ import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.auto.plugin.model.record.FlatRecordHeader
 import tech.kzen.auto.server.data.DataOpenerLookup
+import tech.kzen.auto.server.data.OperationalDataOpener
+import tech.kzen.auto.server.data.configuredTestDataPart
+import tech.kzen.auto.server.data.read.OperationalDataCursor
 import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.auto.server.objects.job.worker.testJobValue
 import tech.kzen.auto.server.objects.job.worker.testProjection
@@ -110,12 +114,12 @@ class ReadWorkerTest {
     @Test
     fun freshResolutionLogsOneDigestedTeasedManifestEvent() = runBlocking {
         val units = (0 until 12).map {
-            DataUnit.of(DataPart(
+            DataUnit.of(configuredTestDataPart(
                 DataRole.main,
                 DataRef(
                     null, "unit-$it",
                     linkedMapOf(DataRef.sizeKey to "$it", DataRef.modifiedKey to "2026-08-24T12:00:00Z")),
-                null, null))
+                null))
         }
         val source = FakeSource(DataManifest(units))
         val control = CountingControl()
@@ -605,7 +609,7 @@ class ReadWorkerTest {
 
 
     private fun part(id: String, role: String = DataRole.main.name): DataPart {
-        return DataPart(DataRole(role), DataRef(null, id), null, null)
+        return configuredTestDataPart(DataRole(role), DataRef(null, id), null)
     }
 
 
@@ -638,7 +642,7 @@ class ReadWorkerTest {
     private class FakeOpener(
         private val factories: Map<String, () -> DataCursor>,
         private val inspected: Map<String, DataShape?> = emptyMap()
-    ): DataOpener {
+    ): OperationalDataOpener {
         var openCount = 0
         var inspectCount = 0
 
@@ -651,9 +655,17 @@ class ReadWorkerTest {
 
         override suspend fun open(context: DataContext, part: DataPart): DataCursor {
             openCount += 1
-            return factories[part.ref.id]?.invoke()
+            val cursor = factories[part.ref.id]?.invoke()
                 ?: error("No cursor for ${part.ref.id}")
+            val identity = adoptionIdentity(part)
+            return object: OperationalDataCursor, DataCursor by cursor {
+                override val adoptionIdentity = identity
+            }
         }
+
+
+        override fun adoptionIdentity(part: DataPart): CursorAdoptionIdentity =
+            CursorAdoptionIdentity(part.digest(), Digest.ofUtf8("fake-read-policy"))
     }
 
 

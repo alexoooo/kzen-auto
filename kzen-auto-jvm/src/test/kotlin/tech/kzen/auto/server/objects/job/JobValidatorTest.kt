@@ -14,6 +14,7 @@ import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.UpdateInAttributeCommand
 import tech.kzen.lib.common.model.structure.notation.cqrs.UpsertAttributeCommand
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
+import tech.kzen.lib.common.exec.data.type.DataType
 import tech.kzen.lib.common.service.context.GraphCreator
 import tech.kzen.lib.common.service.notation.NotationReducer
 import tech.kzen.lib.platform.ClassName
@@ -116,7 +117,8 @@ class JobValidatorTest {
         assertNotNull(read)
         assertNull(read.errorMessage)
         assertNull(read.typeMetadata)
-        assertEquals(listOf("city", "amount"), read.flatColumns?.values?.map { it.text })
+        val record = assertNotNull(read.contract?.structural as? DataType.Record)
+        assertEquals(listOf("city", "amount"), record.fields.map { it.id.name })
     }
 
 

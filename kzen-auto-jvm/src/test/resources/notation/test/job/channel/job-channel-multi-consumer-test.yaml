@@ -14,9 +14,10 @@ main.channels/keptB:
   is: Channel
 
 main.workers/reader:
-  is: CsvReaderWorker
+  is: FileSourceWorker
   output: main.channels/raw
-  path: build/job-channel-multi-consumer/input.csv
+  files:
+    - location: build/job-channel-multi-consumer/input.csv
 
 main.workers/filterA:
   is: FilterWorker

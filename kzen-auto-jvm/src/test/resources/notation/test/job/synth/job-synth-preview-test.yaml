@@ -8,8 +8,9 @@ main:
   is: Job
 
 main.workers/reader:
-  is: CsvReaderWorker
-  path: build/job-synth-preview/input.csv
+  is: FileSourceWorker
+  files:
+    - location: build/job-synth-preview/input.csv
 
 main.workers/preview:
   is: PreviewWorker

@@ -1,6 +1,7 @@
 package tech.kzen.auto.common.objects.document.custom.model
 
 import tech.kzen.auto.common.objects.document.custom.CustomConventions
+import tech.kzen.auto.common.objects.document.custom.create.CustomCreation
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectName
@@ -17,7 +18,7 @@ import tech.kzen.lib.common.service.notation.NotationConventions
 // suppresses no-op publishes; do NOT "simplify" the Builder into always returning a fresh instance.
 data class CustomViewModel(
     val orderedEntries: List<Entry>,
-    val prototypes: List<ObjectLocation>
+    val prototypes: List<CustomCreation>
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     data class Entry(
@@ -63,7 +64,7 @@ data class CustomViewModel(
 
             // Graph-wide (not document-scoped): a prototype added in another document must show up here, which is
             // why the Builder runs per notation event rather than per this document's own state change.
-            val prototypes = CustomConventions.listPrototypes(graphStructure.graphNotation)
+            val prototypes = CustomConventions.listPrototypes(graphStructure)
 
             val next = CustomViewModel(nextEntries, prototypes)
             val prev = current

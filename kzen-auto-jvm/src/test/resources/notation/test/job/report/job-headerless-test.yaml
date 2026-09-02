@@ -1,6 +1,12 @@
 main:
   is: Job
 
+main.formats/input:
+  is: ConfiguredCsv
+  catalogVisible: false
+  delimiter: ";"
+  header: infer-labels
+
 main.channels/raw:
   is: Channel
   capacity: 8
@@ -10,17 +16,17 @@ main.channels/kept:
   capacity: 8
 
 main.workers/reader:
-  is: CsvReaderWorker
+  is: FileSourceWorker
   output: main.channels/raw
-  path: build/job-headerless/input.csv
-  delimiter: ";"
-  header: false
+  files:
+    - location: build/job-headerless/input.csv
+  format: main.formats/input
 
 main.workers/filter:
   is: FilterWorker
   input: main.channels/raw
   output: main.channels/kept
-  where: 'c0 eq "Lviv"'
+  where: 'c0 == "Lviv"'
 
 main.workers/writer:
   is: CsvWriterWorker

@@ -64,7 +64,7 @@ class RunWorkerTest {
         val missing = validArguments() - "prefix"
         val input = SingleInput(tech.kzen.auto.server.objects.job.value.JobDataValues.lift(DataUnit.of()))
         val output = CapturingOutput()
-        val worker = RunWorker(input, output, child, missing, self, context.calculatedColumnEval)
+        val worker = RunWorker(input, output, child, missing, self, context.jobExpressionCompiler)
 
         // Resolve the exact child signature as the run compiler does, then deliberately continue despite the
         // payloadFlow error to prove the runtime boundary independently enforces Job completeness.
@@ -78,7 +78,7 @@ class RunWorkerTest {
 
     private fun validArguments(): Map<String, String> = linkedMapOf(
         "outputDate" to "attributes[\"date\"]",
-        "flatDate" to "flatDate.text",
+        "flatDate" to "flatDate",
         "prefix" to "prefix")
 
 
@@ -91,7 +91,7 @@ class RunWorkerTest {
         }
         val graph = AutoTestUtils.graphDefinitionAttempt(AutoTestUtils.readNotation()).transitiveSuccessful.graphStructure
         return RunWorker(
-            EmptyInput, EmptyOutput, child, arguments, self, context.calculatedColumnEval)
+            EmptyInput, EmptyOutput, child, arguments, self, context.jobExpressionCompiler)
             .payloadFlow(lane(flatColumns), JobLaneContext(parameters(), graph, RunWorker::class.java.classLoader))
     }
 

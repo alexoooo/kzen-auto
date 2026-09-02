@@ -2,12 +2,13 @@ main:
   is: Job
 
 main.workers/reader:
-  is: CsvReaderWorker
-  path: build/bench/slice/input.csv
+  is: FileSourceWorker
+  files:
+    - location: build/bench/slice/input.csv
 
 main.workers/filter:
   is: FilterWorker
-  where: 'flag eq "yes"'
+  where: 'flag == "yes"'
 
 main.workers/writer:
   is: CsvWriterWorker

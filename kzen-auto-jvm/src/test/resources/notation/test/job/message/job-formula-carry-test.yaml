@@ -8,7 +8,7 @@ main.workers/source:
 main.workers/transform:
   is: FormulaWorker
   formula:
-    total: qty.number * price.number
+    total: 'this["qty"]!! * this["price"]!!'
   payload: 'mapOf("kind" to "sale")'
   carry: all
 

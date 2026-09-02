@@ -5,20 +5,30 @@ import tech.kzen.auto.common.data.api.DataCursor
 import tech.kzen.auto.common.data.model.DataPart
 import tech.kzen.auto.common.data.model.DataRole
 import tech.kzen.auto.common.data.model.DataUnit
+import tech.kzen.auto.common.data.read.CursorAdoptionIdentity
 import tech.kzen.auto.common.data.schema.DataShape
-import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.auto.common.data.schema.LegacyDataShapeBridge
 import tech.kzen.auto.common.paradigm.job.control.JobControl
-import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.auto.server.data.DataOpenerLookup
+import tech.kzen.auto.server.data.read.OperationalDataCursor
 import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.lib.common.exec.BinaryExecutionValue
+import tech.kzen.lib.common.exec.BooleanExecutionValue
+import tech.kzen.lib.common.exec.LongExecutionValue
+import tech.kzen.lib.common.exec.NumberExecutionValue
+import tech.kzen.lib.common.exec.ScalarExecutionValue
+import tech.kzen.lib.common.exec.TextExecutionValue
+import tech.kzen.lib.common.exec.data.type.DataPathSegment
 import tech.kzen.lib.common.exec.data.type.DataType
 import tech.kzen.lib.common.exec.data.type.DataContract
 import tech.kzen.lib.common.exec.data.type.DataField
 import tech.kzen.lib.common.exec.data.type.FieldId
+import tech.kzen.lib.common.exec.data.type.DataTypePath
 import tech.kzen.lib.common.exec.data.type.ScalarKind
 import tech.kzen.lib.common.exec.data.value.DataState
+import tech.kzen.lib.common.exec.data.value.DataNode
 import tech.kzen.lib.common.exec.data.value.DataValue
+import tech.kzen.auto.plugin.model.record.FlatFileRecord
 
 
 /**
@@ -49,11 +59,19 @@ object DataReadCore {
 
 
     class DetachedCursor internal constructor(
-        private var cursor: DataCursor?
+        private var cursor: DataCursor?,
+        private val identity: CursorAdoptionIdentity?
     ): AutoCloseable {
-        internal fun adopt(): DataCursor {
+        internal fun adopt(expectedIdentity: CursorAdoptionIdentity?): DataCursor {
             val adopted = cursor
                 ?: throw IllegalStateException("Detached data cursor was already adopted or closed")
+            if (identity == null || expectedIdentity == null || !identity.compatibleWith(expectedIdentity)) {
+                cursor = null
+                adopted.close()
+                throw IllegalStateException(
+                    "Detached data cursor is incompatible with the current part or read policy: " +
+                        "captured=$identity, current=$expectedIdentity")
+            }
             cursor = null
             return adopted
         }
@@ -77,12 +95,17 @@ object DataReadCore {
 
 
     fun detach(cursor: DataCursor?): DetachedCursor? {
-        return cursor?.let(::DetachedCursor)
+        return cursor?.let {
+            DetachedCursor(it, (it as? OperationalDataCursor)?.adoptionIdentity)
+        }
     }
 
 
-    fun adopt(detached: DetachedCursor?): DataCursor? {
-        return detached?.adopt()
+    fun adopt(
+        detached: DetachedCursor?,
+        expectedIdentity: CursorAdoptionIdentity? = null
+    ): DataCursor? {
+        return detached?.adopt(expectedIdentity)
     }
 
 
@@ -197,9 +220,20 @@ object DataReadCore {
             "Data attributes collide with columns at $origin: ${collisions.joinToString()}"
         }
 
-        val attributeHeader = HeaderListing.ofUnique(unitAttributes.keys.toList())
+        val record = cursorShape.itemType.structural as DataType.Record
+        val attributeFields = unitAttributes.keys.map { name ->
+            DataField(FieldId(name), DataType.Scalar(ScalarKind.Text))
+        }
+        val contract = combineContract(
+            attributeFields.map { ContractField(it, DataContract(it.type), origin) } +
+                contractFields(cursorShape.itemType, record.fields, origin),
+            record.nullable)
         return ShapeBaseline(
-            LegacyDataShapeBridge.tabular(attributeHeader.append(header)),
+            DataShape(
+                contract,
+                cursorShape.provenance,
+                cursorShape.stability,
+                cursorShape.diagnostics),
             origin)
     }
 
@@ -239,30 +273,73 @@ object DataReadCore {
         check(schemaMode == schemaSuperset) { "Unknown schema mode: $schemaMode" }
         val flat = candidates.filter { it.shape.itemType.structural is DataType.Record }
         if (flat.size == candidates.size) {
-            val headers = candidates.map { candidate ->
-                LegacyDataShapeBridge.headerOrNull(candidate.shape)
-                    ?: error("Flat-record shape at ${candidate.origin} is not a record")
-            }
             val attributeNames = linkedSetOf<String>()
             candidates.forEach { attributeNames.addAll(it.attributes?.keys.orEmpty()) }
-            val dataLabels = linkedSetOf<tech.kzen.auto.common.data.schema.HeaderLabel>()
-            headers.forEach { dataLabels.addAll(it.values) }
-            val dataNames = dataLabels.mapTo(linkedSetOf()) { it.text }
+            val dataNames = candidates.flatMap { candidate ->
+                val record = candidate.shape.itemType.structural as DataType.Record
+                record.fields.map { it.id.name }
+            }.toSet()
             val collisions = attributeNames.filter { it in dataNames }
             check(collisions.isEmpty()) {
                 "Data attributes collide with columns across the selected data: ${collisions.joinToString()}"
             }
-            val attributes = HeaderListing.ofUnique(attributeNames.toList())
-            val combined = attributes.append(HeaderListing(dataLabels.toList()))
+
+            val mergedAttributes = attributeNames.map { name ->
+                val id = FieldId(name)
+                ContractField(
+                    DataField(
+                        id,
+                        DataType.Scalar(ScalarKind.Text),
+                        optional = candidates.any { name !in it.attributes.orEmpty() }),
+                    DataContract(DataType.Scalar(ScalarKind.Text)),
+                    candidates.first { name in it.attributes.orEmpty() }.origin)
+            }
+            val mergedData = mutableListOf<MergedField>()
+            var recordNullable: Boolean? = null
+            var recordNullableOrigin: String? = null
+            for (candidate in candidates) {
+                val contract = candidate.shape.itemType
+                val record = contract.structural as DataType.Record
+                val previousNullable = recordNullable
+                check(previousNullable == null || previousNullable == record.nullable) {
+                    "Record nullability mismatch between $recordNullableOrigin ($previousNullable) and " +
+                        "${candidate.origin} (${record.nullable})"
+                }
+                recordNullable = record.nullable
+                recordNullableOrigin = recordNullableOrigin ?: candidate.origin
+                for (field in contractFields(contract, record.fields, candidate.origin)) {
+                    val existing = mergedData.firstOrNull { it.contractField.field.id == field.field.id }
+                    if (existing == null) {
+                        val insertAfter = mergedData.indexOfLast {
+                            it.contractField.field.id.name == field.field.id.name
+                        }
+                        if (insertAfter == -1) {
+                            mergedData.add(MergedField(field, 1))
+                        }
+                        else {
+                            mergedData.add(insertAfter + 1, MergedField(field, 1))
+                        }
+                    }
+                    else {
+                        check(existing.contractField.contract == field.contract) {
+                            "Data field ${field.field.id} contract mismatch between " +
+                                "${existing.contractField.origin} (${existing.contractField.contract}) and " +
+                                "${field.origin} (${field.contract})"
+                        }
+                        existing.presentCount += 1
+                        existing.optional = existing.optional || field.field.optional
+                    }
+                }
+            }
+            val mergedFields = mergedData.map { merged ->
+                val field = merged.contractField.field.copy(
+                    optional = merged.optional || merged.presentCount != candidates.size)
+                merged.contractField.copy(field = field)
+            }
             val firstShape = candidates.first().shape
             return ShapeBaseline(
                 DataShape(
-                    DataContract(DataType.Record(combined.values.map { label ->
-                        DataField(
-                            FieldId(label.text, label.occurrence),
-                            DataType.Scalar(ScalarKind.Text),
-                            optional = true)
-                    })),
+                    combineContract(mergedAttributes + mergedFields, recordNullable == true),
                     firstShape.provenance,
                     firstShape.stability,
                     firstShape.diagnostics),
@@ -297,43 +374,101 @@ object DataReadCore {
             return item
         }
 
-        val record = item.access as? FlatFileRecord
-            ?: throw IllegalStateException(
-                "Tabular cursor at ${effectiveShape.origin} emitted " +
-                    item.access::class.qualifiedName +
-                    "; expected ${FlatFileRecord::class.qualifiedName}")
-        val candidateRecord =
-            if (unitAttributes == null) {
-                record
-            }
-            else {
-                FlatFileRecord.of(unitAttributes.values + record.toList())
-            }
-        val cursorHeader = LegacyDataShapeBridge.headerOrNull(cursorShape)
-            ?: throw IllegalStateException(
-                "Flat-record cursor at ${effectiveShape.origin} has non-record shape ${cursorShape.itemType}")
-        val candidateHeader =
-            if (unitAttributes == null) {
-                cursorHeader
-            }
-            else {
-                HeaderListing.ofUnique(unitAttributes.keys.toList()).append(cursorHeader)
-            }
-        val header = LegacyDataShapeBridge.headerOrNull(effectiveShape.shape)
-            ?: error("Effective flat-record shape is not a record: ${effectiveShape.shape}")
-        if (unitAttributes == null && cursorHeader == header) {
+        if (unitAttributes == null && cursorShape.itemType == effectiveShape.shape.itemType) {
             return item
         }
-        val states = header.values.map { label ->
-            val index = candidateHeader.values.indexOf(label)
-            if (index == -1) DataState.Absent else DataState.Present
+
+        val cursorRecord = cursorShape.itemType.structural as DataType.Record
+        val effectiveRecord = effectiveShape.shape.itemType.structural as? DataType.Record
+            ?: error("Effective flat-record shape is not a record: ${effectiveShape.shape}")
+        val cursorFields = cursorRecord.fields.associateBy { it.id }
+        val cursorFieldNames = cursorFields.keys.mapTo(mutableSetOf()) { it.name }
+        val values = ArrayList<String>(effectiveRecord.fields.size)
+        val states = ArrayList<DataState>(effectiveRecord.fields.size)
+        for (field in effectiveRecord.fields) {
+            val attribute = unitAttributes?.get(field.id.name)
+                .takeIf { field.id.occurrence == 0 && field.id.name !in cursorFieldNames }
+            if (attribute != null) {
+                values.add(attribute)
+                states.add(DataState.Present)
+                continue
+            }
+            if (field.id !in cursorFields) {
+                values.add("")
+                states.add(DataState.Absent)
+                continue
+            }
+            val node = item.access.field(item.root, field.id)
+            val state = item.access.state(node)
+            states.add(state)
+            values.add(if (state == DataState.Present) renderScalar(item, node, field) else "")
         }
-        val projected = FlatFileRecord.of(header.values.mapIndexed { index, label ->
-            val candidateIndex = candidateHeader.values.indexOf(label)
-            if (states[index] == DataState.Absent) "" else candidateRecord.getString(candidateIndex)
-        })
+        val projected = FlatFileRecord.of(values)
         return JobDataValues.projectedRecord(effectiveShape.shape.itemType, projected, states)
     }
+
+
+    private fun renderScalar(
+        item: DataValue,
+        node: DataNode,
+        field: DataField
+    ): String {
+        check(field.type is DataType.Scalar) {
+            "Data field ${field.id} requires scalar materialization, found ${field.type}"
+        }
+        return scalarText(item.access.scalar(node))
+    }
+
+
+    private fun scalarText(value: ScalarExecutionValue): String = when (value) {
+        is TextExecutionValue -> value.value
+        is BooleanExecutionValue -> value.value.toString()
+        is LongExecutionValue -> value.value.toString()
+        is NumberExecutionValue -> value.value.toString()
+        is BinaryExecutionValue -> value.asBase64()
+        else -> throw IllegalStateException("Unsupported scalar materialization: ${value::class.qualifiedName}")
+    }
+
+
+    private fun contractFields(
+        contract: DataContract,
+        fields: List<DataField>,
+        origin: String
+    ): List<ContractField> = fields.map { field ->
+        ContractField(
+            field,
+            contract.child(DataPathSegment.Field(field.id)),
+            origin)
+    }
+
+
+    private fun combineContract(
+        fields: List<ContractField>,
+        nullable: Boolean
+    ): DataContract {
+        val nativeByPath = linkedMapOf<DataTypePath, tech.kzen.lib.common.model.structure.metadata.TypeMetadata>()
+        for (field in fields) {
+            val fieldPrefix = DataTypePath(listOf(DataPathSegment.Field(field.field.id)))
+            for ((path, metadata) in field.contract.nativeByPath) {
+                nativeByPath[DataTypePath(fieldPrefix.segments + path.segments)] = metadata
+            }
+        }
+        return DataContract(DataType.Record(fields.map { it.field }, nullable), nativeByPath)
+    }
+
+
+    private data class ContractField(
+        val field: DataField,
+        val contract: DataContract,
+        val origin: String
+    )
+
+
+    private data class MergedField(
+        val contractField: ContractField,
+        var presentCount: Int,
+        var optional: Boolean = contractField.field.optional
+    )
 
 
     private fun describe(shape: DataShape): String =

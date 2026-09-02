@@ -1,9 +1,14 @@
 main:
   is: Job
 
+main.formats/input:
+  is: ConfiguredCsv
+  catalogVisible: false
+  schema: test/job/run/job-read-schema-source-test.yaml#main
+
 main.sources/input:
   is: FileDataSource
-  schema: test/job/run/job-read-schema-source-test.yaml#main
+  format: main.formats/input
 
 main.workers/read:
   is: ReadWorker

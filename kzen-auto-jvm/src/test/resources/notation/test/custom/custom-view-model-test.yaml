@@ -30,6 +30,34 @@ ViewModelNamedImpl:
   meta:
     name: String
 
+ThirdPartyRecordSchema:
+  is: AuthoredRecordSchema
+  abstract: true
+  fields:
+    amount:
+      class: kotlin.Int
+      of: []
+      nullable: false
+
+NovelCapability:
+  abstract: true
+  class: tech.kzen.auto.server.objects.custom.test.AdhocNamedImpl
+  customCreate:
+    category: "Widgets"
+    label: "Named widget"
+    defaults:
+      - name
+  meta:
+    name: String
+    customCreate: CustomCreationSpec
+
+NovelPrototype:
+  is:
+    - NovelCapability
+    - CustomCreatable
+  abstract: true
+  name: "created"
+
 main.objects/Greeting:
   is: ViewModelPrototype
   named: ViewModelNamedImpl

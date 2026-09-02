@@ -11,6 +11,8 @@ import tech.kzen.auto.server.objects.job.worker.Emitter
 import tech.kzen.auto.server.objects.job.worker.ExpandingTransformWorker
 import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.lib.common.exec.data.value.DataValue
+import tech.kzen.lib.common.exec.data.type.DataType
+import tech.kzen.lib.common.exec.data.type.DataTypePath
 import tech.kzen.auto.server.objects.job.worker.JobLaneDescriptor
 import tech.kzen.auto.server.objects.job.worker.JobLaneAttempt
 import tech.kzen.auto.server.objects.job.worker.JobLaneContext
@@ -134,7 +136,7 @@ class ReadPartWorker(
 
                 val inspected = inspectedShapes?.get(partIndex)
                 if (inspected != null) {
-                    check(activeCursor.shape == inspected) {
+                    check(activeCursor.shape.itemType == inspected.itemType) {
                         "Data shape changed after inspection at unit $completedUnits part $partIndex " +
                             "(${part.ref.display()}): inspected $inspected, opened ${activeCursor.shape}"
                     }
@@ -241,7 +243,10 @@ class ReadPartWorker(
         if (role == state.role && attributes == state.attributes && schemaMode == state.schemaMode) {
             partIndex = state.partIndex
             itemIndex = state.itemIndex
-            cursor = state.adoptCursor()
+            val expectedIdentity = currentUnit
+                ?.let { unit -> DataReadCore.parts(unit, role, completedUnits).getOrNull(partIndex) }
+                ?.let(openerLookup::adoptionIdentity)
+            cursor = state.adoptCursor(expectedIdentity)
             return
         }
 
@@ -260,18 +265,19 @@ class ReadPartWorker(
             return JobLaneAttempt(JobLaneDescriptor.unknown, configError)
         }
 
-        if (input.payloadType == null && input.flatColumns == null) {
+        if (input.contract.structural is DataType.Dynamic) {
             return JobLaneAttempt(JobLaneDescriptor.unknown, null)
         }
 
-        val inputType = input.payloadType
-        val valid = inputType != null &&
+        val inputType = input.contract.nativeByPath[DataTypePath.root]
+        val structural = input.contract.structural
+        val valid = structural is DataType.Opaque && !structural.nullable &&
+            inputType != null &&
             inputType.className == dataUnitClassName &&
             inputType.generics.isEmpty() &&
             !inputType.nullable
         if (!valid) {
-            val description = inputType?.toSimple()
-                ?: "flat columns ${input.flatColumns?.render() ?: "unknown"}"
+            val description = inputType?.toSimple() ?: input.contract.structural.toString()
             return JobLaneAttempt(
                 JobLaneDescriptor.unknown,
                 "ReadPart requires a non-null DataUnit payload, found $description")
@@ -314,10 +320,12 @@ class ReadPartWorker(
         val schemaMode: String,
         private var detachedCursor: DataReadCore.DetachedCursor?
     ): AutoCloseable {
-        fun adoptCursor(): DataCursor? {
+        fun adoptCursor(
+            expectedIdentity: tech.kzen.auto.common.data.read.CursorAdoptionIdentity?
+        ): DataCursor? {
             val detached = detachedCursor
             detachedCursor = null
-            return DataReadCore.adopt(detached)
+            return DataReadCore.adopt(detached, expectedIdentity)
         }
 
 

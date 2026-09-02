@@ -356,16 +356,37 @@ Target:
 
 
 ################################################################
+RecordSchema:
+  abstract: true
+  class: tech.kzen.auto.common.data.schema.AuthoredRecordSchema
+  customCreate:
+    category: "Schemas"
+    label: "Record schema"
+    defaults:
+      - fields
+  meta:
+    fields:
+      is: DataSchemaFieldListSpec
+      editor: DataSchemaFieldsEditor
+    customCreate: CustomCreationSpec
+
+AuthoredRecordSchema:
+  abstract: true
+  is:
+    - RecordSchema
+    - CustomCreatable
+  fields: {}
+
 DataSchema:
   abstract: true
-  is: Document
+  is:
+    - Document
+    - RecordSchema
   class: tech.kzen.auto.server.objects.data.schema.DataSchemaDocument
   title: "Data Schema"
   icon: "material-symbols:storage"
   group: "Customize"
   fields: {}
-  meta:
-    fields: DataSchemaFieldListSpec
 
 DataSchemaFieldListSpec:
   abstract: true
@@ -570,3 +591,23 @@ CustomDocument:
 
 Prototype:
   abstract: true
+  is: CustomCreatable
+  customCreate:
+    category: "Objects"
+    label: ""
+    defaults: []
+  meta:
+    customCreate: CustomCreationSpec
+
+CustomCreatable:
+  abstract: true
+
+CustomCreationSpec:
+  abstract: true
+  class: tech.kzen.auto.common.objects.document.custom.create.CustomCreationSpec
+  meta:
+    ref:
+      by: CustomCreationSpecDefiner
+
+CustomCreationSpecDefiner:
+  class: tech.kzen.auto.common.objects.document.custom.create.CustomCreationSpec$Definer

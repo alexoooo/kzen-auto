@@ -17,6 +17,7 @@ kotlin {
 
 
 dependencies {
+    api(project(":kzen-auto-common"))
     api("tech.kzen.lib:kzen-lib-common-jvm:$kzenLibVersion")
     api("net.openhft:zero-allocation-hashing:$zeroAllocationHashingVersion")
 

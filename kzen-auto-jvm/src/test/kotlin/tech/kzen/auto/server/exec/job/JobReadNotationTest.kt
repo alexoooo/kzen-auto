@@ -49,7 +49,7 @@ class JobReadNotationTest {
         val output = directory.resolve(outputName)
         val lines = listOf("name,value", "alpha,1", "beta,2")
         Files.createDirectories(directory)
-        Files.write(input, lines)
+        Files.writeString(input, lines.joinToString(separator = "\n", postfix = "\n"))
         Files.deleteIfExists(output)
 
         val documentPath = DocumentPath.parse("test/job/run/$documentName")

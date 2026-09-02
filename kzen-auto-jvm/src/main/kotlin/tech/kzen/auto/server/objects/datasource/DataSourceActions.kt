@@ -5,11 +5,10 @@ import kotlinx.serialization.json.Json
 import tech.kzen.auto.common.data.DataSourceConventions
 import tech.kzen.auto.common.data.api.DataSource
 import tech.kzen.auto.common.data.format.FileFormatCatalog
+import tech.kzen.auto.common.data.format.ConfiguredFormatDetail
 import tech.kzen.auto.common.data.model.DataPart
 import tech.kzen.auto.common.paradigm.detached.DetachedAction
 import tech.kzen.auto.server.data.DataOpenerLookup
-import tech.kzen.auto.server.data.FileDataOpener
-import tech.kzen.auto.server.data.ReportDefinitionRepository
 import tech.kzen.auto.server.data.TextEncodingCatalog
 import tech.kzen.auto.server.service.exec.ExecutionGraphErrors
 import tech.kzen.auto.server.service.exec.GraphInstanceCache
@@ -21,6 +20,11 @@ import tech.kzen.lib.common.exec.ExecutionResult
 import tech.kzen.lib.common.exec.ExecutionSuccess
 import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.model.attribute.AttributeName
+import tech.kzen.lib.common.model.attribute.AttributePath
+import tech.kzen.lib.common.service.notation.NotationConventions
+import tech.kzen.auto.common.util.AutoConventions
+import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.service.store.LocalGraphStore
@@ -30,8 +34,7 @@ import tech.kzen.lib.common.service.store.LocalGraphStore
 class DataSourceActions(
     @Service private val graphStore: LocalGraphStore,
     @Service private val graphInstanceCache: GraphInstanceCache,
-    @Service private val openerLookup: DataOpenerLookup,
-    @Service private val definitionRepository: ReportDefinitionRepository
+    @Service private val openerLookup: DataOpenerLookup
 ): DetachedAction {
     override suspend fun execute(request: ExecutionRequest): ExecutionResult {
         val action = request.getSingle(DataSourceConventions.actionParameter)
@@ -68,14 +71,33 @@ class DataSourceActions(
     }
 
 
-    // Scoped to the payload type FileDataOpener resolves among, so the selects offer only formats that could
-    // actually read the chosen files — the same repository query the reader performs, asked ahead of time.
-    private fun fileFormats(): FileFormatCatalog {
-        val formats = definitionRepository
-            .listMetadata()
-            .filter { it.payloadType == FileDataOpener.flatRecordPayloadType }
-            .map { it.toProcessorDefinerDetail() }
-            .sortedBy { it.coordinate.asString() }
+    // Enumerate concrete configured formats from the same graph snapshot used for object construction.
+    private suspend fun fileFormats(): FileFormatCatalog {
+        val graphNotation = graphStore.graphNotation()
+        val marker = ObjectLocation.parse(
+            "auto-jvm/datasource/configured-delimited-format.yaml#ConfiguredRecordFormat")
+        val extensionsPath = AttributePath.ofName(AttributeName("extensions"))
+        val catalogVisiblePath = AttributePath.ofName(AttributeName("catalogVisible"))
+        val formats = graphNotation.objectLocations.mapNotNull { location ->
+            if (location == marker || marker !in graphNotation.inheritanceChain(location)) {
+                return@mapNotNull null
+            }
+            val isAbstract = graphNotation
+                .directAttribute(location, NotationConventions.abstractAttributePath)
+                ?.asBoolean() == true
+            if (isAbstract) return@mapNotNull null
+            val catalogVisible = graphNotation.firstAttribute(location, catalogVisiblePath)?.asBoolean() != false
+            if (!catalogVisible) return@mapNotNull null
+            val label = graphNotation
+                .firstAttribute(location, AutoConventions.titleAttributePath)
+                ?.asString()
+                ?: location.objectPath.name.value
+            val extensions = (graphNotation.firstAttribute(location, extensionsPath) as? ListAttributeNotation)
+                ?.values
+                ?.mapNotNull { it.asString() }
+                .orEmpty()
+            ConfiguredFormatDetail(location.asString(), label, extensions)
+        }.sortedBy { it.reference }
 
         return FileFormatCatalog(formats, TextEncodingCatalog.available())
     }
@@ -95,13 +117,12 @@ class DataSourceActions(
             return ExecutionFailure("Invalid data part: ${e.message ?: e::class.simpleName}")
         }
 
-        val shape = source.staticShape(part.role)
-            ?: try {
-                openerLookup.openerFor(part.ref).inspectShape(context, part)
-            }
-            catch (e: IllegalArgumentException) {
-                return ExecutionFailure(e.message ?: "Unable to inspect data part")
-            }
+        val shape = try {
+            openerLookup.openerFor(part.ref).inspectShape(context, part)
+        }
+        catch (e: IllegalArgumentException) {
+            return ExecutionFailure(e.message ?: "Unable to inspect data part")
+        }
         return shape?.let { ExecutionSuccess.ofValue(it.asExecutionValue()) }
             ?: ExecutionFailure("Data shape is unavailable for ${part.ref.display()}")
     }

@@ -6,9 +6,10 @@ main.channels/data:
   capacity: 8
 
 main.workers/reader:
-  is: CsvReaderWorker
+  is: FileSourceWorker
   output: main.channels/data
-  path: build/job-quoted-roundtrip/input.csv
+  files:
+    - location: build/job-quoted-roundtrip/input.csv
 
 main.workers/writer:
   is: CsvWriterWorker

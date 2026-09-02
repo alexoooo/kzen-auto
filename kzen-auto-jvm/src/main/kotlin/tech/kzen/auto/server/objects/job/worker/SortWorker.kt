@@ -32,7 +32,7 @@ import tech.kzen.lib.common.reflect.Reflect
  * LIVE-EDIT MIGRATION: the accumulated [buffer] is carried forward into the rebuilt instance
  * ([captureMigrationState] / [loadMigrationState]) — like [SummaryWorker]'s builders, it is pure in-memory data
  * with no live handle. This is REQUIRED for correctness, not just an optimization: an unchanged upstream
- * [CsvReaderWorker] RESUMES from its file position across a pause / edit / continue, so a SortWorker that
+ * A file source RESUMES from its cursor across a pause / edit / continue, so a SortWorker that
  * restarted empty would silently drop every pre-pause row from the sort. Carryover is UNCONDITIONAL of the sort
  * spec — the buffered INPUT is valid whatever the ordering, and the rebuilt instance re-sorts it with the edited
  * spec. Capture happens while parked at the pre-receive checkpoint (buffer consistent); [onComplete] itself has

@@ -3,6 +3,7 @@ package tech.kzen.auto.server.objects.datasource
 import tech.kzen.auto.common.data.api.DataContext
 import tech.kzen.auto.common.data.api.DataSource
 import tech.kzen.auto.common.data.file.FileSelectionEntry
+import tech.kzen.auto.common.data.format.ConfiguredRecordFormat
 import tech.kzen.auto.common.data.model.DataDiagnostic
 import tech.kzen.auto.common.data.model.DataManifest
 import tech.kzen.auto.common.data.model.DataPart
@@ -10,12 +11,9 @@ import tech.kzen.auto.common.data.model.DataRef
 import tech.kzen.auto.common.data.model.DataResolveResult
 import tech.kzen.auto.common.data.model.DataRole
 import tech.kzen.auto.common.data.model.DataUnit
-import tech.kzen.auto.common.objects.document.plugin.model.CommonDataEncodingSpec
-import tech.kzen.auto.common.objects.document.plugin.model.CommonPluginCoordinate
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.common.util.data.DataLocationInfo
 import tech.kzen.auto.server.data.FileListingAction
-import tech.kzen.auto.server.objects.data.schema.DataSchemaDocument
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
 
@@ -25,12 +23,10 @@ class FileDataSource(
     private val directory: String,
     private val filter: String,
     files: List<Map<String, String>>,
-    format: String,
-    encoding: String,
+    private val format: ConfiguredRecordFormat,
     private val groupPattern: String,
     private val missing: String,
-    @Service private val fileListingAction: FileListingAction,
-    private val schema: DataSchemaDocument? = null
+    @Service private val fileListingAction: FileListingAction
 ): DataSource {
     companion object {
         const val missingFail = "fail"
@@ -41,8 +37,6 @@ class FileDataSource(
 
 
     private val files = files.map(FileSelectionEntry::ofCollection)
-    private val defaultFormat = format.takeIf { it.isNotBlank() }?.let(CommonPluginCoordinate::ofString)
-    private val defaultEncoding = encoding.takeIf { it.isNotBlank() }?.let(CommonDataEncodingSpec::ofString)
 
 
     override suspend fun resolve(context: DataContext): DataResolveResult {
@@ -61,8 +55,9 @@ class FileDataSource(
                 fileListingAction
                     .scanInfoBlocking(DataLocation.of(directory), filter)
                     .map { null to it }
+                    .sortedBy { it.second.path.asString() }
             }
-        }.sortedBy { it.second.path.asString() }
+        }
 
         val units = mutableListOf<DataUnit>()
         val diagnostics = mutableListOf<DataDiagnostic>()
@@ -77,7 +72,13 @@ class FileDataSource(
             if (info.directory) {
                 throw IllegalStateException("Expected file, found directory: ${info.path.asString()}")
             }
-            units.add(unit(info, entry))
+            units.add(unit(info))
+            if (entry?.format != null || entry?.encoding != null) {
+                diagnostics.add(DataDiagnostic(
+                    DataDiagnostic.unsupported,
+                    "Per-file format and encoding overrides are not supported; the configured format was used for " +
+                        info.path.asString()))
+            }
         }
 
         return DataResolveResult(DataManifest(units), diagnostics)
@@ -85,17 +86,17 @@ class FileDataSource(
 
 
     override fun staticShape(role: DataRole?): tech.kzen.auto.common.data.schema.DataShape? {
-        return if (role == null || role == DataRole.main) schema?.shape() else null
+        return if (role == null || role == DataRole.main) format.declaredShape() else null
     }
 
 
-    private fun unit(info: DataLocationInfo, entry: FileSelectionEntry?): DataUnit {
+    private fun unit(info: DataLocationInfo): DataUnit {
         val ref = DataRef.of(info)
         val part = DataPart(
             DataRole.main,
             ref,
-            entry?.format ?: defaultFormat,
-            entry?.encoding ?: defaultEncoding)
+            tech.kzen.auto.common.data.read.DataContentFingerprint.localOrNull(ref),
+            format.resolvedRead(ref))
         return DataUnit(groupAttributes(info.name), listOf(part))
     }
 

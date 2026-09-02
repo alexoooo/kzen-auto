@@ -1,8 +1,9 @@
 package tech.kzen.auto.server.objects.job.worker.data
 
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
+import tech.kzen.auto.common.data.schema.RecordSchema
+import tech.kzen.auto.common.data.schema.declaredShape
 import tech.kzen.auto.server.data.DataOpenerLookup
-import tech.kzen.auto.server.objects.data.schema.DataSchemaDocument
 import tech.kzen.auto.server.objects.datasource.LogicDataSource
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
@@ -16,7 +17,7 @@ class LogicSourceWorker(
     output: ChannelOutput<DataValue>,
     instructions: ObjectLocation?,
     arguments: List<String>,
-    schema: DataSchemaDocument?,
+    schema: RecordSchema?,
     emit: String,
     role: String,
     attributes: String,
@@ -32,11 +33,11 @@ class LogicSourceWorker(
         internal fun compatibilityKey(
             instructions: ObjectLocation?,
             arguments: List<String>,
-            schema: DataSchemaDocument?
+            schema: RecordSchema?
         ): Digest = Digest.build {
             addDigestibleNullable(instructions)
             arguments.forEach(::addUtf8)
-            addDigestibleNullable(schema?.shape()?.asExecutionValue())
+            addDigestibleNullable(schema?.declaredShape()?.asExecutionValue())
         }
     }
 }

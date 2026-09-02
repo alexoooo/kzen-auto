@@ -1,0 +1,116 @@
+ConfiguredRecordFormat:
+  abstract: true
+  class: tech.kzen.auto.common.data.format.ConfiguredRecordFormat
+  title: "Record format"
+  extensions: []
+  catalogVisible: true
+  meta:
+    title: String
+    extensions:
+      is: List
+      of: String
+    catalogVisible: Boolean
+
+ConfiguredDelimitedFormat:
+  abstract: true
+  is: ConfiguredRecordFormat
+  class: tech.kzen.auto.server.objects.datasource.format.ConfiguredDelimitedFormat
+  customCreate:
+    category: "Formats"
+    label: "Delimited format"
+    defaults:
+      - delimiter
+      - header
+      - schema
+  title: "Delimited"
+  extensions: []
+  catalogVisible: true
+  delimiter: ","
+  quote: '"'
+  escape: double-quote
+  recordSeparator: lf
+  trimming: none
+  header: present
+  charset: UTF-8
+  bom: permit
+  malformed: report
+  unmappable: report
+  nullToken: ""
+  schema: ""
+  meta:
+    delimiter: String
+    quote: String
+    escape:
+      is: String
+      editor: SelectValuesEditor
+      values:
+        double-quote: "Doubled quote"
+        none: "No escape"
+    recordSeparator:
+      is: String
+      editor: SelectValuesEditor
+      values:
+        lf: "LF"
+        crlf: "CRLF"
+    trimming:
+      is: String
+      editor: SelectValuesEditor
+      values:
+        none: "Preserve"
+        unquoted: "Trim unquoted fields"
+    header:
+      is: String
+      editor: SelectValuesEditor
+      values:
+        present: "First record is a header"
+        absent: "No header"
+        infer-labels: "Positional labels"
+    charset:
+      is: String
+      editor: SelectDataEncodingEditor
+    bom:
+      is: String
+      editor: SelectValuesEditor
+      values:
+        permit: "Permit"
+        require: "Require"
+        forbid: "Forbid"
+        detect: "Detect charset"
+    malformed:
+      is: String
+      editor: SelectValuesEditor
+      values:
+        report: "Fail"
+        replace: "Replace"
+    unmappable:
+      is: String
+      editor: SelectValuesEditor
+      values:
+        report: "Fail"
+        replace: "Replace"
+    nullToken: String
+    schema:
+      is: RecordSchema
+      nullable: true
+      by: DataSchemaReference
+      editor: SelectObjectEditor
+    customCreate: CustomCreationSpec
+
+AuthoredDelimitedFormat:
+  abstract: true
+  is:
+    - ConfiguredDelimitedFormat
+    - CustomCreatable
+
+ConfiguredCsv:
+  is: ConfiguredDelimitedFormat
+  title: "CSV"
+  extensions:
+    - csv
+
+ConfiguredTsv:
+  is: ConfiguredDelimitedFormat
+  title: "TSV"
+  extensions:
+    - tsv
+  delimiter: "\t"

@@ -447,17 +447,13 @@ class ReportDocument(
             val dataEncoding = ReportUtils.encodingWithMetadata(inputDataSpec, processorDefinitionMetadata)
             val dataEncodingCommon = with(ReportUtils) { dataEncoding.asCommon() }
             val info = fileListingAction.fileInfoBlocking(inputDataSpec.location)
-            val part = DataPart(
-                DataRole.main,
-                DataRef.of(info),
-                inputDataSpec.processorDefinitionCoordinate,
-                dataEncodingCommon)
+            val dataRef = DataRef.of(info)
 
             val flatDataLocation = FlatDataLocation(
                 info.path, dataEncoding)
 
             val headerListing = columnListingAction.headerListing(
-                part,
+                dataRef,
                 inputDataSpec.processorDefinitionCoordinate,
                 dataEncodingCommon
             ) {

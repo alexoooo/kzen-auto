@@ -341,9 +341,9 @@ object JobReportBenchmark {
         }
 
         Files.newBufferedWriter(output).use { writer ->
-            writer.appendLine("station,min,average,max")
+            writer.append("station,min,average,max\n")
             for ((station, stats) in statistics.toSortedMap()) {
-                writer.appendLine("$station,${stats.min},${stats.average()},${stats.max}")
+                writer.append("$station,${stats.min},${stats.average()},${stats.max}\n")
             }
         }
         return statistics

@@ -40,7 +40,7 @@ main.workers/run:
   instructions: test/job/run/job-per-unit-child-test.yaml#main
   arguments:
     outputDate: 'attributes["date"]'
-    flatDate: flatDate.text
+    flatDate: flatDate
     prefix: prefix
 
 main.workers/outputs:

@@ -7,7 +7,8 @@ import tech.kzen.auto.common.data.model.DataResolveResult
 import tech.kzen.auto.common.data.model.DataRole
 import tech.kzen.auto.common.data.model.DataUnit
 import tech.kzen.auto.common.data.schema.DataShape
-import tech.kzen.auto.server.objects.data.schema.DataSchemaDocument
+import tech.kzen.auto.common.data.schema.RecordSchema
+import tech.kzen.auto.common.data.schema.declaredShape
 import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.lib.common.exec.data.binding.BindingDefinition
 import tech.kzen.lib.common.exec.data.binding.BindingName
@@ -25,7 +26,7 @@ import tech.kzen.lib.common.reflect.Reflect
 class LogicDataSource(
     private val instructions: ObjectLocation?,
     arguments: List<String>,
-    private val schema: DataSchemaDocument? = null
+    private val schema: RecordSchema? = null
 ): DataSource {
     private val arguments = arguments.toList()
 
@@ -78,7 +79,7 @@ class LogicDataSource(
 
 
     override fun staticShape(role: DataRole?): DataShape? {
-        return if (role == null || role == DataRole.main) schema?.shape() else null
+        return if (role == null || role == DataRole.main) schema?.declaredShape() else null
     }
 
 

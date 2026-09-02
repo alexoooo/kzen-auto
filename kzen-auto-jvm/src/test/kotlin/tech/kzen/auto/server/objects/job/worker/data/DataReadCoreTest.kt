@@ -8,6 +8,8 @@ import tech.kzen.auto.common.data.model.DataPart
 import tech.kzen.auto.common.data.model.DataRef
 import tech.kzen.auto.common.data.model.DataRole
 import tech.kzen.auto.common.data.model.DataUnit
+import tech.kzen.auto.common.data.read.CursorAdoptionIdentity
+import tech.kzen.auto.common.data.read.ReadOperationalPolicy
 import tech.kzen.auto.common.data.schema.DataShape
 import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.auto.common.data.schema.LegacyDataShapeBridge
@@ -19,9 +21,20 @@ import tech.kzen.lib.common.exec.data.value.DataState
 import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.lib.common.exec.data.value.DefaultDataAdapterRegistry
 import tech.kzen.lib.common.exec.data.value.LiteralDataValues
+import tech.kzen.lib.common.exec.data.value.recordOf
+import tech.kzen.lib.common.exec.data.type.DataContract
+import tech.kzen.lib.common.exec.data.type.DataField
+import tech.kzen.lib.common.exec.data.type.DataPathSegment
+import tech.kzen.lib.common.exec.data.type.DataType
+import tech.kzen.lib.common.exec.data.type.DataTypePath
+import tech.kzen.lib.common.exec.data.type.FieldId
+import tech.kzen.lib.common.exec.data.type.ScalarKind
 import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.auto.server.data.read.OperationalDataCursor
+import tech.kzen.auto.server.data.configuredTestDataPart
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
+import tech.kzen.lib.common.util.digest.Digest
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
@@ -242,16 +255,25 @@ class DataReadCoreTest {
 
 
     @Test
-    fun tabularMessageRequiresFlatFileRecord() {
-        val shape = LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("value")))
-        val effective = DataReadCore.ShapeBaseline(shape, "unit 5 part 6")
+    fun tabularMessageProjectsAnyValueAccessWithoutFlatteningItsScalarContract() {
+        val amount = DataField(FieldId("amount"), DataType.Scalar(ScalarKind.Integer(64)))
+        val shape = typedShape(amount)
+        val effective = DataReadCore.planShape(listOf(
+            DataReadCore.ShapeCandidate(shape, null, "unit 5 part 6"),
+            DataReadCore.ShapeCandidate(
+                typedShape(DataField(FieldId("note"), DataType.Scalar(ScalarKind.Text))),
+                null,
+                "unit 7 part 8")
+        ), DataReadCore.schemaSuperset)
+        val literal = LiteralDataValues.lift(recordOf("amount" to 42L), shape.itemType)
 
-        val failure = assertFailsWith<IllegalStateException> {
-            DataReadCore.message(
-                shape, effective, LiteralDataValues.lift("not a record"), null)
-        }
-        assertTrue(failure.message.orEmpty().contains("unit 5 part 6"))
-        assertTrue(failure.message.orEmpty().contains(FlatFileRecord::class.qualifiedName!!))
+        val projected = DataReadCore.message(shape, effective, literal, null)
+        val amountNode = projected.access.field(projected.root, amount.id)
+        val noteNode = projected.access.field(projected.root, FieldId("note"))
+
+        assertEquals(42L, projected.access.readLong(amountNode))
+        assertEquals(DataState.Absent, projected.access.state(noteNode))
+        assertEquals(amount.type, projected.access.contract(amountNode).structural)
     }
 
 
@@ -276,6 +298,78 @@ class DataReadCoreTest {
                 .let(JobDataValues::projection)
                 .let(JobDataValues::record)
                 .toList())
+    }
+
+
+    @Test
+    fun supersetPreservesTypedNullableFieldsAndOnlyAddsOptionalPresence() {
+        val amount = DataField(
+            FieldId("amount"),
+            DataType.Scalar(ScalarKind.Decimal, nullable = true))
+        val plan = DataReadCore.planShape(listOf(
+            DataReadCore.ShapeCandidate(typedShape(amount), null, "first"),
+            DataReadCore.ShapeCandidate(
+                typedShape(DataField(FieldId("note"), DataType.Scalar(ScalarKind.Text))),
+                null,
+                "second")
+        ), DataReadCore.schemaSuperset)
+
+        val fields = (plan.shape.itemType.structural as DataType.Record).fields
+        assertEquals(amount.type, fields.single { it.id == amount.id }.type)
+        assertTrue(fields.single { it.id == amount.id }.optional)
+        assertTrue(fields.single { it.id == FieldId("note") }.optional)
+    }
+
+
+    @Test
+    fun supersetPreservesFieldNativeMetadata() {
+        val amount = DataField(FieldId("amount"), DataType.Scalar(ScalarKind.Integer(64)))
+        val fieldPath = DataTypePath(listOf(DataPathSegment.Field(amount.id)))
+        val sourceContract = DataContract(
+            DataType.Record(listOf(amount)),
+            mapOf(fieldPath to TypeMetadata.long))
+        val plan = DataReadCore.planShape(listOf(
+            DataReadCore.ShapeCandidate(typedShape(sourceContract), null, "typed"),
+            DataReadCore.ShapeCandidate(
+                typedShape(DataField(FieldId("note"), DataType.Scalar(ScalarKind.Text))),
+                null,
+                "other")
+        ), DataReadCore.schemaSuperset)
+
+        assertEquals(TypeMetadata.long, plan.shape.itemType.nativeByPath[fieldPath])
+    }
+
+
+    @Test
+    fun supersetRejectsSameFieldWithDifferentNullabilityAndNamesBothContracts() {
+        val nullable = typedShape(DataField(
+            FieldId("amount"), DataType.Scalar(ScalarKind.Decimal, nullable = true)))
+        val required = typedShape(DataField(
+            FieldId("amount"), DataType.Scalar(ScalarKind.Decimal, nullable = false)))
+
+        val failure = assertFailsWith<IllegalStateException> {
+            DataReadCore.planShape(listOf(
+                DataReadCore.ShapeCandidate(nullable, null, "nullable source"),
+                DataReadCore.ShapeCandidate(required, null, "required source")
+            ), DataReadCore.schemaSuperset)
+        }
+
+        assertTrue(failure.message.orEmpty().contains("nullable source"))
+        assertTrue(failure.message.orEmpty().contains("required source"))
+        assertTrue(failure.message.orEmpty().contains("Decimal"))
+    }
+
+
+    @Test
+    fun attributeColumnsPrependTextWithoutReducingTypedDataFields() {
+        val amount = DataField(FieldId("amount"), DataType.Scalar(ScalarKind.Decimal))
+        val effective = DataReadCore.effectiveShape(
+            typedShape(amount), linkedMapOf("group" to "west"), "typed source")
+        val fields = (effective.shape.itemType.structural as DataType.Record).fields
+
+        assertEquals(listOf(FieldId("group"), amount.id), fields.map { it.id })
+        assertEquals(DataType.Scalar(ScalarKind.Text), fields.first().type)
+        assertEquals(amount.type, fields.last().type)
     }
 
 
@@ -325,17 +419,35 @@ class DataReadCoreTest {
     //-----------------------------------------------------------------------------------------------------------------
     @Test
     fun detachedCursorCanBeAdoptedOnlyOnce() {
-        val cursor = TrackingCursor(emptyList(), null)
+        val tracking = TrackingCursor(emptyList(), null)
+        val identity = CursorAdoptionIdentity(Digest.ofUtf8("part"), Digest.ofUtf8("policy"))
+        val cursor = object: OperationalDataCursor, DataCursor by tracking {
+            override val adoptionIdentity = identity
+        }
         val detached = DataReadCore.detach(cursor)
 
-        assertSame(cursor, DataReadCore.adopt(detached))
+        assertSame(cursor, DataReadCore.adopt(detached, identity))
         val second = assertFailsWith<IllegalStateException> {
-            DataReadCore.adopt(detached)
+            DataReadCore.adopt(detached, identity)
         }
         assertTrue(second.message.orEmpty().contains("already adopted or closed"))
 
         detached!!.close()
-        assertFalse(cursor.closed)
+        assertFalse(tracking.closed)
+    }
+
+
+    @Test
+    fun detachedCursorWithoutAdoptionIdentityFailsClosed() {
+        val cursor = TrackingCursor(emptyList(), null)
+        val detached = DataReadCore.detach(cursor)
+
+        val failure = assertFailsWith<IllegalStateException> {
+            DataReadCore.adopt(detached)
+        }
+
+        assertTrue(failure.message.orEmpty().contains("incompatible"))
+        assertTrue(cursor.closed)
     }
 
 
@@ -375,6 +487,32 @@ class DataReadCoreTest {
 
 
     @Test
+    fun detachedConfiguredCursorRejectsOneChangedRunLimitAndCloses() {
+        var closed = false
+        val partIdentity = Digest.ofUtf8("part")
+        val capturedPolicy = ReadOperationalPolicy(maximumFields = 10)
+        val currentPolicy = ReadOperationalPolicy(maximumFields = 11)
+        val cursor = object: OperationalDataCursor {
+            override val adoptionIdentity = CursorAdoptionIdentity(
+                partIdentity, capturedPolicy.digest())
+            override val shape = LegacyDataShapeBridge.runtimeUnknown()
+            override fun hasNext() = false
+            override fun next(): DataValue = error("empty")
+            override fun close() { closed = true }
+        }
+
+        val detached = DataReadCore.detach(cursor)
+        val failure = assertFailsWith<IllegalStateException> {
+            DataReadCore.adopt(detached, CursorAdoptionIdentity(partIdentity, currentPolicy.digest()))
+        }
+
+        assertTrue(closed)
+        assertTrue(failure.message.orEmpty().contains("incompatible"))
+        assertTrue(failure.message.orEmpty().contains("current="))
+    }
+
+
+    @Test
     fun cancellationDuringOffloadedCloseLeavesCursorForSynchronousFallback() = runBlocking {
         val cursor = TrackingCursor(emptyList(), null)
         val cancellingControl = object: JobControl by TrackingControl() {
@@ -396,7 +534,7 @@ class DataReadCoreTest {
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun part(role: String, id: String): DataPart {
-        return DataPart(DataRole(role), DataRef(null, id), null, null)
+        return configuredTestDataPart(DataRole(role), DataRef(null, id), null)
     }
 
 
@@ -440,6 +578,22 @@ class DataReadCoreTest {
         val record = FlatFileRecord.of(*fields)
         record.attachHeader(FlatRecordHeader(shape.itemType))
         return DataValue(record, DataNode(0))
+    }
+
+
+    private fun typedShape(vararg fields: DataField): DataShape {
+        return typedShape(DataContract(DataType.Record(fields.toList())))
+    }
+
+
+    private fun typedShape(contract: DataContract): DataShape {
+        val base = LegacyDataShapeBridge.tabular(
+            HeaderListing.ofUnique((contract.structural as DataType.Record).fields.map { it.id.name }))
+        return DataShape(
+            contract,
+            base.provenance,
+            base.stability,
+            base.diagnostics)
     }
 
 

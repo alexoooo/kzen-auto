@@ -1,9 +1,9 @@
 package tech.kzen.auto.client.objects.document.job.source
 
 import tech.kzen.auto.common.data.model.DataManifest
-import tech.kzen.auto.common.data.schema.DataShape
 import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.auto.common.data.schema.LegacyDataShapeBridge
+import tech.kzen.lib.common.exec.data.shape.DataShapeResult
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import kotlin.test.Test
@@ -34,19 +34,28 @@ class DataSourceShapeStoreTest {
 
 
     @Test
-    fun aggregateIsOrderedTabularUnionOnlyAfterEveryPartSucceeds() {
+    fun aggregatePreservesCompleteShapeOnlyAfterEveryPartSucceeds() {
+        val common = LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("a", "shared")))
         val a = DataSourceShapeStore.PartState(
-            false, LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("a", "shared"))), null)
+            false, DataShapeResult.Observed(common), null)
         val b = DataSourceShapeStore.PartState(
-            false, LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("shared", "b"))), null)
+            false, DataShapeResult.Observed(common), null)
         assertEquals(
-            listOf("a", "shared", "b"),
-            DataSourceShapeStore.aggregate(listOf(a, b))?.values?.map { it.text })
+            DataShapeResult.Observed(common),
+            DataSourceShapeStore.aggregate(listOf(a, b)))
 
         assertNull(DataSourceShapeStore.aggregate(listOf(a.copy(inspecting = true), b)))
         assertNull(DataSourceShapeStore.aggregate(listOf(a.copy(error = "failed"), b)))
-        assertNull(DataSourceShapeStore.aggregate(listOf(
-            a, DataSourceShapeStore.PartState(
-                false, LegacyDataShapeBridge.payload(TypeMetadata.string), null))))
+        assertEquals(
+            DataShapeResult.Unavailable,
+            DataSourceShapeStore.aggregate(listOf(
+                a, DataSourceShapeStore.PartState(
+                    false,
+                    DataShapeResult.Observed(LegacyDataShapeBridge.payload(TypeMetadata.string)),
+                    null))))
+        assertEquals(
+            DataShapeResult.Unavailable,
+            DataSourceShapeStore.aggregate(listOf(
+                a, DataSourceShapeStore.PartState(false, DataShapeResult.Unavailable, null))))
     }
 }

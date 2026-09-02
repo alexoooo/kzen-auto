@@ -49,7 +49,7 @@ import java.nio.file.Path
  * LIVE-EDIT MIGRATION: P4 baseline is RESTART on a live edit (the [WorkerBase] default — no state carried), which
  * is coherent because the scratch path is deterministic per `(runId, stableId)` and runId is migrate-stable, so
  * the rebuilt instance rebuilds the pivot from a resuming upstream reader. Carrying the store forward (like
- * [tech.kzen.auto.server.objects.job.worker.CsvReaderWorker] carries its reader) is a documented later extension.
+ * a configured source carries its cursor) is a documented later extension.
  */
 @Reflect
 class PivotWorker(

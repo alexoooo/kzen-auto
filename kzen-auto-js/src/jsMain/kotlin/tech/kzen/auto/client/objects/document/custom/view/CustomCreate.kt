@@ -17,7 +17,7 @@ import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.select.SelectOption
 import tech.kzen.auto.client.wrap.select.muiAutocompleteField
 import tech.kzen.auto.client.wrap.setState
-import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.auto.common.objects.document.custom.create.CustomCreation
 import web.cssom.*
 
 
@@ -25,13 +25,13 @@ import web.cssom.*
 external interface CustomCreateProps: Props {
     var customState: CustomState
     var viewStore: CustomViewStore
-    var prototypes: List<ObjectLocation>
+    var prototypes: List<CustomCreation>
 }
 
 
 external interface CustomCreateState: State {
     var expanded: Boolean
-    var selectedPrototype: ObjectLocation?
+    var selectedPrototype: CustomCreation?
     var dispatching: Boolean
     var lastError: String?
 }
@@ -73,7 +73,9 @@ class CustomCreate(
 
 
     private fun onPrototypeChange(reference: String) {
-        val match = props.prototypes.firstOrNull { it.toReference().asString() == reference }
+        val match = props.prototypes.firstOrNull {
+            it.prototype.toReference().asString() == reference
+        }
         setState {
             selectedPrototype = match
         }
@@ -192,16 +194,17 @@ class CustomCreate(
 
     private fun ChildrenBuilder.renderTypeSelect() {
         val typeOptions = props.prototypes
-            .map { prototype ->
+            .map { creation ->
                 val option: SelectOption = unsafeJso {
-                    value = prototype.toReference().asString()
-                    label = prototype.objectPath.name.value
+                    value = creation.prototype.toReference().asString()
+                    label = creation.label
+                    group = creation.category
                 }
                 option
             }
             .toTypedArray()
 
-        val selectedReference = state.selectedPrototype?.toReference()?.asString()
+        val selectedReference = state.selectedPrototype?.prototype?.toReference()?.asString()
 
         div {
             css {

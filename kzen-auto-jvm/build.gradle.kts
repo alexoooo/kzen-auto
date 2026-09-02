@@ -240,6 +240,26 @@ tasks.register<JavaExec>("benchJob") {
 }
 
 
+tasks.register<JavaExec>("dataReadCanary") {
+    group = "verification"
+    description = "Run the opt-in configured data-reader acceptance and performance canary"
+    dependsOn(tasks.testClasses)
+    mainClass.set("tech.kzen.auto.server.data.read.canary.DataReadCanary")
+    classpath = sourceSets.test.get().runtimeClasspath
+    workingDir = rootProject.projectDir
+
+    System.getProperties().stringPropertyNames()
+        .filter { it.startsWith("dataReadCanary.") }
+        .forEach { propertyName ->
+            systemProperty(propertyName, System.getProperty(propertyName))
+        }
+
+    maxHeapSize = providers.gradleProperty("dataReadCanaryMaxHeap")
+        .orElse("1g")
+        .get()
+}
+
+
 ksp {
     arg("kzen.reflect.moduleClassName", "tech.kzen.auto.server.codegen.KzenAutoJvmModule")
 }

@@ -16,7 +16,7 @@ main:
       values:
         - yes
   formula:
-    total: "qty * price"
+    total: "qty.text.toBigDecimal() * price.text.toBigDecimal()"
   analysis:
     type: FlatData
     flat:

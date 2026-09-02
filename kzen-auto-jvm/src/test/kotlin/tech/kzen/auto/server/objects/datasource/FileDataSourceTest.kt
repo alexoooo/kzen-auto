@@ -10,13 +10,17 @@ import tech.kzen.auto.common.data.file.FileSelectionEntry
 import tech.kzen.auto.common.data.model.DataDiagnostic
 import tech.kzen.auto.common.data.model.DataRef
 import tech.kzen.auto.common.data.model.DataRole
+import tech.kzen.auto.common.data.read.DelimitedReadConfig
 import tech.kzen.auto.common.data.schema.DataShape
 import tech.kzen.auto.common.data.schema.LegacyDataShapeBridge
 import tech.kzen.auto.common.objects.document.data.schema.DataSchemaFieldListSpec
 import tech.kzen.auto.common.objects.document.data.schema.DataSchemaFieldSpec
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.server.data.FileListingAction
+import tech.kzen.auto.server.data.read.delimited.ConfiguredDelimitedReaderCapability
 import tech.kzen.auto.server.objects.data.schema.DataSchemaDocument
+import tech.kzen.auto.server.objects.datasource.format.ConfiguredDelimitedFormat
+import tech.kzen.auto.server.objects.datasource.format.ConfiguredDelimitedTestFormats
 import tech.kzen.auto.server.service.plugin.HostReportDefinitionRepository
 import java.nio.file.Files
 import java.nio.file.Path
@@ -43,13 +47,13 @@ class FileDataSourceTest {
         directory: String = "",
         filter: String = "",
         files: List<Map<String, String>> = emptyList(),
-        format: String = "",
-        encoding: String = "",
+        format: ConfiguredDelimitedFormat? = null,
         groupPattern: String = "",
         missing: String = FileDataSource.missingFail,
         schema: DataSchemaDocument? = null
     ): FileDataSource = FileDataSource(
-        directory, filter, files, format, encoding, groupPattern, missing, listing, schema)
+        directory, filter, files, format ?: ConfiguredDelimitedTestFormats.csv(schema),
+        groupPattern, missing, listing)
 
     private fun resolve(source: FileDataSource) = runBlocking { source.resolve(DirectContext) }
 
@@ -96,30 +100,42 @@ class FileDataSourceTest {
 
         val result = resolve(source(
             directory = directory.toString(),
-            files = listOf(picked(picked, "Tsv", "ISO-8859-1")),
-            format = "Csv",
-            encoding = "UTF-8"))
+            files = listOf(picked(picked, "Tsv", "ISO-8859-1"))))
         val part = result.manifest.units.single().parts.single()
+        val config = ConfiguredDelimitedReaderCapability.decode(part.resolvedRead.config) as DelimitedReadConfig
 
         assertEquals(canonical(picked), part.ref.id)
-        assertEquals("Tsv", part.format?.asString())
-        assertEquals("ISO-8859-1", part.encoding?.asString())
+        assertEquals(ConfiguredDelimitedReaderCapability.identity, part.resolvedRead.reader)
+        assertEquals("UTF-8", config.characters.charset)
+        assertEquals(1, result.diagnostics.size)
     }
 
 
     @Test
-    fun blankSelectionOverridesFallBackToDefaultsAndBlankDefaultsRemainNull() {
+    fun explicitSelectionPreservesAuthoredOrder() {
+        val directory = Files.createTempDirectory("file-source-explicit-order")
+        val alphabeticFirst = directory.resolve("a.csv").also { it.writeText("a") }
+        val authoredFirst = directory.resolve("z.csv").also { it.writeText("z") }
+
+        val result = resolve(source(files = listOf(
+            picked(authoredFirst),
+            picked(alphabeticFirst))))
+
+        assertEquals(
+            listOf(canonical(authoredFirst), canonical(alphabeticFirst)),
+            result.manifest.units.map { it.parts.single().ref.id })
+    }
+
+
+    @Test
+    fun persistedBlankOverridesCannotChangeTheCanonicalConfiguredRead() {
         val file = Files.createTempFile("file-source-format", ".csv").also { it.writeText("a") }
         val withDefaults = resolve(source(
-            files = listOf(picked(file, "", "")), format = "Csv", encoding = "UTF-8"))
+            files = listOf(picked(file, "", ""))))
             .manifest.units.single().parts.single()
-        assertEquals("Csv", withDefaults.format?.asString())
-        assertEquals("UTF-8", withDefaults.encoding?.asString())
-
-        val inferred = resolve(source(files = listOf(picked(file, "", ""))))
+        val withoutOverrides = resolve(source(files = listOf(picked(file))))
             .manifest.units.single().parts.single()
-        assertNull(inferred.format)
-        assertNull(inferred.encoding)
+        assertEquals(withoutOverrides.resolvedRead, withDefaults.resolvedRead)
     }
 
 

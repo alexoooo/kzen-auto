@@ -94,7 +94,7 @@ class CustomViewModelBuilderTest {
         val notation = AutoTestUtils.readNotation()
 
         val first = update(builder, notation)
-        assertContains(first.prototypes, prototypeLocation)
+        assertContains(first.prototypes.map { it.prototype }, prototypeLocation)
 
         assertSame(first, update(builder, notation))
     }
@@ -108,13 +108,13 @@ class CustomViewModelBuilderTest {
         val baseNotation = AutoTestUtils.readNotation()
 
         val first = update(builder, baseNotation)
-        assertTrue(candidateLocation !in first.prototypes)
+        assertTrue(candidateLocation !in first.prototypes.map { it.prototype })
 
         val second = update(builder, edit(
             baseNotation, candidateLocation, "is", ScalarAttributeNotation("Prototype")))
 
         assertNotSame(first, second)
-        assertContains(second.prototypes, candidateLocation)
+        assertContains(second.prototypes.map { it.prototype }, candidateLocation)
     }
 
 

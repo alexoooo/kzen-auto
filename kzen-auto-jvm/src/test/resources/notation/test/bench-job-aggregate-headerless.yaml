@@ -1,10 +1,16 @@
 main:
   is: Job
 
+main.formats/input:
+  is: ConfiguredCsv
+  catalogVisible: false
+  header: infer-labels
+
 main.workers/reader:
-  is: CsvReaderWorker
-  path: build/bench/agg/input-headerless.csv
-  header: false
+  is: FileSourceWorker
+  files:
+    - location: build/bench/agg/input-headerless.csv
+  format: main.formats/input
 
 main.workers/pivot:
   is: PivotWorker

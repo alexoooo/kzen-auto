@@ -36,8 +36,6 @@ import tech.kzen.auto.common.data.file.FileSelectionBrowserConventions
 import tech.kzen.auto.common.data.file.FileSelectionEntry
 import tech.kzen.auto.common.data.file.FileSelectionSpec
 import tech.kzen.auto.common.data.format.FileFormatCatalog
-import tech.kzen.auto.common.objects.document.plugin.model.CommonDataEncodingSpec
-import tech.kzen.auto.common.objects.document.plugin.model.CommonPluginCoordinate
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.common.util.data.DataLocationInfo
 import tech.kzen.lib.common.model.attribute.AttributeName
@@ -83,8 +81,8 @@ external interface FileSelectionEditorState : State {
     var showDetails: Boolean
     var browserOpen: Boolean
 
-    // Options for the per-file Format / Encoding selects under Details; null until the document's shared
-    // catalogue arrives (see DataFormatStore).
+    // Shared format catalogue passed to the selection table; per-entry overrides are disabled for configured
+    // sources. Null until the document catalogue arrives (see DataFormatStore).
     var formatCatalog: FileFormatCatalog?
 }
 
@@ -429,7 +427,7 @@ class FileSelectionEditor(
      *
      * A `browser: <attribute path>` marker in the attribute's metadata opts into a navigation pair held apart from
      * a source's runtime directory query, so browsing can never turn the last visited folder into a directory scan.
-     * Without the marker — the legacy `MultiFileReaderWorker.paths` case, and any third-party attribute that has
+     * Without the marker — for any third-party attribute that has
      * not opted in — navigation lives in component state and only the selection is written.
      */
     private fun browserPaths(): BrowserPaths? {
@@ -494,30 +492,6 @@ class FileSelectionEditor(
     }
 
 
-    private fun editFormat(index: Int, value: String) {
-        val current = state.selected ?: return
-        if (index !in current.indices) {
-            return
-        }
-        val edited = current.toMutableList()
-        edited[index] = edited[index].copy(
-            format = value.takeIf { it.isNotBlank() }?.let(CommonPluginCoordinate::ofString))
-        // Committed at once, not debounced: picking from a list is a finished decision, unlike the keystrokes
-        // these two used to be.
-        changeSelection(edited, false)
-    }
-
-
-    private fun editEncoding(index: Int, value: String) {
-        val current = state.selected ?: return
-        if (index !in current.indices) {
-            return
-        }
-        val edited = current.toMutableList()
-        edited[index] = edited[index].copy(
-            encoding = value.takeIf { it.isNotBlank() }?.let(CommonDataEncodingSpec::ofString))
-        changeSelection(edited, false)
-    }
 
 
     private fun addAll(locations: List<DataLocation>) {
@@ -742,11 +716,11 @@ class FileSelectionEditor(
             entries = selected
             checked = state.selectedChecked
             showDetails = state.showDetails
-            perEntryFormat = props.attributeName != legacyPathsAttributeName
+            perEntryFormat = false
             formatCatalog = state.formatCatalog
             onCheckedChanged = { next -> setState { selectedChecked = next } }
-            onFormatChanged = { index, value -> editFormat(index, value) }
-            onEncodingChanged = { index, value -> editEncoding(index, value) }
+            onFormatChanged = { _, _ -> }
+            onEncodingChanged = { _, _ -> }
         }
     }
 
@@ -837,8 +811,7 @@ class FileSelectionEditor(
     }
 
 
-    // Report's Details toggle: the full path and the per-file format overrides are what make a row wide, and most
-    // of the time neither is being read.
+    // Report's Details toggle: full paths make rows wide and are usually not being read.
     private fun ChildrenBuilder.renderDetailsToggle() {
         val showing = state.showDetails
 

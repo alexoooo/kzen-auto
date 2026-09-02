@@ -17,6 +17,7 @@ import tech.kzen.auto.common.data.model.DataRef
 import tech.kzen.auto.common.data.model.DataResolveResult
 import tech.kzen.auto.common.data.model.DataRole
 import tech.kzen.auto.common.data.model.DataUnit
+import tech.kzen.auto.common.data.read.CursorAdoptionIdentity
 import tech.kzen.auto.common.data.schema.DataShape
 import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.auto.common.data.schema.LegacyDataShapeBridge
@@ -27,6 +28,9 @@ import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.auto.plugin.model.record.FlatRecordHeader
 import tech.kzen.auto.server.data.DataOpenerLookup
+import tech.kzen.auto.server.data.OperationalDataOpener
+import tech.kzen.auto.server.data.configuredTestDataPart
+import tech.kzen.auto.server.data.read.OperationalDataCursor
 import tech.kzen.auto.server.objects.job.channel.JobChannel
 import tech.kzen.auto.server.objects.job.worker.testJobValue
 import tech.kzen.auto.server.objects.job.worker.testProjection
@@ -36,6 +40,12 @@ import tech.kzen.auto.server.objects.job.worker.JobLaneDescriptor
 import tech.kzen.auto.server.objects.job.worker.JobLaneContext
 import tech.kzen.auto.server.objects.job.worker.definition.WorkerDefinitionResolution
 import tech.kzen.lib.common.exec.data.binding.BindingSchema
+import tech.kzen.lib.common.exec.data.type.DataContract
+import tech.kzen.lib.common.exec.data.type.DataField
+import tech.kzen.lib.common.exec.data.type.DataType
+import tech.kzen.lib.common.exec.data.type.FieldId
+import tech.kzen.lib.common.exec.data.type.ScalarKind
+import tech.kzen.lib.common.exec.data.type.toDataContract
 import tech.kzen.lib.common.exec.data.value.DataNode
 import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.lib.common.exec.data.value.DefaultDataAdapterRegistry
@@ -654,25 +664,26 @@ class ReadPartWorkerTest {
         assertNull(unknown.lane.payloadType)
 
         val dataUnit = TypeMetadata(dataUnitClassName(), emptyList(), false)
-        val valid = worker.payloadFlow(JobLaneDescriptor(dataUnit, HeaderListing.empty), laneContext())
+        val valid = worker.payloadFlow(JobLaneDescriptor(dataUnit.toDataContract()), laneContext())
         assertNull(valid.errorMessage)
         assertNull(valid.lane.payloadType)
         assertNull(valid.lane.flatColumns)
 
         val nullable = worker.payloadFlow(
-            JobLaneDescriptor(
-                TypeMetadata(dataUnit.className, dataUnit.generics, true),
-                HeaderListing.empty),
+            JobLaneDescriptor(TypeMetadata(
+                dataUnit.className, dataUnit.generics, true).toDataContract()),
             laneContext())
         assertContains(nullable.errorMessage!!, "DataUnit?")
 
         val wrong = worker.payloadFlow(
-            JobLaneDescriptor(TypeMetadata.int, HeaderListing.empty), laneContext())
-        assertContains(wrong.errorMessage!!, "Int")
+            JobLaneDescriptor(TypeMetadata.int.toDataContract()), laneContext())
+        assertContains(wrong.errorMessage!!, "Integer")
 
         val flat = worker.payloadFlow(
-            JobLaneDescriptor(null, HeaderListing.ofUnique(listOf("value"))), laneContext())
-        assertContains(flat.errorMessage!!, "flat columns")
+            JobLaneDescriptor(DataContract(DataType.Record(listOf(
+                DataField(FieldId("value"), DataType.Scalar(ScalarKind.Text)))))),
+            laneContext())
+        assertContains(flat.errorMessage!!, "Record")
     }
 
 
@@ -739,7 +750,7 @@ class ReadPartWorkerTest {
 
 
     private fun part(id: String, role: String = DataRole.main.name): DataPart {
-        return DataPart(DataRole(role), DataRef(null, id), null, null)
+        return configuredTestDataPart(DataRole(role), DataRef(null, id), null)
     }
 
 
@@ -786,7 +797,7 @@ class ReadPartWorkerTest {
     private class FakeOpener(
         private val factories: Map<String, () -> DataCursor>,
         private val inspected: Map<String, DataShape?> = emptyMap()
-    ): DataOpener {
+    ): OperationalDataOpener {
         val opened = mutableListOf<String>()
         var inspectCount = 0
 
@@ -799,9 +810,17 @@ class ReadPartWorkerTest {
 
         override suspend fun open(context: DataContext, part: DataPart): DataCursor {
             opened.add(part.ref.id)
-            return factories[part.ref.id]?.invoke()
+            val cursor = factories[part.ref.id]?.invoke()
                 ?: error("No cursor for ${part.ref.id}")
+            val identity = adoptionIdentity(part)
+            return object: OperationalDataCursor, DataCursor by cursor {
+                override val adoptionIdentity = identity
+            }
         }
+
+
+        override fun adoptionIdentity(part: DataPart): CursorAdoptionIdentity =
+            CursorAdoptionIdentity(part.digest(), Digest.ofUtf8("fake-read-policy"))
     }
 
 

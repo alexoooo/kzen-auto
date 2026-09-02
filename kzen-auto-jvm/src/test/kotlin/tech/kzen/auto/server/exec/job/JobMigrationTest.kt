@@ -45,7 +45,7 @@ import kotlin.test.assertTrue
  */
 class JobMigrationTest {
     //-----------------------------------------------------------------------------------------------------------------
-    // Preview-pipeline fixture (shared with JobStateMigrationTest): CsvReaderWorker -> raw channel -> PreviewWorker.
+    // Preview-pipeline fixture (shared with JobStateMigrationTest): file source -> raw channel -> PreviewWorker.
     private val previewDocumentPath = DocumentPath.parse("test/job/migration/job-migration-preview-test.yaml")
     private val previewJobLocation = ObjectLocation(previewDocumentPath, ObjectPath.parse("main"))
     private val previewWorkerLocation = ObjectLocation(previewDocumentPath, ObjectPath.parse("main.workers/preview"))
@@ -298,10 +298,10 @@ class JobMigrationTest {
         Files.createDirectories(path.parent)
         Files.newBufferedWriter(path).use { writer ->
             writer.write("id,name")
-            writer.newLine()
+            writer.append('\n')
             for (i in 0 until rows) {
                 writer.write("$i,n$i")
-                writer.newLine()
+                writer.append('\n')
             }
         }
     }

@@ -91,7 +91,7 @@ class PreviewWorker(
     // sample (header + rolling window + running count) forward into the rebuilt Preview so the view doesn't
     // reset to empty across the edit. The snapshot is an immutable copy (no live handle) — coherent because the
     // Preview accumulates and never re-truncates; over-counts only if the upstream source RESTARTS rather than
-    // resumes (with CsvReaderWorker resuming from position on unchanged config, reader -> preview stays exact).
+    // resumes (with the source resuming from position on unchanged config, source -> preview stays exact).
     override fun captureMigrationState(): Any =
         snapshot()
 

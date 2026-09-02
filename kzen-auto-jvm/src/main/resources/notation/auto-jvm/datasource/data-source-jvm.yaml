@@ -3,11 +3,9 @@ FileDataSourceConfig:
   directory: ""
   filter: ""
   files: []
-  format: ""
-  encoding: ""
+  format: auto-jvm/datasource/configured-delimited-format.yaml#ConfiguredCsv
   groupPattern: ""
   missing: fail
-  schema: ""
 
   # Chooser navigation state, deliberately separate from the runtime `directory` / `filter` query above: browsing
   # must never turn the last visited directory into a directory scan (FileSelectionBrowserConventions).
@@ -26,14 +24,9 @@ FileDataSourceConfig:
         of:
           - String
           - String
-    # Defaults for every file this source reads, each overridable per file in the selection's Details. Blank is
-    # the normal setting: format falls back to extension inference, encoding to the format's own default.
     format:
-      is: String
+      is: ConfiguredRecordFormat
       editor: SelectDataFormatEditor
-    encoding:
-      is: String
-      editor: SelectDataEncodingEditor
     groupPattern: String
     missing:
       is: String
@@ -41,11 +34,6 @@ FileDataSourceConfig:
       values:
         fail: "Fail if a file is missing"
         skip: "Skip the unit"
-    schema:
-      is: DataSchema
-      nullable: true
-      by: DataSchemaReference
-      editor: SelectObjectEditor
 
 
 FileDataSource:

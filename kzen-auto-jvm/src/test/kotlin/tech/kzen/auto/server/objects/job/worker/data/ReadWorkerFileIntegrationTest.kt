@@ -17,18 +17,19 @@ import tech.kzen.auto.common.util.data.DataLocationGroup
 import tech.kzen.auto.plugin.model.PluginCoordinate
 import tech.kzen.auto.plugin.spec.DataEncodingSpec
 import tech.kzen.auto.server.data.DataOpenerLookup
-import tech.kzen.auto.server.data.FileDataOpener
+import tech.kzen.auto.server.data.ConfiguredDataOpener
 import tech.kzen.auto.server.data.FileListingAction
 import tech.kzen.auto.server.data.FlatDataLocation
 import tech.kzen.auto.server.data.SchemaCache
 import tech.kzen.auto.server.objects.datasource.FileDataSource
-import tech.kzen.auto.server.objects.job.worker.CsvReaderWorker
+import tech.kzen.auto.server.objects.datasource.format.ConfiguredDelimitedFormat
+import tech.kzen.auto.server.objects.datasource.format.ConfiguredDelimitedTestFormats
 import tech.kzen.auto.server.objects.job.worker.testJobValue
 import tech.kzen.auto.server.objects.job.worker.testProjection
 import tech.kzen.auto.server.objects.job.worker.testRecord
+import tech.kzen.auto.server.objects.job.worker.compatibility.LegacyCsvSourceWorker
 import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.lib.common.exec.data.value.DataValue
-import tech.kzen.auto.server.objects.job.worker.MultiFileReaderWorker
 import tech.kzen.auto.server.objects.job.worker.definition.WorkerDefinitionResolution
 import tech.kzen.auto.server.objects.report.exec.input.parse.csv.CsvReportDefiner
 import tech.kzen.auto.server.objects.report.exec.input.parse.text.TextReportDefiner
@@ -60,12 +61,35 @@ class ReadWorkerFileIntegrationTest {
     private val repository = HostReportDefinitionRepository(listOf(
         CsvReportDefiner(), TsvReportDefiner(), TextReportDefiner()))
     private val listing = FileListingAction(repository)
-    private val opener = FileDataOpener(
-        repository, SchemaCache(WorkUtils(Files.createTempDirectory("read-worker-file-cache"))))
+    private val opener = ConfiguredDataOpener(
+        SchemaCache(WorkUtils(Files.createTempDirectory("read-worker-file-cache"))))
 
 
     @Test
-    fun matchesLegacyCsvReaderOnRfc4180EdgeCases() = runBlocking {
+    fun nominalCompatibilityReaderUsesConfiguredHeaderlessDelimiter() = runBlocking {
+        withTempDir { directory ->
+            val input = directory.resolve("input.txt").also {
+                it.writeText("alpha;1\nbeta;2\n")
+            }
+            val messages = mutableListOf<DataValue>()
+            LegacyCsvSourceWorker(
+                capturing(messages),
+                input.toString(),
+                ";",
+                false,
+                workerLocation,
+                DataOpenerLookup(opener),
+                listing).run(CountingControl())
+
+            assertEquals(listOf("c0", "c1"),
+                testProjection(messages.first()).header.values.map { it.text })
+            assertEquals(listOf(listOf("alpha", "1"), listOf("beta", "2")), records(messages))
+        }
+    }
+
+
+    @Test
+    fun configuredCsvReaderHandlesRfc4180EdgeCases() = runBlocking {
         withTempDir { directory ->
             val csv = directory.resolve("edge.csv").also {
                 it.writeText(
@@ -73,39 +97,47 @@ class ReadWorkerFileIntegrationTest {
                         "beta,\"line1\nline2\"\r\ngamma,\"quote \"\"inside\"\"\"\r\n")
             }
 
-            val legacy = mutableListOf<DataValue>()
-            CsvReaderWorker(capturing(legacy), csv.toString(), ",", true, workerLocation)
-                .run(CountingControl())
-
             val modern = mutableListOf<DataValue>()
-            readWorker(source(listOf(csv)), capturing(modern)).run(CountingControl())
+            readWorker(source(
+                listOf(csv),
+                format = ConfiguredDelimitedTestFormats.csv(recordSeparator = "crlf")),
+                capturing(modern)).run(CountingControl())
 
-            assertEquals(records(legacy), records(modern))
-            assertEquals(headers(legacy), headers(modern))
+            assertEquals(
+                listOf(
+                    listOf("alpha", "comma, inside"),
+                    listOf("beta", "line1\nline2"),
+                    listOf("gamma", "quote \"inside\"")),
+                records(modern))
+            assertEquals(
+                listOf("name", "note"),
+                headers(modern).distinct().single().values.map { it.text })
         }
     }
 
 
     @Test
-    fun matchesLegacyMultiFileOrderAndHeaderSkipping() = runBlocking {
+    fun configuredReaderPreservesMultiFileOrderAndSkipsEachHeader() = runBlocking {
         withTempDir { directory ->
             val first = directory.resolve("a.csv")
                 .also { it.writeText("city,amount\nLviv,10\nKyiv,20\n") }
             val second = directory.resolve("b.csv")
                 .also { it.writeText("city,amount\nOdesa,30\nDnipro,40\n") }
 
-            val legacy = mutableListOf<DataValue>()
-            MultiFileReaderWorker(
-                capturing(legacy), listOf(first.toString(), second.toString()),
-                ",", true, workerLocation)
-                .run(CountingControl())
-
             val modern = mutableListOf<DataValue>()
             val control = CountingControl()
             readWorker(source(listOf(first, second)), capturing(modern)).run(control)
 
-            assertEquals(records(legacy), records(modern))
-            assertEquals(headers(legacy), headers(modern))
+            assertEquals(
+                listOf(
+                    listOf("Lviv", "10"),
+                    listOf("Kyiv", "20"),
+                    listOf("Odesa", "30"),
+                    listOf("Dnipro", "40")),
+                records(modern))
+            assertEquals(
+                List(4) { listOf("city", "amount") },
+                headers(modern).map { header -> header.values.map { it.text } })
             assertTrue(control.blockingCount >= modern.size)
         }
     }
@@ -175,7 +207,7 @@ class ReadWorkerFileIntegrationTest {
 
 
     @Test
-    fun realFileUnitsEmitInStableLexicalPathOrderWithoutOpening() = runBlocking {
+    fun realFileUnitsEmitInAuthoredExplicitOrderWithoutOpening() = runBlocking {
         withTempDir { directory ->
             val files = listOf("c.csv", "a.csv", "b.csv").mapIndexed { index, name ->
                 directory.resolve(name).also { it.writeText("value\n$index\n") }
@@ -186,7 +218,7 @@ class ReadWorkerFileIntegrationTest {
                 .run(CountingControl())
 
             assertEquals(
-                files.sorted().map {
+                files.map {
                     DataLocation.of(it.toAbsolutePath().normalize().toString()).asString()
                 },
                 messages.map { (JobDataValues.boundary(it) as DataUnit).parts.single().ref.id })
@@ -232,17 +264,21 @@ class ReadWorkerFileIntegrationTest {
     }
 
 
-    private fun source(files: List<Path>, groupPattern: String = ""): FileDataSource {
+    private fun source(
+        files: List<Path>,
+        groupPattern: String = "",
+        format: ConfiguredDelimitedFormat = ConfiguredDelimitedTestFormats.csv()
+    ): FileDataSource {
         return FileDataSource(
             "", "",
             files.map { mapOf(FileSelectionEntry.locationKey to it.toString()) },
-            "", "", groupPattern, FileDataSource.missingFail, listing)
+            format, groupPattern, FileDataSource.missingFail, listing)
     }
 
 
     private fun directorySource(directory: Path): FileDataSource {
         return FileDataSource(
-            directory.toString(), "", emptyList(), "", "", "",
+            directory.toString(), "", emptyList(), ConfiguredDelimitedTestFormats.csv(), "",
             FileDataSource.missingFail, listing)
     }
 

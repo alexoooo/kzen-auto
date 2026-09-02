@@ -11,7 +11,7 @@ main.workers/source:
 
 main.workers/filter:
   is: FilterWorker
-  where: 'value.number > 2'
+  where: 'value > 2'
 
 main.workers/writer:
   is: CsvWriterWorker
