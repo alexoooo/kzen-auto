@@ -9,6 +9,8 @@ import tech.kzen.lib.common.exec.data.type.DataType
 import tech.kzen.lib.common.exec.data.type.FieldId
 import tech.kzen.lib.common.exec.data.type.ScalarKind
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
+import tech.kzen.lib.common.model.attribute.AttributeSegment
+import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
 import tech.kzen.lib.platform.ClassName
 
 
@@ -26,6 +28,13 @@ class AuthoredRecordSchemaDraftTest {
         assertEquals(
             TypeMetadata(ClassName("java.math.BigDecimal"), emptyList(), nullable = true),
             draft.fields.getValue("value").typeMetadata)
+
+        val body = requireNotNull(AuthoredRecordSchemaNotation.body(contract))
+        assertEquals(
+            AuthoredRecordSchemaNotation.prototypeReference,
+            body.map.getValue(AttributeSegment.ofKey("is")).asString())
+        val fields = body.map.getValue(AttributeSegment.ofKey("fields")) as MapAttributeNotation
+        assertEquals(listOf("key", "value"), fields.map.keys.map(AttributeSegment::asKey))
     }
 
 

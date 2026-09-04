@@ -11,6 +11,13 @@ ConfiguredRecordFormat:
       of: String
     catalogVisible: Boolean
 
+AutomaticFormat:
+  is: ConfiguredRecordFormat
+  class: tech.kzen.auto.server.objects.datasource.format.AutomaticFormat
+  title: "Automatic"
+  extensions: []
+  catalogVisible: true
+
 ConfiguredDelimitedFormat:
   abstract: true
   is: ConfiguredRecordFormat
@@ -37,6 +44,11 @@ ConfiguredDelimitedFormat:
   unmappable: report
   nullToken: ""
   schema: ""
+  skipLeadingLines: 0
+  commentPrefix: ""
+  compatibleStructuredFamilies: []
+  automaticDetectionTemplate: false
+  contentCodings: []
   meta:
     delimiter: String
     quote: String
@@ -89,6 +101,15 @@ ConfiguredDelimitedFormat:
         report: "Fail"
         replace: "Replace"
     nullToken: String
+    skipLeadingLines: Int
+    commentPrefix: String
+    compatibleStructuredFamilies:
+      is: List
+      of: String
+    automaticDetectionTemplate: Boolean
+    contentCodings:
+      is: List
+      of: String
     schema:
       is: RecordSchema
       nullable: true
@@ -107,6 +128,9 @@ ConfiguredCsv:
   title: "CSV"
   extensions:
     - csv
+  compatibleStructuredFamilies:
+    - csv
+  automaticDetectionTemplate: true
 
 ConfiguredTsv:
   is: ConfiguredDelimitedFormat
@@ -114,3 +138,66 @@ ConfiguredTsv:
   extensions:
     - tsv
   delimiter: "\t"
+  compatibleStructuredFamilies:
+    - tsv
+  automaticDetectionTemplate: true
+
+ConfiguredSemicolon:
+  is: ConfiguredDelimitedFormat
+  title: "Semicolon-delimited"
+  delimiter: ";"
+  compatibleStructuredFamilies:
+    - csv
+  automaticDetectionTemplate: true
+
+ConfiguredPipe:
+  is: ConfiguredDelimitedFormat
+  title: "Pipe-delimited"
+  delimiter: "|"
+  automaticDetectionTemplate: true
+
+PlainTextFormat:
+  abstract: true
+  is: ConfiguredRecordFormat
+  class: tech.kzen.auto.server.objects.datasource.format.PlainTextFormat
+  title: "Plain text"
+  extensions:
+    - txt
+    - log
+    - md
+  catalogVisible: true
+  charset: UTF-8
+  bom: permit
+  malformed: report
+  unmappable: report
+  contentCodings: []
+  meta:
+    charset:
+      is: String
+      editor: SelectDataEncodingEditor
+    bom:
+      is: String
+      editor: SelectValuesEditor
+      values:
+        permit: "Permit"
+        require: "Require"
+        forbid: "Forbid"
+        detect: "Detect charset"
+    malformed:
+      is: String
+      editor: SelectValuesEditor
+      values:
+        report: "Fail"
+        replace: "Replace"
+    unmappable:
+      is: String
+      editor: SelectValuesEditor
+      values:
+        report: "Fail"
+        replace: "Replace"
+    contentCodings:
+      is: List
+      of: String
+
+PlainText:
+  is: PlainTextFormat

@@ -6,6 +6,9 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
+import tech.kzen.auto.common.data.format.FormatResolutionBasis
+import tech.kzen.auto.common.data.format.FormatResolutionDetail
+import tech.kzen.auto.common.data.format.FormatSelectionKind
 
 
 class DataModelExecutionValueTest {
@@ -45,9 +48,27 @@ class DataModelExecutionValueTest {
             listOf(
                 diagnostic,
                 DataDiagnostic(DataDiagnostic.skipped, "Skipped empty input")
-            )
+            ),
+            listOf(FormatResolutionDetail(
+                sourcedRef,
+                "test/formats.yaml#Csv",
+                "CSV",
+                FormatSelectionKind.Automatic,
+                FormatResolutionBasis.Extension,
+                "The .csv extension was validated",
+                "The delimiter was inferred",
+                DataRole("reference")))
         )
         assertEquals(result, DataResolveResult.ofExecutionValue(result.asExecutionValue()))
+        val detailMap = (result.asExecutionValue() as MapExecutionValue)
+            .requiredList(DataModelKeys.resolutionDetails)
+            .values.single() as MapExecutionValue
+        assertEquals("automatic", detailMap.requiredText("selection"))
+        assertEquals("extension", detailMap.requiredText("basis"))
+
+        val legacy = MapExecutionValue(
+            (result.asExecutionValue() as MapExecutionValue).values - DataModelKeys.resolutionDetails)
+        assertEquals(emptyList(), DataResolveResult.ofExecutionValue(legacy).resolutionDetails)
     }
 
 

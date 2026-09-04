@@ -24,6 +24,12 @@ import tech.kzen.auto.server.data.read.delimited.ConfiguredDelimitedReaderCapabi
 import tech.kzen.auto.plugin.api.data.ReaderCapability
 import tech.kzen.auto.plugin.api.data.ReaderInspectionRequest
 import tech.kzen.auto.plugin.api.data.ReaderOpenRequest
+import tech.kzen.auto.plugin.api.data.ReaderProbeCapability
+import tech.kzen.auto.plugin.api.data.ReaderProbeRequest
+import tech.kzen.auto.plugin.api.data.ReaderProbeResult
+import tech.kzen.auto.plugin.api.data.FormatAuthoringCapability
+import tech.kzen.auto.common.data.format.FormatMaterializationRequest
+import tech.kzen.auto.common.data.format.FormatMaterializationResult
 import tech.kzen.auto.server.data.content.SequentialByteContent
 import tech.kzen.auto.server.data.content.policy.ContentReadControl
 import tech.kzen.auto.server.data.content.provider.DataContentDescriptor
@@ -64,6 +70,39 @@ class ReaderCapabilityRegistryTest {
         assertFailsWith<IllegalArgumentException> {
             ReaderCapabilityRegistry(emptyList()).resolve(
                 ReaderCapabilityIdentity("test", "unknown", "1"))
+        }
+    }
+
+
+    @Test
+    fun optionalProbeIsIndexedByCompatibilityWhileOrdinaryReaderRemainsRunnable() {
+        val probeReader = ProbeReader("probe", "probe-v1")
+        val ordinaryReader = object: ReaderCapability by TestServiceReaderCapability() {}
+        val registry = ReaderCapabilityRegistry(listOf(probeReader, ordinaryReader))
+
+        assertEquals(probeReader, registry.probeFor(probeReader.identity))
+        assertEquals(null, registry.probeFor(ordinaryReader.identity))
+        assertEquals(setOf("probe-v1"), registry.probeCompatibilityIdentities())
+        assertEquals(ordinaryReader, registry.resolve(ordinaryReader.identity))
+    }
+
+
+    @Test
+    fun duplicateProbeCompatibilityFailsEvenWhenReaderIdentitiesDiffer() {
+        assertFailsWith<IllegalStateException> {
+            ReaderCapabilityRegistry(listOf(
+                ProbeReader("first", "shared-probe-v1"),
+                ProbeReader("second", "shared-probe-v1")))
+        }
+    }
+
+
+    @Test
+    fun duplicateAuthoringIdentityFailsEvenWhenReadersDiffer() {
+        assertFailsWith<IllegalStateException> {
+            ReaderCapabilityRegistry(listOf(
+                AuthoringReader("first", "reader-first"),
+                AuthoringReader("second", "reader-second")))
         }
     }
 
@@ -221,6 +260,29 @@ class ReaderCapabilityRegistryTest {
 
         override suspend fun inspect(request: ReaderInspectionRequest): DataShape =
             throw IllegalArgumentException("plugin inspection failed")
+    }
+
+
+    private class ProbeReader(
+        name: String,
+        compatibility: String
+    ): ReaderCapability by TestServiceReaderCapability(), ReaderProbeCapability {
+        override val identity = ReaderCapabilityIdentity("third.party.test", name, compatibility)
+        override val readerCompatibility: String = compatibility
+
+        override suspend fun probe(request: ReaderProbeRequest): ReaderProbeResult = ReaderProbeResult.NoMatch
+    }
+
+
+    private class AuthoringReader(
+        name: String,
+        compatibility: String
+    ): ReaderCapability by TestServiceReaderCapability(), FormatAuthoringCapability {
+        override val identity = ReaderCapabilityIdentity("third.party.test", name, compatibility)
+        override val authoringIdentity: String = "shared-authoring-v1"
+
+        override fun materialize(request: FormatMaterializationRequest): FormatMaterializationResult =
+            error("Not used by duplicate-registration proof")
     }
 
 

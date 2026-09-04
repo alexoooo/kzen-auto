@@ -11,6 +11,7 @@ main:
 
 main.sources/input:
   is: FileDataSource
+  format: auto-jvm/datasource/configured-delimited-format.yaml#ConfiguredCsv
   files:
     - location: build/job-per-unit/input/2026-08-21.csv
     - location: build/job-per-unit/input/2026-08-22.csv

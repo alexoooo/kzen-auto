@@ -1,9 +1,16 @@
 package tech.kzen.auto.server.objects.datasource
 
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import tech.kzen.auto.common.data.api.DataContext
 import tech.kzen.auto.common.data.api.DataSource
 import tech.kzen.auto.common.data.file.FileSelectionEntry
 import tech.kzen.auto.common.data.format.ConfiguredRecordFormat
+import tech.kzen.auto.common.data.format.FormatResolutionRequest
+import tech.kzen.auto.common.data.format.FormatResolutionResult
+import tech.kzen.auto.common.data.format.FormatSelectionKind
+import tech.kzen.auto.common.data.format.detection.NormalizedFormatHints
 import tech.kzen.auto.common.data.model.DataDiagnostic
 import tech.kzen.auto.common.data.model.DataManifest
 import tech.kzen.auto.common.data.model.DataPart
@@ -11,9 +18,14 @@ import tech.kzen.auto.common.data.model.DataRef
 import tech.kzen.auto.common.data.model.DataResolveResult
 import tech.kzen.auto.common.data.model.DataRole
 import tech.kzen.auto.common.data.model.DataUnit
+import tech.kzen.auto.common.data.read.DataContentFingerprint
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.common.util.data.DataLocationInfo
 import tech.kzen.auto.server.data.FileListingAction
+import tech.kzen.auto.server.data.format.SourceFormatResolutionBudget
+import tech.kzen.auto.server.data.format.SourceFormatResolutionBudgetFactory
+import tech.kzen.auto.server.objects.datasource.format.ConfiguredRecordFormatLookup
+import tech.kzen.auto.server.objects.datasource.format.ConfiguredRecordFormatPreflight
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
 
@@ -26,13 +38,21 @@ class FileDataSource(
     private val format: ConfiguredRecordFormat,
     private val groupPattern: String,
     private val missing: String,
-    @Service private val fileListingAction: FileListingAction
-): DataSource {
+    @Service private val fileListingAction: FileListingAction,
+    @Service private val formatLookup: ConfiguredRecordFormatLookup = unavailableFormatLookup,
+    @Service private val resolutionBudgetFactory: SourceFormatResolutionBudgetFactory =
+        SourceFormatResolutionBudgetFactory()
+): FileResolutionDataSource {
     companion object {
         const val missingFail = "fail"
         const val missingSkip = "skip"
 
         private const val groupAttribute = "group"
+        private val unavailableFormatLookup = object: ConfiguredRecordFormatLookup {
+            override suspend fun preflight(reference: String): ConfiguredRecordFormatPreflight {
+                throw IllegalArgumentException("Configured format lookup is unavailable for $reference")
+            }
+        }
     }
 
 
@@ -44,7 +64,77 @@ class FileDataSource(
             "Unknown missing-file policy: $missing"
         }
 
-        val selected = context.blocking {
+        return resolutionBudgetFactory.create().withinDeadline {
+            val sourceFormat = formatLookup.preflight(format)
+            val selected = list(context)
+            val diagnostics = mutableListOf<DataDiagnostic>()
+            val regularFiles = validateSelection(selected, diagnostics)
+            val prepared = prepareOverrides(regularFiles)
+            val sourceBudget = this
+            val resolved = coroutineScope {
+                prepared.map { input ->
+                    async {
+                        resolveInput(context, input, sourceFormat, sourceBudget)
+                    }
+                }.awaitAll()
+            }
+            DataResolveResult(
+                DataManifest(resolved.map(ResolvedInput::unit)),
+                diagnostics,
+                resolved.map { it.resolution.detail })
+        }
+    }
+
+
+    override suspend fun resolveFile(
+        context: DataContext,
+        entry: FileSelectionEntry
+    ): DataResolveResult {
+        return resolutionBudgetFactory.create().withinDeadline {
+            val sourceFormat = formatLookup.preflight(format)
+            val selected = selectedFile(context, entry)
+            require(selected.size == 1) {
+                "Selected file is unavailable or ambiguous: ${entry.location.asString()}"
+            }
+            val diagnostics = mutableListOf<DataDiagnostic>()
+            val regular = validateSelection(selected, diagnostics)
+            require(regular.size == 1) { "Selected file is unavailable: ${entry.location.asString()}" }
+            val prepared = prepareOverrides(listOf(entry to regular.single().second)).single()
+            val resolved = resolveInput(context, prepared, sourceFormat, this)
+            DataResolveResult(
+                DataManifest(listOf(resolved.unit)),
+                diagnostics,
+                listOf(resolved.resolution.detail))
+        }
+    }
+
+
+    private suspend fun selectedFile(
+        context: DataContext,
+        entry: FileSelectionEntry
+    ): List<Pair<FileSelectionEntry?, DataLocationInfo>> {
+        if (files.isNotEmpty()) {
+            require(entry in files) {
+                "The selected file row changed before resolution: ${entry.location.asString()}"
+            }
+            return listOf(entry to context.blocking {
+                fileListingAction.fileInfoBlocking(entry.location)
+            })
+        }
+        return list(context).filter { (_, info) -> info.path == entry.location }
+    }
+
+
+    override fun staticShape(role: DataRole?): tech.kzen.auto.common.data.schema.DataShape? {
+        return if ((role == null || role == DataRole.main) && files.none { it.format != null }) {
+            format.declaredShape()
+        }
+        else null
+    }
+
+
+    private suspend fun list(context: DataContext): List<Pair<FileSelectionEntry?, DataLocationInfo>> {
+        return context.blocking {
             if (files.isNotEmpty()) {
                 files.map { it to fileListingAction.fileInfoBlocking(it.location) }
             }
@@ -58,9 +148,14 @@ class FileDataSource(
                     .sortedBy { it.second.path.asString() }
             }
         }
+    }
 
-        val units = mutableListOf<DataUnit>()
-        val diagnostics = mutableListOf<DataDiagnostic>()
+
+    private fun validateSelection(
+        selected: List<Pair<FileSelectionEntry?, DataLocationInfo>>,
+        diagnostics: MutableList<DataDiagnostic>
+    ): List<Pair<FileSelectionEntry?, DataLocationInfo>> {
+        val regularFiles = mutableListOf<Pair<FileSelectionEntry?, DataLocationInfo>>()
         for ((entry, info) in selected) {
             if (info.isMissing()) {
                 if (missing == missingFail) {
@@ -72,32 +167,84 @@ class FileDataSource(
             if (info.directory) {
                 throw IllegalStateException("Expected file, found directory: ${info.path.asString()}")
             }
-            units.add(unit(info))
-            if (entry?.format != null || entry?.encoding != null) {
-                diagnostics.add(DataDiagnostic(
-                    DataDiagnostic.unsupported,
-                    "Per-file format and encoding overrides are not supported; the configured format was used for " +
-                        info.path.asString()))
-            }
+            regularFiles.add(entry to info)
         }
-
-        return DataResolveResult(DataManifest(units), diagnostics)
+        return regularFiles
     }
 
 
-    override fun staticShape(role: DataRole?): tech.kzen.auto.common.data.schema.DataShape? {
-        return if (role == null || role == DataRole.main) format.declaredShape() else null
+    private suspend fun prepareOverrides(
+        selected: List<Pair<FileSelectionEntry?, DataLocationInfo>>
+    ): List<PreparedInput> {
+        val preflights = mutableMapOf<String, ConfiguredRecordFormatPreflight>()
+        return selected.map { (entry, info) ->
+            val reference = entry?.format?.asString()
+            val preflight = if (reference == null) {
+                null
+            }
+            else {
+                preflights[reference] ?: preflight(reference, info).also {
+                    require(it.selectionKind == FormatSelectionKind.Explicit) {
+                        "Per-file format override '$reference' for ${info.path.asString()} must be concrete"
+                    }
+                    preflights[reference] = it
+                }
+            }
+            PreparedInput(entry, info, preflight)
+        }
     }
 
 
-    private fun unit(info: DataLocationInfo): DataUnit {
+    private suspend fun preflight(
+        reference: String,
+        info: DataLocationInfo
+    ): ConfiguredRecordFormatPreflight {
+        return try {
+            formatLookup.preflight(reference)
+        }
+        catch (failure: IllegalArgumentException) {
+            throw IllegalArgumentException(
+                "Unable to resolve per-file format override '$reference' for ${info.path.asString()}: " +
+                    (failure.message ?: "invalid configured format"),
+                failure)
+        }
+    }
+
+
+    private suspend fun resolveInput(
+        context: DataContext,
+        input: PreparedInput,
+        sourceFormat: ConfiguredRecordFormatPreflight?,
+        sourceBudget: SourceFormatResolutionBudget
+    ): ResolvedInput {
+        val info = input.info
         val ref = DataRef.of(info)
+        val expectedFingerprint = DataContentFingerprint.localOrNull(ref)
+        val request = FormatResolutionRequest(
+            context,
+            ref,
+            expectedFingerprint,
+            hints(info.name),
+            input.entry?.encoding?.asString(),
+            sourceBudget)
+        val resolution = input.formatOverride?.resolve(request)
+            ?: sourceFormat?.resolve(request)
+            ?: format.resolve(request)
+        require(resolution.detail.ref == ref && resolution.detail.role == DataRole.main) {
+            "Format resolution returned mismatched provenance for ${ref.display()}"
+        }
         val part = DataPart(
             DataRole.main,
             ref,
-            tech.kzen.auto.common.data.read.DataContentFingerprint.localOrNull(ref),
-            format.resolvedRead(ref))
-        return DataUnit(groupAttributes(info.name), listOf(part))
+            expectedFingerprint,
+            resolution.resolvedRead)
+        return ResolvedInput(DataUnit(groupAttributes(info.name), listOf(part)), resolution)
+    }
+
+
+    private fun hints(fileName: String): NormalizedFormatHints {
+        val extension = fileName.substringAfterLast('.', "").takeIf(String::isNotEmpty)
+        return NormalizedFormatHints.of(filenameExtension = extension)
     }
 
 
@@ -184,5 +331,18 @@ class FileDataSource(
     private data class Capture(
         val index: Int,
         val name: String?
+    )
+
+
+    private data class PreparedInput(
+        val entry: FileSelectionEntry?,
+        val info: DataLocationInfo,
+        val formatOverride: ConfiguredRecordFormatPreflight?
+    )
+
+
+    private data class ResolvedInput(
+        val unit: DataUnit,
+        val resolution: FormatResolutionResult
     )
 }

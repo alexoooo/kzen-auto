@@ -2,6 +2,7 @@ package tech.kzen.auto.common.data.read
 
 import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.ListExecutionValue
+import tech.kzen.lib.common.exec.LongExecutionValue
 import tech.kzen.lib.common.exec.MapExecutionValue
 import tech.kzen.lib.common.exec.NullExecutionValue
 import tech.kzen.lib.common.exec.TextExecutionValue
@@ -14,10 +15,23 @@ data class DelimitedReadConfig(
     val header: HeaderReadSpec,
     val characters: CharacterDecodingSpec,
     val schema: DataContract?,
-    val typedDecode: TypedDecodePolicy
+    val typedDecode: TypedDecodePolicy,
+    val skipLeadingLines: Int = 0,
+    val commentPrefix: String? = null
 ): ReaderConfig {
+    /** Keeps cached/generated JVM callers from before explicit cleanup controls binary-compatible. */
+    constructor(
+        framing: RecordFramingSpec,
+        dialect: DelimitedDialectSpec,
+        header: HeaderReadSpec,
+        characters: CharacterDecodingSpec,
+        schema: DataContract?,
+        typedDecode: TypedDecodePolicy
+    ): this(framing, dialect, header, characters, schema, typedDecode, 0, null)
+
+
     fun asExecutionValue(): MapExecutionValue {
-        return MapExecutionValue(mapOf(
+        val values = linkedMapOf(
             "framing" to MapExecutionValue(mapOf(
                 "separator" to TextExecutionValue(framing.separator))),
             "dialect" to MapExecutionValue(mapOf(
@@ -42,8 +56,14 @@ data class DelimitedReadConfig(
                     MapExecutionValue(mapOf(
                         "path" to ListExecutionValue(fieldOverride.path.map(::TextExecutionValue)),
                         "nullToken" to nullableText(fieldOverride.nullToken)))
-                })))
-        ))
+                }))))
+        if (skipLeadingLines != 0) {
+            values["skipLeadingLines"] = LongExecutionValue(skipLeadingLines.toLong())
+        }
+        if (commentPrefix != null) {
+            values["commentPrefix"] = TextExecutionValue(commentPrefix)
+        }
+        return MapExecutionValue(values)
     }
 
     private fun nullableText(value: String?): ExecutionValue =

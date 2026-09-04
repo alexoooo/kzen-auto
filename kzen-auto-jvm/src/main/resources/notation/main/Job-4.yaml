@@ -1,0 +1,7 @@
+main:
+  is: Job
+
+main.workers/File:
+  is: FileSourceWorker
+  files:
+    - location: C:/Users/ostro/IdeaProjects/kzen-auto/README.md

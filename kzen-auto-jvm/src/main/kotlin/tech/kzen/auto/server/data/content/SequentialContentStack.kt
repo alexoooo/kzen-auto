@@ -51,7 +51,7 @@ class SequentialContentStack(
                 }
                 val decodedBytes = ContentCodingStack.wrap(handle.bytes, codings, control, ref.display(), part)
                 owner = null
-                return OpenedReaderByteInput(decodedBytes, control)
+                return OpenedReaderByteInput(decodedBytes, control, handle.observedFingerprint)
             }
             catch (failure: Throwable) {
                 closeSuppressing(owner, failure)

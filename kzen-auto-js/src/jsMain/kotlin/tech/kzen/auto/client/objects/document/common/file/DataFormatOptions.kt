@@ -2,6 +2,7 @@ package tech.kzen.auto.client.objects.document.common.file
 
 import js.objects.unsafeJso
 import tech.kzen.auto.client.wrap.select.SelectOption
+import tech.kzen.auto.common.data.format.ConfiguredFormatDetail
 import tech.kzen.auto.common.data.format.FileFormatCatalog
 
 
@@ -11,8 +12,21 @@ import tech.kzen.auto.common.data.format.FileFormatCatalog
  * are explicit parts of the authored snapshot.
  */
 internal object DataFormatOptions {
-    fun formats(catalog: FileFormatCatalog?, current: String): Array<SelectOption> {
-        val known = catalog?.formats.orEmpty().map { format ->
+    fun formats(catalog: FileFormatCatalog?, current: String): Array<SelectOption> =
+        formatOptions(catalog?.formats.orEmpty(), current)
+
+
+    fun entryFormats(catalog: FileFormatCatalog?, current: String): Array<SelectOption> =
+        withDefault(
+            formatOptions(catalog?.formats.orEmpty().filter { it.perFileOverrideAvailable }, current),
+            "Use source format")
+
+
+    private fun formatOptions(
+        formats: List<ConfiguredFormatDetail>,
+        current: String
+    ): Array<SelectOption> {
+        val known = formats.map { format ->
             option(
                 format.reference,
                 format.label,
@@ -26,6 +40,14 @@ internal object DataFormatOptions {
         val known = catalog?.encodings.orEmpty().map { option(it, it, null) }
         return withCurrent(known, current)
     }
+
+
+    fun entryEncodings(catalog: FileFormatCatalog?, current: String): Array<SelectOption> =
+        withDefault(encodings(catalog, current), "Detect encoding")
+
+
+    private fun withDefault(known: Array<SelectOption>, label: String): Array<SelectOption> =
+        arrayOf(option("", label, null), *known)
 
 
     private fun withCurrent(known: List<SelectOption>, current: String): Array<SelectOption> {

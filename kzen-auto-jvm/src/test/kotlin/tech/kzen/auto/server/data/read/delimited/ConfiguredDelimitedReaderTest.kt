@@ -94,6 +94,50 @@ class ConfiguredDelimitedReaderTest {
         }
     }
 
+
+    @Test
+    fun leadingLinesAndCommentsAreAppliedBeforeTheHeader() {
+        val configured = config(
+            null,
+            header = "present",
+            skipLeadingLines = 1,
+            commentPrefix = "#")
+        reader("preamble\n# generated\nname;value\na;1\n# ignored\nb;2", configured).use {
+            assertEquals(listOf("name", "value"),
+                (it.contract.structural as DataType.Record).fields.map { field -> field.id.name })
+            assertEquals(listOf("a", "1"), it.read()!!.backing.toList())
+            assertEquals(listOf("b", "2"), it.read()!!.backing.toList())
+            assertNull(it.read())
+            assertEquals(1, it.skippedLeadingLines)
+            assertEquals(2, it.skippedComments)
+        }
+    }
+
+
+    @Test
+    fun commentPrefixOnlyMatchesAtALogicalRecordBoundary() {
+        val configured = config(textContract(2), commentPrefix = "#")
+        reader("a;#value\n\"#quoted\";x\n## comment\nb;y", configured).use {
+            assertEquals(listOf("a", "#value"), it.read()!!.backing.toList())
+            assertEquals(listOf("#quoted", "x"), it.read()!!.backing.toList())
+            assertEquals(listOf("b", "y"), it.read()!!.backing.toList())
+            assertNull(it.read())
+            assertEquals(1, it.skippedComments)
+        }
+    }
+
+
+    @Test
+    fun emptyHeaderReportsItsOneBasedColumnBeforeFieldConstruction() {
+        val failure = assertFailsWith<DelimitedReadException> {
+            reader("name;;value\na;b;c", config(null, header = "present"))
+        }
+        assertEquals(DelimitedReadException.header, failure.category)
+        assertEquals(1, failure.recordIndex)
+        assertEquals(2, failure.columnIndex)
+        assertTrue(failure.message!!.contains("empty column name"))
+    }
+
     @Test
     fun inferredLabelsKeepFirstRecord() {
         reader("a;b\nc;d", config(null, header = "infer-labels")).use {
@@ -275,14 +319,18 @@ class ConfiguredDelimitedReaderTest {
         header: String = "absent",
         separator: String = "lf",
         nullToken: String? = null,
-        overrides: List<FieldDecodeOverride> = emptyList()
+        overrides: List<FieldDecodeOverride> = emptyList(),
+        skipLeadingLines: Int = 0,
+        commentPrefix: String? = null
     ) = DelimitedReadConfig(
         RecordFramingSpec(separator),
         DelimitedDialectSpec(";", "\"", "double-quote", "empty", "unquoted"),
         HeaderReadSpec(header, "exact-name"),
         CharacterDecodingSpec("UTF-8", "forbid", "report", "report"),
         schema,
-        TypedDecodePolicy(nullToken, "fail-part", overrides))
+        TypedDecodePolicy(nullToken, "fail-part", overrides),
+        skipLeadingLines,
+        commentPrefix)
 
     private fun textContract(width: Int): DataContract = contract(*
         (1..width).map { "field-$it" to scalar(ScalarKind.Text) }.toTypedArray())

@@ -4,6 +4,9 @@ import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import tech.kzen.auto.common.data.format.FormatResolutionBasis
+import tech.kzen.auto.common.data.format.FormatResolutionDetail
+import tech.kzen.auto.common.data.format.FormatSelectionKind
 
 
 class DataModelSerializationTest {
@@ -48,5 +51,32 @@ class DataModelSerializationTest {
     fun valueClassesEncodeAsStrings() {
         assertEquals("\"main\"", Json.encodeToString(DataRole.main))
         assertEquals("\"provider-7\"", Json.encodeToString(DataSourceId("provider-7")))
+    }
+
+
+    @Test
+    fun resolutionDetailsUseStableWireNamesAndRemainLegacyOptional() {
+        val ref = DataRef(null, "/data/input.csv")
+        val result = DataResolveResult(
+            DataManifest(listOf(testDataUnit(ref.id))),
+            emptyList(),
+            listOf(FormatResolutionDetail(
+                ref,
+                "formats.yaml#Csv",
+                "CSV",
+                FormatSelectionKind.Automatic,
+                FormatResolutionBasis.Content,
+                "Comma-delimited records were detected")))
+
+        val encoded = Json.encodeToString(result)
+
+        assertTrue(encoded.contains("\"selection\":\"automatic\""), encoded)
+        assertTrue(encoded.contains("\"basis\":\"content\""), encoded)
+        assertEquals(result, Json.decodeFromString<DataResolveResult>(encoded))
+
+        val legacy = Json.decodeFromString<DataResolveResult>(
+            Json.encodeToString(result.copy(resolutionDetails = emptyList()))
+                .replace(",\"resolutionDetails\":[]", ""))
+        assertEquals(emptyList(), legacy.resolutionDetails)
     }
 }

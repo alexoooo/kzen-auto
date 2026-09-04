@@ -7,6 +7,7 @@ import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.server.data.DataOpenerLookup
 import tech.kzen.auto.server.data.FileListingAction
 import tech.kzen.auto.server.objects.datasource.FileDataSource
+import tech.kzen.auto.server.objects.datasource.format.ConfiguredRecordFormatLookup
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
@@ -29,11 +30,12 @@ class FileSourceWorker(
     selfLocation: ObjectLocation,
     @Service openerLookup: DataOpenerLookup,
     @Service fileListingAction: FileListingAction,
+    @Service formatLookup: ConfiguredRecordFormatLookup,
     schemaMode: String = DataReadCore.schemaSuperset
 ): InlineDataSourceWorker(
     output, emit, role, attributes, selfLocation, openerLookup, schemaMode,
     FileDataSource(
-        directory, filter, files, format, groupPattern, missing, fileListingAction),
+        directory, filter, files, format, groupPattern, missing, fileListingAction, formatLookup),
     compatibilityKey(directory, filter, files, format, groupPattern, missing)
 ) {
     companion object {

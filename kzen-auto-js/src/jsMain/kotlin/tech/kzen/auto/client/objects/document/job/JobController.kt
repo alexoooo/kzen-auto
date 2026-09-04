@@ -23,6 +23,8 @@ import tech.kzen.auto.client.objects.document.job.display.WorkerDisplayManager
 import tech.kzen.auto.client.objects.document.job.display.WorkerDisplayPropsCommon
 import tech.kzen.auto.client.objects.document.job.source.DataFormatStore
 import tech.kzen.auto.client.objects.document.job.source.DataFormatStoreKey
+import tech.kzen.auto.client.objects.document.job.source.file.FileResolutionStore
+import tech.kzen.auto.client.objects.document.job.source.file.FileResolutionStoreKey
 import tech.kzen.auto.client.objects.document.job.source.DataSourceResolveStore
 import tech.kzen.auto.client.objects.document.job.source.DataSourceResolveStoreKey
 import tech.kzen.auto.client.objects.document.job.source.DataSourceShapeStore
@@ -252,6 +254,10 @@ class JobController(
         DataSourceShapeStore(props.restClient)
     }
 
+    private val fileResolutionStore by lazy {
+        FileResolutionStore(props.restClient)
+    }
+
     // Document-wide rather than per-source: the Format / Encoding option lists describe the server's installed
     // definitions, so every File Worker's selects read one fetch.
     private val dataFormatStore by lazy {
@@ -300,6 +306,7 @@ class JobController(
     override fun componentDidMount() {
         dataSourceResolveStore.mount()
         dataSourceShapeStore.mount()
+        fileResolutionStore.mount()
         dataFormatStore.mount()
         props.clientStateGlobal.observe(this)
         insertion()?.subscribe(this)
@@ -311,6 +318,7 @@ class JobController(
         props.clientStateGlobal.unobserve(this)
         dataSourceResolveStore.unmount()
         dataSourceShapeStore.unmount()
+        fileResolutionStore.unmount()
         dataFormatStore.unmount()
     }
 
@@ -352,6 +360,7 @@ class JobController(
         val dataSources = DataSourceConventions.allDataSources(graphStructure.graphNotation).toSet()
         dataSourceResolveStore.retain(dataSources)
         dataSourceShapeStore.retain(dataSources)
+        fileResolutionStore.retainSources(dataSources)
 
         val connections = JobChannelDerivation.derive(graphStructure, documentPath)
             .connections
@@ -744,6 +753,7 @@ class JobController(
 
         contextValue<DocumentBridge?>()?.provide(DataSourceResolveStoreKey, dataSourceResolveStore)
         contextValue<DocumentBridge?>()?.provide(DataSourceShapeStoreKey, dataSourceShapeStore)
+        contextValue<DocumentBridge?>()?.provide(FileResolutionStoreKey, fileResolutionStore)
         contextValue<DocumentBridge?>()?.provide(DataFormatStoreKey, dataFormatStore)
 
         div {

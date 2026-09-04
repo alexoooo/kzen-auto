@@ -40,10 +40,12 @@ external interface FileSelectionTableProps: Props {
     // Null while the catalogue is still in flight (or if it failed): the selects then offer only Default and
     // whatever the row already holds, so an existing override still reads correctly and nothing is lost.
     var formatCatalog: FileFormatCatalog?
+    var resolutionByLocation: Map<DataLocation, FileResolutionPresentation>
 
     var onCheckedChanged: (Set<DataLocation>) -> Unit
     var onFormatChanged: (Int, String) -> Unit
     var onEncodingChanged: (Int, String) -> Unit
+    var renderOverrideEditor: ((ChildrenBuilder, Int, FileSelectionEntry) -> Unit)?
 }
 
 
@@ -175,6 +177,10 @@ class FileSelectionTable(props: FileSelectionTableProps):
 
                 // The full path is what disambiguates same-named files gathered from different folders, but it is
                 // also the longest thing in the table - so it lives under Details, exactly as it does in Report.
+                if (props.perEntryFormat) {
+                    renderResolution(entry, index)
+                }
+
                 if (props.showDetails) {
                     div {
                         css { fontFamily = FontFamily.monospace; fontSize = 0.85.em; color = NamedColor.gray }
@@ -187,13 +193,62 @@ class FileSelectionTable(props: FileSelectionTableProps):
                 val format = entry.format?.asString().orEmpty()
                 val encoding = entry.encoding?.asString().orEmpty()
 
-                td { entrySelect("Format", DataFormatOptions.formats(props.formatCatalog, format), format) {
+                td { entrySelect("Format", DataFormatOptions.entryFormats(props.formatCatalog, format), format) {
                     props.onFormatChanged(index, it)
                 } }
-                td { entrySelect("Encoding", DataFormatOptions.encodings(props.formatCatalog, encoding), encoding) {
+                td { entrySelect(
+                    "Encoding",
+                    DataFormatOptions.entryEncodings(props.formatCatalog, encoding),
+                    encoding
+                ) {
                     props.onEncodingChanged(index, it)
                 } }
             }
+        }
+    }
+
+
+    private fun ChildrenBuilder.renderResolution(entry: FileSelectionEntry, index: Int) {
+        val presentation = props.resolutionByLocation[entry.location] ?: return
+        val accent = when (presentation.status) {
+            FileResolutionPresentation.Status.Loading -> NamedColor.gray
+            FileResolutionPresentation.Status.Resolved -> Color("rgba(0, 0, 0, 0.65)")
+            FileResolutionPresentation.Status.Warning -> Color("#9a6700")
+            FileResolutionPresentation.Status.Failure -> Color("#c62828")
+        }
+
+        div {
+            css { marginTop = 0.2.em; fontSize = 0.85.em; color = accent }
+            +presentation.summary
+            presentation.basis?.let { +" · $it" }
+        }
+
+        if (props.showDetails) {
+            presentation.encoding?.let { encoding ->
+                div {
+                    css { fontSize = 0.8.em; color = NamedColor.gray }
+                    +"Encoding: $encoding"
+                }
+            }
+            presentation.reason?.let { reason ->
+                div {
+                    css { fontSize = 0.8.em; color = NamedColor.gray }
+                    +reason
+                }
+            }
+            presentation.warning?.let { warning ->
+                div {
+                    css { fontSize = 0.8.em; color = Color("#9a6700") }
+                    +warning
+                }
+            }
+            presentation.error?.let { error ->
+                div {
+                    css { fontSize = 0.8.em; color = Color("#c62828") }
+                    +error
+                }
+            }
+            props.renderOverrideEditor?.invoke(this, index, entry)
         }
     }
 

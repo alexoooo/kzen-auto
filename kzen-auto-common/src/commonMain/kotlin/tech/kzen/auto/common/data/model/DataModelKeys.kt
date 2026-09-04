@@ -23,6 +23,7 @@ object DataModelKeys {
     const val parts = "parts"
     const val ref = "ref"
     const val resolvedRead = "resolvedRead"
+    const val resolutionDetails = "resolutionDetails"
     const val role = "role"
     const val source = "source"
     const val type = "type"
@@ -53,6 +54,13 @@ internal fun MapExecutionValue.requiredMap(key: String): MapExecutionValue {
 
 internal fun MapExecutionValue.requiredList(key: String): ListExecutionValue {
     return requiredValue(key) as? ListExecutionValue
+        ?: throw IllegalArgumentException("'$key' must be a list: $this")
+}
+
+
+internal fun MapExecutionValue.optionalList(key: String): ListExecutionValue? {
+    val value = values[key] ?: return null
+    return value as? ListExecutionValue
         ?: throw IllegalArgumentException("'$key' must be a list: $this")
 }
 

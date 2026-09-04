@@ -116,11 +116,13 @@ ExportSpecEditor:
 FileSelectionEditor:
   is: AttributeEditor
   class: tech.kzen.auto.client.objects.document.job.edit.FileSelectionEditor$Wrapper
+  formatOverrideEditorHost: FormatOverrideEditorHost
 
 
 MultiFileInputEditor:
   is: AttributeEditor
   class: tech.kzen.auto.client.objects.document.job.edit.FileSelectionEditor$Wrapper
+  formatOverrideEditorHost: FormatOverrideEditorHost
 
 
 # Data-format selects: one component behind two registrations, offering the formats and text encodings the

@@ -1,0 +1,18 @@
+
+
+FormatOverrideEditorHost:
+  class: tech.kzen.auto.client.objects.document.common.file.format.FormatOverrideEditorHost$Wrapper
+  meta:
+    editors:
+      is: List
+      of: FormatOverrideEditor
+      by: Autowired
+
+
+FormatOverrideEditor:
+  abstract: true
+  class: tech.kzen.auto.client.objects.document.common.file.format.FormatOverrideEditor
+  meta:
+    objectLocation:
+      is: ObjectLocation
+      by: Self

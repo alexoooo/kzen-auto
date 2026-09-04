@@ -1,1 +1,3 @@
 tech.kzen.auto.server.data.read.TestServiceReaderCapability
+tech.kzen.auto.server.objects.datasource.format.TestContributedProbeReaderCapability
+tech.kzen.auto.server.objects.datasource.format.TestContributedEditorReaderCapability

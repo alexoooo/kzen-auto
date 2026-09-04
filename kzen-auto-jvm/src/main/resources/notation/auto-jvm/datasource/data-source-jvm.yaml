@@ -3,7 +3,7 @@ FileDataSourceConfig:
   directory: ""
   filter: ""
   files: []
-  format: auto-jvm/datasource/configured-delimited-format.yaml#ConfiguredCsv
+  format: auto-jvm/datasource/configured-delimited-format.yaml#AutomaticFormat
   groupPattern: ""
   missing: fail
 

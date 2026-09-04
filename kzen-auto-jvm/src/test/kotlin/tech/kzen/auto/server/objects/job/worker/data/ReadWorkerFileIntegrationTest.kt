@@ -6,10 +6,17 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import tech.kzen.auto.common.data.file.FileSelectionEntry
+import tech.kzen.auto.common.data.format.ConfiguredRecordFormat
+import tech.kzen.auto.common.data.format.FormatResolutionBasis
+import tech.kzen.auto.common.data.format.FormatResolutionRequest
+import tech.kzen.auto.common.data.format.FormatResolutionResult
+import tech.kzen.auto.common.data.format.FormatSelectionKind
 import tech.kzen.auto.common.data.model.DataUnit
 import tech.kzen.auto.common.data.schema.DataShape
 import tech.kzen.auto.common.data.schema.LegacyDataShapeBridge
 import tech.kzen.auto.common.data.schema.HeaderListing
+import tech.kzen.auto.common.objects.document.data.schema.DataSchemaFieldListSpec
+import tech.kzen.auto.common.objects.document.data.schema.DataSchemaFieldSpec
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.common.util.data.DataLocation
@@ -22,8 +29,8 @@ import tech.kzen.auto.server.data.FileListingAction
 import tech.kzen.auto.server.data.FlatDataLocation
 import tech.kzen.auto.server.data.SchemaCache
 import tech.kzen.auto.server.objects.datasource.FileDataSource
-import tech.kzen.auto.server.objects.datasource.format.ConfiguredDelimitedFormat
 import tech.kzen.auto.server.objects.datasource.format.ConfiguredDelimitedTestFormats
+import tech.kzen.auto.server.objects.data.schema.DataSchemaDocument
 import tech.kzen.auto.server.objects.job.worker.testJobValue
 import tech.kzen.auto.server.objects.job.worker.testProjection
 import tech.kzen.auto.server.objects.job.worker.testRecord
@@ -43,6 +50,7 @@ import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.location.ObjectReference
 import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.util.digest.Digest
+import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.writeText
@@ -231,7 +239,8 @@ class ReadWorkerFileIntegrationTest {
         withTempDir { directory ->
             val original = directory.resolve("a.csv")
                 .also { it.writeText("value\none\ntwo\nthree\n") }
-            val source = directorySource(directory)
+            val format = CountingAutomaticFormat()
+            val source = directorySource(directory, format)
             val firstMessages = mutableListOf<DataValue>()
             val parked = CompletableDeferred<Unit>()
             val release = CompletableDeferred<Unit>()
@@ -239,6 +248,7 @@ class ReadWorkerFileIntegrationTest {
             val job = launch { first.run(ParkingControl(parked, release)) }
             parked.await()
             val captured = first.captureMigrationState()
+            assertEquals(1, format.resolveCount)
             job.cancelAndJoin()
 
             try {
@@ -256,6 +266,110 @@ class ReadWorkerFileIntegrationTest {
                     listOf(listOf("one"), listOf("two"), listOf("three")),
                     records(firstMessages + resumedMessages),
                     "the captured manifest and cursor exclude files added after the migration cut")
+                assertEquals(
+                    1,
+                    format.resolveCount,
+                    "migration must reuse the captured concrete read spec instead of re-detecting the source")
+            }
+            finally {
+                (captured as AutoCloseable).close()
+            }
+        }
+    }
+
+
+    @Test
+    fun lockedColumnsRejectMissingAndExtraNamesButMapReorderedExactNames() = runBlocking {
+        withTempDir { directory ->
+            val schema = lockedSchema("left", "right")
+            val cases = linkedMapOf(
+                "added" to "left,right,extra\n1,2,3\n",
+                "removed" to "left\n1\n")
+
+            for ((name, content) in cases) {
+                val input = directory.resolve("$name.csv").also { it.writeText(content) }
+                val failure = assertFailsWith<tech.kzen.auto.server.data.read.delimited.DelimitedReadException>(name) {
+                    readWorker(
+                        source(listOf(input), format = ConfiguredDelimitedTestFormats.csv(schema)),
+                        capturing(mutableListOf()))
+                        .run(CountingControl())
+                }
+                assertTrue(failure.message.orEmpty().contains(input.fileName.toString()), failure.message)
+                assertTrue(failure.message.orEmpty().contains("labels"), failure.message)
+            }
+
+            val reordered = directory.resolve("reordered.csv")
+                .also { it.writeText("right,left\n2,1\n") }
+            val values = mutableListOf<DataValue>()
+            readWorker(
+                source(listOf(reordered), format = ConfiguredDelimitedTestFormats.csv(schema)),
+                capturing(values)).run(CountingControl())
+            assertEquals(listOf("left", "right"), headers(values).single().values.map { it.text })
+            assertEquals(listOf(listOf("1", "2")), records(values))
+        }
+    }
+
+
+    @Test
+    fun madeExplicitFormatKeepsItsFrozenDialectAfterSourceContentDrifts() = runBlocking {
+        withTempDir { directory ->
+            val input = directory.resolve("input.csv")
+                .also { it.writeText("name,value\nalpha,1\n") }
+            val explicit = ConfiguredDelimitedTestFormats.csv()
+            val source = source(listOf(input), format = explicit)
+            val before = mutableListOf<DataValue>()
+            readWorker(source, capturing(before)).run(CountingControl())
+            assertEquals(listOf(listOf("alpha", "1")), records(before))
+
+            input.writeText("name;value\n\"beta;inside\";2\n")
+            assertFailsWith<tech.kzen.auto.server.data.read.delimited.DelimitedReadException> {
+                readWorker(source, capturing(mutableListOf())).run(CountingControl())
+            }
+
+            input.writeText("city,amount,note\nToronto,2,new\n")
+            val compatibleDrift = mutableListOf<DataValue>()
+            readWorker(source, capturing(compatibleDrift)).run(CountingControl())
+            assertEquals(listOf("city", "amount", "note"),
+                headers(compatibleDrift).single().values.map { it.text })
+            assertEquals(listOf(listOf("Toronto", "2", "new")), records(compatibleDrift))
+        }
+    }
+
+
+    @Test
+    fun capturedPreLockManifestContinuesWhileFreshResolutionAdoptsTheLockedContract() = runBlocking {
+        withTempDir { directory ->
+            val input = directory.resolve("input.csv")
+                .also { it.writeText("left,right\none,1\ntwo,2\n") }
+            val switching = SwitchingFormat(ConfiguredDelimitedTestFormats.csv())
+            val source = source(listOf(input), format = switching)
+            val beforeLock = mutableListOf<DataValue>()
+            val parked = CompletableDeferred<Unit>()
+            val release = CompletableDeferred<Unit>()
+            val first = readWorker(source, capturing(beforeLock, batchSize = 1))
+            val job = launch { first.run(ParkingControl(parked, release)) }
+            parked.await()
+            val captured = first.captureMigrationState()
+            job.cancelAndJoin()
+
+            switching.delegate = ConfiguredDelimitedTestFormats.csv(lockedSchema("left", "right"))
+            Files.delete(input)
+            input.writeText("renamed,left\n3,three\n")
+
+            try {
+                val resumed = mutableListOf<DataValue>()
+                val migrated = readWorker(source, capturing(resumed, batchSize = 1))
+                migrated.loadMigrationState(captured)
+                migrated.run(CountingControl())
+                assertEquals(
+                    listOf(listOf("one", "1"), listOf("two", "2")),
+                    records(beforeLock + resumed),
+                    "migration must retain the captured pre-lock manifest and open cursor")
+
+                val freshFailure = assertFailsWith<tech.kzen.auto.server.data.read.delimited.DelimitedReadException> {
+                    readWorker(source, capturing(mutableListOf())).run(CountingControl())
+                }
+                assertTrue(freshFailure.message.orEmpty().contains("labels"), freshFailure.message)
             }
             finally {
                 (captured as AutoCloseable).close()
@@ -267,7 +381,7 @@ class ReadWorkerFileIntegrationTest {
     private fun source(
         files: List<Path>,
         groupPattern: String = "",
-        format: ConfiguredDelimitedFormat = ConfiguredDelimitedTestFormats.csv()
+        format: ConfiguredRecordFormat = ConfiguredDelimitedTestFormats.csv()
     ): FileDataSource {
         return FileDataSource(
             "", "",
@@ -276,11 +390,81 @@ class ReadWorkerFileIntegrationTest {
     }
 
 
-    private fun directorySource(directory: Path): FileDataSource {
+    private fun directorySource(
+        directory: Path,
+        format: ConfiguredRecordFormat = ConfiguredDelimitedTestFormats.csv()
+    ): FileDataSource {
         return FileDataSource(
-            directory.toString(), "", emptyList(), ConfiguredDelimitedTestFormats.csv(), "",
+            directory.toString(), "", emptyList(), format, "",
             FileDataSource.missingFail, listing)
     }
+
+
+    private class CountingAutomaticFormat: ConfiguredRecordFormat {
+        private val delegate = ConfiguredDelimitedTestFormats.csv()
+
+        var resolveCount: Int = 0
+            private set
+
+        override val title: String = "Automatic test format"
+        override val extensions: List<String> = emptyList()
+        override val catalogVisible: Boolean = false
+        override val selectionKind: FormatSelectionKind = FormatSelectionKind.Automatic
+        override val automaticDetectionCandidate: Boolean = false
+
+
+        override suspend fun resolve(request: FormatResolutionRequest): FormatResolutionResult {
+            resolveCount += 1
+            val resolved = delegate.resolve(request)
+            return resolved.copy(detail = resolved.detail.copy(
+                concreteFormatReference = "test/configured-format.yaml#ConfiguredCsv",
+                displayLabel = delegate.title,
+                selection = FormatSelectionKind.Automatic,
+                basis = FormatResolutionBasis.Content,
+                reason = "CSV was detected from content"))
+        }
+
+
+        @Suppress("OVERRIDE_DEPRECATION")
+        override fun resolvedRead(ref: tech.kzen.auto.common.data.model.DataRef) = delegate.resolvedRead(ref)
+
+
+        override fun declaredShape(): DataShape? = null
+
+
+        override fun digest(sink: Digest.Sink) {
+            sink.addUtf8(title)
+        }
+    }
+
+
+    private class SwitchingFormat(
+        var delegate: ConfiguredRecordFormat
+    ): ConfiguredRecordFormat {
+        override val title: String get() = delegate.title
+        override val extensions: List<String> get() = delegate.extensions
+        override val catalogVisible: Boolean get() = delegate.catalogVisible
+        override val automaticDetectionCandidate: Boolean get() = delegate.automaticDetectionCandidate
+        override val authoringCapabilityIdentity: String? get() = delegate.authoringCapabilityIdentity
+        override val overrideEditorReference: String? get() = delegate.overrideEditorReference
+        override val columnsLocked: Boolean get() = delegate.columnsLocked
+
+        override suspend fun resolve(request: FormatResolutionRequest): FormatResolutionResult =
+            delegate.resolve(request)
+
+        @Suppress("OVERRIDE_DEPRECATION")
+        override fun resolvedRead(ref: tech.kzen.auto.common.data.model.DataRef) = delegate.resolvedRead(ref)
+
+        override fun declaredShape(): DataShape? = delegate.declaredShape()
+
+        override fun digest(sink: Digest.Sink) = delegate.digest(sink)
+    }
+
+
+    private fun lockedSchema(vararg fields: String): DataSchemaDocument = DataSchemaDocument(
+        DataSchemaFieldListSpec(linkedMapOf(*fields.map { name ->
+            name to DataSchemaFieldSpec(TypeMetadata.string)
+        }.toTypedArray())))
 
 
     private fun readWorker(

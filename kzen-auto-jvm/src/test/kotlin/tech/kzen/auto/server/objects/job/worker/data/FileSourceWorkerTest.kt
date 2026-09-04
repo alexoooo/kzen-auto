@@ -17,6 +17,7 @@ import tech.kzen.auto.server.data.SchemaCache
 import tech.kzen.auto.server.objects.data.schema.DataSchemaDocument
 import tech.kzen.auto.server.objects.datasource.FileDataSource
 import tech.kzen.auto.server.objects.datasource.format.ConfiguredDelimitedTestFormats
+import tech.kzen.auto.server.objects.datasource.format.ConfiguredRecordFormatLookup
 import tech.kzen.auto.server.objects.job.worker.testJobValue
 import tech.kzen.auto.server.objects.job.worker.testProjection
 import tech.kzen.auto.server.objects.job.worker.testRecord
@@ -65,7 +66,8 @@ class FileSourceWorkerTest {
             val format = ConfiguredDelimitedTestFormats.csv()
             FileSourceWorker(
                 capturing(directMessages), "", "", files, format, "(?<year>\\d{4})", "fail",
-                ReadWorker.emitItems, "", ReadWorker.attributesColumns, workerLocation, opener, listing)
+                ReadWorker.emitItems, "", ReadWorker.attributesColumns, workerLocation, opener, listing,
+                missingFormatLookup)
                 .run(DirectControl)
 
             val source = FileDataSource(
@@ -200,5 +202,12 @@ class FileSourceWorkerTest {
         ) {}
         override suspend fun host(instructions: ObjectLocation, input: Any?) =
             error("File reader hosts no child")
+    }
+
+
+    companion object {
+        private val missingFormatLookup = ConfiguredRecordFormatLookup { reference ->
+            error("Unexpected per-file format lookup: $reference")
+        }
     }
 }

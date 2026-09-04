@@ -19,10 +19,18 @@ import tech.kzen.auto.client.objects.document.common.edit.documentEditActivity
 import tech.kzen.auto.client.objects.document.common.file.FileBrowser
 import tech.kzen.auto.client.objects.document.common.file.FileBrowserToggleChannel
 import tech.kzen.auto.client.objects.document.common.file.FileBrowserToggleKey
+import tech.kzen.auto.client.objects.document.common.file.FileResolutionPresentation
 import tech.kzen.auto.client.objects.document.common.file.FileSelectionTable
 import tech.kzen.auto.client.objects.document.common.file.fileBrowserToggle
+import tech.kzen.auto.client.objects.document.common.file.format.FormatOverrideEditorHost
+import tech.kzen.auto.client.objects.document.common.file.format.FormatOverrideTransition
+import tech.kzen.auto.client.objects.document.common.file.format.RestFormatMaterializationClient
 import tech.kzen.auto.client.objects.document.job.source.DataFormatStore
 import tech.kzen.auto.client.objects.document.job.source.DataFormatStoreKey
+import tech.kzen.auto.client.objects.document.job.source.DataSourceShapeStore
+import tech.kzen.auto.client.objects.document.job.source.DataSourceShapeStoreKey
+import tech.kzen.auto.client.objects.document.job.source.file.FileResolutionStore
+import tech.kzen.auto.client.objects.document.job.source.file.FileResolutionStoreKey
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.util.async
@@ -36,12 +44,18 @@ import tech.kzen.auto.common.data.file.FileSelectionBrowserConventions
 import tech.kzen.auto.common.data.file.FileSelectionEntry
 import tech.kzen.auto.common.data.file.FileSelectionSpec
 import tech.kzen.auto.common.data.format.FileFormatCatalog
+import tech.kzen.auto.common.data.format.FormatMaterializationActionRequest
+import tech.kzen.auto.common.data.format.FormatMaterializationIntent
+import tech.kzen.auto.common.objects.document.plugin.model.CommonDataEncodingSpec
+import tech.kzen.auto.common.objects.document.plugin.model.CommonPluginCoordinate
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.common.util.data.DataLocationInfo
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.model.location.ObjectReference
+import tech.kzen.lib.common.model.location.ObjectReferenceHost
 import tech.kzen.lib.common.model.structure.notation.AttributeNotation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
@@ -59,6 +73,7 @@ import web.cssom.*
 
 external interface FileSelectionEditorProps : AttributeEditorProps {
     var restClient: ClientRestApi
+    var formatOverrideEditorHost: FormatOverrideEditorHost.Wrapper
 }
 
 
@@ -81,9 +96,11 @@ external interface FileSelectionEditorState : State {
     var showDetails: Boolean
     var browserOpen: Boolean
 
-    // Shared format catalogue passed to the selection table; per-entry overrides are disabled for configured
-    // sources. Null until the document catalogue arrives (see DataFormatStore).
+    // Null until the document format catalogue arrives (see DataFormatStore).
     var formatCatalog: FileFormatCatalog?
+    var fileResolutions: Map<DataLocation, FileResolutionPresentation>
+    var resolutions: Map<DataLocation, FileResolutionStore.Resolution>
+    var shapeRevision: Int
 }
 
 
@@ -108,10 +125,13 @@ class FileSelectionEditor(
     RComponent<FileSelectionEditorProps, FileSelectionEditorState>(props),
     LocalGraphStore.Observer,
     FileBrowserToggleChannel.Observer,
-    DataFormatStore.Observer
+    DataFormatStore.Observer,
+    FileResolutionStore.Observer,
+    DataSourceShapeStore.GlobalObserver
 {
     companion object {
         private val legacyPathsAttributeName = AttributeName("paths")
+        private val formatAttributePath = AttributePath.ofName(AttributeName("format"))
         private val toggleSelected = Color("#e0e0e0")
         private val separatorColor = Color("#c3c3c3")
         private val errorColor = Color("#c62828")
@@ -192,6 +212,7 @@ class FileSelectionEditor(
     @Reflect
     class Wrapper(
         objectLocation: ObjectLocation,
+        private val formatOverrideEditorHost: FormatOverrideEditorHost.Wrapper,
         @Service private val clientStateGlobal: ClientStateGlobal,
         @Service private val mirroredGraphStore: MirroredGraphStore,
         @Service private val restClient: ClientRestApi
@@ -201,6 +222,7 @@ class FileSelectionEditor(
                 clientStateGlobal = this@Wrapper.clientStateGlobal
                 mirroredGraphStore = this@Wrapper.mirroredGraphStore
                 restClient = this@Wrapper.restClient
+                formatOverrideEditorHost = this@Wrapper.formatOverrideEditorHost
                 block()
             }
         }
@@ -216,6 +238,7 @@ class FileSelectionEditor(
     private var pendingSelection: List<FileSelectionEntry>? = null
     private var listingEpoch = 0
     private var requestedListing: Pair<String, String>? = null
+    private var observedResolutionKeys = emptySet<FileResolutionStore.Key>()
 
     private val committer = AttributeCommitter(
         graphStore = { this.props.mirroredGraphStore },
@@ -252,6 +275,9 @@ class FileSelectionEditor(
         showDetails = false
         browserOpen = false
         formatCatalog = null
+        fileResolutions = emptyMap()
+        resolutions = emptyMap()
+        shapeRevision = 0
     }
 
 
@@ -264,6 +290,8 @@ class FileSelectionEditor(
         }
         documentToggleChannel()?.observe(props.objectLocation, this)
         dataFormatStore()?.observe(this)
+        dataSourceShapeStore()?.observeAll(this)
+        bindResolutions(state.selected.orEmpty(), currentGraphNotation())
         ensureListingLoaded()
     }
 
@@ -288,6 +316,10 @@ class FileSelectionEditor(
         // its children, so by now the header may already have released its claim.
         documentToggleChannel()?.unobserve(props.objectLocation, this)
         dataFormatStore()?.unobserve(this)
+        dataSourceShapeStore()?.unobserveAll(this)
+        val resolutionStore = fileResolutionStore()
+        observedResolutionKeys.forEach { resolutionStore?.unobserve(it, this) }
+        observedResolutionKeys = emptySet()
     }
 
 
@@ -303,12 +335,53 @@ class FileSelectionEditor(
     }
 
 
+    private fun fileResolutionStore(): FileResolutionStore? {
+        return contextValue<DocumentBridge?>()?.lookup(FileResolutionStoreKey)
+    }
+
+
+    private fun dataSourceShapeStore(): DataSourceShapeStore? {
+        return contextValue<DocumentBridge?>()?.lookup(DataSourceShapeStoreKey)
+    }
+
+
+    private fun currentGraphNotation(): GraphNotation {
+        return requireNotNull(props.clientStateGlobal.current()).graphStructure().graphNotation
+    }
+
+
     override fun onDataFormatState(state: DataFormatStore.State) {
         val catalog = state.catalog
         if (this.state.formatCatalog == catalog) {
             return
         }
         setState { formatCatalog = catalog }
+    }
+
+
+    override fun onFileResolutionState(key: FileResolutionStore.Key, state: FileResolutionStore.State?) {
+        if (key !in observedResolutionKeys) {
+            return
+        }
+        val nextPresentation = this.state.fileResolutions +
+            (key.location to FileResolutionPresentation.of(
+                state?.resolving ?: true,
+                state?.resolution?.detail,
+                state?.error))
+        val resolution = state?.takeUnless { it.resolving }?.resolution
+        val nextResolutions = if (resolution == null) {
+            this.state.resolutions - key.location
+        }
+        else {
+            this.state.resolutions + (key.location to resolution)
+        }
+        if (nextPresentation != this.state.fileResolutions ||
+                nextResolutions != this.state.resolutions) {
+            setState {
+                fileResolutions = nextPresentation
+                resolutions = nextResolutions
+            }
+        }
     }
 
 
@@ -357,6 +430,8 @@ class FileSelectionEditor(
             return
         }
 
+        bindResolutions(pendingSelection ?: readSelection(graphNotation), graphNotation)
+
         if (pendingSelection == null) {
             val selected = readSelection(graphNotation)
             if (state.selected != selected) {
@@ -391,6 +466,69 @@ class FileSelectionEditor(
     private fun retainChecked(entries: List<FileSelectionEntry>): Set<DataLocation> {
         val remaining = entries.map { it.location }.toSet()
         return state.selectedChecked.filter { it in remaining }.toSet()
+    }
+
+
+    private fun bindResolutions(entries: List<FileSelectionEntry>, graphNotation: GraphNotation) {
+        val store = fileResolutionStore()
+            ?: return
+        val nextKeys = entries.mapTo(linkedSetOf()) {
+            FileResolutionStore.Key.of(
+                props.objectLocation,
+                it,
+                sourceFormatIdentity(graphNotation) + "|" + entryFormatIdentity(graphNotation, it))
+        }
+        val removed = observedResolutionKeys - nextKeys
+        val added = nextKeys - observedResolutionKeys
+        removed.forEach { store.unobserve(it, this) }
+        store.discard(removed)
+        observedResolutionKeys = nextKeys
+        added.forEach { key ->
+            store.observe(key, this)
+            store.resolve(key)
+        }
+
+        val presentations = nextKeys.associate { key ->
+            val state = store.state(key)
+            key.location to FileResolutionPresentation.of(
+                state?.resolving ?: true,
+                state?.resolution?.detail,
+                state?.error)
+        }
+        val resolutions = nextKeys.mapNotNull { key ->
+            store.state(key)?.takeUnless { it.resolving }?.resolution?.let { key.location to it }
+        }.toMap()
+        if (state.fileResolutions != presentations || state.resolutions != resolutions) {
+            setState {
+                fileResolutions = presentations
+                this.resolutions = resolutions
+            }
+        }
+    }
+
+
+    private fun sourceFormatIdentity(graphNotation: GraphNotation): String {
+        val reference = graphNotation.firstAttribute(props.objectLocation, formatAttributePath)
+            ?.asString()
+            .orEmpty()
+        val location = ObjectReference.tryParse(reference)?.let {
+            graphNotation.coalesce.locateOptional(it, ObjectReferenceHost.ofLocation(props.objectLocation))
+        }
+        val digest = location?.let { graphNotation.coalesce.map[it]?.digest()?.asString() }.orEmpty()
+        return "$reference|$digest"
+    }
+
+
+    private fun entryFormatIdentity(
+        graphNotation: GraphNotation,
+        entry: FileSelectionEntry
+    ): String {
+        val reference = entry.format?.asString().orEmpty()
+        val location = ObjectReference.tryParse(reference)?.let {
+            graphNotation.coalesce.locateOptional(it, ObjectReferenceHost.ofLocation(props.objectLocation))
+        }
+        val digest = location?.let { graphNotation.coalesce.map[it]?.digest()?.asString() }.orEmpty()
+        return "$reference|$digest"
     }
 
 
@@ -480,6 +618,24 @@ class FileSelectionEditor(
             committer.cancel()
             async { committer.commitNow(selectionNotation(entries)) }
         }
+    }
+
+
+    private fun changeFormat(index: Int, value: String) {
+        val current = state.selected ?: return
+        val entry = current.getOrNull(index) ?: return
+        val next = current.toMutableList()
+        next[index] = entry.copy(format = value.takeIf(String::isNotBlank)?.let(CommonPluginCoordinate::ofString))
+        changeSelection(next, false)
+    }
+
+
+    private fun changeEncoding(index: Int, value: String) {
+        val current = state.selected ?: return
+        val entry = current.getOrNull(index) ?: return
+        val next = current.toMutableList()
+        next[index] = entry.copy(encoding = value.takeIf(String::isNotBlank)?.let(CommonDataEncodingSpec::ofString))
+        changeSelection(next, false)
     }
 
 
@@ -716,11 +872,90 @@ class FileSelectionEditor(
             entries = selected
             checked = state.selectedChecked
             showDetails = state.showDetails
-            perEntryFormat = false
+            perEntryFormat = true
             formatCatalog = state.formatCatalog
+            resolutionByLocation = state.fileResolutions
             onCheckedChanged = { next -> setState { selectedChecked = next } }
-            onFormatChanged = { _, _ -> }
-            onEncodingChanged = { _, _ -> }
+            onFormatChanged = ::changeFormat
+            onEncodingChanged = ::changeEncoding
+            renderOverrideEditor = ::renderOverrideEditor
+        }
+    }
+
+
+    private fun renderOverrideEditor(
+        builder: ChildrenBuilder,
+        index: Int,
+        entry: FileSelectionEntry
+    ) {
+        val resolution = state.resolutions[entry.location]
+            ?: return
+        val shapeState = dataSourceShapeStore()?.partState(props.objectLocation, resolution.part)
+        props.formatOverrideEditorHost.child(builder) {
+            catalog = state.formatCatalog
+            source = props.objectLocation
+            rowIndex = index
+            this.entry = entry
+            part = resolution.part
+            this.resolution = resolution.detail
+            onFormatChanged = { changeFormat(index, it) }
+            onEncodingChanged = { changeEncoding(index, it) }
+            shapeInspecting = shapeState?.inspecting ?: false
+            shapeResult = shapeState?.result
+            shapeError = shapeState?.error
+            onInspectColumns = {
+                dataSourceShapeStore()?.inspect(props.objectLocation, resolution.manifest)
+            }
+            onApply = { intent, overrides, completed ->
+                materializeOverride(index, entry, resolution, intent, overrides, completed)
+            }
+        }
+    }
+
+
+    override fun onDataSourceShapesChanged() {
+        setState { shapeRevision++ }
+    }
+
+
+    private fun materializeOverride(
+        index: Int,
+        entry: FileSelectionEntry,
+        resolution: FileResolutionStore.Resolution,
+        intent: FormatMaterializationIntent,
+        overrides: Map<String, String?>,
+        completed: (String?) -> Unit
+    ) {
+        val concreteFormat = resolution.detail.concreteFormatReference
+        if (concreteFormat == null) {
+            completed("The resolved format is no longer available.")
+            return
+        }
+        val editorState = tech.kzen.auto.client.objects.document.common.file.format.FormatOverrideEditorState(
+            props.objectLocation,
+            index,
+            entry,
+            resolution.part,
+            resolution.detail,
+            requireNotNull(state.formatCatalog?.formats?.find { it.reference == concreteFormat }),
+            state.formatCatalog?.encodings.orEmpty())
+        async {
+            try {
+                val materialized = RestFormatMaterializationClient(props.restClient).materialize(
+                    props.objectLocation,
+                    entry,
+                    FormatMaterializationActionRequest(resolution.part, concreteFormat, overrides, intent))
+                val command = FormatOverrideTransition.command(
+                    currentGraphNotation(),
+                    editorState,
+                    props.attributeName,
+                    materialized)
+                props.mirroredGraphStore.apply(command)
+                completed(null)
+            }
+            catch (cause: Throwable) {
+                completed(cause.message ?: "Unable to apply file format controls")
+            }
         }
     }
 

@@ -4,7 +4,10 @@ import tech.kzen.auto.common.data.read.ReaderCapabilityIdentity
 import tech.kzen.auto.common.data.read.ReaderConfig
 import tech.kzen.auto.common.data.read.ResolvedReadSpec
 import tech.kzen.auto.plugin.api.data.ReaderCapability
+import tech.kzen.auto.plugin.api.data.FormatAuthoringCapability
+import tech.kzen.auto.plugin.api.data.ReaderProbeCapability
 import tech.kzen.auto.server.data.read.delimited.ConfiguredDelimitedReaderCapability
+import tech.kzen.auto.server.data.read.text.PlainTextReaderCapability
 import java.util.ServiceLoader
 
 
@@ -16,6 +19,7 @@ class ReaderCapabilityRegistry(
             classLoader: ClassLoader = activeContextClassLoader()
         ): ReaderCapabilityRegistry = ReaderCapabilityRegistry(buildList {
             add(ConfiguredDelimitedReaderCapability)
+            add(PlainTextReaderCapability)
             ServiceLoader.load(ReaderCapability::class.java, classLoader).forEach { add(it) }
         })
 
@@ -27,6 +31,8 @@ class ReaderCapabilityRegistry(
     }
 
     private val capabilities = linkedMapOf<ReaderCapabilityIdentity, ReaderCapability>()
+    private val probes = linkedMapOf<String, ReaderProbeCapability>()
+    private val authoringCapabilities = linkedMapOf<String, FormatAuthoringCapability>()
 
     init {
         for (capability in capabilities) {
@@ -35,12 +41,40 @@ class ReaderCapabilityRegistry(
                 "Duplicate reader capability ${capability.identity}: " +
                     "${previous!!::class.java.name} and ${capability::class.java.name}"
             }
+            if (capability is ReaderProbeCapability) {
+                require(capability.readerCompatibility == capability.identity.compatibility) {
+                    "Reader probe ${capability::class.java.name} declares compatibility " +
+                        "${capability.readerCompatibility}, but its reader declares ${capability.identity.compatibility}"
+                }
+                val previousProbe = probes.put(capability.readerCompatibility, capability)
+                check(previousProbe == null) {
+                    "Duplicate reader probe capability ${capability.readerCompatibility}: " +
+                        "${previousProbe!!::class.java.name} and ${capability::class.java.name}"
+                }
+            }
+            if (capability is FormatAuthoringCapability) {
+                require(capability.authoringIdentity.isNotBlank()) { "Format-authoring identity must not be blank" }
+                val previousAuthoring = authoringCapabilities.put(capability.authoringIdentity, capability)
+                check(previousAuthoring == null) {
+                    "Duplicate format-authoring capability ${capability.authoringIdentity}: " +
+                        "${previousAuthoring!!::class.java.name} and ${capability::class.java.name}"
+                }
+            }
         }
     }
 
     fun resolve(identity: ReaderCapabilityIdentity): ReaderCapability =
         capabilities[identity]
             ?: throw IllegalArgumentException("Unknown reader capability: $identity")
+
+
+    fun probeFor(identity: ReaderCapabilityIdentity): ReaderProbeCapability? = probes[identity.compatibility]
+
+
+    fun authoringFor(identity: String): FormatAuthoringCapability? = authoringCapabilities[identity]
+
+
+    fun probeCompatibilityIdentities(): Set<String> = probes.keys
 
     fun decodeValidateCanonicalize(spec: ResolvedReadSpec): ReaderConfig {
         val capability = resolve(spec.reader)

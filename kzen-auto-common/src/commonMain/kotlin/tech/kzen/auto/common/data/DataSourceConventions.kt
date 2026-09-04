@@ -32,7 +32,12 @@ object DataSourceConventions {
     const val sourceParameter = "source"
     const val actionParameter = "action"
     const val partParameter = "part"
+    const val locationParameter = "location"
+    const val formatParameter = "format"
+    const val encodingParameter = "encoding"
     const val resolveAction = "resolve"
+    const val resolveFileAction = "resolveFile"
+    const val materializeFormatAction = "materializeFormat"
     const val shapeAction = "shape"
 
     // Unlike the two above, this asks about the SERVER rather than about one source — which formats and text

@@ -7,6 +7,7 @@ class DelimitedReadException(
     val recordIndex: Long,
     val fieldPath: String? = null,
     val span: LongRange? = null,
+    val columnIndex: Int? = null,
     detail: String
 ): IllegalArgumentException(buildString {
     append(category).append(" at ").append(context.source)
@@ -14,6 +15,7 @@ class DelimitedReadException(
     context.part?.let { append(", part ").append(it) }
     append(", record ").append(recordIndex)
     fieldPath?.let { append(", field ").append(it) }
+    columnIndex?.let { append(", column ").append(it) }
     span?.let { append(", span ").append(it.first).append("..").append(it.last) }
     append(": ").append(detail)
 }) {

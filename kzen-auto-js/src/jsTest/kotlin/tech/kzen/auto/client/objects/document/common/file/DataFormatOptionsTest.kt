@@ -9,8 +9,16 @@ import kotlin.test.assertNull
 
 
 class DataFormatOptionsTest {
-    private fun detail(reference: String, label: String, vararg extensions: String) =
-        ConfiguredFormatDetail(reference, label, extensions.toList())
+    private fun detail(
+        reference: String,
+        label: String,
+        vararg extensions: String,
+        perFileOverrideAvailable: Boolean = true
+    ) = ConfiguredFormatDetail(
+        reference,
+        label,
+        extensions.toList(),
+        perFileOverrideAvailable = perFileOverrideAvailable)
 
 
     private val catalog = FileFormatCatalog(
@@ -67,5 +75,47 @@ class DataFormatOptionsTest {
         assertEquals(emptyList(), DataFormatOptions.formats(null, "").map { it.value })
         assertEquals(listOf("TSV"), DataFormatOptions.formats(null, "TSV").map { it.value })
         assertEquals(listOf("UTF-16"), DataFormatOptions.encodings(null, "UTF-16").map { it.value })
+    }
+
+
+    @Test
+    fun perFileOptionsCanReturnToTheSourcePolicy() {
+        val formats = DataFormatOptions.entryFormats(catalog, "configured.yaml#ConfiguredCsv")
+        val encodings = DataFormatOptions.entryEncodings(catalog, "UTF-8")
+
+        assertEquals("", formats.first().value)
+        assertEquals("Use source format", formats.first().label)
+        assertEquals("", encodings.first().value)
+        assertEquals("Detect encoding", encodings.first().label)
+    }
+
+
+    @Test
+    fun automaticRemainsASourceOptionButIsNotOfferedAsAPerFileOverride() {
+        val automaticReference = "configured.yaml#Automatic"
+        val withAutomatic = catalog.copy(formats = catalog.formats + detail(
+            automaticReference,
+            "Automatic",
+            perFileOverrideAvailable = false))
+
+        assertNotNull(DataFormatOptions.formats(withAutomatic, "")
+            .singleOrNull { it.value == automaticReference })
+        assertNull(DataFormatOptions.entryFormats(withAutomatic, "")
+            .singleOrNull { it.value == automaticReference })
+    }
+
+
+    @Test
+    fun ineligiblePersistedPerFileValueRemainsVisibleAsUnavailable() {
+        val automaticReference = "configured.yaml#Automatic"
+        val withAutomatic = catalog.copy(formats = catalog.formats + detail(
+            automaticReference,
+            "Automatic",
+            perFileOverrideAvailable = false))
+
+        val retained = DataFormatOptions.entryFormats(withAutomatic, automaticReference)
+            .single { it.value == automaticReference }
+
+        assertNotNull(retained.detail)
     }
 }

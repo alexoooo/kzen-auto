@@ -138,6 +138,13 @@ class DataSourceShapeStore(
     fun state(key: Key): State? = states[key]
 
 
+    /** Exact preview-part lookup: equality includes the resolved read spec and expected content fingerprint. */
+    fun partState(source: ObjectLocation, part: DataPart): PartState? =
+        states.entries.toList().asReversed().firstNotNullOfOrNull { (key, state) ->
+            if (key.source == source) state.parts[part] else null
+        }
+
+
     fun observeAll(observer: GlobalObserver) {
         globalObservers.add(observer)
     }

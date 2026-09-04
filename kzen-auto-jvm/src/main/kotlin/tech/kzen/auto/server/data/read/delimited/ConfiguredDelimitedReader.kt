@@ -35,6 +35,8 @@ class ConfiguredDelimitedReader private constructor(
     private var pending: RawRecord?
 ): AutoCloseable {
     val expandedBytesRead: Long? get() = input.expandedBytesRead
+    val skippedLeadingLines: Long get() = parser.skippedLeadingLines
+    val skippedComments: Long get() = parser.skippedComments
 
     companion object {
         fun open(
@@ -43,9 +45,21 @@ class ConfiguredDelimitedReader private constructor(
             policy: ReadOperationalPolicy,
             context: DelimitedReadContext,
             checkpoint: () -> Unit = {}
+        ): ConfiguredDelimitedReader = openSample(input, config, policy, context, true, checkpoint)
+
+
+        internal fun openSample(
+            input: SequentialCharacterContent,
+            config: DelimitedReadConfig,
+            policy: ReadOperationalPolicy,
+            context: DelimitedReadContext,
+            completeFinalRecord: Boolean,
+            checkpoint: () -> Unit = {}
         ): ConfiguredDelimitedReader {
             try {
-                val parser = Parser(input, SyntaxSpec.of(config), Limits.of(policy), context, checkpoint)
+                val parser = Parser(
+                    input, SyntaxSpec.of(config), Limits.of(policy), context,
+                    config.skipLeadingLines, config.commentPrefix, completeFinalRecord, checkpoint)
                 val declared = config.schema
                 val headerPolicy = config.header.policy
                 val first = when (headerPolicy) {
@@ -90,6 +104,13 @@ class ConfiguredDelimitedReader private constructor(
                     ?: ProjectionPlan(observedTextContract(emptyList()), IntArray(0))
             }
             val labels = header.fields.map { it.text }
+            val emptyColumn = labels.indexOfFirst(String::isEmpty)
+            if (emptyColumn >= 0) {
+                throw DelimitedReadException(
+                    DelimitedReadException.header, context, 1,
+                    columnIndex = emptyColumn + 1,
+                    detail = "The first row contains an empty column name")
+            }
             val duplicates = labels.groupingBy { it }.eachCount().filterValues { it > 1 }.keys.sorted()
             if (duplicates.isNotEmpty()) {
                 headerFailure(context, "Duplicate labels: ${duplicates.joinToString()}")
@@ -151,6 +172,7 @@ class ConfiguredDelimitedReader private constructor(
         if (raw.fields.size != physicalByOutput.size) {
             throw DelimitedReadException(
                 DelimitedReadException.width, context, logicalRecordIndex,
+                columnIndex = minOf(raw.fields.size, physicalByOutput.size) + 1,
                 detail = "Expected ${physicalByOutput.size} fields but found ${raw.fields.size}")
         }
         val decoded = physicalByOutput.mapIndexed { outputIndex, physicalIndex ->
@@ -260,12 +282,25 @@ private class Parser(
     private val syntax: SyntaxSpec,
     private val limits: Limits,
     private val context: DelimitedReadContext,
+    private val leadingLines: Int,
+    private val commentPrefix: String?,
+    private val completeFinalRecord: Boolean,
     private val checkpoint: () -> Unit
 ) {
     private val chars = CharacterInput(input)
     private var physicalRecordIndex = 0L
+    private var initialized = false
+    var skippedLeadingLines = 0L
+        private set
+    var skippedComments = 0L
+        private set
 
     fun readRecord(): RawRecord? {
+        initialize()
+        while (commentPrefix != null && chars.consumePrefix(commentPrefix)) {
+            skipPhysicalLine()
+            skippedComments++
+        }
         var state = ParserState.Start
         val fields = mutableListOf<RawField>()
         val field = StringBuilder()
@@ -302,6 +337,7 @@ private class Parser(
             val next = chars.read()
             if (next < 0) {
                 if (!sawInput) return null
+                if (!completeFinalRecord) return null
                 if (state == ParserState.Quoted) syntax("Unterminated quoted field", chars.offset)
                 return complete(chars.offset)
             }
@@ -352,6 +388,36 @@ private class Parser(
         }
     }
 
+    private fun initialize() {
+        if (initialized) return
+        initialized = true
+        repeat(leadingLines) {
+            if (!skipPhysicalLine()) return
+            skippedLeadingLines++
+        }
+    }
+
+    private fun skipPhysicalLine(): Boolean {
+        var sawInput = false
+        while (true) {
+            val next = chars.read()
+            if (next < 0) return sawInput
+            sawInput = true
+            val c = next.toChar()
+            when {
+                syntax.crlf && c == '\r' -> {
+                    val following = chars.read()
+                    if (following != '\n'.code) syntax("Bare CR or mixed record separator", chars.offset - 1)
+                    return true
+                }
+                syntax.crlf && c == '\n' -> syntax("Bare LF or mixed record separator", chars.offset - 1)
+                !syntax.crlf && c == '\r' -> syntax("Bare CR or mixed record separator", chars.offset - 1)
+                !syntax.crlf && c == '\n' -> return true
+            }
+            if (chars.offset and 1023 == 0L) checkpoint()
+        }
+    }
+
     private fun syntax(detail: String, offset: Long): Nothing = throw DelimitedReadException(
         DelimitedReadException.syntax, context, physicalRecordIndex + 1,
         span = offset..offset, detail = detail)
@@ -366,19 +432,52 @@ private class CharacterInput(private val input: SequentialCharacterContent) {
     private val buffer = CharArray(8192)
     private var size = 0
     private var index = 0
+    private var sourceOffset = 0L
+    private val replay = ArrayDeque<ReadCharacter>()
     var offset = 0L
         private set
 
     fun read(): Int {
+        if (replay.isNotEmpty()) {
+            val next = replay.removeFirst()
+            offset = next.offset + 1
+            return next.code
+        }
         while (index >= size) {
             size = input.read(buffer)
             index = 0
             if (size < 0) return -1
             if (size == 0) continue
         }
-        offset++
-        return buffer[index++].code
+        val code = buffer[index++].code
+        offset = sourceOffset + 1
+        sourceOffset++
+        return code
     }
+
+    fun consumePrefix(prefix: String): Boolean {
+        val consumed = ArrayList<ReadCharacter>(prefix.length)
+        for (expected in prefix) {
+            val code = read()
+            if (code < 0) {
+                unread(consumed)
+                return false
+            }
+            consumed += ReadCharacter(code, offset - 1)
+            if (code != expected.code) {
+                unread(consumed)
+                return false
+            }
+        }
+        return true
+    }
+
+    private fun unread(consumed: List<ReadCharacter>) {
+        for (index in consumed.indices.reversed()) replay.addFirst(consumed[index])
+        if (consumed.isNotEmpty()) offset = consumed.first().offset
+    }
+
+    private data class ReadCharacter(val code: Int, val offset: Long)
 }
 
 
@@ -478,7 +577,7 @@ private class TypedDecoder(
 
     private fun failure(record: Long, field: String, span: LongRange, detail: String): Nothing =
         throw DelimitedReadException(
-            DelimitedReadException.typedValue, context, record, field, span, detail)
+            DelimitedReadException.typedValue, context, record, field, span, detail = detail)
 
     private fun invalid(detail: String): Nothing = throw DelimitedReadException(
         DelimitedReadException.configuration, context, 0, detail = detail)

@@ -1,12 +1,14 @@
 package tech.kzen.auto.server.data.content
 
 import tech.kzen.auto.plugin.api.data.ReaderByteInput
+import tech.kzen.auto.common.data.read.DataContentFingerprint
 import tech.kzen.auto.server.data.content.policy.ContentReadControl
 
 
 class OpenedReaderByteInput internal constructor(
     private val bytes: SequentialByteContent,
-    private val control: ContentReadControl
+    private val control: ContentReadControl,
+    val observedFingerprint: DataContentFingerprint
 ): ReaderByteInput, AutoCloseable {
     override val expandedBytesRead: Long get() = control.expandedBytesRead
 

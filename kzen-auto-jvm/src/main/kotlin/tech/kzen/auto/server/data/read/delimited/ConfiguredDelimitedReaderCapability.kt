@@ -12,14 +12,24 @@ import tech.kzen.auto.common.data.read.RecordFramingSpec
 import tech.kzen.auto.common.data.read.TypedDecodePolicy
 import tech.kzen.auto.common.data.api.DataCursor
 import tech.kzen.auto.common.data.schema.DataShape
+import tech.kzen.auto.common.data.schema.AuthoredRecordSchemaNotation
 import tech.kzen.auto.plugin.api.data.ReaderCapability
 import tech.kzen.auto.plugin.api.data.ReaderInspectionRequest
 import tech.kzen.auto.plugin.api.data.ReaderOpenRequest
+import tech.kzen.auto.plugin.api.data.ReaderProbeCapability
+import tech.kzen.auto.plugin.api.data.ReaderProbeRequest
+import tech.kzen.auto.plugin.api.data.ReaderProbeResult
+import tech.kzen.auto.plugin.api.data.FormatAuthoringCapability
+import tech.kzen.auto.common.data.format.DelimitedFormatOverrideConventions
+import tech.kzen.auto.common.data.format.FormatMaterializationRequest
+import tech.kzen.auto.common.data.format.FormatMaterializationResult
+import tech.kzen.auto.common.data.format.FormatOverrideEditorMetadata
 import tech.kzen.auto.server.data.content.character.CharacterDecoder
 import tech.kzen.auto.server.data.content.policy.ContentReadControl
 import tech.kzen.auto.server.data.content.policy.ContentReadPolicy
 import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.ListExecutionValue
+import tech.kzen.lib.common.exec.LongExecutionValue
 import tech.kzen.lib.common.exec.MapExecutionValue
 import tech.kzen.lib.common.exec.NullExecutionValue
 import tech.kzen.lib.common.exec.TextExecutionValue
@@ -27,14 +37,28 @@ import tech.kzen.lib.common.exec.data.type.DataContract
 import tech.kzen.lib.common.exec.data.shape.SampleCoverage
 import tech.kzen.lib.common.exec.data.shape.ShapeProvenance
 import tech.kzen.lib.common.exec.data.shape.ShapeStability
+import tech.kzen.lib.common.model.attribute.AttributeSegment
+import tech.kzen.lib.common.model.structure.notation.AttributeNotation
+import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
+import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
+import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
+import tech.kzen.lib.platform.collect.toPersistentList
+import tech.kzen.lib.platform.collect.toPersistentMap
 import java.nio.charset.Charset
 import java.util.concurrent.CancellationException
 import kotlin.time.Duration.Companion.milliseconds
 
 
-object ConfiguredDelimitedReaderCapability: ReaderCapability {
+object ConfiguredDelimitedReaderCapability:
+    ReaderCapability,
+    ReaderProbeCapability,
+    FormatAuthoringCapability
+{
     override val identity = ReaderCapabilityIdentity(
         "tech.kzen.auto", "configured-delimited", "1")
+    override val readerCompatibility: String = identity.compatibility
+    override val authoringIdentity = "tech.kzen.auto/configured-delimited-authoring-v1"
+    override val supportsColumnLocking: Boolean = true
 
     override fun decode(config: ExecutionValue): ReaderConfig {
         val root = config.map("configured-delimited")
@@ -71,7 +95,9 @@ object ConfiguredDelimitedReaderCapability: ReaderCapability {
             TypedDecodePolicy(
                 typed.nullableTextAt("nullToken"),
                 typed.textAt("malformedValue"),
-                overrides))
+                overrides),
+            root.optionalNonNegativeIntAt("skipLeadingLines") ?: 0,
+            root.optionalNullableTextAt("commentPrefix"))
     }
 
     override fun validate(config: ReaderConfig) {
@@ -91,6 +117,14 @@ object ConfiguredDelimitedReaderCapability: ReaderCapability {
         require(config.header.policy in setOf("present", "absent", "infer-labels"))
         require(config.header.mapping == "exact-name")
         require(config.typedDecode.malformedValue == "fail-part")
+        require(config.skipLeadingLines >= 0) { "Leading-line skip must not be negative" }
+        val commentPrefix = config.commentPrefix
+        require(commentPrefix == null || commentPrefix.isNotEmpty()) {
+            "Comment prefix must not be empty when configured"
+        }
+        require(commentPrefix?.none { it == '\r' || it == '\n' } != false) {
+            "Comment prefix must not contain a record separator"
+        }
         val characters = canonicalCharacters(config.characters)
         require(characters.bom in setOf("detect", "permit", "require", "forbid")) {
             "Unsupported BOM policy '${config.characters.bom}'"
@@ -156,6 +190,106 @@ object ConfiguredDelimitedReaderCapability: ReaderCapability {
             }
             inspectionShape(cursor, inspected, complete)
         }
+
+
+    override suspend fun probe(request: ReaderProbeRequest): ReaderProbeResult =
+        DelimitedProbe.probe(request)
+
+
+    override fun materialize(request: FormatMaterializationRequest): FormatMaterializationResult {
+        val unsupported = request.overrides.keys - DelimitedFormatOverrideConventions.supported
+        require(unsupported.isEmpty()) { "Unsupported delimited overrides: ${unsupported.sorted().joinToString()}" }
+        require(request.resolvedRead.reader == identity) {
+            "Delimited authoring requires the configured-delimited reader"
+        }
+        val decoded = decode(request.resolvedRead.config) as DelimitedReadConfig
+        require(decoded.schema == null || request.observedSchema == null) {
+            "An observed schema cannot replace a configured schema during quick correction"
+        }
+        val delimiter = requiredOverrideOrDefault(
+            request.overrides, DelimitedFormatOverrideConventions.delimiter, decoded.dialect.delimiter)
+        val header = requiredOverrideOrDefault(
+            request.overrides, DelimitedFormatOverrideConventions.header, decoded.header.policy)
+        val charset = requiredOverrideOrDefault(
+            request.overrides, DelimitedFormatOverrideConventions.encoding, decoded.characters.charset)
+        val skipLeadingLines = if (DelimitedFormatOverrideConventions.skipLeadingLines in request.overrides) {
+            val raw = requireNotNull(request.overrides[DelimitedFormatOverrideConventions.skipLeadingLines]) {
+                "'${DelimitedFormatOverrideConventions.skipLeadingLines}' override must not be null"
+            }
+            raw.toIntOrNull() ?: throw IllegalArgumentException(
+                "'${DelimitedFormatOverrideConventions.skipLeadingLines}' override must be an integer")
+        }
+        else {
+            decoded.skipLeadingLines
+        }
+        val commentPrefix = if (DelimitedFormatOverrideConventions.commentPrefix in request.overrides) {
+            request.overrides[DelimitedFormatOverrideConventions.commentPrefix]
+        }
+        else {
+            decoded.commentPrefix
+        }
+        val observedSchema = request.observedSchema
+        val materialized = decoded.copy(
+            dialect = decoded.dialect.copy(delimiter = delimiter),
+            header = decoded.header.copy(policy = if (observedSchema != null && header == "infer-labels") {
+                "absent"
+            }
+            else {
+                header
+            }),
+            characters = decoded.characters.copy(charset = charset),
+            schema = observedSchema ?: decoded.schema,
+            skipLeadingLines = skipLeadingLines,
+            commentPrefix = commentPrefix)
+        val canonical = canonicalize(materialized) as DelimitedReadConfig
+        val values = linkedMapOf(
+            "is" to request.baseFormatReference,
+            "catalogVisible" to "false",
+            "delimiter" to canonical.dialect.delimiter,
+            "quote" to canonical.dialect.quote.orEmpty(),
+            "escape" to canonical.dialect.escape,
+            "recordSeparator" to canonical.framing.separator,
+            "trimming" to canonical.dialect.trimming,
+            "header" to canonical.header.policy,
+            "charset" to canonical.characters.charset,
+            "bom" to canonical.characters.bom,
+            "malformed" to canonical.characters.malformed,
+            "unmappable" to canonical.characters.unmappable,
+            "nullToken" to canonical.typedDecode.nullToken.orEmpty(),
+            "skipLeadingLines" to canonical.skipLeadingLines.toString(),
+            "commentPrefix" to canonical.commentPrefix.orEmpty())
+        val entries: Map<AttributeSegment, AttributeNotation> = values.map { (key, value) ->
+            AttributeSegment.ofKey(key) to ScalarAttributeNotation(value)
+        }.toMap() + (AttributeSegment.ofKey("contentCodings") to ListAttributeNotation(
+            request.resolvedRead.contentCodings.map { coding ->
+                require(coding.config == MapExecutionValue(emptyMap())) {
+                    "Configured delimited formats cannot author content-coding config for '${coding.identity}'"
+                }
+                ScalarAttributeNotation(coding.identity)
+            }.toPersistentList()))
+        val body = MapAttributeNotation(entries.toPersistentMap())
+        val schemaBody = observedSchema?.let { contract ->
+            AuthoredRecordSchemaNotation.body(contract)
+                ?: throw IllegalArgumentException(
+                    "Observed columns cannot be represented as an authored record schema")
+        }
+        return FormatMaterializationResult(
+            body,
+            schemaBody,
+            schemaBody?.let { "schema" },
+            FormatOverrideEditorMetadata(overrideEditorReference, "Delimited options"),
+            canonical.characters.charset)
+    }
+
+
+    private fun requiredOverrideOrDefault(
+        overrides: Map<String, String?>,
+        key: String,
+        default: String
+    ): String {
+        if (key !in overrides) return default
+        return requireNotNull(overrides[key]) { "'$key' override must not be null" }
+    }
 
 
     private fun openCursor(
@@ -240,6 +374,10 @@ object ConfiguredDelimitedReaderCapability: ReaderCapability {
             malformed = spec.malformed.lowercase(),
             unmappable = spec.unmappable.lowercase())
     }
+
+
+    const val overrideEditorReference =
+        "auto-js/datasource/delimited-format-override-editor.yaml#DelimitedFormatOverrideEditor"
 }
 
 
@@ -263,5 +401,18 @@ private fun MapExecutionValue.textAt(name: String): String = valueAt(name).text(
 
 private fun MapExecutionValue.nullableTextAt(name: String): String? = when (val value = valueAt(name)) {
     NullExecutionValue -> null
+    else -> value.text(name)
+}
+
+private fun MapExecutionValue.optionalNonNegativeIntAt(name: String): Int? = when (val value = values[name]) {
+    null -> null
+    is LongExecutionValue -> value.value.also {
+        require(it in 0..Int.MAX_VALUE.toLong()) { "'$name' is outside the supported range" }
+    }.toInt()
+    else -> throw IllegalArgumentException("'$name' must be an integer")
+}
+
+private fun MapExecutionValue.optionalNullableTextAt(name: String): String? = when (val value = values[name]) {
+    null, NullExecutionValue -> null
     else -> value.text(name)
 }

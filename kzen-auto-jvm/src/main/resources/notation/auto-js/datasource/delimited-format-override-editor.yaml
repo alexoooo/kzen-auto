@@ -1,0 +1,3 @@
+DelimitedFormatOverrideEditor:
+  is: FormatOverrideEditor
+  class: tech.kzen.auto.client.objects.document.common.file.format.DelimitedFormatOverrideEditor$Wrapper
