@@ -7,6 +7,11 @@ import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 
 object ServerGraphDefinition {
     fun of(attempt: GraphDefinitionAttempt): GraphDefinition {
-        return attempt.transitiveSuccessful.filterDefinitions(AutoConventions.serverAllowed)
+        return of(attempt.transitiveSuccessful)
+    }
+
+
+    fun of(definition: GraphDefinition): GraphDefinition {
+        return definition.filterDefinitions(AutoConventions.serverAllowed)
     }
 }

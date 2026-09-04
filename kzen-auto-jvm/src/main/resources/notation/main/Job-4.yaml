@@ -4,4 +4,10 @@ main:
 main.workers/File:
   is: FileSourceWorker
   files:
-    - location: C:/Users/ostro/IdeaProjects/kzen-auto/README.md
+    - location: C:/~/data/measurements-100000.txt
+  browser:
+    directory: C:/~/data
+    filter: ""
+
+main.workers/Preview:
+  is: PreviewWorker

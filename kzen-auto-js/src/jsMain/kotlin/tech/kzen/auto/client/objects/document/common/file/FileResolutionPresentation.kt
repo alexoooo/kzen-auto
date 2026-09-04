@@ -42,7 +42,7 @@ data class FileResolutionPresentation(
             error?.let {
                 return FileResolutionPresentation(
                     Status.Failure,
-                    "Format could not be resolved",
+                    it,
                     null,
                     null,
                     null,

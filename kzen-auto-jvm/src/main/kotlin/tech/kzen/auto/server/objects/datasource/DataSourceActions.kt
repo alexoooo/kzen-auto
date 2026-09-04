@@ -13,6 +13,7 @@ import tech.kzen.auto.common.data.model.DataPart
 import tech.kzen.auto.common.data.schema.AuthoredRecordSchemaDraft
 import tech.kzen.auto.common.objects.document.plugin.model.CommonDataEncodingSpec
 import tech.kzen.auto.common.objects.document.plugin.model.CommonPluginCoordinate
+import tech.kzen.auto.common.objects.document.job.JobChannelSynthesis
 import tech.kzen.auto.common.paradigm.detached.DetachedAction
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.server.data.DataOpenerLookup
@@ -30,6 +31,7 @@ import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
+import tech.kzen.lib.common.service.metadata.NotationMetadataReader
 import tech.kzen.lib.common.service.store.LocalGraphStore
 
 
@@ -38,7 +40,8 @@ class DataSourceActions(
     @Service private val graphStore: LocalGraphStore,
     @Service private val graphInstanceCache: GraphInstanceCache,
     @Service private val openerLookup: DataOpenerLookup,
-    @Service private val configuredFormatRegistry: ConfiguredRecordFormatRegistry
+    @Service private val configuredFormatRegistry: ConfiguredRecordFormatRegistry,
+    @Service private val notationMetadataReader: NotationMetadataReader
 ): DetachedAction {
     override suspend fun execute(request: ExecutionRequest): ExecutionResult {
         val action = request.getSingle(DataSourceConventions.actionParameter)
@@ -55,13 +58,26 @@ class DataSourceActions(
             ?: return ExecutionFailure("Missing data source")
         val sourceLocation = ObjectLocation.parse(sourceValue)
         val definitionAttempt = graphStore.graphDefinition()
-        val instanceAttempt = graphInstanceCache.tryObjectInstance(
+        val directInstanceAttempt = graphInstanceCache.tryObjectInstance(
             ServerGraphDefinition.of(definitionAttempt), sourceLocation)
+        val instanceAttempt = if (directInstanceAttempt is ObjectInstanceAttempt.Created) {
+            directInstanceAttempt
+        }
+        else {
+            val completed = JobChannelSynthesis(notationMetadataReader)
+                .synthesizeOpenOutputsForObject(
+                    definitionAttempt.transitiveSuccessful, sourceLocation)
+            graphInstanceCache.tryObjectInstance(
+                ServerGraphDefinition.of(completed.graphDefinition), sourceLocation)
+        }
         val instance = (instanceAttempt as? ObjectInstanceAttempt.Created)?.objectInstance?.reference
             ?: return ExecutionFailure(
                 ExecutionGraphErrors.describe(sourceLocation, definitionAttempt, instanceAttempt))
-        val source = instance as? DataSource
-            ?: return ExecutionFailure("Not a DataSource: $sourceLocation")
+        val source = when (instance) {
+            is DataSource -> instance
+            is DataSourceHost -> instance.hostedDataSource
+            else -> return ExecutionFailure("Not a DataSource: $sourceLocation")
+        }
 
         val context = DesignDataContext(request)
         return when (action) {

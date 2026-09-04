@@ -31,10 +31,10 @@ class FileResolutionStore private constructor(
             return restClient.performDetached(
                 DataSourceConventions.dataSourceActionsLocation,
                 DataSourceConventions.sourceParameter to key.source.asString(),
-                actionParameter to resolveFileAction,
-                locationParameter to key.location.asString(),
-                formatParameter to key.format.orEmpty(),
-                encodingParameter to key.encoding.orEmpty())
+                DataSourceConventions.actionParameter to DataSourceConventions.resolveFileAction,
+                DataSourceConventions.locationParameter to key.location.asString(),
+                DataSourceConventions.formatParameter to key.format.orEmpty(),
+                DataSourceConventions.encodingParameter to key.encoding.orEmpty())
         }
     }
 
@@ -95,12 +95,6 @@ class FileResolutionStore private constructor(
     }
 
     companion object {
-        private const val actionParameter = "action"
-        private const val resolveFileAction = "resolveFile"
-        private const val locationParameter = "location"
-        private const val formatParameter = "format"
-        private const val encodingParameter = "encoding"
-
         internal fun resolution(result: DataResolveResult): Resolution {
             val parts = result.manifest.units.flatMap { it.parts }
             require(parts.size == 1) {

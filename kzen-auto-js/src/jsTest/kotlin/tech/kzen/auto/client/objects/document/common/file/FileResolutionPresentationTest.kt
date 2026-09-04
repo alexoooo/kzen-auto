@@ -41,6 +41,7 @@ class FileResolutionPresentationTest {
         assertEquals(FileResolutionPresentation.Status.Warning, warning.status)
         assertEquals("The file uses a regional delimiter.", warning.warning)
         assertEquals(FileResolutionPresentation.Status.Failure, failure.status)
+        assertEquals("Choose a format or encoding.", failure.summary)
         assertEquals("Choose a format or encoding.", failure.error)
     }
 

@@ -9,6 +9,7 @@ import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.notation.DocumentNotation
+import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.model.structure.notation.ObjectNotation
 import tech.kzen.lib.common.model.structure.notation.PositionIndex
 import tech.kzen.lib.common.model.structure.notation.PositionedObjectPath
@@ -86,6 +87,81 @@ class JobChannelSynthesis(
         val augmentedDefinition = GraphDefiner.tryDefine(augmentedStructure).successful()
 
         return Result(augmentedDefinition, channelLocationsOf(augmentedDoc, jobDocumentPath))
+    }
+
+
+    /**
+     * Completes the ordinary Job synthesis and then gives [objectLocation] a transient channel for each output
+     * port that remains open. Detached editor actions use this to instantiate a source Worker before it has a
+     * downstream neighbour; saved notation remains unchanged, and a normally connected output keeps the
+     * channel selected by [synthesize]. Ports are classified from metadata, so this carries no Worker-name
+     * knowledge.
+     */
+    fun synthesizeOpenOutputsForObject(
+        graphDefinition: GraphDefinition,
+        objectLocation: ObjectLocation
+    ): Result {
+        val ordinary = synthesize(graphDefinition, objectLocation.documentPath)
+        val structure = ordinary.graphDefinition.graphStructure
+        val documentNotation = structure.graphNotation.documents[objectLocation.documentPath]
+            ?: return ordinary
+        if (!JobConventions.isJob(documentNotation)) {
+            return ordinary
+        }
+
+        val metadata = structure.graphMetadata.get(objectLocation)
+            ?: return ordinary
+        val openOutputs = metadata.attributes.map
+            .filter { (_, attributeMetadata) ->
+                JobChannelPorts.kindOf(attributeMetadata.type) == JobChannelPorts.Kind.Output
+            }
+            .map { it.key }
+            .filter { outputPort ->
+                isOpenPort(structure.graphNotation, objectLocation, outputPort)
+            }
+        if (openOutputs.isEmpty()) {
+            return ordinary
+        }
+
+        val mainLocation = ObjectLocation(
+            objectLocation.documentPath, NotationConventions.mainObjectPath)
+        val defaultBatchSize = structure.graphNotation
+            .firstAttribute(mainLocation, AttributePath.ofName(JobConventions.batchSizeAttributeName))?.asString()
+        val defaultCapacity = structure.graphNotation
+            .firstAttribute(mainLocation, AttributePath.ofName(JobConventions.capacityAttributeName))?.asString()
+
+        var augmentedDoc = documentNotation
+        for (outputPort in openOutputs) {
+            val channelName = ObjectName(JobConventions.autoSynthChannelName(
+                objectLocation.objectPath, outputPort))
+            val channelObjectPath = channelObjectPath(channelName)
+            val channelRef = channelObjectPath.asString()
+            val workerNotation = augmentedDoc.objects.notations.map[objectLocation.objectPath]
+            val batchSize = workerConfigValue(
+                workerNotation, outputPort, JobConventions.batchSizeAttributeName)
+                ?: defaultBatchSize
+            val capacity = workerConfigValue(
+                workerNotation, outputPort, JobConventions.capacityAttributeName)
+                ?: defaultCapacity
+
+            var channelNotation = ObjectNotation.ofParent(JobConventions.channelObjectName)
+            channelNotation = upsertIfPresent(
+                channelNotation, JobConventions.batchSizeAttributeName, batchSize)
+            channelNotation = upsertIfPresent(
+                channelNotation, JobConventions.capacityAttributeName, capacity)
+            augmentedDoc = ensureChannel(augmentedDoc, channelObjectPath, channelNotation)
+            augmentedDoc = setPort(
+                augmentedDoc, objectLocation.objectPath, outputPort, channelRef)
+        }
+
+        val augmentedNotation = structure.graphNotation.withModifiedDocument(
+            objectLocation.documentPath, augmentedDoc)
+        val augmentedStructure = GraphStructure(
+            augmentedNotation, notationMetadataReader.read(augmentedNotation))
+        val augmentedDefinition = GraphDefiner.tryDefine(augmentedStructure).successful()
+        return Result(
+            augmentedDefinition,
+            channelLocationsOf(augmentedDoc, objectLocation.documentPath))
     }
 
 
@@ -212,5 +288,23 @@ class JobChannelSynthesis(
             ?: return documentNotation
         return documentNotation.withModifiedObject(
             workerPath, workerNotation.upsertAttribute(port, ScalarAttributeNotation(channelRef)))
+    }
+
+
+    private fun isOpenPort(
+        graphNotation: GraphNotation,
+        objectLocation: ObjectLocation,
+        portName: AttributeName
+    ): Boolean {
+        val value = graphNotation
+            .firstAttribute(objectLocation, AttributePath.ofName(portName))
+            ?.asString()
+        if (value.isNullOrBlank()) {
+            return true
+        }
+        val referenced = graphNotation.coalesce.locateOptional(
+            tech.kzen.lib.common.model.location.ObjectReference.parse(value),
+            tech.kzen.lib.common.model.location.ObjectReferenceHost.ofLocation(objectLocation))
+        return referenced == null
     }
 }

@@ -50,6 +50,7 @@ class DataSourceActionsTest {
         private lateinit var moduleRoot: Path
         private lateinit var existing: Path
         private lateinit var plainExisting: Path
+        private lateinit var markdownExisting: Path
         private lateinit var declaredExisting: Path
         private lateinit var missing: Path
         private lateinit var context: KzenAutoContext
@@ -58,6 +59,7 @@ class DataSourceActionsTest {
         private val brokenSource = ObjectLocation.parse("main/data-source-actions-test.yaml#main.sources/broken")
         private val declaredSource = ObjectLocation.parse("main/data-source-actions-test.yaml#main.sources/declared")
         private val plainSource = ObjectLocation.parse("main/data-source-actions-test.yaml#main.sources/plain")
+        private val workerSource = ObjectLocation.parse("main/data-source-actions-test.yaml#main.workers/markdown")
         private val logicSource = ObjectLocation.parse("main/data-source-actions-test.yaml#main.sources/logic")
         private val nonSource = ObjectLocation.parse("main/data-source-actions-test.yaml#main")
 
@@ -68,10 +70,12 @@ class DataSourceActionsTest {
             moduleRoot = Files.createTempDirectory("data-source-actions-test")
             existing = moduleRoot.resolve("existing.csv")
             plainExisting = moduleRoot.resolve("notes.txt")
+            markdownExisting = moduleRoot.resolve("README.md")
             declaredExisting = moduleRoot.resolve("declared.csv")
             missing = moduleRoot.resolve("missing.csv")
             Files.writeString(existing, "name,value\nalpha,1\n")
             Files.writeString(plainExisting, "first line\nsecond line\n")
+            Files.writeString(markdownExisting, "# Guide\n\n| name | value |\n| --- | --- |\n")
             Files.writeString(declaredExisting, "city,amount\nToronto,1\n")
 
             val notationDir = moduleRoot.resolve("src/main/resources/notation/main")
@@ -102,6 +106,11 @@ class DataSourceActionsTest {
                   is: FileDataSource
                   files:
                     - location: '${plainExisting.toString().replace('\\', '/')}'
+
+                main.workers/markdown:
+                  is: FileSourceWorker
+                  files:
+                    - location: '${markdownExisting.toString().replace('\\', '/')}'
 
                 main.declaredFormat:
                   is: ConfiguredCsv
@@ -243,6 +252,24 @@ class DataSourceActionsTest {
         assertEquals(
             result.manifest.units.single().parts.single().ref,
             result.resolutionDetails.single().ref)
+    }
+
+
+    @Test
+    fun resolveFileUsesTheDataSourceHostedByAFileWorker() {
+        val outcome = executeFile(
+            DataSourceConventions.resolveFileAction, workerSource, markdownExisting)
+        val result = DataResolveResult.ofExecutionValue(
+            assertIs<ExecutionSuccess>(outcome, outcome.toString()).value)
+
+        val detail = result.resolutionDetails.single()
+        assertEquals(FormatSelectionKind.Automatic, detail.selection)
+        assertEquals(FormatResolutionBasis.Extension, detail.basis)
+        assertEquals("Plain text", detail.displayLabel)
+        assertTrue(detail.concreteFormatReference.orEmpty().endsWith("#PlainText"), detail.toString())
+        assertEquals(
+            canonical(markdownExisting),
+            result.manifest.units.single().parts.single().ref.id)
     }
 
 

@@ -57,6 +57,12 @@ external interface FileSelectionTableState: State {
 class FileSelectionTable(props: FileSelectionTableProps):
     RPureComponent<FileSelectionTableProps, FileSelectionTableState>(props)
 {
+    companion object {
+        internal fun additionalError(presentation: FileResolutionPresentation): String? =
+            presentation.error?.takeUnless { it == presentation.summary }
+    }
+
+
     override fun FileSelectionTableState.init(props: FileSelectionTableProps) {
         rangeAnchor = null
     }
@@ -242,7 +248,7 @@ class FileSelectionTable(props: FileSelectionTableProps):
                     +warning
                 }
             }
-            presentation.error?.let { error ->
+            additionalError(presentation)?.let { error ->
                 div {
                     css { fontSize = 0.8.em; color = Color("#c62828") }
                     +error
