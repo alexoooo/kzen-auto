@@ -6,22 +6,38 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.time.LocalDateTime
+import java.util.UUID
 
 
+/**
+ * One context's work root and the signature that marks what this context (not another live one) wrote there.
+ * Instance-owned: two contexts in one JVM hold two roots and two signatures, so a root claimed by one is never
+ * swept or reused by the other, and two contexts created in the same instant cannot collide.
+ */
 class WorkUtils(
-    private val base: Path
+    private val base: Path,
+    private val signature: String
 ) {
+    /** A root with a signature nothing else shares; the form tests and ad hoc callers use. */
+    constructor(base: Path): this(base, freshSignature(base.fileName?.toString() ?: "work"))
+
+
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        val processSignature = LocalDateTime.now().toString()
+        /** The standalone default: `../work`, a sibling of the module so IDEs do not index it. */
+        val standaloneRoot: Path = Paths.get("../work")
 
-        // NB: sibling to hide it from IDE
-        val sibling = WorkUtils(Paths.get(
-            "../work"))
+        fun sibling(): WorkUtils {
+            return WorkUtils(standaloneRoot, freshSignature("standalone"))
+        }
 
         fun temporary(name: String): WorkUtils {
-            return WorkUtils(kotlin.io.path.createTempDirectory(name))
+            return WorkUtils(kotlin.io.path.createTempDirectory(name), freshSignature(name))
+        }
+
+        /** A signature nothing else can share: the claim token plus a random component. */
+        fun freshSignature(claimToken: String): String {
+            return claimToken + "-" + UUID.randomUUID()
         }
 
         private val digestEncoding = BaseEncoding.base32().omitPadding().lowerCase()
@@ -59,6 +75,12 @@ class WorkUtils(
     //-----------------------------------------------------------------------------------------------------------------
     fun base(): Path {
         return base
+    }
+
+
+    /** Marks files this context owns (a running Report output's info file): another context's mark reads as dead. */
+    fun signature(): String {
+        return signature
     }
 
 

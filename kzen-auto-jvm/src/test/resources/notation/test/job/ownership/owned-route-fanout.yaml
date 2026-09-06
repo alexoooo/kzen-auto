@@ -1,0 +1,34 @@
+# OwnedRouteTest route "fanout" (archetypes in owned-route-test.yaml).
+
+# source → tee → two sinks
+main:
+  is: Job
+
+main.channels/items:
+  is: Channel
+
+main.channels/left:
+  is: Channel
+
+main.channels/right:
+  is: Channel
+
+main.workers/source:
+  is: OwnedSourceWorker
+  output: main.channels/items
+
+main.workers/tee:
+  is: TeeTransformWorker
+  input: main.channels/items
+  output: main.channels/left
+  second: main.channels/right
+
+main.workers/leftSink:
+  is: ObservingSinkWorker
+  input: main.channels/left
+  label: left
+
+main.workers/rightSink:
+  is: ObservingSinkWorker
+  input: main.channels/right
+  label: right

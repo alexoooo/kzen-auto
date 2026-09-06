@@ -1,0 +1,81 @@
+# Test fixture for JavaAdaptersTest: a Job whose source and transform are plain-Java classes compiled by javac
+# against the Kotlin adapter bases (CursorSourceWorker / JavaTransformWorker), served by the JVM reflective
+# mirror, feeding a Kotlin collecting sink. The worker archetypes are test-only.
+
+
+#######################################################################################################################
+# Test-only Worker archetypes.
+
+JavaCountingSource:
+  abstract: true
+  is: Worker
+  title: "Java Counting Source (test)"
+  class: tech.kzen.auto.server.objects.job.worker.javafixture.JavaCountingSource
+  output: ""
+  meta:
+    output:
+      is: ChannelOutput
+      creator: JobChannelCreator
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
+JavaDoublingTransform:
+  abstract: true
+  is: Worker
+  title: "Java Doubling Transform (test)"
+  class: tech.kzen.auto.server.objects.job.worker.javafixture.JavaDoublingTransform
+  input: ""
+  output: ""
+  meta:
+    input:
+      is: ChannelInput
+      creator: JobChannelCreator
+    output:
+      is: ChannelOutput
+      creator: JobChannelCreator
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
+CollectingSinkWorker:
+  abstract: true
+  is: Worker
+  title: "Collecting Sink (test)"
+  class: tech.kzen.auto.server.objects.job.worker.javafixture.CollectingSinkWorker
+  input: ""
+  meta:
+    input:
+      is: ChannelInput
+      creator: JobChannelCreator
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
+#######################################################################################################################
+# The concrete Job: Java cursor source → Java transform → collecting sink.
+
+main:
+  is: Job
+
+main.channels/items:
+  is: Channel
+
+main.channels/doubled:
+  is: Channel
+
+main.workers/source:
+  is: JavaCountingSource
+  output: main.channels/items
+
+main.workers/transform:
+  is: JavaDoublingTransform
+  input: main.channels/items
+  output: main.channels/doubled
+
+main.workers/sink:
+  is: CollectingSinkWorker
+  input: main.channels/doubled

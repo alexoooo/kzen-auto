@@ -102,6 +102,17 @@ SortSpecEditor:
   class: tech.kzen.auto.client.objects.document.job.edit.SortSpecEditor$Wrapper
 
 
+# Path picker: edits a PathProjectionWorker's `paths` attribute (a PathProjectionSpec — an ordered list of path
+# entries) by walking the upstream Worker's contract (from the Job's server-side validation, threaded through
+# the JobValidationChannel bridge channel): scalar leaves are added by a click, lists and maps expand into
+# their `[*]` element (a map into `key` / `value`), a recursive reference stays collapsed until expanded, and
+# each chosen entry shows its output name, an alias field and its binding error. Selected via
+# `editor: PathProjectionEditor` on the PathProjectionWorker's `paths` metadata.
+PathProjectionEditor:
+  is: AttributeEditor
+  class: tech.kzen.auto.client.objects.document.job.edit.PathProjectionEditor$Wrapper
+
+
 # Export-config editor: edits an ExportWriterWorker's `export` attribute (an OutputExportSpec — format /
 # compression / path-pattern), a thin composition of the same Select / Text field editors Report's export panel
 # uses, pointed at the Job-relative `export.*` paths. Selected via `editor: ExportSpecEditor` on the

@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.exec.job
 
 import tech.kzen.auto.common.paradigm.job.api.Worker
+import tech.kzen.auto.server.exec.job.ownership.RunOwnershipLedger
 import tech.kzen.auto.server.objects.job.worker.WorkerBase
 import tech.kzen.lib.common.exec.data.binding.BindingSchema
 import tech.kzen.lib.common.exec.data.binding.DataBindings
@@ -8,6 +9,7 @@ import tech.kzen.lib.common.exec.data.type.DataContract
 import tech.kzen.lib.common.exec.engine.Execution
 import tech.kzen.lib.common.exec.engine.Logic
 import tech.kzen.lib.common.exec.engine.LogicSignature
+import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import java.nio.file.Path
@@ -51,7 +53,9 @@ class WorkerLogic(
     private val jobResults: BindingSchema,
     private val inputPayloadType: TypeMetadata?,
     private val inputContract: DataContract?,
-    private val resultCollector: JobResultCollector
+    private val resultCollector: JobResultCollector,
+    private val ledger: RunOwnershipLedger,
+    private val workerLocation: ObjectLocation
 ): Logic {
     override fun signature(): LogicSignature {
         return LogicSignature.empty
@@ -67,7 +71,8 @@ class WorkerLogic(
 
         val control = EngineJobControl(
             execution, childLogicHost, objectStableMapper, scratchDir, outputDir,
-            jobInputs, jobParameters, jobResults, inputPayloadType, inputContract, resultCollector)
+            jobInputs, jobParameters, jobResults, inputPayloadType, inputContract, resultCollector,
+            ledger, workerLocation)
 
         // The engine renders the failure (the run settles / parks per pause-on-error); the run-level ErrorPaused
         // state already surfaces which Worker halted (per-Worker error chips are a separate display gap).

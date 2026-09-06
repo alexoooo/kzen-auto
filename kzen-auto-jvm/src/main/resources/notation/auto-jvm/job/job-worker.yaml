@@ -361,6 +361,38 @@ PivotWorker:
       by: Self
 
 
+# Projects paths over the incoming object graph into flat scalar columns and unnests `[*]` lists / maps (E8):
+# `paths` is an ordered list of entries — a path string, or `{path: executions[*].price, as: px}` — bound
+# against the upstream contract (PathBinding: fields must exist, `[*]` needs a list or map, leaves must be
+# scalar, output names — the dotted path with wildcards dropped, or the alias — must be unique). One output row
+# per unnested element; paths on the same list share the iteration, on different lists they cross-product; a
+# null intermediate keeps the row with nulls, an empty list yields no rows. The rows are fresh scalar copies:
+# an owned upstream element (E9) closes once the callback returns.
+PathProjectionWorker:
+  abstract: true
+  is: Worker
+  title: "Paths"
+  class: tech.kzen.auto.server.objects.job.worker.PathProjectionWorker
+  input: ""
+  output: ""
+  paths: []
+  meta:
+    input:
+      is: ChannelInput
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    output:
+      is: ChannelOutput
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    paths:
+      is: PathProjectionSpec
+      editor: PathProjectionEditor
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
 # Buffers every incoming record, then at end-of-stream emits them re-ordered by a multi-key sort (`sort`, a
 # SortSpec): an ORDERED map of column -> ascending, first key primary, ties broken by the next. Per key, values
 # that parse as numbers sort numerically and BEFORE non-numeric text (which sorts lexically) — a stable total

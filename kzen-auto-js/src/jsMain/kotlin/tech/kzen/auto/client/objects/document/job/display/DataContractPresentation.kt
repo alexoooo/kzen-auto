@@ -37,6 +37,10 @@ internal object DataContractPresentation {
     private fun contract(contract: DataContract, shape: DataShape?): Presentation {
         val details = mutableListOf<String>()
         appendType(details, contract.structural, "", "item")
+        // Recursive shapes: each definition once, collapsed where it recurs (↻), never expanded eagerly
+        contract.definitions.entries.sortedBy { it.key.value }.forEach { (id, type) ->
+            appendType(details, type, "", "definition ${id.value}")
+        }
         contract.nativeByPath.entries.sortedBy { it.key.toString() }.forEach { (path, metadata) ->
             details.add("native $path: ${metadata.toSimple()}")
         }
@@ -59,6 +63,7 @@ internal object DataContractPresentation {
         is DataType.Mapping -> "Map"
         is DataType.Union -> "Union · ${type.variants.size} variants"
         is DataType.Opaque -> "Opaque"
+        is DataType.Reference -> "↻ ${type.id.value}"
     }
 
     private fun appendType(lines: MutableList<String>, type: DataType, indent: String, label: String) {
@@ -84,6 +89,8 @@ internal object DataContractPresentation {
             is DataType.Scalar -> lines.add("$indent$label: ${scalar(type.kind)}$nullable")
             is DataType.Dynamic -> lines.add("$indent$label: Dynamic$nullable")
             is DataType.Opaque -> lines.add("$indent$label: Opaque$nullable")
+            // A recursive occurrence stays collapsed: the definition is listed once, under "definitions"
+            is DataType.Reference -> lines.add("$indent$label: ↻ ${type.id.value}$nullable")
         }
     }
 

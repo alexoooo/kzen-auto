@@ -129,6 +129,27 @@ interface JobControl {
     fun yieldResult(component: String, value: DataValue) {}
 
 
+    /**
+     * A named hold on the native resources behind [value] for a Worker that keeps it **beyond the callback that
+     * delivered it** (an accumulator buffering to end-of-stream, a window); the run closes those resources only
+     * after every hold, this one included, is released. The framework's own holds cover the callback itself —
+     * ordinary Workers never call this; anything a Worker needs later it copies, or leases. A value the run does
+     * not own yields [ValueLease.none].
+     */
+    fun retain(value: DataValue): ValueLease = ValueLease.none
+
+
+    /**
+     * A run-independent copy of [value] for anything that leaves the run — a Result, a retained trace, a
+     * preview: a value the run owns is materialized structurally (record → map, listing → list, scalars),
+     * **never** as the native identity the run closes at its end, and must be taken while the caller still
+     * holds it (inside the callback that delivered it); an unowned value is returned as is, so ordinary
+     * results keep today's identity-preserving path. An owned native that cannot be materialized (an opaque
+     * handle) fails by name rather than escaping.
+     */
+    fun snapshot(value: DataValue): DataValue = value
+
+
     /** Append one immutable structured event to this Worker's run history. */
     fun log(location: ObjectLocation, value: Map<String, Any?>) {}
 

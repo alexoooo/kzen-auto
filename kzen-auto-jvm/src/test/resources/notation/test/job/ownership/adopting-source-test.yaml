@@ -1,0 +1,32 @@
+# Test fixture for RunOwnershipTeardownTest: a source that adopts resources into the run's ownership ledger and
+# emits scalars, feeding the collecting sink; the run's teardown must close every adopted resource.
+
+
+AdoptingSourceWorker:
+  abstract: true
+  is: Worker
+  title: "Adopting Source (test)"
+  class: tech.kzen.auto.server.exec.job.ownership.AdoptingSourceWorker
+  output: ""
+  meta:
+    output:
+      is: ChannelOutput
+      creator: JobChannelCreator
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
+main:
+  is: Job
+
+main.channels/items:
+  is: Channel
+
+main.workers/source:
+  is: AdoptingSourceWorker
+  output: main.channels/items
+
+main.workers/sink:
+  is: CollectingSinkWorker
+  input: main.channels/items

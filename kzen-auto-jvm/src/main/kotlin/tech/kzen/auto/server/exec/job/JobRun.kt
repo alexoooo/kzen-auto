@@ -1,10 +1,12 @@
 package tech.kzen.auto.server.exec.job
 
-import tech.kzen.lib.common.exec.data.value.DataValue
+import tech.kzen.auto.server.exec.job.ownership.LeaseHolder
+import tech.kzen.auto.server.exec.job.ownership.RunOwnershipLedger
 import tech.kzen.lib.common.exec.data.binding.BindingSchema
 import tech.kzen.lib.common.exec.data.binding.DataBindings
 
 import kotlinx.coroutines.CompletableDeferred
+import org.slf4j.LoggerFactory
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -98,6 +100,13 @@ class JobRun(
         // re-yields at its onComplete (yield is last-write-wins).
         val resultCollector = JobResultCollector(jobResults)
 
+        // One ownership ledger per run (E9): every native the run adopts, closed after the Workers have joined —
+        // in the finally below, which runs only once the coroutineScope has joined every child. A live edit
+        // rebuilds the graph but not the run: the ledger rides the root's carryover, and the rebuilt run resumes
+        // it with every carried element still held by its channel or Worker.
+        val carried = execution.restoredAs<JobCarryover>()
+        val ledger = carried?.ledger ?: RunOwnershipLedger(runId)
+
         // One shared instance graph for the whole run: the Channel objects are single shared instances and each
         // Worker's injected endpoint views reference them (via JobChannelCreator) — exactly as the old
         // buildAndLaunch built it.
@@ -110,6 +119,7 @@ class JobRun(
         // the Preview's slice query) so [route] can address its serving Worker by name. The deterministic
         // synthesized identity means a rebuilt run resolves the SAME stable ids / names, so a migrate lines up.
         val streamChannels = LinkedHashMap<ObjectStableId, JobChannel>()
+        val channelsByLocation = LinkedHashMap<ObjectLocation, JobChannel>()
         val externalClients = LinkedHashMap<String, ChannelClient<Any?, Any?>>()
         for (channelLocation in channelLocations) {
             when (val channel = graphInstance[channelLocation]?.reference) {
@@ -118,17 +128,20 @@ class JobRun(
                         externalClients[channelLocation.objectPath.name.value] = channel.newClient()
                     }
 
-                is JobChannel ->
+                is JobChannel -> {
                     streamChannels[objectStableMapper.objectStableId(channelLocation)] = channel
+                    channelsByLocation[channelLocation] = channel
+                    // Sends through this channel take its named hold on owned elements (E9)
+                    channel.bindOwnership(ledger, LeaseHolder(channelLocation.asString()))
+                }
             }
         }
 
         // Restore: seed each channel with the in-flight payloads its predecessor (same stable id) was carrying at
         // the edit, BEFORE any Worker launches — so the consumer drains the carryover ahead of the live stream.
-        val carriedChannels = execution.restoredAs<Map<ObjectStableId, List<DataValue>>>()
-        if (carriedChannels != null) {
+        if (carried != null) {
             for ((stableId, channel) in streamChannels) {
-                carriedChannels[stableId]?.let { channel.preload(it) }
+                carried.channels[stableId]?.let { channel.preload(it) }
             }
         }
 
@@ -136,8 +149,11 @@ class JobRun(
         // payloads so the rebuilt run can re-seed them. Safe to drain here because the engine pauses the run
         // before invoking this, so a Worker an in-progress drain unparks re-parks at its next checkpoint rather
         // than producing more (and drainBuffered dedups a sender that completes mid-drain — see JobChannel).
+        // The teardown that follows is a migration's, not the run's end: the ledger goes with the carryover.
+        var migrating = false
         execution.onCapture {
-            streamChannels.mapValues { (_, channel) -> channel.drainBuffered() }
+            migrating = true
+            JobCarryover(streamChannels.mapValues { (_, channel) -> channel.drainBuffered() }, ledger)
         }
 
         // Sweep this run's whole scratch tree (every file-backed Worker's on-disk store) when the run settles —
@@ -189,17 +205,33 @@ class JobRun(
         // open (see [JobDeadlockMonitor]).
         val activeWorkers = AtomicInteger(workers.size)
         val deadlockSignal = CompletableDeferred<Nothing>()
+        // The ownership report rides the monitor's clock (E9 item 5): after the no-progress interval, if owned
+        // natives are held, the log and the root's trace name the holders — a warning, never a verdict
+        val ownershipReport = JobOwnershipReport(execution, ledger, channelsByLocation)
         val deadlockMonitor = JobDeadlockMonitor(
-            streamChannels.values, activeWorkers, externalClients.isNotEmpty()
-        ) {
-            deadlockSignal.completeExceptionally(
-                LogicFailure("Job deadlock: all workers blocked on channels with no progress"))
-        }
+            streamChannels.values, activeWorkers, externalClients.isNotEmpty(),
+            onDeadlock = {
+                deadlockSignal.completeExceptionally(
+                    LogicFailure("Job deadlock: all workers blocked on channels with no progress"))
+            },
+            progressMark = {
+                ledger.activityCount() + streamChannels.values.sumOf { it.transferredElements().toLong() }
+            },
+            onStall = { stalled ->
+                if (stalled && ledger.liveCount() > 0) {
+                    logger.warn("Job {} stalled: {}", jobLocation, ownershipReport.stallMessage())
+                    ownershipReport.emit(stalled = true)
+                }
+                else if (!stalled) {
+                    ownershipReport.emit(stalled = false)
+                }
+            })
         deadlockMonitor.start()
 
         // Launch every Worker concurrently as its own confined node; the run settles when all of them do. The
         // external bridge clients are closed at teardown (run end, cancel, or migrate) so the serving Workers'
         // serve streams end and the rebuilt run re-opens fresh clients.
+        var processingFailure: Throwable? = null
         try {
             coroutineScope {
                 // Fails the scope (and so the run) the instant the monitor declares a deadlock; cancelled once the
@@ -230,7 +262,8 @@ class JobRun(
                                         worker, childLogicHost, objectStableMapper,
                                         workerScratchDir, workerOutputDir,
                                         execution.inputs, jobParameters, jobResults,
-                                        inputPayloadType, inputContract, resultCollector),
+                                        inputPayloadType, inputContract, resultCollector,
+                                        ledger, location),
                                     inputs = DataBindings.bind(BindingSchema.empty),
                                     // These frames are live SIMULTANEOUSLY, which is the one shape the engine's
                                     // ambient-context model is not specified for (logic-spec §6): two Workers
@@ -251,11 +284,24 @@ class JobRun(
                     .awaitAll()
 
                 deadlockGuard.cancel()
+                // The run's final ownership accounting, on its ordinary trace
+                ownershipReport.emit(stalled = false)
             }
+        }
+        catch (e: Throwable) {
+            processingFailure = e
+            throw e
         }
         finally {
             deadlockMonitor.close()
             externalClients.values.forEach { it.close() }
+            // Every Worker has joined (a Worker parked in runBlockingIo delays this until its call returns), so no
+            // callback can be using an owned native: close them all, best-effort. A processing failure stays the
+            // run's outcome with close failures suppressed; a close failure alone becomes the outcome. Not at a
+            // migration barrier: the rebuilt run carries the ledger on.
+            if (!migrating) {
+                ledger.closeAll(processingFailure)?.let { throw it }
+            }
         }
 
         return resultCollector.settle()
@@ -289,6 +335,8 @@ class JobRun(
 
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
+        private val logger = LoggerFactory.getLogger(JobRun::class.java)
+
         // Upper bound a UI -> Worker external round-trip blocks the controller monitor (request is @Synchronized);
         // a well-behaved serving Worker replies well within this. A blocked / paused Worker makes the request time
         // out rather than stalling status / pause / cancel. KNOWN BOUNDED SEAM: this is a `runBlocking` on the

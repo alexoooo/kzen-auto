@@ -131,6 +131,21 @@ object JobConventions {
     // emit is retained in engine history, so periodic pushes must be O(bounded).
     const val progressTeaserRowCount = 10
 
+    // A Worker's live holds on owned natives (E9), added to its progress map by the server when non-zero — the
+    // generic card renders it as a scalar entry; a per-item list is never pushed.
+    const val progressHoldsKey = "holds"
+
+    // Keys of the run-level ownership report the Job root emits (E9 item 5): holds by holder name, queued
+    // elements per channel, live / closed native counts, and the stall flag set after the no-progress interval.
+    const val ownershipHoldsKey = "holds"
+    const val ownershipQueuedKey = "queued"
+    const val ownershipLiveKey = "live"
+    const val ownershipClosedKey = "closed"
+    const val ownershipStalledKey = "stalled"
+
+    // Bounded per-item detail in a stall warning: never an unbounded live-resource list.
+    const val ownershipDetailLimit = 5
+
 
     // Deterministic name for the one-way channel auto-synthesized to carry one adjacent-Worker connection
     // (order-driven wiring — see [JobChannelSynthesis]): `ch__<upstreamWorkerLeaf>__<outputPort>`. A pure

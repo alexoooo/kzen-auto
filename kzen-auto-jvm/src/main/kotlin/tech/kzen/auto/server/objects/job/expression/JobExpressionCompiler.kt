@@ -15,6 +15,9 @@ import tech.kzen.lib.common.exec.data.type.DataType
 import tech.kzen.lib.common.exec.data.type.DataTypePath
 import tech.kzen.lib.common.exec.data.type.ScalarKind
 import tech.kzen.lib.common.exec.data.type.toDataContract
+import tech.kzen.auto.server.objects.job.value.JobDataValues
+import kotlin.reflect.KType
+import tech.kzen.lib.common.exec.data.problem.DataException
 import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.platform.ClassName
@@ -64,14 +67,26 @@ class JobExpressionCompiler(
         @Suppress("UNCHECKED_CAST")
         val generated = clazz.getDeclaredConstructor().newInstance() as JobCalculatedExpression<Any?>
         val inferredType = ExpressionReturnTypeInference.inferReturnKType(clazz)
-        val inferred = ExpressionReturnTypeInference.toTypeMetadata(inferredType).toDataContract()
-        unsupportedBoundary(inferred.structural)?.let { return Attempt(null, it) }
         val streams = ExpressionReturnTypeInference.isStreamType(inferredType)
+        // Design-time shapes come from the adapter registry (E7 item 6), so a record, bean, enum or Set typed
+        // expression shows the columns the run will emit; a stream container itself is named, not described.
+        val inferred = if (streams) {
+            ExpressionReturnTypeInference.toTypeMetadata(inferredType).toDataContract()
+        }
+        else {
+            val (described, error) = describe(inferredType)
+            described ?: return Attempt(null, error)
+        }
+        unsupportedBoundary(inferred.structural)?.let { return Attempt(null, it) }
         val streamElement = if (streams) {
-            ExpressionReturnTypeInference.streamElementType(inferredType)
-                ?.let(ExpressionReturnTypeInference::toTypeMetadata)
-                ?.toDataContract()
-                ?: TypeMetadata.anyNullable.toDataContract()
+            val elementType = ExpressionReturnTypeInference.streamElementType(inferredType)
+            if (elementType == null) {
+                TypeMetadata.anyNullable.toDataContract()
+            }
+            else {
+                val (described, error) = describe(elementType)
+                described ?: return Attempt(null, error)
+            }
         }
         else {
             null
@@ -168,6 +183,7 @@ $expression
             is DataType.Mapping,
             is DataType.Listing,
             is DataType.Opaque,
+            is DataType.Reference,
             is DataType.Union -> emptyList()
         }
 
@@ -178,6 +194,17 @@ $expression
             ExpressionUtils.escapeKotlinVariableName(it.name.value) in names
         } ?: return null
         return "Parameter '${collision.name.value}' collides with an input field - rename one of them"
+    }
+
+
+    /** Describes [type] through the run-time registry; a refused or conflicting type is the compile error text. */
+    private fun describe(type: KType): Pair<DataContract?, String?> {
+        return try {
+            JobDataValues.describe(type) to null
+        }
+        catch (e: DataException) {
+            null to "Job expression type $type: ${e.problem.message}"
+        }
     }
 
 
@@ -196,6 +223,7 @@ $expression
         is DataType.Mapping -> unsupportedBoundary(type.key) ?: unsupportedBoundary(type.value)
         is DataType.Listing -> unsupportedBoundary(type.element)
         is DataType.Union -> type.variants.firstNotNullOfOrNull { unsupportedBoundary(it.type) }
+        is DataType.Reference,
         is DataType.Dynamic,
         is DataType.Opaque -> null
     }
@@ -274,6 +302,7 @@ $expression
         }), emptyList(), nullable)
         is DataType.Opaque,
         is DataType.Record,
+        is DataType.Reference,
         is DataType.Union -> if (nullable) TypeMetadata.anyNullable else TypeMetadata.any
     }
 }

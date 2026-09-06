@@ -74,6 +74,7 @@ class JobLaneDescriptor(
             is DataType.Record -> ColumnProjectionDescriptor.from(contract).header
             is DataType.Scalar,
             is DataType.Opaque,
+            is DataType.Reference,
             is DataType.Listing -> HeaderListing.empty
             is DataType.Mapping,
             is DataType.Dynamic,

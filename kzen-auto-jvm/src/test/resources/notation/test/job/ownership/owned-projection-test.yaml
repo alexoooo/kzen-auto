@@ -1,0 +1,28 @@
+# PathProjectionRouteTest: owned orders → path projection (symbol, executions[*].price, executions[*].qty) →
+# observing sink; the rows are detached copies that outlive the closed orders.
+main:
+  is: Job
+
+main.channels/orders:
+  is: Channel
+
+main.channels/rows:
+  is: Channel
+
+main.workers/source:
+  is: OwnedSourceWorker
+  output: main.channels/orders
+
+main.workers/project:
+  is: PathProjectionWorker
+  input: main.channels/orders
+  output: main.channels/rows
+  paths:
+    - symbol
+    - path: executions[*].price
+    - path: executions[*].qty
+
+main.workers/sink:
+  is: ObservingSinkWorker
+  input: main.channels/rows
+  label: sink

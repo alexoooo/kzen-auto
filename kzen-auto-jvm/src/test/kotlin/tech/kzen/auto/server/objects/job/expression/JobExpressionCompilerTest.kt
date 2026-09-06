@@ -12,6 +12,8 @@ import tech.kzen.lib.common.exec.LongExecutionValue
 import tech.kzen.lib.common.exec.data.type.DataContract
 import tech.kzen.lib.common.exec.data.type.DataField
 import tech.kzen.lib.common.exec.data.type.DataType
+import tech.kzen.lib.common.exec.data.type.DataPathSegment
+import tech.kzen.lib.common.exec.data.type.DefinitionId
 import tech.kzen.lib.common.exec.data.type.FieldId
 import tech.kzen.lib.common.exec.data.type.ScalarKind
 import tech.kzen.lib.common.exec.data.value.DataState
@@ -26,6 +28,16 @@ import kotlin.test.assertTrue
 
 
 class JobExpressionCompilerTest {
+    /** An ordinary class — not a data class — so the bean convention, not component order, names its columns. */
+    class PlainRow(val id: Int, val name: String)
+
+    class Conflicting {
+        @JvmField val value: Int = 1
+        fun getValue(): String = "one"
+    }
+
+    data class Chain(val label: String, val next: Chain?)
+
     private val compiler = JobExpressionCompiler(
         CachedKotlinCompiler(
             ScriptKotlinCompiler(),
@@ -91,6 +103,68 @@ class JobExpressionCompilerTest {
         assertEquals(
             DataType.Scalar(ScalarKind.Decimal),
             assertNotNull(compiled.streamElementContract).structural)
+    }
+
+
+    @Test
+    fun plainObjectStreamShowsItsColumnsBeforeExecutionAndEmitsThem() {
+        val attempt = compiler.compile(
+            "rows",
+            "listOf(${PlainRow::class.qualifiedName}(1, \"a\"))",
+            DataContract(DataType.Dynamic()),
+            TypeMetadata.unit,
+            classLoader)
+        val compiled = assertNotNull(attempt.compiled, attempt.error)
+
+        assertTrue(compiled.streams)
+        val designTime = assertIs<DataType.Record>(assertNotNull(compiled.streamElementContract).structural)
+        assertEquals(listOf("id", "name"), designTime.fields.map { it.id.name })
+
+        val emitted = JobDataValues.lift(PlainRow(1, "a"))
+        assertEquals(designTime, emitted.type, "the run emits the columns the editor showed")
+        assertEquals(1L, emitted.access.readLong(emitted.access.field(emitted.root, FieldId("id"))))
+
+        val single = assertNotNull(compiler.compile(
+            "row", "${PlainRow::class.qualifiedName}(2, \"b\")", DataContract(DataType.Dynamic()), TypeMetadata.unit, classLoader).compiled)
+        assertFalse(single.streams)
+        assertEquals(designTime, single.contract.structural)
+
+        val refused = compiler.compile(
+            "conflict", "${Conflicting::class.qualifiedName}()", DataContract(DataType.Dynamic()), TypeMetadata.unit, classLoader)
+        assertTrue(assertNotNull(refused.error).contains("Conflicting"), refused.error)
+    }
+
+
+    @Test
+    fun recursiveClassGivesAFiniteContractAColdEditorCanTraverse() {
+        val attempt = compiler.compile(
+            "chain",
+            "${Chain::class.qualifiedName}(\"a\", ${Chain::class.qualifiedName}(\"b\", null))",
+            DataContract(DataType.Dynamic()),
+            TypeMetadata.unit,
+            classLoader)
+        val compiled = assertNotNull(attempt.compiled, attempt.error)
+
+        // Finite: the recursive occurrence is a named reference with one definition
+        val root = assertIs<DataType.Record>(compiled.contract.structural)
+        val next = root.fields.single { it.id.name == "next" }.type
+        assertIs<DataType.Reference>(next)
+        assertEquals(setOf(DefinitionId(Chain::class.qualifiedName!!)), compiled.contract.definitions.keys)
+
+        // Traversable without running the source: each step expands one level
+        val level1 = compiled.contract.child(DataPathSegment.Field(FieldId("next")))
+        assertIs<DataType.Record>(level1.structural)
+        val level2 = level1.child(DataPathSegment.Field(FieldId("next")))
+        assertIs<DataType.Record>(level2.structural)
+        assertEquals(compiled.contract.definitions, level2.definitions)
+
+        // The wire form a client receives round-trips with its definitions
+        val decoded = DataContract.ofExecutionValue(compiled.contract.asExecutionValue())
+        assertEquals(compiled.contract, decoded)
+
+        // And the run's value satisfies the design-time contract
+        val emitted = JobDataValues.lift(Chain("a", Chain("b", null)), compiled.contract)
+        assertEquals("b", emitted.access.readText(emitted.access.field(emitted.access.field(emitted.root, FieldId("next")), FieldId("label"))))
     }
 
 

@@ -78,6 +78,8 @@ class ColumnProjectionDescriptor private constructor(
                 is DataType.Listing -> unsupported("Listings have no column projection")
                 is DataType.Opaque -> unsupported(
                     "Opaque values require a structural adapter before column projection")
+                is DataType.Reference -> unsupported(
+                    "Recursive type references require a projection before column projection")
                 is DataType.Union -> unsupported(
                     "Union values require an explicitly selected structural variant before column projection")
             }

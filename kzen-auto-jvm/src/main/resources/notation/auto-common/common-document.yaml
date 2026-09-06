@@ -531,6 +531,19 @@ SortSpecDefiner:
   class: tech.kzen.auto.common.objects.document.report.spec.sort.SortSpec$Definer
 
 
+# The object-graph path projection as a standalone attribute type (an ordered list of path entries, each a path
+# string or `{path, as}`), for the Job PathProjectionWorker to carry it directly (E8). Job-native, like SortSpec.
+PathProjectionSpec:
+  abstract: true
+  class: tech.kzen.auto.common.objects.document.job.path.PathProjectionSpec
+  meta:
+    ref:
+      by: PathProjectionSpecDefiner
+
+PathProjectionSpecDefiner:
+  class: tech.kzen.auto.common.objects.document.job.path.PathProjectionSpec$Definer
+
+
 # The export config as a standalone attribute type (a map with format / compression / path), for the Job
 # ExportWriterWorker to carry it directly — the Report document instead nests it inside OutputSpec (output.export).
 OutputExportSpec:
@@ -558,6 +571,9 @@ OutputSpecDefiner:
 ################################################################
 
 
+# Read-only view of the installed plugin universe (folders under --plugin.root=, pinned at start); installation
+# is a filesystem act, so the document has no attributes of its own (the legacy per-document jarPath /
+# META-INF/kzen/plugins.yaml Report-definer path retired in HS21).
 Plugin:
   abstract: true
   is: Document
@@ -565,9 +581,7 @@ Plugin:
   title: "Plugin"
   icon: "material-symbols:settings"
   group: "Customize"
-  jarPath: "path/to/plugin.jar"
   meta:
-    jarPath: String
     selfLocation: SelfLocation
 
 

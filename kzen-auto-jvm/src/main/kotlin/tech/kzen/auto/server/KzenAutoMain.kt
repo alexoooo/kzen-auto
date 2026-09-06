@@ -34,11 +34,14 @@ import tech.kzen.auto.server.backend.indexPage
 import tech.kzen.auto.server.context.BuildInfo
 import tech.kzen.auto.server.context.KzenAutoConfig
 import tech.kzen.auto.server.context.KzenAutoContext
+import tech.kzen.auto.server.context.runtime.KzenAutoRuntime
+import tech.kzen.auto.server.context.runtime.KzenAutoRuntimeConfig
 import tech.kzen.auto.server.paradigm.detached.ExecutionDownloadContent
 import tech.kzen.auto.server.paradigm.detached.ExecutionDownloadResult
 import tech.kzen.auto.server.service.impl.LogicStartAttempt
 import tech.kzen.lib.common.util.ImmutableByteArray
 import java.nio.file.Files
+import java.nio.file.Paths
 import kotlin.system.exitProcess
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -49,6 +52,8 @@ const val kzenAutoJsModuleName = "kzen-auto-js"
 
 private const val indexFileName = "index.html"
 private const val indexFilePath = "/$indexFileName"
+
+private const val defaultPluginDirectoryName = "plugins"
 
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -114,7 +119,14 @@ fun kzenAutoInit(args: Array<String>, jsModuleName: String, buildInfo: BuildInfo
         moduleRoot = KzenAutoConfig.readModuleRoot(args),
         managedLifeline = KzenAutoConfig.readManagedLifeline(args),
         parentPid = KzenAutoConfig.readParentPid(args),
-        buildInfo = buildInfo)
+        buildInfo = buildInfo,
+        workRoot = KzenAutoConfig.readWorkRoot(args))
+
+    // The extension universe is pinned once for the process, before the first context: --plugin.root= or, by
+    //  default, a `plugins/` directory under the module root (or the cwd) when one exists.
+    val pluginRoot = KzenAutoConfig.readPluginRoot(args)
+        ?: (config.moduleRoot ?: Paths.get("")).resolve(defaultPluginDirectoryName).takeIf { Files.isDirectory(it) }
+    KzenAutoRuntime.initialize(KzenAutoRuntimeConfig(pluginRoot))
 
     val context = KzenAutoContext.create(config)
 

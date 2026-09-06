@@ -1,0 +1,34 @@
+# Test fixture: a Java transform that declares its output class (a Java record), so the static walk shows the
+# record's columns downstream and the run lifts each record under that shape. Reuses the java-adapters
+# archetypes for the source and sink; the transform archetype is test-only.
+
+JavaRecordTransform:
+  abstract: true
+  is: Worker
+  title: "Java Record Transform (test)"
+  class: tech.kzen.auto.server.objects.job.worker.javafixture.JavaRecordTransform
+  input: ""
+  output: ""
+  meta:
+    input:
+      is: ChannelInput
+      creator: JobChannelCreator
+    output:
+      is: ChannelOutput
+      creator: JobChannelCreator
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
+main:
+  is: Job
+
+main.workers/source:
+  is: JavaCountingSource
+
+main.workers/transform:
+  is: JavaRecordTransform
+
+main.workers/sink:
+  is: CollectingSinkWorker

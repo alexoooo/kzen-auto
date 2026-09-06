@@ -5,10 +5,11 @@ import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.MapExecutionValue
 import tech.kzen.lib.common.util.digest.Digest
 import tech.kzen.lib.common.util.digest.Digestible
+import kotlin.jvm.JvmOverloads
 
 
 @Serializable
-data class ContentCodingSpec(
+data class ContentCodingSpec @JvmOverloads constructor(
     val identity: String,
     val config: ExecutionValue = MapExecutionValue(emptyMap()),
     val configDigest: Digest = config.digest()

@@ -102,7 +102,7 @@ class ReportWorkPool(
         val processText = processNode.toObject() as String
 
         return when (processText) {
-            WorkUtils.processSignature ->
+            workUtils.signature() ->
                 OutputStatus.Running
 
             else -> OutputStatus.Killed
@@ -148,7 +148,7 @@ class ReportWorkPool(
         Files.createDirectories(dir)
 
         val initialInfoYaml = """
-            process-signature: "${WorkUtils.processSignature}"
+            process-signature: "${workUtils.signature()}"
             status: Running
             run-id: "${logicRunExecutionId.logicRunId.value}"
             execution-id: "${logicRunExecutionId.logicExecutionId.value}"

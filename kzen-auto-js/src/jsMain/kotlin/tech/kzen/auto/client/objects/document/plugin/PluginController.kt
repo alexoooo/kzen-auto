@@ -10,7 +10,6 @@ import react.dom.html.ReactHTML.h2
 import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
-import tech.kzen.auto.client.objects.document.common.edit.TextAttributeEditor
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.rest.ClientRestApi
@@ -19,7 +18,8 @@ import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.plugin.PluginConventions
-import tech.kzen.auto.common.objects.document.plugin.model.ReportDefinerDetail
+import tech.kzen.auto.common.objects.document.plugin.model.PluginClassDetail
+import tech.kzen.auto.common.objects.document.plugin.model.PluginScopeDetail
 import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.exec.ExecutionSuccess
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -39,12 +39,18 @@ external interface PluginControllerProps: Props {
 
 external interface PluginControllerState: State {
     var clientState: ClientState?
-    var detailList: List<ReportDefinerDetail>?
+    var scopes: List<PluginScopeDetail>?
     var listingError: String?
 }
 
 
 //---------------------------------------------------------------------------------------------------------------------
+/**
+ * The Plugin document: a read-only view of the installed plugin universe as the server pinned it at start —
+ * one card per scope (the application classpath first), its discovered contributions, the classes this
+ * workspace resolved with their availability here, and every named failure. Installation is a filesystem act
+ * (a folder under the plugin root, applied at the next start); nothing on this page changes the server.
+ */
 @Suppress("unused")
 class PluginController(
     props: PluginControllerProps
@@ -54,8 +60,10 @@ class PluginController(
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-//        val separatorWidth = 2.px
-//        val separatorColor = Color("#c3c3c3")
+        private val loadedColor = NamedColor.darkgreen
+        private val failedColor = NamedColor.darkred
+        private val unavailableColor = NamedColor.darkorange
+        private val mutedColor = NamedColor.gray
 
         fun tryMainLocation(clientState: ClientState): ObjectLocation? {
             val documentPath = clientState
@@ -118,7 +126,7 @@ class PluginController(
     //-----------------------------------------------------------------------------------------------------------------
     override fun PluginControllerState.init(props: PluginControllerProps) {
         clientState = null
-        detailList = null
+        scopes = null
         listingError = null
     }
 
@@ -146,7 +154,6 @@ class PluginController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun onClientState(clientState: ClientState) {
-//        console.log("#!#@!#@! onClientState - ${clientState.imperativeModel}")
         setState {
             this.clientState = clientState
         }
@@ -168,18 +175,18 @@ class PluginController(
             when (result) {
                 is ExecutionSuccess -> {
                     @Suppress("UNCHECKED_CAST")
-                    val infoCollectionList = result.value.get() as List<Map<String, Any?>>
+                    val collections = result.value.get() as List<Map<String, Any?>>
 
-                    val infoList = infoCollectionList.map { ReportDefinerDetail.ofCollection(it) }
+                    val loaded = collections.map { PluginScopeDetail.ofCollection(it) }
                     setState {
-                        this.detailList = infoList
+                        scopes = loaded
                         listingError = null
                     }
                 }
 
                 is ExecutionFailure -> {
                     setState {
-                        detailList = null
+                        scopes = null
                         listingError = result.errorMessage
                     }
                 }
@@ -201,40 +208,31 @@ class PluginController(
                 margin = Margin(5.em, 2.em, 2.em, 2.em)
             }
 
-            renderPathEditor(mainObjectLocation, clientState)
-            renderInfoListing()
+            renderIntro()
+            renderListing()
         }
     }
 
 
-    private fun ChildrenBuilder.renderPathEditor(mainObjectLocation: ObjectLocation, clientState: ClientState) {
-        val jarPathAttributePath = PluginConventions.jarPathAttributeName.asAttributePath()
-
-        val jarPath = clientState
-            .graphStructure()
-            .graphNotation
-            .firstAttribute(mainObjectLocation, jarPathAttributePath)
-            ?.asString()
-            ?: ""
-
-        TextAttributeEditor::class.react {
-            objectLocation = mainObjectLocation
-            attributePath = jarPathAttributePath
-
-            value = jarPath
-            labelOverride = "Plugin Jar File Path"
-
-            mirroredGraphStore = props.mirroredGraphStore
-
-            onChange = {
-                loadInfo()
+    private fun ChildrenBuilder.renderIntro() {
+        div {
+            css {
+                color = mutedColor
+                marginBottom = 0.5.em
             }
+            +"Installed plugins, as pinned when this server started. Install a plugin by placing its jars in a "
+            span {
+                css { fontFamily = FontFamily.monospace }
+                +"plugins/<name>/"
+            }
+            +" folder (or the --plugin.root= directory) and restart. Only what a plugin contributed through an explicit "
+            +"protocol is listed; a class appears once this workspace has resolved it."
         }
     }
 
 
-    private fun ChildrenBuilder.renderInfoListing() {
-        val infoList = state.detailList
+    private fun ChildrenBuilder.renderListing() {
+        val scopes = state.scopes
         val listingError = state.listingError
 
         div {
@@ -243,8 +241,8 @@ class PluginController(
             }
 
             when {
-                infoList != null ->
-                    renderInfoList(infoList)
+                scopes != null ->
+                    renderScopes(scopes)
 
                 listingError != null ->
                     +"Error: $listingError"
@@ -256,15 +254,15 @@ class PluginController(
     }
 
 
-    private fun ChildrenBuilder.renderInfoList(detailList: List<ReportDefinerDetail>) {
-        if (detailList.isEmpty()) {
+    private fun ChildrenBuilder.renderScopes(scopes: List<PluginScopeDetail>) {
+        if (scopes.isEmpty()) {
             +"Empty"
             return
         }
 
-        for (processorDefinitionDetail in detailList) {
+        for (scope in scopes) {
             div {
-                key = Key(processorDefinitionDetail.coordinate.asString())
+                key = Key(scope.id)
 
                 css {
                     filter = dropShadow(0.px, 1.px, 1.px, NamedColor.gray)
@@ -275,56 +273,140 @@ class PluginController(
                     marginTop = 1.em
                 }
 
-                h2 {
+                renderScopeHeader(scope)
+                renderScopeBody(scope)
+            }
+        }
+    }
+
+
+    private fun ChildrenBuilder.renderScopeHeader(scope: PluginScopeDetail) {
+        h2 {
+            css {
+                marginTop = (-0.5).em
+                marginBottom = 0.px
+            }
+            +scope.id
+            span {
+                css {
+                    marginLeft = 1.em
+                    fontSize = 0.6.em
+                    fontWeight = FontWeight.normal
+                    color = if (scope.loaded) loadedColor else failedColor
+                }
+                +(if (scope.loaded) "loaded" else "failed")
+            }
+        }
+
+        div {
+            css {
+                color = mutedColor
+                fontSize = 0.9.em
+            }
+            +(scope.directory ?: "application classpath")
+            scope.version?.let { +" · version $it" }
+            scope.spiVersion?.let { +" · SPI $it" }
+            if (scope.jars.isNotEmpty()) {
+                +" · "
+                span {
+                    css { fontFamily = FontFamily.monospace }
+                    +scope.jars.joinToString()
+                }
+            }
+        }
+    }
+
+
+    private fun ChildrenBuilder.renderScopeBody(scope: PluginScopeDetail) {
+        scope.failure?.let { renderLine("Failed to load", it, failedColor) }
+
+        for (failure in scope.failures) {
+            renderLine("Failure", failure, failedColor)
+        }
+
+        for (reader in scope.readers) {
+            renderLine("Reader", reader)
+        }
+
+        if (scope.isApplication) {
+            // kzen's own bundled notation is not what this page is for; one line keeps the row honest
+            if (scope.documents.isNotEmpty()) {
+                renderLine("Bundled documents", scope.documents.size.toString(), detail = "kzen's own notation")
+            }
+        }
+        else {
+            for (document in scope.documents) {
+                renderLine("Document", document.path, detail = document.origin)
+            }
+        }
+
+        for (module in scope.generatedModules) {
+            renderLine("Generated module", module)
+        }
+
+        for (klass in scope.classes) {
+            val color = when (klass.availability) {
+                PluginClassDetail.available -> loadedColor
+                PluginClassDetail.unavailable -> unavailableColor
+                else -> failedColor
+            }
+            val caption = when (klass.availability) {
+                PluginClassDetail.available -> "available in this workspace"
+                PluginClassDetail.unavailable -> "unavailable in this workspace — " + (klass.detail ?: "")
+                else -> "cannot be served — " + (klass.detail ?: "")
+            }
+            renderLine("Class", klass.className, color, caption)
+        }
+
+        for (name in scope.shadowedClasses) {
+            renderLine("Shadowed", name, unavailableColor, "the application classpath defines it; the application copy is used")
+        }
+
+        for (name in scope.ambiguousClasses) {
+            renderLine("Ambiguous", name, failedColor, "defined by more than one plugin; resolution fails by name")
+        }
+
+        val nothingListed = scope.loaded && scope.failures.isEmpty() && scope.readers.isEmpty() &&
+                scope.documents.isEmpty() && scope.generatedModules.isEmpty() && scope.classes.isEmpty() &&
+                scope.shadowedClasses.isEmpty() && scope.ambiguousClasses.isEmpty()
+        if (nothingListed) {
+            div {
+                css {
+                    color = mutedColor
+                    marginTop = 0.5.em
+                }
+                +"No contributions discovered and no class resolved yet."
+            }
+        }
+    }
+
+
+    private fun ChildrenBuilder.renderLine(
+        label: String,
+        value: String,
+        valueColor: Color? = null,
+        detail: String? = null
+    ) {
+        div {
+            css {
+                marginTop = 0.25.em
+            }
+            +"$label: "
+            span {
+                css {
+                    fontFamily = FontFamily.monospace
+                    valueColor?.let { color = it }
+                }
+                +value
+            }
+            detail?.let {
+                span {
                     css {
-                        marginTop = (-0.5).em
-                        marginBottom = 0.px
+                        marginLeft = 0.5.em
+                        color = mutedColor
+                        fontSize = 0.9.em
                     }
-                    +processorDefinitionDetail.coordinate.name
-                }
-
-                div {
-                    +"File extensions: "
-                    span {
-                        css {
-                            fontFamily = FontFamily.monospace
-                        }
-                        +processorDefinitionDetail.extensions.joinToString()
-                    }
-                }
-
-                div {
-                    val dataEncoding = processorDefinitionDetail.dataEncoding.textEncoding?.charsetName ?: "Binary"
-                    +"Data encoding: "
-                    span {
-                        css {
-                            fontFamily = FontFamily.monospace
-                        }
-                        +dataEncoding
-                    }
-                }
-
-                div {
-                    +"Model type: "
-
-                    span {
-                        css {
-                            fontFamily = FontFamily.monospace
-                        }
-                        +processorDefinitionDetail.modelType.asString()
-                    }
-                }
-
-                if (processorDefinitionDetail.priority != -1) {
-                    div {
-                        +"Priority: "
-                        span {
-                            css {
-                                fontFamily = FontFamily.monospace
-                            }
-                            +processorDefinitionDetail.priority.toString()
-                        }
-                    }
+                    +it
                 }
             }
         }

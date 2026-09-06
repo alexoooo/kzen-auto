@@ -1,6 +1,0 @@
-# Definition-clean on purpose (it joins the global test notation): the jar path is bogus but `jarPath` is a plain
-# String attribute, so definition succeeds and only the runtime load fails — which is exactly the
-# incomplete-definer-cache state PluginReportDefinitionRepositoryTest pins.
-main:
-  is: Plugin
-  jarPath: "C:/nonexistent/plugin-cache-test.jar"

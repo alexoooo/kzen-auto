@@ -1,0 +1,19 @@
+# OwnedSourceRouteTest route "streammigration": a closeable stream of scalars behind a gated sink; the migration
+# must detach and re-adopt the open stream (one evaluation, one close) and deliver every element once.
+main:
+  is: Job
+
+main.channels/items:
+  is: Channel
+  capacity: 4
+  batchSize: 1
+
+main.workers/source:
+  is: FormulaSourceWorker
+  output: main.channels/items
+  code: 'tech.kzen.auto.server.exec.job.ownership.ClosingStreams.stream(40)'
+
+main.workers/sink:
+  is: GatedCountingSinkWorker
+  input: main.channels/items
+  note: original

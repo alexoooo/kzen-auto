@@ -1,0 +1,16 @@
+# OwnedSourceRouteTest route "selfclosing": an iterator that is its own closeable container, closed once.
+main:
+  is: Job
+
+main.channels/items:
+  is: Channel
+
+main.workers/source:
+  is: FormulaSourceWorker
+  output: main.channels/items
+  code: 'tech.kzen.auto.server.exec.job.ownership.ClosingStreams.selfClosingIterator(3)'
+
+main.workers/sink:
+  is: ObservingSinkWorker
+  input: main.channels/items
+  label: sink

@@ -1,0 +1,28 @@
+# OwnershipBoundaryTest route "stall": a two-permit arena source behind a Sort — the source parks on its third
+# permit, which only the Sort's completion could return; the run must warn naming the Sort, not fail.
+main:
+  is: Job
+
+main.channels/items:
+  is: Channel
+  capacity: 0
+  batchSize: 1
+
+main.channels/sorted:
+  is: Channel
+
+main.workers/source:
+  is: OwnedSourceWorker
+  output: main.channels/items
+
+main.workers/sort:
+  is: SortWorker
+  input: main.channels/items
+  output: main.channels/sorted
+  sort:
+    "0|name": true
+
+main.workers/sink:
+  is: ObservingSinkWorker
+  input: main.channels/sorted
+  label: sink

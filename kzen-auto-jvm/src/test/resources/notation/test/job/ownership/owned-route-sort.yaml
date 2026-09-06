@@ -1,0 +1,27 @@
+# OwnedRouteTest route "sort" (archetypes in owned-route-test.yaml).
+
+# source → sort (retains to end-of-stream) → sink
+main:
+  is: Job
+
+main.channels/items:
+  is: Channel
+
+main.channels/sorted:
+  is: Channel
+
+main.workers/source:
+  is: OwnedSourceWorker
+  output: main.channels/items
+
+main.workers/sort:
+  is: SortWorker
+  input: main.channels/items
+  output: main.channels/sorted
+  sort:
+    "0|name": true
+
+main.workers/sink:
+  is: ObservingSinkWorker
+  input: main.channels/sorted
+  label: sink

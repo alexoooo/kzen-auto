@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.service.compile
 
 import org.jetbrains.kotlin.scripting.compiler.plugin.impl.ScriptJvmCompilerIsolated
+import tech.kzen.auto.server.context.runtime.KzenAutoRuntime
 import tech.kzen.auto.server.service.compile.KotlinCode.Companion.classNamePrefix
 import java.io.File
 import java.nio.file.Files
@@ -153,8 +154,12 @@ open class ScriptKotlinCompiler: KotlinCompiler {
         outputJarFile: Path
     ) {
         jvm {
+            // classpathFromClassloader walks URLClassLoader chains and sees nothing through the runtime's
+            // delegating aggregate loader, so the plugin jars are added explicitly; class identity still holds
+            // because the compiled script's loader delegates through that same aggregate.
             val classloaderClasspath: List<File> = classpathFromClassloader(classLoader, false)!!
-            val classpathFiles = classloaderClasspath + classpathLocations.map { it.toFile() }
+            val pluginClasspath = KzenAutoRuntime.currentOrDefault().pluginClasspath().map { it.toFile() }
+            val classpathFiles = classloaderClasspath + pluginClasspath + classpathLocations.map { it.toFile() }
             updateClasspath(classpathFiles)
         }
 

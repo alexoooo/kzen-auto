@@ -84,6 +84,9 @@ class ServerLogicController(
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private val logger = LoggerFactory.getLogger(ServerLogicController::class.java)
+
+        // How long close waits for the driving executor to finish cancelling before interrupting it
+        private const val closeJoinTimeoutSeconds = 10L
     }
 
 
@@ -1007,17 +1010,28 @@ class ServerLogicController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun close() {
+        closeAndJoin()
+    }
+
+
+    /**
+     * Cancels the active run and joins the driving executor; false when the join timed out and the run was
+     * interrupted instead — the owner then must not treat the work root as safely reusable.
+     */
+    fun closeAndJoin(): Boolean {
         synchronized(this) {
             stateOrNull?.engine?.cancel()
         }
 
         executor.shutdown()
-        if (!executor.awaitTermination(10, TimeUnit.SECONDS)) {
+        val joined = executor.awaitTermination(closeJoinTimeoutSeconds, TimeUnit.SECONDS)
+        if (!joined) {
             executor.shutdownNow()
         }
 
         synchronized(this) {
             stateOrNull?.let { disposeState(it) }
         }
+        return joined
     }
 }

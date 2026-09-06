@@ -82,6 +82,7 @@ private fun DataType.toLegacyTypeMetadata(): TypeMetadata =
             nullable)
         is DataType.Opaque,
         is DataType.Record,
+        is DataType.Reference,
         is DataType.Union -> TypeMetadata(
             ClassName("kotlin.Any"),
             emptyList(),

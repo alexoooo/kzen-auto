@@ -1,0 +1,24 @@
+# OwnershipBoundaryTest route "borrowed": a transform emits a Borrowed closeable child of each owned parent.
+main:
+  is: Job
+
+main.channels/items:
+  is: Channel
+
+main.channels/children:
+  is: Channel
+
+main.workers/source:
+  is: OwnedSourceWorker
+  output: main.channels/items
+
+main.workers/transform:
+  is: ForwardingTransformWorker
+  input: main.channels/items
+  output: main.channels/children
+  mode: borrowed
+
+main.workers/sink:
+  is: ObservingSinkWorker
+  input: main.channels/children
+  label: sink

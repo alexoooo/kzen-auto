@@ -1,0 +1,38 @@
+# OwnershipBoundaryTest route "copied": a one-permit arena source, a transform projecting each owned element to
+# a row of scalars it declares an independent copy, then a Sort — the rows carry no owner, each element closes
+# when the projecting callback returns, and the source's next permit is free: the run completes, sorted.
+main:
+  is: Job
+
+main.channels/items:
+  is: Channel
+  capacity: 0
+  batchSize: 1
+
+main.channels/rows:
+  is: Channel
+
+main.channels/sorted:
+  is: Channel
+
+main.workers/source:
+  is: OwnedSourceWorker
+  output: main.channels/items
+
+main.workers/copy:
+  is: CopyingTransformWorker
+  input: main.channels/items
+  output: main.channels/rows
+  independent: true
+
+main.workers/sort:
+  is: SortWorker
+  input: main.channels/rows
+  output: main.channels/sorted
+  sort:
+    "0|name": true
+
+main.workers/sink:
+  is: ObservingSinkWorker
+  input: main.channels/sorted
+  label: sink

@@ -12,6 +12,8 @@ import tech.kzen.lib.common.exec.data.type.ScalarKind
 import tech.kzen.lib.common.exec.data.value.DataState
 import tech.kzen.lib.common.exec.data.value.DataNode
 import tech.kzen.lib.common.exec.data.value.DataValue
+import tech.kzen.auto.plugin.api.data.Borrowed
+import tech.kzen.auto.server.exec.job.ownership.NativeIdentityRegistry
 import tech.kzen.lib.common.exec.data.value.DefaultDataAdapterRegistry
 import tech.kzen.lib.common.exec.data.value.DataAccessException
 import tech.kzen.lib.common.exec.data.value.ValueAccess
@@ -24,14 +26,33 @@ import tech.kzen.lib.common.exec.data.type.FieldId
 import tech.kzen.lib.common.exec.ScalarExecutionValue
 import java.math.BigDecimal
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.reflect.KType
 
 
 /** Process-lifetime adapter entry point for values entering Job transport from native Logic boundaries. */
 internal object JobDataValues {
-    private val adapters = DefaultDataAdapterRegistry()
+    // A read through a native some run has closed fails by name (E9): the process-wide identity registry guards it
+    private val adapters = DefaultDataAdapterRegistry(livenessGuard = NativeIdentityRegistry.global.guard)
     private val flatHeaders = ConcurrentHashMap<HeaderListing, FlatRecordHeader>()
 
-    fun lift(value: Any?, expected: DataContract? = null): DataValue = adapters.lift(value, expected)
+    fun lift(value: Any?, expected: DataContract? = null): DataValue {
+        if (value is Borrowed<*>) {
+            // The wrapper is an ownership declaration, not data: the value reads as the wrapped object, and no
+            // run adopts it (E9)
+            NativeIdentityRegistry.global.markBorrowed(value.value)
+            return adapters.lift(value.value, expected)
+        }
+        return adapters.lift(value, expected)
+    }
+
+
+    /**
+     * The design-time contract of a JVM type, through the same adapter registry that lifts values at run time —
+     * so an expression's inferred record, bean, enum or Set shape shows its columns before any execution and
+     * matches what the run emits. Throws [tech.kzen.lib.common.exec.data.problem.DataException] for a type the
+     * registry refuses (a streaming type as a value, a class with conflicting properties).
+     */
+    fun describe(type: KType): DataContract = adapters.describe(type)
 
     fun flat(header: HeaderListing, record: FlatFileRecord): DataValue {
         val flatHeader = flatHeaders.computeIfAbsent(header) {
@@ -160,7 +181,7 @@ internal object JobDataValues {
         catch (_: DataAccessException) {
             // Continue with structural materialization.
         }
-        return when (val type = access.contract(node).structural) {
+        return when (val type = access.contract(node).expanded().structural) {
             is DataType.Scalar -> scalarBoundary(access, node, type.kind)
             is DataType.Record -> LinkedHashMap<String, Any?>(type.fields.size).also { result ->
                 for (field in type.fields) {
@@ -179,6 +200,7 @@ internal object JobDataValues {
             }
             is DataType.Union -> boundaryNode(access, access.selected(node))
             is DataType.Dynamic,
+            is DataType.Reference,
             is DataType.Opaque -> throw DataAccessException(
                 tech.kzen.lib.common.exec.data.problem.DataProblem(
                     tech.kzen.lib.common.exec.data.problem.DataProblem.nativeTypeMissing,

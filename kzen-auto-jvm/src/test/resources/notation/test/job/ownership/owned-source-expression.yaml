@@ -1,0 +1,16 @@
+# OwnedSourceRouteTest route "expression": an expression returning a closeable stream of closeable elements.
+main:
+  is: Job
+
+main.channels/items:
+  is: Channel
+
+main.workers/source:
+  is: FormulaSourceWorker
+  output: main.channels/items
+  code: 'tech.kzen.auto.server.exec.job.ownership.ClosingStreams.resourceStream(3)'
+
+main.workers/sink:
+  is: ObservingSinkWorker
+  input: main.channels/items
+  label: sink

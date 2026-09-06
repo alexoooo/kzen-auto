@@ -1,6 +1,10 @@
 package tech.kzen.auto.server.exec.job
 
 import tech.kzen.auto.common.paradigm.job.control.JobControl
+import tech.kzen.auto.common.paradigm.job.control.ValueLease
+import tech.kzen.auto.server.exec.job.ownership.LeaseHolder
+import tech.kzen.auto.server.exec.job.ownership.RunOwnershipControl
+import tech.kzen.auto.server.exec.job.ownership.RunOwnershipLedger
 import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.ListExecutionValue
@@ -13,6 +17,11 @@ import tech.kzen.lib.common.exec.data.binding.BindingState
 import tech.kzen.lib.common.exec.data.binding.DataBindings
 import tech.kzen.lib.common.exec.data.type.DataContract
 import tech.kzen.lib.common.exec.data.value.DataValue
+import tech.kzen.lib.common.exec.data.value.SnapshotResult
+import tech.kzen.lib.common.exec.data.value.DataSnapshot
+import tech.kzen.lib.common.exec.data.value.DataAccessException
+import tech.kzen.lib.common.exec.data.problem.DataProblem
+import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.lib.common.exec.engine.Logic
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
@@ -55,8 +64,11 @@ class EngineJobControl(
     private val jobResults: BindingSchema,
     private val inputPayloadType: TypeMetadata?,
     private val inputContract: DataContract?,
-    private val resultCollector: JobResultCollector
-): JobControl {
+    private val resultCollector: JobResultCollector,
+    /** The run's ownership ledger (E9): shared by every Worker of the run, torn down after they join. */
+    override val ledger: RunOwnershipLedger,
+    private val workerLocation: ObjectLocation
+): JobControl, RunOwnershipControl {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         // Reserved emit address tagging a Worker's live-progress payload, distinct from any other value the
@@ -91,6 +103,10 @@ class EngineJobControl(
 
     //-----------------------------------------------------------------------------------------------------------------
     private val progressAddress = Address.of(workerProgressAddressMarker)
+
+    // The holder every hold of this Worker is named by: its notation location, so a live-edit replacement
+    // instance is the same holder
+    private val workerHolder = LeaseHolder(workerLocation.asString())
 
     // This Worker runs single-threaded on its own node coroutine, so a plain field suffices (no concurrent
     // publishProgress for one Worker).
@@ -139,6 +155,10 @@ class EngineJobControl(
         if (!force && lastProgressNanos != 0L && now - lastProgressNanos < progressThrottleNanos) {
             return
         }
+        // This Worker's live holds on owned natives ride its ordinary progress (E9 item 5), aggregated only
+        val holds = ledger.holdsOf(workerHolder)
+        @Suppress("NAME_SHADOWING")
+        val value = if (holds == 0) value else LinkedHashMap(value).also { it[JobConventions.progressHoldsKey] = holds }
         lastProgressNanos = now
 
         // The emit address is the Worker node's; the Worker's own stable id (the node's stableId) is what the
@@ -192,8 +212,36 @@ class EngineJobControl(
 
     // Contribute a ResultSink Worker's named binding to the run's output (harvested by JobRun once the run
     // settles). Last write per component wins, so a re-yield after a live-edit migrate is idempotent.
+    override fun retain(value: DataValue): ValueLease {
+        return ledger.retain(value, workerHolder)
+    }
+
+
     override fun yieldResult(component: String, value: DataValue) {
+        // An owned native never escapes the run (E9): the run closes it at its end, so a Result holding its
+        // identity would read as closed later — the sink snapshots what it keeps
+        check(ledger.owners(value).isEmpty) {
+            "Result '$component' of $workerLocation holds a native the run owns and will close; " +
+                "snapshot it (JobControl.snapshot) before yielding"
+        }
         resultCollector.yieldResult(BindingName(component), value)
+    }
+
+
+    override fun snapshot(value: DataValue): DataValue {
+        if (ledger.owners(value).isEmpty) {
+            return value
+        }
+        return when (val result = DataSnapshot.capture(value)) {
+            is SnapshotResult.Complete -> result.snapshot.asDataValue()
+            is SnapshotResult.Rejected -> throw DataAccessException(DataProblem(
+                DataProblem.snapshotRejected,
+                "Boundary of $workerLocation: an owned ${JobDataValues.native(value)?.javaClass?.name} cannot " +
+                    "leave the run and cannot be snapshotted: ${result.problems.joinToString { it.message }}"))
+            SnapshotResult.Redacted -> throw DataAccessException(DataProblem(
+                DataProblem.snapshotRejected,
+                "Boundary of $workerLocation: an owned value was redacted and cannot leave the run"))
+        }
     }
 
 

@@ -36,6 +36,9 @@ import tech.kzen.lib.platform.ClassNames
  * a single sink with default config satisfies it with zero configuration. A Job may carry several ResultSinks,
  * each yielding its own declared named component. [progress] also pushes the kept value's display text so the
  * card's ResultWorkerDisplay shows it in a value box (live for [last], settled on the forced final publish).
+ * An element the run OWNS (E9) is kept as a [JobControl.snapshot] — a structural copy taken inside the
+ * callback — so the Result stays readable after the run closed the native and never carries its identity;
+ * an opaque owned native fails the run by name here rather than escaping.
  *
  * LIVE-EDIT MIGRATION: the kept element (and the seen-count) is carried across a live edit ([SortWorker]'s-buffer
  * precedent) — REQUIRED for correctness, since an unchanged upstream resumes rather than replays, so a sink that
@@ -99,16 +102,16 @@ class ResultSinkWorker(
     //-----------------------------------------------------------------------------------------------------------------
     override suspend fun onElement(element: DataValue, control: JobControl) {
         collected++
-        if (keep == all) {
-            keptAll.add(JobDataValues.boundary(element))
-            kept = element
-            hasAny = true
-            return
-        }
         if (keep == first && hasAny) {
             return
         }
-        kept = element
+        // The kept element outlives this callback and leaves the run: an owned value is snapshotted here, while
+        // the callback still holds it (E9 boundary rule); an unowned one keeps its identity as before
+        val retained = control.snapshot(element)
+        if (keep == all) {
+            keptAll.add(JobDataValues.boundary(retained))
+        }
+        kept = retained
         hasAny = true
     }
 

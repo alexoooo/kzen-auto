@@ -204,12 +204,42 @@ tasks.compileJava {
 }
 
 
+// Java test fixtures are plain-Java plugin authors' code: the reflective mirror needs their constructor
+// parameter names, which javac keeps only with -parameters.
+tasks.compileTestJava {
+    options.release.set(javaVersion)
+    options.compilerArgs.add("-parameters")
+}
+
+
 // Forward the optional `-DjobSliceRows=<n>` to the forked test JVM, so JobExecutionTest's M3 throughput
 // benchmark can be scaled for a heavier manual run (it defaults to a modest CI-friendly N otherwise).
 tasks.test {
     System.getProperty("jobSliceRows")?.let {
         systemProperty("jobSliceRows", it)
     }
+
+    // Boot-universe tests each need their own JVM (below); the shared test JVM pins one universe for its lifetime.
+    exclude("**/context/runtime/boot/**")
+}
+
+
+// Plugin-universe boot tests: the process-global KzenAutoRuntime can be initialized once per JVM and has no
+// reset seam, so every test that initializes it with its own universe (conflicting second initialization,
+// duplicate ids, SPI mismatch, ...) runs in a fresh JVM — one failing boot never poisons the others. The
+// ordinary `test` task excludes this package.
+val pluginUniverseTest = tasks.register<Test>("pluginUniverseTest") {
+    group = "verification"
+    description = "Run the plugin-universe boot tests, one JVM per test class"
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    include("**/context/runtime/boot/**")
+    forkEvery = 1
+    workingDir = rootProject.projectDir
+}
+
+tasks.check {
+    dependsOn(pluginUniverseTest)
 }
 
 

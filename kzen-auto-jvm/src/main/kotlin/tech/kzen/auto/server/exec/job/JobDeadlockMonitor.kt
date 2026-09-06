@@ -25,20 +25,31 @@ import java.util.concurrent.atomic.AtomicInteger
  * - **Genuine deadlock** — a lone sink on an orphan channel, or a cycle of Workers each waiting on the other:
  *   every Worker suspended on a channel that will never deliver → `blocked == active` → failed.
  *
- * Suppressed entirely while the run serves an external duplex channel: a Worker idle on an open serve port
- * awaits a UI request, indistinguishable from a channel block under this heuristic (matches the retired
- * `JobExecution`; a precise per-Worker fix is deferred). A transient wavefront where a handoff briefly leaves
+ * The failing verdict is suppressed while the run serves an external duplex channel: a Worker idle on an open
+ * serve port awaits a UI request, indistinguishable from a channel block under this heuristic (matches the
+ * retired `JobExecution`; a precise per-Worker fix is deferred). The stall warning below reads the progress mark,
+ * not the blocked heuristic, so it stays on for a serving run — a Job ending in a Preview is the common
+ * interactive shape, and its retained-lease diagnostics must not go quiet with it. A transient wavefront where a handoff briefly leaves
  * every Worker suspended is absorbed by requiring the condition to hold across [graceThreshold] consecutive
  * polls, so only a SUSTAINED stall reaches a verdict.
  *
  * Runs OFF the engine dispatcher (its own daemon thread): a polling coroutine on the engine's CountingDispatcher
  * would keep `inFlight` bouncing and break the controller's [awaitQuiescent][tech.kzen.lib.server.exec.engine.RunEngine.awaitQuiescent].
+ *
+ * **Stall warning (E9 item 5).** The same clock carries a lower, NON-failing threshold: when [progressMark]
+ * (channel transfers plus the ownership ledger's adoptions and closes) has not advanced for [stallThreshold]
+ * consecutive polls while Workers are live, [onStall] fires once with `true` — the run names the holders of
+ * its owned natives — and once with `false` when progress resumes. A source parked on a host permit behind an
+ * accumulator looks exactly like slow I/O, so only the interval, never the state combination, warns; the
+ * failing deadlock threshold above is untouched.
  */
 class JobDeadlockMonitor(
     private val streamChannels: Collection<JobChannel>,
     private val activeWorkers: AtomicInteger,
     private val externallyServing: Boolean,
-    private val onDeadlock: () -> Unit
+    private val onDeadlock: () -> Unit,
+    private val progressMark: () -> Long = { 0L },
+    private val onStall: (Boolean) -> Unit = {}
 ): AutoCloseable {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -50,6 +61,9 @@ class JobDeadlockMonitor(
         // Consecutive all-blocked polls before declaring deadlock: a channel handoff can briefly leave every
         // Worker suspended, so only quiescence sustained across ~200 ms reaches a verdict.
         private const val graceThreshold = 4
+        // Consecutive polls without progress before the (non-failing) stall warning: ~2 s.
+        internal const val stallThreshold = 40
+        internal const val stallIntervalMillis = pollIntervalMillis * stallThreshold
     }
 
 
@@ -60,6 +74,9 @@ class JobDeadlockMonitor(
 
     // Touched only on the single scheduler thread.
     private var consecutiveStalls = 0
+    private var lastMark = Long.MIN_VALUE
+    private var pollsWithoutProgress = 0
+    private var stallReported = false
 
     @Volatile
     private var fired = false
@@ -67,10 +84,6 @@ class JobDeadlockMonitor(
 
     //-----------------------------------------------------------------------------------------------------------------
     fun start() {
-        if (externallyServing) {
-            // Deadlock detection is suspended for the whole run while any external channel is open.
-            return
-        }
         executor.scheduleWithFixedDelay(
             ::poll, pollIntervalMillis, pollIntervalMillis, TimeUnit.MILLISECONDS)
     }
@@ -94,6 +107,14 @@ class JobDeadlockMonitor(
             return
         }
 
+        trackProgress()
+
+        if (externallyServing) {
+            // The verdict is suspended for the whole run while any external channel is open: a Worker idle on
+            // its serve port is indistinguishable from a channel block. Only the no-progress warning above runs.
+            return
+        }
+
         val blocked = streamChannels.sumOf { it.blockedCount() }
         if (blocked < active) {
             // At least one Worker is running / computing / parked at a checkpoint / gated on a non-channel wait —
@@ -109,6 +130,26 @@ class JobDeadlockMonitor(
             fired = true
             logger.warn("Job deadlock: {} worker(s) all blocked on channels with no progress", active)
             onDeadlock()
+        }
+    }
+
+
+    // The no-progress interval: a warning once it elapses, a recovery once the mark moves again.
+    private fun trackProgress() {
+        val mark = progressMark()
+        if (mark != lastMark) {
+            lastMark = mark
+            pollsWithoutProgress = 0
+            if (stallReported) {
+                stallReported = false
+                onStall(false)
+            }
+            return
+        }
+        pollsWithoutProgress += 1
+        if (!stallReported && pollsWithoutProgress >= stallThreshold) {
+            stallReported = true
+            onStall(true)
         }
     }
 }

@@ -9,6 +9,9 @@ import tech.kzen.auto.common.data.read.CursorAdoptionIdentity
 import tech.kzen.auto.common.data.schema.DataShape
 import tech.kzen.auto.common.data.schema.LegacyDataShapeBridge
 import tech.kzen.auto.common.paradigm.job.control.JobControl
+import tech.kzen.auto.server.objects.job.worker.ownership
+import tech.kzen.auto.server.exec.job.ownership.LeaseHolder
+import tech.kzen.auto.common.paradigm.job.control.ValueLease
 import tech.kzen.auto.server.data.DataOpenerLookup
 import tech.kzen.auto.server.data.read.OperationalDataCursor
 import tech.kzen.auto.server.objects.job.value.JobDataValues
@@ -39,9 +42,11 @@ object DataReadCore {
     const val schemaStrict = "strict"
     const val schemaSuperset = "superset"
 
+    /** One pulled item and the producer hold the run took on it at the pull (E9 source ingress); none at exhaustion. */
     data class Pull(
         val hasItem: Boolean,
-        val item: DataValue?
+        val item: DataValue?,
+        val hold: ValueLease? = null
     )
 
 
@@ -122,9 +127,12 @@ object DataReadCore {
 
 
     suspend fun pull(control: JobControl, cursor: DataCursor): Pull {
+        val ledger = control.ownership()
         return control.runBlockingIo {
             if (cursor.hasNext()) {
-                Pull(true, cursor.next())
+                val item = cursor.next()
+                // Adopted inside the blocking body: a cancel winning the return cannot lose a closeable item
+                Pull(true, item, ledger?.hold(item, LeaseHolder.producer))
             }
             else {
                 Pull(false, null)
@@ -153,13 +161,20 @@ object DataReadCore {
             return false
         }
 
-        val message = message(
-            cursor.shape,
-            effectiveShape,
-            requireNotNull(pull.item),
-            unitAttributes)
-        claimBeforeSend()
-        send(message)
+        // The producer hold lasts through conversion and send; released with no channel hold taken (a
+        // conversion failure, a cancel before the send), it closes the item
+        try {
+            val message = message(
+                cursor.shape,
+                effectiveShape,
+                requireNotNull(pull.item),
+                unitAttributes)
+            claimBeforeSend()
+            send(message)
+        }
+        finally {
+            pull.hold?.release()
+        }
         return true
     }
 
@@ -420,7 +435,8 @@ object DataReadCore {
     }
 
 
-    private fun scalarText(value: ScalarExecutionValue): String = when (value) {
+    /** A scalar's text form for a flat record cell — the one rendering a reader and the path projection share. */
+    internal fun scalarText(value: ScalarExecutionValue): String = when (value) {
         is TextExecutionValue -> value.value
         is BooleanExecutionValue -> value.value.toString()
         is LongExecutionValue -> value.value.toString()

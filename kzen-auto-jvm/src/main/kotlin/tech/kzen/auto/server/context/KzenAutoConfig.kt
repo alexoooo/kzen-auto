@@ -24,7 +24,19 @@ data class KzenAutoConfig(
 
     // Version + build timestamp of the running artifact, loaded from a baked-in classpath resource
     //  by the entry point (see BuildInfo). Surfaced to the client via indexPage as logo hover text.
-    val buildInfo: BuildInfo? = null
+    val buildInfo: BuildInfo? = null,
+
+    // This context's work root (transient Job scratch, persisted Worker output, compiler cache, schema cache).
+    //  Created, canonicalized and claimed process-wide at context creation, so two live contexts never share
+    //  one; null = the standalone default `../work` beside the module.
+    val workRoot: Path? = null,
+
+    // Services an embedding host supplies to @Service constructor parameters (see KzenAutoHost); empty standalone.
+    val hostServices: KzenAutoHost = KzenAutoHost.empty,
+
+    // Whether the cwd-relative `logs/` directory is presented as a managed storage area. A foreign host owns
+    //  its own logging backend and location, so it turns this off; standalone kzen (bundled logback.xml) keeps it.
+    val manageLogs: Boolean = true
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -42,6 +54,10 @@ data class KzenAutoConfig(
 
         const val parentPidPrefix = "--parent.pid="
 
+        // Plugin root for the process-global runtime (see KzenAutoRuntimeConfig); a runtime concern rather than
+        //  a per-context one, parsed here beside the other command-line arguments for one place to look.
+        const val pluginRootPrefix = "--plugin.root="
+
         fun readPort(args: Array<String>): Int? {
             val match = args
                 .lastOrNull { it.matches(serverPortRegex) }
@@ -57,6 +73,24 @@ data class KzenAutoConfig(
                 ?: return null
 
             return Paths.get(match.substring(moduleRootPrefix.length))
+        }
+
+        const val workRootPrefix = "--work.root="
+
+        fun readWorkRoot(args: Array<String>): Path? {
+            val match = args
+                .lastOrNull { it.startsWith(workRootPrefix) }
+                ?: return null
+
+            return Paths.get(match.substring(workRootPrefix.length))
+        }
+
+        fun readPluginRoot(args: Array<String>): Path? {
+            val match = args
+                .lastOrNull { it.startsWith(pluginRootPrefix) }
+                ?: return null
+
+            return Paths.get(match.substring(pluginRootPrefix.length))
         }
 
         fun readManagedLifeline(args: Array<String>): Boolean {

@@ -10,6 +10,7 @@ import kotlin.reflect.KVisibility
 import kotlin.reflect.full.allSupertypes
 import kotlin.reflect.full.declaredMemberProperties
 import kotlin.reflect.full.isSubclassOf
+import java.util.stream.Stream
 
 
 /**
@@ -63,9 +64,9 @@ object ExpressionReturnTypeInference {
 
     //-----------------------------------------------------------------------------------------------------------------
     /**
-     * The strict-static stream classification: an `Iterable`, `Sequence`, or `Iterator` expression type
-     * streams its elements (per [streamElementType]); anything else — including `Any` — emits a single
-     * message. The inferred type alone decides; the runtime value never does.
+     * The strict-static stream classification: an `Iterable`, `Sequence`, `Iterator` or `java.util.stream.Stream`
+     * expression type streams its elements (per [streamElementType]); anything else — including `Any` — emits
+     * a single message. The inferred type alone decides; the runtime value never does.
      */
     fun isStreamType(kType: KType): Boolean {
         val classifier = kType.classifier as? KClass<*>
@@ -107,12 +108,16 @@ object ExpressionReturnTypeInference {
     }
 
 
-    /** Converts a statically stream-classified expression value into the iterator both runtimes consume. */
+    /**
+     * Converts a statically stream-classified expression value into the iterator both runtimes consume. A
+     * `Stream`'s iterator does not close the stream: the container is closed separately (E9 item 1).
+     */
     fun streamIterator(value: Any?): Iterator<*>? {
         return when (value) {
             is Iterable<*> -> value.iterator()
             is Sequence<*> -> value.iterator()
             is Iterator<*> -> value
+            is Stream<*> -> value.iterator()
             else -> null
         }
     }
@@ -143,5 +148,5 @@ object ExpressionReturnTypeInference {
     }
 
 
-    private val streamClassifiers = listOf(Iterable::class, Sequence::class, Iterator::class)
+    private val streamClassifiers = listOf(Iterable::class, Sequence::class, Iterator::class, Stream::class)
 }

@@ -1,0 +1,29 @@
+# OwnershipBoundaryTest route "sort-migration": owned elements retained by a Sort across a live edit of the sink.
+main:
+  is: Job
+
+main.channels/items:
+  is: Channel
+  capacity: 2
+  batchSize: 1
+
+main.channels/sorted:
+  is: Channel
+  capacity: 2
+  batchSize: 1
+
+main.workers/source:
+  is: OwnedSourceWorker
+  output: main.channels/items
+
+main.workers/sort:
+  is: SortWorker
+  input: main.channels/items
+  output: main.channels/sorted
+  sort:
+    "0|name": true
+
+main.workers/sink:
+  is: GatedCountingSinkWorker
+  input: main.channels/sorted
+  note: original

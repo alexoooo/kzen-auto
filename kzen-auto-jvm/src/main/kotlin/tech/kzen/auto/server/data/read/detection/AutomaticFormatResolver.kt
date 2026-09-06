@@ -42,7 +42,9 @@ class AutomaticFormatResolver(
         val policy = policyOverride ?: DetectionPolicy.default(hintMetadata)
         val candidates = formats.candidates(effectiveRequest)
         val identities = candidates.map(DetectionCandidateIdentity::of)
-        val probeIdentities = candidates.map { it.resolvedRead.reader.compatibility }.distinct()
+        val probeIdentities = candidates.map { it.resolvedRead.reader }.distinct().map { reader ->
+            "${reader.namespace}/${reader.name}/${reader.compatibility}"
+        }
 
         val expectedFingerprint = request.expectedFingerprint
         if (expectedFingerprint != null) {
@@ -74,12 +76,7 @@ class AutomaticFormatResolver(
                 }
 
                 val hint = classify(hints, hintMetadata)
-                val decoded = StrictCharacterSampleDecoder.decode(
-                    sample.bytes,
-                    sample.endOfInput,
-                    request.explicitEncoding,
-                    hint?.hintClass == FormatHintClass.StructuredFamily ||
-                        hint?.hintClass == FormatHintClass.GenericText)
+                val decoded = decodeSample(request, sample, hint)
                 val result = if (hint?.hintClass == FormatHintClass.SemanticText) {
                     textResult(
                         effectiveRequest, sample, decoded,
@@ -177,6 +174,7 @@ class AutomaticFormatResolver(
         }
 
         if (matches.isEmpty()) {
+            decoded.textFailure?.let { throw it }
             if (hint?.hintClass == FormatHintClass.StructuredFamily) {
                 val reason = rejections.firstOrNull()
                     ?: "No installed format validated the structured input"
@@ -198,7 +196,7 @@ class AutomaticFormatResolver(
         val finalists = matches.filter { it.strength.ordinal == strongest }
         val bySpec = finalists.groupBy { it.spec.digest().asString() }
         if (bySpec.size > 1) {
-            if (hint?.hintClass == FormatHintClass.StructuredFamily) {
+            if (hint?.hintClass == FormatHintClass.StructuredFamily || decoded.textFailure != null) {
                 throw FormatDetectionException(
                     tech.kzen.auto.common.data.format.detection.FormatDetectionFailureCategory.Resolution,
                     "More than one installed format matched the structured input equally")
@@ -236,8 +234,36 @@ class AutomaticFormatResolver(
             },
             winner.evidence,
             combineWarnings(decoded.warning, dialectWarning),
-            resolvedEncoding = decoded.characterViews.single().encoding,
+            resolvedEncoding = decoded.characterViews.singleOrNull()?.encoding,
             columnsLocked = winner.candidate.columnsLocked))
+    }
+
+
+    /**
+     * Text views of the sample. A sample that is not text under any permitted encoding is still probed as bytes
+     * unless text was demanded (an explicit encoding, or a hint that only ever means text): a binary reader such
+     * as a feed decoder matches on its framing, never on a filename alone, and the text failure is what the user
+     * sees if nothing matched.
+     */
+    private fun decodeSample(
+        request: FormatResolutionRequest,
+        sample: AcquiredDetectionSample,
+        hint: FormatHintMetadata?
+    ): DecodedDetectionSample {
+        val textDemanded = request.explicitEncoding != null ||
+            hint?.hintClass == FormatHintClass.SemanticText
+        return try {
+            StrictCharacterSampleDecoder.decode(
+                sample.bytes,
+                sample.endOfInput,
+                request.explicitEncoding,
+                hint?.hintClass == FormatHintClass.StructuredFamily ||
+                    hint?.hintClass == FormatHintClass.GenericText)
+        }
+        catch (failure: FormatDetectionException) {
+            if (textDemanded) throw failure
+            DecodedDetectionSample(emptyList(), null, failure)
+        }
     }
 
 

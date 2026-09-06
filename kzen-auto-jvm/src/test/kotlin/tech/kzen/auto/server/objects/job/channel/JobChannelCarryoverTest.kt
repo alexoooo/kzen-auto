@@ -46,7 +46,7 @@ class JobChannelCarryoverTest {
         // channel last), each exactly once.
         assertEquals(
             listOf<Any?>("a", "b", "c"),
-            channel.drainBuffered().map(JobDataValues::boundary))
+            channel.drainBuffered().elements.map(JobDataValues::boundary))
 
         parkedSend.cancel()
     }
@@ -55,7 +55,7 @@ class JobChannelCarryoverTest {
     @Test
     fun preloadDeliversCarryoverBeforeTheLiveStream() = runBlocking {
         val rebuilt = JobChannel(capacity = 4, batchSize = 1)
-        rebuilt.preload(listOf("a", "b", "c").map(JobDataValues::lift))
+        rebuilt.preload(ChannelCarryover.of(listOf("a", "b", "c").map(JobDataValues::lift)))
 
         val producer = rebuilt.newProducer()
         producer.emit("d")

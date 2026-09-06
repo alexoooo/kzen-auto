@@ -13,6 +13,7 @@ import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.api.ReactWrapper
 import tech.kzen.auto.client.objects.document.DocumentController
 import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
+import tech.kzen.auto.client.objects.document.job.JobValidationChannel
 import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.objects.document.bridge.InsertionKey
 import tech.kzen.auto.client.objects.document.common.dragdrop.dropZoneRegion
@@ -454,6 +455,9 @@ class JobController(
                 setState {
                     workerValidations = validation
                 }
+                // Attribute editors render deep under the generic AttributeEditorManager (objectLocation +
+                // attributeName only), so an editor that needs the upstream contract reads it off the bridge
+                contextValue<DocumentBridge?>()?.channel(JobValidationChannel.Key)?.publish(validation)
             }
 
             if (epoch != validationEpoch) {

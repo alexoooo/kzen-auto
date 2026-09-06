@@ -122,7 +122,7 @@ class FormulaWorker(
                 replace = replacement?.let { value -> { _: ColumnProjection -> value } },
                 carry = carrySelection)
             computed += 1
-            emit.send(result.value)
+            emit.send(inheriting(result.value, element, control))
             return
         }
 
@@ -135,7 +135,16 @@ class FormulaWorker(
             carry = carrySelection)
 
         computed += 1
-        emit.send(result.value)
+        emit.send(inheriting(result.value, element, control))
+    }
+
+
+    // E9 item 3: the output may hold anything reachable from the input (a replaced payload, a carried native
+    // record), so a non-scalar output keeps the input's native open until its own consumer is done; a scalar
+    // carries no owner. Nothing is copied or inspected — only the ledger's owner set is propagated.
+    private fun inheriting(output: DataValue, input: DataValue, control: JobControl): DataValue {
+        control.ownership()?.inherit(output, input)
+        return output
     }
 
 

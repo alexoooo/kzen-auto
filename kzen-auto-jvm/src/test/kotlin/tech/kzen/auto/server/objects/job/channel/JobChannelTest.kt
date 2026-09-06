@@ -37,9 +37,9 @@ class JobChannelTest {
         producer.emit("b")
         producer.emit("c")
 
-        assertEquals(listOf("a", "b", "c"), channel.drainBuffered().map(JobDataValues::boundary))
+        assertEquals(listOf("a", "b", "c"), channel.drainBuffered().elements.map(JobDataValues::boundary))
         // A drained channel holds nothing more.
-        assertEquals(listOf<DataValue>(), channel.drainBuffered())
+        assertEquals(listOf<DataValue>(), channel.drainBuffered().elements)
     }
 
 
@@ -57,7 +57,7 @@ class JobChannelTest {
             producer.emit(3)  // parks here: the buffer already holds batches [1], [2]
         }
 
-        assertEquals(listOf(1, 2, 3), channel.drainBuffered().map(JobDataValues::boundary))
+        assertEquals(listOf(1, 2, 3), channel.drainBuffered().elements.map(JobDataValues::boundary))
 
         sender.cancel()
     }
@@ -67,7 +67,7 @@ class JobChannelTest {
     @Test
     fun preloadDeliversCarryoverBeforeLiveStreamViaReceive() = runBlocking {
         val channel = JobChannel(capacity = 4, batchSize = 1)
-        channel.preload(listOf("x", "y").map(JobDataValues::lift))
+        channel.preload(ChannelCarryover.of(listOf("x", "y").map(JobDataValues::lift)))
         val producer = channel.newProducer()
         producer.emit("live1")
         producer.emit("live2")
@@ -87,7 +87,7 @@ class JobChannelTest {
         // The framework consumer loops (Transform / Sink workers) drain batches, so the carryover must precede the
         // live channel on that path too.
         val channel = JobChannel(capacity = 4, batchSize = 1)
-        channel.preload(listOf("x", "y").map(JobDataValues::lift))
+        channel.preload(ChannelCarryover.of(listOf("x", "y").map(JobDataValues::lift)))
         val producer = channel.newProducer()
         producer.emit("live1")
         producer.close()
@@ -115,7 +115,7 @@ class JobChannelTest {
         }
         val carried = source.drainBuffered()
         sender.cancel()
-        assertEquals(listOf(1, 2, 3), carried.map(JobDataValues::boundary))
+        assertEquals(listOf(1, 2, 3), carried.elements.map(JobDataValues::boundary))
 
         val rebuilt = JobChannel(capacity = 2, batchSize = 1)
         rebuilt.preload(carried)

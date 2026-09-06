@@ -18,6 +18,11 @@ import tech.kzen.lib.common.exec.data.value.DataValue
  * - **End-of-stream.** [output] is closed when [produce] returns, fails, or is cancelled — after a final [flush]
  *   of the trailing partial batch on normal completion — so a source can never deadlock the pipeline by
  *   forgetting to close, nor drop its last sub-batch of rows.
+ * - **Ownership (E9).** An `AutoCloseable` [produce] emits becomes the run's to close (adopted at the send)
+ *   and is flushed at once; one the run must not close is wrapped as [tech.kzen.auto.plugin.api.data.Borrowed].
+ *   Before the send the resource is the author's: a [produce] body that acquires a native and fails before
+ *   emitting it closes it on its own failure path — kzen cannot intercept an acquisition it did not make. A
+ *   source that lets the framework pull ([CursorSourceWorker]) gets the guarantee from the pull itself.
  */
 abstract class SourceWorker(
     private val output: ChannelOutput<DataValue>,

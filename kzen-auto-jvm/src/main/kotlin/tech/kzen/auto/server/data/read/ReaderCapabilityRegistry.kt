@@ -6,6 +6,7 @@ import tech.kzen.auto.common.data.read.ResolvedReadSpec
 import tech.kzen.auto.plugin.api.data.ReaderCapability
 import tech.kzen.auto.plugin.api.data.FormatAuthoringCapability
 import tech.kzen.auto.plugin.api.data.ReaderProbeCapability
+import tech.kzen.auto.server.context.runtime.KzenAutoRuntime
 import tech.kzen.auto.server.data.read.delimited.ConfiguredDelimitedReaderCapability
 import tech.kzen.auto.server.data.read.text.PlainTextReaderCapability
 import java.util.ServiceLoader
@@ -25,13 +26,26 @@ class ReaderCapabilityRegistry(
 
         fun withBuiltInReaders(): ReaderCapabilityRegistry = withConfiguredReaders()
 
+        /**
+         * The built-ins plus a fresh instance of every reader provider the runtime discovered across its plugin
+         * scopes: descriptors live in the process-global runtime, instances belong to one context.
+         */
+        fun forRuntime(runtime: KzenAutoRuntime): ReaderCapabilityRegistry = ReaderCapabilityRegistry(buildList {
+            add(ConfiguredDelimitedReaderCapability)
+            add(PlainTextReaderCapability)
+            runtime.readerDescriptors().forEach { add(it.instantiate()) }
+        })
+
         private fun activeContextClassLoader(): ClassLoader =
             Thread.currentThread().contextClassLoader
                 ?: ReaderCapabilityRegistry::class.java.classLoader
     }
 
     private val capabilities = linkedMapOf<ReaderCapabilityIdentity, ReaderCapability>()
-    private val probes = linkedMapOf<String, ReaderProbeCapability>()
+
+    // Keyed by the reader's full identity: `compatibility` is one reader's version tag ("1" for most), not a
+    // global probe name — the first external probing reader collided with the built-in delimited one when it was.
+    private val probes = linkedMapOf<ReaderCapabilityIdentity, ReaderProbeCapability>()
     private val authoringCapabilities = linkedMapOf<String, FormatAuthoringCapability>()
 
     init {
@@ -46,11 +60,7 @@ class ReaderCapabilityRegistry(
                     "Reader probe ${capability::class.java.name} declares compatibility " +
                         "${capability.readerCompatibility}, but its reader declares ${capability.identity.compatibility}"
                 }
-                val previousProbe = probes.put(capability.readerCompatibility, capability)
-                check(previousProbe == null) {
-                    "Duplicate reader probe capability ${capability.readerCompatibility}: " +
-                        "${previousProbe!!::class.java.name} and ${capability::class.java.name}"
-                }
+                probes[capability.identity] = capability
             }
             if (capability is FormatAuthoringCapability) {
                 require(capability.authoringIdentity.isNotBlank()) { "Format-authoring identity must not be blank" }
@@ -68,13 +78,13 @@ class ReaderCapabilityRegistry(
             ?: throw IllegalArgumentException("Unknown reader capability: $identity")
 
 
-    fun probeFor(identity: ReaderCapabilityIdentity): ReaderProbeCapability? = probes[identity.compatibility]
+    fun probeFor(identity: ReaderCapabilityIdentity): ReaderProbeCapability? = probes[identity]
 
 
     fun authoringFor(identity: String): FormatAuthoringCapability? = authoringCapabilities[identity]
 
 
-    fun probeCompatibilityIdentities(): Set<String> = probes.keys
+    fun probeIdentities(): Set<ReaderCapabilityIdentity> = probes.keys
 
     fun decodeValidateCanonicalize(spec: ResolvedReadSpec): ReaderConfig {
         val capability = resolve(spec.reader)

@@ -1,0 +1,15 @@
+# OwnedSourceRouteTest route "liftfailure": the pulled item does not fit the declared element contract.
+main:
+  is: Job
+
+main.channels/items:
+  is: Channel
+
+main.workers/source:
+  is: ContractMismatchSource
+  output: main.channels/items
+
+main.workers/sink:
+  is: ObservingSinkWorker
+  input: main.channels/items
+  label: sink

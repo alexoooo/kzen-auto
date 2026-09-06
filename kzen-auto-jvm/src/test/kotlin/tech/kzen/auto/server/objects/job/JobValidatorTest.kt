@@ -87,6 +87,20 @@ class JobValidatorTest {
 
 
     @Test
+    fun javaTransformDeclaringItsOutputClassPublishesTheRecordShape() {
+        // A plain-Java transform (JavaTransformWorker) names its output record class; the walk describes it
+        // through the same registry that lifts the records at run time, so the card and the sink see the columns.
+        val validation = validate("test/job/plugin/java-record-shape-test.yaml")
+        val transform = assertNotNull(validation.workerValidations[ObjectPath.parse("main.workers/transform")])
+        assertNull(transform.errorMessage)
+        val record = assertNotNull(transform.contract?.structural as? DataType.Record)
+        assertEquals(listOf("value", "label"), record.fields.map { it.id.name })
+        val sink = assertNotNull(validation.workerValidations[ObjectPath.parse("main.workers/sink")])
+        assertEquals(listOf("value", "label"), (sink.contract?.structural as? DataType.Record)?.fields?.map { it.id.name })
+    }
+
+
+    @Test
     fun readWorkerValidModesPublishUnitsAndUnknownItems() {
         val items = validate("test/job/run/job-read-test.yaml")
         val itemRead = items.workerValidations[ObjectPath.parse("main.workers/read")]

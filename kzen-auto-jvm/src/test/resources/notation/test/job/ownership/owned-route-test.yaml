@@ -1,0 +1,100 @@
+# Worker archetypes for OwnedRouteTest (E9 through channels and Worker callbacks, HS16): a source emitting
+# Worker-created closeables, transforms that forward / project / derive / fail, a fan-out, and observing sinks.
+# One Job per document (workers are discovered under `main`): see owned-route-<route>.yaml.
+
+
+OwnedSourceWorker:
+  abstract: true
+  is: Worker
+  title: "Owned Source (test)"
+  class: tech.kzen.auto.server.exec.job.ownership.OwnedSourceWorker
+  output: ""
+  meta:
+    output:
+      is: ChannelOutput
+      creator: JobChannelCreator
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
+ForwardingTransformWorker:
+  abstract: true
+  is: Worker
+  title: "Forwarding Transform (test)"
+  class: tech.kzen.auto.server.exec.job.ownership.ForwardingTransformWorker
+  input: ""
+  output: ""
+  mode: forward
+  meta:
+    input:
+      is: ChannelInput
+      creator: JobChannelCreator
+    output:
+      is: ChannelOutput
+      creator: JobChannelCreator
+    mode: String
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
+TeeTransformWorker:
+  abstract: true
+  is: Worker
+  title: "Tee Transform (test)"
+  class: tech.kzen.auto.server.exec.job.ownership.TeeTransformWorker
+  input: ""
+  output: ""
+  second: ""
+  meta:
+    input:
+      is: ChannelInput
+      creator: JobChannelCreator
+    output:
+      is: ChannelOutput
+      creator: JobChannelCreator
+    second:
+      is: ChannelOutput
+      creator: JobChannelCreator
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
+ObservingSinkWorker:
+  abstract: true
+  is: Worker
+  title: "Observing Sink (test)"
+  class: tech.kzen.auto.server.exec.job.ownership.ObservingSinkWorker
+  input: ""
+  label: sink
+  meta:
+    input:
+      is: ChannelInput
+      creator: JobChannelCreator
+    label: String
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
+CopyingTransformWorker:
+  abstract: true
+  is: Worker
+  title: "Copying Transform (test)"
+  class: tech.kzen.auto.server.exec.job.ownership.CopyingTransformWorker
+  input: ""
+  output: ""
+  independent: false
+  meta:
+    input:
+      is: ChannelInput
+      creator: JobChannelCreator
+    output:
+      is: ChannelOutput
+      creator: JobChannelCreator
+    independent: Boolean
+    selfLocation:
+      is: ObjectLocation
+      by: Self

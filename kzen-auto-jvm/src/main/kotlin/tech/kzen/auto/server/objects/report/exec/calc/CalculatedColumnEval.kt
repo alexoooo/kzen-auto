@@ -333,6 +333,7 @@ $calculatedColumnFormula
                 nullable)
             is DataType.Opaque,
             is DataType.Record,
+            is DataType.Reference,
             is DataType.Union -> if (nullable) TypeMetadata.anyNullable else TypeMetadata.any
             is DataType.Scalar -> TypeMetadata(ClassName(when (val scalarKind = kind) {
                 ScalarKind.Boolean -> "kotlin.Boolean"

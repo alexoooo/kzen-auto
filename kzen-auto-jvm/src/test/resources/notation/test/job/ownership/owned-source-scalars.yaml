@@ -1,0 +1,16 @@
+# OwnedSourceRouteTest route "scalars": a java.util.stream.Stream of scalars, closed once when exhausted.
+main:
+  is: Job
+
+main.channels/items:
+  is: Channel
+
+main.workers/source:
+  is: FormulaSourceWorker
+  output: main.channels/items
+  code: 'tech.kzen.auto.server.exec.job.ownership.ClosingStreams.stream(3)'
+
+main.workers/sink:
+  is: ObservingSinkWorker
+  input: main.channels/items
+  label: sink

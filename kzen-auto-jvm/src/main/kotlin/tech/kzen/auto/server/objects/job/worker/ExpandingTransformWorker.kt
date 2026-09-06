@@ -3,6 +3,7 @@ package tech.kzen.auto.server.objects.job.worker
 import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
+import tech.kzen.auto.server.objects.job.channel.ReceivedBatch
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.exec.data.value.DataValue
 
@@ -15,7 +16,13 @@ import tech.kzen.lib.common.exec.data.value.DataValue
  *
  * The index advances only after [onElement] returns. Every cadence checkpoint follows a completed output flush,
  * so replay adopts the active element and its subclass cursor without duplicating or losing output. The active
- * batch is frozen in migration state; it is never reconstructed from `JobChannel.drainBuffered`.
+ * batch is detached from the channel's capture and frozen in migration state; it is never reconstructed from
+ * `JobChannel.drainBuffered`.
+ *
+ * OWNERSHIP (E9): the channel's hold on an owned element stays in place until that element's expansion has
+ * completed (the batch travels with its leases across a migration, so a replacement instance resumes the
+ * element still held), and the callback holds its own per-callback lease alongside; a batch a removed Worker
+ * carried is released when the engine closes its orphaned state.
  */
 abstract class ExpandingTransformWorker(
     private val input: ChannelInput<*>,
@@ -23,7 +30,7 @@ abstract class ExpandingTransformWorker(
     selfLocation: ObjectLocation
 ): WorkerBase(selfLocation) {
     private val emitter = Emitter(output)
-    private var activeBatch: List<DataValue>? = null
+    private var activeBatch: ReceivedBatch? = null
     private var nextIndex = 0
 
 
@@ -33,16 +40,26 @@ abstract class ExpandingTransformWorker(
             var batch = activeBatch
             if (batch == null) {
                 control.checkpoint()
-                val received = input.receiveBatch()
+                val received = ReceivedBatch.receive(input, ::receiveValue)
                     ?: break
-                batch = received.map(::receiveValue)
+                // This Worker carries the batch across checkpoints itself; the channel must not capture it too
+                received.detach()
+                batch = received
                 activeBatch = batch
                 nextIndex = 0
             }
 
             while (nextIndex < batch.size) {
-                onElement(batch[nextIndex], emitter, control)
-                nextIndex += 1
+                val index = nextIndex
+                val element = batch.elements[index]
+                CallbackLeases.holding(control, element) {
+                    onElement(element, emitter, control)
+                }
+                // The element's expansion is complete: advance first (a close failure below must not replay it),
+                // then let the channel's hold go
+                nextIndex = index + 1
+                batch.markDispatched(index)
+                batch.channelLease(index)?.release()
             }
 
             activeBatch = null
@@ -95,17 +112,24 @@ abstract class ExpandingTransformWorker(
             (captured as? AutoCloseable)?.close()
             return
         }
-        activeBatch = state.activeBatch
+        activeBatch = state.adoptBatch()
         nextIndex = state.nextIndex
         loadExpansionState(state.adoptSubclassState())
     }
 
 
     private class ExpansionState(
-        val activeBatch: List<DataValue>?,
+        private var activeBatch: ReceivedBatch?,
         val nextIndex: Int,
         private var subclassState: Any?
     ): AutoCloseable {
+        fun adoptBatch(): ReceivedBatch? {
+            val adopted = activeBatch
+            activeBatch = null
+            return adopted
+        }
+
+
         fun adoptSubclassState(): Any? {
             val adopted = subclassState
             subclassState = null
@@ -116,7 +140,15 @@ abstract class ExpandingTransformWorker(
         override fun close() {
             val closing = subclassState
             subclassState = null
-            (closing as? AutoCloseable)?.close()
+            val dropped = activeBatch
+            activeBatch = null
+            try {
+                (closing as? AutoCloseable)?.close()
+            }
+            finally {
+                // The carried elements are dropped with the Worker: their channel holds go with them
+                dropped?.releaseRemaining()
+            }
         }
     }
 }

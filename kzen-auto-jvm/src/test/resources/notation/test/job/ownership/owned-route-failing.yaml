@@ -1,0 +1,26 @@
+# OwnedRouteTest route "failing" (archetypes in owned-route-test.yaml).
+
+# source → forward, failing mid-stream → sink
+main:
+  is: Job
+
+main.channels/items:
+  is: Channel
+
+main.channels/forwarded:
+  is: Channel
+
+main.workers/source:
+  is: OwnedSourceWorker
+  output: main.channels/items
+
+main.workers/transform:
+  is: ForwardingTransformWorker
+  input: main.channels/items
+  output: main.channels/forwarded
+  mode: forward
+
+main.workers/sink:
+  is: ObservingSinkWorker
+  input: main.channels/forwarded
+  label: sink

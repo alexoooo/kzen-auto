@@ -1,0 +1,18 @@
+# OwnedRouteTest route "permit1" (archetypes in owned-route-test.yaml).
+
+main:
+  is: Job
+
+main.channels/items:
+  is: Channel
+  capacity: 1
+  batchSize: 4
+
+main.workers/source:
+  is: OwnedSourceWorker
+  output: main.channels/items
+
+main.workers/sink:
+  is: ObservingSinkWorker
+  input: main.channels/items
+  label: sink

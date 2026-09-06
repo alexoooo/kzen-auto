@@ -400,10 +400,10 @@ class ReadPartWorkerTest {
                 yield()
             }
         }
-        assertEquals(emptyList(), inputChannel.drainBuffered(),
+        assertEquals(emptyList(), inputChannel.drainBuffered().elements,
             "all three units are owned by ExpandingTransformWorker's active batch")
         val carriedOutput = outputChannel.drainBuffered()
-        assertEquals(listOf("u1", "u2-0", "u2-1"), payloads(carriedOutput))
+        assertEquals(listOf("u1", "u2-0", "u2-1"), payloads(carriedOutput.elements))
         parked.await()
         val captured = first.captureMigrationState()
         job.cancelAndJoin()
@@ -424,7 +424,7 @@ class ReadPartWorkerTest {
 
         assertEquals(
             listOf("u1", "u2-0", "u2-1", "u2-2", "u2-3", "u2-4", "u3"),
-            payloads(resumedOutput.drainBuffered()))
+            payloads(resumedOutput.drainBuffered().elements))
         assertEquals(listOf("unit-3"), resumedOpener.opened)
         assertTrue(activeSecond.closed)
     }

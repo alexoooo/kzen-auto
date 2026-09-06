@@ -97,7 +97,37 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > a `ColumnProjection` only when needed, while Formula/output Workers use exclusive `RecordOutputBuilder` claims
 > for widening and replacement. The static wiring walk uses `JobLaneDescriptor` as its sole type authority.
 > Logic boundaries materialize through the explicit `JobDataValues.boundary` policy; the former payload/flat
-> carrier and lane façades were deleted. Two things about Job are worth knowing generally, because they are where
+> carrier and lane façades were deleted. **Resource-owning values (E9).** An `AutoCloseable` a Worker emits
+> becomes the run's to close: the send adopts it into the run's `RunOwnershipLedger` (`server/exec/job/ownership/`,
+> keyed by native identity, with named leases — a process-wide weak `NativeIdentityRegistry` makes ownership
+> linear across runs and a read through a closed native fail by name), each channel hop and each framework
+> callback holds it, and it closes exactly once when the last holder lets go — a Transform / Sink holds an element
+> only for the duration of `onElement`, an accumulator (Sort) takes an explicit `JobControl.retain` lease, a
+> non-scalar Formula output inherits its input's owners, a scalar never does, and `Borrowed.of(x)`
+> (kzen-auto-plugin) marks a host object the run must not close. Where the framework owns the pull (`CursorSourceWorker`,
+> `ReadWorker` / `DataReadCore`, `FormulaSourceWorker` over the stream an expression returned — `Iterable`,
+> `Sequence`, `Iterator` or `java.util.stream.Stream`) the item and the stream's closeable iterator / container
+> are adopted **inside the blocking acquisition** (`SourceIngress`), so a cancel that wins the return dispatch
+> cannot lose them; a producer hold lasts through lift and send, and a closeable stream is detached across a
+> live edit rather than re-evaluated. An owned element flushes the moment it is sent
+> (channel capacity unchanged), so an item whose close returns a host permit never waits in a producer's buffer;
+> a live edit carries the ledger and every channel lease across the rebuild, and the run's post-join teardown
+> closes whatever is left, a processing failure staying primary over close failures. An owned native never
+> leaves the run: a Result sink keeps `JobControl.snapshot(value)` — a structural copy taken inside the
+> callback — and `yieldResult` refuses an owned value; an opaque owned native fails by name. Diagnostics are
+> aggregates: a Worker's progress carries its `holds`, the root emits a `$job-ownership` report (holds by
+> holder, queued elements per channel, live / closed counts), and `JobDeadlockMonitor`'s clock adds a lower,
+> non-failing no-progress threshold that logs and flags the holders (a stalled arena source behind a Sort
+> names the Sort) without touching the deadlock verdict; the warning stays on while the run serves an external
+> channel (a Preview), where only the verdict is suspended. A `JavaTransformWorker` whose outputs are deliberate
+> copies (rows of scalars read off a native) declares `independentOutputs()`: its rows carry no owner, the
+> element closes when the callback returns, and a Sort after it retains rows, not natives (HS25). **Object-graph paths (E8).** `PathProjectionWorker`
+> turns paths over the incoming contract (`executions[*].price`, `attributes[*].value.price`, an optional
+> alias) into a flat record of nullable scalars, unnesting `[*]` lists and maps (same list → one iteration,
+> different lists → cross product, null intermediate → null cells, empty list → no rows); the binding rules
+> (`PathBinding`, kzen-auto-common) are shared with the design-time picker so both report the same errors,
+> and every cell is a text copy, so rows never alias an owned element's storage. Two things about Job are
+> worth knowing generally, because they are where
 > concurrency stops being free: quiescence (what pause / step / edit act on) is **not** liveness, so
 > deadlock detection is deliberately flavour-owned — `JobDeadlockMonitor` reads channel state and runs
 > **off** the engine dispatcher, since running on it would deadlock `awaitQuiescent`. And the run-level
@@ -495,7 +525,7 @@ The companion-object `init` block registers SPI metadata with kzen-lib's `Reflec
 | `cachedKotlinCompiler`, `kotlinSyntaxValidator`, `calculatedColumnEval` | scripting | Embedded Kotlin scripting for Script formula steps and report formula columns; the compiler owns a disk-backed, budgeted code cache (§ 6) |
 | `scriptValidationCache`, `jobValidationCache` | validation caches | Digest-keyed `ScriptValidation` / Job-validation caches shared by the editor's detached validation and every run/hosted-child compile — the key covers the root document's closure ∪ linked logic documents' closures, so validation re-runs only when notation it depends on changed |
 | `filterIndex` | `FilterIndex` | Persistent column-value index backing report filtering |
-| `definitionRepository` | `MultiDefinitionRepository` | Report-definer pool: `HostReportDefinitionRepository` over the built-ins (`CsvReportDefiner` / `TsvReportDefiner` / `TextReportDefiner`) plus `PluginReportDefinitionRepository` for JAR-loaded plugins |
+| `definitionRepository` | `HostReportDefinitionRepository` | Report definers: the built-ins only (`CsvReportDefiner` / `TsvReportDefiner` / `TextReportDefiner`); the per-document plugin-jar definer path (`jarPath`, `META-INF/kzen/plugins.yaml`) retired in HS21 — plugins extend Jobs through the runtime's scopes (§ 5), not Reports |
 | `managedStorageRegistry` | `ManagedStorageRegistry` | Every on-disk area the server owns, with budgets and eviction — see § 6 |
 
 The Selenium / WebDriver browser handle is **no longer a context service**: it is a per-run resource keyed `"browser"`, registered **with the engine** — the kzen-lib `RunEngine` stores the live handle (value) alongside the disposal closer on the owning node. Steps reach it through a declared **Context** rather than a bare string: `BrowserOpenStep` declares `binds: BrowserContext` and calls `StepExecution.bindContext(...)`, the action steps declare `uses: [BrowserContext]` and read `execution.context<RemoteWebDriver>()` (an ancestor-chain walk, so **any** hosted child — Script, Flow, or Job — reads the handle its host opened), and `BrowserCloseStep` declares `releases: BrowserContext`. The raw string-keyed API (`openResource` / `resource` / `releaseResource`) survives as the escape hatch beneath it; a Context's `key:` IS that string, so a typed step and a raw one naming `browser` share one registration. There is no Script-side value registry (the former `ScriptRunResources` was deleted when the engine took over value storage); `WebDriverSupport` holds only that shared key + the quiet-quit helper. This replaced the former `webDriverContext` process singleton (removes a global; allows concurrent runs).
@@ -624,30 +654,115 @@ Both modes share the save flow: the client parses the full document via `YamlNot
 
 The raw-editing stack is document-agnostic and lives under `objects/document/common/raw/` (`DocumentViewMode`, `DocumentRawState`, `DocumentRawStore`, `DocumentRaw`, plus the `DocumentRawHost` seam each document store implements). `ScriptDocument` reuses it for a **Raw** view, but exposes it differently from Custom: instead of a header toggle, "Raw" is a tab in the shared ribbon (the `ScriptGroup_Raw` `RibbonGroup` in notation, with no `RibbonTool` children, so it offers no actions). Selecting a ribbon tab publishes its `RibbonGroup.viewMode` (`""` for action groups, `"Raw"` for the raw tab) onto the document's `DocumentBridge` under `ViewModeKey` — a self-constructing ribbon→stage channel, mirroring `InsertionKey` — and `ScriptController` subscribes and calls `ScriptStore.setViewMode`, switching the stage. This keeps the shared `RibbonController` document-agnostic (it forwards a notation-declared view id; it knows nothing about Script or raw). See [`js-architecture.md` § 4](js-architecture.md#4-service-layer-plumbing) for the bridge itself.
 
-## 8. Plugin SPI
+## 8. Plugins: plugin = class loader
 
-Subpackage: `kzen-auto-plugin/src/main/kotlin/tech/kzen/auto/plugin/`. This is the public, in-development contract
-for third-party plugins, versioned with the coordinated release train. It deliberately depends on
+Public SPI subpackage: `kzen-auto-plugin/src/main/kotlin/tech/kzen/auto/plugin/` — the in-development contract
+third-party plugins compile against, versioned with the coordinated release train. It deliberately depends on
 `kzen-lib-common-jvm`: plugin records and readers use the same `DataValue` / `ValueAccess` vocabulary as the host,
 and the parent-first plugin loader preserves that class identity.
 
-The plugin model is JAR-based, reflection-loaded:
+**Installation is a filesystem act.** A plugin is a directory of jars under the plugin root:
 
-1. A plugin JAR contains classes that subclass `ReportDefiner<Output>` (no-arg constructor required).
-2. User enters the JAR's **server filesystem path** in the Plugin document (`jarPath` attribute). There is no browser upload — JAR-as-document-resource is an open decision, not a shipped feature.
-3. Server-side `PluginDocument` (a `DetachedAction`) loads the JAR via a `URLClassLoader`, scans for `ReportDefiner` subclasses, instantiates each reflectively, registers them with `PluginReportDefinitionRepository`.
-4. Plugin-defined reports become available like built-in ones.
+```
+plugins/<name>/*.jar                       # one scope per directory, jars in name order
+plugins/<name>/... META-INF/kzen/plugin.yaml   # optional: id / version / spi (metadata, never an allow-list)
+```
 
-Key public types:
+The root is `--plugin.root=` or, by default, `plugins/` under the module root (or the cwd) when it exists;
+`KzenAutoRuntimeConfig.pluginRootSystemProperty` (`kzen.plugin.root`) serves an implicit first context. The
+universe is **pinned once per process** at startup by `KzenAutoRuntime.initialize` (`server.context.runtime`):
+equal re-initialization is a no-op, a differing one fails naming both configurations, and there is no unload —
+restart to apply a change. The application classpath is the reserved scope `application` (plugin zero).
 
-| Type | Purpose |
-|------|---------|
-| `ReportDefiner<Output>` | Subclass + override `info()` and `define()` to declare a report |
-| `ReportDefinition<Output>` | Result of `define()`: input/output shape, stage chain |
-| `ReportTerminalStep`, `ReportIntermediateStep` | Pipeline stage building blocks |
-| `DataFramer`, `HeaderExtractor` | Utility SPIs for structured-data plugins |
+**What a scope contributes is discovered through explicit protocols, once, at boot** (`PluginContributionDiscovery`):
 
-The sibling `../kzen-sample-plugin` is an example. When working on a plugin: it compiles against `kzen-auto-plugin` from mavenLocal, so make sure `./gradlew :kzen-auto-plugin:publishToMavenLocal` ran after any plugin-SPI change.
+| Protocol | Contribution | Duplicate rule |
+|---|---|---|
+| `META-INF/services/tech.kzen.auto.plugin.api.data.ReaderCapability` | reader providers, held as descriptors; each context instantiates its own capability instances | one identity across all scopes, else boot error |
+| bundled `notation/<server-allowed prefix>/…yaml` | documents read from the scope's own jars with their exact origin (`OriginNotationMedia`) | one logical path across all origins, else boot error naming both |
+| `META-INF/services/tech.kzen.lib.common.reflect.ModuleReflection` | KSP-generated registrations, in a registry **owned by the scope** (never `ReflectionRegistry.global`) | — |
+
+A jar that will not open, two manifests, or a malformed manifest fail **that scope alone** (`PluginScope.FAILED`,
+named); duplicate ids, the reserved id and an `spi` other than `PluginSpiVersion.current` are boot errors
+(`PluginBootException`, all reported together).
+
+**Class loading.** Every scope has one pinned, parent-first `URLClassLoader`; `KzenAutoRuntime.aggregateClassLoader`
+(`AggregateClassLoader` in kzen-lib-jvm) is the loader compiled expressions, the reflective mirror and dynamic
+definers resolve through (`ClassLoaderUtils.dynamicParentClassLoader()`). The application classpath wins; a name
+two folders define is an `AmbiguousClassException` recorded on both scopes (lazily, on first resolution); a folder
+class the application also defines is served as the application copy and recorded as shadowed
+(`PluginDiagnostics`). The expression compiler gets the explicit union of folder jars as classpath
+(`pluginClasspath()`), so a compiled expression and a mirror-created instance share one `Class`.
+
+**Per-context availability.** `PluginAvailability` (one per `KzenAutoContext`) knows which plugin classes this
+workspace can instantiate: contributed generated registrations are checked against the context's
+`GraphEnvironment` at creation, and every `class` a notation document names that a folder scope defines is
+resolved lazily as notation changes (it observes the graph store). A class needing a `@Service` type the
+environment lacks is *unavailable in this workspace*, named — never a blocked workspace. Hosts supply services
+through `KzenAutoConfig.hostServices` (`KzenAutoHost.builder().service(Class, instance)`).
+
+**The Plugin document** (`objects/plugin/PluginDocument`, client `objects/document/plugin/PluginController`) is a
+read-only view over that cached state (`PluginUniverseView` → `PluginScopeDetail`): one card per scope (id,
+version, SPI, directory, jars, status), its discovered contributions, the classes this workspace has resolved with
+their availability, shadowing / ambiguity findings and every named failure. It promises deliberately less than "the
+jar's contents": an unreferenced class does not appear, and a read never rescans a jar or instantiates a provider.
+The document carries no attributes of its own: the former `jarPath` (a per-document Report-definer jar with a
+`META-INF/kzen/plugins.yaml` class list, loaded by `LegacyPluginJar` for `PluginReportDefinitionRepository`) was
+retired in HS21 once the sample's cities reader ran as a Job; a stale `jarPath:` line in an old document is ignored.
+
+**Compatibility kit.** `PluginCompatibilityKit` (`server.context.runtime.kit`) checks a plugin root against
+`KitExpectations` and prints the same rows the document shows; its `main` takes the expectations as repeatable
+`--expect-scope=` / `--expect-reader=` / `--expect-document=` / `--expect-class=` / `--expect-expression=` (and
+the failed-scope, boot-error, unavailable, ambiguous, shadowed variants) flags, so a foreign build — the sample's
+Maven `PluginDirectoryIT` — runs the same checks from a child JVM per universe. `inspect` is pure (no pinning; boot-error universes
+can be checked in the same JVM), `verify` pins the runtime, creates a standalone context and proves availability
+and expression identity — run it in its own process (`java -cp <kzen-auto-jvm runtime classpath>
+tech.kzen.auto.server.context.runtime.kit.PluginCompatibilityKit <root> --verify`). In-repo, boot-level plugin
+tests live in `server.context.runtime.boot` and run one universe per forked JVM under `pluginUniverseTest`.
+
+**Java-first authoring.** `BlockingReaderCapability` (SPI) provides the `suspend` pair over ordinary
+`openBlocking` / `inspectBlocking`; `CursorSourceWorker` and `JavaTransformWorker` (kzen-auto-jvm) let a Job
+source or transform be written as iterator-returning callbacks with the framework owning pulls, emission,
+cancellation and close. Both bases take part in the static payload walk (HS22): a subclass declaring
+`outputContract()` / `elementContract()` (a literal record contract) or `outputClass()` / `elementClass()` (a
+plain Java record, bean or enum, described through the same registry that lifts it) gives its card and every
+downstream Worker the columns before any run — the path picker offers a record class's leaves that way —
+and the run lifts each output under that same shape; a base with neither passes its input lane through as
+before. A plugin depends on `kzen-auto-jvm` at *provided* scope for these bases (the sample excludes its
+transitives: only the Worker bases are compiled against).
+
+**Java plugin classes, the rules the sample found (HS21).** A `class:` a plugin's notation names is served by the
+scope's `ReflectiveClassMirror`, which needs `@Reflect` (`tech.kzen.lib.common.reflect.Reflect`, plain Java
+annotation use), a single constructor, and `javac -parameters` so the attribute names bind — without the
+annotation the graph reports `Unknown: <class>` and the format object never instantiates. Java cannot see a
+Kotlin typealias (`tech.kzen.auto.common.data.schema.DataShape` is one: import
+`tech.kzen.lib.common.exec.data.shape.DataShape`), nor a Kotlin `fun default(...)` (a Java keyword), nor default
+constructor arguments unless the constructor is `@JvmOverloads` (`ResolvedReadSpec`, `ContentCodingSpec`,
+kzen-lib's `DataContract` are); the live `DataNode` API is Kotlin value classes, so a Java reader builds rows
+through `LiteralDataValues.lift(RecordLiteral.of(map), contract)` and a Java test reads them back through a
+`DataSnapshot`. A probing reader is keyed by its full `ReaderCapabilityIdentity` — `compatibility` is that
+reader's own version tag (`"1"` is everyone's first), not a global probe name.
+
+**Detecting a plugin's format.** Automatic detection samples bytes, and a sample that is not text under any
+permitted encoding still reaches every eligible probe (no character view; the text failure is what the user sees
+only if nothing matched), so a binary feed such as ITCH is recognized by its framing and never by its extension
+alone — the `.itch` hint only narrows the candidates to that structured family. Among content matches,
+`ReaderProbeStrength.ContentSignature` (magic bytes, a fixed header row) outranks the built-in delimited reader's
+`ContentStrong` structural guess; two matches in the same tier are ambiguity, preserved as plain text.
+
+**Embedding.** A foreign host embeds kzen-auto by initializing `KzenAutoRuntime` once, then creating one
+`KzenAutoContext` per workspace (`KzenAutoConfig`: its own module root, a claimed work root, `hostServices`,
+`manageLogs = false`) and serving each with `embeddedServer(CIO, port, "127.0.0.1") { ktorMain(context) }`; the
+host reverse-proxies `/<prefix>/<workspace>/**` to those loopback servers with a synchronous, flush-per-chunk relay
+(SSE arrives incrementally; a `StreamingResponseBody` would buffer it) under kzen-shell's header rules, and stops
+server-then-context. `../kzen-sample-embed-spring` is that host on Spring Boot 4 (HS23), the sample plugin on its
+class path as plugin zero.
+
+The sibling `../kzen-sample-plugin` is the example (`ItchReaderCapability` over a plain-Java core,
+`WorldCitiesReaderCapability` as the minimal blocking reader, both discovered through `META-INF/services` with
+their formats as bundled-notation `ConfiguredRecordFormat` objects). When working on a plugin: it compiles against
+`kzen-auto-plugin` from mavenLocal, so make sure `./gradlew :kzen-auto-plugin:publishToMavenLocal` ran after any
+plugin-SPI change.
 
 ## 9. Module registration
 

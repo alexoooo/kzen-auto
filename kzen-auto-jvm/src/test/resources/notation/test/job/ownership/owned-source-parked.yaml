@@ -1,0 +1,17 @@
+# OwnedSourceRouteTest route "parked": an arena-backed source (one permit) feeding a sink whose first callback
+# parks; a cancel lands while the source waits for a permit and the sink's callback is active.
+main:
+  is: Job
+
+main.channels/items:
+  is: Channel
+  capacity: 0
+  batchSize: 1
+
+main.workers/source:
+  is: OwnedSourceWorker
+  output: main.channels/items
+
+main.workers/sink:
+  is: ParkingSinkWorker
+  input: main.channels/items

@@ -1,0 +1,20 @@
+# OwnershipBoundaryTest route "result": owned scalar-only records kept (last) as the Job's result.
+main:
+  is: Job
+  results:
+    main:
+      class: kotlin.Any
+      generics: []
+      nullable: true
+
+main.channels/items:
+  is: Channel
+
+main.workers/source:
+  is: OwnedSourceWorker
+  output: main.channels/items
+
+main.workers/collect:
+  is: ResultSinkWorker
+  input: main.channels/items
+  keep: last

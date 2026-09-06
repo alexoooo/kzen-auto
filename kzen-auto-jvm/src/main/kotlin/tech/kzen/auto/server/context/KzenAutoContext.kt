@@ -3,7 +3,6 @@ package tech.kzen.auto.server.context
 import kotlinx.coroutines.runBlocking
 import tech.kzen.auto.common.codegen.KzenAutoCommonModule
 import tech.kzen.auto.common.service.ServiceEnvironmentValidation
-import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.auto.server.api.handler.DetachedActionHandler
 import tech.kzen.auto.server.api.handler.FileListingHandler
 import tech.kzen.auto.server.api.handler.LogicHandler
@@ -18,7 +17,6 @@ import tech.kzen.auto.server.exec.report.ReportTraceAddressRouting
 import tech.kzen.auto.server.objects.job.JobValidationCache
 import tech.kzen.auto.server.objects.job.expression.JobExpressionCompiler
 import tech.kzen.auto.server.objects.job.service.JobWorkPool
-import tech.kzen.auto.server.objects.plugin.PluginReportDefinitionRepository
 import tech.kzen.auto.server.objects.report.exec.calc.CalculatedColumnEval
 import tech.kzen.auto.server.objects.report.exec.input.parse.csv.CsvReportDefiner
 import tech.kzen.auto.server.objects.report.exec.input.parse.text.TextReportDefiner
@@ -47,7 +45,6 @@ import tech.kzen.auto.server.service.exec.ModelDetachedExecutor
 import tech.kzen.auto.server.service.exec.ModelTaskRepository
 import tech.kzen.auto.server.service.impl.ServerLogicController
 import tech.kzen.auto.server.service.plugin.HostReportDefinitionRepository
-import tech.kzen.auto.server.service.plugin.MultiDefinitionRepository
 import tech.kzen.auto.server.data.ReportDefinitionRepository
 import tech.kzen.auto.server.service.storage.DirectoryStorageArea
 import tech.kzen.auto.server.service.storage.SchemaCacheStorageArea
@@ -56,7 +53,11 @@ import tech.kzen.auto.server.service.storage.ManagedStorageRegistry
 import tech.kzen.auto.server.service.storage.ReportStorageArea
 import tech.kzen.auto.server.service.storage.StorageLruEvictor
 import tech.kzen.auto.server.service.target.TargetLocator
+import org.slf4j.LoggerFactory
+import tech.kzen.auto.server.context.runtime.KzenAutoRuntime
+import tech.kzen.auto.server.context.runtime.WorkRootRegistry
 import tech.kzen.auto.server.util.WorkUtils
+import java.nio.file.Files
 import tech.kzen.lib.common.codegen.KzenLibCommonModule
 import tech.kzen.lib.common.reflect.GlobalMirror
 import tech.kzen.lib.common.service.context.GraphCreator
@@ -76,7 +77,6 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import tech.kzen.lib.platform.ClassName
 import tech.kzen.auto.server.exec.RunEngineLogicTrace
 import tech.kzen.lib.common.exec.logic.trace.LogicTrace
-import tech.kzen.lib.server.notation.ClasspathNotationMedia
 import tech.kzen.lib.server.notation.FileNotationMedia
 import tech.kzen.lib.server.notation.locate.FileNotationLocator
 import tech.kzen.lib.server.notation.locate.GradleLocator
@@ -85,8 +85,12 @@ import java.lang.AutoCloseable
 import java.nio.file.Paths
 
 
-class KzenAutoContext(
-    val config: KzenAutoConfig
+class KzenAutoContext private constructor(
+    val config: KzenAutoConfig,
+    // The process-global extension universe this context runs against: pinned by KzenAutoMain or an embedding
+    // host before the first context, or by the first context with the default configuration.
+    val runtime: KzenAutoRuntime,
+    private val workRootClaim: WorkRootRegistry.Claim
 ):
     AutoCloseable
 {
@@ -103,16 +107,43 @@ class KzenAutoContext(
         }
 
 
+        private val logger = LoggerFactory.getLogger(KzenAutoContext::class.java)
+
+
         // Construction is self-initializing: callers get a ready context (observers wired,
-        // stable ids pre-warmed) rather than having to remember a separate init() step.
+        // stable ids pre-warmed) rather than having to remember a separate init() step. The work root is
+        // claimed first and released again if anything after the claim fails, so a failed creation leaves
+        // no claim behind.
         fun create(config: KzenAutoConfig): KzenAutoContext {
-            return KzenAutoContext(config).also { it.init() }
+            val runtime = KzenAutoRuntime.currentOrDefault()
+            val claim = claimWorkRoot(config, runtime)
+            try {
+                return KzenAutoContext(config, runtime, claim).also { it.init() }
+            }
+            catch (failure: Throwable) {
+                claim.release()
+                throw failure
+            }
         }
 
 
-        // Defaulted config for tests that drive in-process logic and don't need a real port/host.
+        // Create → toRealPath() → claim, unconditionally canonical: "claim where it exists" would leave an alias
+        // race between two contexts creating the same root, and Windows case or symlink aliases defeat string
+        // comparison. Claimed before any boot sweep can touch the root.
+        private fun claimWorkRoot(config: KzenAutoConfig, runtime: KzenAutoRuntime): WorkRootRegistry.Claim {
+            val configured = config.workRoot ?: WorkUtils.standaloneRoot
+            Files.createDirectories(configured)
+            return runtime.workRoots.claim(configured.toRealPath())
+        }
+
+
+        // Defaulted config for tests that drive in-process logic and don't need a real port/host. Each test
+        // context gets its own temporary work root: the standalone default is one root per process, and a
+        // test that never closes its context would otherwise hold that root against every later test.
         fun forTest(): KzenAutoContext {
-            return create(KzenAutoConfig(jsModuleName = "kzen-auto-js"))
+            return create(KzenAutoConfig(
+                jsModuleName = "kzen-auto-js",
+                workRoot = kotlin.io.path.createTempDirectory("kzen-auto-test-work")))
         }
 
 
@@ -132,10 +163,10 @@ class KzenAutoContext(
         moduleRootOverride = config.moduleRoot)
     private val fileMedia = FileNotationMedia(fileLocator)
 
+    // Bundled notation of every plugin scope (the application classpath included), discovered once by the runtime
+    // with exact origins; the project's own on-disk documents shadow bundled ones of the same path.
     private val readOnlyMedia: NotationMedia = runBlocking {
-        val classpathNotationMedia = ClasspathNotationMedia(
-            exclude = listOf(AutoConventions.autoMainDocumentNesting))
-        LiteralNotationMedia.filter(classpathNotationMedia, fileMedia)
+        LiteralNotationMedia.filter(runtime.bundledNotation, fileMedia)
     }
 
     val notationMedia: NotationMedia = ReadWriteNotationMedia(
@@ -161,7 +192,9 @@ class KzenAutoContext(
     // between a run terminating and the user editing the notation afterward.
     val objectStableMapper = ObjectStableMapper()
 
-    val workUtils = WorkUtils.sibling
+    // The work root was created, canonicalized and claimed in create() before anything below sweeps it
+    // (JobWorkPool's boot sweep runs in its constructor); the claim is held until close has stopped the run.
+    val workUtils = WorkUtils(workRootClaim.realPath, WorkUtils.freshSignature(workRootClaim.token))
     val reportWorkPool = ReportWorkPool(workUtils)
     val jobWorkPool = JobWorkPool(workUtils)
 
@@ -174,25 +207,21 @@ class KzenAutoContext(
     val jobValidationCache = JobValidationCache()
 
 
-    private val basicDefinitionRepository = HostReportDefinitionRepository(listOf(
+    // The Report definers are the host's built-ins only: the per-document plugin jar (`jarPath`,
+    // `META-INF/kzen/plugins.yaml`) retired in HS21 — plugins contribute readers to Jobs through the runtime's
+    // scopes, not definers to Reports. Built before fileListingAction, which depends on it.
+    val definitionRepository: ReportDefinitionRepository = HostReportDefinitionRepository(listOf(
         CsvReportDefiner(),
         TsvReportDefiner(),
         TextReportDefiner()))
-
-    private val pluginProcessorDefinitionRepository = PluginReportDefinitionRepository(
-         graphStore, graphDefiner, graphCreator)
-
-    // Built before fileListingAction, which now depends on it.
-    val definitionRepository: ReportDefinitionRepository = MultiDefinitionRepository(listOf(
-        basicDefinitionRepository, pluginProcessorDefinitionRepository))
 
     val fileListingAction = FileListingAction(definitionRepository)
     val schemaCache = SchemaCache(workUtils)
     val contentProviderLookup = DataContentProviderLookup(LocalDataContentProvider(), emptyMap())
     val sequentialContentStack = SequentialContentStack(contentProviderLookup)
     val sourceFormatResolutionBudgetFactory = SourceFormatResolutionBudgetFactory()
-    val readerCapabilityRegistry = ReaderCapabilityRegistry.withConfiguredReaders(
-        Thread.currentThread().contextClassLoader)
+    // Per-context capability instances from the runtime's provider descriptors (the SPI makes no thread-safety demand)
+    val readerCapabilityRegistry = ReaderCapabilityRegistry.forRuntime(runtime)
     val configuredDataOpener = ConfiguredDataOpener(
         schemaCache, readerCapabilityRegistry, sequentialContentStack)
     val dataOpenerLookup = DataOpenerLookup(configuredDataOpener)
@@ -231,7 +260,15 @@ class KzenAutoContext(
         .put(ClassName(GraphInstanceCache::class.qualifiedName!!)) { graphInstanceCache }
         .put(ClassName(LogicTrace::class.qualifiedName!!)) { logicTrace }
         .put(ClassName(ServerLogicController::class.qualifiedName!!)) { serverLogicController }
+        .put(ClassName(KzenAutoRuntime::class.qualifiedName!!), runtime)
+        .put(ClassName(PluginAvailability::class.qualifiedName!!)) { pluginAvailability }
+        // Host services last, so a host key kzen already provides fails here by name rather than shadowing
+        .also { builder -> config.hostServices.services.forEach { (name, service) -> builder.put(name, service) } }
         .build()
+
+
+    // Which plugin-contributed classes this workspace can instantiate, given the services its environment provides
+    val pluginAvailability = PluginAvailability(runtime, graphEnvironment)
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -285,6 +322,8 @@ class KzenAutoContext(
             graphStore.observe(modelTaskRepository)
             graphStore.observe(objectStableMapper)
             graphStore.observe(serverLogicController)
+            graphStore.observe(pluginAvailability)
+            pluginAvailability.learn(graphStore.graphNotation())
 
             // Pre-warm so stable ids reflect names-at-boot deterministically, independent
             // of first-access order during run execution. Notation-level enumeration so
@@ -330,21 +369,41 @@ class KzenAutoContext(
             jobWorkPool.scratchBase(),
             deletable = false))
 
-        managedStorageRegistry.register(DirectoryStorageArea(
-            "logs",
-            "Logs",
-            "Rolling server logs; old archives are pruned automatically.",
-            logDir,
-            deletable = false))
+        if (config.manageLogs) {
+            managedStorageRegistry.register(DirectoryStorageArea(
+                "logs",
+                "Logs",
+                "Rolling server logs; old archives are pruned automatically.",
+                logDir,
+                deletable = false))
+        }
 
         // Reclaims budget overshoot accumulated while no evictor was attached (prior process).
         codeCacheEvictor.maybeEvict()
     }
 
 
+    /**
+     * Shutdown order for any owner: stop and await the HTTP server first (the server is created outside the
+     * context by `ktorMain`'s caller), then this — which cancels the active run, joins its executor, and only
+     * then releases the work-root claim. If the run cannot be joined the claim is kept: the root is not
+     * advertised as reusable while a Worker could still be writing to it. Idempotent.
+     */
     override fun close() {
         // Cancelling the active run settles its root node, which disposes the run-scoped resources (a browser
         // opened with closePolicy Auto/KeepOnFailure) via the engine.
-        serverLogicController.close()
+        val joined = serverLogicController.closeAndJoin()
+        if (joined) {
+            workRootClaim.release()
+        }
+        else {
+            logger.error("Active execution did not join during close; work root {} stays claimed", workUtils.base())
+        }
+    }
+
+
+    /** Whether close released this context's work root (false while unclosed, or if the run could not be joined). */
+    fun isWorkRootReleased(): Boolean {
+        return workRootClaim.isReleased
     }
 }

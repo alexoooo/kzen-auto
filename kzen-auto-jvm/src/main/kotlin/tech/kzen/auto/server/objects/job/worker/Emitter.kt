@@ -2,6 +2,7 @@ package tech.kzen.auto.server.objects.job.worker
 
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
+import tech.kzen.auto.server.objects.job.channel.FrameworkChannelOutput
 import tech.kzen.lib.common.exec.data.value.DataValue
 
 
@@ -17,13 +18,20 @@ import tech.kzen.lib.common.exec.data.value.DataValue
  * no output boundary at which they can safely wait indefinitely, so they enable [flushCadence]: [send] then
  * auto-[flush]es every [ChannelOutput.batchSize] elements, checkpointing and publishing progress at that
  * boundary. [flush] resets the cadence before touching the channel, so a checkpoint always captures an empty
- * emitter even when the flush itself parked under backpressure.
+ * emitter even when the flush itself parked under backpressure. An element the run OWNS (E9) does not wait for
+ * the cadence: the channel flushes it the moment it is sent, so [send] may then suspend under backpressure.
+ *
+ * A flush that PARKED on backpressure is followed by a [JobControl.checkpoint] (once the drive loop has
+ * [attach]ed its control): a migration's channel drain unparks such a send, and the Worker must re-park
+ * before it produces anything more — otherwise what it sent after the drain would be lost with the old
+ * channel. Running normally the extra checkpoint is a cheap no-op; while paused it is the Worker's park.
  */
 class Emitter(
     private val output: ChannelOutput<DataValue>
 ) {
     private var cadence: Cadence? = null
     private var sinceFlush = 0
+    private var control: JobControl? = null
 
 
     /**
@@ -32,11 +40,19 @@ class Emitter(
      */
     internal fun flushCadence(control: JobControl, onFlush: () -> Unit) {
         cadence = Cadence(control, onFlush)
+        this.control = control
+    }
+
+
+    /** Names the control a parked flush checkpoints against; called once by a framework drive loop. */
+    internal fun attach(control: JobControl) {
+        this.control = control
     }
 
 
     suspend fun send(element: DataValue) {
         output.send(element)
+        reparkIfParked()
 
         val cadence = cadence
             ?: return
@@ -53,7 +69,21 @@ class Emitter(
     suspend fun flush() {
         sinceFlush = 0
         output.flush()
+        reparkIfParked()
     }
+
+
+    private suspend fun reparkIfParked() {
+        val checkpointing = control
+            ?: return
+        if (output is FrameworkChannelOutput && output.takeParked()) {
+            checkpointing.checkpoint()
+        }
+    }
+
+
+    /** The output's batch grain — what a framework pull loop reads ahead by ([SourceIngress.pull]). */
+    fun batchSize(): Int = output.batchSize()
 
 
     private class Cadence(

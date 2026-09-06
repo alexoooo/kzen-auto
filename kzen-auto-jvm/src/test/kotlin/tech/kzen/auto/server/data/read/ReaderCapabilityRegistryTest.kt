@@ -75,25 +75,30 @@ class ReaderCapabilityRegistryTest {
 
 
     @Test
-    fun optionalProbeIsIndexedByCompatibilityWhileOrdinaryReaderRemainsRunnable() {
+    fun optionalProbeIsIndexedByIdentityWhileOrdinaryReaderRemainsRunnable() {
         val probeReader = ProbeReader("probe", "probe-v1")
         val ordinaryReader = object: ReaderCapability by TestServiceReaderCapability() {}
         val registry = ReaderCapabilityRegistry(listOf(probeReader, ordinaryReader))
 
         assertEquals(probeReader, registry.probeFor(probeReader.identity))
         assertEquals(null, registry.probeFor(ordinaryReader.identity))
-        assertEquals(setOf("probe-v1"), registry.probeCompatibilityIdentities())
+        assertEquals(setOf(probeReader.identity), registry.probeIdentities())
         assertEquals(ordinaryReader, registry.resolve(ordinaryReader.identity))
     }
 
 
     @Test
-    fun duplicateProbeCompatibilityFailsEvenWhenReaderIdentitiesDiffer() {
-        assertFailsWith<IllegalStateException> {
-            ReaderCapabilityRegistry(listOf(
-                ProbeReader("first", "shared-probe-v1"),
-                ProbeReader("second", "shared-probe-v1")))
-        }
+    fun probingReadersMaySharePlainCompatibilityTag() {
+        // "1" is every reader's natural first compatibility; the built-in delimited reader and a plugin's reader
+        // must coexist (the sample plugin's ITCH reader found the old compatibility-keyed index at boot).
+        val first = ProbeReader("first", "1")
+        val second = ProbeReader("second", "1")
+        val registry = ReaderCapabilityRegistry(listOf(ConfiguredDelimitedReaderCapability, first, second))
+
+        assertEquals(first, registry.probeFor(first.identity))
+        assertEquals(second, registry.probeFor(second.identity))
+        assertEquals(ConfiguredDelimitedReaderCapability,
+            registry.probeFor(ConfiguredDelimitedReaderCapability.identity))
     }
 
 

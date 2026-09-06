@@ -5,6 +5,8 @@ import tech.kzen.auto.common.objects.document.report.spec.sort.SortSpec
 import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
+import tech.kzen.auto.common.paradigm.job.control.ValueLease
+import tech.kzen.auto.server.exec.job.ownership.ValueLeases
 import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -29,15 +31,22 @@ import tech.kzen.lib.common.reflect.Reflect
  * follow-up — this Worker is the in-memory baseline the plan calls for. It has NO `serve` port and opens NO
  * scratch dir.
  *
+ * OWNERSHIP (E9): a buffered element the run owns is kept beyond its callback, so the Sort takes an explicit
+ * [JobControl.retain] lease per such element — the ledger names this Sort as the holder — and releases them
+ * only after [onComplete] has sent the sorted stream on (each send took the output channel's hold first). The
+ * leases migrate with the buffer; a Sort the edit removed drops its buffer and its holds with it.
+ *
  * LIVE-EDIT MIGRATION: the accumulated [buffer] is carried forward into the rebuilt instance
  * ([captureMigrationState] / [loadMigrationState]) — like [SummaryWorker]'s builders, it is pure in-memory data
  * with no live handle. This is REQUIRED for correctness, not just an optimization: an unchanged upstream
  * A file source RESUMES from its cursor across a pause / edit / continue, so a SortWorker that
  * restarted empty would silently drop every pre-pause row from the sort. Carryover is UNCONDITIONAL of the sort
  * spec — the buffered INPUT is valid whatever the ordering, and the rebuilt instance re-sorts it with the edited
- * spec. Capture happens while parked at the pre-receive checkpoint (buffer consistent); [onComplete] itself has
- * no checkpoint, so a cooperative pause can never cut mid-drain (no double-emit), and the buffer is cleared once
- * emitted so a post-completion rebuild re-emits nothing.
+ * spec. Capture happens while parked at the pre-receive checkpoint (buffer consistent) or, once [onComplete]
+ * is draining, while a send is parked on backpressure: the drain claims each element BEFORE sending it, so the
+ * carried buffer is exactly the unsent remainder (a parked element is in the channel's in-flight batch, carried
+ * by the channel) — the rebuilt instance re-sorts and emits that remainder, no element twice, none lost — and
+ * the buffer is empty once emitted so a post-completion rebuild re-emits nothing.
  */
 @Reflect
 class SortWorker(
@@ -59,6 +68,15 @@ class SortWorker(
     private var buffered = 0L
     private var emitted = 0L
 
+    // The explicit holds on the owned elements in the buffer (E9): only owned elements cost a lease.
+    private var leases = ArrayList<ValueLease>()
+
+    // The sorted stream being drained by onComplete and how far it got: a migration cut while a send is parked
+    // carries the unsent remainder (claimed before each send). @Volatile: read at the capture barrier.
+    private var draining: List<Decorated>? = null
+    @Volatile
+    private var drained = 0
+
     // Sort-column field positions, cached per header (records typically share one header).
     private var indexedForHeader: HeaderListing? = null
     private var columnIndices = IntArray(0)
@@ -66,6 +84,10 @@ class SortWorker(
     //-----------------------------------------------------------------------------------------------------------------
     override suspend fun onElement(element: DataValue, emit: Emitter, control: JobControl) {
         // Accumulate only: the sorted stream is emitted once, at end-of-stream (onComplete).
+        val lease = control.retain(element)
+        if (lease.isActive) {
+            leases.add(lease)
+        }
         buffer.add(element)
         buffered += 1
     }
@@ -81,13 +103,23 @@ class SortWorker(
             .map { decorate(it) }
             .sortedWith(comparator)
 
+        draining = sorted
+        drained = 0
         for (decorated in sorted) {
+            // Claimed before the send: a send parked mid-flush holds the element in the channel, which a
+            // migration carries — the rebuilt instance must not emit it again
+            drained += 1
             emit.send(decorated.message)
             emitted += 1
         }
+        draining = null
 
-        // Release the buffered input; a rebuilt instance (post-completion live edit) must not re-emit it.
+        // Release the buffered input; a rebuilt instance (post-completion live edit) must not re-emit it. The
+        // output channel holds every owned element now, so letting go of this Worker's holds closes nothing.
         buffer = ArrayList()
+        val held = leases
+        leases = ArrayList()
+        ValueLeases.releaseAll(held)
     }
 
 
@@ -158,8 +190,11 @@ class SortWorker(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun captureMigrationState(): Any =
-        BufferState(buffer, buffered)
+    override fun captureMigrationState(): Any {
+        // Mid-drain: only what has not been sent yet is the rebuilt instance's to emit
+        val remainder = draining?.let { sorted -> ArrayList(sorted.drop(drained).map { it.message }) }
+        return BufferState(remainder ?: buffer, buffered, leases)
+    }
 
 
     override fun loadMigrationState(captured: Any?) {
@@ -167,15 +202,32 @@ class SortWorker(
             ?: return
         buffer = state.buffer
         buffered = state.buffered
+        leases = state.adoptLeases()
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    // The carried run-scoped state: the accumulated input buffer (pure data, no live handle) + its running count.
+    // The carried run-scoped state: the accumulated input buffer (pure data, no live handle) + its running count
+    // + the Sort's explicit holds on the owned elements in it. Closed by the engine when the edit removed the
+    // Sort: the buffer is dropped, so the holds are let go.
     private class BufferState(
         val buffer: ArrayList<DataValue>,
-        val buffered: Long
-    )
+        val buffered: Long,
+        private var leases: ArrayList<ValueLease>?
+    ): AutoCloseable {
+        fun adoptLeases(): ArrayList<ValueLease> {
+            val adopted = leases ?: ArrayList()
+            leases = null
+            return adopted
+        }
+
+
+        override fun close() {
+            val dropped = leases ?: return
+            leases = null
+            ValueLeases.releaseAll(dropped)
+        }
+    }
 
 
     // A buffered message decorated with its precomputed sort key (per-column text + numeric value).
