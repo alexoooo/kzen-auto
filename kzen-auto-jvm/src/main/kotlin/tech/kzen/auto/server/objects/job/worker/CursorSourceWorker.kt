@@ -45,10 +45,14 @@ abstract class CursorSourceWorker(
     /** The element class when the items are plain objects of one type (see [JavaTransformWorker.outputClass]). */
     protected open fun elementClass(): Class<*>? = null
 
+    protected open fun cursorConfigurationKey(): Any? = null
+
+    protected open fun configurationError(): String? = null
+
 
     /** A declared element contract or class is the source's static output; otherwise the lane is known only at run time. */
     final override fun payloadFlow(input: JobLaneDescriptor, context: JobLaneContext): JobLaneAttempt =
-        staticElementContract()?.let { JobLaneAttempt(JobLaneDescriptor(it), null) }
+        staticElementContract()?.let { JobLaneAttempt(JobLaneDescriptor(it), configurationError()) }
             ?: super.payloadFlow(input, context)
 
 
@@ -114,7 +118,7 @@ abstract class CursorSourceWorker(
         stream = null
         val carried = pending
         pending = ArrayDeque()
-        return DetachedCursor(open, carried, delivered)
+        return DetachedCursor(open, carried, delivered, cursorConfigurationKey())
     }
 
 
@@ -123,6 +127,10 @@ abstract class CursorSourceWorker(
         if (detached == null) {
             (captured as? AutoCloseable)?.close()
             return
+        }
+        if (detached.configurationKey != cursorConfigurationKey()) {
+            detached.close()
+            error("Source selection changed. Start a new run to apply it.")
         }
         val adopted = detached.adopt()
         stream = adopted.first
@@ -134,7 +142,8 @@ abstract class CursorSourceWorker(
     private class DetachedCursor(
         private var stream: OpenedStream?,
         private var pending: ArrayDeque<AcquiredItem>?,
-        val delivered: Long
+        val delivered: Long,
+        val configurationKey: Any?
     ): AutoCloseable {
         fun adopt(): Pair<OpenedStream, ArrayDeque<AcquiredItem>> {
             val adopted = stream ?: throw IllegalStateException("Detached cursor already adopted or closed")
