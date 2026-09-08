@@ -7,6 +7,9 @@ import mui.material.Size
 import react.ChildrenBuilder
 import react.Key
 import react.State
+import react.dom.html.ReactHTML.details
+import react.dom.html.ReactHTML.summary
+import react.dom.html.ReactHTML.span
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.table
 import react.dom.html.ReactHTML.tbody
@@ -26,6 +29,8 @@ import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.job.JobConventions
+import tech.kzen.auto.common.objects.document.job.preview.PreviewNode
+import tech.kzen.auto.common.objects.document.job.preview.PreviewTable
 import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.exec.ExecutionSuccess
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -200,7 +205,9 @@ class PreviewWorkerDisplay(
             this.attributeViewManager = props.attributeViewManager
             this.clientStateGlobal = props.clientStateGlobal
             this.mirroredGraphStore = props.mirroredGraphStore
-            this.common = props.common
+            val progress = props.common.progress
+            this.common = props.common.copy(progress = progress?.copy(
+                progressMap = progress.progressMap - setOf(PreviewNode.limitedKey, JobConventions.progressCountKey)))
             this.bodyExtra = { bodyBuilder -> bodyBuilder.renderPreview() }
         }
     }
@@ -216,6 +223,10 @@ class PreviewWorkerDisplay(
 
         val header = shown?.let { parseHeader(it.progressMap) } ?: listOf()
         val rows = shown?.let { parseRows(it.progressMap) } ?: listOf()
+        val items = (shown?.progressMap?.get(PreviewNode.progressKey) as? List<*>)?.mapNotNull {
+            (it as? String)?.let { encoded -> PreviewNode.decode(encoded) }
+        }
+        val structured = items?.let(::PreviewTable)
 
         div {
             css {
@@ -236,8 +247,17 @@ class PreviewWorkerDisplay(
                 +("Sample" + (count?.let { " — $it row(s) total" } ?: "") + suffix)
             }
 
-            if (header.isNotEmpty() || rows.isNotEmpty()) {
-                renderPreviewTable(header, rows)
+            if (structured != null) {
+                renderPreviewTable(structured.columns.map { it.label }, structured.rows)
+                if (items.any { it.partial }) {
+                    div { css { fontSize = 0.8.em; color = Color("#8a5a00") }; +"Partial preview — expand cells for details." }
+                }
+                if (shown.progressMap[PreviewNode.limitedKey] == true) {
+                    div { css { fontSize = 0.8.em }; +"Showing recent items within the preview memory limit." }
+                }
+            }
+            else if (header.isNotEmpty() || rows.isNotEmpty()) {
+                renderPreviewTable(header, rows.map { row -> row.map { PreviewNode("scalar", it) } })
             }
 
             Button {
@@ -267,11 +287,12 @@ class PreviewWorkerDisplay(
     }
 
 
-    private fun ChildrenBuilder.renderPreviewTable(header: List<String>, rows: List<List<String>>) {
+    private fun ChildrenBuilder.renderPreviewTable(header: List<String>, rows: List<List<PreviewNode>>) {
         div {
             css {
                 maxHeight = 20.em
                 overflowY = Auto.auto
+                overflowX = Auto.auto
                 marginTop = 0.25.em
                 marginBottom = 0.25.em
                 border = Border(1.px, LineStyle.solid, NamedColor.lightgray)
@@ -316,7 +337,8 @@ class PreviewWorkerDisplay(
                                         padding = Padding(0.1.em, 0.4.em, 0.1.em, 0.4.em)
                                         border = Border(1.px, LineStyle.solid, NamedColor.gainsboro)
                                     }
-                                    +abbreviate(cell.value)
+                                    css { whiteSpace = WhiteSpace.nowrap }
+                                    renderNode(cell.value)
                                 }
                             }
                         }
@@ -327,12 +349,37 @@ class PreviewWorkerDisplay(
     }
 
 
-    private fun abbreviate(value: String): String {
-        return if (value.length > 50) {
-            value.substring(0, 50) + "…"
+    private fun ChildrenBuilder.renderNode(node: PreviewNode) {
+        if (node.children.isNotEmpty() || node.text.length > 50) {
+            details {
+                summary {
+                    css { cursor = Cursor.pointer; whiteSpace = WhiteSpace.nowrap }
+                    +(node.text.take(50) + if (node.text.length > 50) "…" else "")
+                    if (node.partial) +" · partial"
+                }
+                div {
+                    css { paddingLeft = 0.75.em; maxWidth = 35.em; overflowWrap = OverflowWrap.anywhere }
+                    if (node.children.isEmpty()) +node.text
+                    node.children.forEachIndexed { index, child ->
+                        div {
+                            key = Key("${child.name}:${child.occurrence}:$index")
+                            css { padding = Padding(3.px, 0.px) }
+                            span {
+                                css { fontWeight = FontWeight.bold }
+                                +(child.name + if (child.occurrence <= 0) ": " else " (#${child.occurrence + 1}): ")
+                            }
+                            renderNode(child)
+                        }
+                    }
+                }
+            }
         }
         else {
-            value
+            span {
+                if (node.partial || node.kind == "absent") css { color = Color("#8a5a00") }
+                +node.text
+                if (node.partial) +" · partial"
+            }
         }
     }
 }

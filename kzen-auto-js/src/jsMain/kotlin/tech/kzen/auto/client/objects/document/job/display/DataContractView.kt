@@ -1,18 +1,17 @@
 package tech.kzen.auto.client.objects.document.job.display
 
 import emotion.react.css
+import tech.kzen.auto.client.objects.document.job.display.contract.ContractTreeNode
 import react.ChildrenBuilder
 import react.State
 import react.dom.html.ReactHTML.details
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
 import react.dom.html.ReactHTML.summary
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.RPureComponent
 import web.cssom.Cursor
-import web.cssom.Display
-import web.cssom.FontFamily
 import web.cssom.Margin
-import web.cssom.OverflowWrap
 import web.cssom.WhiteSpace
 import web.cssom.em
 
@@ -23,7 +22,7 @@ class DataContractView(
 ): RPureComponent<DataContractViewProps, State>(props) {
     override fun ChildrenBuilder.render() {
         val presentation = DataContractPresentation.of(props.display)
-        if (presentation.details.isEmpty()) {
+        if (presentation.details.isEmpty() && props.display !is DataContractDisplay.Contract) {
             span {
                 css {
                     fontSize = 0.75.em
@@ -50,19 +49,21 @@ class DataContractView(
                 title = presentation.title
                 +presentation.summary
             }
-            div {
-                css {
-                    display = Display.flex
-                    flexDirection = web.cssom.FlexDirection.column
-                    marginTop = 0.25.em
-                    fontFamily = FontFamily.monospace
-                    overflowWrap = OverflowWrap.anywhere
-                    whiteSpace = WhiteSpace.preWrap
+            val contractDisplay = props.display as? DataContractDisplay.Contract
+            if (contractDisplay != null) {
+                ContractTreeNode::class.react {
+                    contract = contractDisplay.contract
+                    label = "Stream item"
+                    optional = false
                 }
-                presentation.details.forEach { line ->
-                    div { +line }
+                if (presentation.details.isNotEmpty()) {
+                    details {
+                        summary { css { cursor = Cursor.pointer }; +"Technical details" }
+                        presentation.details.forEach { line -> div { +line } }
+                    }
                 }
             }
+            else presentation.details.forEach { line -> div { +line } }
         }
     }
 }

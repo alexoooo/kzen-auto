@@ -1,0 +1,8 @@
+main:
+  is: Job
+
+main.workers/source:
+  is: OwnedSourceWorker
+
+main.workers/preview:
+  is: PreviewWorker

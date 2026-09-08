@@ -3,7 +3,9 @@ package tech.kzen.auto.server.exec.job
 import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.util.AutoTestUtils
-import tech.kzen.auto.server.util.awaitDone
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.delay
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceQuery
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -38,6 +40,9 @@ class JobFormulaPreviewReproTest {
     private val previewLocation = ObjectLocation(documentPath, ObjectPath.parse("main.workers/Preview"))
 
     private lateinit var context: KzenAutoContext
+    // Formula compilation runs inside the engine and can exceed the ordinary five-second control wait.
+    private val compileAndRunTimeoutMillis = 30_000L
+    private val pollIntervalMillis = 10L
 
 
     @AfterTest
@@ -58,7 +63,11 @@ class JobFormulaPreviewReproTest {
         val runId = controller.start(jobLocation, attempt)
             ?: fail("Unable to start run")
         controller.continueOrStart(runId, attempt)
-        controller.awaitDone()
+        runBlocking {
+            withTimeout(compileAndRunTimeoutMillis) {
+                while (controller.status().active != null) delay(pollIntervalMillis)
+            }
+        }
 
         // JobProgressStore.fetchRunProgress FIRST resolves the run via mostRecent(main); a null here is the bug
         // (the Preview never even fetches its worker progress).

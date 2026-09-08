@@ -74,6 +74,27 @@ class OwnershipBoundaryTest {
 
     //-----------------------------------------------------------------------------------------------------------------
     @Test
+    fun previewReleasesNestedOwnedValuesAndKeepsDetachedContent() {
+        OwnedSourceWorker.kind = OwnedSourceWorker.kindOrder
+        val engine = newEngine(document("preview"))
+        try {
+            engine.resume()
+            assertIs<Outcome.Success>(runBlocking { withTimeout(runTimeoutMillis) { engine.await() } })
+            assertTrue(OwnedSourceWorker.orders.all { it.closes == 1 })
+            val progress = engine.snapshot().root.children.mapNotNull {
+                it.live[Address.of("\$job-progress")]?.get() as? Map<*, *>
+            }.first { it.containsKey("previewItems") }
+            val items = progress["previewItems"] as List<*>
+            assertEquals(3, items.size)
+            val first = tech.kzen.auto.common.objects.document.job.preview.PreviewNode.decode(items.first() as String)
+            val executions = first.children.single { it.name == "executions" }
+            assertEquals(2, executions.children.size)
+            assertEquals("10.0", executions.children.first().children.single { it.name == "price" }.text)
+        }
+        finally { engine.close() }
+    }
+
+    @Test
     fun resultKeepsASnapshotThatStaysReadableAfterTheRunClosedTheNative() {
         OwnedSourceWorker.kind = OwnedSourceWorker.kindRecord
         val success = assertIs<Outcome.Success>(run(document("result")))

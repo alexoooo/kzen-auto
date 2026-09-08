@@ -46,7 +46,7 @@ class DataContractViewTest {
             .of(DataContractDisplay.Contract(contract, shape))
             .details
 
-        assertTrue(details.any { it.contains("value: Decimal · nullable · optional") })
+        assertEquals("Record · 1 field", DataContractPresentation.summary(contract.structural))
         assertTrue(details.any { it == "provenance: ProviderReported" })
         assertTrue(details.any { it == "stability: Provisional · 12 items · 256 bytes · partial" })
         assertTrue(details.any { it.contains("Warning: sample at /field:value#0") })

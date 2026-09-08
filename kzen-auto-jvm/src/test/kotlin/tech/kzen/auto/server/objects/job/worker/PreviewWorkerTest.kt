@@ -84,6 +84,38 @@ class PreviewWorkerTest {
     }
 
 
+    @Test
+    fun nestedWindowQueryAndMigrationUseTheSameDetachedItems() = runBlocking {
+        val worker = PreviewWorker(scalarInput(listOf(listOf(listOf(1, 2), listOf(3), listOf(4)))), emptyServer, 2, selfLocation)
+        worker.run(RecordingJobControl())
+        val snapshot = worker.captureMigrationState() as PreviewWorker.Snapshot
+        assertEquals(3L, snapshot.count)
+        assertEquals(2, snapshot.items.size)
+        assertEquals("3", snapshot.items[0].children.single().text)
+        val query = PreviewWorker::class.java.getDeclaredMethod("onQuery", Any::class.java, Any::class.java)
+        query.isAccessible = true
+        val result = query.invoke(worker, null, snapshot) as tech.kzen.lib.common.exec.ExecutionSuccess
+        val wire = result.value.get() as Map<*, *>
+        val encoded = wire[tech.kzen.auto.common.objects.document.job.preview.PreviewNode.progressKey] as List<*>
+        assertEquals(snapshot.items.map { it.encode() }, encoded)
+        val migrated = PreviewWorker(scalarInput(emptyList()), emptyServer, 1, selfLocation)
+        migrated.loadMigrationState(snapshot)
+        val restored = migrated.captureMigrationState() as PreviewWorker.Snapshot
+        assertEquals(3L, restored.count)
+        assertEquals(snapshot.items.takeLast(1), restored.items)
+    }
+
+    @Test
+    fun previewWindowIsBoundedByBytesAsWellAsItemCount() = runBlocking {
+        val worker = PreviewWorker(scalarInput(listOf(List(2200) { "x".repeat(4096) })), emptyServer, 3000, selfLocation)
+        worker.run(RecordingJobControl())
+        val snapshot = worker.captureMigrationState() as PreviewWorker.Snapshot
+        assertEquals(2200L, snapshot.count)
+        assertTrue(snapshot.limited)
+        assertTrue(snapshot.items.sumOf { it.encode().toByteArray().size } <= 8 * 1024 * 1024)
+        assertTrue(snapshot.items.size < 2200)
+    }
+
     //-----------------------------------------------------------------------------------------------------------------
     private suspend fun runPreview(elements: List<Any?>): PreviewWorker.Snapshot {
         val worker = PreviewWorker(scalarInput(listOf(elements)), emptyServer, 1000, selfLocation)

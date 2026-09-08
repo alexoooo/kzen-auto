@@ -18,6 +18,7 @@ import react.dom.html.ReactHTML.thead
 import react.dom.html.ReactHTML.tr
 import react.dom.html.ReactHTML.details
 import react.dom.html.ReactHTML.summary
+import react.dom.html.ReactHTML.span
 import react.Key
 import web.html.checkbox
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
@@ -75,6 +76,7 @@ class CatalogSourceDisplay(props: CatalogSourceDisplayProps):
     override fun CatalogSourceDisplayState.init(props: CatalogSourceDisplayProps) {
         catalogState = null; selection = emptyList(); symbols = emptyList()
         symbolSearch = ""; saving = false; error = null
+        datesOpen = null; symbolsOpen = false; dateFilter = ""; dateSearch = ""
     }
     override fun componentDidMount() { props.clientStateGlobal.observe(this); store.mount(this) }
     override fun componentWillUnmount() { store.unmount(); scope.cancel(); props.clientStateGlobal.unobserve(this) }
@@ -120,77 +122,95 @@ class CatalogSourceDisplay(props: CatalogSourceDisplayProps):
     private fun ChildrenBuilder.renderCatalog() {
         val catalog = state.catalogState?.catalog
         val entries = catalog?.entries.orEmpty()
+        val selected = entries.filter { it.id in state.selection }
+        val preparing = selected.any { it.state in preparationStates }
         val busy = state.catalogState?.busy == true
         val editingDisabled = props.common.active || state.saving
+        val datesOpen = state.datesOpen ?: state.selection.isEmpty()
         div {
             css {
-                display = Display.flex; flexDirection = FlexDirection.column; gap = 0.75.em
+                display = Display.flex; flexDirection = FlexDirection.column; gap = 0.5.em
                 "button" {
-                    fontFamily = Globals.inherit; fontSize = 0.8.em; padding = Padding(5.px, 8.px)
+                    fontFamily = Globals.inherit; fontSize = 0.85.em; padding = Padding(4.px, 8.px)
                     border = Border(1.px, LineStyle.solid, Color("#c4c4c4")); borderRadius = 4.px
                     backgroundColor = NamedColor.white; color = Color("#245a91"); cursor = Cursor.pointer
                     "&:disabled" { color = Color("#888"); cursor = Cursor.default }
                 }
-                "td" { padding = Padding(7.px, 4.px); verticalAlign = VerticalAlign.top }
+                "td" { padding = Padding(5.px, 4.px); verticalAlign = VerticalAlign.top }
                 "th" { textAlign = TextAlign.left; padding = Padding(5.px, 4.px); color = Color("#666") }
             }
             div {
-                css { display = Display.flex; flexWrap = FlexWrap.wrap; gap = 5.px }
-                button { disabled = busy; onClick = { store.action("refresh") }; +"Refresh dates" }
+                css { display = Display.flex; gap = 6.px; alignItems = AlignItems.center; flexWrap = FlexWrap.wrap }
                 button {
-                    disabled = busy || state.selection.isEmpty()
-                    onClick = { store.action("prepare", state.selection) }
-                    +"Download and prepare selected"
+                    onClick = { setState { this.datesOpen = !datesOpen } }
+                    +(if (datesOpen) "▾ Dates" else "▸ Dates")
                 }
-                button {
-                    disabled = busy || state.selection.isEmpty()
-                    onClick = { store.action("cancel", state.selection) }
-                    +"Cancel preparation"
+                span {
+                    val dates = selected.map { it.date }
+                    +(if (state.selection.isEmpty()) "Choose dates" else
+                        dates.take(3).joinToString(", ") + if (dates.size > 3) " +${dates.size - 3}" else "")
+                }
+                if (selected.isNotEmpty()) span {
+                    css { color = Color("#687080"); fontSize = 0.85.em }
+                    +"${selected.count { it.state == "ready" }}/${state.selection.size} ready"
                 }
             }
-            if (catalog == null) div { +"Loading dates…" }
-            if (catalog != null && entries.isEmpty()) div { +"No dated files found. Refresh the download catalog." }
-            div {
-                css { overflowX = Auto.auto; maxHeight = 350.px; overflowY = Auto.auto }
-                table {
-                    css { borderCollapse = BorderCollapse.collapse; width = 100.pct; tableLayout = TableLayout.fixed; fontSize = 0.8.em }
-                    thead { tr { listOf("Date / source", "Download", "Analysis").forEach { th { +it } } } }
-                    tbody {
-                        entries.forEach { entry ->
-                            tr {
-                                key = Key(entry.id)
-                                css { borderBottom = Border(1.px, LineStyle.solid, Color("#ddd")) }
-                                td {
-                                    label {
-                                        css { whiteSpace = WhiteSpace.nowrap; fontWeight = FontWeight.bold }
-                                        input {
-                                            type = InputType.checkbox; checked = entry.id in state.selection; disabled = editingDisabled
-                                            onChange = { save(CatalogConventions.selection,
-                                                if (entry.id in state.selection) state.selection - entry.id else state.selection + entry.id) }
+            if (datesOpen) {
+                div {
+                    css { display = Display.flex; gap = 5.px; flexWrap = FlexWrap.wrap }
+                    val filter = state.dateFilter.ifEmpty { if (state.selection.isEmpty()) "All" else "Selected" }
+                    listOf("Selected", "Downloaded", "All").forEach { option ->
+                        button {
+                            disabled = option == filter
+                            onClick = { setState { dateFilter = option } }
+                            +option
+                        }
+                    }
+                    input {
+                        placeholder = "Find date"; value = state.dateSearch
+                        onChange = { event -> setState { dateSearch = event.currentTarget.value } }
+                    }
+                    button { disabled = busy; onClick = { store.action("refresh") }; +"Refresh dates" }
+                }
+                if (catalog == null) div { +"Loading dates…" }
+                val filter = state.dateFilter.ifEmpty { if (state.selection.isEmpty()) "All" else "Selected" }
+                val visible = entries.filter {
+                    (filter == "All" || filter == "Selected" && it.id in state.selection || filter == "Downloaded" && it.downloaded) &&
+                            it.date.contains(state.dateSearch)
+                }.sortedByDescending { it.date }
+                if (catalog != null && visible.isEmpty()) div { +"No dates match this view." }
+                if (visible.isNotEmpty()) div {
+                    css { maxHeight = 280.px; overflowY = Auto.auto }
+                    table {
+                        css { width = 100.pct; borderCollapse = BorderCollapse.collapse; fontSize = 0.85.em }
+                        thead { tr { listOf("Date", "Download", "Preparation").forEach { th { +it } } } }
+                        tbody {
+                            visible.forEach { entry ->
+                                tr {
+                                    key = Key(entry.id)
+                                    css { borderBottom = Border(1.px, LineStyle.solid, Color("#e5e7eb")) }
+                                    td {
+                                        label {
+                                            input {
+                                                type = InputType.checkbox; checked = entry.id in state.selection; disabled = editingDisabled
+                                                onChange = { save(CatalogConventions.selection,
+                                                    if (entry.id in state.selection) state.selection - entry.id else state.selection + entry.id) }
+                                            }
+                                            +entry.date
                                         }
-                                        +entry.date
-                                    }
-                                    div { css { overflowWrap = OverflowWrap.anywhere; color = Color("#666"); marginTop = 3.px }; +entry.fileName }
-                                    details {
-                                        summary { css { color = Color("#245a91"); cursor = Cursor.pointer }; +"Source URL" }
-                                        a {
-                                            css { overflowWrap = OverflowWrap.anywhere }
-                                            href = entry.sourceUrl; title = entry.sourceUrl; +entry.sourceUrl
+                                        details {
+                                            summary { css { cursor = Cursor.pointer; color = Color("#245a91") }; +"Source" }
+                                            div { +entry.fileName }
+                                            a { css { overflowWrap = OverflowWrap.anywhere }; href = entry.sourceUrl; +entry.sourceUrl }
                                         }
                                     }
-                                }
-                                td {
-                                    div { +(if (entry.downloaded) "Downloaded" else "Not downloaded") }
-                                    div { css { color = Color("#666") }; +formatSize(entry.sizeBytes) }
-                                }
-                                td {
-                                    div {
-                                        css { color = Color(if (entry.state == "ready") "#237747" else if (entry.state == "failed") "#b3261e" else "#444"); fontWeight = FontWeight.bold }
-                                        +(if (entry.state == "missing" || entry.state == "downloaded") "Not prepared" else entry.state.replaceFirstChar { it.uppercase() })
+                                    td {
+                                        +(if (entry.downloaded) "Downloaded" else "Not downloaded")
+                                        div { css { color = Color("#687080") }; +formatSize(entry.sizeBytes) }
                                     }
-                                    div { css { fontSize = 0.9.em; color = Color("#666") }; +entry.detail }
-                                    if (entry.state == "downloading") {
-                                        div { +"${formatSize(entry.completedBytes)} downloaded" }
+                                    td {
+                                        +(if (entry.state == "missing" || entry.state == "downloaded") "Not prepared"
+                                            else entry.state.replaceFirstChar { it.uppercase() })
                                     }
                                 }
                             }
@@ -198,11 +218,29 @@ class CatalogSourceDisplay(props: CatalogSourceDisplayProps):
                     }
                 }
             }
+            div {
+                css { display = Display.flex; gap = 5.px; flexWrap = FlexWrap.wrap }
+                if (selected.any { it.state != "ready" && it.state !in preparationStates }) button {
+                    disabled = busy
+                    onClick = { store.action("prepare", state.selection) }
+                    +"Download and prepare"
+                }
+                if (preparing) button {
+                    disabled = busy
+                    onClick = { store.action("cancel", state.selection) }
+                    +"Cancel preparation"
+                }
+            }
+            selected.filter { it.state in preparationStates || it.state == "failed" }.forEach { entry ->
+                div {
+                    css { fontSize = 0.85.em; color = Color(if (entry.state == "failed") "#b3261e" else "#687080") }
+                    +"${entry.date}: ${entry.state} — ${entry.detail}"
+                    if (entry.state == "downloading") +" · ${formatSize(entry.completedBytes)} / ${formatSize(entry.sizeBytes)}"
+                }
+            }
             val missing = state.selection.filter { id -> entries.none { it.id == id } }
-            if (missing.isNotEmpty()) div { +"Selected files unavailable: ${missing.joinToString()}" }
-            if (state.selection.isEmpty()) div { +"Select at least one date." }
-            else if (entries.any { it.id in state.selection && it.state != "ready" }) div { +"Prepare the selected dates before running." }
-            if (props.common.active) div { +"Date and symbol selection is fixed for this run." }
+            if (catalog != null && missing.isNotEmpty()) div { +"Selected files unavailable: ${missing.joinToString()}" }
+            if (props.common.active) div { css { fontSize = 0.8.em }; +"Date and symbol selection is fixed for this run." }
             renderSymbols(editingDisabled)
             listOfNotNull(state.error, state.catalogState?.error, catalog?.error).distinct().forEach { message ->
                 div { css { color = Color("#b3261e") }; +message }
@@ -214,27 +252,54 @@ class CatalogSourceDisplay(props: CatalogSourceDisplayProps):
         val selectedEntries = state.catalogState?.catalog?.entries.orEmpty().filter { it.id in state.selection }
         val available = selectedEntries.flatMap { it.symbols }.distinct().sorted()
         div {
-            div { +"Symbols: ${if (state.symbols.isEmpty()) "All" else state.symbols.joinToString()}" }
-            button { this.disabled = disabled || state.symbols.isEmpty(); onClick = { save(CatalogConventions.symbols, emptyList()) }; +"Use all symbols" }
-            input { css { marginLeft = 6.px; padding = 4.px; maxWidth = 150.px }; placeholder = "Find symbols"; value = state.symbolSearch; onChange = { event -> setState { symbolSearch = event.currentTarget.value } } }
-            if (available.isEmpty()) div { +"Symbol choices appear after preparation." }
             div {
-                css { maxHeight = 180.px; overflowY = Auto.auto }
-                available.filter { it.contains(state.symbolSearch, ignoreCase = true) }.take(symbolChoiceLimit).forEach { symbol ->
-                    val dates = selectedEntries.filter { symbol in it.symbols }.map { it.date }
-                    div { label {
-                        input {
-                            type = InputType.checkbox; checked = symbol in state.symbols; this.disabled = disabled
-                            onChange = { save(CatalogConventions.symbols, if (symbol in state.symbols) state.symbols - symbol else state.symbols + symbol) }
-                        }
-                        +"$symbol · ${dates.joinToString()}"
-                    } }
+                css { display = Display.flex; gap = 6.px; alignItems = AlignItems.center; flexWrap = FlexWrap.wrap }
+                button {
+                    onClick = { setState { symbolsOpen = !state.symbolsOpen } }
+                    +(if (state.symbolsOpen) "▾ Symbols" else "▸ Symbols")
                 }
+                span { +(if (state.symbols.isEmpty()) "All symbols" else
+                    state.symbols.take(6).joinToString(", ") + if (state.symbols.size > 6) " +${state.symbols.size - 6}" else "") }
             }
-            if (available.size > symbolChoiceLimit) div { +"Search to narrow the symbol list." }
+            if (state.symbolsOpen) {
+                div {
+                    css { display = Display.flex; gap = 5.px; flexWrap = FlexWrap.wrap; marginTop = 6.px }
+                    button { this.disabled = disabled || state.symbols.isEmpty(); onClick = { save(CatalogConventions.symbols, emptyList()) }; +"Use all symbols" }
+                    input { placeholder = "Find symbols"; value = state.symbolSearch; onChange = { event -> setState { symbolSearch = event.currentTarget.value } } }
+                }
+                if (state.symbols.isNotEmpty()) div {
+                    css { display = Display.flex; gap = 4.px; flexWrap = FlexWrap.wrap; marginTop = 5.px }
+                    state.symbols.forEach { symbol ->
+                        button { this.disabled = disabled; title = "Remove $symbol"; onClick = { save(CatalogConventions.symbols, state.symbols - symbol) }; +"$symbol ×" }
+                    }
+                }
+                if (available.isEmpty()) div { +"Symbol choices appear after preparation." }
+                val matches = available.filter { it.contains(state.symbolSearch, ignoreCase = true) }
+                div {
+                    css { maxHeight = 180.px; overflowY = Auto.auto; marginTop = 5.px }
+                    matches.take(symbolChoiceLimit).forEach { symbol ->
+                        div {
+                            key = Key(symbol)
+                            css { display = Display.flex; gap = 6.px; alignItems = AlignItems.baseline }
+                            label {
+                                input {
+                                    type = InputType.checkbox; checked = symbol in state.symbols; this.disabled = disabled
+                                    onChange = { save(CatalogConventions.symbols, if (symbol in state.symbols) state.symbols - symbol else state.symbols + symbol) }
+                                }
+                                +symbol
+                            }
+                            details {
+                                summary { css { cursor = Cursor.pointer; fontSize = 0.8.em; color = Color("#687080") }; +"Dates" }
+                                +selectedEntries.filter { symbol in it.symbols }.joinToString { it.date }
+                            }
+                        }
+                    }
+                }
+                if (matches.size > symbolChoiceLimit) div { +"Showing $symbolChoiceLimit of ${matches.size}. Search to narrow the list." }
+            }
             state.symbols.forEach { symbol ->
                 val absent = selectedEntries.filter { it.state == "ready" && symbol !in it.symbols }
-                if (absent.isNotEmpty()) div { +"$symbol is absent on ${absent.joinToString { it.date }}; those combinations will be skipped." }
+                if (absent.isNotEmpty()) div { css { fontSize = 0.85.em }; +"$symbol is absent on ${absent.joinToString { it.date }}; those combinations will be skipped." }
             }
         }
     }
@@ -247,6 +312,7 @@ class CatalogSourceDisplay(props: CatalogSourceDisplayProps):
     }
 
     companion object {
+        private val preparationStates = setOf("queued", "downloading", "verifying", "preparing")
         private const val bytesPerKiB = 1024
         private const val bytesPerMiB = 1024 * 1024
         private const val symbolChoiceLimit = 100
