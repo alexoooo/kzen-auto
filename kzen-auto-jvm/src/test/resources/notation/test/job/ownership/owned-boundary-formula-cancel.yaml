@@ -1,0 +1,21 @@
+main:
+  is: Job
+
+main.channels/calculated:
+  is: Channel
+  capacity: 2
+  batchSize: 1
+
+main.workers/source:
+  is: OwnedSourceWorker
+
+main.workers/formula:
+  is: FormulaWorker
+  output: main.channels/calculated
+  formula:
+    test: symbol.length
+
+main.workers/sink:
+  is: GatedCountingSinkWorker
+  input: main.channels/calculated
+  note: gate

@@ -1,0 +1,13 @@
+main:
+  is: Job
+
+main.workers/source:
+  is: OwnedSourceWorker
+
+main.workers/formula:
+  is: FormulaWorker
+  formula:
+    test: symbol.length
+
+main.workers/preview:
+  is: PreviewWorker

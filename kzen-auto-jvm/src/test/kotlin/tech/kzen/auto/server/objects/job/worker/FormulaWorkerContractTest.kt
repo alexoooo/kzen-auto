@@ -45,7 +45,7 @@ class FormulaWorkerContractTest {
 
 
     @Test
-    fun nativeNonScalarInputsAdvertiseTheSyntheticTypedRuntimeRecord() {
+    fun nestedRecordsKeepTheirShapeAndOpaqueInputsUseSyntheticProjection() {
         val native = TypeMetadata(ClassName(DataUnit::class.qualifiedName!!), emptyList(), false)
         assertSynthetic(worker().payloadFlow(
             JobLaneDescriptor(native.toDataContract()), laneContext()), native)
@@ -57,7 +57,31 @@ class FormulaWorkerContractTest {
                     DataType.Scalar(ScalarKind.Text),
                     DataType.Scalar(ScalarKind.Text))))),
             mapOf(DataTypePath.root to native))
-        assertSynthetic(worker().payloadFlow(JobLaneDescriptor(nested), laneContext()), native)
+        val output = worker().payloadFlow(JobLaneDescriptor(nested), laneContext())
+        assertNull(output.errorMessage)
+        val record = assertIs<DataType.Record>(output.lane.contract.structural)
+        assertEquals(listOf("nested", "flatDate"), record.fields.map { it.id.name })
+        assertIs<DataType.Mapping>(record.fields.first().type)
+        assertEquals(native, output.lane.contract.nativeByPath[DataTypePath.root])
+    }
+
+
+    @Test
+    fun nativeFieldMetadataSurvivesCalculatedColumnsAndChainedValidation() {
+        tech.kzen.lib.common.exec.data.value.DefaultDataAdapterRegistry().use { registry ->
+            val item = tech.kzen.auto.server.objects.job.value.RecordOverlayTest.Item(
+                "2019-12-30", "AAPL", "source",
+                tech.kzen.auto.server.objects.job.value.RecordOverlayTest.Day(true, emptyList(), emptyMap()), null)
+            val contract = registry.lift(item).contract
+            val first = worker("test", "symbol.length").payloadFlow(JobLaneDescriptor(contract), laneContext())
+            assertNull(first.errorMessage)
+            assertEquals(contract.nativeByPath, first.lane.contract.nativeByPath)
+            assertEquals(ScalarKind.Integer(32),
+                (first.lane.contract.child(tech.kzen.lib.common.exec.data.type.DataPathSegment.Field(FieldId("test"))).structural as DataType.Scalar).kind)
+            val next = worker("checked", "test == symbol.length && day.open").payloadFlow(first.lane, laneContext())
+            assertNull(next.errorMessage)
+            assertEquals(7, (next.lane.contract.structural as DataType.Record).fields.size)
+        }
     }
 
 
@@ -72,10 +96,10 @@ class FormulaWorkerContractTest {
     }
 
 
-    private fun worker(): FormulaWorker = FormulaWorker(
+    private fun worker(name: String = "flatDate", expression: String = "\"2026-09-01\""): FormulaWorker = FormulaWorker(
         EmptyInput,
         IgnoredOutput,
-        FormulaSpec(mapOf("flatDate" to "\"2026-09-01\"")),
+        FormulaSpec(mapOf(name to expression)),
         "",
         FormulaCarrySpec.none,
         ObjectLocation.parse("test/formula-worker-contract.yaml#main.workers/formula"),

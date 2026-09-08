@@ -1,0 +1,18 @@
+main:
+  is: Job
+
+main.workers/source:
+  is: OwnedSourceWorker
+
+main.workers/formula:
+  is: FormulaWorker
+  formula:
+    test: symbol.length
+
+main.workers/failure:
+  is: FormulaWorker
+  formula:
+    failed: 'if (test >= 0) error("formula fixture failure") else 0'
+
+main.workers/preview:
+  is: PreviewWorker

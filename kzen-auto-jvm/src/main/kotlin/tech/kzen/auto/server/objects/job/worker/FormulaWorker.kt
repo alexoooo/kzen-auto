@@ -15,6 +15,7 @@ import tech.kzen.auto.server.objects.job.value.CarrySelection
 import tech.kzen.auto.server.objects.job.value.ColumnProjection
 import tech.kzen.auto.server.objects.job.value.FormulaValueTransformer
 import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.auto.server.objects.job.value.RecordOverlay
 import tech.kzen.auto.server.objects.job.value.JobValueClaim
 import tech.kzen.auto.server.objects.report.exec.calc.ColumnValue
 import tech.kzen.auto.server.util.ClassLoaderUtils
@@ -52,7 +53,7 @@ class FormulaWorker(
         private fun requiresSyntheticProjection(contract: DataContract): Boolean {
             if (contract.nativeByPath[DataTypePath.root] == null) return false
             return when (val structural = contract.structural) {
-                is DataType.Record -> structural.fields.any { it.type !is DataType.Scalar }
+                is DataType.Record -> false
                 is DataType.Mapping -> structural.value !is DataType.Scalar
                 is DataType.Scalar -> false
                 else -> true
@@ -296,36 +297,11 @@ class FormulaWorker(
         if (carrySelection == CarrySelection.None) {
             return replacement
         }
-        val source = projectableFields(widened.contract) ?: return JobLaneDescriptor.unknown
-        val carried = when (val selection = carrySelection) {
-            CarrySelection.None -> emptyList()
-            is CarrySelection.All -> source
-            is CarrySelection.Selected -> {
-                val byId = source.associateBy { it.id }
-                selection.fields.map { selected ->
-                    val field = requireNotNull(byId[selected.source]) {
-                        "Unknown carry field '${selected.source}'"
-                    }
-                    selected.rename?.let { field.copy(id = it) } ?: field
-                }
-            }
-        }
-        val target = projectableFields(replacement.contract) ?: return JobLaneDescriptor.unknown
-        val ids = target.mapTo(mutableSetOf()) { it.id }
-        val collision = carried.firstOrNull { !ids.add(it.id) }
-        require(collision == null) { "Carry field '${collision?.id}' collides with replacement output" }
-        return JobLaneDescriptor(DataContract(
-            DataType.Record(target + carried, replacement.contract.structural.nullable),
-            replacement.contract.nativeByPath))
+        if (replacement.contract.structural !is DataType.Record && replacement.contract.structural !is DataType.Scalar ||
+            widened.contract.structural !is DataType.Record && widened.contract.structural !is DataType.Scalar
+        ) return JobLaneDescriptor.unknown
+        return JobLaneDescriptor(RecordOverlay.carryContract(replacement.contract, widened.contract, carrySelection))
     }
-
-
-    private fun projectableFields(contract: DataContract): List<DataField>? =
-        when (val structural = contract.structural) {
-            is DataType.Record -> structural.fields
-            is DataType.Scalar -> listOf(DataField(FieldId("value"), structural))
-            else -> null
-        }
 
 
     private fun appendCalculated(
@@ -335,20 +311,16 @@ class FormulaWorker(
         if (calculated.isEmpty()) {
             return input
         }
-        val existing = if (requiresSyntheticProjection(input.contract)) {
-            listOf(DataField(FieldId("value"), DataType.Scalar(ScalarKind.Text)))
+        val contract = if (requiresSyntheticProjection(input.contract)) {
+            DataContract(
+                DataType.Record(listOf(DataField(FieldId("value"), DataType.Scalar(ScalarKind.Text)))),
+                input.contract.nativeByPath.filterKeys { it == DataTypePath.root })
         }
-        else when (val structural = input.contract.structural) {
-            is DataType.Record -> structural.fields
-            is DataType.Scalar -> listOf(DataField(FieldId("value"), structural))
-            else -> return JobLaneDescriptor.unknown
+        else input.contract
+        if (contract.structural !is DataType.Record && contract.structural !is DataType.Scalar) {
+            return JobLaneDescriptor.unknown
         }
-        val collisions = existing.mapTo(mutableSetOf()) { it.id }
-        val duplicate = calculated.firstOrNull { !collisions.add(it.id) }
-        require(duplicate == null) { "Calculated field '${duplicate?.id}' collides with an input field" }
-        return JobLaneDescriptor(DataContract(
-            DataType.Record(existing + calculated, input.contract.structural.nullable),
-            input.contract.nativeByPath))
+        return JobLaneDescriptor(RecordOverlay.appendContract(contract, calculated))
     }
 
 

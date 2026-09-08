@@ -326,3 +326,8 @@ DuplexChannelTool:
   is: RibbonTool
   parent: JobGroup_Channels
   delegate: DuplexChannel
+
+
+FormulaCarryEditor:
+  is: AttributeEditor
+  class: tech.kzen.auto.client.objects.document.job.edit.FormulaCarryEditor$Wrapper

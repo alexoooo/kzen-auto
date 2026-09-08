@@ -50,6 +50,25 @@ internal object FormulaValueTransformer {
         val calculated = calculate(originalProjection)
         val replacement = replace?.invoke(originalProjection)
 
+        val flatOnly = claim.value.access is tech.kzen.auto.plugin.model.record.FlatFileRecord &&
+                claim.value.contract.nativeByPath.isEmpty() &&
+                claim.value.contract.definitions.isEmpty() &&
+                !claim.value.type.nullable &&
+                calculated.none { it.type.kind == tech.kzen.lib.common.exec.data.type.ScalarKind.Binary } &&
+                (replacement == null || replacement.access is tech.kzen.auto.plugin.model.record.FlatFileRecord &&
+                        replacement.contract.nativeByPath.isEmpty() && replacement.contract.definitions.isEmpty())
+        val overlaySource = claim.value.type is DataType.Record || claim.value.type is DataType.Scalar
+        val overlayTarget = replacement == null || replacement.type is DataType.Record || replacement.type is DataType.Scalar
+        if (!flatOnly && overlaySource && overlayTarget) {
+            val widened = RecordOverlay.append(claim.value, calculated)
+            val output = when {
+                replacement == null -> widened
+                carry == CarrySelection.None -> replacement
+                else -> RecordOverlay.carry(replacement, widened, carry)
+            }
+            return FormulaTransformResult(output, 0, calculated.size)
+        }
+
         if (replacement == null) {
             val builder = RecordOutputBuilder.open(claim, originalProjection.descriptor)
             appendCalculated(builder, calculated)

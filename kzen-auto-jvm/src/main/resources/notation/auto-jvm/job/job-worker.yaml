@@ -274,6 +274,7 @@ FormulaWorker:
       multiline: true
     carry:
       is: FormulaCarrySpec
+      editor: FormulaCarryEditor
     selfLocation:
       is: ObjectLocation
       by: Self

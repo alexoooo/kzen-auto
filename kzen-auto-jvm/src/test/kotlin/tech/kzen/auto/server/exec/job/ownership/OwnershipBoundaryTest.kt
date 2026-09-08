@@ -95,6 +95,60 @@ class OwnershipBoundaryTest {
     }
 
     @Test
+    fun formulaPreviewReleasesNestedOwnedValuesAndKeepsCalculatedContent() {
+        OwnedSourceWorker.kind = OwnedSourceWorker.kindOrder
+        val engine = newEngine(document("formula-preview"))
+        try {
+            engine.resume()
+            assertIs<Outcome.Success>(runBlocking { withTimeout(runTimeoutMillis) { engine.await() } })
+            assertTrue(OwnedSourceWorker.orders.all { it.closes == 1 })
+            val progress = engine.snapshot().root.children.mapNotNull {
+                it.live[Address.of("\$job-progress")]?.get() as? Map<*, *>
+            }.first { it.containsKey("previewItems") }
+            val items = progress["previewItems"] as List<*>
+            assertEquals(3, items.size)
+            val first = tech.kzen.auto.common.objects.document.job.preview.PreviewNode.decode(items.first() as String)
+            assertTrue(first.children.any { it.name == "test" }, first.encode())
+            assertEquals(OwnedSourceWorker.orders.first().symbol.length.toString(), first.children.single { it.name == "test" }.text)
+            val executions = first.children.single { it.name == "executions" }
+            assertEquals(2, executions.children.size)
+            assertEquals("10.0", executions.children.first().children.single { it.name == "price" }.text)
+        }
+        finally { engine.close() }
+    }
+
+    @Test
+    fun cancellingFormulaWithAQueuedWrapperReleasesItsNative() {
+        OwnedSourceWorker.kind = OwnedSourceWorker.kindOrder
+        val engine = newEngine(document("formula-cancel"))
+        try {
+            engine.resume()
+            awaitCondition("Formula output queued", runTimeoutMillis) {
+                engine.snapshot().root.children.any {
+                    val progress = it.live[Address.of("\$job-progress")]?.get() as? Map<*, *>
+                    ((progress?.get("computed") as? Number)?.toLong() ?: 0L) >= 1L
+                }
+            }
+            assertTrue(OwnedSourceWorker.orders.any { it.closes == 0 })
+            engine.cancel()
+            assertIs<Outcome.Cancelled>(runBlocking { withTimeout(runTimeoutMillis) { engine.await() } })
+        }
+        finally { engine.close() }
+        assertTrue(OwnedSourceWorker.orders.isNotEmpty())
+        assertTrue(OwnedSourceWorker.orders.all { it.closes == 1 })
+    }
+
+    @Test
+    fun failingAfterFormulaReleasesItsWrappedNative() {
+        OwnedSourceWorker.kind = OwnedSourceWorker.kindOrder
+        val outcome = run(document("formula-failure"))
+        assertIs<Outcome.Failed>(outcome)
+        assertTrue(outcome.toString().contains("formula fixture failure"), outcome.toString())
+        assertTrue(OwnedSourceWorker.orders.isNotEmpty())
+        assertTrue(OwnedSourceWorker.orders.all { it.closes == 1 })
+    }
+
+    @Test
     fun resultKeepsASnapshotThatStaysReadableAfterTheRunClosedTheNative() {
         OwnedSourceWorker.kind = OwnedSourceWorker.kindRecord
         val success = assertIs<Outcome.Success>(run(document("result")))
