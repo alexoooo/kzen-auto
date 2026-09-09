@@ -5,6 +5,7 @@ import org.junit.Before
 import org.junit.Test
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.util.AutoTestUtils
+import tech.kzen.auto.server.util.awaitDone
 import tech.kzen.auto.server.util.awaitSettled
 import tech.kzen.lib.common.model.definition.GraphDefinitionAttempt
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -100,6 +101,28 @@ class ServerLogicControllerStatusObserverTest {
         }
     }
 
+
+    @Test
+    fun retainedRunTimingSurvivesPauseAndFreezesOnCancellation() {
+        val controller = context.serverLogicController
+        val graph = graphDefinitionAttempt()
+        val run = controller.start(scriptMain, graph) ?: fail("Unable to start")
+        controller.continueOrStart(run, graph)
+        controller.awaitSettled()
+        val first = assertNotNull(controller.retainedTraceAccess()?.timing)
+        assertEquals(false, first.settled)
+        val version = controller.status().structureVersion
+        Thread.sleep(20)
+        val later = assertNotNull(controller.retainedTraceAccess()?.timing)
+        assertTrue(later.elapsedMillis >= first.elapsedMillis + 10)
+        assertEquals(version, controller.status().structureVersion)
+        controller.cancel(run)
+        controller.awaitDone()
+        val terminal = assertNotNull(controller.retainedTraceAccess()?.timing)
+        assertEquals(true, terminal.settled)
+        Thread.sleep(20)
+        assertEquals(terminal, controller.retainedTraceAccess()?.timing)
+    }
 
     @Test
     fun statusObserverUnsubscribes() {

@@ -116,6 +116,8 @@ class ServerLogicController(
         @Volatile
         var settled: Boolean = false
 
+        val elapsed = tech.kzen.auto.server.exec.RunElapsedTime()
+
         // The engine has been launched (the root coroutine started). A fresh run is created but not launched;
         // the first drive (resume / step) — or a pause-at-entry — launches it.
         @Volatile
@@ -830,6 +832,7 @@ class ServerLogicController(
             // Retain the settled run for post-run trace queries: stop the engine's pools (no threads held) but
             // keep its node tree + history readable. The next start() (or clearRetainedTrace) disposes it;
             // status() reports it as no-active-run via `settled`.
+            state.elapsed.finish()
             state.settled = true
             state.engine.shutdown()
 
@@ -865,7 +868,7 @@ class ServerLogicController(
     fun retainedTraceAccess(): RunTraceAccess? {
         val state = stateOrNull
             ?: return null
-        return RunTraceAccess(state.runId, state.engine)
+        return RunTraceAccess(state.runId, state.engine, state.elapsed.snapshot(state.runId.value))
     }
 
 

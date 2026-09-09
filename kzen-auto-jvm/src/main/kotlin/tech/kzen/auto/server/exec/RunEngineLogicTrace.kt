@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.exec
 
+import tech.kzen.auto.common.paradigm.logic.RunTiming
 import tech.kzen.lib.common.exec.BinaryExecutionValue
 import tech.kzen.lib.common.exec.BinaryHandleExecutionValue
 import tech.kzen.lib.common.exec.ExecutionValue
@@ -32,7 +33,8 @@ import kotlin.time.Clock
  */
 class RunTraceAccess(
     val runId: LogicRunId,
-    val engine: RunEngine
+    val engine: RunEngine,
+    val timing: RunTiming? = null
 )
 
 
@@ -161,6 +163,10 @@ class RunEngineLogicTrace(
                     merged[path] = entry
                 }
             }
+        }
+        access.timing?.let { timing ->
+            merged[RunTiming.path] = LogicTraceEntry(ExecutionValue.of(timing.toCollection()), time,
+                access.engine.snapshot().sequence)
         }
         return LogicTraceSnapshot(filterAndRetain(merged, logicTraceQuery))
     }

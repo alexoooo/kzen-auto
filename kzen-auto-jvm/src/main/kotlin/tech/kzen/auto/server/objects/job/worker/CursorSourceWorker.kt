@@ -39,6 +39,10 @@ abstract class CursorSourceWorker(
     protected abstract fun open(control: JobControl): Iterator<*>
 
 
+    /** Called with the current control after opening or adopting a cursor, before any pull. */
+    protected open fun onCursorReady(iterator: Iterator<*>, control: JobControl) {}
+
+
     /** The element contract, when statically known; null lets each element describe itself. */
     protected open fun elementContract(): DataContract? = null
 
@@ -70,6 +74,7 @@ abstract class CursorSourceWorker(
             ?: (ingress.openStream { open(control) } ?: throw IllegalStateException("open returned no iterator"))
                 .also { stream = it }
         try {
+            onCursorReady(opened.iterator, control)
             while (true) {
                 if (pending.isEmpty()) {
                     val pulled = ingress.pull(opened.iterator, emit.batchSize())

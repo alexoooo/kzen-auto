@@ -769,6 +769,11 @@ class JobController(
                 stageFloatGutter()
             }
 
+            RunElapsedDisplay::class.react {
+                timing = tech.kzen.auto.common.paradigm.logic.RunTiming.ofCollection(
+                    state.traceSnapshot?.values?.get(tech.kzen.auto.common.paradigm.logic.RunTiming.path)?.value?.get())
+            }
+
             // The whole stage is one drop zone; the drop index is computed from the cursor Y (onStageDragOver).
             onDragEnter = { event -> onStageDragOver(event) }
             onDragOver = { event -> onStageDragOver(event) }

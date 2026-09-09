@@ -1,5 +1,0 @@
-CatalogSourceDisplay:
-  is: WorkerDisplay
-  class: tech.kzen.auto.client.objects.document.job.source.catalog.CatalogSourceDisplay$Wrapper
-  attributeEditorManager: AttributeEditorManager
-  attributeViewManager: AttributeViewManager
