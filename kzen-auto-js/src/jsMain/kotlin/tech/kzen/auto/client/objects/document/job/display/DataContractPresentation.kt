@@ -3,6 +3,7 @@ package tech.kzen.auto.client.objects.document.job.display
 import tech.kzen.lib.common.exec.data.shape.DataShape
 import tech.kzen.lib.common.exec.data.shape.ShapeStability
 import tech.kzen.lib.common.exec.data.type.DataContract
+import tech.kzen.lib.common.exec.data.type.DataTypePath
 import tech.kzen.lib.common.exec.data.type.DataType
 import tech.kzen.lib.common.exec.data.type.ScalarKind
 import tech.kzen.lib.common.exec.data.type.renderName
@@ -46,7 +47,26 @@ internal object DataContractPresentation {
                 details.add("${diagnostic.severity.name}: ${diagnostic.code}$location — ${diagnostic.message}")
             }
         }
-        return Presentation(summary(contract.structural), "Contract details", details, normal)
+        return Presentation(typeLabel(contract), typeTitle(contract), details, normal)
+    }
+
+    fun typeLabel(contract: DataContract): String {
+        val type = contract.structural
+        val native = contract.nativeByPath[DataTypePath.root]
+        val label = when (type) {
+            is DataType.Record -> native?.let { "${it.toSimple()} (Record)" } ?: "Record"
+            is DataType.Union -> "Union"
+            else -> summary(type)
+        }
+        return label + if (type.nullable) "?" else ""
+    }
+
+    fun typeTitle(contract: DataContract): String = buildString {
+        append(summary(contract.structural))
+        if (contract.structural.nullable) append(" · nullable")
+        contract.nativeByPath[DataTypePath.root]?.let {
+            append(" · JVM: ${it.className.asString()}")
+        }
     }
 
     fun summary(type: DataType): String = when (type) {

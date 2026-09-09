@@ -11,6 +11,9 @@ import tech.kzen.lib.common.exec.data.type.DataField
 import tech.kzen.lib.common.exec.data.type.DataType
 import tech.kzen.lib.common.exec.data.type.FieldId
 import tech.kzen.lib.common.exec.data.type.ScalarKind
+import tech.kzen.lib.common.exec.data.type.DataTypePath
+import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
+import tech.kzen.lib.platform.ClassName
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -24,7 +27,7 @@ class DataContractViewTest {
         assertEquals("Error", DataContractPresentation.of(DataContractDisplay.Error("failed")).summary)
         assertEquals("Dynamic", DataContractPresentation.of(DataContractDisplay.Dynamic).summary)
         assertEquals(
-            "Record · 1 field",
+            "Record",
             DataContractPresentation.of(DataContractDisplay.Contract(recordContract())).summary)
     }
 
@@ -50,6 +53,20 @@ class DataContractViewTest {
         assertTrue(details.any { it == "provenance: ProviderReported" })
         assertTrue(details.any { it == "stability: Provisional · 12 items · 256 bytes · partial" })
         assertTrue(details.any { it.contains("Warning: sample at /field:value#0") })
+    }
+
+
+    @Test
+    fun nativeRecordNamesAndSemanticScalarsHaveDetailedTooltips() {
+        val record = DataContract(recordContract().structural, mapOf(
+            DataTypePath.root to TypeMetadata(ClassName("example.DatedSymbolDay"), emptyList(), false)))
+        assertEquals("DatedSymbolDay (Record)", DataContractPresentation.typeLabel(record))
+        assertTrue(DataContractPresentation.typeTitle(record).contains("1 field"))
+        assertTrue(DataContractPresentation.typeTitle(record).contains("example.DatedSymbolDay"))
+        val text = DataContract(DataType.Scalar(ScalarKind.Text, nullable = true), mapOf(
+            DataTypePath.root to TypeMetadata(ClassName("kotlin.String"), emptyList(), true)))
+        assertEquals("Text?", DataContractPresentation.typeLabel(text))
+        assertTrue(DataContractPresentation.typeTitle(text).contains("kotlin.String"))
     }
 
 

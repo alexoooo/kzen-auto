@@ -7,4 +7,5 @@ external interface ContractTreeNodeProps: Props {
     var contract: DataContract
     var label: String
     var optional: Boolean
+    var childrenOnly: Boolean?
 }

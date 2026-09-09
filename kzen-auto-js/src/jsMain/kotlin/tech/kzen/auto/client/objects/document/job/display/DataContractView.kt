@@ -53,7 +53,8 @@ class DataContractView(
             if (contractDisplay != null) {
                 ContractTreeNode::class.react {
                     contract = contractDisplay.contract
-                    label = "Stream item"
+                    label = ""
+                    childrenOnly = true
                     optional = false
                 }
                 if (presentation.details.isNotEmpty()) {

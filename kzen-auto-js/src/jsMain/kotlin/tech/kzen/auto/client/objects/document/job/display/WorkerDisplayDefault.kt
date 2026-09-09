@@ -198,11 +198,12 @@ class WorkerDisplayDefault(
 
             props.bodyBefore?.invoke(this)
 
+            val editableAttributes = editableAttributes(objectMetadata)
             val disclosure = props.attributeDisclosure
             if (disclosure == null) {
-                renderAttributeEditors(objectMetadata)
+                renderAttributeEditors(editableAttributes)
             }
-            else {
+            else if (editableAttributes.isNotEmpty()) {
                 details {
                     css {
                         marginTop = 0.5.em
@@ -218,7 +219,7 @@ class WorkerDisplayDefault(
                         css {
                             marginTop = 0.5.em
                         }
-                        renderAttributeEditors(objectMetadata)
+                        renderAttributeEditors(editableAttributes)
                     }
                 }
             }
@@ -398,7 +399,8 @@ class WorkerDisplayDefault(
     // An editor for each non-managed attribute via the shared AttributeEditorManager — scalars (path, delimiter,
     // ...) fall to the default value editor; channel-reference attributes dispatch to SelectChannelEditor via their
     // `editor:` metadata. Channel-endpoint ports are order-managed (the gold pipes between cards), not per-Worker.
-    private fun ChildrenBuilder.renderAttributeEditors(objectMetadata: ObjectMetadata) {
+    private fun editableAttributes(objectMetadata: ObjectMetadata): List<AttributeName> {
+        val editable = mutableListOf<AttributeName>()
         val hiddenAttributes = props.hiddenAttributes ?: emptySet()
         for ((attributeName, attributeMetadata) in objectMetadata.attributes.map) {
             // Per-output channel config lives in a free-form `channels` map, which infers to no metadata and so
@@ -408,12 +410,21 @@ class WorkerDisplayDefault(
             // document level (the stage's Result control), so no free-text editor on the card — hand-edit
             // notation for a multi-result Job until the document editor wires named results.
             if (AutoConventions.isManaged(attributeName) ||
+                    attributeMetadata.definerReference?.name?.objectName?.value == "Self" ||
                     JobChannelPorts.isChannelPort(attributeMetadata.type) ||
                     attributeName == JobConventions.resultAttributeName ||
                     attributeName in hiddenAttributes) {
                 continue
             }
 
+            editable.add(attributeName)
+        }
+        return editable
+    }
+
+
+    private fun ChildrenBuilder.renderAttributeEditors(attributes: List<AttributeName>) {
+        for (attributeName in attributes) {
             div {
                 css {
                     // The stacked-field rhythm ScriptStepDisplayDefault uses: an outlined field's floating label

@@ -4,6 +4,8 @@ import emotion.react.css
 import tech.kzen.auto.client.objects.document.job.display.DataContractPresentation
 import react.ChildrenBuilder
 import react.Key
+import react.ReactNode
+import mui.material.Tooltip
 import react.dom.html.ReactHTML.button
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
@@ -16,38 +18,38 @@ import web.cssom.*
 /** A contract is expanded only when its node is opened, including recursive references. */
 class ContractTreeNode(props: ContractTreeNodeProps): RPureComponent<ContractTreeNodeProps, ContractTreeNodeState>(props) {
     override fun ContractTreeNodeState.init(props: ContractTreeNodeProps) {
-        expanded = props.label == "Stream item"
+        expanded = false
     }
 
     override fun ChildrenBuilder.render() {
         val contract = props.contract
+        if (props.childrenOnly == true) {
+            renderChildren(contract)
+            return
+        }
         val type = contract.structural
         val expandable = type is DataType.Record || type is DataType.Listing || type is DataType.Mapping ||
                 type is DataType.Union || type is DataType.Reference
         div {
-            css { padding = Padding(3.px, 0.px); minWidth = 15.em }
+            css { padding = Padding(1.px, 0.px) }
             div {
-                css { display = Display.flex; alignItems = AlignItems.center; gap = 6.px; flexWrap = FlexWrap.wrap }
+                css { display = Display.flex; alignItems = AlignItems.center; gap = 4.px; flexWrap = FlexWrap.nowrap }
                 if (expandable) {
                     button {
                         title = if (state.expanded) "Collapse ${props.label}" else "Expand ${props.label}"
-                        css { border = None.none; backgroundColor = Color("transparent"); cursor = Cursor.pointer; padding = 0.px }
+                        css { border = None.none; backgroundColor = Color("transparent"); cursor = Cursor.pointer; padding = 0.px; width = 12.px; flexShrink = number(0.0) }
                         onClick = { setState { expanded = !state.expanded } }
                         +(if (state.expanded) "▾" else "▸")
                     }
                 }
-                span { css { fontWeight = FontWeight.bold }; +props.label }
-                span {
-                    css { backgroundColor = Color("#eef2f7"); borderRadius = 4.px; padding = Padding(2.px, 5.px) }
-                    +DataContractPresentation.summary(type)
-                }
-                if (type.nullable) span { +"nullable" }
-                if (props.optional) span { +"optional" }
-                contract.nativeByPath[DataTypePath.root]?.let { metadata ->
+                else span { css { width = 12.px; flexShrink = number(0.0) } }
+                span { +"${props.label}${if (props.optional) "?" else ""}:" }
+                Tooltip {
+                    title = ReactNode(DataContractPresentation.typeTitle(contract) + if (props.optional) " · optional field" else "")
                     span {
-                        title = "JVM type: ${metadata.className.asString()}"
-                        css { color = Color("#687080"); fontSize = 0.9.em }
-                        +"JVM: ${metadata.toSimple()}"
+                        tabIndex = 0
+                        css { color = Color("#687080") }
+                        +DataContractPresentation.typeLabel(contract)
                     }
                 }
             }

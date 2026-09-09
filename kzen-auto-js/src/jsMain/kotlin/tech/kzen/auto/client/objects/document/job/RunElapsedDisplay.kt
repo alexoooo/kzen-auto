@@ -52,7 +52,18 @@ class RunElapsedDisplay(props: RunElapsedDisplayProps): RPureComponent<RunElapse
         val minutes = seconds / secondsPerMinute % secondsPerMinute
         val remainingSeconds = seconds % secondsPerMinute
         div {
-            css { color = Color("#596579"); fontSize = 0.9.em; marginBottom = 0.75.em }
+            css {
+                position = Position.fixed
+                bottom = 16.px
+                right = 16.px
+                zIndex = integer(1000)
+                color = Color("#596579")
+                backgroundColor = Color("#ffffff")
+                border = Border(1.px, LineStyle.solid, Color("#d4dce6"))
+                borderRadius = 6.px
+                padding = Padding(8.px, 12.px)
+                fontSize = 0.9.em
+            }
             title = "Total time including pauses and waits, until the entire run finishes"
             +(if (timing.settled) "Run duration: " else "Run elapsed: ")
             +(if (hours > 0) "${hours}h " else "")
