@@ -1,0 +1,27 @@
+# EntryScopeWorkerTest "many": ten thousand small entries, plain copy (per-entry cost, spike plan §5 unknown 1)
+main:
+  is: Job
+  results:
+    main:
+      class: kotlin.Any
+      generics: []
+      nullable: true
+
+main.channels/written:
+  is: Channel
+
+main.workers/Archive:
+  is: EntryScope
+  path: build/content-scope/many/input.tar.gz
+  entries: []
+  output: main.channels/written
+
+main.workers/Archive.body/Write:
+  is: ContentWriter
+  directory: build/content-scope/many/out
+  coding: none
+
+main.workers/collect:
+  is: ResultSinkWorker
+  input: main.channels/written
+  keep: all

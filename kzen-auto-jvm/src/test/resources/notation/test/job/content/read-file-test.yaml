@@ -1,0 +1,28 @@
+# ScopeReadPartTest "read" reference: the same CSV extracted to a file, read by FileSourceWorker
+main:
+  is: Job
+  results:
+    main:
+      class: kotlin.Any
+      generics: []
+      nullable: true
+
+main.formats/csv:
+  is: ConfiguredCsv
+  catalogVisible: false
+  schema: test/job/content/content-schema-test.yaml#main
+
+main.channels/rows:
+  is: Channel
+
+main.workers/read:
+  is: FileSourceWorker
+  output: main.channels/rows
+  files:
+    - location: build/content-scope/read/bar.csv
+  format: main.formats/csv
+
+main.workers/collect:
+  is: ResultSinkWorker
+  input: main.channels/rows
+  keep: all

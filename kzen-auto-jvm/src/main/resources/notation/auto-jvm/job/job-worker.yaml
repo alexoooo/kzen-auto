@@ -597,3 +597,127 @@ RunWorker:
     selfLocation:
       is: ObjectLocation
       by: Self
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Content streaming spike (docs/plans/2026-09-16_borrowed-elements.md; design docs/analysis/
+# 2026-09-15_content-streaming-and-containers.md §6). An EntryScope is a Worker that owns a tar.gz cursor and
+# re-enters its nested `body` per entry; body objects are ScopeBodyWorkers (nested under `body`, NOT Job Workers:
+# no channel ports), chained in document order, and only the last one's output leaves the scope.
+ScopeBodyWorker:
+  abstract: true
+  class: tech.kzen.auto.server.objects.job.worker.content.scope.ScopeBodyWorker
+
+
+EntryScope:
+  abstract: true
+  is: Worker
+  title: "Entry Scope"
+  class: tech.kzen.auto.server.objects.job.worker.content.scope.EntryScopeWorker
+  display: EntryScopeWorkerDisplay
+  path: ""
+  entries: []
+  output: ""
+  meta:
+    path: String
+    entries:
+      is: List
+      of: String
+    body:
+      is: List
+      of: ScopeBodyWorker
+      by: NestedList
+    output:
+      is: ChannelOutput
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
+ScopeFilter:
+  abstract: true
+  is: ScopeBodyWorker
+  title: "Filter"
+  class: tech.kzen.auto.server.objects.job.worker.content.scope.ScopeFilter
+  where: ""
+  meta:
+    where: String
+
+
+ContentWriter:
+  abstract: true
+  is: ScopeBodyWorker
+  title: "Write"
+  class: tech.kzen.auto.server.objects.job.worker.content.scope.ContentWriter
+  directory: ""
+  name: "${name}${extension}"
+  coding: gzip
+  existing: fail
+  meta:
+    directory: String
+    name: String
+    coding:
+      is: String
+      editor: SelectValuesEditor
+      values:
+        gzip: "Gzip"
+        none: "None"
+    existing:
+      is: String
+      editor: SelectValuesEditor
+      values:
+        fail: "Fail"
+        replace: "Replace"
+        skip: "Skip"
+
+
+# CS2: ReadPart inside the scope — the entry's bytes through the same reader chain as ReadPart over a file,
+# under the referenced format's dialect / header / declared schema; rows leave the scope, the bytes do not.
+ScopeReadPart:
+  abstract: true
+  is: ScopeBodyWorker
+  title: "Read part"
+  class: tech.kzen.auto.server.objects.job.worker.content.scope.ScopeReadPart
+  format: auto-jvm/datasource/configured-delimited-format.yaml#ConfiguredCsv
+  meta:
+    format:
+      is: ConfiguredRecordFormat
+      editor: SelectDataFormatEditor
+
+
+# CS2: Take(n) inside the scope — forwards n elements, then closes the scope early.
+ScopeTake:
+  abstract: true
+  is: ScopeBodyWorker
+  title: "Take"
+  class: tech.kzen.auto.server.objects.job.worker.content.scope.ScopeTake
+  count: 10
+  meta:
+    count: Int
+
+
+# CS2: Take(n) as an ordinary Worker — forwards n elements, then completes, closing its input on the consumer
+# side so its upstream sees a closed (not paused) downstream.
+TakeWorker:
+  abstract: true
+  is: Worker
+  title: "Take"
+  class: tech.kzen.auto.server.objects.job.worker.TakeWorker
+  input: ""
+  output: ""
+  count: 10
+  meta:
+    input:
+      is: ChannelInput
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    output:
+      is: ChannelOutput
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    count: Int
+    selfLocation:
+      is: ObjectLocation
+      by: Self

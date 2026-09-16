@@ -1,0 +1,26 @@
+# EntryScopeWorkerTest "duplicate": Archive(EntryScope) -> body -> ResultSink keep: all
+main:
+  is: Job
+  results:
+    main:
+      class: kotlin.Any
+      generics: []
+      nullable: true
+
+main.channels/written:
+  is: Channel
+
+main.workers/Archive:
+  is: EntryScope
+  path: build/content-scope/duplicate/input.tar.gz
+  entries: []
+  output: main.channels/written
+
+main.workers/Archive.body/Write:
+  is: ContentWriter
+  directory: build/content-scope/duplicate/out
+
+main.workers/collect:
+  is: ResultSinkWorker
+  input: main.channels/written
+  keep: all

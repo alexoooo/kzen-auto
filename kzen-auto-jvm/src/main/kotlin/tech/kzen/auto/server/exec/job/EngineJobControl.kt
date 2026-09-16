@@ -52,6 +52,14 @@ import java.nio.file.Path
  * compiles the child once via the run-shared [JobChildLogicHost] and hosts it under THIS Worker's own
  * [Execution] node, so the engine drives the child's stepping and pause / cancel uniformly with the rest of
  * the tree.
+ *
+ * [draining] is the upstream-first quiescence rule of the content streaming spike (CS3, design §6.7): while an
+ * entry scope upstream of this Worker (or this Worker itself, if it is the scope) is inside an entry,
+ * [checkpoint] returns without parking, so a consumer keeps draining and the scope can reach its boundary
+ * against a bounded channel, and the scope never parks inside an entry whatever its body checkpoints (a
+ * reader's per-batch checkpoint); a pause then lands with the scope between entries. A breakpoint on such a
+ * Worker is likewise reached only once the scope is at its boundary. Running free the gate costs nothing,
+ * since an ungated checkpoint would not park either.
  */
 class EngineJobControl(
     private val execution: Execution,
@@ -67,7 +75,8 @@ class EngineJobControl(
     private val resultCollector: JobResultCollector,
     /** The run's ownership ledger (E9): shared by every Worker of the run, torn down after they join. */
     override val ledger: RunOwnershipLedger,
-    private val workerLocation: ObjectLocation
+    private val workerLocation: ObjectLocation,
+    private val draining: () -> Boolean
 ): JobControl, RunOwnershipControl {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -79,6 +88,10 @@ class EngineJobControl(
         // Minimum spacing between (non-forced) progress emits per Worker, mirroring JobControlImpl — a forced
         // write (the final end-of-stream value) always lands.
         private const val progressThrottleNanos = 200_000_000L  // 200 ms
+
+        /** Test seam: false makes every checkpoint park regardless of an upstream scope (spike CS3 verification). */
+        @Volatile
+        internal var drainingEnabled = true
 
 
         internal fun normalizeArguments(
@@ -119,6 +132,9 @@ class EngineJobControl(
 
     //-----------------------------------------------------------------------------------------------------------------
     override suspend fun checkpoint() {
+        if (drainingEnabled && draining()) {
+            return
+        }
         execution.checkpoint()
     }
 

@@ -1,0 +1,42 @@
+# ScopeMigrationTest: Archive(big.csv) -> ScopeReadPart -> Summary over a channel of capacity 1, then
+# ResultSink keep: last; the sink is edited while the scope is inside its one large entry
+main:
+  is: Job
+  results:
+    main:
+      class: kotlin.Any
+      generics: []
+      nullable: true
+
+main.formats/csv:
+  is: ConfiguredCsv
+  catalogVisible: false
+
+main.channels/rows:
+  is: Channel
+  capacity: 1
+
+main.channels/summarized:
+  is: Channel
+
+main.workers/Archive:
+  is: EntryScope
+  path: build/content-scope/migrate-summary/input.tar.gz
+  entries:
+    - big.csv
+  output: main.channels/rows
+
+main.workers/Archive.body/Read:
+  is: ScopeReadPart
+  format: main.formats/csv
+
+main.workers/summary:
+  is: SummaryWorker
+  input: main.channels/rows
+  output: main.channels/summarized
+
+main.workers/collect:
+  is: ResultSinkWorker
+  input: main.channels/summarized
+  keep: last
+  result: ""

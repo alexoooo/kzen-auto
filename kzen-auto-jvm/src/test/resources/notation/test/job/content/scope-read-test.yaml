@@ -1,0 +1,32 @@
+# ScopeReadPartTest "read": Archive(bar.csv) -> ScopeReadPart(declared schema) -> ResultSink keep: all
+main:
+  is: Job
+  results:
+    main:
+      class: kotlin.Any
+      generics: []
+      nullable: true
+
+main.formats/csv:
+  is: ConfiguredCsv
+  catalogVisible: false
+  schema: test/job/content/content-schema-test.yaml#main
+
+main.channels/rows:
+  is: Channel
+
+main.workers/Archive:
+  is: EntryScope
+  path: build/content-scope/read/input.tar.gz
+  entries:
+    - bar.csv
+  output: main.channels/rows
+
+main.workers/Archive.body/Read:
+  is: ScopeReadPart
+  format: main.formats/csv
+
+main.workers/collect:
+  is: ResultSinkWorker
+  input: main.channels/rows
+  keep: all

@@ -1,0 +1,12 @@
+# CS2: the declared CSV schema shared by the scope ReadPart fixtures and their file-read reference
+main:
+  is: DataSchema
+  fields:
+    a:
+      class: kotlin.Int
+      of: []
+      nullable: false
+    b:
+      class: kotlin.Int
+      of: []
+      nullable: false

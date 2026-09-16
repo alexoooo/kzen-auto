@@ -1,0 +1,25 @@
+# EntryScopeWorkerTest "hold": Archive(EntryScope) -> body -> ResultSink keep: all
+main:
+  is: Job
+  results:
+    main:
+      class: kotlin.Any
+      generics: []
+      nullable: true
+
+main.channels/written:
+  is: Channel
+
+main.workers/Archive:
+  is: EntryScope
+  path: build/content-scope/hold/input.tar.gz
+  entries: []
+  output: main.channels/written
+
+main.workers/Archive.body/Hold:
+  is: HoldingBody
+
+main.workers/collect:
+  is: ResultSinkWorker
+  input: main.channels/written
+  keep: all

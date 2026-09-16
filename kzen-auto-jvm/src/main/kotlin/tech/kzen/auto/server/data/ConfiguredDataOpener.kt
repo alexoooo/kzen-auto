@@ -3,14 +3,19 @@ package tech.kzen.auto.server.data
 import tech.kzen.auto.common.data.api.DataContext
 import tech.kzen.auto.common.data.api.DataCursor
 import tech.kzen.auto.common.data.model.DataPart
+import tech.kzen.auto.common.data.read.ContentCapabilityIdentity
 import tech.kzen.auto.common.data.read.CursorAdoptionIdentity
 import tech.kzen.auto.common.data.read.ReaderConfig
 import tech.kzen.auto.common.data.schema.DataShape
 import tech.kzen.auto.plugin.api.data.ReaderCapability
 import tech.kzen.auto.plugin.api.data.ReaderInspectionRequest
 import tech.kzen.auto.plugin.api.data.ReaderOpenRequest
+import tech.kzen.auto.server.data.content.OpenedReaderByteInput
+import tech.kzen.auto.server.data.content.SequentialByteContent
 import tech.kzen.auto.server.data.content.SequentialContentStack
+import tech.kzen.auto.server.data.content.coding.ContentCodingStack
 import tech.kzen.auto.server.data.content.local.LocalDataContentProvider
+import tech.kzen.auto.server.data.content.policy.ContentReadControl
 import tech.kzen.auto.server.data.content.provider.DataContentProviderLookup
 import tech.kzen.auto.server.data.read.OwnedReaderDataCursor
 import tech.kzen.auto.server.data.read.ReaderCapabilityRegistry
@@ -23,7 +28,7 @@ class ConfiguredDataOpener(
     private val contentStack: SequentialContentStack = SequentialContentStack(
         DataContentProviderLookup(LocalDataContentProvider(), emptyMap())),
     private val policies: ReaderExecutionPolicies = ReaderExecutionPolicies()
-): OperationalDataOpener {
+): OperationalDataOpener, ContentDataOpener {
     override suspend fun open(context: DataContext, part: DataPart): DataCursor {
         val resolved = resolve(part)
         val required = resolved.capability.requiredContent(resolved.config)
@@ -47,6 +52,45 @@ class ConfiguredDataOpener(
         catch (failure: Throwable) {
             try {
                 bytes.close()
+            }
+            catch (closeFailure: Throwable) {
+                failure.addSuppressed(closeFailure)
+            }
+            throw failure
+        }
+    }
+
+
+    override suspend fun openContent(part: DataPart, bytes: SequentialByteContent): DataCursor {
+        // The provider-free entry (content streaming spike CS2): same stack as open() from the coding wrap down.
+        val resolved = resolve(part)
+        val required = resolved.capability.requiredContent(resolved.config)
+        check(required == ContentCapabilityIdentity.sequentialBytes) {
+            "No consumer is implemented for content capability $required"
+        }
+        val fingerprint = part.expectedFingerprint
+            ?: throw IllegalArgumentException(
+                "Content opened from held bytes must carry its fingerprint: ${part.ref.display()}")
+
+        val control = ContentReadControl(policies.runContent)
+        var owner: AutoCloseable = bytes
+        try {
+            val decodedBytes = ContentCodingStack.wrap(
+                bytes, part.resolvedRead.contentCodings, control, part.ref.display(), part.role.name)
+            owner = decodedBytes
+            val input = OpenedReaderByteInput(decodedBytes, control, fingerprint)
+            owner = input
+            val cursor = resolved.capability.open(ReaderOpenRequest(
+                part.ref.display(),
+                part.role.name,
+                resolved.config,
+                input,
+                policies.run))
+            return OwnedReaderDataCursor(cursor, input, adoptionIdentity(part))
+        }
+        catch (failure: Throwable) {
+            try {
+                owner.close()
             }
             catch (closeFailure: Throwable) {
                 failure.addSuppressed(closeFailure)

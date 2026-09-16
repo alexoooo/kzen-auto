@@ -23,6 +23,7 @@ import tech.kzen.auto.server.exec.LogicParameterTrace
 import tech.kzen.auto.server.objects.job.channel.DuplexJobChannel
 import tech.kzen.auto.server.objects.job.channel.JobChannel
 import tech.kzen.auto.server.objects.job.worker.WorkerBase
+import tech.kzen.auto.server.objects.job.worker.content.scope.ScopeBoundary
 import tech.kzen.auto.server.objects.job.worker.definition.WorkerDefinitionContext
 import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionResult
@@ -197,6 +198,26 @@ class JobRun(
             .derive(graphDefinition.graphStructure, jobLocation.documentPath)
             .connections
             .associate { it.downstreamWorker.objectPath to it.upstreamWorker.objectPath }
+        // Upstream-first quiescence (spike CS3): a Worker below an entry scope keeps draining while the scope is
+        // inside an entry, so the scope can reach its boundary before the run quiesces; and the scope itself never
+        // parks inside an entry, whatever its body checkpoints (EngineJobControl.draining)
+        val upstreamWorkers = JobChannelTopology.upstreamWorkers(filteredDefinition, workers.map { it.first })
+        val workersByLocation = workers.toMap()
+        val upstreamScopes = workers.associate { (location, worker) ->
+            val scopes = ArrayList<ScopeBoundary>()
+            (worker as? ScopeBoundary)?.let { scopes.add(it) }
+            val visited = HashSet<ObjectLocation>()
+            val pending = ArrayDeque(upstreamWorkers.getValue(location))
+            while (pending.isNotEmpty()) {
+                val upstream = pending.removeFirst()
+                if (!visited.add(upstream)) {
+                    continue
+                }
+                (workersByLocation[upstream] as? ScopeBoundary)?.let { scopes.add(it) }
+                pending.addAll(upstreamWorkers[upstream].orEmpty())
+            }
+            location to scopes.toList()
+        }
 
         // Channel-aware deadlock detection: fail the run if every non-terminal Worker becomes blocked on a channel
         // with no way to progress. [activeWorkers] is the live non-terminal count (each Worker decrements it as it
@@ -254,6 +275,7 @@ class JobRun(
                             ?.let { jobValidation.workerValidations[it]?.typeMetadata }
                         val inputContract = upstreamByDownstream[location.objectPath]
                             ?.let { jobValidation.workerValidations[it]?.contract }
+                        val scopes = upstreamScopes.getValue(location)
                         async {
                             try {
                                 execution.host(
@@ -263,7 +285,8 @@ class JobRun(
                                         workerScratchDir, workerOutputDir,
                                         execution.inputs, jobParameters, jobResults,
                                         inputPayloadType, inputContract, resultCollector,
-                                        ledger, location),
+                                        ledger, location,
+                                        draining = { scopes.any { it.insideEntry() } }),
                                     inputs = DataBindings.bind(BindingSchema.empty),
                                     // These frames are live SIMULTANEOUSLY, which is the one shape the engine's
                                     // ambient-context model is not specified for (logic-spec §6): two Workers

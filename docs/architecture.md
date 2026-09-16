@@ -133,7 +133,12 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > **off** the engine dispatcher, since running on it would deadlock `awaitQuiescent`. And the run-level
 > pause reason across concurrently-parked spines is chosen by tree position rather than severity, so an
 > error-parked Worker can be masked by a sibling at an ordinary boundary (a known gap, `logic-spec.md`
-> §4). Job is intended to eventually subsume Report; the living plan is `kzen/plans/2026-07-25_job-improvements.md`.
+> §4). Quiescence is also gated per Worker for the content streaming spike's entry scopes: while an
+> `EntryScopeWorker` upstream of a Worker (or the scope itself) is inside an entry, that Worker's
+> `checkpoint()` does not park (`EngineJobControl.draining`, topology from `JobChannelTopology`), so a pause
+> or live edit lands with the scope between entries and a bounded channel below it keeps draining; a live edit
+> that changes a scope's `path` is refused from notation (`ScopeMigrationKey`, `JobLogic.refuseMigration`)
+> before the engine detaches anything. Job is intended to eventually subsume Report; the living plan is `kzen/plans/2026-07-25_job-improvements.md`.
 
 > **Report → Logic.** Reports were the last holdout of the Task paradigm; they now run as
 > the **fourth Logic flavour**. `ReportDocument` gained `LogicDocument` (keeping its `DetachedAction` /

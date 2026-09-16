@@ -1,0 +1,29 @@
+# ScopeMigrationTest: Archive(e00..e09) -> [ContentWriter gzip] -> ResultSink keep: all; the body's coding and
+# the scope's entries are edited live, at an entry boundary
+main:
+  is: Job
+  results:
+    main:
+      class: kotlin.Any
+      generics: []
+      nullable: true
+
+main.channels/written:
+  is: Channel
+
+main.workers/Archive:
+  is: EntryScope
+  path: build/content-scope/migrate-write/input.tar.gz
+  entries:
+    - "*.txt"
+  output: main.channels/written
+
+main.workers/Archive.body/Write:
+  is: ContentWriter
+  directory: build/content-scope/migrate-write/out
+  coding: gzip
+
+main.workers/collect:
+  is: ResultSinkWorker
+  input: main.channels/written
+  keep: all

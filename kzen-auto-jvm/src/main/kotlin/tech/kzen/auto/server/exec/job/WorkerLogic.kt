@@ -55,7 +55,8 @@ class WorkerLogic(
     private val inputContract: DataContract?,
     private val resultCollector: JobResultCollector,
     private val ledger: RunOwnershipLedger,
-    private val workerLocation: ObjectLocation
+    private val workerLocation: ObjectLocation,
+    private val draining: () -> Boolean
 ): Logic {
     override fun signature(): LogicSignature {
         return LogicSignature.empty
@@ -72,7 +73,7 @@ class WorkerLogic(
         val control = EngineJobControl(
             execution, childLogicHost, objectStableMapper, scratchDir, outputDir,
             jobInputs, jobParameters, jobResults, inputPayloadType, inputContract, resultCollector,
-            ledger, workerLocation)
+            ledger, workerLocation, draining)
 
         // The engine renders the failure (the run settles / parks per pause-on-error); the run-level ErrorPaused
         // state already surfaces which Worker halted (per-Worker error chips are a separate display gap).

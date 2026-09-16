@@ -15,4 +15,11 @@ class DataOpenerLookup(
 
     fun adoptionIdentity(part: DataPart): CursorAdoptionIdentity? =
         (plainOpener as? OperationalDataOpener)?.adoptionIdentity(part)
+
+
+    /** The provider-free entry for bytes the caller already holds (content streaming spike CS2). */
+    fun contentOpener(): ContentDataOpener =
+        plainOpener as? ContentDataOpener
+            ?: throw IllegalStateException(
+                "Data opener ${plainOpener.javaClass.name} cannot open held content")
 }

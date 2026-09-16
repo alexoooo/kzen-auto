@@ -7,6 +7,7 @@ import tech.kzen.auto.common.paradigm.logic.LogicControlReply
 import tech.kzen.auto.server.exec.LogicCompiler
 import tech.kzen.auto.server.exec.LogicCompilerServices
 import tech.kzen.auto.server.exec.RunTraceAccess
+import tech.kzen.auto.server.exec.job.JobLogic
 import tech.kzen.auto.server.objects.job.JobValidationCache
 import tech.kzen.auto.server.objects.job.service.JobWorkPool
 import tech.kzen.auto.server.objects.script.ScriptValidationCache
@@ -96,6 +97,9 @@ class ServerLogicController(
         val runExecutionId: LogicRunExecutionId,
         val engine: RunEngine,
         val rootLocation: ObjectLocation,
+        // The compiled definition the live engine tree runs, replaced on each migrate: what a live edit is judged
+        // against before the barrier (refusedMigration).
+        var liveLogic: Logic,
 
         // Content digest of the transitive-closure NOTATION (root document + everything it references, PLUS
         // each linked logic document's closure — weakly-referenced callees a plain root closure cannot see;
@@ -425,7 +429,7 @@ class ServerLogicController(
         // old trace, and the engine's root node exists from construction — so a Job root (which only HOSTS its
         // Workers) is discoverable via mostRecent(root) the moment it starts, with no eager registration.
         val state = LogicState(
-            runId, runExecutionId, engine, root,
+            runId, runExecutionId, engine, root, logic,
             LinkedLogicDocuments.transitiveDigest(
                 graphDefinitionAttempt.transitiveSuccessful,
                 graphDefinitionAttempt.graphStructure,
@@ -720,6 +724,7 @@ class ServerLogicController(
             val editedDigest = LinkedLogicDocuments.transitiveDigest(
                 attempt.transitiveSuccessful, attempt.graphStructure, state.rootLocation.documentPath)
             val compiled = compileLogic(state.rootLocation, attempt, state.runExecutionId)
+            refusedMigration(state, compiled)?.let { return rejected(it) }
             state.baselineClosureDigest = editedDigest
             editDirty = false
             attempt to compiled
@@ -740,6 +745,7 @@ class ServerLogicController(
                 is RepositionGate.Attempt.Accepted -> request.moveTarget
             }
 
+        state.liveLogic = logic
         val removedStableIds = objectStableMapper.drainRemovedIds()
 
         state.pauseRequested = false
@@ -976,6 +982,16 @@ class ServerLogicController(
     // run migrates — an unlaunched engine has no live state to re-point, so the first release just runs the
     // start-time logic. A recompile failure (a mid-edit incomplete definition), or any failure recomputing the
     // closure digest, falls back to null — keeping the prior definition running rather than killing the run.
+    // A live edit an entry scope cannot adopt (spike CS3, JobLogic.refuseMigration): the running definition stays
+    // and the baseline is left untouched, so an edit that restores the selection compares equal and applies
+    // nothing. Surfacing the reason to the client beyond the log is not built.
+    private fun refusedMigration(state: LogicState, edited: Logic): String? {
+        val live = state.liveLogic as? JobLogic ?: return null
+        val job = edited as? JobLogic ?: return null
+        return live.refuseMigration(job)
+    }
+
+
     private fun pendingMigration(
         state: LogicState,
         snapshotGraphDefinitionAttempt: GraphDefinitionAttempt?
@@ -999,7 +1015,12 @@ class ServerLogicController(
             }
 
             val logic = compileLogic(state.rootLocation, attempt, state.runExecutionId)
+            refusedMigration(state, logic)?.let {
+                logger.warn("Live edit refused for {}: {}", state.rootLocation, it)
+                return null
+            }
             state.baselineClosureDigest = editedDigest
+            state.liveLogic = logic
             logic
         }
         catch (e: Throwable) {

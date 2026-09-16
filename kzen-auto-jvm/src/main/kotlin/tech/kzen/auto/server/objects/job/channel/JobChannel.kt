@@ -36,6 +36,12 @@ import java.util.concurrent.atomic.AtomicInteger
  * only once *all* of them have [ChannelOutput.close]d. The live producer count is tracked across worker threads
  * via an [AtomicInteger].
  *
+ * **Consumer close (content streaming spike CS2):** a consumer that completes early closes its end through
+ * [FrameworkChannelInput.closeConsumer]; from then on a producer's `send` / `flush` fails with
+ * [DownstreamClosedException] (a parked one is resumed with it) and what the buffer holds is released. That is
+ * the only way a producer can tell a CLOSED downstream from a PAUSED one; without it the deadlock monitor
+ * would fail the run once the producer parked behind the finished consumer.
+ *
  * **Ownership (E9).** Once [bindOwnership] has named the run's ledger and this channel's holder, a producer's
  * `send` is the transport-transfer boundary: a value the run owns (or a Worker-created `AutoCloseable` the run
  * does not own yet, adopted right there) takes one channel lease per send, held until the consumer is done with
@@ -75,8 +81,28 @@ class JobChannel(
             Channel(capacity)
         }
 
+    //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        /**
+         * Test seam (content streaming spike CS2): with this off, [FrameworkChannelInput.closeConsumer] is a
+         * no-op, which is the engine as it was before the spike — a consumer that completes early simply stops
+         * receiving, and its producer parks on the full channel exactly as it would behind a paused consumer.
+         */
+        @Volatile
+        internal var consumerCloseEnabled = true
+
+        private const val downstreamClosedMessage =
+            "Downstream of this channel has completed; it receives nothing more"
+    }
+
+
     private val openProducers = AtomicInteger(0)
     private val producers = CopyOnWriteArrayList<Producer>()
+
+    // Set once the consumer closed its end (see FrameworkChannelInput.closeConsumer): producers then fail with
+    // DownstreamClosedException instead of buffering or parking.
+    @Volatile
+    private var consumerClosed = false
 
     // Count of endpoints (consumers + producers) currently suspended on a channel op: a consumer awaiting the
     // next batch, or a producer parked on a full channel. The Job-level deadlock monitor
@@ -287,6 +313,9 @@ class JobChannel(
 
 
         override suspend fun send(element: DataValue) {
+            if (consumerClosed) {
+                throw downstreamClosed()
+            }
             // The transport-transfer boundary (E9): the channel's hold is taken here, before whoever handed the
             // value over lets go of theirs, so the count never touches zero mid-hop.
             val lease = ownership?.let { it.ledger.hold(element, it.holder) }
@@ -321,6 +350,14 @@ class JobChannel(
                 // Delivered or not, the batch is the teardown's (or, at a migration barrier, the carryover's)
                 throw e
             }
+            catch (e: DownstreamClosedException) {
+                // The consumer closed while this batch was buffered or parked: nobody will receive it, so its
+                // leases are released here and the producer learns the downstream is gone (a fresh instance —
+                // the one the close resumed a parked send with is the closer's, shared by every sender)
+                val closed = downstreamClosed()
+                batch.releaseLeases(closed)
+                throw closed
+            }
             catch (e: Throwable) {
                 batch.releaseLeases(e)
                 throw e
@@ -329,6 +366,10 @@ class JobChannel(
                 inFlight = null
             }
         }
+
+
+        private fun downstreamClosed(): DownstreamClosedException =
+            DownstreamClosedException(downstreamClosedMessage)
 
 
         override fun close() {
@@ -364,6 +405,25 @@ class JobChannel(
             val received = ReceivedBatch(batch.elements, batch.leases) { active = null }
             active = received
             return received
+        }
+
+
+        override fun closeConsumer() {
+            if (!consumerCloseEnabled || consumerClosed) {
+                return
+            }
+            consumerClosed = true
+            // Closing WITH a cause fails the channel for send: a producer already suspended on a full channel
+            // is resumed with the cause, a later send throws it, and a producer's own close stays a no-op.
+            // What the buffer already holds is released here — no consumer will ever receive it.
+            channel.close(DownstreamClosedException(downstreamClosedMessage))
+            releaseRaw()
+            while (true) {
+                val batch = channel.tryReceive().getOrNull()
+                    ?: break
+                queued.addAndGet(-batch.size)
+                ValueLeases.releaseAll(batch.leases.filterNotNull())
+            }
         }
 
 

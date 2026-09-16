@@ -8,4 +8,12 @@ package tech.kzen.auto.server.objects.job.channel
  */
 internal interface FrameworkChannelInput {
     suspend fun receiveFrameworkBatch(): ReceivedBatch?
+
+
+    /**
+     * The consumer is done receiving (it completed early — content streaming spike CS2): from here on every
+     * producer send fails with [DownstreamClosedException], a producer parked on a full channel is resumed
+     * with it, and whatever sits in the buffer is released. Idempotent; a no-op once the producers closed.
+     */
+    fun closeConsumer()
 }

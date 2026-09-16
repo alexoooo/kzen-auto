@@ -7,6 +7,7 @@ import tech.kzen.auto.common.objects.document.logic.BindingSignatureDefiner
 import tech.kzen.auto.common.paradigm.logic.LogicConventions
 import tech.kzen.auto.server.exec.LogicCompilerServices
 import tech.kzen.auto.server.exec.LogicParameter
+import tech.kzen.auto.server.objects.job.worker.content.scope.ScopeMigrationKey
 import tech.kzen.lib.common.exec.data.binding.BindingSchema
 import tech.kzen.lib.common.exec.engine.LogicSignature
 import tech.kzen.lib.common.model.definition.GraphDefinition
@@ -70,6 +71,10 @@ object JobLogicCompiler {
         val inputSignature = BindingSchema.of(parameterBindings.map(LogicParameter::definition))
         val outputSignature = declaredSignature.outputs
         val logicSignature = LogicSignature(inputSignature, outputSignature)
+        // Live-edit compatibility of each entry scope, from notation alone (see JobLogic.refuseMigration)
+        val scopeKeys = workerLocations
+            .mapNotNull { ScopeMigrationKey.of(graphNotation, graphDefinition, it) }
+            .associateBy { services.objectStableMapper.objectStableId(it.scope) }
 
         return JobLogic(
             jobLocation,
@@ -80,6 +85,7 @@ object JobLogicCompiler {
             JobParameters(inputSignature, parameterBindings),
             graphNotation,
             graphDefinition,
+            scopeKeys,
             services)
     }
 }

@@ -1,0 +1,35 @@
+# ScopeReadPartTest "write-take": Archive(20 entries) -> [Write] -> Take(10) -> ResultSink keep: all
+main:
+  is: Job
+  results:
+    main:
+      class: kotlin.Any
+      generics: []
+      nullable: true
+
+main.channels/written:
+  is: Channel
+
+main.channels/taken:
+  is: Channel
+
+main.workers/Archive:
+  is: EntryScope
+  path: build/content-scope/write-take/input.tar.gz
+  entries: []
+  output: main.channels/written
+
+main.workers/Archive.body/Write:
+  is: ContentWriter
+  directory: build/content-scope/write-take/out
+
+main.workers/take:
+  is: TakeWorker
+  input: main.channels/written
+  output: main.channels/taken
+  count: 10
+
+main.workers/collect:
+  is: ResultSinkWorker
+  input: main.channels/taken
+  keep: all
