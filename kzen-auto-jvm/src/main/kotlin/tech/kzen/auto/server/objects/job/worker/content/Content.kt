@@ -17,4 +17,10 @@ interface Content {
     fun lifetime(): ContentLifetime
     fun reference(): DataRef? = null
     fun open(): SequentialByteContent
+
+    /**
+     * The lender's release: a [ContentLifetime.CursorBorrowed] content is invalidated (a later open or read
+     * fails by name instead of reading the cursor's next bytes); a content with its own lifetime ignores it.
+     */
+    fun release() {}
 }

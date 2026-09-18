@@ -1,0 +1,47 @@
+# ExtractReadPartTest "read": File(units) -> Extract(bar.csv) -> Read part(declared schema) -> ResultSink keep: all
+main:
+  is: Job
+  results:
+    main:
+      class: kotlin.Any
+      generics: []
+      nullable: true
+
+main.formats/csv:
+  is: ConfiguredCsv
+  catalogVisible: false
+  schema: test/job/content/content-schema-test.yaml#main
+
+main.channels/entries:
+  is: Channel
+
+main.channels/rows:
+  is: Channel
+
+main.channels/files:
+  is: Channel
+
+main.workers/Archive:
+  is: FileSourceWorker
+  files:
+    - location: build/content-scope/read/input.tar.gz
+  emit: units
+  output: main.channels/files
+
+main.workers/Extract:
+  is: Extract
+  input: main.channels/files
+  members:
+    - bar.csv
+  output: main.channels/entries
+
+main.workers/Read:
+  is: ReadPartWorker
+  input: main.channels/entries
+  output: main.channels/rows
+  format: main.formats/csv
+
+main.workers/collect:
+  is: ResultSinkWorker
+  input: main.channels/rows
+  keep: all

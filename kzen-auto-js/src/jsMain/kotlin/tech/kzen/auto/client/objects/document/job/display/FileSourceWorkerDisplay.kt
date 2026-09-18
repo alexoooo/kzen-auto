@@ -61,7 +61,7 @@ class FileSourceWorkerDisplay(
     props: FileSourceWorkerDisplayProps
 ):
     RPureComponent<FileSourceWorkerDisplayProps, FileSourceWorkerDisplayState>(props),
-    ClientStateGlobal.DocumentScopedObserver,
+    ClientStateGlobal.Observer,
     FileBrowserToggleChannel.Observer
 {
     companion object {
@@ -116,6 +116,12 @@ class FileSourceWorkerDisplay(
         toggleChannel?.unobserve(props.common.objectLocation, this)
         toggleChannel?.unhost(props.common.objectLocation)
     }
+
+
+    // Reads its own object's `files`, so a publish from which the Worker is already gone (delete, rename) must be
+    // skipped by ClientStateGlobal.deliver rather than guarded here; declared by hand because the props hold the
+    // location under `common`, not as ObjectScopedProps.
+    override fun observedObjectLocation(): ObjectLocation = props.common.objectLocation
 
 
     override fun onClientState(clientState: ClientState) {

@@ -9,8 +9,8 @@ import tech.kzen.auto.server.objects.job.worker.content.ContentLifetime
 
 /**
  * The [ContentLifetime.CursorBorrowed] content of the tar entry the cursor is positioned on. Reads come from
- * the archive stream, which ends at the entry boundary. [invalidate] is the release (design §6.2): a later
- * open or read fails by name instead of reading the next entry's bytes. Closing the opened handle never closes
+ * the archive stream, which ends at the entry boundary. [release] invalidates (design §6.2): a later open or
+ * read fails by name instead of reading the next entry's bytes. Closing the opened handle never closes
  * the archive; it records whether the entry was read to its end ([consumed]) or closed with bytes remaining
  * ([closedEarly]), which the cursor skips before advancing.
  */
@@ -49,8 +49,8 @@ class TarEntryContent internal constructor(
     }
 
 
-    /** The cursor's release: nothing may read this entry any more. */
-    internal fun invalidate() {
+    /** The release (the entry's last hold, or the cursor advancing): nothing may read this entry any more. */
+    override fun release() {
         invalidated = true
     }
 

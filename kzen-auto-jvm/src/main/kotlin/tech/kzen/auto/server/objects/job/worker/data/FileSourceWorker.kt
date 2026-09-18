@@ -8,7 +8,9 @@ import tech.kzen.auto.server.data.DataOpenerLookup
 import tech.kzen.auto.server.data.FileListingAction
 import tech.kzen.auto.server.objects.datasource.FileDataSource
 import tech.kzen.auto.server.objects.datasource.format.ConfiguredRecordFormatLookup
+import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.util.digest.Digest
@@ -39,6 +41,10 @@ class FileSourceWorker(
     compatibilityKey(directory, filter, files, format, groupPattern, missing)
 ) {
     companion object {
+        private val selectionAttributes = listOf(
+            "directory", "filter", "files", "format", "groupPattern", "missing").map(::AttributeName)
+
+
         internal fun compatibilityKey(
             directory: String,
             filter: String,
@@ -55,4 +61,9 @@ class FileSourceWorker(
             addUtf8(missing)
         }
     }
+
+
+    /** The file selection: an edit that changes it is refused while the run is open over the previous one. */
+    override fun migrationKey(graphNotation: GraphNotation, location: ObjectLocation): Any =
+        migrationKeyOf(graphNotation, location, selectionAttributes)
 }

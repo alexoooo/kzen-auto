@@ -24,8 +24,10 @@ import tech.kzen.auto.common.util.data.DataLocationInfo
 import tech.kzen.auto.server.data.FileListingAction
 import tech.kzen.auto.server.data.format.SourceFormatResolutionBudget
 import tech.kzen.auto.server.data.format.SourceFormatResolutionBudgetFactory
+import tech.kzen.auto.server.data.read.detection.FormatDetectionException
 import tech.kzen.auto.server.objects.datasource.format.ConfiguredRecordFormatLookup
 import tech.kzen.auto.server.objects.datasource.format.ConfiguredRecordFormatPreflight
+import tech.kzen.auto.server.objects.datasource.format.UndetectedFormat
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
 
@@ -93,8 +95,11 @@ class FileDataSource(
         return resolutionBudgetFactory.create().withinDeadline {
             val sourceFormat = formatLookup.preflight(format)
             val selected = selectedFile(context, entry)
+            require(selected.isNotEmpty()) {
+                "Selected file is not in this source's selection: ${entry.location.asString()}"
+            }
             require(selected.size == 1) {
-                "Selected file is unavailable or ambiguous: ${entry.location.asString()}"
+                "Selected file is ambiguous: ${entry.location.asString()}"
             }
             val diagnostics = mutableListOf<DataDiagnostic>()
             val regular = validateSelection(selected, diagnostics)
@@ -227,9 +232,20 @@ class FileDataSource(
             hints(info.name),
             input.entry?.encoding?.asString(),
             sourceBudget)
-        val resolution = input.formatOverride?.resolve(request)
-            ?: sourceFormat?.resolve(request)
-            ?: format.resolve(request)
+        val resolution = try {
+            input.formatOverride?.resolve(request)
+                ?: sourceFormat?.resolve(request)
+                ?: format.resolve(request)
+        }
+        catch (failure: FormatDetectionException) {
+            // Automatic detection over a file no format claims (an archive, an image): kept as opaque bytes
+            // for whole-file consumers, refused only when read — unless the row demanded text by encoding
+            val selected = input.formatOverride ?: sourceFormat
+            val automatic = (selected?.selectionKind ?: format.selectionKind) == FormatSelectionKind.Automatic &&
+                input.entry?.encoding == null
+            if (!automatic || !UndetectedFormat.carries(failure)) throw failure
+            UndetectedFormat.resolve(request, failure)
+        }
         require(resolution.detail.ref == ref && resolution.detail.role == DataRole.main) {
             "Format resolution returned mismatched provenance for ${ref.display()}"
         }

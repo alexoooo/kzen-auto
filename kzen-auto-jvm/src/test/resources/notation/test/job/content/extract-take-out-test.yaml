@@ -1,0 +1,55 @@
+# ExtractReadPartTest "take-out": File(units) -> Extract(big.csv) -> Read part -> Take(10) -> ResultSink keep: all
+main:
+  is: Job
+  results:
+    main:
+      class: kotlin.Any
+      generics: []
+      nullable: true
+
+main.formats/csv:
+  is: ConfiguredCsv
+  catalogVisible: false
+
+main.channels/entries:
+  is: Channel
+
+main.channels/rows:
+  is: Channel
+
+main.channels/taken:
+  is: Channel
+
+main.channels/files:
+  is: Channel
+
+main.workers/Archive:
+  is: FileSourceWorker
+  files:
+    - location: build/content-scope/take-out/input.tar.gz
+  emit: units
+  output: main.channels/files
+
+main.workers/Extract:
+  is: Extract
+  input: main.channels/files
+  members:
+    - big.csv
+  output: main.channels/entries
+
+main.workers/Read:
+  is: ReadPartWorker
+  input: main.channels/entries
+  output: main.channels/rows
+  format: main.formats/csv
+
+main.workers/take:
+  is: TakeWorker
+  input: main.channels/rows
+  output: main.channels/taken
+  count: 10
+
+main.workers/collect:
+  is: ResultSinkWorker
+  input: main.channels/taken
+  keep: all

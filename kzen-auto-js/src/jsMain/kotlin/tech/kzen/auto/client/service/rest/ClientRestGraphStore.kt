@@ -8,9 +8,22 @@ import tech.kzen.lib.common.util.digest.Digest
 
 class ClientRestGraphStore(
     private val restClient: ClientRestApi,
-    private val notationParser: NotationParser
+    private val notationParser: NotationParser,
+    private val gate: RemoteApplyGate
 ): RemoteGraphStore {
+    // Bracketed so a fetch that must see this write on the server can wait for it (RemoteApplyGate).
     override suspend fun apply(command: NotationCommand): Digest {
+        gate.begin()
+        try {
+            return applyRemote(command)
+        }
+        finally {
+            gate.end()
+        }
+    }
+
+
+    private suspend fun applyRemote(command: NotationCommand): Digest {
         return when (command) {
             is CreateDocumentCommand -> {
                 val unparsed = notationParser.unparseDocument(command.documentObjectNotation, "")

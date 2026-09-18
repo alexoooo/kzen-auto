@@ -982,7 +982,7 @@ class ServerLogicController(
     // run migrates — an unlaunched engine has no live state to re-point, so the first release just runs the
     // start-time logic. A recompile failure (a mid-edit incomplete definition), or any failure recomputing the
     // closure digest, falls back to null — keeping the prior definition running rather than killing the run.
-    // A live edit an entry scope cannot adopt (spike CS3, JobLogic.refuseMigration): the running definition stays
+    // A live edit a running source cannot adopt (JobLogic.refuseMigration): the running definition stays
     // and the baseline is left untouched, so an edit that restores the selection compares equal and applies
     // nothing. Surfacing the reason to the client beyond the log is not built.
     private fun refusedMigration(state: LogicState, edited: Logic): String? {

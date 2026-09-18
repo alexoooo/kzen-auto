@@ -1,0 +1,95 @@
+# Test-only Workers for the borrowed-elements tests (ExtractWorkerTest): each consumes an Entry inside its
+# callback in a way the protocol must handle, and emits nothing.
+StashingWorker:
+  abstract: true
+  is: Worker
+  title: "Stashing (test)"
+  class: tech.kzen.auto.server.objects.job.worker.content.StashingWorker
+  input: ""
+  output: ""
+  meta:
+    input:
+      is: ChannelInput
+      creator: JobChannelCreator
+    output:
+      is: ChannelOutput
+      creator: JobChannelCreator
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
+HoldingWorker:
+  abstract: true
+  is: Worker
+  title: "Holding (test)"
+  class: tech.kzen.auto.server.objects.job.worker.content.HoldingWorker
+  input: ""
+  output: ""
+  meta:
+    input:
+      is: ChannelInput
+      creator: JobChannelCreator
+    output:
+      is: ChannelOutput
+      creator: JobChannelCreator
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
+FailingWorker:
+  abstract: true
+  is: Worker
+  title: "Failing (test)"
+  class: tech.kzen.auto.server.objects.job.worker.content.FailingWorker
+  input: ""
+  output: ""
+  meta:
+    input:
+      is: ChannelInput
+      creator: JobChannelCreator
+    output:
+      is: ChannelOutput
+      creator: JobChannelCreator
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
+BlockingWorker:
+  abstract: true
+  is: Worker
+  title: "Blocking (test)"
+  class: tech.kzen.auto.server.objects.job.worker.content.BlockingWorker
+  input: ""
+  output: ""
+  meta:
+    input:
+      is: ChannelInput
+      creator: JobChannelCreator
+    output:
+      is: ChannelOutput
+      creator: JobChannelCreator
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
+LabelsWorker:
+  abstract: true
+  is: Worker
+  title: "Labels (test)"
+  class: tech.kzen.auto.server.objects.job.worker.content.LabelsWorker
+  input: ""
+  output: ""
+  meta:
+    input:
+      is: ChannelInput
+      creator: JobChannelCreator
+    output:
+      is: ChannelOutput
+      creator: JobChannelCreator
+    selfLocation:
+      is: ObjectLocation
+      by: Self

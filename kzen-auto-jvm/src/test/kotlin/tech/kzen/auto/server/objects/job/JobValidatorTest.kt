@@ -214,6 +214,16 @@ class JobValidatorTest {
 
 
     @Test
+    fun extractRejectsKnownNonFileInputWithTheUnitsHint() {
+        val validation = validate("test/job/content/extract-wrong-input-test.yaml")
+        val extract = validation.workerValidations[ObjectPath.parse("main.workers/Extract")]
+        assertNotNull(extract)
+        assertContains(extract.errorMessage ?: "", "Emit set to Units")
+        assertContains(extract.errorMessage ?: "", "Int")
+    }
+
+
+    @Test
     fun brokenExpressionIsValidationErrorNotCrash() {
         val validation = validate("test/job/job-validator-error-test.yaml")
 

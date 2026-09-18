@@ -112,7 +112,8 @@ LogicSourceWorker:
 
 
 # Expands each incoming DataUnit payload into the items of its selected role. Blank role accepts only a unit with
-# one distinct role. Output shape stays unknown because the unit carries refs, not a source declaration.
+# one distinct role. Output shape stays unknown because the unit carries refs, not a source declaration. An
+# incoming Entry (an `Extract` transform's lent element) is read as records with `format` (borrowed elements §3.8).
 ReadPartWorker:
   abstract: true
   is: Worker
@@ -123,6 +124,7 @@ ReadPartWorker:
   role: ""
   attributes: ignore
   schemaMode: superset
+  format: auto-jvm/datasource/configured-delimited-format.yaml#ConfiguredCsv
   meta:
     input:
       is: ChannelInput
@@ -145,6 +147,9 @@ ReadPartWorker:
       values:
         superset: "Ordered superset"
         strict: "Strict"
+    format:
+      is: ConfiguredRecordFormat
+      editor: SelectDataFormatEditor
     selfLocation:
       is: ObjectLocation
       by: Self
@@ -600,33 +605,27 @@ RunWorker:
 
 
 # ---------------------------------------------------------------------------------------------------------------------
-# Content streaming spike (docs/plans/2026-09-16_borrowed-elements.md; design docs/analysis/
-# 2026-09-15_content-streaming-and-containers.md §6). An EntryScope is a Worker that owns a tar.gz cursor and
-# re-enters its nested `body` per entry; body objects are ScopeBodyWorkers (nested under `body`, NOT Job Workers:
-# no channel ports), chained in document order, and only the last one's output leaves the scope.
-ScopeBodyWorker:
-  abstract: true
-  class: tech.kzen.auto.server.objects.job.worker.content.scope.ScopeBodyWorker
+# Borrowed elements (docs/plans/2026-09-16_borrowed-elements.md): Extract opens each incoming file — a whole
+# file from a File or Read source (Emit: Units), or an Entry of an enclosing archive — as a .tar.gz and lends
+# its members to the Workers downstream, advancing only once the member's last hold is released; Write and
+# Read part consume an Entry inside their callback and emit independent values (a Written record, rows).
 
-
-EntryScope:
+Extract:
   abstract: true
   is: Worker
-  title: "Entry Scope"
-  class: tech.kzen.auto.server.objects.job.worker.content.scope.EntryScopeWorker
-  display: EntryScopeWorkerDisplay
-  path: ""
-  entries: []
+  title: "Extract"
+  class: tech.kzen.auto.server.objects.job.worker.content.ExtractWorker
+  input: ""
   output: ""
+  members: []
   meta:
-    path: String
-    entries:
+    input:
+      is: ChannelInput
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    members:
       is: List
       of: String
-    body:
-      is: List
-      of: ScopeBodyWorker
-      by: NestedList
     output:
       is: ChannelOutput
       creator: JobChannelCreator
@@ -636,26 +635,26 @@ EntryScope:
       by: Self
 
 
-ScopeFilter:
+Write:
   abstract: true
-  is: ScopeBodyWorker
-  title: "Filter"
-  class: tech.kzen.auto.server.objects.job.worker.content.scope.ScopeFilter
-  where: ""
-  meta:
-    where: String
-
-
-ContentWriter:
-  abstract: true
-  is: ScopeBodyWorker
+  is: Worker
   title: "Write"
-  class: tech.kzen.auto.server.objects.job.worker.content.scope.ContentWriter
+  class: tech.kzen.auto.server.objects.job.worker.content.WriteWorker
+  input: ""
+  output: ""
   directory: ""
   name: "${name}${extension}"
   coding: gzip
   existing: fail
   meta:
+    input:
+      is: ChannelInput
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    output:
+      is: ChannelOutput
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
     directory: String
     name: String
     coding:
@@ -671,31 +670,9 @@ ContentWriter:
         fail: "Fail"
         replace: "Replace"
         skip: "Skip"
-
-
-# CS2: ReadPart inside the scope — the entry's bytes through the same reader chain as ReadPart over a file,
-# under the referenced format's dialect / header / declared schema; rows leave the scope, the bytes do not.
-ScopeReadPart:
-  abstract: true
-  is: ScopeBodyWorker
-  title: "Read part"
-  class: tech.kzen.auto.server.objects.job.worker.content.scope.ScopeReadPart
-  format: auto-jvm/datasource/configured-delimited-format.yaml#ConfiguredCsv
-  meta:
-    format:
-      is: ConfiguredRecordFormat
-      editor: SelectDataFormatEditor
-
-
-# CS2: Take(n) inside the scope — forwards n elements, then closes the scope early.
-ScopeTake:
-  abstract: true
-  is: ScopeBodyWorker
-  title: "Take"
-  class: tech.kzen.auto.server.objects.job.worker.content.scope.ScopeTake
-  count: 10
-  meta:
-    count: Int
+    selfLocation:
+      is: ObjectLocation
+      by: Self
 
 
 # CS2: Take(n) as an ordinary Worker — forwards n elements, then completes, closing its input on the consumer
@@ -721,3 +698,4 @@ TakeWorker:
     selfLocation:
       is: ObjectLocation
       by: Self
+

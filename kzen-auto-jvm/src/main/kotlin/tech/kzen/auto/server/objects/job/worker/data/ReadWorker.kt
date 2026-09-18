@@ -22,9 +22,11 @@ import tech.kzen.auto.server.objects.job.worker.JobLaneAttempt
 import tech.kzen.auto.server.objects.job.worker.JobLaneContext
 import tech.kzen.auto.server.objects.job.worker.definition.WorkerDefinitionContext
 import tech.kzen.auto.server.objects.job.worker.definition.WorkerDefinitionResolution
+import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.location.ObjectReference
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
+import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.util.digest.Digest
@@ -65,6 +67,7 @@ open class ReadWorker(
         private val dataUnitType = TypeMetadata(
             ClassName(DataUnit::class.qualifiedName!!), emptyList(), false)
         private val logger = LoggerFactory.getLogger(ReadWorker::class.java)
+        private val sourceAttribute = AttributeName("source")
     }
 
 
@@ -294,6 +297,15 @@ open class ReadWorker(
         DataReadCore.closeFallback(cursor)
         cursor = null
     }
+
+
+    /**
+     * The selected data source: a different one is refused while the run is open over the previous
+     * ([tech.kzen.auto.server.exec.job.JobLogic.refuseMigration]); an edit inside the same data source is judged
+     * by the definition digest on adoption ([loadMigrationState]), which restarts the read from a fresh manifest.
+     */
+    override fun migrationKey(graphNotation: GraphNotation, location: ObjectLocation): Any =
+        migrationKeyOf(graphNotation, location, sourceAttribute)
 
 
     override fun captureMigrationState(): Any {

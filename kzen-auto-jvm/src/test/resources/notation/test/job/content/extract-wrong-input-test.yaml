@@ -1,0 +1,14 @@
+# JobValidatorTest: a known non-file lane (Int) upstream of Extract is a static validation error with the Units hint
+main:
+  is: Job
+
+main.workers/source:
+  is: FormulaSourceWorker
+  code: 42
+
+main.workers/Extract:
+  is: Extract
+
+main.workers/write:
+  is: CsvWriterWorker
+  path: build/content-scope/wrong-input/output.csv

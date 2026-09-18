@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.exec.job.ownership
 
+import kotlinx.coroutines.CompletableDeferred
 import tech.kzen.auto.common.paradigm.job.control.ValueLease
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -11,7 +12,8 @@ import java.util.concurrent.atomic.AtomicBoolean
  * zero between holders. Closing is a claim: whichever release (or teardown) wins closes, every later attempt
  * is a no-op, and a `close()` that throws still leaves the entry closed — the failure is thrown from the
  * release that closed (a mid-run last holder reports it) or returned from [forceClose] (teardown aggregates).
- * Thread-safe: leases are taken and released from any thread.
+ * Thread-safe: leases are taken and released from any thread. A lending source suspends on [awaitClosed] until
+ * the last release closes the native (docs/plans/2026-09-16_borrowed-elements.md §3.2).
  */
 class OwnedNative internal constructor(
     val native: AutoCloseable,
@@ -22,6 +24,8 @@ class OwnedNative internal constructor(
     private val closeClaimed = AtomicBoolean(false)
     @Volatile private var total = 0
     @Volatile private var closedFlag = false
+    // Created by the first waiter, completed by the close; guarded by [lock] against the close racing the wait
+    private var closedSignal: CompletableDeferred<Unit>? = null
 
 
     val isClosed: Boolean
@@ -33,6 +37,18 @@ class OwnedNative internal constructor(
 
 
     fun leaseCount(): Int = total
+
+
+    /** Suspends until the native is closed (the last release, or teardown); returns at once when it already is. */
+    suspend fun awaitClosed() {
+        val signal = synchronized(lock) {
+            if (closedFlag) {
+                return
+            }
+            closedSignal ?: CompletableDeferred<Unit>().also { closedSignal = it }
+        }
+        signal.await()
+    }
 
 
     /** Takes one hold for [holder]; fails by name once the native is closed. */
@@ -77,6 +93,7 @@ class OwnedNative internal constructor(
             return null
         }
         closedFlag = true
+        synchronized(lock) { closedSignal }?.complete(Unit)
         val failure = try {
             native.close()
             null

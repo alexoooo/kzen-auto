@@ -6,7 +6,11 @@ import tech.kzen.auto.common.paradigm.job.api.ChannelServer
 import tech.kzen.auto.common.paradigm.job.api.Worker
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.server.objects.job.worker.definition.WorkerDefinitionContext
+import tech.kzen.lib.common.model.attribute.AttributeName
+import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.model.structure.notation.AttributeNotation
+import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.exec.data.value.DataValue
 
 
@@ -40,6 +44,25 @@ abstract class WorkerBase(
 ):
     Worker
 {
+    companion object {
+        /** The usual [migrationKey]: the notations of [attributes] at [location], inherited ones included. */
+        internal fun migrationKeyOf(
+            graphNotation: GraphNotation,
+            location: ObjectLocation,
+            attributes: List<AttributeName>
+        ): List<AttributeNotation?> =
+            attributes.map { graphNotation.firstAttribute(location, AttributePath.ofName(it)) }
+
+
+        internal fun migrationKeyOf(
+            graphNotation: GraphNotation,
+            location: ObjectLocation,
+            attribute: AttributeName
+        ): List<AttributeNotation?> =
+            migrationKeyOf(graphNotation, location, listOf(attribute))
+    }
+
+
     @Volatile
     private var latestSnapshot: Any? = null
 
@@ -102,6 +125,21 @@ abstract class WorkerBase(
 
     /** Adopt state captured by the previous (same stable id) instance's [captureMigrationState]. Default no-op. */
     internal open fun loadMigrationState(captured: Any?) {}
+
+
+    /**
+     * Live-edit compatibility (borrowed elements §3.6, docs/plans/2026-09-16_borrowed-elements.md): the part of
+     * this Worker's NOTATION that its run-scoped state was opened over (a source's selection — the archive
+     * path, the file selection), or null when every edit is compatible or is judged only in
+     * [loadMigrationState]. Read from notation rather than from the instance so the RUNNING instance can
+     * evaluate both its own definition and an edited one at [location] (the same stable id, possibly renamed)
+     * and refuse an edit whose key differs BEFORE the engine detaches anything
+     * ([tech.kzen.auto.server.exec.job.JobLogic.refuseMigration]): the run continues unedited rather than lose
+     * a single-pass source or re-emit what it already delivered. A rule the instance also enforces on adoption
+     * (the belt and braces of [loadMigrationState]) guards the capture that was taken by something other than
+     * a pause. [migrationKeyOf] builds the usual key: the named attributes' notations.
+     */
+    internal open fun migrationKey(graphNotation: GraphNotation, location: ObjectLocation): Any? = null
 
 
     /** Binds services derived from the exact compiled graph snapshot that owns this Worker instance. */

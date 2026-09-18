@@ -1,4 +1,4 @@
-# ScopeReadPartTest "read" reference: the same CSV extracted to a file, read by FileSourceWorker
+# ExtractReadPartTest "read" reference: the same CSV extracted to a file, read by FileSourceWorker
 main:
   is: Job
   results:

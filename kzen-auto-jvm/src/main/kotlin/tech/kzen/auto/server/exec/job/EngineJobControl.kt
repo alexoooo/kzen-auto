@@ -3,8 +3,10 @@ package tech.kzen.auto.server.exec.job
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.common.paradigm.job.control.ValueLease
 import tech.kzen.auto.server.exec.job.ownership.LeaseHolder
+import tech.kzen.auto.server.exec.job.ownership.OwnerSet
 import tech.kzen.auto.server.exec.job.ownership.RunOwnershipControl
 import tech.kzen.auto.server.exec.job.ownership.RunOwnershipLedger
+import tech.kzen.auto.server.objects.job.worker.LentElement
 import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.ListExecutionValue
@@ -226,17 +228,42 @@ class EngineJobControl(
     }
 
 
-    // Contribute a ResultSink Worker's named binding to the run's output (harvested by JobRun once the run
-    // settles). Last write per component wins, so a re-yield after a live-edit migrate is idempotent.
+    // A Worker's own hold past its callback (an accumulator). A lent element is refused by name (borrowed
+    // elements §3.3): its source waits for the release before it advances, so a hold that outlives the callback
+    // would hang the run rather than keep the element.
     override fun retain(value: DataValue): ValueLease {
+        val owners = ledger.owners(value)
+        lentOwner(owners)?.let { lent ->
+            throw IllegalStateException(
+                "$workerLocation cannot keep ${lent.lentName()}: it is borrowed from ${lent.lender()} and is " +
+                        "only valid until the source advances. Snapshot it, read it, or write it.")
+        }
+        return owners.lease(workerHolder)
+    }
+
+
+    override fun holdForCallback(value: DataValue): ValueLease {
         return ledger.retain(value, workerHolder)
     }
 
 
+    private fun lentOwner(owners: OwnerSet): LentElement? =
+        owners.entries().firstNotNullOfOrNull { it.native as? LentElement }
+
+
+    // Contribute a ResultSink Worker's named binding to the run's output (harvested by JobRun once the run
+    // settles). Last write per component wins, so a re-yield after a live-edit migrate is idempotent.
     override fun yieldResult(component: String, value: DataValue) {
         // An owned native never escapes the run (E9): the run closes it at its end, so a Result holding its
-        // identity would read as closed later — the sink snapshots what it keeps
-        check(ledger.owners(value).isEmpty) {
+        // identity would read as closed later — the sink snapshots what it keeps; a lent element is named
+        val owners = ledger.owners(value)
+        lentOwner(owners)?.let { lent ->
+            throw IllegalStateException(
+                "Result '$component' of $workerLocation cannot keep ${lent.lentName()}: it is borrowed from " +
+                        "${lent.lender()} and is only valid until the source advances. " +
+                        "Snapshot it, read it, or write it.")
+        }
+        check(owners.isEmpty) {
             "Result '$component' of $workerLocation holds a native the run owns and will close; " +
                 "snapshot it (JobControl.snapshot) before yielding"
         }

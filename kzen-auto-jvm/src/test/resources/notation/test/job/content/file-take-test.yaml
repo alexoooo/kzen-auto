@@ -1,0 +1,37 @@
+# ExtractReadPartTest "file-take": File(big.csv) -> Take(10) -> ResultSink keep: all — a plain source upstream
+# of a Take (the CS2 inherited case): the source ends on the closed downstream instead of deadlocking
+main:
+  is: Job
+  results:
+    main:
+      class: kotlin.Any
+      generics: []
+      nullable: true
+
+main.formats/csv:
+  is: ConfiguredCsv
+  catalogVisible: false
+
+main.channels/rows:
+  is: Channel
+
+main.channels/taken:
+  is: Channel
+
+main.workers/read:
+  is: FileSourceWorker
+  output: main.channels/rows
+  files:
+    - location: build/content-scope/file-take/big.csv
+  format: main.formats/csv
+
+main.workers/take:
+  is: TakeWorker
+  input: main.channels/rows
+  output: main.channels/taken
+  count: 10
+
+main.workers/collect:
+  is: ResultSinkWorker
+  input: main.channels/taken
+  keep: all

@@ -160,7 +160,7 @@ Three ways to satisfy it, in order of preference:
 | | how | who |
 |---|---|---|
 | Object-scoped React component | extend `ObjectScopedComponent<P: ObjectScopedProps, S>` — declares the scope `final` and owns the observe/unobserve pair | 17 editors, views, managers and fields |
-| Object-scoped, can't extend it | implement `Observer` and declare the scope by hand | `ScriptBranchDisplay` (keyed on `attributeLocation`), `StepPickingSelectEditorBase` (extends `SelectReferenceEditorBase`) |
+| Object-scoped, can't extend it | implement `Observer` and declare the scope by hand | `ScriptBranchDisplay` (keyed on `attributeLocation`), `StepPickingSelectEditorBase` (extends `SelectReferenceEditorBase`), `FileSourceWorkerDisplay` (keyed on `props.common.objectLocation`) |
 | Document-scoped | implement `ClientStateGlobal.DocumentScopedObserver` | 18 controllers and stores |
 
 `ObjectScopedProps` (`objectLocation` + `clientStateGlobal`) is the shared parent of `AttributeEditorProps`,
@@ -417,21 +417,6 @@ Debounced attribute submits go through the shared `DebouncedSubmitter` (`objects
 - **On unmount, `flush()` — never `cancel()`.** The debounce is buffering the user's pending edit before it reaches the server; cancelling silently discards their input. `cancel()` is only right for idempotent refresh-style callbacks with no user input at stake. Flushing from a non-suspend lifecycle method is fine even when the callback launches a coroutine — the launch is synchronous and the coroutine outlives the component.
 - **No `.pending()` on a lodash debounce.** The bundled lodash's debounced function has no `.pending()` — it throws, and inside a `util.async` Promise the throw is swallowed, presenting as a stuck-busy indicator. `DebouncedSubmitter` detects a keystroke-re-armed-mid-commit with an explicit `scheduleSequence` counter instead; the `pending()` binding was removed from `wrap/Lodash.kt` as dead + broken. Don't reintroduce it.
 - **Lossy round-trips compare semantically, and never overwrite user input.** Where the source of truth is a parsed model and deparse is lossy (the raw-YAML editor: `unparseDocument` drops comments/whitespace/key order), the "modified" check must be `parse(editorValue) != serverNotation` — not text equality — and the controller must never write a regenerated text form back into the editor, even on save success. Unparseable input counts as modified; external updates refresh the editor only when the user has no pending edits.
-
-### Nested-object list attributes: host the editor from a `display:`, not an `editor:`
-
-An attribute whose value is a list of nested objects (`is: List, of: <archetype>, by: NestedList` — the Job
-`EntryScope.body` is the example) has no generic editor: `DefaultAttributeEditor` prints "type not
-supported". Editing it means editing each item's *own* attributes, which needs the `AttributeEditorManager` —
-and an `AttributeEditor` that takes the manager closes a reference cycle through the manager's autowired
-`is: AttributeEditor` list, which `GraphCreator` refuses. So the item-list editor (`job/edit/ScopeBodyEditor`)
-is not registered as an editor at all; it is mounted by a per-type `WorkerDisplay`
-(`job/display/EntryScopeWorkerDisplay`, `display: EntryScopeWorkerDisplay` on the archetype), which
-legitimately receives the manager, wraps `WorkerDisplayDefault` with the list attribute in `hiddenAttributes`
-and renders the list in `bodyExtra`. Items are the nested paths under `<worker>.body/` (kzen-lib
-`DocumentNotation.directNestedObjectPaths`), added with `AddObjectCommand.ofParent` at `PositionRelation.at`
-just after the last item's document index, reordered via `ObjectTreeReorder.reorderPosition` +
-`ShiftObjectTreeCommand`, and the picker's archetypes are the `abstract: true` descendants of the `of:` type.
 
 ## 8. `KotlinCodeArea` — the syntax-highlighted expression field
 

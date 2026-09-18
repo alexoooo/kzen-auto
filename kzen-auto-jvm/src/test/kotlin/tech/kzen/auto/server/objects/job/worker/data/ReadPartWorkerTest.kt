@@ -28,6 +28,7 @@ import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.auto.plugin.model.record.FlatRecordHeader
 import tech.kzen.auto.server.data.DataOpenerLookup
+import tech.kzen.auto.server.objects.datasource.format.ConfiguredDelimitedTestFormats
 import tech.kzen.auto.server.data.OperationalDataOpener
 import tech.kzen.auto.server.data.configuredTestDataPart
 import tech.kzen.auto.server.data.read.OperationalDataCursor
@@ -745,7 +746,8 @@ class ReadPartWorkerTest {
         schemaMode: String = DataReadCore.schemaStrict
     ): ReadPartWorker {
         return ReadPartWorker(
-            input, output, role, attributes, workerLocation, DataOpenerLookup(opener), schemaMode)
+            input, output, role, attributes, ConfiguredDelimitedTestFormats.csv(), workerLocation,
+            DataOpenerLookup(opener), schemaMode)
     }
 
 

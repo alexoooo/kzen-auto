@@ -1,0 +1,40 @@
+# ExtractWorkerTest "fail": File(units) -> Extract -> FailingWorker (test) -> ResultSink keep: all
+main:
+  is: Job
+  results:
+    main:
+      class: kotlin.Any
+      generics: []
+      nullable: true
+
+main.channels/entries:
+  is: Channel
+
+main.channels/written:
+  is: Channel
+
+main.channels/files:
+  is: Channel
+
+main.workers/Archive:
+  is: FileSourceWorker
+  files:
+    - location: build/content-scope/fail/input.tar.gz
+  emit: units
+  output: main.channels/files
+
+main.workers/Extract:
+  is: Extract
+  input: main.channels/files
+  members: []
+  output: main.channels/entries
+
+main.workers/Failing:
+  is: FailingWorker
+  input: main.channels/entries
+  output: main.channels/written
+
+main.workers/collect:
+  is: ResultSinkWorker
+  input: main.channels/written
+  keep: all

@@ -1,0 +1,53 @@
+# ExtractWorkerTest "inner": File(units) -> Extract (*.tar.gz) -> Extract (**) -> Write -> ResultSink keep: all
+main:
+  is: Job
+  results:
+    main:
+      class: kotlin.Any
+      generics: []
+      nullable: true
+
+main.channels/files:
+  is: Channel
+
+main.channels/archives:
+  is: Channel
+
+main.channels/entries:
+  is: Channel
+
+main.channels/written:
+  is: Channel
+
+main.workers/Archive:
+  is: FileSourceWorker
+  files:
+    - location: build/content-scope/inner/input.tar.gz
+  emit: units
+  output: main.channels/files
+
+main.workers/Outer:
+  is: Extract
+  input: main.channels/files
+  members:
+    - "*.tar.gz"
+  output: main.channels/archives
+
+main.workers/Inner:
+  is: Extract
+  input: main.channels/archives
+  members:
+    - "**"
+  output: main.channels/entries
+
+main.workers/Write:
+  is: Write
+  input: main.channels/entries
+  output: main.channels/written
+  directory: build/content-scope/inner/out
+  name: "${parent.name}/${name}${extension}"
+
+main.workers/collect:
+  is: ResultSinkWorker
+  input: main.channels/written
+  keep: all

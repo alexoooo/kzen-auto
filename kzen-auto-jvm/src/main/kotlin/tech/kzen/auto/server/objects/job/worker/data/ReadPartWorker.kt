@@ -1,7 +1,12 @@
 package tech.kzen.auto.server.objects.job.worker.data
 
 import tech.kzen.auto.common.data.api.DataCursor
+import tech.kzen.auto.common.data.format.ConfiguredRecordFormat
+import tech.kzen.auto.common.data.model.DataPart
+import tech.kzen.auto.common.data.model.DataRef
+import tech.kzen.auto.common.data.model.DataRole
 import tech.kzen.auto.common.data.model.DataUnit
+import tech.kzen.auto.common.data.read.DataContentFingerprint
 import tech.kzen.auto.common.data.schema.DataShape
 import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
@@ -9,7 +14,10 @@ import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.server.data.DataOpenerLookup
 import tech.kzen.auto.server.objects.job.worker.Emitter
 import tech.kzen.auto.server.objects.job.worker.ExpandingTransformWorker
+import tech.kzen.auto.server.objects.job.worker.content.Entry
 import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.lib.common.exec.MapExecutionValue
+import tech.kzen.lib.common.exec.TextExecutionValue
 import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.lib.common.exec.data.type.DataType
 import tech.kzen.lib.common.exec.data.type.DataTypePath
@@ -27,6 +35,19 @@ import tech.kzen.lib.platform.ClassName
  * resolves the units itself. The active unit, part/item positions, shape baseline, and open cursor all migrate
  * with [ExpandingTransformWorker]'s active physical input batch.
  *
+ * CONTENT ELEMENTS (borrowed elements, docs/plans/2026-09-16_borrowed-elements.md §3.8): an [Entry] — a lent
+ * element of an `Extract` transform — is read through the SAME reader chain a file takes, entered below the
+ * content provider via [tech.kzen.auto.server.data.ContentDataOpener.openContent] with [format]'s resolved
+ * read spec (dialect, header mode, declared schema), the content-coding wrap, the run read policy and the
+ * reader capability. Rows are the lifted literal records [DataReadCore] produces — independent of the entry,
+ * which is released as soon as the reader closes; the entry's bytes never leave. The first entry fixes the
+ * item shape and every later entry must match it (the `strict` rule of [DataReadCore.establishShape]); a
+ * declared schema fixes it up front. [format] applies to content elements only: a [DataUnit]'s parts carry
+ * their own resolved read specs. The cadence checkpoints inside an entry do not park while the entry is lent
+ * ([tech.kzen.auto.server.objects.job.worker.BorrowingSource]); the entry's cursor is closed at the end of the
+ * entry, WITHOUT draining when the downstream completes early, and it is never carried across a live edit
+ * (the source refuses an edit that lands inside a lent element).
+ *
  * Fan-out to several independently configured readers requires duplicate FormulaSource/manual channel wiring
  * until J6 adds first-class fan-out. A single ReadPart owns and consumes its incoming DataUnit stream.
  */
@@ -36,6 +57,7 @@ class ReadPartWorker(
     output: ChannelOutput<DataValue>,
     private val role: String,
     private val attributes: String,
+    private val format: ConfiguredRecordFormat,
     selfLocation: ObjectLocation,
     @Service private val openerLookup: DataOpenerLookup,
     private val schemaMode: String = DataReadCore.schemaSuperset
@@ -45,6 +67,9 @@ class ReadPartWorker(
         const val attributesColumns = ReadWorker.attributesColumns
 
         private val dataUnitClassName = ClassName(DataUnit::class.qualifiedName!!)
+        private val entryClassName = ClassName(Entry::class.qualifiedName!!)
+
+        private const val entryFingerprintIdentity = "tech.kzen.auto/archive-entry-v1"
     }
 
 
@@ -60,6 +85,12 @@ class ReadPartWorker(
     private var unitShapePlan: DataReadCore.ShapeBaseline? = null
     private var cursor: DataCursor? = null
 
+    // The open reader over a content element; closed at the end of the element, never carried
+    private var entryCursor: DataCursor? = null
+
+    /** The lent entry being read, for the by-name refusal of a capture taken inside it. */
+    private var entryName: String? = null
+
 
     override suspend fun onStart(control: JobControl) {
         configError()?.let { throw IllegalArgumentException(it) }
@@ -68,9 +99,13 @@ class ReadPartWorker(
 
     override suspend fun onElement(element: DataValue, emit: Emitter, control: JobControl) {
         val incomingValue = JobDataValues.native(element)
+        if (incomingValue is Entry) {
+            readEntry(incomingValue, emit, control)
+            return
+        }
         val incoming = incomingValue as? DataUnit
             ?: throw IllegalStateException(
-                "ReadPart requires a non-null DataUnit payload, but received " +
+                "ReadPart requires a non-null DataUnit or Entry payload, but received " +
                     (incomingValue?.let { "${it::class.qualifiedName}: $it" } ?: "null"))
 
         val activeUnit = currentUnit
@@ -194,6 +229,64 @@ class ReadPartWorker(
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
+    private suspend fun readEntry(entry: Entry, emitter: Emitter, control: JobControl) {
+        val part = entryPart(entry)
+        val bytes = control.runBlockingIo { entry.content.open() }
+        // openContent owns the bytes from here: it closes them itself when the reader fails to open
+        val opened: DataCursor = openerLookup.contentOpener().openContent(part, bytes)
+        entryCursor = opened
+        entryName = entry.name
+
+        var completed = false
+        try {
+            val origin = "entry '${entry.name}' of '${entry.parent.name}'"
+            shapeBaseline = DataReadCore.establishShape(
+                shapeBaseline,
+                DataReadCore.effectiveShape(opened.shape, null, origin))
+
+            while (true) {
+                val emitted = DataReadCore.emitNext(
+                    control,
+                    opened,
+                    requireNotNull(shapeBaseline),
+                    null,
+                    claimBeforeSend = { totalEmitted += 1 },
+                    send = emitter::send)
+                if (!emitted) {
+                    break
+                }
+            }
+            completed = true
+        }
+        finally {
+            entryCursor = null
+            entryName = null
+            if (completed) {
+                DataReadCore.close(control, opened)
+            }
+            else {
+                // Failure or an early downstream close: released without draining the rest of the entry
+                DataReadCore.closeFallback(opened)
+            }
+        }
+        completedUnits += 1
+    }
+
+
+    private fun entryPart(entry: Entry): DataPart {
+        val ref = DataRef(null, "${entry.parent.name}!${entry.name}")
+        val fingerprint = DataContentFingerprint(
+            entryFingerprintIdentity,
+            MapExecutionValue(linkedMapOf(
+                "archive" to TextExecutionValue(entry.parent.name),
+                "entry" to TextExecutionValue(entry.name),
+                "size" to TextExecutionValue(entry.size.toString()),
+                "modified" to TextExecutionValue(entry.modifiedEpochMillis?.toString() ?: ""))))
+        return DataPart(DataRole.main, ref, fingerprint, format.resolvedRead(ref))
+    }
+
+
     private fun attributeValues(unit: DataUnit): Map<String, String>? {
         return if (attributes == attributesColumns) unit.attributes else null
     }
@@ -202,6 +295,9 @@ class ReadPartWorker(
     override fun onExpansionClose() {
         DataReadCore.closeFallback(cursor)
         cursor = null
+        DataReadCore.closeFallback(entryCursor)
+        entryCursor = null
+        entryName = null
     }
 
 
@@ -221,7 +317,8 @@ class ReadPartWorker(
             inspectedShapes,
             unitShapePlan,
             schemaMode,
-            detached)
+            detached,
+            entryName)
     }
 
 
@@ -230,6 +327,14 @@ class ReadPartWorker(
         if (state == null) {
             (captured as? AutoCloseable)?.close()
             return
+        }
+        val interrupted = state.interruptedEntry
+        if (interrupted != null) {
+            // A lent entry is read in one pass from a single-open stream (borrowed elements §3.6): the capture
+            // was taken inside it, so the rebuilt instance cannot resume — refused by name, like the lender
+            state.close()
+            error("Read part was interrupted inside entry '$interrupted'; a live edit applies only between " +
+                "elements. Start a new run to apply it.")
         }
 
         currentUnit = state.currentUnit
@@ -271,16 +376,17 @@ class ReadPartWorker(
 
         val inputType = input.contract.nativeByPath[DataTypePath.root]
         val structural = input.contract.structural
-        val valid = structural is DataType.Opaque && !structural.nullable &&
+        val unit = structural is DataType.Opaque && !structural.nullable &&
             inputType != null &&
             inputType.className == dataUnitClassName &&
             inputType.generics.isEmpty() &&
             !inputType.nullable
-        if (!valid) {
+        val entry = inputType != null && inputType.className == entryClassName && !inputType.nullable
+        if (!unit && !entry) {
             val description = inputType?.toSimple() ?: input.contract.structural.toString()
             return JobLaneAttempt(
                 JobLaneDescriptor.unknown,
-                "ReadPart requires a non-null DataUnit payload, found $description")
+                "ReadPart requires a non-null DataUnit or Entry payload, found $description")
         }
 
         return JobLaneAttempt(JobLaneDescriptor.unknown, null)
@@ -318,7 +424,8 @@ class ReadPartWorker(
         val inspectedShapes: Map<Int, DataShape>?,
         val unitShapePlan: DataReadCore.ShapeBaseline?,
         val schemaMode: String,
-        private var detachedCursor: DataReadCore.DetachedCursor?
+        private var detachedCursor: DataReadCore.DetachedCursor?,
+        val interruptedEntry: String?
     ): AutoCloseable {
         fun adoptCursor(
             expectedIdentity: tech.kzen.auto.common.data.read.CursorAdoptionIdentity?

@@ -6,6 +6,7 @@ import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
 import tech.kzen.auto.server.objects.job.worker.content.ContentDescriptor
 import tech.kzen.auto.server.objects.job.worker.content.Entry
 import java.io.BufferedInputStream
+import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -15,12 +16,20 @@ import java.nio.file.Path
  * hard-wired; the design's negotiated container access is not built). Selection runs on the header, before an
  * element exists, so a non-matching entry costs one skip. Advancing invalidates the previous entry's content
  * and lets the archive stream skip whatever of it was not read; closing the cursor closes the archive. The
- * caller advances only after the previous entry is released (the scope's responsibility, not this class's).
+ * caller advances only after the previous entry is released (the lending Worker's responsibility, not this
+ * class's). The archive bytes come from a file ([Path]) or from any stream — an entry of an enclosing archive,
+ * for nested extraction — described by [parent].
  */
 class TarGzEntryCursor(
-    path: Path,
+    private val parent: ContentDescriptor,
+    bytes: InputStream,
     select: (String) -> Boolean
 ): Iterator<Entry>, AutoCloseable {
+    constructor(path: Path, select: (String) -> Boolean): this(
+        ContentDescriptor(path.fileName.toString(), Files.size(path), Files.getLastModifiedTime(path).toMillis()),
+        Files.newInputStream(path),
+        select)
+
     companion object {
         private const val readBufferBytes = 64 * 1024
 
@@ -30,10 +39,9 @@ class TarGzEntryCursor(
         internal var observer: ((TarGzEntryCursor) -> Unit)? = null
     }
 
-    private val archiveName = path.fileName.toString()
-    private val parent = ContentDescriptor(archiveName, Files.size(path), Files.getLastModifiedTime(path).toMillis())
+    private val archiveName = parent.name
     private val archive = TarArchiveInputStream(
-        GzipCompressorInputStream(BufferedInputStream(Files.newInputStream(path), readBufferBytes)))
+        GzipCompressorInputStream(BufferedInputStream(bytes, readBufferBytes)))
 
     private var pending: TarArchiveEntry? = null
     private var current: TarEntryContent? = null
@@ -75,7 +83,7 @@ class TarGzEntryCursor(
         check(!closed) { "Cursor over '$archiveName' is closed" }
         if (pending != null) return true
         if (exhausted) return false
-        current?.invalidate()
+        current?.release()
         current = null
         while (true) {
             val header = archive.nextEntry
@@ -108,7 +116,7 @@ class TarGzEntryCursor(
         closeCount += 1
         if (closed) return
         closed = true
-        current?.invalidate()
+        current?.release()
         archive.close()
     }
 }

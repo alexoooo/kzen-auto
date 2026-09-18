@@ -77,16 +77,6 @@ ResultWorkerDisplay:
   attributeViewManager: AttributeViewManager
 
 
-# Content streaming spike: the Entry Scope card, with its nested body (ScopeBodyWorker instances) edited in place.
-# Hosted as a display rather than an `editor:` because an AttributeEditor that needs the AttributeEditorManager
-# (to edit each body item's attributes) would close a reference cycle through the manager's autowired list.
-EntryScopeWorkerDisplay:
-  is: WorkerDisplay
-  class: tech.kzen.auto.client.objects.document.job.display.EntryScopeWorkerDisplay$Wrapper
-  attributeEditorManager: AttributeEditorManager
-  attributeViewManager: AttributeViewManager
-
-
 # Channel-reference picker: lists the Job document's Channel objects in a dropdown and writes the chosen
 # reference into the Worker's ChannelInput / ChannelOutput / ChannelServer / ChannelClient attribute.
 # Selected per attribute via `editor: SelectChannelEditor` in the Worker archetype metadata.
@@ -238,17 +228,17 @@ ReadPartTool:
   delegate: ReadPartWorker
 
 
+# Borrowed elements (docs/plans/2026-09-16_borrowed-elements.md): archive members out of whole files
+ExtractTool:
+  is: RibbonTool
+  parent: JobGroup_Transforms
+  delegate: Extract
+
+
 FilterTool:
   is: RibbonTool
   parent: JobGroup_Transforms
   delegate: FilterWorker
-
-
-# Content streaming spike (docs/plans/2026-09-16_borrowed-elements.md): loads the document; no editor.
-EntryScopeTool:
-  is: RibbonTool
-  parent: JobGroup_Sources
-  delegate: EntryScope
 
 
 TakeTool:
@@ -305,6 +295,12 @@ CsvWriterTool:
   is: RibbonTool
   parent: JobGroup_Sinks
   delegate: CsvWriterWorker
+
+
+WriteTool:
+  is: RibbonTool
+  parent: JobGroup_Sinks
+  delegate: Write
 
 
 PreviewTool:

@@ -37,6 +37,7 @@ import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.service.logic.LogicValidationGlobal
 import tech.kzen.auto.client.service.rest.ClientRestApi
+import tech.kzen.auto.client.service.rest.RemoteApplyGate
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.contextValue
@@ -81,6 +82,7 @@ external interface JobControllerProps: Props {
     var clientStateGlobal: ClientStateGlobal
     var logicValidationGlobal: LogicValidationGlobal
     var restClient: ClientRestApi
+    var remoteApplyGate: RemoteApplyGate
     var objectStableMapper: ObjectStableMapper
     var mirroredGraphStore: MirroredGraphStore
     var workerDisplayManager: WorkerDisplayManager.Wrapper
@@ -168,6 +170,7 @@ class JobController(
         @Service private val clientStateGlobal: ClientStateGlobal,
         @Service private val logicValidationGlobal: LogicValidationGlobal,
         @Service private val restClient: ClientRestApi,
+        @Service private val remoteApplyGate: RemoteApplyGate,
         @Service private val objectStableMapper: ObjectStableMapper,
         @Service private val mirroredGraphStore: MirroredGraphStore
     ):
@@ -194,6 +197,7 @@ class JobController(
                         this.clientStateGlobal = this@Wrapper.clientStateGlobal
                         this.logicValidationGlobal = this@Wrapper.logicValidationGlobal
                         this.restClient = this@Wrapper.restClient
+                        this.remoteApplyGate = this@Wrapper.remoteApplyGate
                         this.objectStableMapper = this@Wrapper.objectStableMapper
                         this.mirroredGraphStore = this@Wrapper.mirroredGraphStore
                         this.workerDisplayManager = this@Wrapper.workerDisplayManager
@@ -256,7 +260,7 @@ class JobController(
     }
 
     private val fileResolutionStore by lazy {
-        FileResolutionStore(props.restClient)
+        FileResolutionStore(props.restClient, props.remoteApplyGate)
     }
 
     // Document-wide rather than per-source: the Format / Encoding option lists describe the server's installed
@@ -358,10 +362,14 @@ class JobController(
             }
         }
 
+        // Retention drops the keys of deleted objects, so it must span every object a store is keyed by: the
+        // shape and file-row stores also serve Worker-hosted sources (a File Worker's own selection), not only
+        // DataSource objects; the whole-source resolve store is keyed by DataSource objects alone.
         val dataSources = DataSourceConventions.allDataSources(graphStructure.graphNotation).toSet()
+        val hostedSources = dataSources + workers
         dataSourceResolveStore.retain(dataSources)
-        dataSourceShapeStore.retain(dataSources)
-        fileResolutionStore.retainSources(dataSources)
+        dataSourceShapeStore.retain(hostedSources)
+        fileResolutionStore.retainSources(hostedSources)
 
         val connections = JobChannelDerivation.derive(graphStructure, documentPath)
             .connections

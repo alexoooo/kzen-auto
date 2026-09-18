@@ -3,6 +3,8 @@ package tech.kzen.auto.server.objects.job.worker
 import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
+import tech.kzen.auto.server.objects.job.channel.DownstreamClosedException
+import tech.kzen.auto.server.objects.job.channel.FrameworkChannelInput
 import tech.kzen.auto.server.objects.job.channel.ReceivedBatch
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.exec.data.value.DataValue
@@ -23,6 +25,10 @@ import tech.kzen.lib.common.exec.data.value.DataValue
  * completed (the batch travels with its leases across a migration, so a replacement instance resumes the
  * element still held), and the callback holds its own per-callback lease alongside; a batch a removed Worker
  * carried is released when the engine closes its orphaned state.
+ *
+ * EARLY COMPLETION (borrowed elements §3.7): a closed downstream ([DownstreamClosedException] from the emitter)
+ * ends the expansion and the Worker — the active batch's remaining channel holds are released, and the input is
+ * closed on the consumer side so the closure travels upstream, as [TransformWorker] does.
  */
 abstract class ExpandingTransformWorker(
     private val input: ChannelInput<*>,
@@ -36,6 +42,22 @@ abstract class ExpandingTransformWorker(
 
     final override suspend fun drive(control: JobControl) {
         emitter.flushCadence(control) { publish(control) }
+        try {
+            expand(control)
+        }
+        catch (e: DownstreamClosedException) {
+            // The consumer of this Worker's output completed: the rest of the active batch is nobody's now, and
+            // this Worker's own producer learns the downstream is gone rather than parking behind it
+            activeBatch?.let { batch ->
+                activeBatch = null
+                batch.releaseRemaining()
+            }
+            (input as? FrameworkChannelInput)?.closeConsumer()
+        }
+    }
+
+
+    private suspend fun expand(control: JobControl) {
         while (true) {
             var batch = activeBatch
             if (batch == null) {

@@ -21,7 +21,7 @@ import kotlin.test.fail
 /**
  * Regression coverage for the JS Job UI's live-progress read path, driven through the PUBLIC
  * [tech.kzen.auto.server.service.impl.ServerLogicController] surface exactly as the client does (start ->
- * continueOrStart). Reproduces the user's Job-1.yaml (a scalar FormulaSourceWorker -> PreviewWorker with BLANK
+ * continueOrStart). Reproduces (a scalar FormulaSourceWorker -> PreviewWorker with BLANK
  * ports, so the order-driven synthesis wires both the one-way channel and the Preview's external serve).
  *
  * The bug this guards: a Job's Workers are each hosted as their OWN engine node (registering their own stable id

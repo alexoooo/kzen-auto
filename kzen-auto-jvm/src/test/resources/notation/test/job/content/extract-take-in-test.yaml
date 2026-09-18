@@ -1,0 +1,50 @@
+# ExtractReadPartTest "take-in": File(units) -> Extract(20 entries) -> Take(10) -> Write -> ResultSink keep: all
+main:
+  is: Job
+  results:
+    main:
+      class: kotlin.Any
+      generics: []
+      nullable: true
+
+main.channels/entries:
+  is: Channel
+
+main.channels/taken:
+  is: Channel
+
+main.channels/written:
+  is: Channel
+
+main.channels/files:
+  is: Channel
+
+main.workers/Archive:
+  is: FileSourceWorker
+  files:
+    - location: build/content-scope/take-in/input.tar.gz
+  emit: units
+  output: main.channels/files
+
+main.workers/Extract:
+  is: Extract
+  input: main.channels/files
+  members: []
+  output: main.channels/entries
+
+main.workers/take:
+  is: TakeWorker
+  input: main.channels/entries
+  output: main.channels/taken
+  count: 10
+
+main.workers/Write:
+  is: Write
+  input: main.channels/taken
+  output: main.channels/written
+  directory: build/content-scope/take-in/out
+
+main.workers/collect:
+  is: ResultSinkWorker
+  input: main.channels/written
+  keep: all

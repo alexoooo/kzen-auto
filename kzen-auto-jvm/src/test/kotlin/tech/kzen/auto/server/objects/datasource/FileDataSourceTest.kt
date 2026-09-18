@@ -241,6 +241,23 @@ class FileDataSourceTest {
 
 
     @Test
+    fun singleFilePreviewOutsideAnEmptySelectionSaysSo() = runBlocking {
+        // The client can ask for a row the server's copy of the selection does not hold yet (a notation write in
+        // flight): with no rows and no directory there is nothing to match, and the message must say which
+        val absent = Files.createTempFile("file-source-absent", ".csv").also { it.writeText("a") }
+        val source = source()
+
+        val failure = assertFailsWith<IllegalArgumentException> {
+            source.resolveFile(DirectContext, FileSelectionEntry.ofCollection(picked(absent)))
+        }
+
+        assertEquals(
+            "Selected file is not in this source's selection: ${canonical(absent)}",
+            failure.message)
+    }
+
+
+    @Test
     fun persistedBlankOverridesCannotChangeTheCanonicalConfiguredRead() {
         val file = Files.createTempFile("file-source-format", ".csv").also { it.writeText("a") }
         val withDefaults = resolve(source(

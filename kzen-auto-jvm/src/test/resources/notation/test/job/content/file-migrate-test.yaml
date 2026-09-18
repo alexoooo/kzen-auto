@@ -1,0 +1,37 @@
+# FileSourceMigrationTest: File(big.csv) -> Summary -> ResultSink keep: last; the file selection is edited while
+# the source is open over it (refused before anything is detached), the sink is edited compatibly
+main:
+  is: Job
+  results:
+    main:
+      class: kotlin.Any
+      generics: []
+      nullable: true
+
+main.formats/csv:
+  is: ConfiguredCsv
+  catalogVisible: false
+
+main.channels/rows:
+  is: Channel
+
+main.channels/summarized:
+  is: Channel
+
+main.workers/read:
+  is: FileSourceWorker
+  output: main.channels/rows
+  files:
+    - location: build/content-scope/file-migrate/big.csv
+  format: main.formats/csv
+
+main.workers/summary:
+  is: SummaryWorker
+  input: main.channels/rows
+  output: main.channels/summarized
+
+main.workers/collect:
+  is: ResultSinkWorker
+  input: main.channels/summarized
+  keep: last
+  result: ""

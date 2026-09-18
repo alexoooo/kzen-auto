@@ -2,6 +2,7 @@ package tech.kzen.auto.server.objects.job.worker
 
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
+import tech.kzen.auto.server.objects.job.channel.DownstreamClosedException
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.exec.data.value.DataValue
 
@@ -40,8 +41,14 @@ abstract class SourceWorker(
             // produces anything (symmetric with a Transform / Sink parking at its loop-top checkpoint before its
             // first receive) — "nothing drained yet" at the first quiescent wavefront.
             control.checkpoint()
-            produce(emitter, control)
-            emitter.flush()
+            try {
+                produce(emitter, control)
+                emitter.flush()
+            }
+            catch (e: DownstreamClosedException) {
+                // The consumer of this source's output completed (a Take downstream): nothing more can leave, so
+                // the source is done — not failed — and whatever it buffered is dropped with the channel
+            }
         }
         finally {
             output.close()

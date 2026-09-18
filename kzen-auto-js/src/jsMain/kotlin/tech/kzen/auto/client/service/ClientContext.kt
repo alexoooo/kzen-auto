@@ -12,6 +12,7 @@ import tech.kzen.auto.client.service.logic.ClientLogicGlobal
 import tech.kzen.auto.client.service.logic.LogicValidationGlobal
 import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.service.rest.ClientRestGraphStore
+import tech.kzen.auto.client.service.rest.RemoteApplyGate
 import tech.kzen.auto.client.service.rest.ClientRestNotationMedia
 import tech.kzen.auto.client.service.rest.ClientRestTaskRepository
 import tech.kzen.auto.client.wrap.iconify.IconLoader
@@ -76,8 +77,10 @@ class ClientContext private constructor() {
             graphDefiner,
             notationReducer)
 
+    val remoteApplyGate = RemoteApplyGate()
+
     private val remoteGraphStore = ClientRestGraphStore(
-            restClient, notationParser)
+            restClient, notationParser, remoteApplyGate)
 
     val mirroredGraphStore = MirroredGraphStore(
             directGraphStore, remoteGraphStore)
@@ -116,6 +119,7 @@ class ClientContext private constructor() {
     val graphEnvironment: GraphEnvironment by lazy {
         GraphEnvironment.builder()
             .put(ClassName("tech.kzen.lib.common.service.store.MirroredGraphStore"), mirroredGraphStore)
+            .put(ClassName("tech.kzen.auto.client.service.rest.RemoteApplyGate"), remoteApplyGate)
             .put(ClassName("tech.kzen.lib.common.service.store.normal.ObjectStableMapper"), objectStableMapper)
             .put(ClassName("tech.kzen.lib.common.service.parse.NotationParser"), notationParser)
             .put(ClassName("tech.kzen.auto.client.service.global.ClientStateGlobal"), clientStateGlobal)

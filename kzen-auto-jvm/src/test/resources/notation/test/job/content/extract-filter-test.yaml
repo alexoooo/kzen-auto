@@ -1,0 +1,50 @@
+# ExtractWorkerTest "filter": File(units) -> Extract -> Filter(size > 8) -> Write -> ResultSink keep: all
+main:
+  is: Job
+  results:
+    main:
+      class: kotlin.Any
+      generics: []
+      nullable: true
+
+main.channels/entries:
+  is: Channel
+
+main.channels/kept:
+  is: Channel
+
+main.channels/written:
+  is: Channel
+
+main.channels/files:
+  is: Channel
+
+main.workers/Archive:
+  is: FileSourceWorker
+  files:
+    - location: build/content-scope/filter/input.tar.gz
+  emit: units
+  output: main.channels/files
+
+main.workers/Extract:
+  is: Extract
+  input: main.channels/files
+  members: []
+  output: main.channels/entries
+
+main.workers/Filter:
+  is: FilterWorker
+  input: main.channels/entries
+  output: main.channels/kept
+  where: "size > 8"
+
+main.workers/Write:
+  is: Write
+  input: main.channels/kept
+  output: main.channels/written
+  directory: build/content-scope/filter/out
+
+main.workers/collect:
+  is: ResultSinkWorker
+  input: main.channels/written
+  keep: all

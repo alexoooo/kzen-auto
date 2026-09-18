@@ -1,0 +1,44 @@
+# ExtractMigrationTest: File(units) -> Extract(e00..e09) -> Write gzip -> ResultSink keep: all; the writer's coding and the
+# transform's members are edited live, between entries
+main:
+  is: Job
+  results:
+    main:
+      class: kotlin.Any
+      generics: []
+      nullable: true
+
+main.channels/entries:
+  is: Channel
+
+main.channels/written:
+  is: Channel
+
+main.channels/files:
+  is: Channel
+
+main.workers/Archive:
+  is: FileSourceWorker
+  files:
+    - location: build/content-scope/migrate-write/input.tar.gz
+  emit: units
+  output: main.channels/files
+
+main.workers/Extract:
+  is: Extract
+  input: main.channels/files
+  members:
+    - "*.txt"
+  output: main.channels/entries
+
+main.workers/Write:
+  is: Write
+  input: main.channels/entries
+  output: main.channels/written
+  directory: build/content-scope/migrate-write/out
+  coding: gzip
+
+main.workers/collect:
+  is: ResultSinkWorker
+  input: main.channels/written
+  keep: all

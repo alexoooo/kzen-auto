@@ -2,6 +2,7 @@ package tech.kzen.auto.server.data
 
 import tech.kzen.auto.common.data.api.DataContext
 import tech.kzen.auto.common.data.api.DataCursor
+import tech.kzen.auto.common.data.format.detection.FormatDetectionFailureCategory
 import tech.kzen.auto.common.data.model.DataPart
 import tech.kzen.auto.common.data.read.ContentCapabilityIdentity
 import tech.kzen.auto.common.data.read.CursorAdoptionIdentity
@@ -20,6 +21,8 @@ import tech.kzen.auto.server.data.content.provider.DataContentProviderLookup
 import tech.kzen.auto.server.data.read.OwnedReaderDataCursor
 import tech.kzen.auto.server.data.read.ReaderCapabilityRegistry
 import tech.kzen.auto.server.data.read.ReaderExecutionPolicies
+import tech.kzen.auto.server.data.read.detection.FormatDetectionException
+import tech.kzen.auto.server.objects.datasource.format.UndetectedFormat
 
 
 class ConfiguredDataOpener(
@@ -148,6 +151,12 @@ class ConfiguredDataOpener(
 
 
     private fun resolve(part: DataPart): ResolvedCapability {
+        UndetectedFormat.refusalOrNull(part.resolvedRead)?.let { reason ->
+            throw FormatDetectionException(
+                FormatDetectionFailureCategory.Resolution,
+                "No installed format reads ${part.ref.display()}: $reason. To pass the file on whole " +
+                    "(to Extract), set the File source's Emit to Units")
+        }
         val capability = readerCapabilities.resolve(part.resolvedRead.reader)
         val config = readerCapabilities.decodeValidateCanonicalize(part.resolvedRead)
         return ResolvedCapability(capability, config)

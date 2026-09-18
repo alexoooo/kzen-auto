@@ -23,7 +23,9 @@ import java.util.concurrent.atomic.AtomicInteger
  * - **Externally-gated waits** — a Worker parked on a non-channel latch (a test gate, a `host`ed child) is not
  *   blocked on a channel, so `blocked < active`.
  * - **Genuine deadlock** — a lone sink on an orphan channel, or a cycle of Workers each waiting on the other:
- *   every Worker suspended on a channel that will never deliver → `blocked == active` → failed.
+ *   every Worker suspended on a channel that will never deliver → `blocked == active` → failed. A source
+ *   suspended [awaitingRelease] of a lent element (borrowed elements §3.3) counts as blocked: it advances only
+ *   when a downstream hold is released, so with every other Worker channel-blocked no release can come.
  *
  * The failing verdict is suppressed while the run serves an external duplex channel: a Worker idle on an open
  * serve port awaits a UI request, indistinguishable from a channel block under this heuristic (matches the
@@ -47,6 +49,7 @@ class JobDeadlockMonitor(
     private val streamChannels: Collection<JobChannel>,
     private val activeWorkers: AtomicInteger,
     private val externallyServing: Boolean,
+    private val awaitingRelease: () -> Int = { 0 },
     private val onDeadlock: () -> Unit,
     private val progressMark: () -> Long = { 0L },
     private val onStall: (Boolean) -> Unit = {}
@@ -115,7 +118,7 @@ class JobDeadlockMonitor(
             return
         }
 
-        val blocked = streamChannels.sumOf { it.blockedCount() }
+        val blocked = streamChannels.sumOf { it.blockedCount() } + awaitingRelease()
         if (blocked < active) {
             // At least one Worker is running / computing / parked at a checkpoint / gated on a non-channel wait —
             // the pipeline is not wholly channel-blocked, so it can still make progress.

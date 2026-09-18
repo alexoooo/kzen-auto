@@ -23,7 +23,7 @@ import tech.kzen.auto.server.exec.LogicParameterTrace
 import tech.kzen.auto.server.objects.job.channel.DuplexJobChannel
 import tech.kzen.auto.server.objects.job.channel.JobChannel
 import tech.kzen.auto.server.objects.job.worker.WorkerBase
-import tech.kzen.auto.server.objects.job.worker.content.scope.ScopeBoundary
+import tech.kzen.auto.server.objects.job.worker.BorrowingSource
 import tech.kzen.auto.server.objects.job.worker.definition.WorkerDefinitionContext
 import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionResult
@@ -63,7 +63,7 @@ import kotlin.time.Duration.Companion.milliseconds
  * - Deadlock: [JobDeadlockMonitor] polls this run's stream channels off the engine dispatcher and fails the
  *   run through an exceptionally-completed signal; the open external bridge is its suppression signal.
  */
-class JobRun(
+class JobRun internal constructor(
     private val execution: Execution,
     private val jobLocation: ObjectLocation,
     private val filteredDefinition: GraphDefinition,
@@ -73,7 +73,8 @@ class JobRun(
     private val jobResults: BindingSchema,
     private val graphNotation: GraphNotation,
     private val graphDefinition: GraphDefinition,
-    private val services: LogicCompilerServices
+    private val services: LogicCompilerServices,
+    private val liveWorkers: LiveWorkers
 ) {
     private val objectStableMapper get() = services.objectStableMapper
     private val graphEnvironment get() = services.graphEnvironment
@@ -183,6 +184,15 @@ class JobRun(
             location to worker
         }
 
+        // Visible to JobLogic.refuseMigration for as long as this run lives: a live edit is judged by these
+        // instances before the engine detaches anything
+        val registration = liveWorkers.register(
+            workers
+                .mapNotNull { (location, worker) -> (worker as? WorkerBase)?.let { location to it } }
+                .associate { (location, worker) ->
+                    objectStableMapper.objectStableId(location) to LiveWorkers.LiveWorker(location, worker)
+                })
+
         // The static payload-type walk (shared with the editor's detached JobValidator through the cache — a
         // hit reuses the editor's entry, a miss computes on THIS run's instances): each Worker's inferred
         // INPUT payload type is threaded into its control, so runtime expression compiles use the same
@@ -198,14 +208,14 @@ class JobRun(
             .derive(graphDefinition.graphStructure, jobLocation.documentPath)
             .connections
             .associate { it.downstreamWorker.objectPath to it.upstreamWorker.objectPath }
-        // Upstream-first quiescence (spike CS3): a Worker below an entry scope keeps draining while the scope is
-        // inside an entry, so the scope can reach its boundary before the run quiesces; and the scope itself never
-        // parks inside an entry, whatever its body checkpoints (EngineJobControl.draining)
+        // Upstream-first quiescence (borrowed elements §3.2): a Worker below a BorrowingSource keeps draining while
+        // the source is lending an element, so a pause lands between lent elements, never inside one
+        // (EngineJobControl.draining)
         val upstreamWorkers = JobChannelTopology.upstreamWorkers(filteredDefinition, workers.map { it.first })
         val workersByLocation = workers.toMap()
         val upstreamScopes = workers.associate { (location, worker) ->
-            val scopes = ArrayList<ScopeBoundary>()
-            (worker as? ScopeBoundary)?.let { scopes.add(it) }
+            val scopes = ArrayList<BorrowingSource>()
+            (worker as? BorrowingSource)?.let { scopes.add(it) }
             val visited = HashSet<ObjectLocation>()
             val pending = ArrayDeque(upstreamWorkers.getValue(location))
             while (pending.isNotEmpty()) {
@@ -213,7 +223,7 @@ class JobRun(
                 if (!visited.add(upstream)) {
                     continue
                 }
-                (workersByLocation[upstream] as? ScopeBoundary)?.let { scopes.add(it) }
+                (workersByLocation[upstream] as? BorrowingSource)?.let { scopes.add(it) }
                 pending.addAll(upstreamWorkers[upstream].orEmpty())
             }
             location to scopes.toList()
@@ -229,8 +239,12 @@ class JobRun(
         // The ownership report rides the monitor's clock (E9 item 5): after the no-progress interval, if owned
         // natives are held, the log and the root's trace name the holders — a warning, never a verdict
         val ownershipReport = JobOwnershipReport(execution, ledger, channelsByLocation)
+        // A source suspended awaiting the release of a lent element is blocked for the verdict (borrowed elements
+        // §3.3): a Deferred wait, not a channel op, so the channels alone would under-count it
+        val borrowingSources = workers.mapNotNull { it.second as? BorrowingSource }
         val deadlockMonitor = JobDeadlockMonitor(
             streamChannels.values, activeWorkers, externalClients.isNotEmpty(),
+            awaitingRelease = { borrowingSources.count { it.awaitingRelease() } },
             onDeadlock = {
                 deadlockSignal.completeExceptionally(
                     LogicFailure("Job deadlock: all workers blocked on channels with no progress"))
@@ -286,7 +300,7 @@ class JobRun(
                                         execution.inputs, jobParameters, jobResults,
                                         inputPayloadType, inputContract, resultCollector,
                                         ledger, location,
-                                        draining = { scopes.any { it.insideEntry() } }),
+                                        draining = { scopes.any { it.lending() } }),
                                     inputs = DataBindings.bind(BindingSchema.empty),
                                     // These frames are live SIMULTANEOUSLY, which is the one shape the engine's
                                     // ambient-context model is not specified for (logic-spec §6): two Workers
@@ -316,6 +330,7 @@ class JobRun(
             throw e
         }
         finally {
+            registration.close()
             deadlockMonitor.close()
             externalClients.values.forEach { it.close() }
             // Every Worker has joined (a Worker parked in runBlockingIo delays this until its call returns), so no

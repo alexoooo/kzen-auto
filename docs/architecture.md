@@ -133,12 +133,23 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > **off** the engine dispatcher, since running on it would deadlock `awaitQuiescent`. And the run-level
 > pause reason across concurrently-parked spines is chosen by tree position rather than severity, so an
 > error-parked Worker can be masked by a sibling at an ordinary boundary (a known gap, `logic-spec.md`
-> §4). Quiescence is also gated per Worker for the content streaming spike's entry scopes: while an
-> `EntryScopeWorker` upstream of a Worker (or the scope itself) is inside an entry, that Worker's
-> `checkpoint()` does not park (`EngineJobControl.draining`, topology from `JobChannelTopology`), so a pause
-> or live edit lands with the scope between entries and a bounded channel below it keeps draining; a live edit
-> that changes a scope's `path` is refused from notation (`ScopeMigrationKey`, `JobLogic.refuseMigration`)
-> before the engine detaches anything. Job is intended to eventually subsume Report; the living plan is `kzen/plans/2026-07-25_job-improvements.md`.
+> §4). Quiescence is also gated per Worker for lending sources (`BorrowingSource`, the borrowed-element
+> protocol of `kzen/docs/plans/2026-09-16_borrowed-elements.md`): a `CursorSourceWorker` whose element is a
+> `LentElement` (an archive `Entry`) advances only once the element's last hold is released, and while it is
+> lending, the `checkpoint()` of every Worker downstream of it (and its own) does not park
+> (`EngineJobControl.draining`, topology from `JobChannelTopology`), so a pause or live edit lands with the
+> source between entries and a bounded channel below it keeps draining; `JobControl.retain` and `yieldResult`
+> refuse a lent element by name, since a hold past the callback would hang the source (`Write` and `ReadPartWorker`
+> over an `Entry` consume it inside the callback and emit independent values); the lender is either a source
+> (`CursorSourceWorker`) or the `Extract` transform below the one `File` selector (`File` with `emit: units`
+> emits whole files as `DataUnit`s; `ExtractWorker` opens each as a `.tar.gz` and lends its members, nested
+> archives through an `Entry` input), both over the shared lend / await-release loop `CursorLending`; a file no
+> installed format claims stays in the selection as `UndetectedFormat` and is refused only when a reader opens
+> it; a `TakeWorker` downstream of any
+> source ends the run cleanly, the closed downstream (`DownstreamClosedException`) completing the source,
+> transform and expanding drive loops without draining; a live edit that changes a running source's selection (a
+> `File` selection, a `Read` data source: `WorkerBase.migrationKey`, read from notation by the
+> live instance) is refused by name (`JobLogic.refuseMigration`) before the engine detaches anything. Job is intended to eventually subsume Report; the living plan is `kzen/plans/2026-07-25_job-improvements.md`.
 
 > **Report → Logic.** Reports were the last holdout of the Task paradigm; they now run as
 > the **fourth Logic flavour**. `ReportDocument` gained `LogicDocument` (keeping its `DetachedAction` /
@@ -426,6 +437,12 @@ Browser                                          Server
 5. `ClientRestGraphStore` ships the command to the corresponding per-command REST endpoint (here `/command/attribute/upsert` — see § 3 for the full surface).
 6. Server `NotationCommandHandler` deserializes, applies to server-side graph store → server-side observers fire.
 7. Server response confirms; if mismatch, client could resync (rare in practice — commands are deterministic).
+
+Steps 4 and 5 run concurrently, so a server fetch launched from step 4 (a Job validation, a `File` row's format
+resolution) can be served from pre-commit server notation. Two client-side guards exist: validators echo the host
+document's digest (`ValidationDigestEcho`, retried by `ServerValidationFetch` until it matches), and fetches whose
+stale answer is a plain failure wait on `RemoteApplyGate` (jsMain `service/rest/`), which `ClientRestGraphStore`
+brackets around every remote apply (`FileResolutionStore`).
 
 The **observer pattern in kzen-lib** is what makes this work — both sides subscribe to the same event stream from their respective local stores. No diffing, no syncing logic beyond replaying the command.
 

@@ -1,5 +1,6 @@
 package tech.kzen.auto.client.objects.document.job.source.file
 
+import tech.kzen.auto.client.service.rest.RemoteApplyGate
 import tech.kzen.auto.common.data.file.FileSelectionEntry
 import tech.kzen.auto.common.data.format.FormatResolutionBasis
 import tech.kzen.auto.common.data.format.FormatResolutionDetail
@@ -14,17 +15,35 @@ import tech.kzen.auto.common.data.model.DataUnit
 import tech.kzen.auto.common.data.read.ReaderCapabilityIdentity
 import tech.kzen.auto.common.data.read.ResolvedReadSpec
 import tech.kzen.auto.common.util.data.DataLocation
+import tech.kzen.lib.common.exec.ExecutionFailure
+import tech.kzen.lib.common.exec.ExecutionResult
 import tech.kzen.lib.common.exec.MapExecutionValue
 import tech.kzen.lib.common.model.location.ObjectLocation
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 
 class FileResolutionStoreTest {
     private val source = ObjectLocation.parse("job.yaml#main.workers/Input")
     private val entry = FileSelectionEntry(DataLocation.of("./orders.csv"), null, null)
+
+
+    private class CountingResolver: FileResolutionStore.Resolver {
+        var calls = 0
+        override suspend fun resolve(key: FileResolutionStore.Key): ExecutionResult {
+            calls++
+            return ExecutionFailure("counted")
+        }
+    }
+
+
+    private fun mountedStore(resolver: CountingResolver, gate: RemoteApplyGate): FileResolutionStore {
+        return FileResolutionStore(resolver, gate).also { it.mount() }
+    }
+
 
     @Test
     fun rowEpochRejectsRemovedAndRecreatedWork() {
@@ -76,5 +95,51 @@ class FileResolutionStoreTest {
         assertEquals(DataManifest(listOf(DataUnit(emptyMap(), listOf(part)))), resolution.manifest)
         assertEquals(part, resolution.part)
         assertEquals(detail, resolution.detail)
+    }
+
+    @Test
+    fun resolutionWaitsForTheInFlightRemoteWriteThenFetchesOnce() {
+        val key = FileResolutionStore.Key.of(source, entry, "Automatic")
+        val resolver = CountingResolver()
+        val gate = RemoteApplyGate()
+        val store = mountedStore(resolver, gate)
+        gate.begin()
+
+        store.resolve(key)
+
+        assertTrue(store.state(key)?.resolving == true)
+        assertEquals(0, resolver.calls)
+        gate.end()
+        assertEquals(1, resolver.calls)
+        assertEquals("counted", store.state(key)?.error)
+    }
+
+
+    @Test
+    fun rowDiscardedWhileTheWriteIsInFlightNeverFetches() {
+        val key = FileResolutionStore.Key.of(source, entry, "Automatic")
+        val resolver = CountingResolver()
+        val gate = RemoteApplyGate()
+        val store = mountedStore(resolver, gate)
+        gate.begin()
+        store.resolve(key)
+
+        store.discard(setOf(key))
+        gate.end()
+
+        assertEquals(0, resolver.calls)
+        assertNull(store.state(key))
+    }
+
+
+    @Test
+    fun settledGateFetchesImmediately() {
+        val key = FileResolutionStore.Key.of(source, entry, "Automatic")
+        val resolver = CountingResolver()
+        val store = mountedStore(resolver, RemoteApplyGate())
+
+        store.resolve(key)
+
+        assertEquals(1, resolver.calls)
     }
 }
