@@ -9,9 +9,15 @@
 # job-*-test.yaml fixtures under src/test/resources/notation/test/job/.
 
 
+# Marker (JobConventions.isFileConsumer): a Worker that takes files whole rather than their contents. A source
+# left on automatic emit hands the adjacent FileConsumer each file unread instead of opening it.
+FileConsumer:
+  abstract: true
+
+
 DataReadWorkerConfig:
   abstract: true
-  emit: items
+  emit: auto
   role: ""
   attributes: ignore
   schemaMode: superset
@@ -19,22 +25,34 @@ DataReadWorkerConfig:
     emit:
       is: String
       editor: SelectValuesEditor
+      label: "Send on"
+      description: "Automatic sends whole files to a step that takes files (such as Extract), otherwise their contents."
       values:
-        items: "Items"
-        units: "Units"
-    role: String
+        auto: "Automatic"
+        items: "What is inside each file"
+        units: "Each file, whole"
+    role:
+      is: String
+      label: "Part to read"
+      description: "Only for sources whose files come in several named parts. Leave empty otherwise."
     attributes:
       is: String
       editor: SelectValuesEditor
+      label: "Values from file names"
+      description: "What to do with the values that Name pattern picks out of each file name."
       values:
-        ignore: "Ignore"
-        columns: "As columns"
+        ignore: "Leave out"
+        columns: "Add as columns"
     schemaMode:
       is: String
       editor: SelectValuesEditor
+      label: "When files have different columns"
       values:
-        superset: "Ordered superset"
-        strict: "Strict"
+        superset: "Combine all columns"
+        strict: "Stop with an error"
+      details:
+        superset: "A column missing from a file is left empty for that file's rows"
+        strict: "Every file must have exactly the same columns"
 
 
 # Resolves one DataSource manifest per run, then emits either whole units or the items of one role. The source
@@ -116,7 +134,9 @@ LogicSourceWorker:
 # incoming Entry (an `Extract` transform's lent element) is read as records with `format` (borrowed elements §3.8).
 ReadPartWorker:
   abstract: true
-  is: Worker
+  is:
+    - Worker
+    - FileConsumer
   title: "Read part"
   class: tech.kzen.auto.server.objects.job.worker.data.ReadPartWorker
   input: ""
@@ -606,13 +626,15 @@ RunWorker:
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Borrowed elements (docs/plans/2026-09-16_borrowed-elements.md): Extract opens each incoming file — a whole
-# file from a File or Read source (Emit: Units), or an Entry of an enclosing archive — as a .tar.gz and lends
+# file from the File or Read source above it, or an Entry of an enclosing archive — as a .tar.gz and lends
 # its members to the Workers downstream, advancing only once the member's last hold is released; Write and
 # Read part consume an Entry inside their callback and emit independent values (a Written record, rows).
 
 Extract:
   abstract: true
-  is: Worker
+  is:
+    - Worker
+    - FileConsumer
   title: "Extract"
   class: tech.kzen.auto.server.objects.job.worker.content.ExtractWorker
   input: ""

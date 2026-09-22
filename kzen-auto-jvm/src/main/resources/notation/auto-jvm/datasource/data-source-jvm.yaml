@@ -13,8 +13,14 @@ FileDataSourceConfig:
     directory: "./"
     filter: ""
   meta:
-    directory: String
-    filter: String
+    directory:
+      is: String
+      label: "Folder to scan"
+      description: "Optional: take every matching file in this folder, in addition to the files picked above."
+    filter:
+      is: String
+      label: "File name filter"
+      description: "Which files in the folder to take, for example *.csv"
     files:
       is: List
       editor: FileSelectionEditor
@@ -27,13 +33,17 @@ FileDataSourceConfig:
     format:
       is: ConfiguredRecordFormat
       editor: SelectDataFormatEditor
-    groupPattern: String
+    groupPattern:
+      is: String
+      label: "Name pattern"
+      description: "Optional: picks values out of each file name by named group, for example (?<year>[0-9]{4})"
     missing:
       is: String
       editor: SelectValuesEditor
+      label: "If a file is missing"
       values:
-        fail: "Fail if a file is missing"
-        skip: "Skip the unit"
+        fail: "Stop with an error"
+        skip: "Skip it"
 
 
 FileDataSource:

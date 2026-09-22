@@ -6,6 +6,7 @@ import react.Props
 import react.State
 import react.dom.html.ReactHTML.div
 import tech.kzen.auto.client.api.ReactWrapper
+import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
 import tech.kzen.auto.client.objects.document.common.scope.ObjectScopedComponent
 import tech.kzen.auto.client.objects.document.common.scope.ObjectScopedProps
 import tech.kzen.auto.client.service.global.ClientState
@@ -43,6 +44,9 @@ external interface AttributeEditorManagerState: State {
     // This attribute's definition-failure message (or null), so the field can highlight itself in place
     // rather than the document showing a top-level error banner.
     var attributeError: String?
+
+    // The attribute's declared `meta.<attr>.description` (or null): one plain-language line under the field.
+    var description: String?
 }
 
 
@@ -57,6 +61,7 @@ class AttributeEditorManager(
         // Matches the validation-error accent on step cards (ScriptStepDisplayDefault.validationErrorColour) —
         // a red-orange, distinct from the darker run-failure red.
         private val definitionErrorColour = Color("#d84315")
+        private val descriptionColour = Color("#6b6b6b")
     }
 
 
@@ -118,6 +123,14 @@ class AttributeEditorManager(
                 this.attributeError = attributeError
             }
         }
+
+        val description = CommonEditUtils.declaredDescription(
+            clientState.graphStructure(), props.objectLocation, props.attributeName)
+        if (description != state.description) {
+            setState {
+                this.description = description
+            }
+        }
     }
 
 
@@ -155,6 +168,17 @@ class AttributeEditorManager(
             }
 
             renderEditor(this, editorWrapper)
+
+            state.description?.let { description ->
+                div {
+                    css {
+                        marginTop = 0.15.em
+                        color = descriptionColour
+                        fontSize = 0.8.em
+                    }
+                    +description
+                }
+            }
 
             if (attributeError != null) {
                 div {

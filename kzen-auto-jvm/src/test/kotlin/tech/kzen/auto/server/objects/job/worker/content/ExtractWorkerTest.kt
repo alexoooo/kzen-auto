@@ -191,14 +191,14 @@ class ExtractWorkerTest {
 
 
     @Test
-    fun fileLeftInItemsModeFailsByNameWithTheUnitsHint() {
-        prepare("items", standardEntries)
+    fun fileLeftOnAutomaticHandsExtractTheArchiveWhole() {
+        val directory = prepare("items", standardEntries)
 
         val outcome = harness.run("test/job/content/extract-items-test.yaml")
 
-        val failed = assertIs<Outcome.Failed>(outcome)
-        assertContains(failed.message, "Emit to Units")
-        assertTrue(cursors.isEmpty())
+        assertIs<Outcome.Success>(outcome)
+        assertEquals(listOf("input.tar.gz"), cursors.map { it.archiveFileName })
+        assertContains(listFiles(directory.resolve("out")), "foo.txt.gz")
     }
 
 

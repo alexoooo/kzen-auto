@@ -10,6 +10,7 @@ import tech.kzen.auto.common.data.schema.DataShape
 import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.auto.common.data.schema.LegacyDataShapeBridge
 import tech.kzen.auto.common.objects.document.job.JobConventions
+import tech.kzen.auto.common.objects.document.job.JobReadEmit
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.server.data.DataOpenerLookup
@@ -35,8 +36,9 @@ import tech.kzen.lib.platform.ClassName
 
 /**
  * Source-generic reader for resolved data manifests. Item mode opens each selected part in manifest order;
- * unit mode emits each [DataUnit] whole. A manifest and positional cursor are migration state, so directory
- * changes cannot alter a resumed run. Cursor pulls always use the resumed Worker's [JobControl].
+ * unit mode emits each [DataUnit] whole; left automatic, [JobReadEmit] picks between them from the step below.
+ * A manifest and positional cursor are migration state, so directory changes cannot alter a resumed run. Cursor
+ * pulls always use the resumed Worker's [JobControl].
  *
  * Item mode fixes one effective shape across every part and unit. Default `schemaMode=superset` inspects the
  * selected manifest first and projects compatible tabular parts to one ordered union; `schemaMode=strict`
@@ -59,8 +61,8 @@ open class ReadWorker(
     private val schemaMode: String = DataReadCore.schemaSuperset
 ): SourceWorker(output, selfLocation) {
     companion object {
-        const val emitItems = "items"
-        const val emitUnits = "units"
+        const val emitItems = JobReadEmit.items
+        const val emitUnits = JobReadEmit.units
         const val attributesIgnore = "ignore"
         const val attributesColumns = "columns"
 
@@ -74,6 +76,10 @@ open class ReadWorker(
     private var sourceResolution: WorkerDefinitionResolution =
         WorkerDefinitionResolution.Failed("Worker definition context is not loaded")
     private var compatibilityKey: Digest? = null
+
+    // The declared emit with `auto` settled: units when the source passes files whole or the step below takes
+    // files, otherwise items. Fixed per definition load, so it is part of the compatibility key.
+    private var effectiveEmit: String = JobReadEmit.items
 
     private var manifest: DataManifest? = null
     private var finished = false
@@ -101,7 +107,8 @@ open class ReadWorker(
                 "Unable to prepare data source definition dependency: ${e.message}"))
             return
         }
-        loadSourceResolution(resolved, dependencyDigests)
+        loadSourceResolution(
+            resolved, dependencyDigests, JobReadEmit.effective(emit, context.graphStructure(), selfLocation))
     }
 
 
@@ -117,7 +124,8 @@ open class ReadWorker(
 
     internal fun loadSourceResolution(
         resolution: WorkerDefinitionResolution,
-        dependencyDigests: List<Digest> = emptyList()
+        dependencyDigests: List<Digest> = emptyList(),
+        adjacentEmit: String = emit
     ) {
         sourceResolution =
             if (resolution is WorkerDefinitionResolution.Resolved && resolution.value !is DataSource) {
@@ -129,12 +137,20 @@ open class ReadWorker(
                 resolution
             }
 
+        val passesFilesWhole =
+            ((sourceResolution as? WorkerDefinitionResolution.Resolved)?.value as? DataSource)?.passesFilesWhole == true
+        effectiveEmit = when {
+            emit == JobReadEmit.automatic && passesFilesWhole -> JobReadEmit.units
+            adjacentEmit == JobReadEmit.automatic -> JobReadEmit.items
+            else -> adjacentEmit
+        }
+
         compatibilityKey = (sourceResolution as? WorkerDefinitionResolution.Resolved)?.let {
             Digest.build {
                 addDigestible(it.location)
                 addDigest(it.cacheKey)
                 dependencyDigests.forEach(::addDigest)
-                addUtf8(emit)
+                addUtf8(effectiveEmit)
                 addUtf8(role)
                 addUtf8(attributes)
                 addUtf8(schemaMode)
@@ -151,7 +167,7 @@ open class ReadWorker(
 
         val context = WorkerDataContext(control)
         val activeManifest = manifest ?: resolveManifest(context, control).also { manifest = it }
-        if (this.emit == emitUnits) {
+        if (effectiveEmit == emitUnits) {
             emitUnits(activeManifest, emit)
         }
         else {
@@ -359,7 +375,7 @@ open class ReadWorker(
                 JobLaneDescriptor.unknown,
                 (sourceResolution as WorkerDefinitionResolution.Failed).message)
         val dataSource = resolved.value as DataSource
-        if (emit == emitUnits) {
+        if (effectiveEmit == emitUnits) {
             return JobLaneAttempt(
                 JobLaneDescriptor(dataUnitType, HeaderListing.empty), null)
         }
@@ -397,10 +413,10 @@ open class ReadWorker(
 
 
     private fun configError(): String? {
-        if (emit != emitItems && emit != emitUnits) {
+        if (!JobReadEmit.isKnown(emit)) {
             return "Unknown Read emit mode: $emit"
         }
-        if (emit == emitItems && attributes != attributesIgnore && attributes != attributesColumns) {
+        if (effectiveEmit == emitItems && attributes != attributesIgnore && attributes != attributesColumns) {
             return "Unknown Read attributes mode: $attributes"
         }
         if (schemaMode != DataReadCore.schemaStrict && schemaMode != DataReadCore.schemaSuperset) {

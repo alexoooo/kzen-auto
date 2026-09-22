@@ -19,6 +19,13 @@ interface ConfiguredRecordFormat: Digestible {
     val automaticDetectionCandidate: Boolean
         get() = true
 
+    /**
+     * False for a format that passes each file on whole instead of opening it; such a format applies to a whole
+     * source, never to one file.
+     */
+    val readsContent: Boolean
+        get() = true
+
     val automaticTextFallback: Boolean
         get() = false
 

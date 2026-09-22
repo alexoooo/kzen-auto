@@ -1,4 +1,5 @@
-# ExtractWorkerTest "items": File (Emit left at Items) -> Extract -> Write; fails by name with the Units hint
+# ExtractWorkerTest "items": File (emit left automatic) -> Extract -> Write; Extract takes files, so File hands
+# the archive on whole instead of listing it
 main:
   is: Job
   results:

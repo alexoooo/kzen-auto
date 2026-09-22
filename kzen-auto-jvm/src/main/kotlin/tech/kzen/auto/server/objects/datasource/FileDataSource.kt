@@ -130,6 +130,10 @@ class FileDataSource(
     }
 
 
+    override val passesFilesWhole: Boolean
+        get() = !format.readsContent
+
+
     override fun staticShape(role: DataRole?): tech.kzen.auto.common.data.schema.DataShape? {
         return if ((role == null || role == DataRole.main) && files.none { it.format != null }) {
             format.declaredShape()
@@ -191,6 +195,10 @@ class FileDataSource(
                 preflights[reference] ?: preflight(reference, info).also {
                     require(it.selectionKind == FormatSelectionKind.Explicit) {
                         "Per-file format override '$reference' for ${info.path.asString()} must be concrete"
+                    }
+                    require(it.format.readsContent) {
+                        "Per-file format override '$reference' for ${info.path.asString()} must read the file: " +
+                            "${it.format.title} applies to the whole source"
                     }
                     preflights[reference] = it
                 }

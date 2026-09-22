@@ -1,0 +1,22 @@
+# ArchiveListingTest: File (automatic format) over a .tar.gz -> ResultSink; one row per archive member
+main:
+  is: Job
+  results:
+    main:
+      class: kotlin.Any
+      generics: []
+      nullable: true
+
+main.channels/rows:
+  is: Channel
+
+main.workers/Archive:
+  is: FileSourceWorker
+  files:
+    - location: build/content-scope/listing/input.tar.gz
+  output: main.channels/rows
+
+main.workers/collect:
+  is: ResultSinkWorker
+  input: main.channels/rows
+  keep: all

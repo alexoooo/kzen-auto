@@ -1,7 +1,9 @@
 package tech.kzen.auto.client.objects.document.common.edit
 
+import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.model.structure.notation.AttributeNotation
 import tech.kzen.lib.common.model.structure.notation.cqrs.NotationCommand
@@ -76,6 +78,34 @@ object CommonEditUtils {
     }
 
 
+    // Plain-language copy an archetype declares beside an attribute's type (`meta.<attr>.label` / `.description`):
+    // the label replaces the name-derived default, the description is drawn beneath the field.
+    private const val labelKey = "label"
+    private const val descriptionKey = "description"
+    private val wordBoundary = Regex("([a-z0-9])([A-Z])")
+
+
+    fun declaredLabel(
+        graphStructure: GraphStructure, objectLocation: ObjectLocation, attributeName: AttributeName
+    ): String? =
+        declared(graphStructure, objectLocation, attributeName, labelKey)
+
+
+    fun declaredDescription(
+        graphStructure: GraphStructure, objectLocation: ObjectLocation, attributeName: AttributeName
+    ): String? =
+        declared(graphStructure, objectLocation, attributeName, descriptionKey)
+
+
+    private fun declared(
+        graphStructure: GraphStructure, objectLocation: ObjectLocation, attributeName: AttributeName, key: String
+    ): String? =
+        graphStructure.graphMetadata.get(objectLocation)
+            ?.attributes?.get(attributeName)
+            ?.attributeMetadataNotation?.get(key)?.asString()
+            ?.takeIf { it.isNotBlank() }
+
+
     fun formattedLabel(
         attributePath: AttributePath,
         labelOverride: String? = null
@@ -93,6 +123,7 @@ object CommonEditUtils {
             }
 
         val upperCamelCase = defaultLabel
+            .replace(wordBoundary, "$1 $2")
             .replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
 
         val results = Regex("\\w+").findAll(upperCamelCase)

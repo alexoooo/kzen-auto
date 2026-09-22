@@ -30,6 +30,10 @@ object JobConventions {
     val channelObjectName = ObjectName("Channel")
     val duplexChannelObjectName = ObjectName("DuplexChannel")
 
+    // Marker archetype (job-worker.yaml): a Worker that takes files whole rather than their contents, so an
+    // adjacent source on automatic emit hands it each file unread.
+    val fileConsumerObjectName = ObjectName("FileConsumer")
+
     // Semantic ChannelServer subtype (declared in common-job.yaml, no own `class:` so it resolves to the
     // ChannelServer class). A Worker declares its `serve` port as this to mark itself a summary source;
     // JobServeCapability classifies by inheritance-chain membership, so subtypes are recognized (see CC-17).
@@ -188,5 +192,12 @@ object JobConventions {
             val name = it.objectPath.name
             name == channelObjectName || name == duplexChannelObjectName
         }
+    }
+
+
+    fun isFileConsumer(graphNotation: GraphNotation, workerLocation: ObjectLocation): Boolean {
+        return workerLocation in graphNotation.coalesce && graphNotation
+            .inheritanceChain(workerLocation)
+            .any { it.objectPath.name == fileConsumerObjectName }
     }
 }

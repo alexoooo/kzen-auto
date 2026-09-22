@@ -100,6 +100,52 @@ object JobChannelDerivation {
     }
 
 
+    /**
+     * The Worker that drains [producer]'s output, whichever way the two are joined: by the order rule above, or by
+     * a manual wire to one shared Channel (which is also how every pair appears in a synthesized run-copy).
+     * Null when nothing consumes it, or when the producer has several outputs.
+     */
+    fun consumerOf(graphStructure: GraphStructure, producer: ObjectLocation): ObjectLocation? {
+        val derived = derive(graphStructure, producer.documentPath)
+            .connections
+            .firstOrNull { it.upstreamWorker == producer }
+        if (derived != null) {
+            return derived.downstreamWorker
+        }
+
+        val channel = wiredChannels(graphStructure, producer, JobChannelPorts.Kind.Output).singleOrNull()
+            ?: return null
+        val documentNotation = graphStructure.graphNotation.documents[producer.documentPath]
+            ?: return null
+        return documentNotation
+            .directNestedObjectPaths(NotationConventions.mainObjectPath, JobConventions.workersAttributeName)
+            .map { ObjectLocation(producer.documentPath, it) }
+            .firstOrNull { it != producer && channel in wiredChannels(graphStructure, it, JobChannelPorts.Kind.Input) }
+    }
+
+
+    private fun wiredChannels(
+        graphStructure: GraphStructure,
+        workerLocation: ObjectLocation,
+        kind: JobChannelPorts.Kind
+    ): List<ObjectLocation> {
+        val metadata = graphStructure.graphMetadata.get(workerLocation)
+            ?: return listOf()
+        return metadata.attributes.map
+            .filter { JobChannelPorts.kindOf(it.value.type) == kind }
+            .mapNotNull { (attributeName, _) ->
+                graphStructure.graphNotation
+                    .firstAttribute(workerLocation, AttributePath.ofName(attributeName))
+                    ?.asString()
+                    ?.takeIf { it.isNotBlank() }
+                    ?.let {
+                        graphStructure.graphNotation.coalesce.locateOptional(
+                            ObjectReference.parse(it), ObjectReferenceHost.ofLocation(workerLocation))
+                    }
+            }
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     private fun readWorkerPorts(workerLocation: ObjectLocation, graphStructure: GraphStructure): WorkerPorts {
         val openInputs = mutableListOf<AttributeName>()

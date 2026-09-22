@@ -7,6 +7,7 @@ import tech.kzen.auto.plugin.api.data.ReaderCapability
 import tech.kzen.auto.plugin.api.data.FormatAuthoringCapability
 import tech.kzen.auto.plugin.api.data.ReaderProbeCapability
 import tech.kzen.auto.server.context.runtime.KzenAutoRuntime
+import tech.kzen.auto.server.data.read.archive.ArchiveListingReaderCapability
 import tech.kzen.auto.server.data.read.delimited.ConfiguredDelimitedReaderCapability
 import tech.kzen.auto.server.data.read.text.PlainTextReaderCapability
 import java.util.ServiceLoader
@@ -21,6 +22,7 @@ class ReaderCapabilityRegistry(
         ): ReaderCapabilityRegistry = ReaderCapabilityRegistry(buildList {
             add(ConfiguredDelimitedReaderCapability)
             add(PlainTextReaderCapability)
+            add(ArchiveListingReaderCapability)
             ServiceLoader.load(ReaderCapability::class.java, classLoader).forEach { add(it) }
         })
 
@@ -33,6 +35,7 @@ class ReaderCapabilityRegistry(
         fun forRuntime(runtime: KzenAutoRuntime): ReaderCapabilityRegistry = ReaderCapabilityRegistry(buildList {
             add(ConfiguredDelimitedReaderCapability)
             add(PlainTextReaderCapability)
+            add(ArchiveListingReaderCapability)
             runtime.readerDescriptors().forEach { add(it.instantiate()) }
         })
 

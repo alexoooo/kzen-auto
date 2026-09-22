@@ -29,6 +29,10 @@ import tech.kzen.lib.common.service.store.MirroredGraphStore
 external interface SelectValuesEditorState: State {
     // Ordered key -> label options, read from the attribute's `meta.<attr>.values` map notation.
     var options: Map<String, String>?
+
+    // Optional key -> one-line explanation, from the sibling `meta.<attr>.details` map; drawn under the option.
+    var details: Map<String, String>?
+    var label: String?
     var value: String?
 }
 
@@ -65,6 +69,7 @@ class SelectValuesEditor(
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private val valuesAttributePath = AttributePath.parse("values")
+        private val detailsAttributePath = AttributePath.parse("details")
     }
 
 
@@ -86,18 +91,36 @@ class SelectValuesEditor(
             ?.entries
             ?.associate { (key, label) -> key.asKey() to (label.asString() ?: key.asKey()) }
 
+        val details = (graphStructure
+            .graphMetadata
+            .get(props.objectLocation)
+            ?.attributes
+            ?.get(props.attributeName)
+            ?.attributeMetadataNotation
+            ?.get(detailsAttributePath.toNesting())
+                as? MapAttributeNotation)
+            ?.map
+            ?.entries
+            ?.mapNotNull { (key, detail) -> detail.asString()?.let { key.asKey() to it } }
+            ?.toMap()
+
+        val label = CommonEditUtils.declaredLabel(graphStructure, props.objectLocation, props.attributeName)
+
         val value = (graphStructure
             .graphNotation
             .firstAttribute(props.objectLocation, props.attributeName)
                 as? ScalarAttributeNotation)
             ?.value
 
-        if (state.options == options && state.value == value) {
+        if (state.options == options && state.value == value &&
+            state.details == details && state.label == label) {
             return
         }
 
         setState {
             this.options = options
+            this.details = details
+            this.label = label
             this.value = value
         }
     }
@@ -130,13 +153,14 @@ class SelectValuesEditor(
                 val option: SelectOption = unsafeJso {
                     this.value = key
                     this.label = label
+                    state.details?.get(key)?.let { this.detail = it }
                 }
                 option
             }
             .toTypedArray()
 
         muiAutocompleteField(
-            label = CommonEditUtils.formattedLabel(AttributePath.ofName(props.attributeName)),
+            label = CommonEditUtils.formattedLabel(AttributePath.ofName(props.attributeName), state.label),
             options = selectOptions,
             selectedOption = selectOptions.find { it.value == state.value },
             onSelect = { onValueChange(it.value) },

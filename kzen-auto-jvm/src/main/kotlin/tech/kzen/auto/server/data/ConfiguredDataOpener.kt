@@ -154,8 +154,8 @@ class ConfiguredDataOpener(
         UndetectedFormat.refusalOrNull(part.resolvedRead)?.let { reason ->
             throw FormatDetectionException(
                 FormatDetectionFailureCategory.Resolution,
-                "No installed format reads ${part.ref.display()}: $reason. To pass the file on whole " +
-                    "(to Extract), set the File source's Emit to Units")
+                "${part.ref.display()} cannot be read: $reason. It can still be passed on whole to a step " +
+                    "that takes files, such as Extract")
         }
         val capability = readerCapabilities.resolve(part.resolvedRead.reader)
         val config = readerCapabilities.decodeValidateCanonicalize(part.resolvedRead)

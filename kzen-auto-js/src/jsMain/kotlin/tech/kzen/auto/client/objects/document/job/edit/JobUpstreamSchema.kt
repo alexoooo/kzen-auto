@@ -10,6 +10,7 @@ import tech.kzen.auto.common.data.schema.DataShape
 import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.auto.common.data.schema.LegacyDataShapeBridge
 import tech.kzen.auto.common.objects.document.job.JobChannelDerivation
+import tech.kzen.auto.common.objects.document.job.JobReadEmit
 import tech.kzen.auto.common.objects.document.job.JobServeCapability
 import tech.kzen.auto.common.objects.document.report.summary.TableSummary
 import tech.kzen.lib.common.exec.data.type.DataContract
@@ -207,7 +208,8 @@ object JobUpstreamSchema {
 
         return ReadProjectionConfig(
             source,
-            setting(DataSourceConventions.shapeEmitAttributeName) ?: return null,
+            JobReadEmit.effective(
+                setting(DataSourceConventions.shapeEmitAttributeName) ?: return null, graphStructure, host),
             setting(DataSourceConventions.shapeRoleAttributeName) ?: return null,
             setting(DataSourceConventions.shapeAttributesAttributeName) ?: return null,
             setting(DataSourceConventions.shapeSchemaModeAttributeName) ?: return null)

@@ -141,11 +141,14 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > source between entries and a bounded channel below it keeps draining; `JobControl.retain` and `yieldResult`
 > refuse a lent element by name, since a hold past the callback would hang the source (`Write` and `ReadPartWorker`
 > over an `Entry` consume it inside the callback and emit independent values); the lender is either a source
-> (`CursorSourceWorker`) or the `Extract` transform below the one `File` selector (`File` with `emit: units`
-> emits whole files as `DataUnit`s; `ExtractWorker` opens each as a `.tar.gz` and lends its members, nested
-> archives through an `Entry` input), both over the shared lend / await-release loop `CursorLending`; a file no
-> installed format claims stays in the selection as `UndetectedFormat` and is refused only when a reader opens
-> it; a `TakeWorker` downstream of any
+> (`CursorSourceWorker`) or the `Extract` transform below the one `File` selector (`emit` defaults to
+> `auto`, which `JobReadEmit` settles from the step below: a `FileConsumer`-marked Worker — `Extract`, `Read part`
+> — gets whole files as `DataUnit`s, anything else their contents, with the `WholeFile` format forcing whole
+> files for a source; `ExtractWorker` opens each as a `.tar.gz` and lends its members, nested
+> archives through an `Entry` input), both over the shared lend / await-release loop `CursorLending`; reading a
+> tar(.gz) rather than extracting it yields its table of contents (`ArchiveListingFormat`, one row per member,
+> content-detected); a file no installed format claims stays in the selection as `UndetectedFormat` and is
+> refused only when a reader opens it; a `TakeWorker` downstream of any
 > source ends the run cleanly, the closed downstream (`DownstreamClosedException`) completing the source,
 > transform and expanding drive loops without draining; a live edit that changes a running source's selection (a
 > `File` selection, a `Read` data source: `WorkerBase.migrationKey`, read from notation by the

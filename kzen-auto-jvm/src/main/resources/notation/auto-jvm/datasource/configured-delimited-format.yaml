@@ -201,3 +201,27 @@ PlainTextFormat:
 
 PlainText:
   is: PlainTextFormat
+
+ArchiveListingFormat:
+  abstract: true
+  is: ConfiguredRecordFormat
+  class: tech.kzen.auto.server.objects.datasource.format.ArchiveListingFormat
+  title: "Archive listing"
+  extensions:
+    - tar
+    - tgz
+  catalogVisible: true
+
+ArchiveListing:
+  is: ArchiveListingFormat
+
+WholeFileFormat:
+  abstract: true
+  is: ConfiguredRecordFormat
+  class: tech.kzen.auto.server.objects.datasource.format.WholeFileFormat
+  title: "Whole file (don't read)"
+  extensions: []
+  catalogVisible: true
+
+WholeFile:
+  is: WholeFileFormat

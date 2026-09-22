@@ -16,8 +16,8 @@ import tech.kzen.lib.common.exec.TextExecutionValue
 
 /**
  * The resolution of a selected file that no installed format claims (borrowed elements BE5, one file selector):
- * the file stays in the selection as opaque bytes, because a whole-file consumer — `Extract`, or a `File`
- * source with Emit set to Units — never needs a reader; only a reader asked to open it is refused, in the
+ * the file stays in the selection as opaque bytes, because a whole-file consumer (`Extract`, which an adjacent
+ * `File` source feeds unread) never needs a reader; only a reader asked to open it is refused, in the
  * detector's own words ([refusalOrNull]). Detection failures other than [FormatDetectionFailureCategory.Resolution]
  * (a timeout, an unreadable file) still fail the selection.
  */
@@ -25,7 +25,7 @@ object UndetectedFormat {
     //-----------------------------------------------------------------------------------------------------------------
     val identity = ReaderCapabilityIdentity("tech.kzen.auto", "undetected", "1")
 
-    private const val displayLabel = "Undetected"
+    private const val displayLabel = "Whole file (not readable)"
     private const val reasonKey = "reason"
 
 
@@ -37,10 +37,7 @@ object UndetectedFormat {
     fun resolve(request: FormatResolutionRequest, failure: FormatDetectionException): FormatResolutionResult {
         val reason = failure.message ?: "No installed format claims the input"
         return FormatResolutionResult(
-            ResolvedReadSpec(
-                identity,
-                listOf(ContentCodingSpec.identity),
-                MapExecutionValue(linkedMapOf(reasonKey to TextExecutionValue(reason)))),
+            unread(reason),
             FormatResolutionDetail(
                 request.ref,
                 null,
@@ -50,6 +47,14 @@ object UndetectedFormat {
                 reason,
                 warning = "No installed format reads this file; it can be passed on whole but not read"))
     }
+
+
+    /** The spec of a file that is carried but never opened, for the stated [reason]. */
+    fun unread(reason: String): ResolvedReadSpec =
+        ResolvedReadSpec(
+            identity,
+            listOf(ContentCodingSpec.identity),
+            MapExecutionValue(linkedMapOf(reasonKey to TextExecutionValue(reason))))
 
 
     /** The detector's refusal when [spec] is an undetected file, null for any real reader. */

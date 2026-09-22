@@ -47,6 +47,7 @@ class DefaultAttributeEditor(
         val wrapperName = ObjectName("DefaultAttributeEditor")
 
         private const val multilineKey = "multiline"
+        private const val labelKey = "label"
     }
 
 
@@ -177,6 +178,7 @@ class DefaultAttributeEditor(
                 TextAttributeEditor::class.react {
                     objectLocation = props.objectLocation
                     attributePath = path
+                    labelOverride = attributeMetadataNotation.get(labelKey)?.asString()
 
                     value = scalarValue ?: ""
 
@@ -211,6 +213,7 @@ class DefaultAttributeEditor(
                 MultiTextAttributeEditor::class.react {
                     objectLocation = props.objectLocation
                     attributePath = path
+                    labelOverride = attributeMetadataNotation.get(labelKey)?.asString()
 
                     value = listValues ?: listOf()
                     unique = className == ClassNames.kotlinSet

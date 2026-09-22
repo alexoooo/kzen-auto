@@ -38,7 +38,7 @@ class ConfiguredRecordFormatRegistry(
                 registered.format.overrideEditorReference,
                 authoring != null,
                 authoring?.supportsColumnLocking == true,
-                registered.format.selectionKind == FormatSelectionKind.Explicit)
+                registered.format.selectionKind == FormatSelectionKind.Explicit && registered.format.readsContent)
         },
         TextEncodingCatalog.available())
 
@@ -104,7 +104,14 @@ class ConfiguredRecordFormatRegistry(
             if (!format.automaticDetectionCandidate) {
                 return@mapNotNull null
             }
-            val resolved = format.resolve(request).resolvedRead
+            // A format that refuses the request outright (a binary one under an explicit text encoding) is simply
+            // not a candidate for it; the refusal must not fail detection for the formats that do apply.
+            val resolved = try {
+                format.resolve(request).resolvedRead
+            }
+            catch (_: IllegalArgumentException) {
+                return@mapNotNull null
+            }
             if (readerCapabilities.probeFor(resolved.reader) == null) {
                 return@mapNotNull null
             }

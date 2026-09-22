@@ -76,7 +76,7 @@ data class FileResolutionPresentation(
             FormatResolutionBasis.Override -> "explicit format"
             FormatResolutionBasis.Extension -> "file extension"
             FormatResolutionBasis.Content -> "file contents"
-            FormatResolutionBasis.Fallback -> "text fallback"
+            FormatResolutionBasis.Fallback -> "no closer match"
         }
     }
 }
