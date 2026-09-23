@@ -57,15 +57,17 @@ class JobDownloadRouteTest {
             Regex("""^attachment; filename\*=utf-8''DownloadRouteProbe_\d{8}_\d{6}_\d{3}\.csv$""")
 
         // KzenAutoContext parses the whole notation corpus and validates the service environment, so one
-        // instance serves the class rather than one per test method.
-        private lateinit var context: KzenAutoContext
+        // instance serves the class rather than one per test method. Nullable so teardown can drop it: a
+        // companion field outlives the class, and would pin the closed context for the rest of the test JVM.
+        private var contextOrNull: KzenAutoContext? = null
+        private val context get() = contextOrNull!!
         private lateinit var probeDir: Path
 
 
         @BeforeClass
         @JvmStatic
         fun setUp() {
-            context = KzenAutoContext.forTest()
+            contextOrNull = KzenAutoContext.forTest()
 
             probeDir = context.jobWorkPool.workerOutputDir(probeLocation)
             Files.createDirectories(probeDir)
@@ -92,6 +94,7 @@ class JobDownloadRouteTest {
                 WorkUtils.recursivelyDeleteDir(probeDir)
             }
             context.close()
+            contextOrNull = null
         }
     }
 

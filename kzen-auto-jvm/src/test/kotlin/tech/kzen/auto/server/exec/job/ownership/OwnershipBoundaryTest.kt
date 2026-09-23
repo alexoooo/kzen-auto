@@ -135,7 +135,9 @@ class OwnershipBoundaryTest {
         }
         finally { engine.close() }
         assertTrue(OwnedSourceWorker.orders.isNotEmpty())
-        assertTrue(OwnedSourceWorker.orders.all { it.closes == 1 })
+        assertTrue(
+            OwnedSourceWorker.orders.all { it.closes == 1 },
+            OwnedSourceWorker.orders.map { it.symbol to it.closes }.toString())
     }
 
     @Test

@@ -104,9 +104,12 @@ class ConfiguredDataOpener(
 
 
     override suspend fun inspectShape(context: DataContext, part: DataPart): DataShape {
-        val key = SchemaCacheKey.of(part, policies.inspection)
-        key?.let(schemaCache::get)?.let { return it }
         val resolved = resolve(part)
+        resolved.capability.fixedShape(resolved.config)?.let { return it }
+
+        val key = SchemaCacheKey.of(
+            part, policies.inspection, CodeFingerprint.forReader(resolved.capability::class.java))
+        key?.let(schemaCache::get)?.let { return it }
         val required = resolved.capability.requiredContent(resolved.config)
         val bytes = contentStack.openBytes(
             context,

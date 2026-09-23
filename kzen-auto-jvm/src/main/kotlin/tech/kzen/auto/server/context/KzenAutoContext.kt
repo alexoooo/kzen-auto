@@ -82,6 +82,7 @@ import tech.kzen.lib.server.notation.locate.FileNotationLocator
 import tech.kzen.lib.server.notation.locate.GradleLocator
 import tech.kzen.lib.server.reflect.ReflectiveClassMirror
 import java.lang.AutoCloseable
+import java.nio.file.Path
 import java.nio.file.Paths
 
 
@@ -139,11 +140,34 @@ class KzenAutoContext private constructor(
 
         // Defaulted config for tests that drive in-process logic and don't need a real port/host. Each test
         // context gets its own temporary work root: the standalone default is one root per process, and a
-        // test that never closes its context would otherwise hold that root against every later test.
+        // test that never closes its context would otherwise hold that root against every later test. The
+        // context owns that root, so close deletes it (a suite run otherwise left hundreds behind).
         fun forTest(): KzenAutoContext {
-            return create(KzenAutoConfig(
-                jsModuleName = "kzen-auto-js",
-                workRoot = kotlin.io.path.createTempDirectory("kzen-auto-test-work")))
+            val workRoot = kotlin.io.path.createTempDirectory("kzen-auto-test-work")
+            val context = try {
+                create(KzenAutoConfig(
+                    jsModuleName = "kzen-auto-js",
+                    workRoot = workRoot))
+            }
+            catch (failure: Throwable) {
+                deleteTemporaryWorkRoot(workRoot)
+                throw failure
+            }
+            context.temporaryWorkRoot = true
+            return context
+        }
+
+
+        // Best effort: a leftover temp dir is not worth failing a test's teardown over
+        private fun deleteTemporaryWorkRoot(workRoot: Path) {
+            try {
+                if (Files.exists(workRoot)) {
+                    WorkUtils.deleteDirThrowing(workRoot)
+                }
+            }
+            catch (e: Exception) {
+                logger.warn("Could not delete temporary work root {}", workRoot, e)
+            }
         }
 
 
@@ -157,6 +181,10 @@ class KzenAutoContext private constructor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    // Set by forTest only: the work root was created for this context alone, so close deletes it
+    @Volatile
+    private var temporaryWorkRoot = false
+
     val notationMetadataReader = NotationMetadataReader()
 
     private val fileLocator: FileNotationLocator = GradleLocator(
@@ -394,7 +422,12 @@ class KzenAutoContext private constructor(
         // opened with closePolicy Auto/KeepOnFailure) via the engine.
         val joined = serverLogicController.closeAndJoin()
         if (joined) {
+            // Nothing runs any more: release the compiled-code jar handles rather than leave them to GC
+            cachedKotlinCompiler.releaseLoaded()
             workRootClaim.release()
+            if (temporaryWorkRoot) {
+                deleteTemporaryWorkRoot(workRootClaim.realPath)
+            }
         }
         else {
             logger.error("Active execution did not join during close; work root {} stays claimed", workUtils.base())

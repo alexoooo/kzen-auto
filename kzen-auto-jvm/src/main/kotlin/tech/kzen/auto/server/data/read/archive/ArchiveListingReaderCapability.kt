@@ -63,6 +63,12 @@ object ArchiveListingReaderCapability: BlockingReaderCapability(), BlockingReade
     }
 
 
+    override fun fixedShape(config: ReaderConfig): DataShape {
+        validate(config)
+        return shape
+    }
+
+
     // The columns are fixed, and walking headers to confirm them would decompress past the inspection byte limit
     // on any archive whose first member is large.
     override fun inspectBlocking(request: ReaderInspectionRequest): DataShape {

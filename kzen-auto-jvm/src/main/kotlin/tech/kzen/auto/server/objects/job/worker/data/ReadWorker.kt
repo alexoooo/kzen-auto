@@ -8,7 +8,6 @@ import tech.kzen.auto.common.data.model.DataManifest
 import tech.kzen.auto.common.data.model.DataRole
 import tech.kzen.auto.common.data.model.DataUnit
 import tech.kzen.auto.common.data.schema.DataShape
-import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.auto.common.data.schema.LegacyDataShapeBridge
 import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.auto.common.objects.document.job.JobReadEmit
@@ -27,12 +26,11 @@ import tech.kzen.auto.server.objects.job.worker.definition.WorkerDefinitionResol
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.location.ObjectReference
-import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.util.digest.Digest
-import tech.kzen.lib.platform.ClassName
+import kotlin.reflect.typeOf
 
 
 /**
@@ -67,8 +65,8 @@ open class ReadWorker(
         const val attributesIgnore = "ignore"
         const val attributesColumns = "columns"
 
-        private val dataUnitType = TypeMetadata(
-            ClassName(DataUnit::class.qualifiedName!!), emptyList(), false)
+        // The described record, exactly as each emitted unit lifts, so downstream ordinal accessors line up
+        private val dataUnitContract by lazy { JobDataValues.describe(typeOf<DataUnit>()) }
         private val logger = LoggerFactory.getLogger(ReadWorker::class.java)
         private val sourceAttribute = AttributeName("source")
     }
@@ -382,7 +380,7 @@ open class ReadWorker(
         val dataSource = resolved.value as DataSource
         if (effectiveEmit == emitUnits) {
             return JobLaneAttempt(
-                JobLaneDescriptor(dataUnitType, HeaderListing.empty), null)
+                JobLaneDescriptor(dataUnitContract), null)
         }
 
         val staticShape = dataSource.staticShape(

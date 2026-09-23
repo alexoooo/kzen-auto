@@ -104,6 +104,10 @@ class JobExternalBridgeTest {
                     "request crossed the bridge rather than hitting an empty handler")
         }
         finally {
+            // Cancel the paused run before close, as the controller does: close only stops the pools, leaving the
+            // parked Job run (and its deadlock-monitor thread) suspended for the rest of the test JVM
+            engine.cancel()
+            engine.awaitQuiescent()
             engine.close()
         }
     }

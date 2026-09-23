@@ -1,13 +1,7 @@
 package tech.kzen.auto.server.service.compile
 
-import org.jetbrains.kotlin.K1Deprecation
-import org.jetbrains.kotlin.cli.jvm.compiler.EnvironmentConfigFiles
-import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment
-import org.jetbrains.kotlin.com.intellij.openapi.project.Project
-import org.jetbrains.kotlin.com.intellij.openapi.util.Disposer
 import org.jetbrains.kotlin.com.intellij.psi.PsiErrorElement
 import org.jetbrains.kotlin.com.intellij.psi.util.PsiTreeUtil
-import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.psi.KtPsiFactory
 
 
@@ -35,22 +29,6 @@ class KotlinSyntaxValidator {
         // parameter list and mask an error. The newlines keep the expression's own offsets un-shifted.
         private const val probePrefix = "fun probe() {\n"
         private const val probeSuffix = "\n}"
-
-        // KotlinCoreEnvironment registers application-level extensions, so it is built once per JVM and never
-        // disposed: a create/dispose cycle per instance costs seconds and risks double-registration across the
-        // many KzenAutoContext lifecycles a test run creates. Parsing is stateless, so one project serves all.
-        //
-        // K1-tagged because it predates the K2 frontend, but parsing is frontend-independent — the PSI tree and
-        // its PsiErrorElements are what both frontends read, and no resolution happens here.
-        @OptIn(K1Deprecation::class, CompilerConfiguration.Internals::class)
-        private val probeProject: Project by lazy {
-            KotlinCoreEnvironment
-                .createForProduction(
-                    Disposer.newDisposable(KotlinSyntaxValidator::class.java.simpleName),
-                    CompilerConfiguration(),
-                    EnvironmentConfigFiles.JVM_CONFIG_FILES)
-                .project
-        }
     }
 
 
@@ -63,7 +41,9 @@ class KotlinSyntaxValidator {
     fun validate(expression: String): String? {
         val probeCode = probePrefix + expression + probeSuffix
 
-        val probeFile = KtPsiFactory(probeProject, markGenerated = false)
+        // Parsing is stateless and frontend-independent (both frontends read the same PSI tree and its
+        // PsiErrorElements; nothing is resolved), so the one standing project serves every check
+        val probeFile = KtPsiFactory(KotlinApplicationEnvironment.project, markGenerated = false)
             .createFile(probeFileName, probeCode)
 
         val error = PsiTreeUtil.findChildOfType(probeFile, PsiErrorElement::class.java)

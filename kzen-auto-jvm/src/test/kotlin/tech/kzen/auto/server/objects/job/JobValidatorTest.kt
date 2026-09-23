@@ -393,6 +393,10 @@ class JobValidatorTest {
 
 
     private fun validate(path: String): JobValidation {
+        // A test may validate several documents: close the context this one replaces, not just the last
+        if (::context.isInitialized) {
+            context.close()
+        }
         context = KzenAutoContext.forTest()
         val documentPath = DocumentPath.parse(path)
 

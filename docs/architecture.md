@@ -255,6 +255,17 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > `KotlinCodeArea` ([`js-architecture.md` § 8](js-architecture.md#8-kotlincodearea--the-syntax-highlighted-expression-field)),
 > and `FormulaMapEditor`.
 
+> **One standing compiler project per JVM.** Every compile is isolated (`ScriptJvmCompilerIsolated` builds and
+> disposes its own `KotlinCoreEnvironment`), but the Kotlin compiler tears down its shared application
+> environment — parsed classpath jar indexes included — whenever its last project closes.
+> `KotlinApplicationEnvironment` holds one project open for the life of the JVM (the syntax validator parses in
+> it; the compiler only retains it), so each classpath jar is indexed once rather than on every compile, about a
+> fifth of a compile's cost. It is never disposed: the environment registers application-level extensions.
+> Likewise `ScriptKotlinCompiler` derives a class loader's classpath (a stat of every entry) once per loader,
+> not per compile — the runtime's aggregate loader is fixed for its life. On the other end, `KzenAutoContext.close`
+> releases the compiled-expression class loaders once its run has joined, rather than leaving each jar handle
+> open (and, on Windows, undeletable) until garbage collection.
+
 > **Expression error positions — user-relative, end to end.** A Script expression's validation error carries a
 > **character offset into the user's own text**, so the field marks the offending token instead of printing an
 > undifferentiated message under the card. The chain:
@@ -770,6 +781,15 @@ kzen-lib's `DataContract` are); the live `DataNode` API is Kotlin value classes,
 through `LiteralDataValues.lift(RecordLiteral.of(map), contract)` and a Java test reads them back through a
 `DataSnapshot`. A probing reader is keyed by its full `ReaderCapabilityIdentity` — `compatibility` is that
 reader's own version tag (`"1"` is everyone's first), not a global probe name.
+
+**Inspected shapes are cached per code, not just per content.** `ConfiguredDataOpener.inspectShape` persists each
+inspected shape under the work root's `index/` (`SchemaCache`), keyed by the part, the inspection policy, and a
+`CodeFingerprint` of the reader's code: the host jars (or class directories) plus the one the reader class came from.
+A rebuilt reader or a replaced plugin jar therefore misses rather than serving a shape its current code no longer
+produces — which a job run rejects outright, since the cursor's opened shape must equal the inspected one. A reader
+whose shape its config alone determines (the archive listing) overrides `ReaderCapability.fixedShape`; inspection then
+returns it without reading content or caching it. Do not bump a reader's `compatibility` just to invalidate
+shapes: resolution matches it exactly, so a bump orphans every read already resolved against the old tag.
 
 **Detecting a plugin's format.** Automatic detection samples bytes, and a sample that is not text under any
 permitted encoding still reaches every eligible probe (no character view; the text failure is what the user sees

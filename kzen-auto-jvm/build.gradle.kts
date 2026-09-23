@@ -221,6 +221,15 @@ tasks.test {
 
     // Boot-universe tests each need their own JVM (below); the shared test JVM pins one universe for its lifetime.
     exclude("**/context/runtime/boot/**")
+
+    // Gradle's 512m default leaves the Kotlin script compiler's working set no headroom: the shared JVM spends a
+    // third of the suite in back-to-back full GCs
+    maxHeapSize = "2g"
+
+    // Disruptor's single-producer thread assertion records every sequencer in a static map it never clears, so
+    // under the test task's -ea each finished report pipeline (ring buffers, run context, compiled classes)
+    // stayed reachable for the rest of the shared JVM. Production runs without -ea and never took that path.
+    jvmArgs("-da:com.lmax.disruptor...")
 }
 
 

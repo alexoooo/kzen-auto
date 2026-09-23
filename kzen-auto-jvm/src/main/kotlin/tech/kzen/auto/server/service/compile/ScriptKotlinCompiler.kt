@@ -6,6 +6,8 @@ import tech.kzen.auto.server.service.compile.KotlinCode.Companion.classNamePrefi
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.Collections
+import java.util.WeakHashMap
 import kotlin.reflect.KClass
 import kotlin.script.experimental.annotations.KotlinScript
 import kotlin.script.experimental.api.KotlinType
@@ -33,6 +35,18 @@ open class ScriptKotlinCompiler: KotlinCompiler {
             ScriptKotlinCompiler::class.java.kotlin)
 
         private val contextClass: KClass<*> = ScriptCompilationConfiguration::class.java.kotlin
+
+        // Deriving a loader's classpath stats every entry on it, per compile; a loader's classpath is fixed for
+        // its life (the runtime pins its aggregate), so it is derived once. Weak keys: a closed loader drops out.
+        private val classloaderClasspaths: MutableMap<ClassLoader, List<File>> =
+            Collections.synchronizedMap(WeakHashMap())
+
+
+        private fun classloaderClasspath(classLoader: ClassLoader): List<File> {
+            return classloaderClasspaths.computeIfAbsent(classLoader) {
+                classpathFromClassloader(it, false)!!
+            }
+        }
 
         /**
          * The single diagnostic to report, and the user-relative position it points at when it has one.
@@ -131,6 +145,8 @@ open class ScriptKotlinCompiler: KotlinCompiler {
                 outputJarFile)
         }
 
+        // The isolated compile disposes its own project when done; the standing one keeps the jar indexes
+        KotlinApplicationEnvironment.retain()
         val scriptCompilerProxy = ScriptJvmCompilerIsolated(defaultJvmScriptingHostConfiguration)
 
         val result = scriptCompilerProxy.compile(
@@ -157,7 +173,7 @@ open class ScriptKotlinCompiler: KotlinCompiler {
             // classpathFromClassloader walks URLClassLoader chains and sees nothing through the runtime's
             // delegating aggregate loader, so the plugin jars are added explicitly; class identity still holds
             // because the compiled script's loader delegates through that same aggregate.
-            val classloaderClasspath: List<File> = classpathFromClassloader(classLoader, false)!!
+            val classloaderClasspath: List<File> = classloaderClasspath(classLoader)
             val pluginClasspath = KzenAutoRuntime.currentOrDefault().pluginClasspath().map { it.toFile() }
             val classpathFiles = classloaderClasspath + pluginClasspath + classpathLocations.map { it.toFile() }
             updateClasspath(classpathFiles)

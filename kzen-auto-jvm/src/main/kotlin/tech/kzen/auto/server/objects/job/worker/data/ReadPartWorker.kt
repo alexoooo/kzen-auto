@@ -376,7 +376,8 @@ class ReadPartWorker(
 
         val inputType = input.contract.nativeByPath[DataTypePath.root]
         val structural = input.contract.structural
-        val unit = structural is DataType.Opaque && !structural.nullable &&
+        // A unit is identified by its native root type, whether its lane describes the record or leaves it opaque
+        val unit = !structural.nullable &&
             inputType != null &&
             inputType.className == dataUnitClassName &&
             inputType.generics.isEmpty() &&

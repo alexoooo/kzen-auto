@@ -340,6 +340,18 @@ class CachedKotlinCompiler(
     }
 
 
+    /**
+     * Releases every loaded classloader, for an owner shutting down with nothing left running: each holds its jar
+     * open until garbage collection otherwise, which on Windows pins the work root's files. A Class already
+     * handed out keeps executing (see [defineJarClasses]); a later request reloads from the durable jar.
+     */
+    fun releaseLoaded() {
+        for (signature in loadedClasses.asMap().keys.toList()) {
+            loadedClasses.asMap().remove(signature)?.close()
+        }
+    }
+
+
     //-----------------------------------------------------------------------------------------------------------------
     fun attachEvictor(evictor: StorageLruEvictor) {
         check(this.evictor == null) { "Evictor already attached" }

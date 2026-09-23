@@ -63,6 +63,15 @@ class ForEachItemsTest {
     }
 
 
+    // A test may call several helpers, each on a fresh context: close the one it replaces, not just the last
+    private fun freshContext() {
+        if (::context.isInitialized) {
+            context.close()
+        }
+        context = KzenAutoContext.forTest()
+    }
+
+
     //---------------------------------------------------------------------------------------------- element type
     @Test
     fun anInlineRangeNeedsNoUpstreamProducerStep() {
@@ -242,7 +251,7 @@ class ForEachItemsTest {
 
     private fun validationOf(documentPath: DocumentPath): ScriptValidation {
         ScriptStepTestModule.register()
-        context = KzenAutoContext.forTest()
+        freshContext()
 
         val graphNotation = AutoTestUtils.readNotation()
         val stepGraphDefinition = AutoTestUtils
@@ -259,7 +268,7 @@ class ForEachItemsTest {
 
     private fun runScript(documentPath: DocumentPath): Outcome {
         ScriptStepTestModule.register()
-        context = KzenAutoContext.forTest()
+        freshContext()
 
         val scriptLocation = ObjectLocation(documentPath, ObjectPath.parse("main"))
 

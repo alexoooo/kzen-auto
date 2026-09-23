@@ -66,9 +66,11 @@ class DetachedDownloadRouteTest {
             """^attachment; filename\*=utf-8''""" + Regex.escape(StreamedCsvDownloadAction.fileName) + "$")
 
         // KzenAutoContext parses the whole notation corpus and validates the service environment, so one
-        // instance serves the class rather than one per test method.
+        // instance serves the class rather than one per test method. Nullable so teardown can drop it: a
+        // companion field outlives the class, and would pin the closed context for the rest of the test JVM.
         private lateinit var moduleRoot: Path
-        private lateinit var context: KzenAutoContext
+        private var contextOrNull: KzenAutoContext? = null
+        private val context get() = contextOrNull!!
 
 
         @BeforeClass
@@ -81,7 +83,7 @@ class DetachedDownloadRouteTest {
             Files.createDirectories(notationDir)
             Files.writeString(notationDir.resolve(fixtureDocumentName), fixtureNotation)
 
-            context = KzenAutoContext.create(KzenAutoConfig(
+            contextOrNull = KzenAutoContext.create(KzenAutoConfig(
                 jsModuleName = kzenAutoJsModuleName,
                 moduleRoot = moduleRoot))
         }
@@ -91,6 +93,7 @@ class DetachedDownloadRouteTest {
         @JvmStatic
         fun tearDown() {
             context.close()
+            contextOrNull = null
             WorkUtils.recursivelyDeleteDir(moduleRoot)
         }
     }

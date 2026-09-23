@@ -18,6 +18,7 @@ import tech.kzen.auto.server.data.read.delimited.ConfiguredDelimitedReaderCapabi
 import tech.kzen.auto.server.data.read.text.PlainTextReaderCapability
 import java.io.ByteArrayOutputStream
 import java.util.zip.GZIPOutputStream
+import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -26,9 +27,18 @@ import kotlin.test.assertTrue
 
 
 class AutomaticFormatResolverTest {
+    // JUnit makes an instance per test, so each test gets (and closes) its own context
+    private val context = KzenAutoContext.forTest()
+
+
+    @AfterTest
+    fun tearDown() {
+        context.close()
+    }
+
+
     @Test
     fun semanticMarkdownStaysPlainTextAndContentFindsDelimitedFormats() = runBlocking {
-        val context = KzenAutoContext.forTest()
 
         val markdown = resolve(context, "\n# Heading\n| a | b |".encodeToByteArray(), "README.md", "md")
         assertEquals(PlainTextReaderCapability.identity, markdown.result.resolvedRead.reader)
@@ -43,7 +53,6 @@ class AutomaticFormatResolverTest {
 
     @Test
     fun csvFamilyChoosesCommaOrRegionalSemicolonWithoutFalseAmbiguity() = runBlocking {
-        val context = KzenAutoContext.forTest()
         val comma = resolve(context, "name,count\nalice,1".encodeToByteArray(), "orders.csv", "csv")
         val regional = resolve(context, "name;count\nalice;1".encodeToByteArray(), "orders.csv", "csv")
 
@@ -54,7 +63,6 @@ class AutomaticFormatResolverTest {
 
     @Test
     fun mixedCaseGzipSuffixKeepsThePrecedingFormatHintAndWarmCacheReadsNothing() = runBlocking {
-        val context = KzenAutoContext.forTest()
         val bytes = gzip("name,count\nalice,1".encodeToByteArray())
         val source = DataSourceId("memory")
         val fingerprint = fakeFingerprint("gzip-v1")
@@ -86,7 +94,6 @@ class AutomaticFormatResolverTest {
 
     @Test
     fun genericTextHintsPreserveOrdinaryAndEmptyTextButAdmitStrongTsv() = runBlocking {
-        val context = KzenAutoContext.forTest()
 
         for ((name, extension, content) in listOf(
             Triple("notes.txt", "txt", "ordinary notes\nsecond line"),
@@ -108,7 +115,6 @@ class AutomaticFormatResolverTest {
 
     @Test
     fun malformedAndUnsafeCharacterInputsNeverSilentlyFallBack() = runBlocking {
-        val context = KzenAutoContext.forTest()
         assertFailsWith<FormatDetectionException> {
             resolve(context, "name,value\n\"broken".encodeToByteArray(), "broken.csv", "csv")
         }

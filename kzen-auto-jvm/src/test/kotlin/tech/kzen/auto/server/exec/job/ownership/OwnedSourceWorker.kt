@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.exec.job.ownership
 
+import kotlinx.coroutines.CancellationException
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.server.objects.job.value.JobDataValues
@@ -64,17 +65,30 @@ class OwnedSourceWorker(
             val name = names[nextIndex]
             nextIndex += 1
             val arena = permits
-            val element: Any = control.runBlockingIo {
-                if (arena != null && !arena.tryAcquire(permitTimeoutSeconds, TimeUnit.SECONDS)) {
-                    throw IllegalStateException("arena permit for $name not released: an owned item is stuck in a buffer")
+            // A produce body owns what it creates until the send adopts it (E9 ingress scope), and a cancel that
+            // wins runBlockingIo's return dispatch discards the created element — so the body records it, and a
+            // cancelled hand-off closes it. Entering the send adopts synchronously, before any suspension.
+            var created: AutoCloseable? = null
+            val element: Any = try {
+                control.runBlockingIo {
+                    if (arena != null && !arena.tryAcquire(permitTimeoutSeconds, TimeUnit.SECONDS)) {
+                        throw IllegalStateException(
+                            "arena permit for $name not released: an owned item is stuck in a buffer")
+                    }
+                    val item: Any = when (kind) {
+                        kindRecord -> OwnedRecord(name, names.indexOf(name)).also { synchronized(records) { records += it } }
+                        kindOpaque -> OpaqueHandle().also { synchronized(opaques) { opaques += it } }
+                        kindOrder -> order(name).also { synchronized(orders) { orders += it } }
+                        else -> CloseCountingResource(name, onClose = { arena?.release() })
+                            .also { synchronized(resources) { resources += it } }
+                    }
+                    created = item as? AutoCloseable
+                    item
                 }
-                when (kind) {
-                    kindRecord -> OwnedRecord(name, names.indexOf(name)).also { synchronized(records) { records += it } }
-                    kindOpaque -> OpaqueHandle().also { synchronized(opaques) { opaques += it } }
-                    kindOrder -> order(name).also { synchronized(orders) { orders += it } }
-                    else -> CloseCountingResource(name, onClose = { arena?.release() })
-                        .also { synchronized(resources) { resources += it } }
-                }
+            }
+            catch (e: CancellationException) {
+                created?.close()
+                throw e
             }
             emit.send(JobDataValues.lift(element))
         }

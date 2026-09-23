@@ -12,6 +12,7 @@ import tech.kzen.auto.common.objects.document.plugin.model.CommonPluginCoordinat
 import tech.kzen.auto.server.service.storage.SchemaCacheStorageArea
 import tech.kzen.auto.server.objects.datasource.format.ConfiguredDelimitedTestFormats
 import tech.kzen.auto.server.util.WorkUtils
+import tech.kzen.lib.common.util.digest.Digest
 import java.nio.file.Files
 import kotlin.io.path.writeText
 import kotlin.test.assertEquals
@@ -34,7 +35,8 @@ class SchemaCacheTest {
             key(format = CommonPluginCoordinate.ofString("TSV")),
             key(encoding = CommonDataEncodingSpec.ofString("UTF-16")),
             key(size = "11"),
-            key(modified = "21"))
+            key(modified = "21"),
+            key(code = Digest.ofUtf8("rebuilt")))
 
         for (variant in variants) {
             assertNotEquals(base.digest(), variant.digest())
@@ -51,6 +53,18 @@ class SchemaCacheTest {
         assertNull(fresh.peek(key()))
         assertEquals(shape, fresh.get(key()))
         assertEquals(shape, fresh.peek(key()))
+    }
+
+
+    @Test
+    fun diskEntryFromOtherCodeIsAMissForTheSameContent() {
+        // The stale-shape bug: a reader rebuilt with a different declared shape must not be served the old one
+        val work = WorkUtils.temporary("schema-cache-code")
+        SchemaCache(work).put(key(code = Digest.ofUtf8("old build")), shape)
+
+        val fresh = SchemaCache(work)
+        assertNull(fresh.get(key(code = Digest.ofUtf8("new build"))))
+        assertEquals(shape, fresh.get(key(code = Digest.ofUtf8("old build"))))
     }
 
 
@@ -112,11 +126,13 @@ class SchemaCacheTest {
         format: CommonPluginCoordinate = this.format,
         encoding: CommonDataEncodingSpec = this.encoding,
         size: String = "10",
-        modified: String = "20"
+        modified: String = "20",
+        code: Digest = CodeFingerprint.host
     ): SchemaCacheKey = SchemaCacheKey.ofReport(
         DataRef(null, refId, mapOf(
             DataRef.sizeKey to size,
             DataRef.modifiedKey to modified)),
         format,
-        encoding)!!
+        encoding,
+        code)!!
 }
