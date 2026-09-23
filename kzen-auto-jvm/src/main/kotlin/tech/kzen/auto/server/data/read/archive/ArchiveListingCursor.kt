@@ -5,9 +5,12 @@ import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import tech.kzen.auto.common.data.api.DataCursor
 import tech.kzen.auto.common.data.schema.DataShape
 import tech.kzen.auto.plugin.api.data.ReaderByteInput
+import tech.kzen.lib.common.exec.data.type.DataConstraint
 import tech.kzen.lib.common.exec.data.type.DataContract
 import tech.kzen.lib.common.exec.data.type.DataField
+import tech.kzen.lib.common.exec.data.type.DataPathSegment
 import tech.kzen.lib.common.exec.data.type.DataType
+import tech.kzen.lib.common.exec.data.type.DataTypePath
 import tech.kzen.lib.common.exec.data.type.FieldId
 import tech.kzen.lib.common.exec.data.type.ScalarKind
 import tech.kzen.lib.common.exec.data.value.DataValue
@@ -35,11 +38,15 @@ class ArchiveListingCursor(
         const val kindLink = "link"
         const val kindOther = "other"
 
-        val contract = DataContract(DataType.Record(listOf(
-            DataField(FieldId(nameField, 0), DataType.Scalar(ScalarKind.Text)),
-            DataField(FieldId(sizeField, 0), DataType.Scalar(ScalarKind.Integer(64, true))),
-            DataField(FieldId(modifiedField, 0), DataType.Scalar(ScalarKind.Instant, true)),
-            DataField(FieldId(kindField, 0), DataType.Scalar(ScalarKind.Text)))))
+        val contract = DataContract(
+            DataType.Record(listOf(
+                DataField(FieldId(nameField, 0), DataType.Scalar(ScalarKind.Text)),
+                DataField(FieldId(sizeField, 0), DataType.Scalar(ScalarKind.Integer(64, true))),
+                DataField(FieldId(modifiedField, 0), DataType.Scalar(ScalarKind.Instant, true)),
+                DataField(FieldId(kindField, 0), DataType.Scalar(ScalarKind.Text)))),
+            constraintsByPath = mapOf(
+                DataTypePath(listOf(DataPathSegment.Field(FieldId(kindField, 0)))) to listOf(
+                    DataConstraint.SymbolSet(listOf(kindFile, kindDirectory, kindLink, kindOther)))))
     }
 
 
@@ -79,6 +86,8 @@ class ArchiveListingCursor(
         when {
             header.isDirectory -> kindDirectory
             header.isSymbolicLink || header.isLink -> kindLink
+            // TarArchiveEntry.isFile also holds for these special members
+            header.isFIFO || header.isCharacterDevice || header.isBlockDevice -> kindOther
             header.isFile -> kindFile
             else -> kindOther
         }

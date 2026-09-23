@@ -6,8 +6,10 @@ import tech.kzen.lib.common.exec.data.shape.SampleCoverage
 import tech.kzen.lib.common.exec.data.shape.SchemaDiagnostic
 import tech.kzen.lib.common.exec.data.shape.ShapeProvenance
 import tech.kzen.lib.common.exec.data.shape.ShapeStability
+import tech.kzen.lib.common.exec.data.type.DataConstraint
 import tech.kzen.lib.common.exec.data.type.DataContract
 import tech.kzen.lib.common.exec.data.type.DataField
+import tech.kzen.lib.common.exec.data.type.DataPathSegment
 import tech.kzen.lib.common.exec.data.type.DataType
 import tech.kzen.lib.common.exec.data.type.FieldId
 import tech.kzen.lib.common.exec.data.type.ScalarKind
@@ -67,6 +69,29 @@ class DataContractViewTest {
             DataTypePath.root to TypeMetadata(ClassName("kotlin.String"), emptyList(), true)))
         assertEquals("Text?", DataContractPresentation.typeLabel(text))
         assertTrue(DataContractPresentation.typeTitle(text).contains("kotlin.String"))
+    }
+
+
+    @Test
+    fun symbolSetsShowInlineAbbreviatedAndInFullInTheTitleAndDetails() {
+        val kinds = DataConstraint.SymbolSet(listOf("file", "directory", "link", "other"))
+        val kind = DataContract(
+            DataType.Scalar(ScalarKind.Text, nullable = true),
+            constraintsByPath = mapOf(DataTypePath.root to listOf(kinds)))
+        assertEquals("Text? ∈ {file, directory, link, other}", DataContractPresentation.typeLabel(kind))
+        assertTrue(DataContractPresentation.typeTitle(kind).contains("one of: file, directory, link, other"))
+
+        val days = DataConstraint.SymbolSet(listOf("mon", "tue", "wed", "thu", "fri", "sat", "sun"))
+        val day = DataContract(DataType.Scalar(ScalarKind.Text), constraintsByPath = mapOf(DataTypePath.root to listOf(days)))
+        assertEquals("Text ∈ {mon, tue, wed, thu, fri, …}", DataContractPresentation.typeLabel(day))
+        assertTrue(DataContractPresentation.typeTitle(day).contains("sat, sun"))
+
+        val row = DataContract(
+            DataType.Record(listOf(DataField(FieldId("kind"), kind.structural))),
+            constraintsByPath = mapOf(DataTypePath(listOf(DataPathSegment.Field(FieldId("kind")))) to listOf(kinds)))
+        assertEquals("Record", DataContractPresentation.typeLabel(row))
+        val details = DataContractPresentation.of(DataContractDisplay.Contract(row)).details
+        assertTrue(details.any { it.endsWith("one of: file, directory, link, other") && it.contains("kind") }, "$details")
     }
 
 

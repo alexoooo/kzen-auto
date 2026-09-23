@@ -17,7 +17,7 @@ internal object RecordOverlay {
 
     fun appendContract(source: DataContract, added: List<DataField>): DataContract {
         val base = recordContract(source)
-        return compose(base, added.map { it to DataContract(it.type) })
+        return base.withFields(added.map { it to DataContract(it.type) })
     }
 
     fun carryFields(source: DataContract, selection: CarrySelection): List<Pair<DataField, FieldId>> {
@@ -38,42 +38,15 @@ internal object RecordOverlay {
 
     fun carryContract(target: DataContract, source: DataContract, selection: CarrySelection): DataContract {
         val sourceRecord = recordContract(source)
-        return compose(recordContract(target), carryFields(source, selection).map { (field, renamed) ->
+        return recordContract(target).withFields(carryFields(source, selection).map { (field, renamed) ->
             field.copy(id = renamed) to sourceRecord.child(DataPathSegment.Field(field.id))
         })
     }
 
     private fun recordContract(source: DataContract): DataContract {
         if (source.structural is DataType.Record) return source
-        val prefix = DataPathSegment.Field(FieldId("value"))
-        val natives = source.nativeByPath.mapKeys { (path, _) -> DataTypePath(listOf(prefix) + path.segments) }
-        return DataContract(DataType.Record(fields(source)), natives, source.definitions, source.definitionNatives)
-    }
-
-    private fun compose(base: DataContract, additions: List<Pair<DataField, DataContract>>): DataContract {
-        val fields = fields(base).toMutableList()
-        val natives = base.nativeByPath.toMutableMap()
-        val definitions = base.definitions.toMutableMap()
-        val definitionNatives = base.definitionNatives.toMutableMap()
-        for ((field, contract) in additions) {
-            require(fields.none { it.id == field.id }) { "Output field '${field.id}' collides with an existing field" }
-            fields += field
-            val prefix = DataPathSegment.Field(field.id)
-            contract.nativeByPath.forEach { (path, metadata) ->
-                natives[DataTypePath(listOf(prefix) + path.segments)] = metadata
-            }
-            contract.definitions.forEach { (id, type) ->
-                require(id !in definitions || definitions[id] == type) { "Conflicting carried definition '$id'" }
-                definitions[id] = type
-            }
-            contract.definitionNatives.forEach { (id, metadata) ->
-                require(id !in definitionNatives || definitionNatives[id] == metadata) {
-                    "Conflicting carried native definition '$id'"
-                }
-                definitionNatives[id] = metadata
-            }
-        }
-        return DataContract(DataType.Record(fields, base.structural.nullable), natives, definitions, definitionNatives)
+        val field = fields(source).single()
+        return DataContract(DataType.Record(emptyList())).withFields(listOf(field to source))
     }
 
     fun append(source: DataValue, calculated: List<CalculatedFieldValue>): DataValue {

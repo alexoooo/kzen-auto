@@ -26,7 +26,6 @@ import tech.kzen.lib.common.exec.data.type.DataType
 import tech.kzen.lib.common.exec.data.type.DataContract
 import tech.kzen.lib.common.exec.data.type.DataField
 import tech.kzen.lib.common.exec.data.type.FieldId
-import tech.kzen.lib.common.exec.data.type.DataTypePath
 import tech.kzen.lib.common.exec.data.type.ScalarKind
 import tech.kzen.lib.common.exec.data.value.DataState
 import tech.kzen.lib.common.exec.data.value.DataNode
@@ -461,16 +460,9 @@ object DataReadCore {
     private fun combineContract(
         fields: List<ContractField>,
         nullable: Boolean
-    ): DataContract {
-        val nativeByPath = linkedMapOf<DataTypePath, tech.kzen.lib.common.model.structure.metadata.TypeMetadata>()
-        for (field in fields) {
-            val fieldPrefix = DataTypePath(listOf(DataPathSegment.Field(field.field.id)))
-            for ((path, metadata) in field.contract.nativeByPath) {
-                nativeByPath[DataTypePath(fieldPrefix.segments + path.segments)] = metadata
-            }
-        }
-        return DataContract(DataType.Record(fields.map { it.field }, nullable), nativeByPath)
-    }
+    ): DataContract =
+        DataContract(DataType.Record(emptyList(), nullable))
+            .withFields(fields.map { it.field to it.contract })
 
 
     private data class ContractField(

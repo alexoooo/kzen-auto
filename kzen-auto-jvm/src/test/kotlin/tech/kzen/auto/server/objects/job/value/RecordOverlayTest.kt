@@ -3,6 +3,7 @@ package tech.kzen.auto.server.objects.job.value
 import org.junit.Test
 import tech.kzen.auto.server.objects.job.worker.preview.PreviewCapture
 import tech.kzen.lib.common.exec.LongExecutionValue
+import tech.kzen.lib.common.exec.data.problem.DataException
 import tech.kzen.lib.common.exec.data.type.*
 import tech.kzen.lib.common.exec.data.value.*
 import kotlin.test.*
@@ -70,7 +71,7 @@ class RecordOverlayTest {
             assertSame(native.day, result.access.native(child))
             assertEquals(source.contract.child(DataPathSegment.Field(FieldId("day"))),
                 result.contract.child(DataPathSegment.Field(FieldId("originalDay"))))
-            assertFailsWith<IllegalArgumentException> { RecordOverlay.carry(source, source, CarrySelection.All()) }
+            assertFailsWith<DataException> { RecordOverlay.carry(source, source, CarrySelection.All()) }
             assertFailsWith<IllegalArgumentException> { RecordOverlay.carry(target, source,
                 CarrySelection.Selected(listOf(CarriedField(FieldId("missing"))))) }
         }
@@ -101,6 +102,24 @@ class RecordOverlayTest {
             CalculatedFieldValue(testField, integer.copy(nullable = true), null, DataState.Null)))
         assertEquals(DataState.Absent, result.access.state(result.access.field(result.root, FieldId("name"))))
         assertEquals(DataState.Null, result.access.state(result.access.field(result.root, testField)))
-        assertFailsWith<IllegalArgumentException> { RecordOverlay.append(result, listOf(calculated())) }
+        assertFailsWith<DataException> { RecordOverlay.append(result, listOf(calculated())) }
+    }
+
+    @Test
+    fun appendAndCarryKeepTheSourcesConstraints() {
+        val kinds = DataConstraint.SymbolSet(listOf("file", "directory"))
+        val kind = DataContract(DataType.Scalar(ScalarKind.Text), constraintsByPath = mapOf(DataTypePath.root to listOf(kinds)))
+        val source = LiteralDataValues.lift("file", kind)
+        val widened = RecordOverlay.append(source, listOf(calculated()))
+        val valuePath = DataTypePath(listOf(DataPathSegment.Field(FieldId("value"))))
+        assertEquals(mapOf(valuePath to listOf(kinds)), widened.contract.constraintsByPath)
+
+        val target = LiteralDataValues.lift(recordOf("name" to "a"))
+        val carried = RecordOverlay.carry(target, widened, CarrySelection.Selected(listOf(
+            CarriedField(FieldId("value"), FieldId("kind")))))
+        assertEquals(
+            mapOf(DataTypePath(listOf(DataPathSegment.Field(FieldId("kind")))) to listOf(kinds)),
+            carried.contract.constraintsByPath)
+        assertEquals(emptyList(), DataValueAlgebra.validate(carried.contract, carried))
     }
 }

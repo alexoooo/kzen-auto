@@ -2,6 +2,7 @@ package tech.kzen.auto.client.objects.document.job.display
 
 import tech.kzen.lib.common.exec.data.shape.DataShape
 import tech.kzen.lib.common.exec.data.shape.ShapeStability
+import tech.kzen.lib.common.exec.data.type.DataConstraint
 import tech.kzen.lib.common.exec.data.type.DataContract
 import tech.kzen.lib.common.exec.data.type.DataTypePath
 import tech.kzen.lib.common.exec.data.type.DataType
@@ -17,6 +18,8 @@ internal object DataContractPresentation {
         val details: List<String>,
         val color: Color
     )
+
+    private const val maxInlineSymbols = 6
 
     private val normal = Color("rgba(0, 0, 0, 0.65)")
     private val muted = Color("rgba(0, 0, 0, 0.48)")
@@ -39,6 +42,9 @@ internal object DataContractPresentation {
         contract.nativeByPath.entries.sortedBy { it.key.toString() }.forEach { (path, metadata) ->
             details.add("JVM $path: ${metadata.className.asString()}")
         }
+        contract.constraintsByPath.entries.sortedBy { it.key.toString() }.forEach { (path, constraints) ->
+            constraints.forEach { details.add("$path ${constraint(it)}") }
+        }
         if (shape != null) {
             details.add("provenance: ${shape.provenance.name}")
             details.add("stability: ${stability(shape.stability)}")
@@ -58,15 +64,29 @@ internal object DataContractPresentation {
             is DataType.Union -> "Union"
             else -> summary(type)
         }
-        return label + if (type.nullable) "?" else ""
+        val symbols = symbolSet(contract)?.let { " ∈ {${abbreviated(it.symbols)}}" }.orEmpty()
+        return label + (if (type.nullable) "?" else "") + symbols
     }
 
     fun typeTitle(contract: DataContract): String = buildString {
         append(summary(contract.structural))
         if (contract.structural.nullable) append(" · nullable")
+        symbolSet(contract)?.let { append(" · one of: ${it.symbols.joinToString()}") }
         contract.nativeByPath[DataTypePath.root]?.let {
             append(" · JVM: ${it.className.asString()}")
         }
+    }
+
+    private fun symbolSet(contract: DataContract): DataConstraint.SymbolSet? =
+        contract.constraintsByPath[DataTypePath.root]?.firstNotNullOfOrNull { it as? DataConstraint.SymbolSet }
+
+    // Inline labels stay short; the title carries the full set
+    private fun abbreviated(symbols: List<String>): String =
+        if (symbols.size <= maxInlineSymbols) symbols.joinToString()
+        else symbols.take(maxInlineSymbols - 1).joinToString() + ", …"
+
+    private fun constraint(constraint: DataConstraint): String = when (constraint) {
+        is DataConstraint.SymbolSet -> "one of: ${constraint.symbols.joinToString()}"
     }
 
     fun summary(type: DataType): String = when (type) {
