@@ -147,7 +147,9 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > files for a source; `ExtractWorker` opens each as a `.tar.gz` and lends its members, nested
 > archives through an `Entry` input), both over the shared lend / await-release loop `CursorLending`; reading a
 > tar(.gz) rather than extracting it yields its table of contents (`ArchiveListingFormat`, one row per member,
-> content-detected); a file no installed format claims stays in the selection as `UndetectedFormat` and is
+> content-detected; an automatic `File` over explicitly picked files still publishes a static contract when each
+> name's structured family admits only formats of one declared shape — `FilenameDetection`, shared with the
+> detector, reading the registered formats from the validated graph snapshot); a file no installed format claims stays in the selection as `UndetectedFormat` and is
 > refused only when a reader opens it; a `TakeWorker` downstream of any
 > source ends the run cleanly, the closed downstream (`DownstreamClosedException`) completing the source,
 > transform and expanding drive loops without draining; a live edit that changes a running source's selection (a

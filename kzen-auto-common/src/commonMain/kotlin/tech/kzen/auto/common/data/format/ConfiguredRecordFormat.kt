@@ -71,4 +71,11 @@ interface ConfiguredRecordFormat: Digestible {
     fun resolvedRead(ref: DataRef): ResolvedReadSpec
 
     fun declaredShape(): DataShape?
+
+    /**
+     * The shape of reading [fileName] when its name alone fixes it; a format that detects per file answers from
+     * [configuredFormats], the registered formats it chooses among.
+     */
+    fun declaredShape(fileName: String, configuredFormats: Lazy<List<ConfiguredRecordFormat>>): DataShape? =
+        declaredShape()
 }

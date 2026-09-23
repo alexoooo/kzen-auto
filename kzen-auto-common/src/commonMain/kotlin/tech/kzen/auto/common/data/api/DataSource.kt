@@ -1,5 +1,6 @@
 package tech.kzen.auto.common.data.api
 
+import tech.kzen.auto.common.data.format.ConfiguredRecordFormat
 import tech.kzen.auto.common.data.model.DataResolveResult
 import tech.kzen.auto.common.data.model.DataRole
 import tech.kzen.auto.common.data.schema.DataShape
@@ -18,7 +19,11 @@ interface DataSource {
     suspend fun resolve(context: DataContext): DataResolveResult
 
 
-    fun staticShape(role: DataRole?): DataShape? = null
+    /**
+     * The shape promised from compiled notation alone, never by I/O; [configuredFormats] are the graph's
+     * registered formats, for a source whose files are detected per name.
+     */
+    fun staticShape(role: DataRole?, configuredFormats: Lazy<List<ConfiguredRecordFormat>>): DataShape? = null
 
 
     /** True when the source is configured to hand each file on whole rather than have it read. */

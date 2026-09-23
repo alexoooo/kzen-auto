@@ -1,0 +1,12 @@
+main:
+  is: Job
+
+main.workers/archives:
+  is: FileSourceWorker
+  files:
+    - location: build/job-read-archive-validation/first.tar.gz
+    - location: build/job-read-archive-validation/second.tgz
+
+main.workers/write:
+  is: CsvWriterWorker
+  path: build/job-read-archive-validation/output.csv

@@ -12,10 +12,12 @@ import tech.kzen.auto.common.data.format.detection.DetectionCandidateMetadata
 import tech.kzen.auto.common.data.format.detection.FormatHintMetadata
 import tech.kzen.auto.server.data.TextEncodingCatalog
 import tech.kzen.auto.server.data.read.ReaderCapabilityRegistry
+import tech.kzen.auto.server.data.read.detection.FilenameDetection
 import tech.kzen.auto.server.service.exec.ExecutionGraphErrors
 import tech.kzen.auto.server.service.exec.GraphInstanceCache
 import tech.kzen.auto.server.service.exec.ObjectInstanceAttempt
 import tech.kzen.auto.server.service.exec.ServerGraphDefinition
+import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.common.service.store.LocalGraphStore
@@ -118,8 +120,8 @@ class ConfiguredRecordFormatRegistry(
             DetectionCandidateMetadata(
                 registered.reference.asString(),
                 format.digest(),
-                format.extensions.map(::normalizeExtension).distinct().sorted(),
-                format.compatibleStructuredFamilies.map { it.trim().lowercase() }.distinct().sorted(),
+                FilenameDetection.exactExtensions(format),
+                FilenameDetection.structuredFamilies(format),
                 resolved,
                 format.automaticDetectionTemplate,
                 format.authoringCapabilityIdentity,
@@ -152,23 +154,13 @@ class ConfiguredRecordFormatRegistry(
 
 
     private suspend fun availableFormats(): List<RegisteredConfiguredFormat> {
-        val notation = graphStore.graphNotation()
-        val availableDefinitions = ServerGraphDefinition.of(graphStore.graphDefinition()).objectDefinitions
-        val references = notation.objectLocations
-            .asSequence()
-            .filter { it != configuredFormatMarker }
-            .filter { configuredFormatMarker in notation.inheritanceChain(it) }
-            .filter {
-                notation.directAttribute(it, NotationConventions.abstractAttributePath)?.asBoolean() != true
-            }
-            .filter { it in availableDefinitions }
-            .toList()
+        val references = formatLocations(graphStore.graphDefinition().transitiveSuccessful)
         val registered = mutableListOf<RegisteredConfiguredFormat>()
         for (reference in references) {
             val candidate = registeredFormat(reference)
             registered.add(candidate)
         }
-        return registered.sortedBy { it.reference.asString() }
+        return registered
     }
 
 
@@ -187,10 +179,6 @@ class ConfiguredRecordFormatRegistry(
     }
 
 
-    private fun normalizeExtension(extension: String): String =
-        extension.trim().removePrefix(".").lowercase()
-
-
     private data class RegisteredConfiguredFormat(
         val reference: ObjectLocation,
         val format: ConfiguredRecordFormat
@@ -203,5 +191,40 @@ class ConfiguredRecordFormatRegistry(
     companion object {
         val configuredFormatMarker = ObjectLocation.parse(
             "auto-jvm/datasource/configured-delimited-format.yaml#ConfiguredRecordFormat")
+
+
+        /** The concrete, server-allowed format objects of [definition], in reference order. */
+        fun formatLocations(definition: GraphDefinition): List<ObjectLocation> {
+            val notation = definition.graphStructure.graphNotation
+            val availableDefinitions = ServerGraphDefinition.of(definition).objectDefinitions
+            return notation.objectLocations
+                .asSequence()
+                .filter { it != configuredFormatMarker }
+                .filter { configuredFormatMarker in notation.inheritanceChain(it) }
+                .filter {
+                    notation.directAttribute(it, NotationConventions.abstractAttributePath)?.asBoolean() != true
+                }
+                .filter { it in availableDefinitions }
+                .sortedBy { it.asString() }
+                .toList()
+        }
+
+
+        /** The formats automatic detection chooses among in the [definition] snapshot, created through [instances]. */
+        fun formatsOf(
+            definition: GraphDefinition,
+            instances: GraphInstanceCache
+        ): List<ConfiguredRecordFormat> = formatLocations(definition)
+            .map { location ->
+                val instance = when (val attempt = instances.tryObjectInstance(definition, location)) {
+                    is ObjectInstanceAttempt.Created -> attempt.objectInstance.reference
+                    is ObjectInstanceAttempt.Failed -> throw IllegalArgumentException(
+                        "Unable to create configured format $location: ${attempt.failure.errorMessage}")
+                    ObjectInstanceAttempt.Undefined -> error("Configured format is not defined: $location")
+                }
+                instance as? ConfiguredRecordFormat
+                    ?: throw IllegalArgumentException("Not a configured record format: $location")
+            }
+            .filter { it.catalogVisible }
     }
 }

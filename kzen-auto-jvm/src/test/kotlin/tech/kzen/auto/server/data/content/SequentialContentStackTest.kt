@@ -43,6 +43,7 @@ import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
@@ -316,6 +317,19 @@ class SequentialContentStackTest {
         val limited = memoryCharacters(valid, ContentCodingSpec.gzip, smallPolicy)
         assertFailsWith<ContentCodingException> { limited.readAllText() }
         Unit
+    }
+
+
+    @Test
+    fun fullRunIsBoundedByCancellationNotExpandedBytesOrTime() = runBlocking {
+        val runContent = ReaderExecutionPolicies().runContent
+        assertEquals(Long.MAX_VALUE, runContent.maximumExpandedBytes)
+        assertEquals(Duration.INFINITE, runContent.timeout)
+
+        // Expands past the inspection byte limit, which a run must not inherit.
+        val text = "compressible".repeat(1024 * 1024)
+        val expanded = memoryCharacters(gzip(text.encodeToByteArray()), ContentCodingSpec.gzip, runContent)
+        assertEquals(text.length, expanded.readAllText().length)
     }
 
 

@@ -2,6 +2,7 @@ package tech.kzen.auto.server.objects.datasource
 
 import tech.kzen.auto.common.data.api.DataContext
 import tech.kzen.auto.common.data.api.DataSource
+import tech.kzen.auto.common.data.format.ConfiguredRecordFormat
 import tech.kzen.auto.common.data.model.DataManifest
 import tech.kzen.auto.common.data.model.DataResolveResult
 import tech.kzen.auto.common.data.model.DataRole
@@ -78,7 +79,7 @@ class LogicDataSource(
     }
 
 
-    override fun staticShape(role: DataRole?): DataShape? {
+    override fun staticShape(role: DataRole?, configuredFormats: Lazy<List<ConfiguredRecordFormat>>): DataShape? {
         return if (role == null || role == DataRole.main) schema?.declaredShape() else null
     }
 

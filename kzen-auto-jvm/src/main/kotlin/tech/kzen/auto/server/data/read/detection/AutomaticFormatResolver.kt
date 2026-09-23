@@ -36,7 +36,7 @@ class AutomaticFormatResolver(
     suspend fun resolve(request: FormatResolutionRequest): FormatResolutionResult {
         val resolutionStarted = TimeSource.Monotonic.markNow()
         val recordsByCandidate = linkedMapOf<String, Int>()
-        val hints = effectiveHints(request)
+        val hints = FilenameDetection.effectiveHints(request.hints, request.ref.id)
         val effectiveRequest = request.copy(hints = hints)
         val hintMetadata = formats.hintMetadata()
         val policy = policyOverride ?: DetectionPolicy.default(hintMetadata)
@@ -75,7 +75,7 @@ class AutomaticFormatResolver(
                         cached, FormatDetectionCacheState.WarmAfterAcquisition)
                 }
 
-                val hint = classify(hints, hintMetadata)
+                val hint = FilenameDetection.classify(hints, hintMetadata)
                 val decoded = decodeSample(request, sample, hint)
                 val result = if (hint?.hintClass == FormatHintClass.SemanticText) {
                     textResult(
@@ -114,8 +114,8 @@ class AutomaticFormatResolver(
     ): FormatResolutionResult {
         val eligible = when (hint?.hintClass) {
             FormatHintClass.StructuredFamily -> candidates.filter { candidate ->
-                request.hints.filenameExtension in candidate.exactExtensions ||
-                    hint.structuredFamily in candidate.compatibleStructuredFamilies
+                FilenameDetection.structuredEligible(
+                    request.hints, hint, candidate.exactExtensions, candidate.compatibleStructuredFamilies)
             }
             FormatHintClass.SemanticText -> emptyList()
             else -> candidates
@@ -285,35 +285,6 @@ class AutomaticFormatResolver(
                 reason = reason,
                 warning = combineWarnings(decoded.warning, warning),
                 resolvedEncoding = encoding))
-    }
-
-
-    private fun classify(
-        hints: NormalizedFormatHints,
-        metadata: List<FormatHintMetadata>
-    ): FormatHintMetadata? {
-        val matches = metadata.filter { hint ->
-            hints.filenameExtension in hint.extensions || hints.mediaType in hint.mediaTypes
-        }.distinct()
-        if (matches.isEmpty()) return null
-        val meanings = matches.map { it.hintClass to it.structuredFamily }.distinct()
-        require(meanings.size == 1) {
-            "Format hint '${hints.filenameExtension ?: hints.mediaType}' has conflicting classifications"
-        }
-        return matches.first()
-    }
-
-
-    private fun effectiveHints(request: FormatResolutionRequest): NormalizedFormatHints {
-        val supplied = request.hints.filenameExtension
-        val filename = request.ref.id.substringBefore('?').substringBefore('#')
-        val gzipSuffix = filename.endsWith(".gz", ignoreCase = true)
-        val extension = if (supplied == "gz" || (supplied == null && gzipSuffix)) {
-            filename.dropLast(3)
-                .substringAfterLast('.', "").takeIf(String::isNotEmpty)
-        }
-        else supplied
-        return NormalizedFormatHints.of(extension, request.hints.mediaType, request.hints.providerHints)
     }
 
 

@@ -3,6 +3,7 @@ package tech.kzen.auto.server.objects.job.worker.data
 import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.data.api.DataCursor
 import tech.kzen.auto.common.data.api.DataSource
+import tech.kzen.auto.common.data.format.ConfiguredRecordFormat
 import tech.kzen.auto.common.data.model.DataManifest
 import tech.kzen.auto.common.data.model.DataRole
 import tech.kzen.auto.common.data.model.DataUnit
@@ -75,6 +76,9 @@ open class ReadWorker(
 
     private var sourceResolution: WorkerDefinitionResolution =
         WorkerDefinitionResolution.Failed("Worker definition context is not loaded")
+    // Lazy: only a source detecting its files by name needs the registered formats instantiated
+    private var configuredFormats: Lazy<List<ConfiguredRecordFormat>> =
+        lazy { error("Worker definition context is not loaded") }
     private var compatibilityKey: Digest? = null
 
     // The declared emit with `auto` settled: units when the source passes files whole or the step below takes
@@ -93,6 +97,7 @@ open class ReadWorker(
 
 
     final override fun loadDefinitionContext(context: WorkerDefinitionContext) {
+        configuredFormats = lazy { context.configuredFormats() }
         val resolved = resolveSource(context)
         val dataSource = (resolved as? WorkerDefinitionResolution.Resolved)?.value as? DataSource
         val dependencyDigests = try {
@@ -380,7 +385,8 @@ open class ReadWorker(
                 JobLaneDescriptor(dataUnitType, HeaderListing.empty), null)
         }
 
-        val staticShape = dataSource.staticShape(role.takeIf { it.isNotBlank() }?.let(::DataRole))
+        val staticShape = dataSource.staticShape(
+            role.takeIf { it.isNotBlank() }?.let(::DataRole), configuredFormats)
         if (attributes == attributesColumns) {
             return if (staticShape != null && LegacyDataShapeBridge.headerOrNull(staticShape) == null) {
                 JobLaneAttempt(

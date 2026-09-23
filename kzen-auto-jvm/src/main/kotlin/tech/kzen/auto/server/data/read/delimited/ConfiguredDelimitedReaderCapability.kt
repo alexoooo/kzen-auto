@@ -46,7 +46,6 @@ import tech.kzen.lib.platform.collect.toPersistentList
 import tech.kzen.lib.platform.collect.toPersistentMap
 import java.nio.charset.Charset
 import java.util.concurrent.CancellationException
-import kotlin.time.Duration.Companion.milliseconds
 
 
 object ConfiguredDelimitedReaderCapability:
@@ -301,10 +300,7 @@ object ConfiguredDelimitedReaderCapability:
         val characters = CharacterDecoder.open(
             ReaderByteSequentialContent(request.bytes),
             delimited.characters,
-            ContentReadControl(ContentReadPolicy(
-                requireNotNull(request.policy.maximumExpandedBytes),
-                requireNotNull(request.policy.timeoutMillis).milliseconds,
-                inspectionRecordLimit)),
+            ContentReadControl(ContentReadPolicy.of(request.policy, inspectionRecordLimit)),
             request.sourceDisplay,
             request.part)
         val reader = ConfiguredDelimitedReader.open(

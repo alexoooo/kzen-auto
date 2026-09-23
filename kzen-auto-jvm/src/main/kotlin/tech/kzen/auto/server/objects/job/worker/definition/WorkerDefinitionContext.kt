@@ -1,5 +1,7 @@
 package tech.kzen.auto.server.objects.job.worker.definition
 
+import tech.kzen.auto.common.data.format.ConfiguredRecordFormat
+import tech.kzen.auto.server.objects.datasource.format.ConfiguredRecordFormatRegistry
 import tech.kzen.auto.server.service.exec.GraphInstanceCache
 import tech.kzen.auto.server.service.exec.ObjectInstanceAttempt
 import tech.kzen.auto.server.service.impl.LinkedLogicDocuments
@@ -30,6 +32,10 @@ class WorkerDefinitionContext(
 
 
     internal fun graphStructure(): GraphStructure = definition.graphStructure
+
+
+    fun configuredFormats(): List<ConfiguredRecordFormat> =
+        ConfiguredRecordFormatRegistry.formatsOf(definition, instanceCache)
 
 
     /** Includes both the instantiated definition closure and weakly linked hosted-Logic callees. */

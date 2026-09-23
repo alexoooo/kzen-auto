@@ -10,7 +10,6 @@ import tech.kzen.auto.common.data.format.ConfiguredRecordFormat
 import tech.kzen.auto.common.data.format.FormatResolutionRequest
 import tech.kzen.auto.common.data.format.FormatResolutionResult
 import tech.kzen.auto.common.data.format.FormatSelectionKind
-import tech.kzen.auto.common.data.format.detection.NormalizedFormatHints
 import tech.kzen.auto.common.data.model.DataDiagnostic
 import tech.kzen.auto.common.data.model.DataManifest
 import tech.kzen.auto.common.data.model.DataPart
@@ -24,6 +23,7 @@ import tech.kzen.auto.common.util.data.DataLocationInfo
 import tech.kzen.auto.server.data.FileListingAction
 import tech.kzen.auto.server.data.format.SourceFormatResolutionBudget
 import tech.kzen.auto.server.data.format.SourceFormatResolutionBudgetFactory
+import tech.kzen.auto.server.data.read.detection.FilenameDetection
 import tech.kzen.auto.server.data.read.detection.FormatDetectionException
 import tech.kzen.auto.server.objects.datasource.format.ConfiguredRecordFormatLookup
 import tech.kzen.auto.server.objects.datasource.format.ConfiguredRecordFormatPreflight
@@ -134,11 +134,20 @@ class FileDataSource(
         get() = !format.readsContent
 
 
-    override fun staticShape(role: DataRole?): tech.kzen.auto.common.data.schema.DataShape? {
-        return if ((role == null || role == DataRole.main) && files.none { it.format != null }) {
-            format.declaredShape()
+    override fun staticShape(
+        role: DataRole?,
+        configuredFormats: Lazy<List<ConfiguredRecordFormat>>
+    ): tech.kzen.auto.common.data.schema.DataShape? {
+        if ((role != null && role != DataRole.main) || files.any { it.format != null }) {
+            return null
         }
-        else null
+        if (files.isEmpty()) {
+            return format.declaredShape()
+        }
+        return files
+            .map { format.declaredShape(it.location.fileName(), configuredFormats) }
+            .distinct()
+            .singleOrNull()
     }
 
 
@@ -237,7 +246,7 @@ class FileDataSource(
             context,
             ref,
             expectedFingerprint,
-            hints(info.name),
+            FilenameDetection.hints(info.name),
             input.entry?.encoding?.asString(),
             sourceBudget)
         val resolution = try {
@@ -263,12 +272,6 @@ class FileDataSource(
             expectedFingerprint,
             resolution.resolvedRead)
         return ResolvedInput(DataUnit(groupAttributes(info.name), listOf(part)), resolution)
-    }
-
-
-    private fun hints(fileName: String): NormalizedFormatHints {
-        val extension = fileName.substringAfterLast('.', "").takeIf(String::isNotEmpty)
-        return NormalizedFormatHints.of(filenameExtension = extension)
     }
 
 

@@ -8,6 +8,7 @@ import tech.kzen.auto.common.data.model.DataRef
 import tech.kzen.auto.common.data.read.ResolvedReadSpec
 import tech.kzen.auto.common.data.schema.DataShape
 import tech.kzen.auto.server.data.read.detection.AutomaticFormatResolver
+import tech.kzen.auto.server.data.read.detection.FilenameDetection
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.util.digest.Digest
@@ -33,6 +34,11 @@ class AutomaticFormat(
     }
 
     override fun declaredShape(): DataShape? = null
+
+    override fun declaredShape(
+        fileName: String,
+        configuredFormats: Lazy<List<ConfiguredRecordFormat>>
+    ): DataShape? = FilenameDetection.declaredShape(fileName, configuredFormats.value)
 
     override fun digest(sink: Digest.Sink) {
         sink.addUtf8(title)

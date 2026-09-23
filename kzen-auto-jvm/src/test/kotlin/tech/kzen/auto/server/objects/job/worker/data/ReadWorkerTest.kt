@@ -9,6 +9,7 @@ import tech.kzen.auto.common.data.api.DataContext
 import tech.kzen.auto.common.data.api.DataCursor
 import tech.kzen.auto.common.data.api.DataOpener
 import tech.kzen.auto.common.data.api.DataSource
+import tech.kzen.auto.common.data.format.ConfiguredRecordFormat
 import tech.kzen.auto.common.data.model.DataManifest
 import tech.kzen.auto.common.data.model.DataPart
 import tech.kzen.auto.common.data.model.DataRef
@@ -635,7 +636,9 @@ class ReadWorkerTest {
         }
 
 
-        override fun staticShape(role: DataRole?): DataShape? = shape
+        override fun staticShape(
+            role: DataRole?, configuredFormats: Lazy<List<ConfiguredRecordFormat>>
+        ): DataShape? = shape
     }
 
 

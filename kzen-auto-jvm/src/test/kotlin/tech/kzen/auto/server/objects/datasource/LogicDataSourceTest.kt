@@ -4,6 +4,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import tech.kzen.auto.common.data.api.DataContext
 import tech.kzen.auto.common.data.DataSourceConventions
+import tech.kzen.auto.common.data.format.ConfiguredRecordFormat
 import tech.kzen.auto.common.data.model.DataPart
 import tech.kzen.auto.common.data.model.DataRef
 import tech.kzen.auto.common.data.model.DataRole
@@ -47,6 +48,7 @@ import kotlin.test.assertTrue
 
 class LogicDataSourceTest {
     private val instructions = ObjectLocation.parse("test/datasource/logic/dated-sales-test.yaml#main")
+    private val noFormats = lazyOf(emptyList<ConfiguredRecordFormat>())
 
 
     @Test
@@ -167,9 +169,9 @@ class LogicDataSourceTest {
 
         assertEquals(
             listOf("date", "amount"),
-            LegacyDataShapeBridge.headerOrNull(source.staticShape(null)!!)!!.values.map { it.text })
-        assertEquals(source.staticShape(null), source.staticShape(DataRole.main))
-        assertNull(source.staticShape(DataRole("reference")))
+            LegacyDataShapeBridge.headerOrNull(source.staticShape(null, noFormats)!!)!!.values.map { it.text })
+        assertEquals(source.staticShape(null, noFormats), source.staticShape(DataRole.main, noFormats))
+        assertNull(source.staticShape(DataRole("reference"), noFormats))
     }
 
 

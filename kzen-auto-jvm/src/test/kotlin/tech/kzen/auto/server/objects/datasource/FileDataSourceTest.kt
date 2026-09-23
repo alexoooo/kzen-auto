@@ -24,6 +24,7 @@ import tech.kzen.auto.common.objects.document.data.schema.DataSchemaFieldListSpe
 import tech.kzen.auto.common.objects.document.data.schema.DataSchemaFieldSpec
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.server.data.FileListingAction
+import tech.kzen.auto.server.data.read.archive.ArchiveListingReaderCapability
 import tech.kzen.auto.server.data.read.delimited.ConfiguredDelimitedReaderCapability
 import tech.kzen.auto.server.objects.data.schema.DataSchemaDocument
 import tech.kzen.auto.server.objects.datasource.format.ConfiguredDelimitedFormat
@@ -52,6 +53,7 @@ class FileDataSourceTest {
     }
 
     private val listing = FileListingAction(HostReportDefinitionRepository(emptyList()))
+    private val noFormats = lazyOf(emptyList<ConfiguredRecordFormat>())
 
     private fun source(
         directory: String = "",
@@ -341,7 +343,7 @@ class FileDataSourceTest {
                 TypeMetadata.string.generics,
                 true)))))
         val source = source(schema = schema)
-        val shape = source.staticShape(null)!!
+        val shape = source.staticShape(null, noFormats)!!
 
         assertEquals(
             listOf("city", "amount", "note"),
@@ -354,18 +356,33 @@ class FileDataSourceTest {
         assertTrue(kotlin.test.assertIs<DataType.Scalar>(record.fields[2].type).nullable)
         assertEquals(shape, DataShape.ofExecutionValue(shape.asExecutionValue()))
         assertEquals(shape, Json.decodeFromString<DataShape>(Json.encodeToString(shape)))
-        assertEquals(source.staticShape(null), source.staticShape(DataRole.main))
-        assertNull(source.staticShape(DataRole("preview")))
+        assertEquals(source.staticShape(null, noFormats), source.staticShape(DataRole.main, noFormats))
+        assertNull(source.staticShape(DataRole("preview"), noFormats))
 
         val formatOverride = source(
             files = listOf(picked(Files.createTempFile("shape-format-override", ".csv"), format = "Other")),
             schema = schema)
-        assertNull(formatOverride.staticShape(null))
+        assertNull(formatOverride.staticShape(null, noFormats))
 
         val encodingOverride = source(
             files = listOf(picked(Files.createTempFile("shape-encoding-override", ".csv"), encoding = "UTF-8")),
             schema = schema)
-        assertEquals(shape, encodingOverride.staticShape(null))
+        assertEquals(shape, encodingOverride.staticShape(null, noFormats))
+    }
+
+
+    @Test
+    fun explicitFilesPublishTheShapeEveryNameFixes() {
+        val shape = ArchiveListingReaderCapability.shape
+        val format = NameShapedFormat(".tar.gz", shape)
+        val directory = Files.createTempDirectory("shape-by-name")
+        val first = picked(directory.resolve("first.tar.gz"))
+        val second = picked(directory.resolve("second.tar.gz"))
+        val csv = picked(directory.resolve("orders.csv"))
+
+        assertEquals(shape, source(files = listOf(first, second), format = format).staticShape(null, noFormats))
+        assertNull(source(files = listOf(first, csv), format = format).staticShape(null, noFormats))
+        assertNull(source(directory = directory.toString(), format = format).staticShape(null, noFormats))
     }
 
 
@@ -382,6 +399,17 @@ class FileDataSourceTest {
         private val delegate: ConfiguredRecordFormat,
         override val selectionKind: FormatSelectionKind
     ): ConfiguredRecordFormat by delegate
+
+
+    private class NameShapedFormat(
+        private val suffix: String,
+        private val shape: DataShape
+    ): ConfiguredRecordFormat by ConfiguredDelimitedTestFormats.csv() {
+        override fun declaredShape(
+            fileName: String,
+            configuredFormats: Lazy<List<ConfiguredRecordFormat>>
+        ): DataShape? = shape.takeIf { fileName.endsWith(suffix) }
+    }
 
 
     private class BudgetedFormat: ConfiguredRecordFormat by ConfiguredDelimitedTestFormats.csv() {

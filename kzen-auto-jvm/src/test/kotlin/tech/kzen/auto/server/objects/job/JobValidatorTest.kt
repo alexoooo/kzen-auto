@@ -4,6 +4,7 @@ import tech.kzen.auto.common.data.model.DataUnit
 import tech.kzen.auto.common.objects.document.job.JobChannelSynthesis
 import tech.kzen.auto.common.objects.document.job.model.JobValidation
 import tech.kzen.auto.server.context.KzenAutoContext
+import tech.kzen.auto.server.data.read.archive.ArchiveListingReaderCapability
 import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
@@ -133,6 +134,16 @@ class JobValidatorTest {
         assertNull(read.typeMetadata)
         val record = assertNotNull(read.contract?.structural as? DataType.Record)
         assertEquals(listOf("city", "amount"), record.fields.map { it.id.name })
+    }
+
+
+    @Test
+    fun automaticArchiveNamesPublishTheListingContractWithoutReadingFiles() {
+        val validation = validate("test/job/run/job-read-archive-validation-test.yaml")
+        val archives = validation.workerValidations[ObjectPath.parse("main.workers/archives")]
+        assertNotNull(archives)
+        assertNull(archives.errorMessage)
+        assertEquals(ArchiveListingReaderCapability.shape.itemType, archives.contract)
     }
 
 
