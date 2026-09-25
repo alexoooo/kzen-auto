@@ -154,6 +154,9 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > refuse a lent element by name, since a hold past the callback would hang the source (`Write` and `Parse`
 > over an archive member consume it inside the callback and emit independent values); the lender is either a source
 > (`CursorSourceWorker`) or the `Extract` transform, both over the shared lend / await-release loop `CursorLending`.
+> A lent element carries its cursor's owners (`SourceIngress.pull`), so a stop — which cancels the lender and its
+> reader together — never closes the cursor under a reader still inside the element: the cursor closes when
+> the reader lets go, and the reader ends Cancelled, not failed on an invalidated element.
 > **Values are payload + metadata** (`kzen/docs/plans/2026-09-24_values-metadata-and-design-time-types.md`): the
 > `DataValue` / `DataContract` of kzen-lib carry typed metadata beside the payload, and Workers keep it on transform,
 > relate it as `parent` on expansion and set it at sources; expressions see the payload by bare name or `this.x`,

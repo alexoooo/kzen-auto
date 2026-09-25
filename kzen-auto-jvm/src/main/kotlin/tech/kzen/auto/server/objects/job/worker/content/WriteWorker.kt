@@ -42,11 +42,12 @@ import kotlin.time.Clock
  * path into it) read the file's description. Two placeholders are the writer's own: `${extension}` is the
  * compression's suffix, and `${time}` is when this Write started, formatted as Report's export path formats it
  * ([FormatUtils.formatFilenameTime]) so one run's files share it. The interpolated name is normalized and must
- * stay inside [directory]; an escaping, absolute or rooted name fails by name. [existing] governs a destination that is already there: `fail` (default), `replace`
- * (atomic replace) or `skip` (nothing written, nothing emitted).
+ * stay inside [directory]; an escaping, absolute or rooted name fails by name. [existing] governs a destination
+ * that is already there: `fail` (default), `replace` (atomic replace) or `skip` (nothing written, nothing emitted).
  *
  * The content is read inside the callback, under [JobControl.runBlockingIo]; nothing of it is kept, so its source
- * advances as soon as the callback returns.
+ * advances as soon as the callback returns. The copy honours the interrupt a stop delivers between chunks (file
+ * reads do not), so stopping inside a large entry ends the Write as cancelled without publishing the partial file.
  */
 @Reflect
 class WriteWorker(
@@ -161,6 +162,9 @@ class WriteWorker(
                 encoder(Files.newOutputStream(temporary)).use { sink ->
                     val buffer = ByteArray(copyBufferSize)
                     while (true) {
+                        if (Thread.interrupted()) {
+                            throw InterruptedException("Write of '$target' was stopped")
+                        }
                         val count = source.read(buffer, 0, buffer.size)
                         if (count < 0) break
                         sink.write(buffer, 0, count)

@@ -18,6 +18,7 @@ import java.io.OutputStream
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.zip.GZIPInputStream
 import kotlin.io.path.name
@@ -294,6 +295,83 @@ class ExtractWorkerTest {
         assertEquals(1, cursor.produced.size)
         assertEquals(1, cursor.closeCount())
         assertTrue(cursor.isClosed)
+    }
+
+
+    @Test
+    fun stopWhileWriteCopiesAnEntryKeepsTheArchiveOpenUntilTheWriteLetsGo() {
+        // A stop cancels Extract and Write together; Extract lets its archive go at once, but Write is still
+        // reading the lent entry, so the archive must stay open until Write does — a read of an invalidated entry
+        // fails the Write instead of cancelling it. Write's first chunk blocks as file I/O does (deaf to the stop's
+        // interrupt, which stays pending); the copy loop then sees the interrupt and ends cancelled.
+        val big = ByteArray(4 * 1024 * 1024) { (it % 251).toByte() }
+        val outDirectory = prepare("stop-write", listOf("big.bin" to big)).resolve("out")
+        val entered = CountDownLatch(1)
+        val proceed = CountDownLatch(1)
+        val failures = CopyOnWriteArrayList<Throwable>()
+        WriteWorker.encoderInterceptor = { encoded ->
+            object: FilterOutputStream(encoded) {
+                override fun write(b: ByteArray, off: Int, len: Int) {
+                    if (entered.count > 0) {
+                        entered.countDown()
+                        awaitDeafToInterrupt(proceed)
+                    }
+                    this.out.write(b, off, len)
+                }
+            }
+        }
+
+        val engine = harness.start("test/job/content/extract-stop-write-test.yaml")
+        val outcome = try {
+            runBlocking {
+                val terminal = async { engine.await() }
+                engine.resume()
+                assertTrue(entered.await(30, TimeUnit.SECONDS), "Write never started copying")
+                engine.cancel()
+
+                // Extract's own teardown runs right after the cancel; the archive must survive it
+                val cursor = cursors.single()
+                val deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(500)
+                while (!cursor.isClosed && System.nanoTime() < deadline) {
+                    Thread.sleep(10)
+                }
+                if (cursor.isClosed) {
+                    failures.add(AssertionError("archive closed while Write was reading its entry"))
+                }
+                proceed.countDown()
+                terminal.await()
+            }
+        }
+        finally {
+            proceed.countDown()
+            engine.close()
+        }
+
+        assertEquals(emptyList(), failures.map { it.message })
+        assertIs<Outcome.Cancelled>(outcome)
+        val cursor = cursors.single()
+        assertEquals(1, cursor.closeCount())
+        assertTrue(cursor.produced.single().isInvalidated)
+        // Nothing published, and the temporary is gone
+        assertEquals(emptySet(), listFiles(outDirectory))
+    }
+
+
+    // Waits like a blocking file write: an interrupt does not end the wait, and stays set for the caller to see
+    private fun awaitDeafToInterrupt(latch: CountDownLatch) {
+        var interrupted = false
+        while (true) {
+            try {
+                if (latch.await(30, TimeUnit.SECONDS)) break
+                throw AssertionError("test never released the write")
+            }
+            catch (_: InterruptedException) {
+                interrupted = true
+            }
+        }
+        if (interrupted) {
+            Thread.currentThread().interrupt()
+        }
     }
 
 

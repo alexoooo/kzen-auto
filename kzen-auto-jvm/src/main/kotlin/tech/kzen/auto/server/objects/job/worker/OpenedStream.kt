@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.objects.job.worker
 
 import tech.kzen.auto.common.paradigm.job.control.ValueLease
+import tech.kzen.auto.server.exec.job.ownership.OwnerSet
 import tech.kzen.auto.server.exec.job.ownership.ValueLeases
 
 
@@ -8,14 +9,17 @@ import tech.kzen.auto.server.exec.job.ownership.ValueLeases
  * A stream container a source opened, as the framework drives it: the iterator to pull from and the run's
  * holds on whatever is closeable — the iterator, then the container, de-duplicated by identity — taken inside
  * the blocking boundary that opened it (E9 item 1). [close] releases the holds (the ledger closes the iterator
- * first, then the container, exactly once) or, outside a run, closes them directly. [closeable] tells a
+ * first, then the container, exactly once, when no one else holds them) or, outside a run, closes them directly.
+ * [owners] are the run's entries for those closeables: a [LentElement] pulled from the stream carries them, so
+ * the stream stays open while the element is held — even after the source let the stream go. [closeable] tells a
  * source whether the stream must be detached across a live edit (a closeable stream is never re-opened) or
  * may be re-evaluated and skipped.
  */
 class OpenedStream internal constructor(
     val iterator: Iterator<*>,
     private val closeables: List<AutoCloseable>,
-    private val holds: List<ValueLease>
+    private val holds: List<ValueLease>,
+    val owners: OwnerSet = OwnerSet.empty
 ) {
     @Volatile
     private var closed = false

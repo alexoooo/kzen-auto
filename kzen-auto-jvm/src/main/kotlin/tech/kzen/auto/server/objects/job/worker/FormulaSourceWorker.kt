@@ -144,7 +144,7 @@ class FormulaSourceWorker(
         try {
             while (true) {
                 if (pending.isEmpty()) {
-                    val pulled = ingress.pull(opened.iterator, emit.batchSize())
+                    val pulled = ingress.pull(opened, emit.batchSize())
                     if (pulled.isEmpty()) {
                         break
                     }

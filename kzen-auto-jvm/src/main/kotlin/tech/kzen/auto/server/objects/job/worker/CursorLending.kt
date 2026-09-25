@@ -71,7 +71,8 @@ internal class CursorLending(
      * Drains the open cursor — adopted, or opened now through [open] — lending each item; [onReady] sees the
      * iterator before the first pull; [metadataOf] gives each item's metadata. Returns at the end of the cursor; a
      * closed downstream propagates as [tech.kzen.auto.server.objects.job.channel.DownstreamClosedException]. The
-     * cursor is closed on every exit.
+     * cursor is let go of on every exit; a lent element carries the cursor's owners, so when an exit (a stop) leaves
+     * it still held, the cursor closes only once its holder releases it — never under a reader.
      */
     suspend fun drain(
         control: JobControl,
@@ -89,7 +90,7 @@ internal class CursorLending(
             onReady(opened.iterator)
             while (true) {
                 if (pending.isEmpty()) {
-                    val pulled = ingress.pull(opened.iterator, emit.batchSize())
+                    val pulled = ingress.pull(opened, emit.batchSize())
                     if (pulled.isEmpty()) {
                         break
                     }

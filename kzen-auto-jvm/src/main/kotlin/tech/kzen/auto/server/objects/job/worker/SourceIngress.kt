@@ -54,25 +54,28 @@ internal class SourceIngress(
         if (value !== iterator) {
             (value as? AutoCloseable)?.let { closeables.add(it) }
         }
-        val holds = if (ledger == null) {
-            emptyList()
+        if (ledger == null) {
+            return OpenedStream(iterator, closeables, emptyList())
         }
-        else {
-            closeables.map { closeable -> ledger.adopt(closeable, streamHolder).producerLease }
-        }
-        return OpenedStream(iterator, closeables, holds)
+        val adoptions = closeables.map { closeable -> ledger.adopt(closeable, streamHolder) }
+        val owners = adoptions.fold(OwnerSet.empty) { acc, adoption -> acc + adoption.owners }
+        return OpenedStream(iterator, closeables, adoptions.map { it.producerLease }, owners)
     }
 
 
     /**
-     * Pulls the next elements of [iterator] on the blocking dispatcher — up to [limit], stopping after the first
-     * adopted closeable — each adopted as it is pulled. Empty when the iterator is exhausted.
+     * Pulls the next elements of [stream] on the blocking dispatcher — up to [limit], stopping after the first
+     * adopted closeable — each adopted as it is pulled. Empty when the iterator is exhausted. A [LentElement]
+     * depends on the stream it was pulled from: it carries the stream's owners, so a stop that makes the source let
+     * the stream go does not close it under a holder still reading the element.
      */
-    suspend fun pull(iterator: Iterator<*>, limit: Int): List<AcquiredItem> {
+    suspend fun pull(stream: OpenedStream, limit: Int): List<AcquiredItem> {
+        val iterator = stream.iterator
         return control.runBlockingIo {
             val pulled = ArrayList<AcquiredItem>()
             while (pulled.size < limit.coerceAtLeast(1) && iterator.hasNext()) {
-                val item = adopt(iterator.next())
+                val element = iterator.next()
+                val item = adopt(element, if (element is LentElement) stream.owners else OwnerSet.empty)
                 pulled.add(item)
                 if (item.owned) {
                     break
@@ -84,12 +87,12 @@ internal class SourceIngress(
 
 
     /** Adopts one pulled element (inside a blocking body). */
-    fun adopt(element: Any?): AcquiredItem {
+    fun adopt(element: Any?, inherited: OwnerSet = OwnerSet.empty): AcquiredItem {
         if (ledger == null) {
             val native = if (element is Borrowed<*>) element.value else element
             return AcquiredItem(native, OwnerSet.empty, ValueLease.none)
         }
-        val adoption = ledger.adopt(element, LeaseHolder.producer)
+        val adoption = ledger.adopt(element, LeaseHolder.producer, inherited)
         return AcquiredItem(adoption.native, adoption.owners, adoption.producerLease)
     }
 
