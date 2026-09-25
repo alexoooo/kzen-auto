@@ -97,7 +97,6 @@ class ExtractWorker(
             // A tar header always records the member's size
             checkNotNull(descriptor.length) { "Archive member '${descriptor.name}' has no size" },
             descriptor.modifiedEpochMillis,
-            FileValues.kindFile,
             emptyMap(),
             parent)
     }

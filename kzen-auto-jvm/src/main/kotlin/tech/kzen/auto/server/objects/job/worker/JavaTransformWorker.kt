@@ -97,7 +97,7 @@ abstract class JavaTransformWorker @JvmOverloads constructor(
                 val lifted = JobDataValues.lift(outputs.next(), staticOutputContract())
                 val output = element?.metadata?.let { lifted.withMetadata(it) } ?: lifted
                 if (inheriting) {
-                    control.ownership()?.inherit(output, element!!)
+                    control.ownership()?.inherit(output, element)
                 }
                 emit.send(output)
             }

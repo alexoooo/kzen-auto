@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.objects.job.worker.content
 
 import com.linkedin.migz.MiGzOutputStream
+import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
@@ -24,6 +25,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import kotlin.reflect.full.createType
+import kotlin.time.Clock
 
 
 /**
@@ -31,15 +33,16 @@ import kotlin.reflect.full.createType
  * §3.8): an ordinary [TransformWorker] whose output — a [Written] record per published file, keeping the input's
  * metadata — carries no owner. Like any Transform its output must be consumed (channel synthesis wires adjacent
  * pairs only), so a Job ending in `Write` still needs a sink such as `Result`. The bytes are streamed through the
- * encoder [coding] selects (`gzip` is the same MiGz encoder Report's export uses, so the bytes match
+ * encoder [compression] selects (`gzip` is the same MiGz encoder Report's export uses, so the bytes match
  * [tech.kzen.auto.server.objects.report.exec.output.export.model.ExportCompression]; `none` copies) into a
  * temporary in the target directory, finalized, closed, then published by atomic move. `Written` is emitted
  * only after publication; any failure removes the temporary and publishes nothing.
  *
- * [name] is metadata interpolation only: `${name}`, `${size}`, `${kind}`, `${modified}`, `${parent.name}` (any
- * dotted path into the value's metadata) read the file's description, and `${extension}` is the coding's
- * suffix. The interpolated name is normalized and must stay inside [directory]; an escaping, absolute or rooted
- * name fails by name. [existing] governs a destination that is already there: `fail` (default), `replace`
+ * [name] interpolates the value's metadata: `${name}`, `${size}`, `${modified}`, `${parent.name}` (any dotted
+ * path into it) read the file's description. Two placeholders are the writer's own: `${extension}` is the
+ * compression's suffix, and `${time}` is when this Write started, formatted as Report's export path formats it
+ * ([FormatUtils.formatFilenameTime]) so one run's files share it. The interpolated name is normalized and must
+ * stay inside [directory]; an escaping, absolute or rooted name fails by name. [existing] governs a destination that is already there: `fail` (default), `replace`
  * (atomic replace) or `skip` (nothing written, nothing emitted).
  *
  * The content is read inside the callback, under [JobControl.runBlockingIo]; nothing of it is kept, so its source
@@ -51,7 +54,7 @@ class WriteWorker(
     output: ChannelOutput<DataValue>,
     private val directory: String,
     private val name: String,
-    private val coding: String,
+    private val compression: String,
     private val existing: String,
     selfLocation: ObjectLocation,
     @Service private val fileListingAction: FileListingAction
@@ -60,12 +63,16 @@ class WriteWorker(
 {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        const val codingGzip = "gzip"
-        const val codingNone = "none"
+        const val compressionGzip = "gzip"
+        const val compressionNone = "none"
 
         const val existingFail = "fail"
         const val existingReplace = "replace"
         const val existingSkip = "skip"
+
+        // The writer's own placeholders, beside the metadata's (declared for the editor as `placeholders:`)
+        const val extensionPlaceholder = "extension"
+        const val timePlaceholder = "time"
 
         const val defaultName = "\${name}\${extension}"
 
@@ -84,10 +91,11 @@ class WriteWorker(
     }
 
 
-    private val gzip = when (coding.trim().lowercase()) {
-        codingGzip -> true
-        codingNone -> false
-        else -> throw IllegalArgumentException("Unsupported coding '$coding'; expected $codingGzip or $codingNone")
+    private val gzip = when (compression.trim().lowercase()) {
+        compressionGzip -> true
+        compressionNone -> false
+        else -> throw IllegalArgumentException(
+            "Unsupported compression '$compression'; expected $compressionGzip or $compressionNone")
     }
 
     private val onExisting = existing.trim().lowercase().ifEmpty { existingFail }.also {
@@ -100,6 +108,7 @@ class WriteWorker(
     private val writtenContract: DataContract = JobDataValues.describe(Written::class.createType())
 
     private var root: Path? = null
+    private var time: String? = null
     private var written = 0L
     private var skipped = 0L
 
@@ -109,6 +118,7 @@ class WriteWorker(
         val resolved = WriterFilePath.resolve(directory)
         control.runBlockingIo { Files.createDirectories(resolved) }
         root = resolved
+        time = FormatUtils.formatFilenameTime(Clock.System.now())
     }
 
 
@@ -207,8 +217,9 @@ class WriteWorker(
 
 
     private fun field(metadata: DataValue?, key: String): String {
-        if (key == "extension") {
-            return if (gzip) ".gz" else ""
+        when (key) {
+            extensionPlaceholder -> return if (gzip) ".gz" else ""
+            timePlaceholder -> return checkNotNull(time) { "Write was not started" }
         }
         return metadataText(metadata, key)
             ?: throw IllegalArgumentException("Unknown field '\${$key}' in Write name '$template'")

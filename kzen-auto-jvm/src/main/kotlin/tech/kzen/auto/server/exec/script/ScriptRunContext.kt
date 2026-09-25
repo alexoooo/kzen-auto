@@ -423,9 +423,7 @@ class ScriptRunContext(
         // call-site: recording it on the child node lets the trace store attribute the child's execution to
         // THIS RunStep, so its screenshot strip scopes to the invocations it spawned (distinguishing two
         // RunSteps that host the same sub-Script document).
-        val bindingChild = child as? Logic
-            ?: error("Child Logic is not binding-native: $instructions")
-        val childInputs = bindingChild.signature().inputs
+        val childInputs = child.signature().inputs
         val supplied = arguments.entries().mapNotNull { (definition, state) ->
             val childDefinition = childInputs.find(definition.name)
             require(childDefinition != null) {

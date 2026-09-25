@@ -71,4 +71,13 @@ object FormatUtils {
         val seconds = modifiedLocal.second.toString().padStart(2, '0')
         return "${modifiedLocal.date} $hours:$minutes:$seconds"
     }
+
+
+    /** [time] as a generated file name carries it: local time as `yyyyMMddTHHmmss`, free of `:` and `-`. */
+    fun formatFilenameTime(time: Instant): String {
+        return formatLocalDateTime(time)
+            .replace("-", "")
+            .replace(":", "")
+            .replace(" ", "T")
+    }
 }

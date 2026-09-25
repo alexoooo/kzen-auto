@@ -158,7 +158,7 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > `DataValue` / `DataContract` of kzen-lib carry typed metadata beside the payload, and Workers keep it on transform,
 > relate it as `parent` on expansion and set it at sources; expressions see the payload by bare name or `this.x`,
 > metadata by bare name or `meta.x`. **Selecting and reading are separate Workers.** `File` selects files and reads
-> none — each value is the file's `Content` with `{name, path, size, modified, kind}` plus Name-pattern values as
+> none — each value is the file's `Content` with `{name, path, size, modified}` plus Name-pattern values as
 > metadata (`FileValues`); `Extract` opens a file value as a `.tar.gz` and lends its members as the same kind of value
 > with the archive as `parent`; `Parse` owns `format` and reads what a value holds (a selected file, sampled for
 > automatic detection like any file; a member read once, picked by name via `FilenameDetection`; a `DataUnit`'s

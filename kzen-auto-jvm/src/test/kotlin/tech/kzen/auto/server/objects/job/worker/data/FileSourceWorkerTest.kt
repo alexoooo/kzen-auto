@@ -59,10 +59,9 @@ class FileSourceWorkerTest {
             val metadata = JobDataValues.boundary(checkNotNull(messages.first().metadata).value) as Map<String, Any?>
             assertEquals("2026-a.csv", metadata["name"])
             assertEquals(16L, metadata["size"])
-            assertEquals("file", metadata["kind"])
             assertEquals("2026", metadata["year"])
             assertEquals(
-                listOf("name", "path", "size", "modified", "kind", "year"),
+                listOf("name", "path", "size", "modified", "year"),
                 metadata.keys.toList())
             assertEquals("2027", (JobDataValues.boundary(checkNotNull(messages.last().metadata).value) as Map<*, *>)["year"])
         }

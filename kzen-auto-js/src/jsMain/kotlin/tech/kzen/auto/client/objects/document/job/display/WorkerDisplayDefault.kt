@@ -30,6 +30,7 @@ import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.auto.common.objects.document.logic.StepValidation
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.lib.common.model.attribute.AttributeName
+import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.ObjectMetadata
 import tech.kzen.lib.common.model.structure.notation.cqrs.RemoveObjectCommand
@@ -93,6 +94,9 @@ class WorkerDisplayDefault(
         // different colours. Deliberately darker than the validation error's red-orange (#d84315), which is a
         // different kind of problem: that one is wrong before the run, this one happened during it.
         private val failureColor = Color("#c62828")
+
+        // `meta.<attr>.row`: attributes naming the same row render side by side (see renderAttributeEditors)
+        private val rowAttributePath = AttributePath.parse("row")
     }
 
 
@@ -201,7 +205,7 @@ class WorkerDisplayDefault(
             val editableAttributes = editableAttributes(objectMetadata)
             val disclosure = props.attributeDisclosure
             if (disclosure == null) {
-                renderAttributeEditors(editableAttributes)
+                renderAttributeEditors(objectMetadata, editableAttributes)
             }
             else if (editableAttributes.isNotEmpty()) {
                 details {
@@ -219,7 +223,7 @@ class WorkerDisplayDefault(
                         css {
                             marginTop = 0.5.em
                         }
-                        renderAttributeEditors(editableAttributes)
+                        renderAttributeEditors(objectMetadata, editableAttributes)
                     }
                 }
             }
@@ -420,15 +424,57 @@ class WorkerDisplayDefault(
     }
 
 
-    private fun ChildrenBuilder.renderAttributeEditors(attributes: List<AttributeName>) {
+    // Consecutive attributes declaring the same `row:` (e.g. Write's compression and existing-file dropdowns) share
+    // one line, Report Output style; the rest stack.
+    private fun ChildrenBuilder.renderAttributeEditors(
+        objectMetadata: ObjectMetadata,
+        attributes: List<AttributeName>
+    ) {
+        val rows = mutableListOf<MutableList<AttributeName>>()
+        var previousRow: String? = null
         for (attributeName in attributes) {
+            val row = objectMetadata.attributes[attributeName]
+                ?.attributeMetadataNotation
+                ?.get(rowAttributePath.toNesting())
+                ?.asString()
+            if (row != null && row == previousRow) {
+                rows.last().add(attributeName)
+            }
+            else {
+                rows.add(mutableListOf(attributeName))
+            }
+            previousRow = row
+        }
+
+        for (row in rows) {
             div {
+                key = Key(row.first().value)
                 css {
                     // The stacked-field rhythm ScriptStepDisplayDefault uses: an outlined field's floating label
                     // overhangs its own top border, so the tighter label-to-field value reads as a collision.
                     marginBottom = 0.5.em
+                    if (row.size > 1) {
+                        display = Display.flex
+                        flexWrap = FlexWrap.wrap
+                        gap = 1.em
+                    }
                 }
-                renderAttributeEditor(attributeName)
+                if (row.size == 1) {
+                    renderAttributeEditor(row.single())
+                }
+                else {
+                    for (attributeName in row) {
+                        div {
+                            key = Key(attributeName.value)
+                            css {
+                                flexGrow = number(1.0)
+                                flexBasis = 12.em
+                                maxWidth = 20.em
+                            }
+                            renderAttributeEditor(attributeName)
+                        }
+                    }
+                }
             }
         }
     }

@@ -32,7 +32,7 @@ main.workers/Write:
   input: main.channels/entries
   output: main.channels/written
   directory: build/content-scope/many/out
-  coding: none
+  compression: none
 
 main.workers/collect:
   is: ResultSinkWorker

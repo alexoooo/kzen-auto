@@ -92,8 +92,7 @@ object FlowLogicCompiler {
             val childLogic = LogicCompiler.compile(
                 reference.instructions, graphNotation, graphDefinition, services)
 
-            val childSignature = (childLogic as? Logic)?.signature()
-                ?: throw LogicFailure("Child Logic is not binding-native: ${reference.instructions}")
+            val childSignature = childLogic.signature()
             val parameterNames = childSignature.inputs.definitions.map { it.name }
             validateArguments(vertexLocation, reference, parameterNames, matrix)
 

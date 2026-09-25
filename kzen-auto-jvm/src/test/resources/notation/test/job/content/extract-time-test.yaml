@@ -1,4 +1,4 @@
-# ExtractWorkerTest "plain": File(units) -> Extract -> Filter(*.txt) -> Write -> ResultSink keep: all
+# ExtractWorkerTest "time": File(units) -> Extract -> Filter(*.txt) -> Write under ${time}/ -> ResultSink keep: all
 main:
   is: Job
   results:
@@ -22,7 +22,7 @@ main.channels/files:
 main.workers/Archive:
   is: FileSourceWorker
   files:
-    - location: build/content-scope/plain/input.tar.gz
+    - location: build/content-scope/time/input.tar.gz
   output: main.channels/files
 
 main.workers/Extract:
@@ -40,8 +40,9 @@ main.workers/Write:
   is: Write
   input: main.channels/entries
   output: main.channels/written
-  directory: build/content-scope/plain/out
+  directory: build/content-scope/time/out
   compression: none
+  name: "${time}/${name}"
 
 main.workers/collect:
   is: ResultSinkWorker

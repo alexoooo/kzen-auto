@@ -58,7 +58,7 @@ internal object DataContractPresentation {
         }
         val metadataFields = contract.metadata?.structural?.fields.orEmpty()
         val summary = typeLabel(contract) +
-            (if (metadataFields.isEmpty()) "" else " + ${metadataFields.size} metadata") +
+            (if (metadataFields.isEmpty()) "" else " + {${abbreviated(metadataFields.map { it.id.name })}}") +
             (if (provenance == null) "" else " · inferred")
         val title = typeTitle(contract) +
             (if (metadataFields.isEmpty()) "" else " · metadata: ${metadataFields.joinToString { it.id.name }}") +
@@ -92,7 +92,7 @@ internal object DataContractPresentation {
     private fun symbolSet(contract: DataContract): DataConstraint.SymbolSet? =
         contract.constraintsByPath[DataTypePath.root]?.firstNotNullOfOrNull { it as? DataConstraint.SymbolSet }
 
-    // Inline labels stay short; the title carries the full set
+    // Inline labels stay short (symbols, metadata field names); the title carries the full set
     private fun abbreviated(symbols: List<String>): String =
         if (symbols.size <= maxInlineSymbols) symbols.joinToString()
         else symbols.take(maxInlineSymbols - 1).joinToString() + ", …"

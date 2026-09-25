@@ -27,8 +27,8 @@ import tech.kzen.lib.common.util.digest.Digest
 
 /**
  * Selects files, one value per file, and reads none of them (docs/plans/2026-09-24_values-metadata-and-design-time-
- * types.md, R1): the payload is the file's [FileContent], opaque; the metadata is `{name, path, size, modified,
- * kind}` then the values the file's name yields through [groupPattern] (see [FileValues]). What a file holds is
+ * types.md, R1): the payload is the file's [FileContent], opaque; the metadata is `{name, path, size, modified}`
+ * then the values the file's name yields through [groupPattern] (see [FileValues]). What a file holds is
  * read further down, by `Parse` (rows, a document), `Extract` (an archive's members) or `Write` (copied bytes) —
  * never decided by this Worker or by its neighbour.
  *
@@ -92,7 +92,6 @@ class FileSourceWorker(
             info.path.asString(),
             info.size,
             info.modified.toEpochMilliseconds(),
-            FileValues.kindFile,
             captureNames.associateWith { file.captures[it] ?: "" },
             null)
         return FileValues.lift(FileContent(DataRef.of(info)), metadata)

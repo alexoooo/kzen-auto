@@ -10,18 +10,30 @@ import react.dom.html.ReactHTML.span
 import react.dom.html.ReactHTML.summary
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.RPureComponent
+import tech.kzen.lib.common.exec.data.type.DataContract
+import web.cssom.AlignItems
+import web.cssom.Border
+import web.cssom.Color
 import web.cssom.Cursor
+import web.cssom.Display
 import web.cssom.FontStyle
 import web.cssom.FontWeight
+import web.cssom.LineStyle
 import web.cssom.Margin
 import web.cssom.WhiteSpace
 import web.cssom.em
+import web.cssom.px
 
 
 /** Shared expandable contract presentation used by Worker cards and the channels between them. */
 class DataContractView(
     props: DataContractViewProps
 ): RPureComponent<DataContractViewProps, State>(props) {
+    private companion object {
+        val facetDivider = Color("rgba(0, 0, 0, 0.15)")
+    }
+
+
     override fun ChildrenBuilder.render() {
         val presentation = DataContractPresentation.of(props.display)
         if (presentation.details.isEmpty() && props.display !is DataContractDisplay.Contract) {
@@ -64,22 +76,19 @@ class DataContractView(
                 val metadata = contractDisplay.contract.metadata
                     ?.takeIf { it.structural.fields.isNotEmpty() }
                     ?.contract
-                if (metadata != null) {
-                    facetLabel("Payload")
+                if (metadata == null) {
+                    contractTree(contractDisplay.contract.payload())
                 }
-                ContractTreeNode::class.react {
-                    contract = contractDisplay.contract.payload()
-                    label = ""
-                    childrenOnly = true
-                    optional = false
-                }
-                if (metadata != null) {
-                    facetLabel("Metadata")
-                    ContractTreeNode::class.react {
-                        contract = metadata
-                        label = ""
-                        childrenOnly = true
-                        optional = false
+                else {
+                    // A value with metadata shows its two parts side by side, each under its own heading
+                    div {
+                        css {
+                            display = Display.flex
+                            alignItems = AlignItems.flexStart
+                            marginTop = 0.25.em
+                        }
+                        facet("Payload", contractDisplay.contract.payload(), divided = false)
+                        facet("Metadata", metadata, divided = true)
                     }
                 }
                 if (presentation.details.isNotEmpty()) {
@@ -94,14 +103,32 @@ class DataContractView(
     }
 
 
-    // A value with metadata shows its two parts under their own headings
-    private fun ChildrenBuilder.facetLabel(text: String) {
+    private fun ChildrenBuilder.facet(heading: String, contract: DataContract, divided: Boolean) {
         div {
             css {
-                marginTop = 0.25.em
-                fontWeight = FontWeight.bold
+                if (divided) {
+                    borderLeft = Border(1.px, LineStyle.solid, facetDivider)
+                    paddingLeft = 0.75.em
+                    marginLeft = 0.75.em
+                }
             }
-            +text
+            div {
+                css {
+                    fontWeight = FontWeight.bold
+                }
+                +heading
+            }
+            contractTree(contract)
+        }
+    }
+
+
+    private fun ChildrenBuilder.contractTree(contract: DataContract) {
+        ContractTreeNode::class.react {
+            this.contract = contract
+            label = ""
+            childrenOnly = true
+            optional = false
         }
     }
 }

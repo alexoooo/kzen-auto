@@ -1,11 +1,8 @@
 package tech.kzen.auto.server.objects.job.worker.content
 
-import tech.kzen.auto.server.data.read.archive.ArchiveListingCursor
 import tech.kzen.auto.server.objects.job.value.JobDataValues
-import tech.kzen.lib.common.exec.data.type.DataConstraint
 import tech.kzen.lib.common.exec.data.type.DataContract
 import tech.kzen.lib.common.exec.data.type.DataType
-import tech.kzen.lib.common.exec.data.type.DataTypePath
 import tech.kzen.lib.common.exec.data.type.FieldId
 import tech.kzen.lib.common.exec.data.type.MetadataContract
 import tech.kzen.lib.common.exec.data.type.ScalarKind
@@ -20,7 +17,7 @@ import kotlin.reflect.typeOf
 /**
  * A file as a value, whether a selected file (`File`) or a member of an archive (`Extract`): the payload is its
  * [Content] (an opaque native, read by `Parse`, `Extract` or `Write`), and the metadata is plain data describing
- * it — [name], [path], [size], [modified], [kind], then any values taken from its name (the Name pattern's
+ * it — [name], [path], [size], [modified], then any values taken from its name (the Name pattern's
  * captures), then [parent], the metadata of the value it was found in (an archive member's archive). Nothing
  * here is a type of its own: the value is an ordinary payload with a metadata record.
  */
@@ -29,24 +26,12 @@ object FileValues {
     const val path = "path"
     const val size = "size"
     const val modified = "modified"
-    const val kind = "kind"
     const val parent = "parent"
-
-    const val kindFile = ArchiveListingCursor.kindFile
 
 
     private val text = DataType.Scalar(ScalarKind.Text)
     private val size64 = DataType.Scalar(ScalarKind.Integer(64))
     private val nullableInstant = DataType.Scalar(ScalarKind.Instant, nullable = true)
-
-    // The same vocabulary as an archive listing's `kind` column; `File` and `Extract` lend only files today
-    private val kindContract = DataContract(
-        text,
-        constraintsByPath = mapOf(DataTypePath.root to listOf(DataConstraint.SymbolSet(listOf(
-            ArchiveListingCursor.kindFile,
-            ArchiveListingCursor.kindDirectory,
-            ArchiveListingCursor.kindLink,
-            ArchiveListingCursor.kindOther)))))
 
     /** The payload's contract: a [Content], opaque. */
     val contentContract: DataContract by lazy { JobDataValues.describe(typeOf<Content>()) }
@@ -59,7 +44,6 @@ object FileValues {
         fields += FieldId(path) to DataContract(text)
         fields += FieldId(size) to DataContract(size64)
         fields += FieldId(modified) to DataContract(nullableInstant)
-        fields += FieldId(kind) to kindContract
         captures.forEach { fields += FieldId(it) to DataContract(text) }
         if (parent != null) {
             fields += FieldId(FileValues.parent) to parent.contract
@@ -79,7 +63,6 @@ object FileValues {
         path: String,
         size: Long,
         modifiedEpochMillis: Long?,
-        kind: String,
         captures: Map<String, String>,
         parent: ValueMetadata?
     ): ValueMetadata {
@@ -89,7 +72,6 @@ object FileValues {
         fields += FieldId(FileValues.size) to literal(size, size64)
         fields += FieldId(modified) to literal(
             modifiedEpochMillis?.let { Instant.ofEpochMilli(it).toString() }, nullableInstant)
-        fields += FieldId(FileValues.kind) to LiteralDataValues.lift(kind, kindContract)
         captures.forEach { (key, value) -> fields += FieldId(key) to literal(value, text) }
         if (parent != null) {
             fields += FieldId(FileValues.parent) to parent.value

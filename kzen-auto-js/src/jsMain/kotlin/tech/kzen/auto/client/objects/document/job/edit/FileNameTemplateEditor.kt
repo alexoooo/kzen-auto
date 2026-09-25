@@ -1,13 +1,17 @@
 package tech.kzen.auto.client.objects.document.job.edit
 
 import emotion.react.css
-import mui.material.Chip
-import mui.material.ChipVariant
+import mui.material.Divider
+import mui.material.IconButton
+import mui.material.ListSubheader
+import mui.material.Menu
+import mui.material.MenuItem
 import mui.material.Size
 import mui.material.TextField
 import react.ChildrenBuilder
 import react.Key
 import react.ReactNode
+import react.RefObject
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
@@ -21,10 +25,13 @@ import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
 import tech.kzen.auto.client.objects.document.common.edit.documentEditActivity
 import tech.kzen.auto.client.objects.document.common.scope.ObjectScopedComponent
 import tech.kzen.auto.client.objects.document.job.JobValidationChannel
+import tech.kzen.auto.client.objects.document.job.display.DataContractPresentation
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.contextValue
+import tech.kzen.auto.client.wrap.createRef
+import tech.kzen.auto.client.wrap.iconify.icon
 import tech.kzen.auto.client.wrap.installContextType
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
@@ -35,15 +42,18 @@ import tech.kzen.lib.common.exec.data.type.DataType
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.GraphStructure
+import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.common.service.store.MirroredGraphStore
-import web.cssom.Color
-import web.cssom.FlexWrap
-import web.cssom.Display
 import web.cssom.AlignItems
+import web.cssom.Color
+import web.cssom.Display
+import web.cssom.FontFamily
 import web.cssom.em
+import web.cssom.number
+import web.dom.Element
 import web.html.HTMLInputElement
 
 
@@ -52,21 +62,24 @@ external interface FileNameTemplateEditorState: State {
     var value: String
     var label: String?
 
-    // `${…}` placeholders the input's metadata offers (dotted into records such as `parent`), then the extras;
-    // null with [note] when the upstream contract isn't known
-    var fields: List<String>?
+    // The `${…}` placeholders the input's metadata offers (dotted into records such as `parent`), then the
+    // writer's own; null with [note] when the upstream contract isn't known
+    var placeholders: List<FileNameTemplateEditor.Placeholder>?
     var note: String?
+
+    var menuOpen: Boolean
 }
 
 
 //---------------------------------------------------------------------------------------------------------------------
 /**
  * A file-name template over the value's metadata — `Write`'s `name` ([tech.kzen.auto.server.objects.job.worker
- * .content.WriteWorker]): the text itself, plus a chip per `${…}` placeholder the input offers, which inserts it
- * at the caret. The placeholders are the scalar fields of the upstream Worker's metadata contract (from the Job's
- * validation, as the path pickers read it — [JobUpstreamSchema.upstreamContract]), dotted into nested records
- * such as `parent.name`, then the extras declared by `meta.<attr>.placeholders` (`extension` for Write). Wired via
- * `editor: FileNameTemplateEditor`.
+ * .content.WriteWorker]): the text itself, plus an insert button beside it (as a Script expression inserts a
+ * step reference) whose menu lists each `${…}` placeholder and inserts the chosen one at the caret. The
+ * placeholders are the scalar fields of the upstream Worker's metadata contract (from the Job's validation, as
+ * the path pickers read it — [JobUpstreamSchema.upstreamContract]), dotted into nested records such as
+ * `parent.name`, then the writer's own, declared with a description each by `meta.<attr>.placeholders`
+ * (`extension` and `time` for Write). Wired via `editor: FileNameTemplateEditor`.
  */
 @Suppress("unused")
 class FileNameTemplateEditor(
@@ -95,11 +108,23 @@ class FileNameTemplateEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    /** One insertable `${[path]}`, under the menu heading [group], with [hint] (a type or a description). */
+    data class Placeholder(
+        val path: String,
+        val group: String,
+        val hint: String
+    )
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private val placeholdersAttributePath = AttributePath.parse("placeholders")
 
         // Deep enough for an archive member's archive's archive; a metadata record is plain data, never cyclic
         private const val maximumDepth = 3
+
+        private const val ownGroup = "This file"
+        private const val writerGroup = "Written"
 
         private val noteColor = Color("rgba(0, 0, 0, 0.6)")
 
@@ -107,8 +132,8 @@ class FileNameTemplateEditor(
         fun placeholder(field: String): String = "\${$field}"
 
 
-        /** The dotted paths of [contract]'s scalar fields, descending into records. */
-        fun scalarPaths(contract: DataContract, prefix: String = "", depth: Int = 0): List<String> {
+        /** The dotted paths of [contract]'s scalar fields, descending into records, each with its type label. */
+        fun scalarPaths(contract: DataContract, prefix: String = "", depth: Int = 0): List<Pair<String, String>> {
             val expanded = contract.expanded()
             val record = expanded.structural as? DataType.Record
                 ?: return listOf()
@@ -117,11 +142,21 @@ class FileNameTemplateEditor(
                 val child = expanded.childOrNull(DataPathSegment.Field(field.id))?.expanded()
                     ?: return@flatMap listOf()
                 when (child.structural) {
-                    is DataType.Scalar -> listOf(path)
+                    is DataType.Scalar -> listOf(path to DataContractPresentation.typeLabel(child))
                     is DataType.Record ->
                         if (depth + 1 < maximumDepth) scalarPaths(child, "$path.", depth + 1) else listOf()
                     else -> listOf()
                 }
+            }
+        }
+
+
+        // Metadata fields group by where they come from: the file itself, then each `parent.` level
+        private fun metadataGroup(path: String): String {
+            val parents = path.split('.').dropLast(1)
+            return when {
+                parents.isEmpty() -> ownGroup
+                else -> "From " + parents.joinToString(" → ")
             }
         }
     }
@@ -133,8 +168,10 @@ class FileNameTemplateEditor(
     // Set while a typed edit is waiting to commit, so a store publication can't replace the text being typed
     private var pending = false
 
-    // Where a chip inserts: the caret as last seen in the field, or the end when the field was never focused
+    // Where an insert lands: the caret as last seen in the field, or the end when the field was never focused
     private var caret: Int? = null
+
+    private val menuAnchorRef: RefObject<Element> = createRef()
 
     private val committer = AttributeCommitter(
         graphStore = { this.props.mirroredGraphStore },
@@ -152,6 +189,7 @@ class FileNameTemplateEditor(
 
     override fun FileNameTemplateEditorState.init(props: AttributeEditorProps) {
         value = ""
+        menuOpen = false
     }
 
 
@@ -197,25 +235,27 @@ class FileNameTemplateEditor(
             ?: ""
         val value = if (pending) state.value else stored
 
-        val extras = (graphStructure
+        val writerPlaceholders = (graphStructure
             .graphMetadata
             .get(props.objectLocation)
             ?.attributes
             ?.get(props.attributeName)
             ?.attributeMetadataNotation
             ?.get(placeholdersAttributePath.toNesting())
-            ?.asString())
-            ?.split(',')
-            ?.map { it.trim() }
-            ?.filter { it.isNotEmpty() }
+                as? MapAttributeNotation)
+            ?.map
+            ?.entries
+            ?.map { (key, description) -> Placeholder(key.asKey(), writerGroup, description.asString() ?: "") }
             ?: listOf()
 
         val (upstream, upstreamNote) =
             JobUpstreamSchema.upstreamContract(graphStructure, props.objectLocation, validation)
         val metadata = upstream?.metadata
-        val fields = when {
-            metadata != null -> scalarPaths(metadata.contract) + extras
-            else -> extras.takeIf { it.isNotEmpty() }
+        val placeholders = when {
+            metadata != null ->
+                scalarPaths(metadata.contract).map { (path, type) -> Placeholder(path, metadataGroup(path), type) } +
+                    writerPlaceholders
+            else -> writerPlaceholders.takeIf { it.isNotEmpty() }
         }
         val note = when {
             upstream == null -> upstreamNote
@@ -223,13 +263,14 @@ class FileNameTemplateEditor(
             else -> null
         }
 
-        if (state.value == value && state.label == label && state.fields == fields && state.note == note) {
+        if (state.value == value && state.label == label &&
+                state.placeholders == placeholders && state.note == note) {
             return
         }
         setState {
             this.value = value
             this.label = label
-            this.fields = fields
+            this.placeholders = placeholders
             this.note = note
         }
     }
@@ -244,6 +285,11 @@ class FileNameTemplateEditor(
     }
 
 
+    private fun onMenuClose() {
+        setState { menuOpen = false }
+    }
+
+
     private fun onInsert(field: String) {
         val text = state.value
         val at = (caret ?: text.length).coerceIn(0, text.length)
@@ -251,7 +297,10 @@ class FileNameTemplateEditor(
         val next = text.substring(0, at) + token + text.substring(at)
         caret = at + token.length
         pending = true
-        setState { value = next }
+        setState {
+            value = next
+            menuOpen = false
+        }
         committer.cancel()
         async {
             committer.commitNow(ScalarAttributeNotation(next))
@@ -261,64 +310,95 @@ class FileNameTemplateEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun ChildrenBuilder.render() {
-        TextField {
-            fullWidth = true
-            size = Size.small
-            label = ReactNode(CommonEditUtils.formattedLabel(AttributePath.ofName(props.attributeName), state.label))
-            value = state.value
-
-            onChange = {
-                val input = it.target as HTMLInputElement
-                onTyped(input.value, input.selectionStart)
-            }
-            onSelect = {
-                caret = (it.target as HTMLInputElement).selectionStart
-            }
-
-            // Commit the pending debounced edit on focus loss (see DebouncedSubmitter's invariant)
-            onBlur = { committer.flush() }
-        }
-
         div {
             css {
                 display = Display.flex
-                flexWrap = FlexWrap.wrap
                 alignItems = AlignItems.center
-                gap = 0.25.em
-                marginTop = 0.25.em
             }
 
-            val fields = state.fields
-            if (!fields.isNullOrEmpty()) {
-                span {
-                    css {
-                        fontSize = 0.8.em
-                        color = noteColor
-                        marginRight = 0.25.em
-                    }
-                    +"Insert:"
+            div {
+                css {
+                    flexGrow = number(1.0)
                 }
-                for (field in fields) {
-                    Chip {
-                        key = Key(field)
-                        size = Size.small
-                        variant = ChipVariant.outlined
-                        label = ReactNode(placeholder(field))
-                        title = "Insert ${placeholder(field)} at the cursor"
-                        // Keep the field focused so the caret stays where the chip inserts
-                        onMouseDown = { it.preventDefault() }
-                        onClick = { onInsert(field) }
+                TextField {
+                    fullWidth = true
+                    size = Size.small
+                    label = ReactNode(
+                        CommonEditUtils.formattedLabel(AttributePath.ofName(props.attributeName), state.label))
+                    value = state.value
+
+                    onChange = {
+                        val input = it.target as HTMLInputElement
+                        onTyped(input.value, input.selectionStart)
                     }
+                    onSelect = {
+                        caret = (it.target as HTMLInputElement).selectionStart
+                    }
+
+                    // Commit the pending debounced edit on focus loss (see DebouncedSubmitter's invariant)
+                    onBlur = { committer.flush() }
                 }
             }
 
-            state.note?.let { note ->
-                span {
-                    css {
-                        fontSize = 0.8.em
-                        color = noteColor
+            span {
+                ref = menuAnchorRef
+                title = state.note ?: "Insert a field"
+
+                IconButton {
+                    disabled = state.placeholders.isNullOrEmpty()
+                    // Keep the field focused so the caret stays where the insert lands
+                    onMouseDown = { it.preventDefault() }
+                    onClick = { setState { menuOpen = true } }
+                    icon("material-symbols:data-object") {}
+                }
+            }
+        }
+
+        renderMenu()
+    }
+
+
+    private fun ChildrenBuilder.renderMenu() {
+        val placeholders = state.placeholders
+            ?: return
+
+        Menu {
+            open = state.menuOpen
+            onClose = ::onMenuClose
+            anchorEl = menuAnchorRef.current?.let { { _ -> it } }
+
+            var previousGroup: String? = null
+            for (placeholder in placeholders) {
+                if (placeholder.group != previousGroup) {
+                    if (previousGroup != null) {
+                        Divider { key = Key("divider:" + placeholder.group) }
                     }
-                    +note
+                    ListSubheader {
+                        key = Key("group:" + placeholder.group)
+                        +placeholder.group
+                    }
+                    previousGroup = placeholder.group
+                }
+
+                MenuItem {
+                    key = Key(placeholder.path)
+                    dense = true
+                    onClick = { onInsert(placeholder.path) }
+
+                    span {
+                        css {
+                            fontFamily = FontFamily.monospace
+                        }
+                        +placeholder(placeholder.path)
+                    }
+                    span {
+                        css {
+                            marginLeft = 1.em
+                            fontSize = 0.85.em
+                            color = noteColor
+                        }
+                        +placeholder.hint
+                    }
                 }
             }
         }

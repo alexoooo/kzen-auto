@@ -155,12 +155,35 @@ class JobChannelDisplay(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    // The pipe (chevron or its editor) on the left, the type beside it: two independent disclosures, so opening
+    // one never closes the other. The type view keeps its place in the tree across both pipe states, which keeps
+    // its own open state.
     override fun ChildrenBuilder.render() {
-        if (props.expanded) {
-            renderExpanded()
-        }
-        else {
-            renderCollapsed()
+        div {
+            css {
+                display = Display.flex
+                alignItems = AlignItems.flexStart
+                gap = 0.5.em
+                width = 100.pct
+                marginBottom = JobChannelDisplayStyle.marginBottom
+            }
+
+            if (props.expanded) {
+                renderExpanded()
+            }
+            else {
+                renderCollapsed()
+            }
+
+            div {
+                css {
+                    paddingTop = 0.3.em
+                    minWidth = 0.px
+                }
+                DataContractView::class.react {
+                    display = props.contractDisplay
+                }
+            }
         }
     }
 
@@ -190,8 +213,7 @@ class JobChannelDisplay(
                 display = Display.flex
                 flexDirection = FlexDirection.column
                 alignItems = AlignItems.center
-                width = 100.pct
-                marginBottom = JobChannelDisplayStyle.marginBottom
+                flexShrink = number(0.0)
             }
 
             div {
@@ -223,10 +245,6 @@ class JobChannelDisplay(
                 }
 
                 icon("material-symbols:keyboard-arrow-down") {}
-            }
-
-            DataContractView::class.react {
-                display = props.contractDisplay
             }
 
             // The overridden values, visible while collapsed so a customized channel doesn't have to be opened
@@ -265,9 +283,7 @@ class JobChannelDisplay(
             css {
                 display = Display.flex
                 alignItems = AlignItems.center
-                justifyContent = JustifyContent.center
-                width = 100.pct
-                marginBottom = JobChannelDisplayStyle.marginBottom
+                flexShrink = number(0.0)
             }
 
             div {
@@ -303,10 +319,6 @@ class JobChannelDisplay(
                             fontWeight = FontWeight.bold
                         }
                         +routeTitle
-                    }
-
-                    DataContractView::class.react {
-                        display = props.contractDisplay
                     }
 
                     div {

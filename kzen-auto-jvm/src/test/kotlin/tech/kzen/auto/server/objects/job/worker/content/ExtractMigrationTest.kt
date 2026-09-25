@@ -94,18 +94,18 @@ class ExtractMigrationTest {
 
     //-----------------------------------------------------------------------------------------------------------------
     @Test
-    fun codingEditAppliesFromTheEntryAfterTheOneItLandedIn() {
+    fun compressionEditAppliesFromTheEntryAfterTheOneItLandedIn() {
         val out = prepare("migrate-write", entries()).resolve("out")
         val notation = AutoTestUtils.readNotation()
         harness.fresh()
         val base = harness.compile(writeJob, notation)
-        val edited = harness.compile(writeJob, edit(notation, writer, "coding", WriteWorker.codingNone))
+        val edited = harness.compile(writeJob, edit(notation, writer, "compression", WriteWorker.compressionNone))
 
         val outcome = editInsideEntry(base, edited)
 
         val names = collected(outcome).map { (it as Written).name }
         assertEquals(entryNames(0 until entryCount), names)
-        // The entry the edit landed in finished under its original coding; everything after is plain
+        // The entry the edit landed in finished under its original compression; everything after is plain
         val expectedFiles = entryNames(0 until editInsideEntry).map { "$it.gz" } +
                 entryNames(editInsideEntry until entryCount)
         assertEquals(expectedFiles.toSet(), listFiles(out))
@@ -125,7 +125,7 @@ class ExtractMigrationTest {
         val edited = harness.compile(
             writeJob,
             edit(notation, writeSource, "files", ListAttributeNotation(listOf(otherArchive).toPersistentList())))
-        val compatible = harness.compile(writeJob, edit(notation, writer, "coding", WriteWorker.codingNone))
+        val compatible = harness.compile(writeJob, edit(notation, writer, "compression", WriteWorker.compressionNone))
 
         // Judged by the live instances from the two notations (WorkerBase.migrationKey): with no run there is
         // nothing to refuse, and nothing is touched

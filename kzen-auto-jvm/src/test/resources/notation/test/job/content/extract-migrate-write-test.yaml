@@ -1,4 +1,4 @@
-# ExtractMigrationTest: File(units) -> Extract(e00..e09) -> Write gzip -> ResultSink keep: all; the writer's coding is edited live,
+# ExtractMigrationTest: File(units) -> Extract(e00..e09) -> Write gzip -> ResultSink keep: all; the writer's compression is edited live,
 # between entries
 main:
   is: Job
@@ -33,7 +33,7 @@ main.workers/Write:
   input: main.channels/entries
   output: main.channels/written
   directory: build/content-scope/migrate-write/out
-  coding: gzip
+  compression: gzip
 
 main.workers/collect:
   is: ResultSinkWorker

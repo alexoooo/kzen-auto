@@ -101,7 +101,7 @@ class ExtractWorkerTest {
 
 
     @Test
-    fun plainCodingCopiesBytesWithoutSuffix() {
+    fun plainCompressionCopiesBytesWithoutSuffix() {
         val directory = prepare("plain", standardEntries)
         val out = directory.resolve("out")
 
@@ -111,6 +111,22 @@ class ExtractWorkerTest {
         assertEquals(setOf("foo.txt", "baz.txt"), listFiles(out))
         assertEquals(fooBytes.toList(), Files.readAllBytes(out.resolve("foo.txt")).toList())
         assertEquals(bazBytes.toList(), Files.readAllBytes(out.resolve("baz.txt")).toList())
+    }
+
+
+    @Test
+    fun nameInterpolatesTheTimeTheWriteStarted() {
+        val out = prepare("time", standardEntries).resolve("out")
+
+        val outcome = harness.run("test/job/content/extract-time-test.yaml")
+
+        assertIs<Outcome.Success>(outcome)
+        val written = listFiles(out)
+        assertEquals(setOf("foo.txt", "baz.txt"), written.map { it.substringAfter('/') }.toSet())
+        // One run, one time: Report's export format, local yyyyMMddTHHmmss
+        val times = written.map { it.substringBefore('/') }.toSet()
+        assertEquals(1, times.size, "$written")
+        assertTrue(Regex("\\d{8}T\\d{6}").matches(times.single()), "$times")
     }
 
 

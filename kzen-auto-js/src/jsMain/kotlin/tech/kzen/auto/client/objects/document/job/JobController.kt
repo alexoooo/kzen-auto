@@ -163,6 +163,9 @@ class JobController(
     companion object {
         private val dragHandleColor = Color("rgba(0, 0, 0, 0.45)")
         private const val partialValidationRetryMillis = 1000L
+
+        // The insert "+" (32px) at a gap's left edge, and the room the pipe beside it leaves for it
+        private val insertColumnWidth = 2.5.em
     }
 
 
@@ -972,8 +975,9 @@ class JobController(
                 position = Position.relative
                 display = Display.flex
                 alignItems = AlignItems.center
-                justifyContent = JustifyContent.center
                 maxWidth = JobObjectSlot.cardMaxWidth
+                // The pipe hugs the cards' left edge, just clear of the insert "+" (Script's step column)
+                paddingLeft = insertColumnWidth
 
                 // Reserved height depends ONLY on the gap's own content, never on insert-mode — so entering /
                 // leaving insert-mode never reflows the cards (mirrors ScriptBranchDisplay). The expanded card
@@ -1024,16 +1028,16 @@ class JobController(
                 }
             }
 
-            // Insert-mode: the "+" is an absolute overlay anchored to the RIGHT of the gap (like dropZoneRegion,
-            // out of flow) so it ADDS an insertion point without displacing, resizing, or covering the centred
-            // channel pipe / its caption. Skipped over an expanded editor, where a "+" makes no sense.
-            if (state.creating && !expanded) {
+            // Insert-mode: the "+" is an absolute overlay at the LEFT of the gap, where Script puts its step "+"
+            // (out of flow, like dropZoneRegion) so it ADDS an insertion point without displacing, resizing, or
+            // covering the channel pipe beside it (collapsed or expanded — the padding keeps its column clear).
+            if (state.creating) {
                 div {
                     css {
                         position = Position.absolute
                         top = 0.px
                         bottom = 0.px
-                        right = 1.em
+                        left = 0.px
                         display = Display.flex
                         alignItems = AlignItems.center
                     }

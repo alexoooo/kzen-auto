@@ -102,7 +102,7 @@ internal class CursorLending(
                 delivered += 1
                 val lentItem = item.native as? LentElement
                 val owned = lentItem?.let { ingress.ledger()?.entryOf(it) }
-                if (owned != null && lentItem != null) {
+                if (owned != null) {
                     lent = owned
                     lentName = lentItem.lentName()
                 }

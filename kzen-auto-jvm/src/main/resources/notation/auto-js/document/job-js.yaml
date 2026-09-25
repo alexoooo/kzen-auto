@@ -122,9 +122,9 @@ WriterColumnsEditor:
   class: tech.kzen.auto.client.objects.document.job.edit.WriterColumnsEditor$Wrapper
 
 
-# File-name template editor: edits a `${...}` template over the value's metadata (Write's `name`) as text plus a chip
-# per placeholder the upstream Worker's metadata contract offers (dotted into records such as `parent`), then the
-# extras listed in `meta.<attr>.placeholders`. Selected via `editor: FileNameTemplateEditor`.
+# File-name template editor: edits a `${...}` template over the value's metadata (Write's `name`) as text plus an insert
+# menu of the placeholders the upstream Worker's metadata contract offers (dotted into records such as `parent`), then
+# the writer's own, described in `meta.<attr>.placeholders`. Selected via `editor: FileNameTemplateEditor`.
 FileNameTemplateEditor:
   is: AttributeEditor
   class: tech.kzen.auto.client.objects.document.job.edit.FileNameTemplateEditor$Wrapper

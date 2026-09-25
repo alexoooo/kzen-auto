@@ -639,7 +639,7 @@ Write:
   output: ""
   directory: ""
   name: "${name}${extension}"
-  coding: gzip
+  compression: gzip
   existing: fail
   meta:
     input:
@@ -656,19 +656,24 @@ Write:
     name:
       is: String
       editor: FileNameTemplateEditor
-      placeholders: "extension"
-    coding:
+      placeholders:
+        extension: "the compression's suffix: .gz, or nothing"
+        time: "when the run started, as yyyyMMddTHHmmss"
+    compression:
       is: String
-      editor: ToggleValuesEditor
+      editor: SelectValuesEditor
+      row: options
       values:
-        gzip: "Gzip"
-        none: "None"
+        gzip: "gz"
+        none: "none"
       details:
         gzip: "Compress each file (extension .gz)"
         none: "Copy the bytes as they are (no extension)"
     existing:
       is: String
-      editor: ToggleValuesEditor
+      editor: SelectValuesEditor
+      label: "If the file exists"
+      row: options
       values:
         fail: "Fail"
         replace: "Replace"

@@ -86,10 +86,7 @@ data class OutputExportSpec(
             extension: String,
             variables: Map<String, String> = emptyMap()
         ): String {
-            val timeFormat = FormatUtils.formatLocalDateTime(time)
-                .replace("-", "")
-                .replace(":", "")
-                .replace(" ", "T")
+            val timeFormat = FormatUtils.formatFilenameTime(time)
 
             val sanitizedReportName = FormatUtils.sanitizeFilename(reportName.value)
             val sanitizedGroup = FormatUtils.sanitizeFilename(group.group ?: "")
