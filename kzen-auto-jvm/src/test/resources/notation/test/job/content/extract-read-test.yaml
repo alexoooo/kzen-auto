@@ -1,4 +1,4 @@
-# ExtractReadPartTest "read": File(units) -> Extract(bar.csv) -> Read part(declared schema) -> ResultSink keep: all
+# ExtractReadPartTest "read": File(units) -> Extract -> Filter(bar.csv) -> Read part(declared schema) -> ResultSink keep: all
 main:
   is: Job
   results:
@@ -11,6 +11,9 @@ main.formats/csv:
   is: ConfiguredCsv
   catalogVisible: false
   schema: test/job/content/content-schema-test.yaml#main
+
+main.channels/members:
+  is: Channel
 
 main.channels/entries:
   is: Channel
@@ -30,9 +33,13 @@ main.workers/Archive:
 main.workers/Extract:
   is: Extract
   input: main.channels/files
-  members:
-    - bar.csv
+  output: main.channels/members
+
+main.workers/Select:
+  is: FilterWorker
+  input: main.channels/members
   output: main.channels/entries
+  where: 'name == "bar.csv"'
 
 main.workers/Read:
   is: Parse

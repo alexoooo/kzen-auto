@@ -47,11 +47,11 @@ import kotlin.test.fail
  */
 class ServerLogicControllerMigrationTest {
     //-----------------------------------------------------------------------------------------------------------------
-    private val documentPath = DocumentPath.parse("test/job/migration/job-migration-preview-test.yaml")
+    private val documentPath = DocumentPath.parse("test/job/migration/job-migration-controller-test.yaml")
     private val jobLocation = ObjectLocation(documentPath, ObjectPath.parse("main"))
     private val previewLocation = ObjectLocation(documentPath, ObjectPath.parse("main.workers/preview"))
 
-    private val dir = Path.of("build/job-migration")
+    private val dir = Path.of("build/job-migration-controller")
     private val input = dir.resolve("input.csv")
     private val rows = 100
 

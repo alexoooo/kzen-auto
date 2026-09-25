@@ -212,6 +212,11 @@ tasks.compileTestJava {
 }
 
 
+// Half the logical processors (each test JVM also runs background compile and GC threads), capped so the 2g heaps
+// stay within a developer machine's memory
+val testForks = (Runtime.getRuntime().availableProcessors() / 2).coerceIn(1, 6)
+
+
 // Forward the optional `-DjobSliceRows=<n>` to the forked test JVM, so JobExecutionTest's M3 throughput
 // benchmark can be scaled for a heavier manual run (it defaults to a modest CI-friendly N otherwise).
 tasks.test {
@@ -225,6 +230,10 @@ tasks.test {
     // Gradle's 512m default leaves the Kotlin script compiler's working set no headroom: the shared JVM spends a
     // third of the suite in back-to-back full GCs
     maxHeapSize = "2g"
+
+    // Serial, the suite is ~17 minutes of mostly single-threaded work. Test classes share no fixed on-disk paths
+    // (each `build/<fixture>` directory belongs to one class), so they run in parallel JVMs.
+    maxParallelForks = testForks
 
     // Disruptor's single-producer thread assertion records every sequencer in a static map it never clears, so
     // under the test task's -ea each finished report pipeline (ring buffers, run context, compiled classes)
@@ -244,6 +253,7 @@ val pluginUniverseTest = tasks.register<Test>("pluginUniverseTest") {
     classpath = sourceSets.test.get().runtimeClasspath
     include("**/context/runtime/boot/**")
     forkEvery = 1
+    maxParallelForks = testForks
     workingDir = rootProject.projectDir
 }
 

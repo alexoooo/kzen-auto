@@ -1,4 +1,4 @@
-# ExtractMigrationTest: File(units) -> Extract(big.csv) -> Read part -> Summary over a channel of capacity 1, then ResultSink
+# ExtractMigrationTest: File(units) -> Extract -> Read part -> Summary over a channel of capacity 1, then ResultSink
 # keep: last; the sink is edited while the source is lending its one large entry
 main:
   is: Job
@@ -34,8 +34,6 @@ main.workers/Archive:
 main.workers/Extract:
   is: Extract
   input: main.channels/files
-  members:
-    - big.csv
   output: main.channels/entries
 
 main.workers/Read:

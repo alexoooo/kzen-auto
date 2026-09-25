@@ -19,7 +19,11 @@ import java.util.jar.JarFile
 
 class CachedKotlinCompiler(
     private val kotlinCompiler: KotlinCompiler,
-    workUtils: WorkUtils
+    workUtils: WorkUtils,
+
+    // Where compiled jars live; null = `code-cache/` under the work root. Entries are keyed by source digest, so
+    // one directory can serve several contexts in a process (KzenAutoConfig.codeCacheRoot)
+    cacheRoot: Path? = null
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -43,6 +47,13 @@ class CachedKotlinCompiler(
 
         // Number of monitors striping [compileLocks]; fixed so the lock table does not grow per distinct signature.
         private const val compileLockStripes = 64
+
+        // Fixed set of monitors guarding every disk mutation of a signature dir (compile, load, delete, evict), so
+        // concurrent compiles of the same source don't race a half-written jar, and a delete can't pull a jar out
+        // from under an in-progress load. Striped rather than one-monitor-per-signature so the table stays bounded;
+        // distinct signatures may share a stripe, which only adds harmless serialization. Process-wide because a
+        // cache directory may be shared by several contexts.
+        private val compileLocks = Striped.lock(compileLockStripes)
     }
 
 
@@ -65,7 +76,7 @@ class CachedKotlinCompiler(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val cacheDir = workUtils.resolve(codeCacheDir)
+    private val cacheDir = cacheRoot ?: workUtils.resolve(codeCacheDir)
 
     // Hot loaded expression classes, keyed by content signature (className + source digest, so an entry can
     // never be stale; the classloader parent is process-stable, so the signature alone is a sufficient key).
@@ -77,12 +88,6 @@ class CachedKotlinCompiler(
         .maximumSize(loadedClassCacheSize)
         .removalListener<String, LoadedCode> { _, value, _ -> value?.close() }
         .build()
-
-    // Fixed set of monitors guarding every disk mutation of a signature dir (compile, load, delete, evict), so
-    // concurrent compiles of the same source don't race a half-written jar, and a delete can't pull a jar out
-    // from under an in-progress load. Striped rather than one-monitor-per-signature so the table stays bounded;
-    // distinct signatures may share a stripe, which only adds harmless serialization.
-    private val compileLocks = Striped.lock(compileLockStripes)
 
     @Volatile
     private var evictor: StorageLruEvictor? = null

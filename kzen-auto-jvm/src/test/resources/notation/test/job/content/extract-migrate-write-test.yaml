@@ -1,5 +1,5 @@
-# ExtractMigrationTest: File(units) -> Extract(e00..e09) -> Write gzip -> ResultSink keep: all; the writer's coding and the
-# transform's members are edited live, between entries
+# ExtractMigrationTest: File(units) -> Extract(e00..e09) -> Write gzip -> ResultSink keep: all; the writer's coding is edited live,
+# between entries
 main:
   is: Job
   results:
@@ -26,8 +26,6 @@ main.workers/Archive:
 main.workers/Extract:
   is: Extract
   input: main.channels/files
-  members:
-    - "*.txt"
   output: main.channels/entries
 
 main.workers/Write:

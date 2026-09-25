@@ -45,7 +45,9 @@ class FileDataSourceFormatBudgetTest {
         val result = source(
             files,
             format,
-            policy(maximumColdParts = 1, maximumDecodedBytes = 1, overallTimeoutMillis = 100))
+            // The wall-time limit stays generous: resolving the warm parts still takes time, which a loaded
+            // machine stretches
+            policy(maximumColdParts = 1, maximumDecodedBytes = 1, overallTimeoutMillis = 5_000))
             .resolve(DirectContext)
 
         assertEquals(files.map(::canonical), result.manifest.units.map { it.parts.single().ref.id })

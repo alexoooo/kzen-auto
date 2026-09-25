@@ -1,4 +1,4 @@
-# ExtractWorkerTest "inner": File(units) -> Extract (*.tar.gz) -> Extract (**) -> Write -> ResultSink keep: all
+# ExtractWorkerTest "inner": File(units) -> Extract -> Filter(*.tar.gz) -> Extract -> Write -> ResultSink keep: all
 main:
   is: Job
   results:
@@ -8,6 +8,9 @@ main:
       nullable: true
 
 main.channels/files:
+  is: Channel
+
+main.channels/members:
   is: Channel
 
 main.channels/archives:
@@ -28,15 +31,17 @@ main.workers/Archive:
 main.workers/Outer:
   is: Extract
   input: main.channels/files
-  members:
-    - "*.tar.gz"
+  output: main.channels/members
+
+main.workers/Select:
+  is: FilterWorker
+  input: main.channels/members
   output: main.channels/archives
+  where: 'name.endsWith(".tar.gz")'
 
 main.workers/Inner:
   is: Extract
   input: main.channels/archives
-  members:
-    - "**"
   output: main.channels/entries
 
 main.workers/Write:

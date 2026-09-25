@@ -92,9 +92,11 @@ class ExtractWorkerTest {
 
         val cursor = cursors.single()
         assertEquals(1, cursor.closeCount())
-        assertEquals(2, cursor.produced.size)
-        assertTrue(cursor.produced.all { it.consumed && it.isInvalidated })
-        assertEquals(3, cursor.skipped()) // bar.csv, the sub/ directory, sub/data.bin
+        // Every file member is lent (the sub/ directory is not); the Filter drops bar.csv and sub/data.bin
+        // without opening them
+        assertEquals(4, cursor.produced.size)
+        assertEquals(2, cursor.produced.count { it.wasOpened })
+        assertTrue(cursor.produced.all { it.isInvalidated })
     }
 
 
@@ -417,8 +419,10 @@ class ExtractWorkerTest {
 
 
     @Test
-    fun tenThousandSmallEntriesMeasurePerEntryCost() {
-        val count = 10_000
+    fun manySmallEntriesMeasurePerEntryCost() {
+        // KZEN_CONTENT_SPIKE_ENTRIES overrides the entry count (the plan's case: 10000), off the default path for
+        // time: each entry is a published file, which costs milliseconds on Windows
+        val count = System.getenv("KZEN_CONTENT_SPIKE_ENTRIES")?.toIntOrNull() ?: 500
         val directory = prepare("many", (0 until count).map { "e$it.txt" to "entry $it".toByteArray() })
         val out = directory.resolve("out")
 

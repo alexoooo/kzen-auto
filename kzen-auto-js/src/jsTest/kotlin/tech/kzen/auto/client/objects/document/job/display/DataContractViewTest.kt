@@ -69,6 +69,10 @@ class DataContractViewTest {
             DataTypePath.root to TypeMetadata(ClassName("kotlin.String"), emptyList(), true)))
         assertEquals("Text?", DataContractPresentation.typeLabel(text))
         assertTrue(DataContractPresentation.typeTitle(text).contains("kotlin.String"))
+        val content = DataContract(DataType.Opaque(), mapOf(
+            DataTypePath.root to TypeMetadata(ClassName("example.content.Content"), emptyList(), false)))
+        assertEquals("Content", DataContractPresentation.typeLabel(content))
+        assertTrue(DataContractPresentation.typeTitle(content).startsWith("Opaque"))
     }
 
 

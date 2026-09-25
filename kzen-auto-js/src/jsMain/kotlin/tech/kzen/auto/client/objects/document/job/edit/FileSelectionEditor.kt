@@ -350,6 +350,13 @@ class FileSelectionEditor(
     }
 
 
+    // Only a host that reads its files (a DataSource) has a format; `File` selects files without reading them, so
+    // its rows show no format, resolution or override
+    private fun readsFormat(): Boolean =
+        props.clientStateGlobal.current()?.graphStructure()?.graphMetadata?.get(props.objectLocation)
+            ?.attributes?.get(formatAttributePath.attribute) != null
+
+
     override fun onDataFormatState(state: DataFormatStore.State) {
         val catalog = state.catalog
         if (this.state.formatCatalog == catalog) {
@@ -472,7 +479,7 @@ class FileSelectionEditor(
     private fun bindResolutions(entries: List<FileSelectionEntry>, graphNotation: GraphNotation) {
         val store = fileResolutionStore()
             ?: return
-        val nextKeys = entries.mapTo(linkedSetOf()) {
+        val nextKeys = entries.takeIf { readsFormat() }.orEmpty().mapTo(linkedSetOf()) {
             FileResolutionStore.Key.of(
                 props.objectLocation,
                 it,
@@ -872,7 +879,7 @@ class FileSelectionEditor(
             entries = selected
             checked = state.selectedChecked
             showDetails = state.showDetails
-            perEntryFormat = true
+            perEntryFormat = readsFormat()
             formatCatalog = state.formatCatalog
             resolutionByLocation = state.fileResolutions
             onCheckedChanged = { next -> setState { selectedChecked = next } }

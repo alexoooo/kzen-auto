@@ -31,6 +31,11 @@ data class KzenAutoConfig(
     //  one; null = the standalone default `../work` beside the module.
     val workRoot: Path? = null,
 
+    // Compiled-expression cache directory; null = `code-cache/` under the work root. Unlike the rest of the work
+    //  root it may be shared by several contexts in one process (entries are keyed by source digest), which lets
+    //  test contexts reuse each other's compiles.
+    val codeCacheRoot: Path? = null,
+
     // Services an embedding host supplies to @Service constructor parameters (see KzenAutoHost); empty standalone.
     val hostServices: KzenAutoHost = KzenAutoHost.empty,
 

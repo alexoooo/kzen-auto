@@ -64,8 +64,9 @@ class ExtractReadPartTest {
 
         val cursor = cursors.single()
         assertEquals(1, cursor.closeCount())
-        assertEquals(1, cursor.produced.size)
-        assertTrue(cursor.produced.single().isInvalidated)
+        assertEquals(2, cursor.produced.size)
+        assertEquals(1, cursor.produced.count { it.wasOpened })
+        assertTrue(cursor.produced.all { it.isInvalidated })
     }
 
 

@@ -63,8 +63,6 @@ class ExtractMigrationTest {
     private val writeJob = jobLocation(writeDocument)
     private val writeSource = ObjectLocation(
         DocumentPath.parse(writeDocument), ObjectPath.parse("main.workers/Archive"))
-    private val extract = ObjectLocation(
-        DocumentPath.parse(writeDocument), ObjectPath.parse("main.workers/Extract"))
     private val writer = ObjectLocation(
         DocumentPath.parse(writeDocument), ObjectPath.parse("main.workers/Write"))
     private val summaryJob = jobLocation(summaryDocument)
@@ -112,28 +110,6 @@ class ExtractMigrationTest {
                 entryNames(editInsideEntry until entryCount)
         assertEquals(expectedFiles.toSet(), listFiles(out))
         assertSingleCursorAdopted(entryCount)
-    }
-
-
-    @Test
-    fun membersEditAppliesFromTheNextHeaderWithoutRewinding() {
-        prepare("migrate-write", entries())
-        val notation = AutoTestUtils.readNotation()
-        harness.fresh()
-        val base = harness.compile(writeJob, notation)
-        val selected = listOf("e07.txt", "e08.txt", "e09.txt")
-        val edited = harness.compile(
-            writeJob,
-            edit(notation, extract, "members",
-                ListAttributeNotation(selected.map { ScalarAttributeNotation(it) }.toPersistentList())))
-
-        val outcome = editInsideEntry(base, edited)
-
-        val names = collected(outcome).map { (it as Written).name }
-        assertEquals(entryNames(0 until editInsideEntry) + selected, names)
-        // The cursor never rewinds: the entries between the edit and the new selection are skipped at the
-        // header, never opened
-        assertSingleCursorAdopted(editInsideEntry + selected.size)
     }
 
 

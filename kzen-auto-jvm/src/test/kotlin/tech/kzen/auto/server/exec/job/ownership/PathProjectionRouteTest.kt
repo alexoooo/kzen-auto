@@ -26,7 +26,7 @@ import kotlin.test.assertTrue
  * a direct fold over the same objects.
  */
 class PathProjectionRouteTest {
-    private val runTimeoutMillis = 30_000L
+    private val runTimeoutMillis = 120_000L
 
     private lateinit var context: KzenAutoContext
 

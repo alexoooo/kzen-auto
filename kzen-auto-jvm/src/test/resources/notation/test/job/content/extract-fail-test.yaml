@@ -25,7 +25,6 @@ main.workers/Archive:
 main.workers/Extract:
   is: Extract
   input: main.channels/files
-  members: []
   output: main.channels/entries
 
 main.workers/Failing:

@@ -141,13 +141,16 @@ class KzenAutoContext private constructor(
         // Defaulted config for tests that drive in-process logic and don't need a real port/host. Each test
         // context gets its own temporary work root: the standalone default is one root per process, and a
         // test that never closes its context would otherwise hold that root against every later test. The
-        // context owns that root, so close deletes it (a suite run otherwise left hundreds behind).
+        // context owns that root, so close deletes it (a suite run otherwise left hundreds behind). The compiled-
+        // expression cache is the exception: shared by every test context in the process, so an expression
+        // compiled by one test is not recompiled by the next (each compile costs seconds).
         fun forTest(): KzenAutoContext {
             val workRoot = kotlin.io.path.createTempDirectory("kzen-auto-test-work")
             val context = try {
                 create(KzenAutoConfig(
                     jsModuleName = "kzen-auto-js",
-                    workRoot = workRoot))
+                    workRoot = workRoot,
+                    codeCacheRoot = testCodeCacheRoot))
             }
             catch (failure: Throwable) {
                 deleteTemporaryWorkRoot(workRoot)
@@ -155,6 +158,14 @@ class KzenAutoContext private constructor(
             }
             context.temporaryWorkRoot = true
             return context
+        }
+
+
+        // Created on first use and deleted when the process exits
+        private val testCodeCacheRoot: Path by lazy {
+            val root = kotlin.io.path.createTempDirectory("kzen-auto-test-code-cache")
+            Runtime.getRuntime().addShutdownHook(Thread { deleteTemporaryWorkRoot(root) })
+            root
         }
 
 
@@ -227,7 +238,7 @@ class KzenAutoContext private constructor(
     val jobWorkPool = JobWorkPool(workUtils)
 
     val kotlinCompiler = ScriptKotlinCompiler()
-    val cachedKotlinCompiler = CachedKotlinCompiler(kotlinCompiler, workUtils)
+    val cachedKotlinCompiler = CachedKotlinCompiler(kotlinCompiler, workUtils, config.codeCacheRoot)
     val kotlinSyntaxValidator = KotlinSyntaxValidator()
     val calculatedColumnEval = CalculatedColumnEval(cachedKotlinCompiler, kotlinSyntaxValidator)
     val jobExpressionCompiler = JobExpressionCompiler(cachedKotlinCompiler, kotlinSyntaxValidator)

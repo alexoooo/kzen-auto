@@ -33,19 +33,17 @@ import tech.kzen.lib.platform.ClassName
  * Each member's content is a lent element ([CursorLending]): it is valid only until the cursor advances, so the
  * next is read only once the member's last downstream hold is released; a Worker that would keep it past its
  * callback is refused by name, and a value derived from it that carries no owner (a `Written` record, a row)
- * leaves freely. Its metadata is plain data, so it stays valid after the release. [members] selects members by
- * glob at the header (empty selects every file member); a non-matching member costs one skip.
+ * leaves freely. Its metadata is plain data, so it stays valid after the release. Every file member is lent;
+ * choosing among them is a `Filter` over their metadata downstream, which never opens a dropped member's content.
  *
  * Live edit: the open archive moves to the rebuilt instance between members (the base carries the input
- * element; the cursor is this Worker's expansion state); an edited `members:` applies from the next header
- * ([TarGzEntryCursor.reselect]), the cursor never rewinds and the archive is never re-opened. A change of the
- * file selection is refused upstream, by the source's own migration key.
+ * element; the cursor is this Worker's expansion state); the cursor never rewinds and the archive is never
+ * re-opened. A change of the file selection is refused upstream, by the source's own migration key.
  */
 @Reflect
 class ExtractWorker(
     input: ChannelInput<*>,
     output: ChannelOutput<DataValue>,
-    members: List<String>,
     selfLocation: ObjectLocation
 ):
     ExpandingTransformWorker(input, output, selfLocation), BorrowingSource
@@ -57,7 +55,6 @@ class ExtractWorker(
         private const val archivesKey = "archives"
         private const val archiveKey = "archive"
         private const val entriesKey = "entries"
-        private const val skippedKey = "skipped"
         private const val entryKey = "entry"
 
         private const val laneRequirement =
@@ -66,14 +63,12 @@ class ExtractWorker(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private val select = EntryGlob(members)
     private val lending = CursorLending(selfLocation)
 
     @Volatile
     private var cursor: TarGzEntryCursor? = null
 
     private var archives = 0L
-    private var skippedBefore = 0L
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -84,15 +79,10 @@ class ExtractWorker(
             lending.drain(control, emit, FileValues.contentContract, open, { member ->
                 memberMetadata(member as TarEntryContent, parent)
             }) { iterator ->
-                val opened = iterator as TarGzEntryCursor
-                // An adopted cursor selected under the previous notation's `members`; this instance's apply from
-                // the next header
-                opened.reselect(select::matches)
-                cursor = opened
+                cursor = iterator as TarGzEntryCursor
             }
         }
         finally {
-            cursor?.let { skippedBefore += it.skipped() }
             cursor = null
         }
         archives += 1
@@ -117,13 +107,12 @@ class ExtractWorker(
         return when (native) {
             is FileContent -> {
                 val path = native.path
-                ({ TarGzEntryCursor(path, select::matches) })
+                ({ TarGzEntryCursor(path) })
             }
 
             is Content -> {
                 val descriptor = native.descriptor()
-                ({ TarGzEntryCursor(
-                    descriptor, SequentialByteContentInputStream(native.open()), select::matches) })
+                ({ TarGzEntryCursor(descriptor, SequentialByteContentInputStream(native.open())) })
             }
 
             // Reached when the upstream lane was unknown statically, so the hint the validator would have given
@@ -150,7 +139,7 @@ class ExtractWorker(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun captureExpansionState(): Any =
-        ExtractState(lending.capture(null), archives, lending.delivered(), skippedBefore)
+        ExtractState(lending.capture(null), archives, lending.delivered())
 
 
     override fun loadExpansionState(captured: Any?) {
@@ -160,7 +149,6 @@ class ExtractWorker(
             return
         }
         archives = state.archives
-        skippedBefore = state.skippedBefore
         lending.adopt(state.adoptCursor(), null)
         lending.restoreDelivered(state.entries)
     }
@@ -169,8 +157,7 @@ class ExtractWorker(
     private class ExtractState(
         private var cursor: Any?,
         val archives: Long,
-        val entries: Long,
-        val skippedBefore: Long
+        val entries: Long
     ): AutoCloseable {
         fun adoptCursor(): Any? {
             val adopted = cursor
@@ -213,6 +200,5 @@ class ExtractWorker(
             archivesKey to archives,
             archiveKey to cursor?.archiveFileName,
             entriesKey to lending.delivered(),
-            skippedKey to skippedBefore + (cursor?.skipped() ?: 0L),
             entryKey to lending.lentElementName())
 }

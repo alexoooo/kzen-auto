@@ -8,6 +8,7 @@ import tech.kzen.lib.common.exec.data.type.DataTypePath
 import tech.kzen.lib.common.exec.data.type.DataType
 import tech.kzen.lib.common.exec.data.type.ScalarKind
 import tech.kzen.lib.common.exec.data.type.renderName
+import tech.kzen.lib.platform.ClassNames.simple
 import web.cssom.Color
 
 
@@ -71,6 +72,8 @@ internal object DataContractPresentation {
         val label = when (type) {
             is DataType.Record -> native?.let { "${it.toSimple()} (Record)" } ?: "Record"
             is DataType.Union -> "Union"
+            // An opaque value is named by what it is (`Content`); "Opaque" stays in the title
+            is DataType.Opaque -> native?.className?.simple() ?: summary(type)
             else -> summary(type)
         }
         val symbols = symbolSet(contract)?.let { " ∈ {${abbreviated(it.symbols)}}" }.orEmpty()

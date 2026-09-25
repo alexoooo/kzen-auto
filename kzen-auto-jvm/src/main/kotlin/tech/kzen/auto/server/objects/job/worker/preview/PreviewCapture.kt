@@ -4,6 +4,7 @@ import tech.kzen.auto.common.objects.document.job.preview.PreviewNode
 import tech.kzen.lib.common.exec.*
 import tech.kzen.lib.common.exec.data.type.*
 import tech.kzen.lib.common.exec.data.value.*
+import tech.kzen.lib.platform.ClassNames.simple
 import java.util.IdentityHashMap
 import java.util.concurrent.CancellationException
 
@@ -49,7 +50,11 @@ class PreviewCapture(
             val contract = if (declared.structural is DataType.Dynamic) value.access.contract(node).expanded()
                 else declared.expanded()
             val type = contract.structural
-            if (type is DataType.Opaque) return@guarded marker("unavailable", "Opaque value")
+            if (type is DataType.Opaque) {
+                // Never copied by design, so not partial: a larger sample or expanding would show no more
+                val name = contract.nativeByPath[DataTypePath.root]?.className?.simple()
+                return@guarded PreviewNode("unavailable", name ?: "Opaque value")
+            }
             if (type is DataType.Dynamic || type is DataType.Reference) {
                 return@guarded marker("unavailable", "Runtime structure unavailable")
             }

@@ -1,4 +1,4 @@
-# ExtractWorkerTest "write": File(units) -> Extract -> Write -> ResultSink keep: all
+# ExtractWorkerTest "write": File(units) -> Extract -> Filter(*.txt) -> Write -> ResultSink keep: all
 main:
   is: Job
   results:
@@ -6,6 +6,9 @@ main:
       class: kotlin.Any
       generics: []
       nullable: true
+
+main.channels/members:
+  is: Channel
 
 main.channels/entries:
   is: Channel
@@ -25,9 +28,13 @@ main.workers/Archive:
 main.workers/Extract:
   is: Extract
   input: main.channels/files
-  members:
-    - "*.txt"
+  output: main.channels/members
+
+main.workers/Select:
+  is: FilterWorker
+  input: main.channels/members
   output: main.channels/entries
+  where: 'name.endsWith(".txt")'
 
 main.workers/Write:
   is: Write

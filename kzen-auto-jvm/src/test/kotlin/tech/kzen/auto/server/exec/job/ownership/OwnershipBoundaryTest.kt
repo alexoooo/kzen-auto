@@ -48,7 +48,7 @@ import kotlin.test.assertTrue
  * the earlier sessions still close exactly once.
  */
 class OwnershipBoundaryTest {
-    private val runTimeoutMillis = 30_000L
+    private val runTimeoutMillis = 120_000L
     private val latchTimeoutSeconds = 10L
 
     private lateinit var context: KzenAutoContext

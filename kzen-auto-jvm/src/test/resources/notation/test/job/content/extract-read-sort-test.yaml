@@ -33,8 +33,6 @@ main.workers/Archive:
 main.workers/Extract:
   is: Extract
   input: main.channels/files
-  members:
-    - bar.csv
   output: main.channels/entries
 
 main.workers/Read:

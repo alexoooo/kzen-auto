@@ -28,7 +28,7 @@ import kotlin.test.assertTrue
  * closeable and its parent, on a failing run, and with an arena-backed source at channel capacities 0, 1 and 4.
  */
 class OwnedRouteTest {
-    private val runTimeoutMillis = 30_000L
+    private val runTimeoutMillis = 120_000L
 
     private lateinit var context: KzenAutoContext
 

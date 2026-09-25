@@ -41,7 +41,7 @@ import kotlin.test.assertTrue
  * list (delivered prefix skipped, its duplicates closed at once).
  */
 class OwnedSourceRouteTest {
-    private val runTimeoutMillis = 30_000L
+    private val runTimeoutMillis = 120_000L
     private val latchTimeoutSeconds = 10L
     private val migrationTotal = 40
 

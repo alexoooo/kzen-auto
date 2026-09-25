@@ -608,15 +608,11 @@ Extract:
   class: tech.kzen.auto.server.objects.job.worker.content.ExtractWorker
   input: ""
   output: ""
-  members: []
   meta:
     input:
       is: ChannelInput
       creator: JobChannelCreator
       editor: SelectChannelEditor
-    members:
-      is: List
-      of: String
     output:
       is: ChannelOutput
       creator: JobChannelCreator

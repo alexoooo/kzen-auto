@@ -54,6 +54,8 @@ class PreviewCaptureTest {
         assertEquals("unavailable", snapshot.children[0].kind)
         assertEquals("y", snapshot.children[1].text)
         assertEquals("unavailable", snapshot.children[2].kind)
+        assertEquals("Any", snapshot.children[2].text)
+        assertFalse(snapshot.children[2].partial, "an opaque value is never copied, so it is not partial")
     }
 
     @Test

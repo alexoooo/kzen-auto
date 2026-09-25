@@ -93,9 +93,14 @@ class ScriptNotationTest {
     fun largeForeachOverAFormulaStaysFast() {
         // Regression guard for the loaded-class cache: a 1000-iteration ForEach whose body is a Formula (plus the
         // sum + result Formulas) evaluates thousands of times. Rebuilding a URLClassLoader per evaluation would
-        // take orders of magnitude longer than this bound; the cached load keeps it well under a second.
+        // take orders of magnitude longer than this bound; the cached load keeps it well under a second. A first
+        // run compiles the Formulas, so the timed run measures evaluation rather than a contended compile.
+        val documentPath = "test/script/control/script-engine-foreach-benchmark-test.yaml"
+        runScript(documentPath)
+        context.close()
+
         val start = System.nanoTime()
-        val outcome = runScript("test/script/control/script-engine-foreach-benchmark-test.yaml")
+        val outcome = runScript(documentPath)
         val elapsedMillis = (System.nanoTime() - start) / 1_000_000
 
         assertEquals(1_001_000, assertIs<Outcome.Success>(outcome).value.mainBoundaryValue())

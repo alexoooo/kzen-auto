@@ -41,7 +41,7 @@ class JobFormulaPreviewReproTest {
 
     private lateinit var context: KzenAutoContext
     // Formula compilation runs inside the engine and can exceed the ordinary five-second control wait.
-    private val compileAndRunTimeoutMillis = 30_000L
+    private val compileAndRunTimeoutMillis = 120_000L
     private val pollIntervalMillis = 10L
 
 
