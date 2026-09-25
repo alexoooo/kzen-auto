@@ -1,0 +1,15 @@
+# JobImplicitPreviewTest: a Preview between two Workers samples everything and forwards it unchanged; the Filter
+# after it keeps the 50 elements above 50, sampled by the implicit Preview on its open output.
+main:
+  is: Job
+
+main.workers/source:
+  is: FormulaSourceWorker
+  code: "(1..100)"
+
+main.workers/Peek:
+  is: PreviewWorker
+
+main.workers/Filter:
+  is: FilterWorker
+  where: payload > 50

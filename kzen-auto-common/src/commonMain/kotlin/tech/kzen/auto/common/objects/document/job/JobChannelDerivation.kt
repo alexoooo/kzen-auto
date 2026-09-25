@@ -45,9 +45,12 @@ object JobChannelDerivation {
 
     // A Worker's single open output port that no adjacent Worker consumes (typically the last Worker's): the editor
     // still draws its outgoing pipe, so the output channel and its type are visible before a consumer is inserted.
+    // An [optional] port (declared `nullable`, e.g. Preview's) may stay unconsumed: its Worker drops what it would
+    // have forwarded.
     data class OpenOutput(
         val worker: ObjectLocation,
-        val outputPort: AttributeName
+        val outputPort: AttributeName,
+        val optional: Boolean = false
     )
 
 
@@ -56,6 +59,10 @@ object JobChannelDerivation {
         val serves: List<Serve>,
         val openOutputs: List<OpenOutput>
     ) {
+        /** The open outputs a run samples with an implicit Preview: every one that must be consumed. */
+        val sampledOutputs: List<OpenOutput>
+            get() = openOutputs.filterNot { it.optional }
+
         companion object {
             val empty = Result(listOf(), listOf(), listOf())
         }
@@ -67,7 +74,8 @@ object JobChannelDerivation {
         val location: ObjectLocation,
         val openInputs: List<AttributeName>,
         val openOutputs: List<AttributeName>,
-        val openServes: List<AttributeName>
+        val openServes: List<AttributeName>,
+        val optionalOutputs: Set<AttributeName>
     )
 
 
@@ -108,7 +116,10 @@ object JobChannelDerivation {
         val connectedUpstreams = connections.map { it.upstreamWorker }.toSet()
         val openOutputs = workers
             .filter { it.openOutputs.size == 1 && it.location !in connectedUpstreams }
-            .map { OpenOutput(it.location, it.openOutputs.single()) }
+            .map { worker ->
+                val port = worker.openOutputs.single()
+                OpenOutput(worker.location, port, port in worker.optionalOutputs)
+            }
 
         return Result(connections, serves, openOutputs)
     }
@@ -165,6 +176,7 @@ object JobChannelDerivation {
         val openInputs = mutableListOf<AttributeName>()
         val openOutputs = mutableListOf<AttributeName>()
         val openServes = mutableListOf<AttributeName>()
+        val optionalOutputs = mutableSetOf<AttributeName>()
 
         val metadata = graphStructure.graphMetadata.get(workerLocation)
         if (metadata != null) {
@@ -176,7 +188,12 @@ object JobChannelDerivation {
                 }
                 when (kind) {
                     JobChannelPorts.Kind.Input -> openInputs.add(attributeName)
-                    JobChannelPorts.Kind.Output -> openOutputs.add(attributeName)
+                    JobChannelPorts.Kind.Output -> {
+                        openOutputs.add(attributeName)
+                        if (attributeMetadata.type?.nullable == true) {
+                            optionalOutputs.add(attributeName)
+                        }
+                    }
                     JobChannelPorts.Kind.Server -> openServes.add(attributeName)
                     // An open ChannelClient has no producer-side to pair with; not auto-managed (manual only).
                     JobChannelPorts.Kind.Client -> {}
@@ -184,7 +201,7 @@ object JobChannelDerivation {
             }
         }
 
-        return WorkerPorts(workerLocation, openInputs, openOutputs, openServes)
+        return WorkerPorts(workerLocation, openInputs, openOutputs, openServes, optionalOutputs)
     }
 
 

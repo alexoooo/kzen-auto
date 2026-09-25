@@ -9,8 +9,8 @@ import tech.kzen.lib.common.exec.data.value.DataValue
 
 
 /**
- * A SINK Worker — consumes an input stream with no output channel (e.g. a file writer, or the live
- * [PreviewWorker]). The framework owns the drain loop and the batching: it drains one physical input BATCH at a
+ * A SINK Worker — consumes an input stream with no output channel (e.g. a file writer, or the indexing
+ * [ExploreWorker]). The framework owns the drain loop and the batching: it drains one physical input BATCH at a
  * time, a [JobControl.checkpoint] per batch (before receiving, so a parked Worker holds no received-but-
  * unprocessed element — at a pause wavefront every not-yet-consumed element is still in the channel, carried
  * forward by [tech.kzen.auto.server.objects.job.channel.JobChannel.drainBuffered] on a migration), dispatches

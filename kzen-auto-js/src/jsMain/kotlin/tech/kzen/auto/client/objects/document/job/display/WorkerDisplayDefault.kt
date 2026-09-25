@@ -316,10 +316,7 @@ class WorkerDisplayDefault(
                 }
             }
         }
-
-        DataContractView::class.react {
-            display = DataContractDisplay.of(validation)
-        }
+        // The output contract is shown once, on the channel leaving this card (JobController.insertionGap)
     }
 
 

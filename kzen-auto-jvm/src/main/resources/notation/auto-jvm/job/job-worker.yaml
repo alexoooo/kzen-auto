@@ -475,11 +475,13 @@ ExportWriterWorker:
       by: Self
 
 
-# Sink that shows a LIVE sample of incoming data: pushes a teaser (first rows + running count) to its trace
-# for the always-on view, and serves on-demand slice queries (offset / limit) over an external duplex Channel
+# Pass-through that shows a LIVE sample of the data flowing through it: pushes a teaser (first rows + running
+# count) to its trace for the always-on view, and serves on-demand slice queries (offset / limit) over an external duplex Channel
 # `serve` for the browser to read its larger buffered sample. `sample` bounds the buffered rows. Renders each
 # message's flat part: the CSV lane column-for-column, a payload lane auto-flattened to a single `value`
 # column — so the same view serves both the CSV lane and a scalar (FormulaSource / Run) lane.
+# `output` is optional (`nullable`): wired to the next Worker it forwards every value unchanged, so a Preview can sit
+# between any two Workers; left open (ending a Job) it gets no implicit Preview after it, and drops what it sampled.
 PreviewWorker:
   abstract: true
   is: Worker
@@ -487,11 +489,17 @@ PreviewWorker:
   class: tech.kzen.auto.server.objects.job.worker.PreviewWorker
   display: PreviewWorkerDisplay
   input: ""
+  output: ""
   serve: ""
   sample: 1000
   meta:
     input:
       is: ChannelInput
+      creator: JobChannelCreator
+      editor: SelectChannelEditor
+    output:
+      is: ChannelOutput
+      nullable: true
       creator: JobChannelCreator
       editor: SelectChannelEditor
     serve:
@@ -642,21 +650,33 @@ Write:
       is: ChannelOutput
       creator: JobChannelCreator
       editor: SelectChannelEditor
-    directory: String
-    name: String
+    directory:
+      is: String
+      editor: DirectoryEditor
+    name:
+      is: String
+      editor: FileNameTemplateEditor
+      placeholders: "extension"
     coding:
       is: String
-      editor: SelectValuesEditor
+      editor: ToggleValuesEditor
       values:
         gzip: "Gzip"
         none: "None"
+      details:
+        gzip: "Compress each file (extension .gz)"
+        none: "Copy the bytes as they are (no extension)"
     existing:
       is: String
-      editor: SelectValuesEditor
+      editor: ToggleValuesEditor
       values:
         fail: "Fail"
         replace: "Replace"
         skip: "Skip"
+      details:
+        fail: "Stop the run when a destination file already exists"
+        replace: "Overwrite an existing destination file"
+        skip: "Leave an existing destination file and write nothing for it"
     selfLocation:
       is: ObjectLocation
       by: Self

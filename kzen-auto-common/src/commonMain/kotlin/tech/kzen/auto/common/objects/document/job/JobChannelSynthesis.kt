@@ -39,7 +39,9 @@ import tech.kzen.lib.common.service.notation.NotationConventions
  *
  * A Worker's only output that nothing consumes ([JobChannelDerivation.OpenOutput], typically the last Worker's)
  * gets an implicit Preview ([JobConventions.implicitPreviewPath]) inserted after it in the run copy, so the
- * Worker runs and what it produces is sampled for the editor instead of being left unwired.
+ * Worker runs and what it produces is sampled for the editor instead of being left unwired. An optional output
+ * (a Preview's own) gets none: it stays blank, and its Worker drops what it would forward
+ * ([JobChannelDerivation.Result.sampledOutputs]).
  */
 class JobChannelSynthesis(
     private val notationMetadataReader: NotationMetadataReader
@@ -200,7 +202,7 @@ class JobChannelSynthesis(
         val documentNotation = structure.graphNotation.documents[jobDocumentPath]
             ?: return listOf()
         return JobChannelDerivation.derive(structure, jobDocumentPath)
-            .openOutputs
+            .sampledOutputs
             .map { it to JobConventions.implicitPreviewPath(it.worker.objectPath, it.outputPort) }
             .filter { (_, previewPath) -> documentNotation.objects.notations.map[previewPath] == null }
             .map { (openOutput, previewPath) -> openOutput to ObjectLocation(jobDocumentPath, previewPath) }

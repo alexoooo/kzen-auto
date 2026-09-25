@@ -1,0 +1,15 @@
+# JobImplicitPreviewTest: a Preview ending a Job leaves its optional output open, so the run adds no implicit
+# Preview after it; it samples the 50 elements the Filter keeps.
+main:
+  is: Job
+
+main.workers/source:
+  is: FormulaSourceWorker
+  code: "(1..100)"
+
+main.workers/Filter:
+  is: FilterWorker
+  where: payload > 50
+
+main.workers/Last:
+  is: PreviewWorker

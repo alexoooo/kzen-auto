@@ -83,6 +83,10 @@ object JobChannelCreator: AttributeCreator {
         val channelReference = attributeDefinition.objectReference
             ?: throw IllegalArgumentException(
                 "Channel reference is empty: $objectLocation - $attributeName")
+        if (channelReference.isEmpty() && attributeDefinition.nullable) {
+            // An optional port nothing is wired to (see JobChannelDerivation.OpenOutput.optional)
+            return null
+        }
 
         val channelLocation = partialGraphInstance.objectInstances.locate(
             channelReference, ObjectReferenceHost.ofLocation(objectLocation))

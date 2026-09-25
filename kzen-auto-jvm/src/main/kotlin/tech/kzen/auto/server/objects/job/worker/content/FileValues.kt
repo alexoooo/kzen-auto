@@ -1,8 +1,11 @@
 package tech.kzen.auto.server.objects.job.worker.content
 
+import tech.kzen.auto.server.data.read.archive.ArchiveListingCursor
 import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.lib.common.exec.data.type.DataConstraint
 import tech.kzen.lib.common.exec.data.type.DataContract
 import tech.kzen.lib.common.exec.data.type.DataType
+import tech.kzen.lib.common.exec.data.type.DataTypePath
 import tech.kzen.lib.common.exec.data.type.FieldId
 import tech.kzen.lib.common.exec.data.type.MetadataContract
 import tech.kzen.lib.common.exec.data.type.ScalarKind
@@ -29,12 +32,21 @@ object FileValues {
     const val kind = "kind"
     const val parent = "parent"
 
-    const val kindFile = "file"
+    const val kindFile = ArchiveListingCursor.kindFile
 
 
     private val text = DataType.Scalar(ScalarKind.Text)
     private val size64 = DataType.Scalar(ScalarKind.Integer(64))
     private val nullableInstant = DataType.Scalar(ScalarKind.Instant, nullable = true)
+
+    // The same vocabulary as an archive listing's `kind` column; `File` and `Extract` lend only files today
+    private val kindContract = DataContract(
+        text,
+        constraintsByPath = mapOf(DataTypePath.root to listOf(DataConstraint.SymbolSet(listOf(
+            ArchiveListingCursor.kindFile,
+            ArchiveListingCursor.kindDirectory,
+            ArchiveListingCursor.kindLink,
+            ArchiveListingCursor.kindOther)))))
 
     /** The payload's contract: a [Content], opaque. */
     val contentContract: DataContract by lazy { JobDataValues.describe(typeOf<Content>()) }
@@ -47,7 +59,7 @@ object FileValues {
         fields += FieldId(path) to DataContract(text)
         fields += FieldId(size) to DataContract(size64)
         fields += FieldId(modified) to DataContract(nullableInstant)
-        fields += FieldId(kind) to DataContract(text)
+        fields += FieldId(kind) to kindContract
         captures.forEach { fields += FieldId(it) to DataContract(text) }
         if (parent != null) {
             fields += FieldId(FileValues.parent) to parent.contract
@@ -77,7 +89,7 @@ object FileValues {
         fields += FieldId(FileValues.size) to literal(size, size64)
         fields += FieldId(modified) to literal(
             modifiedEpochMillis?.let { Instant.ofEpochMilli(it).toString() }, nullableInstant)
-        fields += FieldId(FileValues.kind) to literal(kind, text)
+        fields += FieldId(FileValues.kind) to LiteralDataValues.lift(kind, kindContract)
         captures.forEach { (key, value) -> fields += FieldId(key) to literal(value, text) }
         if (parent != null) {
             fields += FieldId(FileValues.parent) to parent.value

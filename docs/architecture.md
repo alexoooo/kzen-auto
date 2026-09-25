@@ -93,8 +93,10 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > derivation then wires it like any adjacent pair, so the Worker runs and its output is sampled.
 > `JobLogicCompiler` launches it beside the saved Workers; the editor reads its trace by the stable id minted
 > from that deterministic location and draws the sample (`PreviewSampleView`, shared with the Preview card)
-> under the last Worker's outgoing pipe. An output still open after that (one of several) stays blank, so the
-> re-definition — transitively successful, like its input — prunes its Worker; validation gives such outputs
+> under the last Worker's outgoing pipe. An optional output (a port declared `nullable`: Preview's own, which
+> forwards only when wired, so a Preview can sit between any two Workers) gets no implicit Preview
+> (`sampledOutputs`); it stays blank, `JobChannelCreator` injects null, and its Worker drops what it sampled.
+> An output still open after that (one of several) stays blank, so the re-definition — transitively successful, like its input — prunes its Worker; validation gives such outputs
 > a transient channel (`synthesizeOpenOutputs`, via `JobValidator.validateDetached`) so the Worker is still
 > typed. Per-output-port channel config
 > (batchSize / capacity) lives on the **upstream Worker** in a free-form `channels.<outputPort>` map —

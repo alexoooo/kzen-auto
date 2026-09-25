@@ -60,7 +60,7 @@ class PreviewWorkerTest {
         val elements = (1..25).map { it.toString() }
         val expectedRows = elements.map { listOf(it) }
 
-        val worker = PreviewWorker(scalarInput(elements.chunked(10)), emptyServer, 1000, selfLocation)
+        val worker = PreviewWorker(scalarInput(elements.chunked(10)), null, emptyServer, 1000, selfLocation)
         val control = RecordingJobControl()
         worker.run(control)
 
@@ -86,7 +86,7 @@ class PreviewWorkerTest {
 
     @Test
     fun nestedWindowQueryAndMigrationUseTheSameDetachedItems() = runBlocking {
-        val worker = PreviewWorker(scalarInput(listOf(listOf(listOf(1, 2), listOf(3), listOf(4)))), emptyServer, 2, selfLocation)
+        val worker = PreviewWorker(scalarInput(listOf(listOf(listOf(1, 2), listOf(3), listOf(4)))), null, emptyServer, 2, selfLocation)
         worker.run(RecordingJobControl())
         val snapshot = worker.captureMigrationState() as PreviewWorker.Snapshot
         assertEquals(3L, snapshot.count)
@@ -98,7 +98,7 @@ class PreviewWorkerTest {
         val wire = result.value.get() as Map<*, *>
         val encoded = wire[tech.kzen.auto.common.objects.document.job.preview.PreviewNode.progressKey] as List<*>
         assertEquals(snapshot.items.map { it.encode() }, encoded)
-        val migrated = PreviewWorker(scalarInput(emptyList()), emptyServer, 1, selfLocation)
+        val migrated = PreviewWorker(scalarInput(emptyList()), null, emptyServer, 1, selfLocation)
         migrated.loadMigrationState(snapshot)
         val restored = migrated.captureMigrationState() as PreviewWorker.Snapshot
         assertEquals(3L, restored.count)
@@ -107,7 +107,7 @@ class PreviewWorkerTest {
 
     @Test
     fun previewWindowIsBoundedByBytesAsWellAsItemCount() = runBlocking {
-        val worker = PreviewWorker(scalarInput(listOf(List(2200) { "x".repeat(4096) })), emptyServer, 3000, selfLocation)
+        val worker = PreviewWorker(scalarInput(listOf(List(2200) { "x".repeat(4096) })), null, emptyServer, 3000, selfLocation)
         worker.run(RecordingJobControl())
         val snapshot = worker.captureMigrationState() as PreviewWorker.Snapshot
         assertEquals(2200L, snapshot.count)
@@ -118,7 +118,7 @@ class PreviewWorkerTest {
 
     //-----------------------------------------------------------------------------------------------------------------
     private suspend fun runPreview(elements: List<Any?>): PreviewWorker.Snapshot {
-        val worker = PreviewWorker(scalarInput(listOf(elements)), emptyServer, 1000, selfLocation)
+        val worker = PreviewWorker(scalarInput(listOf(elements)), null, emptyServer, 1000, selfLocation)
         worker.run(RecordingJobControl())
 
         // captureMigrationState() returns the same immutable snapshot() the trace / serve paths read.

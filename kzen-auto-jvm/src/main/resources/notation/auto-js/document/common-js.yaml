@@ -30,6 +30,20 @@ SelectContextEditor:
   class: tech.kzen.auto.client.objects.document.common.edit.SelectContextEditor$Wrapper
 
 
+# Button-group twin of SelectValuesEditor (same `values` / `details` meta), for a short fixed value set whose
+# choices should all be visible at once. Selected via `editor: ToggleValuesEditor`.
+ToggleValuesEditor:
+  is: AttributeEditor
+  class: tech.kzen.auto.client.objects.document.common.edit.ToggleValuesEditor$Wrapper
+
+
+# A directory path: typed, or chosen by walking folders in place (the file browser's listing, folders only).
+# Selected via `editor: DirectoryEditor`.
+DirectoryEditor:
+  is: AttributeEditor
+  class: tech.kzen.auto.client.objects.document.common.file.DirectoryEditor$Wrapper
+
+
 ################################################################
 
 

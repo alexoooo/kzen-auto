@@ -412,7 +412,7 @@ class JobController(
         val mainLocation = ObjectLocation(documentPath, NotationConventions.mainObjectPath)
         // The implicit Previews a run attaches to outputs nothing consumes report progress like saved Workers
         val implicitPreviews = JobChannelDerivation.derive(clientState.graphStructure(), documentPath)
-            .openOutputs
+            .sampledOutputs
             .map(::implicitPreviewLocation)
         val workerLocations = workerPaths(documentNotation)
             .map { ObjectLocation(documentPath, it) } +
@@ -868,7 +868,7 @@ class JobController(
                 else {
                     val openOutput = openOutputs[workerLocation]
                     insertionGap(index + 1, openOutput, null, documentPath, graphNotation)
-                    openOutput?.let { renderImplicitPreview(it, active) }
+                    openOutput?.takeUnless { it.optional }?.let { renderImplicitPreview(it, active) }
                 }
             }
         }
