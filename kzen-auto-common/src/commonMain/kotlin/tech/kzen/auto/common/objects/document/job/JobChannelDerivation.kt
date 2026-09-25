@@ -43,12 +43,21 @@ object JobChannelDerivation {
     )
 
 
+    // A Worker's single open output port that no adjacent Worker consumes (typically the last Worker's): the editor
+    // still draws its outgoing pipe, so the output channel and its type are visible before a consumer is inserted.
+    data class OpenOutput(
+        val worker: ObjectLocation,
+        val outputPort: AttributeName
+    )
+
+
     data class Result(
         val connections: List<Connection>,
-        val serves: List<Serve>
+        val serves: List<Serve>,
+        val openOutputs: List<OpenOutput>
     ) {
         companion object {
-            val empty = Result(listOf(), listOf())
+            val empty = Result(listOf(), listOf(), listOf())
         }
     }
 
@@ -96,7 +105,12 @@ object JobChannelDerivation {
             worker.openServes.map { Serve(worker.location, it) }
         }
 
-        return Result(connections, serves)
+        val connectedUpstreams = connections.map { it.upstreamWorker }.toSet()
+        val openOutputs = workers
+            .filter { it.openOutputs.size == 1 && it.location !in connectedUpstreams }
+            .map { OpenOutput(it.location, it.openOutputs.single()) }
+
+        return Result(connections, serves, openOutputs)
     }
 
 

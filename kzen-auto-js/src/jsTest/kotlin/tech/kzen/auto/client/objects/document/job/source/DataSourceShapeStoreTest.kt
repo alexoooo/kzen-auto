@@ -13,9 +13,7 @@ import tech.kzen.auto.common.data.schema.LegacyDataShapeBridge
 import tech.kzen.lib.common.exec.data.shape.DataShapeResult
 import tech.kzen.lib.common.exec.MapExecutionValue
 import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import kotlin.test.Test
-import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertSame
@@ -43,33 +41,6 @@ class DataSourceShapeStoreTest {
 
 
     @Test
-    fun aggregatePreservesCompleteShapeOnlyAfterEveryPartSucceeds() {
-        val common = LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("a", "shared")))
-        val a = DataSourceShapeStore.PartState(
-            false, DataShapeResult.Observed(common), null)
-        val b = DataSourceShapeStore.PartState(
-            false, DataShapeResult.Observed(common), null)
-        assertEquals(
-            DataShapeResult.Observed(common),
-            DataSourceShapeStore.aggregate(listOf(a, b)))
-
-        assertNull(DataSourceShapeStore.aggregate(listOf(a.copy(inspecting = true), b)))
-        assertNull(DataSourceShapeStore.aggregate(listOf(a.copy(error = "failed"), b)))
-        assertEquals(
-            DataShapeResult.Unavailable,
-            DataSourceShapeStore.aggregate(listOf(
-                a, DataSourceShapeStore.PartState(
-                    false,
-                    DataShapeResult.Observed(LegacyDataShapeBridge.payload(TypeMetadata.string)),
-                    null))))
-        assertEquals(
-            DataShapeResult.Unavailable,
-            DataSourceShapeStore.aggregate(listOf(
-                a, DataSourceShapeStore.PartState(false, DataShapeResult.Unavailable, null))))
-    }
-
-
-    @Test
     fun partLookupRequiresTheExactSourceAndResolvedPartIdentity() {
         val part = DataPart(
             DataRole.main,
@@ -89,7 +60,7 @@ class DataSourceShapeStoreTest {
             ClientRestApi(""),
             mapOf(
                 DataSourceShapeStore.Key.of(source, manifest) to
-                    DataSourceShapeStore.State(mapOf(part to observed), observed.result)))
+                    DataSourceShapeStore.State(mapOf(part to observed))))
 
         assertSame(observed, store.partState(source, part))
         assertNull(store.partState(ObjectLocation.parse("job.yaml#other"), part))

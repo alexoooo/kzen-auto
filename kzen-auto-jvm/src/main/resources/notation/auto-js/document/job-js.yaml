@@ -113,6 +113,15 @@ PathProjectionEditor:
   class: tech.kzen.auto.client.objects.document.job.edit.PathProjectionEditor$Wrapper
 
 
+# Writer-column editor: edits a writer's `columns` attribute (a WriterColumnSpec) as rows — `*` for every payload
+# column, and path columns (a metadata field such as `meta.name`, or a nested scalar) with an alias and their
+# binding error — picked from the upstream contract in the same picker as PathProjectionEditor, without unnesting.
+# Selected via `editor: WriterColumnsEditor` on CsvWriterWorker's and ExportWriterWorker's `columns` metadata.
+WriterColumnsEditor:
+  is: AttributeEditor
+  class: tech.kzen.auto.client.objects.document.job.edit.WriterColumnsEditor$Wrapper
+
+
 # Export-config editor: edits an ExportWriterWorker's `export` attribute (an OutputExportSpec — format /
 # compression / path-pattern), a thin composition of the same Select / Text field editors Report's export panel
 # uses, pointed at the Job-relative `export.*` paths. Selected via `editor: ExportSpecEditor` on the
@@ -222,13 +231,14 @@ JobGroup_Transforms:
   archetype: Job
 
 
-ReadPartTool:
+# Reads what a value holds: a file's or an archive member's rows, or a data unit's parts
+ParseTool:
   is: RibbonTool
   parent: JobGroup_Transforms
-  delegate: ReadPartWorker
+  delegate: Parse
 
 
-# Borrowed elements (docs/plans/2026-09-16_borrowed-elements.md): archive members out of whole files
+# Borrowed elements (docs/plans/2026-09-16_borrowed-elements.md): archive members out of files
 ExtractTool:
   is: RibbonTool
   parent: JobGroup_Transforms
@@ -345,8 +355,3 @@ DuplexChannelTool:
   is: RibbonTool
   parent: JobGroup_Channels
   delegate: DuplexChannel
-
-
-FormulaCarryEditor:
-  is: AttributeEditor
-  class: tech.kzen.auto.client.objects.document.job.edit.FormulaCarryEditor$Wrapper

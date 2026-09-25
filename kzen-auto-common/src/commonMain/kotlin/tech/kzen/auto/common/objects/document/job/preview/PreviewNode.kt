@@ -3,7 +3,10 @@ package tech.kzen.auto.common.objects.document.job.preview
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
-/** Detached display content. Text includes scalar formatting; children preserve field order and identity. */
+/**
+ * Detached display content. Text includes scalar formatting; children preserve field order and identity. An item's
+ * [metadata] is the value's metadata captured the same way (absent when the value has none).
+ */
 @Serializable
 data class PreviewNode(
     val kind: String,
@@ -11,7 +14,8 @@ data class PreviewNode(
     val children: List<PreviewNode> = emptyList(),
     val name: String = "",
     val occurrence: Int = 0,
-    val partial: Boolean = false
+    val partial: Boolean = false,
+    val metadata: PreviewNode? = null
 ) {
     fun encode(): String = Json.encodeToString(serializer(), this)
 

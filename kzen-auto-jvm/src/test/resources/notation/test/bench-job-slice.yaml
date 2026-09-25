@@ -6,6 +6,9 @@ main.workers/reader:
   files:
     - location: build/bench/slice/input.csv
 
+main.workers/reader Parse:
+  is: Parse
+
 main.workers/filter:
   is: FilterWorker
   where: 'flag == "yes"'

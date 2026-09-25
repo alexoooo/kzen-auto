@@ -34,13 +34,13 @@ main.workers/units:
 main.workers/enrich:
   is: FormulaWorker
   formula:
-    flatDate: 'attributes["date"]'
+    flatDate: 'meta["date"] as String'
 
 main.workers/run:
   is: RunWorker
   instructions: test/job/run/job-per-unit-child-test.yaml#main
   arguments:
-    outputDate: 'attributes["date"]'
+    outputDate: 'meta["date"] as String'
     flatDate: flatDate
     prefix: prefix
 

@@ -22,10 +22,7 @@ import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditor
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorProps
 import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
 import tech.kzen.auto.client.objects.document.job.JobSummaryStore
-import tech.kzen.auto.client.objects.document.job.source.DataSourceResolveStore
-import tech.kzen.auto.client.objects.document.job.source.DataSourceResolveStoreKey
-import tech.kzen.auto.client.objects.document.job.source.DataSourceShapeStore
-import tech.kzen.auto.client.objects.document.job.source.DataSourceShapeStoreKey
+import tech.kzen.auto.client.objects.document.job.JobValidationChannel
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.util.ClientInputUtils
 import tech.kzen.auto.client.util.async
@@ -38,6 +35,7 @@ import tech.kzen.auto.client.wrap.select.SelectOption
 import tech.kzen.auto.client.wrap.select.muiAutocompleteField
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.data.schema.HeaderLabel
+import tech.kzen.auto.common.objects.document.job.model.JobValidation
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotSpec
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotValueColumnSpec
 import tech.kzen.auto.common.objects.document.report.spec.analysis.pivot.PivotValueType
@@ -99,7 +97,7 @@ class PivotSpecEditor(
     RComponent<AttributeEditorProps, PivotSpecEditorState>(props),
     LocalGraphStore.Observer,
     JobSummaryStore.Observer,
-    DataSourceShapeStore.GlobalObserver
+    JobValidationChannel.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
@@ -122,8 +120,7 @@ class PivotSpecEditor(
 
     //-----------------------------------------------------------------------------------------------------------------
     private var summaryStore: JobSummaryStore? = null
-    private var resolveStore: DataSourceResolveStore? = null
-    private var shapeStore: DataSourceShapeStore? = null
+    private var validationChannel: JobValidationChannel? = null
 
 
     init {
@@ -152,8 +149,7 @@ class PivotSpecEditor(
         val store = bridge?.channel(JobSummaryStore.Key)
         summaryStore = store
         store?.observe(this)
-        resolveStore = bridge?.lookup(DataSourceResolveStoreKey)
-        shapeStore = bridge?.lookup(DataSourceShapeStoreKey)?.also { it.observeAll(this) }
+        validationChannel = bridge?.channel(JobValidationChannel.Key)?.also { it.observe(this) }
 
         async {
             // Unobserve runs synchronously on unmount, so registering after it would leak this observer.
@@ -170,7 +166,7 @@ class PivotSpecEditor(
         mounted = false
         props.mirroredGraphStore.unobserve(this)
         summaryStore?.unobserve(this)
-        shapeStore?.unobserveAll(this)
+        validationChannel?.unobserve(this)
     }
 
 
@@ -199,7 +195,7 @@ class PivotSpecEditor(
     }
 
 
-    override fun onDataSourceShapesChanged() {
+    override fun onJobValidation(validation: JobValidation?) {
         props.clientStateGlobal.current()?.graphStructure()?.let(::recompute)
     }
 
@@ -218,8 +214,7 @@ class PivotSpecEditor(
             graphStructure,
             props.objectLocation,
             summaryStore?.current().orEmpty(),
-            resolveStore,
-            shapeStore)?.columns?.values.orEmpty()
+            validationChannel?.current())?.columns?.values.orEmpty()
 
         if (state.pivotSpec != nextPivotSpec || state.upstreamSummary != nextSummary ||
             state.upstreamColumns != nextColumns) {

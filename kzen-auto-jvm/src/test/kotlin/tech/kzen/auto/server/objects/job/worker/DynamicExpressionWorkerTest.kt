@@ -4,7 +4,6 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import tech.kzen.auto.common.objects.document.job.FormulaCarrySpec
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
 import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.api.ChannelInputIterator
@@ -65,17 +64,18 @@ class DynamicExpressionWorkerTest {
             FormulaSpec(mapOf(
                 "doubled" to "(key(\"amount\") as BigDecimal) * BigDecimal(\"2\")")),
             "",
-            FormulaCarrySpec.none,
             location("formula"),
             context.jobExpressionCompiler)
 
         worker.run(DynamicInputControl)
 
-        val projection = testProjection(output.values.single())
-        assertEquals(listOf("amount", "doubled"),
+        val value = output.values.single()
+        val projection = testProjection(value)
+        assertEquals(listOf("amount"),
             (0 until projection.size).map { projection.field(it).name })
-        assertEquals(listOf("2.5", "5"),
+        assertEquals(listOf("2.5"),
             (0 until projection.size).map(projection::render))
+        assertEquals(mapOf("doubled" to BigDecimal("5")), testBoundary(value.metadata!!.value))
     }
 
 

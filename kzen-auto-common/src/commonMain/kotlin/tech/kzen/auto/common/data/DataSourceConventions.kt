@@ -15,14 +15,6 @@ object DataSourceConventions {
     val dataSourceObjectName = ObjectName("DataSource")
     val shapeProviderObjectName = ObjectName("DataSourceShapeProvider")
 
-    // DataSourceShapeProvider is capability metadata, while these effective fields are its fail-closed
-    // Read-lane projection contract. A third-party provider that cannot expose them is not advertised.
-    val shapeSourceAttributeName = AttributeName("source")
-    val shapeEmitAttributeName = AttributeName("emit")
-    val shapeRoleAttributeName = AttributeName("role")
-    val shapeAttributesAttributeName = AttributeName("attributes")
-    val shapeSchemaModeAttributeName = AttributeName("schemaMode")
-
     val sourcesAttributeName = AttributeName("sources")
     val sourcesAttributePath = AttributePath.ofName(sourcesAttributeName)
 

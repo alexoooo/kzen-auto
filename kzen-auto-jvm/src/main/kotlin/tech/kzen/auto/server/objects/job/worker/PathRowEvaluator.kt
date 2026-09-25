@@ -17,6 +17,7 @@ import tech.kzen.lib.common.exec.data.value.ValueAccess
  * - a null (or absent) intermediate yields null for every leaf through it and keeps the row;
  * - an empty (or null) unnested list yields zero rows for the element it belongs to — and so for the whole
  *   input element when the list is at the top, since every row carries that path's column.
+ * A path whose first step is [BoundStep.Metadata] reads from the element's metadata (null when it has none).
  * Rows are column-aligned with the bound paths' order. One instance serves one Worker (single-threaded).
  */
 internal class PathRowEvaluator(
@@ -59,8 +60,19 @@ internal class PathRowEvaluator(
     }
 
 
-    fun rows(element: DataValue): List<Row> =
-        evaluate(root, element.access, element.root).map { Row(it) }
+    // The metadata of the element being evaluated, entered by a path's leading Metadata step
+    private var metadata: DataValue? = null
+
+
+    fun rows(element: DataValue): List<Row> {
+        metadata = element.metadata?.value
+        try {
+            return evaluate(root, element.access, element.root).map { Row(it) }
+        }
+        finally {
+            metadata = null
+        }
+    }
 
 
     // Rows of [group] positioned at [node] (the input element, or the list / map element its key unnests):
@@ -86,25 +98,28 @@ internal class PathRowEvaluator(
     // after the parent's key; none when the container, or an intermediate on the way to it, is null / absent.
     private fun iterate(child: Group, access: ValueAccess, node: DataNode, parentKeySize: Int): List<Array<String?>> {
         val unnest = child.key.last()
-        var container = node
-        for (step in child.key.subList(parentKeySize, child.key.size - 1)) {
-            container = navigate(access, container, step) ?: return emptyList()
+        val start = enter(access, node, child.key.subList(parentKeySize, child.key.size - 1))
+            ?: return emptyList()
+        val containerAccess = start.access
+        var container = start.node
+        for (step in start.steps) {
+            container = navigate(containerAccess, container, step) ?: return emptyList()
         }
-        if (access.state(container) != DataState.Present) {
+        if (containerAccess.state(container) != DataState.Present) {
             return emptyList()
         }
         val rows = ArrayList<Array<String?>>()
-        for (index in 0 until access.size(container)) {
+        for (index in 0 until containerAccess.size(container)) {
             val element = when (unnest) {
-                BoundStep.Elements -> access.element(container, index)
+                BoundStep.Elements -> containerAccess.element(container, index)
                 BoundStep.Entries -> {
-                    val key = access.keyAt(container, index)
+                    val key = containerAccess.keyAt(container, index)
                     entryKeyText = DataReadCore.scalarText(key)
-                    access.entry(container, key)
+                    containerAccess.entry(container, key)
                 }
                 else -> throw IllegalStateException("Not an unnesting step: $unnest")
             }
-            rows.addAll(evaluate(child, access, element))
+            rows.addAll(evaluate(child, containerAccess, element))
         }
         return rows
     }
@@ -115,14 +130,30 @@ internal class PathRowEvaluator(
         if (steps.firstOrNull() == BoundStep.Key) {
             return entryKeyText
         }
-        var current = node
-        for (step in steps) {
-            current = navigate(access, current, step) ?: return null
+        val start = enter(access, node, steps)
+            ?: return null
+        var current = start.node
+        for (step in start.steps) {
+            current = navigate(start.access, current, step) ?: return null
         }
-        if (access.state(current) != DataState.Present) {
+        if (start.access.state(current) != DataState.Present) {
             return null
         }
-        return DataReadCore.scalarText(access.scalar(current))
+        return DataReadCore.scalarText(start.access.scalar(current))
+    }
+
+
+    private class Start(val access: ValueAccess, val node: DataNode, val steps: List<BoundStep>)
+
+
+    // Where [steps] start: in the element's metadata after a leading Metadata step (null when it has none),
+    // otherwise at [node]
+    private fun enter(access: ValueAccess, node: DataNode, steps: List<BoundStep>): Start? {
+        if (steps.firstOrNull() != BoundStep.Metadata) {
+            return Start(access, node, steps)
+        }
+        val entered = metadata ?: return null
+        return Start(entered.access, entered.root, steps.subList(1, steps.size))
     }
 
 
@@ -133,7 +164,7 @@ internal class PathRowEvaluator(
         return when (step) {
             is BoundStep.Field -> access.field(node, step.id)
             BoundStep.Value -> node
-            BoundStep.Key, BoundStep.Elements, BoundStep.Entries ->
+            BoundStep.Metadata, BoundStep.Key, BoundStep.Elements, BoundStep.Entries ->
                 throw IllegalStateException("Step $step is not navigated singly")
         }
     }

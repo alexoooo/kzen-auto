@@ -36,6 +36,10 @@ import tech.kzen.lib.common.service.notation.NotationConventions
  * Synthesized channel identity is deterministic ([JobConventions.autoSynthChannelName] /
  * [JobConventions.autoServeChannelName]), so re-running synthesis each tick / migrate yields the same
  * ObjectLocations — and thus the same migration stable ids — preserving in-flight channel carryover.
+ *
+ * A Worker's only output that nothing consumes ([JobChannelDerivation.OpenOutput], typically the last Worker's)
+ * gets an implicit Preview ([JobConventions.implicitPreviewPath]) inserted after it in the run copy, so the
+ * Worker runs and what it produces is sampled for the editor instead of being left unwired.
  */
 class JobChannelSynthesis(
     private val notationMetadataReader: NotationMetadataReader
@@ -47,13 +51,19 @@ class JobChannelSynthesis(
 
         // Every Channel under the Job document in the augmented notation: synthesized + (later) materialized +
         // manual. The run loop enumerates these to open external clients / index stream channels by stable id.
-        val channelLocations: List<ObjectLocation>
+        val channelLocations: List<ObjectLocation>,
+
+        // The implicit Preview Workers the run copy added ([JobConventions.implicitPreviewPath]): the run launches
+        // them beside the saved Workers.
+        val implicitWorkers: List<ObjectLocation>
     )
 
 
     //-----------------------------------------------------------------------------------------------------------------
     fun synthesize(graphDefinition: GraphDefinition, jobDocumentPath: DocumentPath): Result {
-        val structure = graphDefinition.graphStructure
+        val savedStructure = graphDefinition.graphStructure
+        val implicitPreviews = implicitPreviews(savedStructure, jobDocumentPath)
+        val structure = withImplicitPreviews(savedStructure, jobDocumentPath, implicitPreviews)
         val derivation = JobChannelDerivation.derive(structure, jobDocumentPath)
 
         val documentNotation = structure.graphNotation.documents[jobDocumentPath]
@@ -61,7 +71,7 @@ class JobChannelSynthesis(
         if (documentNotation == null ||
                 (derivation.connections.isEmpty() && derivation.serves.isEmpty())) {
             // No Job doc, or every connection is manually wired: the incoming definition already wires the run.
-            return Result(graphDefinition, channelLocationsOf(documentNotation, jobDocumentPath))
+            return Result(graphDefinition, channelLocationsOf(documentNotation, jobDocumentPath), listOf())
         }
 
         // Job-wide channel defaults (declared on the Job archetype, so firstAttribute resolves the archetype
@@ -81,12 +91,7 @@ class JobChannelSynthesis(
             augmentedDoc = wireServe(augmentedDoc, serve, defaultCapacity)
         }
 
-        val augmentedNotation = structure.graphNotation.withModifiedDocument(jobDocumentPath, augmentedDoc)
-        val augmentedStructure = GraphStructure(
-            augmentedNotation, notationMetadataReader.read(augmentedNotation))
-        val augmentedDefinition = GraphDefiner.tryDefine(augmentedStructure).successful()
-
-        return Result(augmentedDefinition, channelLocationsOf(augmentedDoc, jobDocumentPath))
+        return define(structure.graphNotation, jobDocumentPath, augmentedDoc, implicitPreviews.map { it.second })
     }
 
 
@@ -102,70 +107,148 @@ class JobChannelSynthesis(
         objectLocation: ObjectLocation
     ): Result {
         val ordinary = synthesize(graphDefinition, objectLocation.documentPath)
+        return withOpenOutputChannels(ordinary, objectLocation.documentPath, listOf(objectLocation.objectPath))
+    }
+
+
+    /**
+     * [synthesizeOpenOutputsForObject] for every Worker of the Job: validation uses it so a Worker with several
+     * outputs, one of them open, is still instantiated and typed. The run path does not — [synthesize] prunes
+     * such a Worker, which would otherwise fill a channel no one drains. (A Worker's only open output never gets
+     * this far: [synthesize] hands it to an implicit Preview.)
+     */
+    fun synthesizeOpenOutputs(
+        graphDefinition: GraphDefinition,
+        jobDocumentPath: DocumentPath
+    ): Result {
+        val ordinary = synthesize(graphDefinition, jobDocumentPath)
+        val workerPaths = ordinary.graphDefinition.graphStructure.graphNotation.documents[jobDocumentPath]
+            ?.directNestedObjectPaths(NotationConventions.mainObjectPath, JobConventions.workersAttributeName)
+            ?: return ordinary
+        return withOpenOutputChannels(ordinary, jobDocumentPath, workerPaths)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun withOpenOutputChannels(
+        ordinary: Result,
+        jobDocumentPath: DocumentPath,
+        workerPaths: List<ObjectPath>
+    ): Result {
         val structure = ordinary.graphDefinition.graphStructure
-        val documentNotation = structure.graphNotation.documents[objectLocation.documentPath]
+        val documentNotation = structure.graphNotation.documents[jobDocumentPath]
             ?: return ordinary
         if (!JobConventions.isJob(documentNotation)) {
             return ordinary
         }
 
-        val metadata = structure.graphMetadata.get(objectLocation)
-            ?: return ordinary
-        val openOutputs = metadata.attributes.map
-            .filter { (_, attributeMetadata) ->
-                JobChannelPorts.kindOf(attributeMetadata.type) == JobChannelPorts.Kind.Output
-            }
-            .map { it.key }
-            .filter { outputPort ->
-                isOpenPort(structure.graphNotation, objectLocation, outputPort)
-            }
-        if (openOutputs.isEmpty()) {
-            return ordinary
-        }
-
-        val mainLocation = ObjectLocation(
-            objectLocation.documentPath, NotationConventions.mainObjectPath)
+        val mainLocation = ObjectLocation(jobDocumentPath, NotationConventions.mainObjectPath)
         val defaultBatchSize = structure.graphNotation
             .firstAttribute(mainLocation, AttributePath.ofName(JobConventions.batchSizeAttributeName))?.asString()
         val defaultCapacity = structure.graphNotation
             .firstAttribute(mainLocation, AttributePath.ofName(JobConventions.capacityAttributeName))?.asString()
 
         var augmentedDoc = documentNotation
-        for (outputPort in openOutputs) {
-            val channelName = ObjectName(JobConventions.autoSynthChannelName(
-                objectLocation.objectPath, outputPort))
-            val channelObjectPath = channelObjectPath(channelName)
-            val channelRef = channelObjectPath.asString()
-            val workerNotation = augmentedDoc.objects.notations.map[objectLocation.objectPath]
-            val batchSize = workerConfigValue(
-                workerNotation, outputPort, JobConventions.batchSizeAttributeName)
-                ?: defaultBatchSize
-            val capacity = workerConfigValue(
-                workerNotation, outputPort, JobConventions.capacityAttributeName)
-                ?: defaultCapacity
+        for (workerPath in workerPaths) {
+            val objectLocation = ObjectLocation(jobDocumentPath, workerPath)
+            val metadata = structure.graphMetadata.get(objectLocation)
+                ?: continue
+            val openOutputs = metadata.attributes.map
+                .filter { (_, attributeMetadata) ->
+                    JobChannelPorts.kindOf(attributeMetadata.type) == JobChannelPorts.Kind.Output
+                }
+                .map { it.key }
+                .filter { outputPort ->
+                    isOpenPort(structure.graphNotation, objectLocation, outputPort)
+                }
 
-            var channelNotation = ObjectNotation.ofParent(JobConventions.channelObjectName)
-            channelNotation = upsertIfPresent(
-                channelNotation, JobConventions.batchSizeAttributeName, batchSize)
-            channelNotation = upsertIfPresent(
-                channelNotation, JobConventions.capacityAttributeName, capacity)
-            augmentedDoc = ensureChannel(augmentedDoc, channelObjectPath, channelNotation)
-            augmentedDoc = setPort(
-                augmentedDoc, objectLocation.objectPath, outputPort, channelRef)
+            for (outputPort in openOutputs) {
+                val channelName = ObjectName(JobConventions.autoSynthChannelName(workerPath, outputPort))
+                val channelObjectPath = channelObjectPath(channelName)
+                val channelRef = channelObjectPath.asString()
+                val workerNotation = augmentedDoc.objects.notations.map[workerPath]
+                val batchSize = workerConfigValue(
+                    workerNotation, outputPort, JobConventions.batchSizeAttributeName)
+                    ?: defaultBatchSize
+                val capacity = workerConfigValue(
+                    workerNotation, outputPort, JobConventions.capacityAttributeName)
+                    ?: defaultCapacity
+
+                var channelNotation = ObjectNotation.ofParent(JobConventions.channelObjectName)
+                channelNotation = upsertIfPresent(
+                    channelNotation, JobConventions.batchSizeAttributeName, batchSize)
+                channelNotation = upsertIfPresent(
+                    channelNotation, JobConventions.capacityAttributeName, capacity)
+                augmentedDoc = ensureChannel(augmentedDoc, channelObjectPath, channelNotation)
+                augmentedDoc = setPort(augmentedDoc, workerPath, outputPort, channelRef)
+            }
         }
 
-        val augmentedNotation = structure.graphNotation.withModifiedDocument(
-            objectLocation.documentPath, augmentedDoc)
-        val augmentedStructure = GraphStructure(
-            augmentedNotation, notationMetadataReader.read(augmentedNotation))
-        val augmentedDefinition = GraphDefiner.tryDefine(augmentedStructure).successful()
-        return Result(
-            augmentedDefinition,
-            channelLocationsOf(augmentedDoc, objectLocation.documentPath))
+        if (augmentedDoc == documentNotation) {
+            return ordinary
+        }
+        return define(structure.graphNotation, jobDocumentPath, augmentedDoc, ordinary.implicitWorkers)
     }
 
 
-    //-----------------------------------------------------------------------------------------------------------------
+    // Each Worker output nothing consumes, paired with the implicit Preview that will sample it (skipped if the
+    // saved document already holds an object at that path).
+    private fun implicitPreviews(
+        structure: GraphStructure,
+        jobDocumentPath: DocumentPath
+    ): List<Pair<JobChannelDerivation.OpenOutput, ObjectLocation>> {
+        val documentNotation = structure.graphNotation.documents[jobDocumentPath]
+            ?: return listOf()
+        return JobChannelDerivation.derive(structure, jobDocumentPath)
+            .openOutputs
+            .map { it to JobConventions.implicitPreviewPath(it.worker.objectPath, it.outputPort) }
+            .filter { (_, previewPath) -> documentNotation.objects.notations.map[previewPath] == null }
+            .map { (openOutput, previewPath) -> openOutput to ObjectLocation(jobDocumentPath, previewPath) }
+    }
+
+
+    // Inserts each implicit Preview directly after the Worker whose output it samples, so the ordinary
+    // order-driven derivation then wires the two (and the Preview's `serve`) like any adjacent pair — no knowledge
+    // of the Preview's port names here.
+    private fun withImplicitPreviews(
+        structure: GraphStructure,
+        jobDocumentPath: DocumentPath,
+        implicitPreviews: List<Pair<JobChannelDerivation.OpenOutput, ObjectLocation>>
+    ): GraphStructure {
+        if (implicitPreviews.isEmpty()) {
+            return structure
+        }
+        var documentNotation = structure.graphNotation.documents[jobDocumentPath]
+            ?: return structure
+        for ((openOutput, previewLocation) in implicitPreviews) {
+            val upstreamIndex = documentNotation.indexOf(openOutput.worker.objectPath).value
+            documentNotation = documentNotation.withNewObject(
+                PositionedObjectPath(previewLocation.objectPath, PositionIndex(upstreamIndex + 1)),
+                ObjectNotation.ofParent(JobConventions.implicitPreviewObjectName))
+        }
+        val notation = structure.graphNotation.withModifiedDocument(jobDocumentPath, documentNotation)
+        return GraphStructure(notation, notationMetadataReader.read(notation))
+    }
+
+
+    // Re-runs the whole definition pipeline over the augmented Job document. Transitively successful, as the
+    // incoming definition is: a Worker whose required port is still blank (an output that an implicit Preview
+    // does not take, such as one of several) is pruned rather than left to fail `filterTransitive` on its
+    // missing reference.
+    private fun define(
+        graphNotation: GraphNotation,
+        jobDocumentPath: DocumentPath,
+        augmentedDoc: DocumentNotation,
+        implicitWorkers: List<ObjectLocation>
+    ): Result {
+        val augmentedNotation = graphNotation.withModifiedDocument(jobDocumentPath, augmentedDoc)
+        val augmentedStructure = GraphStructure(
+            augmentedNotation, notationMetadataReader.read(augmentedNotation))
+        val augmentedDefinition = GraphDefiner.tryDefine(augmentedStructure).transitiveSuccessful
+        return Result(augmentedDefinition, channelLocationsOf(augmentedDoc, jobDocumentPath), implicitWorkers)
+    }
+
+
     private fun channelLocationsOf(
         documentNotation: DocumentNotation?,
         jobDocumentPath: DocumentPath

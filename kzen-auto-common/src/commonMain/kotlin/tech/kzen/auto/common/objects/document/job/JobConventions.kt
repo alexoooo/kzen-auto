@@ -10,6 +10,7 @@ import tech.kzen.lib.common.model.obj.ObjectName
 import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.model.structure.notation.DocumentNotation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
+import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.common.service.store.normal.ObjectStableId
 
 
@@ -29,10 +30,6 @@ object JobConventions {
     val objectName = ObjectName("Job")
     val channelObjectName = ObjectName("Channel")
     val duplexChannelObjectName = ObjectName("DuplexChannel")
-
-    // Marker archetype (job-worker.yaml): a Worker that takes files whole rather than their contents, so an
-    // adjacent source on automatic emit hands it each file unread.
-    val fileConsumerObjectName = ObjectName("FileConsumer")
 
     // Semantic ChannelServer subtype (declared in common-job.yaml, no own `class:` so it resolves to the
     // ChannelServer class). A Worker declares its `serve` port as this to mark itself a summary source;
@@ -171,6 +168,20 @@ object JobConventions {
     }
 
 
+    // The Worker archetype (job-worker.yaml) a run attaches to an output nothing consumes, so what that output
+    // carries is sampled for the editor rather than lost (see [JobChannelSynthesis]).
+    val implicitPreviewObjectName = ObjectName("PreviewWorker")
+
+
+    // Where that implicit Preview sits in the run copy: `main.workers/pv__<workerLeaf>__<outputPort>`. Never saved;
+    // deterministic like the synthesized channels, so its trace (keyed by the stable id minted from this location)
+    // is found by the editor, which draws the sample under the last Worker's outgoing pipe.
+    fun implicitPreviewPath(upstreamWorker: ObjectPath, outputPort: AttributeName): ObjectPath {
+        return NotationConventions.mainObjectPath.nest(
+            workersAttributePath, ObjectName("pv__${upstreamWorker.name.value}__${outputPort.value}"))
+    }
+
+
     fun isJob(documentNotation: DocumentNotation): Boolean {
         return AutoConventions.isMainArchetype(documentNotation, objectName)
     }
@@ -192,12 +203,5 @@ object JobConventions {
             val name = it.objectPath.name
             name == channelObjectName || name == duplexChannelObjectName
         }
-    }
-
-
-    fun isFileConsumer(graphNotation: GraphNotation, workerLocation: ObjectLocation): Boolean {
-        return workerLocation in graphNotation.coalesce && graphNotation
-            .inheritanceChain(workerLocation)
-            .any { it.objectPath.name == fileConsumerObjectName }
     }
 }

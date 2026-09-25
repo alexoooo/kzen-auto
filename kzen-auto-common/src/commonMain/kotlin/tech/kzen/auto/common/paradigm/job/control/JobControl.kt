@@ -110,6 +110,14 @@ interface JobControl {
 
 
     /**
+     * The contract this Worker's OUTPUT lane was validated with. A Worker typed from data before Run holds the run to
+     * it: a value that does not fit fails by name rather than silently changing the type downstream Workers were
+     * compiled against. Null when inference is unavailable.
+     */
+    fun outputContract(): DataContract? = null
+
+
+    /**
      * The value bound to the declared Job parameter [name]: the run argument the caller passed, falling back to
      * the declaration's typed `default` when the run supplies none (Script parity). Null when neither exists (or
      * the argument is null): a parameterized Job run bare still executes, its expressions seeing null. Values are

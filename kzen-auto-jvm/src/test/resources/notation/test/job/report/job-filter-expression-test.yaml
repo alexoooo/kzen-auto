@@ -9,11 +9,19 @@ main.channels/kept:
   is: Channel
   capacity: 8
 
+main.channels/reader files:
+  is: Channel
+
 main.workers/reader:
   is: FileSourceWorker
-  output: main.channels/raw
+  output: main.channels/reader files
   files:
     - location: build/job-filter-expr/input.csv
+
+main.workers/reader Parse:
+  is: Parse
+  input: main.channels/reader files
+  output: main.channels/raw
 
 main.workers/filter:
   is: FilterWorker

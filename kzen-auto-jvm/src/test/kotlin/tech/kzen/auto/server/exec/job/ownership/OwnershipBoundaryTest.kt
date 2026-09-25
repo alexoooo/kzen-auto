@@ -108,8 +108,8 @@ class OwnershipBoundaryTest {
             val items = progress["previewItems"] as List<*>
             assertEquals(3, items.size)
             val first = tech.kzen.auto.common.objects.document.job.preview.PreviewNode.decode(items.first() as String)
-            assertTrue(first.children.any { it.name == "test" }, first.encode())
-            assertEquals(OwnedSourceWorker.orders.first().symbol.length.toString(), first.children.single { it.name == "test" }.text)
+            val metadata = checkNotNull(first.metadata) { first.encode() }
+            assertEquals(OwnedSourceWorker.orders.first().symbol.length.toString(), metadata.children.single { it.name == "test" }.text)
             val executions = first.children.single { it.name == "executions" }
             assertEquals(2, executions.children.size)
             assertEquals("10.0", executions.children.first().children.single { it.name == "price" }.text)

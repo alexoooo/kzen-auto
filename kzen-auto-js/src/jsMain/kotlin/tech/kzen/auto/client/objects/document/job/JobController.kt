@@ -20,14 +20,13 @@ import tech.kzen.auto.client.objects.document.common.dragdrop.dropZoneRegion
 import tech.kzen.auto.client.objects.document.common.signature.LogicSignatureEditor
 import tech.kzen.auto.client.objects.document.common.signature.ResultSignatureEditor
 import tech.kzen.auto.client.objects.document.job.display.DataContractDisplay
+import tech.kzen.auto.client.objects.document.job.display.PreviewSampleView
 import tech.kzen.auto.client.objects.document.job.display.WorkerDisplayManager
 import tech.kzen.auto.client.objects.document.job.display.WorkerDisplayPropsCommon
 import tech.kzen.auto.client.objects.document.job.source.DataFormatStore
 import tech.kzen.auto.client.objects.document.job.source.DataFormatStoreKey
 import tech.kzen.auto.client.objects.document.job.source.file.FileResolutionStore
 import tech.kzen.auto.client.objects.document.job.source.file.FileResolutionStoreKey
-import tech.kzen.auto.client.objects.document.job.source.DataSourceResolveStore
-import tech.kzen.auto.client.objects.document.job.source.DataSourceResolveStoreKey
 import tech.kzen.auto.client.objects.document.job.source.DataSourceShapeStore
 import tech.kzen.auto.client.objects.document.job.source.DataSourceShapeStoreKey
 import tech.kzen.auto.client.objects.document.stageFloatGutter
@@ -38,6 +37,7 @@ import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.service.logic.LogicValidationGlobal
 import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.service.rest.RemoteApplyGate
+import kotlinx.coroutines.delay
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.contextValue
@@ -121,6 +121,10 @@ external interface JobControllerState: State {
     // Worker. Derived (purely) from Worker order + typed ports — the same rule the server's synthesis uses.
     var connectionsByUpstream: Map<ObjectLocation, JobChannelDerivation.Connection>?
 
+    // Outputs no adjacent Worker consumes, keyed by their Worker: the last Worker's renders as a pipe below it, so
+    // its output channel and type show before a consumer is inserted.
+    var openOutputsByWorker: Map<ObjectLocation, JobChannelDerivation.OpenOutput>?
+
     // Ribbon insert-mode: while true, a "+" insertion point shows in every gap so the user picks where the
     // selected archetype lands (mirrors ScriptBranchDisplay's `creating`).
     var creating: Boolean
@@ -158,6 +162,7 @@ class JobController(
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private val dragHandleColor = Color("rgba(0, 0, 0, 0.45)")
+        private const val partialValidationRetryMillis = 1000L
     }
 
 
@@ -251,10 +256,6 @@ class JobController(
         JobProgressStore(props.restClient, props.objectStableMapper)
     }
 
-    private val dataSourceResolveStore by lazy {
-        DataSourceResolveStore(props.restClient)
-    }
-
     private val dataSourceShapeStore by lazy {
         DataSourceShapeStore(props.restClient)
     }
@@ -300,6 +301,7 @@ class JobController(
         workerValidations = null
         workerLocations = null
         connectionsByUpstream = null
+        openOutputsByWorker = null
         creating = false
         dragSourceIndex = null
         dropInsertionIndex = null
@@ -309,7 +311,6 @@ class JobController(
 
     //-----------------------------------------------------------------------------------------------------------------
     override fun componentDidMount() {
-        dataSourceResolveStore.mount()
         dataSourceShapeStore.mount()
         fileResolutionStore.mount()
         dataFormatStore.mount()
@@ -319,9 +320,10 @@ class JobController(
 
 
     override fun componentWillUnmount() {
+        // Supersedes any fetch in flight, and a pending re-ask for a partial validation with it
+        validationEpoch++
         insertion()?.unsubscribe(this)
         props.clientStateGlobal.unobserve(this)
-        dataSourceResolveStore.unmount()
         dataSourceShapeStore.unmount()
         fileResolutionStore.unmount()
         dataFormatStore.unmount()
@@ -364,19 +366,23 @@ class JobController(
 
         // Retention drops the keys of deleted objects, so it must span every object a store is keyed by: the
         // shape and file-row stores also serve Worker-hosted sources (a File Worker's own selection), not only
-        // DataSource objects; the whole-source resolve store is keyed by DataSource objects alone.
+        // DataSource objects.
         val dataSources = DataSourceConventions.allDataSources(graphStructure.graphNotation).toSet()
         val hostedSources = dataSources + workers
-        dataSourceResolveStore.retain(dataSources)
         dataSourceShapeStore.retain(hostedSources)
         fileResolutionStore.retainSources(hostedSources)
 
-        val connections = JobChannelDerivation.derive(graphStructure, documentPath)
-            .connections
-            .associateBy { it.upstreamWorker }
+        val derivation = JobChannelDerivation.derive(graphStructure, documentPath)
+        val connections = derivation.connections.associateBy { it.upstreamWorker }
         if (connections != state.connectionsByUpstream) {
             setState {
                 connectionsByUpstream = connections
+            }
+        }
+        val openOutputs = derivation.openOutputs.associateBy { it.worker }
+        if (openOutputs != state.openOutputsByWorker) {
+            setState {
+                openOutputsByWorker = openOutputs
             }
         }
     }
@@ -404,8 +410,13 @@ class JobController(
         lastFetchKey = fetchKey
 
         val mainLocation = ObjectLocation(documentPath, NotationConventions.mainObjectPath)
+        // The implicit Previews a run attaches to outputs nothing consumes report progress like saved Workers
+        val implicitPreviews = JobChannelDerivation.derive(clientState.graphStructure(), documentPath)
+            .openOutputs
+            .map(::implicitPreviewLocation)
         val workerLocations = workerPaths(documentNotation)
-            .map { ObjectLocation(documentPath, it) }
+            .map { ObjectLocation(documentPath, it) } +
+            implicitPreviews
 
         async {
             val runProgress = jobProgressStore.fetchRunProgress(mainLocation, workerLocations)
@@ -478,6 +489,16 @@ class JobController(
             val settled = validation ?: state.workerValidations
             props.logicValidationGlobal.validation(
                 documentPath, inFlight = false, errors = jobValidationErrors(settled, documentPath))
+
+            // A type read from only part of the data, because a design-time limit cut the reading short: ask again,
+            // and the server reads on from what it already inspected
+            if (validation?.workerValidations?.values?.any { it.partial } == true) {
+                delay(partialValidationRetryMillis)
+                if (epoch == validationEpoch) {
+                    lastValidationNotation = null
+                    props.clientStateGlobal.current()?.let(::refreshValidationIfNeeded)
+                }
+            }
         }
     }
 
@@ -761,9 +782,9 @@ class JobController(
         val main = ObjectLocation(documentPath, NotationConventions.mainObjectPath)
         val workers = state.workerLocations ?: listOf()
         val connections = state.connectionsByUpstream ?: mapOf()
+        val openOutputs = state.openOutputsByWorker ?: mapOf()
         val active = state.active
 
-        contextValue<DocumentBridge?>()?.provide(DataSourceResolveStoreKey, dataSourceResolveStore)
         contextValue<DocumentBridge?>()?.provide(DataSourceShapeStoreKey, dataSourceShapeStore)
         contextValue<DocumentBridge?>()?.provide(FileResolutionStoreKey, fileResolutionStore)
         contextValue<DocumentBridge?>()?.provide(DataFormatStoreKey, dataFormatStore)
@@ -824,22 +845,71 @@ class JobController(
                     }
                     +"Empty Job — add Workers from the ribbon above."
                 }
-                insertionGap(0, null, documentPath, graphNotation)
+                insertionGap(0, null, null, documentPath, graphNotation)
                 return@div
             }
 
-            insertionGap(0, null, documentPath, graphNotation)
+            insertionGap(0, null, null, documentPath, graphNotation)
             for ((index, workerLocation) in workers.withIndex()) {
                 renderWorkerSlot(index, workerLocation, active)
 
                 // The pipe (if any) for this Worker lives in the gap directly below it (upstream = this Worker).
-                // The last Worker's gap is a plain trailing insert / drop gap.
-                val connection =
-                    if (index < workers.size - 1) connections[workerLocation]
-                    else null
-                insertionGap(index + 1, connection, documentPath, graphNotation)
+                // Below the last Worker it is the output nothing consumes yet, so its type shows before a
+                // consumer is inserted.
+                if (index < workers.size - 1) {
+                    val connection = connections[workerLocation]
+                    insertionGap(
+                        index + 1,
+                        connection?.let { JobChannelDerivation.OpenOutput(it.upstreamWorker, it.outputPort) },
+                        connection?.downstreamWorker,
+                        documentPath,
+                        graphNotation)
+                }
+                else {
+                    val openOutput = openOutputs[workerLocation]
+                    insertionGap(index + 1, openOutput, null, documentPath, graphNotation)
+                    openOutput?.let { renderImplicitPreview(it, active) }
+                }
             }
         }
+    }
+
+
+    // What the last run's implicit Preview sampled from the last Worker's unconsumed output (nothing before a run)
+    private fun ChildrenBuilder.renderImplicitPreview(
+        openOutput: JobChannelDerivation.OpenOutput,
+        active: Boolean
+    ) {
+        val previewLocation = implicitPreviewLocation(openOutput)
+        val progress = state.workerProgress?.get(previewLocation)
+            ?: return
+
+        div {
+            key = Key("implicit-preview:" + previewLocation.toReference().asString())
+            css {
+                maxWidth = JobObjectSlot.cardMaxWidth
+                padding = Padding(0.5.em, 0.75.em, 0.75.em, 0.75.em)
+                border = Border(1.px, LineStyle.dashed, NamedColor.lightgray)
+                borderRadius = 3.px
+            }
+            title = "Nothing below ${openOutput.worker.objectPath.name.value} uses its output yet, " +
+                    "so a run shows a sample of it here"
+
+            PreviewSampleView::class.react {
+                workerLocation = previewLocation
+                this.progress = progress
+                this.active = active
+                clientStateGlobal = props.clientStateGlobal
+                restClient = props.restClient
+            }
+        }
+    }
+
+
+    private fun implicitPreviewLocation(openOutput: JobChannelDerivation.OpenOutput): ObjectLocation {
+        return ObjectLocation(
+            openOutput.worker.documentPath,
+            JobConventions.implicitPreviewPath(openOutput.worker.objectPath, openOutput.outputPort))
     }
 
     private fun ChildrenBuilder.renderWorkerSlot(
@@ -869,12 +939,13 @@ class JobController(
 
 
     // A gap between cards (index 0 above the first, index size after the last): renders the gold pipe for the
-    // order-driven channel when there is one and the stage is idle; the drop indicator when it's the active
-    // drop target; and a "+" insert button while in ribbon insert-mode. Height is reserved so toggling modes
-    // never shifts the card layout.
+    // [output] leaving the Worker above (into [downstreamWorker], or null when nothing consumes it yet); the
+    // drop indicator when it's the active drop target; and a "+" insert button while in ribbon insert-mode.
+    // Height is reserved so toggling modes never shifts the card layout.
     private fun ChildrenBuilder.insertionGap(
         gapIndex: Int,
-        connection: JobChannelDerivation.Connection?,
+        output: JobChannelDerivation.OpenOutput?,
+        downstreamWorker: ObjectLocation?,
         documentPath: DocumentPath,
         graphNotation: GraphNotation
     ) {
@@ -883,17 +954,17 @@ class JobController(
         // Collapsed by default; clicking the chevron expands the channel's single inline editor (local UI
         // toggle, keyed by upstream Worker). A channel's persisted customization is independent of expansion —
         // when collapsed the chevron carries a cue instead (see `customized`).
-        val channelKey = connection?.upstreamWorker?.toReference()?.asString()
+        val channelKey = output?.worker?.toReference()?.asString()
         val expanded = channelKey != null && state.expandedChannels?.contains(channelKey) == true
 
         // Each knob's explicit override (Worker's own value, else null = inheriting). Drives the collapsed
         // caption (overridden knobs only), the bolder chevron, and the taller reserved gap.
-        val batchSizeOverride = connection?.let {
+        val batchSizeOverride = output?.let {
             JobChannelDisplay.ownChannelValue(
-                graphNotation, it.upstreamWorker, it.outputPort, JobConventions.batchSizeAttributeName) }
-        val capacityOverride = connection?.let {
+                graphNotation, it.worker, it.outputPort, JobConventions.batchSizeAttributeName) }
+        val capacityOverride = output?.let {
             JobChannelDisplay.ownChannelValue(
-                graphNotation, it.upstreamWorker, it.outputPort, JobConventions.capacityAttributeName) }
+                graphNotation, it.worker, it.outputPort, JobConventions.capacityAttributeName) }
         val customized = batchSizeOverride != null || capacityOverride != null
 
         div {
@@ -911,7 +982,7 @@ class JobController(
                 // is a thin strip. The "+" appears as an absolute overlay (below), contributing no height.
                 if (!expanded) {
                     when {
-                        connection != null -> minHeight = if (customized) 2.6.em else 1.5.em
+                        output != null -> minHeight = if (customized) 2.6.em else 1.5.em
                         else -> height = 0.75.em
                     }
                 }
@@ -923,24 +994,24 @@ class JobController(
 
             // The channel pipe stays mounted in every mode — the insert "+" is layered ON TOP (below),
             // never replaces it.
-            if (connection != null) {
+            if (output != null) {
                 JobChannelDisplay::class.react {
-                    key = Key("channel:" + connection.upstreamWorker.toReference().asString())
-                    upstreamName = connection.upstreamWorker.objectPath.name.value
-                    downstreamName = connection.downstreamWorker.objectPath.name.value
-                    upstreamWorker = connection.upstreamWorker
-                    outputPort = connection.outputPort
+                    key = Key("channel:" + output.worker.toReference().asString())
+                    upstreamName = output.worker.objectPath.name.value
+                    downstreamName = downstreamWorker?.objectPath?.name?.value
+                    upstreamWorker = output.worker
+                    outputPort = output.outputPort
                     this.batchSizeOverride = batchSizeOverride
                     this.capacityOverride = capacityOverride
                     contractDisplay = DataContractDisplay.of(
                         state.workerValidations?.workerValidations?.get(
-                            connection.upstreamWorker.objectPath))
+                            output.worker.objectPath))
                     batchSize = JobChannelDisplay.effectiveChannelValue(
-                        graphNotation, connection.upstreamWorker, mainLocation,
-                        connection.outputPort, JobConventions.batchSizeAttributeName, "1024")
+                        graphNotation, output.worker, mainLocation,
+                        output.outputPort, JobConventions.batchSizeAttributeName, "1024")
                     capacity = JobChannelDisplay.effectiveChannelValue(
-                        graphNotation, connection.upstreamWorker, mainLocation,
-                        connection.outputPort, JobConventions.capacityAttributeName, "0")
+                        graphNotation, output.worker, mainLocation,
+                        output.outputPort, JobConventions.capacityAttributeName, "0")
                     batchSizeFallback = JobChannelDisplay.effectiveDefaultValue(
                         graphNotation, mainLocation, JobConventions.batchSizeAttributeName, "1024")
                     capacityFallback = JobChannelDisplay.effectiveDefaultValue(

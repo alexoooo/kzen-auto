@@ -14,6 +14,9 @@ main.workers/reader:
   files:
     - location: build/job-synth-dangling-serve/input.csv
 
+main.workers/reader Parse:
+  is: Parse
+
 main.workers/preview:
   is: PreviewWorker
   serve: main.channels/preview queries

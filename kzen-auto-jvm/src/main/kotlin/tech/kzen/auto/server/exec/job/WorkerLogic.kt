@@ -53,6 +53,7 @@ class WorkerLogic(
     private val jobResults: BindingSchema,
     private val inputPayloadType: TypeMetadata?,
     private val inputContract: DataContract?,
+    private val outputContract: DataContract?,
     private val resultCollector: JobResultCollector,
     private val ledger: RunOwnershipLedger,
     private val workerLocation: ObjectLocation,
@@ -72,7 +73,7 @@ class WorkerLogic(
 
         val control = EngineJobControl(
             execution, childLogicHost, objectStableMapper, scratchDir, outputDir,
-            jobInputs, jobParameters, jobResults, inputPayloadType, inputContract, resultCollector,
+            jobInputs, jobParameters, jobResults, inputPayloadType, inputContract, outputContract, resultCollector,
             ledger, workerLocation, draining)
 
         // The engine renders the failure (the run settles / parks per pause-on-error); the run-level ErrorPaused

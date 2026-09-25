@@ -25,9 +25,7 @@ class LegacyCsvSourceWorker(
     @Service fileListingAction: FileListingAction
 ): InlineDataSourceWorker(
     output,
-    "items",
     "",
-    "ignore",
     selfLocation,
     openerLookup,
     DataReadCore.schemaSuperset,

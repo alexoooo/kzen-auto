@@ -10,6 +10,9 @@ import tech.kzen.auto.server.objects.job.worker.Emitter
 import tech.kzen.auto.server.objects.job.worker.TransformWorker
 import tech.kzen.auto.server.objects.job.worker.WriterFilePath
 import tech.kzen.lib.common.exec.data.type.DataContract
+import tech.kzen.lib.common.exec.data.type.DataType
+import tech.kzen.lib.common.exec.data.type.FieldId
+import tech.kzen.lib.common.exec.data.value.DataState
 import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
@@ -24,21 +27,22 @@ import kotlin.reflect.full.createType
 
 
 /**
- * Writes each [Entry]'s bytes to one file under [directory] (design §7, §7.1; borrowed elements §3.8): an
- * ordinary [TransformWorker] whose output — a [Written] record per published file — carries no owner. Like any
- * Transform its output must be consumed (channel synthesis wires adjacent pairs only), so a Job ending in
- * `Write` still needs a sink such as `Result`. The bytes are streamed through the encoder [coding] selects
- * (`gzip` is the same MiGz encoder Report's export uses, so the bytes match
+ * Writes each file value's [Content] payload to one file under [directory] (design §7, §7.1; borrowed elements
+ * §3.8): an ordinary [TransformWorker] whose output — a [Written] record per published file, keeping the input's
+ * metadata — carries no owner. Like any Transform its output must be consumed (channel synthesis wires adjacent
+ * pairs only), so a Job ending in `Write` still needs a sink such as `Result`. The bytes are streamed through the
+ * encoder [coding] selects (`gzip` is the same MiGz encoder Report's export uses, so the bytes match
  * [tech.kzen.auto.server.objects.report.exec.output.export.model.ExportCompression]; `none` copies) into a
  * temporary in the target directory, finalized, closed, then published by atomic move. `Written` is emitted
  * only after publication; any failure removes the temporary and publishes nothing.
  *
- * [name] is field interpolation only: `${name}`, `${size}`, `${kind}`, `${parent.name}` read the entry, and
- * `${extension}` is the coding's suffix. The interpolated name is normalized and must stay inside
- * [directory]; an escaping, absolute or rooted name fails by name. [existing] governs a destination that is
- * already there: `fail` (default), `replace` (atomic replace) or `skip` (nothing written, nothing emitted).
+ * [name] is metadata interpolation only: `${name}`, `${size}`, `${kind}`, `${modified}`, `${parent.name}` (any
+ * dotted path into the value's metadata) read the file's description, and `${extension}` is the coding's
+ * suffix. The interpolated name is normalized and must stay inside [directory]; an escaping, absolute or rooted
+ * name fails by name. [existing] governs a destination that is already there: `fail` (default), `replace`
+ * (atomic replace) or `skip` (nothing written, nothing emitted).
  *
- * The entry is read inside the callback, under [JobControl.runBlockingIo]; nothing of it is kept, so its source
+ * The content is read inside the callback, under [JobControl.runBlockingIo]; nothing of it is kept, so its source
  * advances as soon as the callback returns.
  */
 @Reflect
@@ -109,10 +113,11 @@ class WriteWorker(
 
 
     override suspend fun onElement(element: DataValue, emit: Emitter, control: JobControl) {
-        val entry = JobDataValues.native(element) as? Entry
+        val content = JobDataValues.native(element) as? Content
             ?: throw IllegalArgumentException(
-                "Write expects an Entry; received ${JobDataValues.native(element)?.javaClass?.name}")
-        val target = destination(entry)
+                "Write expects file content; received ${JobDataValues.native(element)?.javaClass?.name}")
+        val entryName = metadataText(element.metadata?.value, FileValues.name) ?: content.descriptor().name
+        val target = destination(element.metadata?.value, entryName)
 
         if (Files.exists(target)) {
             when (onExisting) {
@@ -121,14 +126,14 @@ class WriteWorker(
                     return
                 }
                 existingFail -> throw IllegalStateException(
-                    "Destination for entry '${entry.name}' already exists: $target")
+                    "Destination for '$entryName' already exists: $target")
             }
         }
 
-        val size = control.runBlockingIo { writeAndPublish(entry, target) }
+        val size = control.runBlockingIo { writeAndPublish(content, target) }
         val ref = WriterFilePath.finalizedRef(target, control, fileListingAction)
         written += 1
-        emit.send(JobDataValues.lift(Written(entry.name, ref, size), writtenContract))
+        emit.send(JobDataValues.lift(Written(entryName, ref, size), writtenContract).withMetadata(element.metadata))
     }
 
 
@@ -137,12 +142,12 @@ class WriteWorker(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun writeAndPublish(entry: Entry, target: Path): Long {
+    private fun writeAndPublish(content: Content, target: Path): Long {
         Files.createDirectories(target.parent)
         val temporary = Files.createTempFile(target.parent, ".${target.fileName}.", ".part")
         var published = false
         try {
-            entry.content.open().use { source ->
+            content.open().use { source ->
                 encoder(Files.newOutputStream(temporary)).use { sink ->
                     val buffer = ByteArray(copyBufferSize)
                     while (true) {
@@ -189,29 +194,47 @@ class WriteWorker(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun destination(entry: Entry): Path {
+    private fun destination(metadata: DataValue?, entryName: String): Path {
         val base = checkNotNull(root) { "Write was not started" }
-        val interpolated = placeholder.replace(template) { match -> field(entry, match.groupValues[1]) }
-        val relative = containedRelative(entry.name, interpolated)
+        val interpolated = placeholder.replace(template) { match -> field(metadata, match.groupValues[1]) }
+        val relative = containedRelative(entryName, interpolated)
         val target = base.resolve(relative).normalize()
         check(target.startsWith(base) && target != base) {
-            "Entry '${entry.name}' resolves outside the output directory: $interpolated"
+            "Entry '$entryName' resolves outside the output directory: $interpolated"
         }
         return target
     }
 
 
-    private fun field(entry: Entry, key: String): String =
-        when (key) {
-            "name" -> entry.name
-            "size" -> entry.size.toString()
-            "kind" -> entry.kind
-            "modifiedEpochMillis" -> entry.modifiedEpochMillis?.toString() ?: ""
-            "parent.name" -> entry.parent.name
-            "extension" -> if (gzip) ".gz" else ""
-            else -> throw IllegalArgumentException(
-                "Unknown field '\${$key}' in Write name '$template'")
+    private fun field(metadata: DataValue?, key: String): String {
+        if (key == "extension") {
+            return if (gzip) ".gz" else ""
         }
+        return metadataText(metadata, key)
+            ?: throw IllegalArgumentException("Unknown field '\${$key}' in Write name '$template'")
+    }
+
+
+    /** The text of the scalar at the dotted [path] of [metadata]: empty for a null scalar, null when absent. */
+    private fun metadataText(metadata: DataValue?, path: String): String? {
+        var current = metadata ?: return null
+        for (segment in path.split('.')) {
+            val record = current.type as? DataType.Record
+                ?: return null
+            if (record.fields.none { it.id == FieldId(segment) }) {
+                return null
+            }
+            val node = current.access.field(current.root, FieldId(segment))
+            if (current.access.state(node) != DataState.Present) {
+                return ""
+            }
+            current = DataValue(current.access, node)
+        }
+        if (current.type !is DataType.Scalar) {
+            return null
+        }
+        return JobDataValues.boundary(current)?.toString() ?: ""
+    }
 
 
     /** Normalizes to forward slashes and rejects absolute, rooted, drive-lettered and dot-segment names (§7.1). */

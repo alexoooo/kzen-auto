@@ -11,7 +11,6 @@ import tech.kzen.auto.common.data.format.FormatResolutionBasis
 import tech.kzen.auto.common.data.format.FormatResolutionRequest
 import tech.kzen.auto.common.data.format.FormatResolutionResult
 import tech.kzen.auto.common.data.format.FormatSelectionKind
-import tech.kzen.auto.common.data.model.DataUnit
 import tech.kzen.auto.common.data.schema.DataShape
 import tech.kzen.auto.common.data.schema.LegacyDataShapeBridge
 import tech.kzen.auto.common.data.schema.HeaderListing
@@ -35,7 +34,6 @@ import tech.kzen.auto.server.objects.job.worker.testJobValue
 import tech.kzen.auto.server.objects.job.worker.testProjection
 import tech.kzen.auto.server.objects.job.worker.testRecord
 import tech.kzen.auto.server.objects.job.worker.compatibility.LegacyCsvSourceWorker
-import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.auto.server.objects.job.worker.definition.WorkerDefinitionResolution
 import tech.kzen.auto.server.objects.report.exec.input.parse.csv.CsvReportDefiner
@@ -192,44 +190,6 @@ class ReadWorkerFileIntegrationTest {
 
             assertTrue(failure.message.orEmpty().contains(first.fileName.toString()))
             assertTrue(failure.message.orEmpty().contains(second.fileName.toString()))
-        }
-    }
-
-
-    @Test
-    fun realGroupPatternAttributesBecomeLeadingColumns() = runBlocking {
-        withTempDir { directory ->
-            val file = directory.resolve("2026-08-sales.csv")
-                .also { it.writeText("amount\n10\n") }
-            val messages = mutableListOf<DataValue>()
-            readWorker(
-                source(listOf(file), "(?<year>\\d{4})-(?<month>\\d{2})"),
-                capturing(messages), ReadWorker.attributesColumns)
-                .run(CountingControl())
-
-            val value = messages.single()
-            assertEquals(listOf("year", "month", "amount"), testProjection(value).header.values.map { it.text })
-            assertEquals(listOf("2026", "08", "10"), testRecord(value).toList())
-        }
-    }
-
-
-    @Test
-    fun realFileUnitsEmitInAuthoredExplicitOrderWithoutOpening() = runBlocking {
-        withTempDir { directory ->
-            val files = listOf("c.csv", "a.csv", "b.csv").mapIndexed { index, name ->
-                directory.resolve(name).also { it.writeText("value\n$index\n") }
-            }
-            val messages = mutableListOf<DataValue>()
-            readWorker(
-                source(files), capturing(messages), emit = ReadWorker.emitUnits)
-                .run(CountingControl())
-
-            assertEquals(
-                files.map {
-                    DataLocation.of(it.toAbsolutePath().normalize().toString()).asString()
-                },
-                messages.map { (JobDataValues.boundary(it) as DataUnit).parts.single().ref.id })
         }
     }
 
@@ -470,12 +430,10 @@ class ReadWorkerFileIntegrationTest {
     private fun readWorker(
         source: FileDataSource,
         output: ChannelOutput<Any?>,
-        attributes: String = ReadWorker.attributesIgnore,
-        emit: String = ReadWorker.emitItems,
         schemaMode: String = DataReadCore.schemaSuperset
     ): ReadWorker {
         val worker = ReadWorker(
-            output, ObjectReference.parse("files"), emit, "", attributes,
+            output, ObjectReference.parse("files"), "",
             workerLocation, DataOpenerLookup(opener), schemaMode)
         worker.loadSourceResolution(
             WorkerDefinitionResolution.Resolved(

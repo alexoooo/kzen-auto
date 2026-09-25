@@ -3,6 +3,7 @@ package tech.kzen.auto.server.objects.job.worker
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.server.exec.job.ownership.OwnedNative
 import tech.kzen.lib.common.exec.data.type.DataContract
+import tech.kzen.lib.common.exec.data.value.ValueMetadata
 import tech.kzen.lib.common.model.location.ObjectLocation
 
 
@@ -68,14 +69,16 @@ internal class CursorLending(
     //-----------------------------------------------------------------------------------------------------------------
     /**
      * Drains the open cursor — adopted, or opened now through [open] — lending each item; [onReady] sees the
-     * iterator before the first pull. Returns at the end of the cursor; a closed downstream propagates as
-     * [tech.kzen.auto.server.objects.job.channel.DownstreamClosedException]. The cursor is closed on every exit.
+     * iterator before the first pull; [metadataOf] gives each item's metadata. Returns at the end of the cursor; a
+     * closed downstream propagates as [tech.kzen.auto.server.objects.job.channel.DownstreamClosedException]. The
+     * cursor is closed on every exit.
      */
     suspend fun drain(
         control: JobControl,
         emit: Emitter,
         contract: DataContract?,
         open: () -> Iterator<*>,
+        metadataOf: (Any?) -> ValueMetadata? = { null },
         onReady: (Iterator<*>) -> Unit
     ) {
         val ingress = SourceIngress(control, selfLocation)
@@ -104,7 +107,7 @@ internal class CursorLending(
                     lentName = lentItem.lentName()
                 }
                 try {
-                    emit.send(item.lift(ingress.ledger(), contract))
+                    emit.send(item.lift(ingress.ledger(), contract, metadataOf(item.native)))
                 }
                 finally {
                     item.release()

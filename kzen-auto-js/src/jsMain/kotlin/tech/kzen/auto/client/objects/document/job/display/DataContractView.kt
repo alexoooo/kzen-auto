@@ -11,6 +11,8 @@ import react.dom.html.ReactHTML.summary
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.RPureComponent
 import web.cssom.Cursor
+import web.cssom.FontStyle
+import web.cssom.FontWeight
 import web.cssom.Margin
 import web.cssom.WhiteSpace
 import web.cssom.em
@@ -51,11 +53,34 @@ class DataContractView(
             }
             val contractDisplay = props.display as? DataContractDisplay.Contract
             if (contractDisplay != null) {
+                contractDisplay.provenance?.let { provenance ->
+                    div {
+                        css {
+                            fontStyle = FontStyle.italic
+                        }
+                        +provenance
+                    }
+                }
+                val metadata = contractDisplay.contract.metadata
+                    ?.takeIf { it.structural.fields.isNotEmpty() }
+                    ?.contract
+                if (metadata != null) {
+                    facetLabel("Payload")
+                }
                 ContractTreeNode::class.react {
-                    contract = contractDisplay.contract
+                    contract = contractDisplay.contract.payload()
                     label = ""
                     childrenOnly = true
                     optional = false
+                }
+                if (metadata != null) {
+                    facetLabel("Metadata")
+                    ContractTreeNode::class.react {
+                        contract = metadata
+                        label = ""
+                        childrenOnly = true
+                        optional = false
+                    }
                 }
                 if (presentation.details.isNotEmpty()) {
                     details {
@@ -65,6 +90,18 @@ class DataContractView(
                 }
             }
             else presentation.details.forEach { line -> div { +line } }
+        }
+    }
+
+
+    // A value with metadata shows its two parts under their own headings
+    private fun ChildrenBuilder.facetLabel(text: String) {
+        div {
+            css {
+                marginTop = 0.25.em
+                fontWeight = FontWeight.bold
+            }
+            +text
         }
     }
 }

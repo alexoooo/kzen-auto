@@ -27,6 +27,8 @@ import tech.kzen.auto.plugin.model.record.FlatRecordHeader
 import tech.kzen.auto.server.data.DataOpenerLookup
 import tech.kzen.auto.server.data.OperationalDataOpener
 import tech.kzen.auto.server.data.configuredTestDataPart
+import tech.kzen.auto.server.data.design.DesignReadBudget
+import tech.kzen.auto.server.data.design.DesignReader
 import tech.kzen.auto.server.data.read.OperationalDataCursor
 import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.auto.server.objects.job.worker.testJobValue
@@ -37,6 +39,7 @@ import tech.kzen.auto.server.objects.job.worker.JobLaneContext
 import tech.kzen.auto.server.objects.job.worker.definition.WorkerDefinitionResolution
 import tech.kzen.lib.common.exec.data.binding.BindingSchema
 import tech.kzen.lib.common.exec.ExecutionValue
+import tech.kzen.lib.common.exec.data.type.DataType
 import tech.kzen.lib.common.exec.data.value.DataNode
 import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.lib.common.exec.data.value.DefaultDataAdapterRegistry
@@ -85,7 +88,7 @@ class ReadWorkerTest {
     @Test
     fun nullSourceFailsAtRuntimeWithClearMessage() = runBlocking {
         val read = ReadWorker(
-            CapturingOutput(), null, ReadWorker.emitItems, "", ReadWorker.attributesIgnore,
+            CapturingOutput(), null, "",
             workerLocation, DataOpenerLookup(FakeOpener(emptyMap())))
         read.loadSourceResolution(WorkerDefinitionResolution.Failed("No data source selected"))
 
@@ -104,7 +107,7 @@ class ReadWorkerTest {
         val messages = mutableListOf<DataValue>()
         worker(
             source, opener, CapturingOutput(messages),
-            emit = ReadWorker.emitUnits, role = "not-present", attributes = "not-a-mode")
+            emit = ReadWorker.emitUnits, role = "not-present")
             .run(CountingControl())
 
         assertEquals(units, messages.map(JobDataValues::boundary))
@@ -161,32 +164,18 @@ class ReadWorkerTest {
 
 
     @Test
-    fun attributesPrependColumnsAndCollisionsCloseCursor() = runBlocking {
-        val shape = LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("value")))
-        val attributes = linkedMapOf("date" to "2026-08-23", "group" to "A")
-        val source = FakeSource(manifest(DataUnit(attributes, listOf(part("ok")))))
-        val okCursor = FakeCursor(shape, listOf(FlatFileRecord.of("7")))
+    fun unitAttributesBecomeTheUnitValueMetadata() = runBlocking {
+        val unit = DataUnit(linkedMapOf("date" to "2026-08-23", "group" to "A"), listOf(part("ok")))
         val messages = mutableListOf<DataValue>()
         worker(
-            source, FakeOpener(mapOf("ok" to { okCursor })), CapturingOutput(messages),
-            attributes = ReadWorker.attributesColumns)
+            FakeSource(manifest(unit)), FakeOpener(emptyMap()), CapturingOutput(messages),
+            emit = ReadWorker.emitUnits)
             .run(CountingControl())
 
+        assertEquals(unit, JobDataValues.boundary(messages.single()))
         assertEquals(
-            listOf("date", "group", "value"),
-            testProjection(messages.single()).header.values.map { it.text })
-        assertEquals(listOf("2026-08-23", "A", "7"), testRecord(messages.single()).toList())
-
-        val collisionSource = FakeSource(manifest(DataUnit(mapOf("value" to "A"), listOf(part("bad")))))
-        val collisionCursor = FakeCursor(shape, listOf(FlatFileRecord.of("7")))
-        val failure = assertFailsWith<IllegalStateException> {
-            worker(
-                collisionSource, FakeOpener(mapOf("bad" to { collisionCursor })), CapturingOutput(),
-                attributes = ReadWorker.attributesColumns)
-                .run(CountingControl())
-        }
-        assertContains(failure.message!!, "value")
-        assertTrue(collisionCursor.closed)
+            mapOf("date" to "2026-08-23", "group" to "A"),
+            JobDataValues.boundary(checkNotNull(messages.single().metadata).value))
     }
 
 
@@ -378,13 +367,12 @@ class ReadWorkerTest {
 
 
     @Test
-    fun changedEmitRoleOrAttributesRejectsDetachedCursor() = runBlocking {
+    fun changedEmitOrRoleRejectsDetachedCursor() = runBlocking {
         val changes = listOf(
-            Triple(ReadWorker.emitUnits, "", ReadWorker.attributesIgnore),
-            Triple(ReadWorker.emitItems, "main", ReadWorker.attributesIgnore),
-            Triple(ReadWorker.emitItems, "", ReadWorker.attributesColumns))
+            ReadWorker.emitUnits to "",
+            ReadWorker.emitItems to "main")
 
-        for ((changedEmit, changedRole, changedAttributes) in changes) {
+        for ((changedEmit, changedRole) in changes) {
             val oldSource = FakeSource(manifest(unit("old")))
             val oldCursor = FakeCursor(
                 LegacyDataShapeBridge.payload(TypeMetadata.string), listOf("old-1", "old-2"))
@@ -400,7 +388,7 @@ class ReadWorkerTest {
 
             val changed = worker(
                 oldSource, FakeOpener(emptyMap()), CapturingOutput(),
-                emit = changedEmit, role = changedRole, attributes = changedAttributes)
+                emit = changedEmit, role = changedRole)
             changed.loadMigrationState(captured)
             assertTrue(oldCursor.closed)
         }
@@ -489,12 +477,6 @@ class ReadWorkerTest {
         assertEquals(TypeMetadata.string, attempt.lane.payloadType)
         assertEquals(0, source.resolveCount)
 
-        val columns = worker(
-            source, FakeOpener(emptyMap()), CapturingOutput(),
-            attributes = ReadWorker.attributesColumns)
-            .payloadFlow(JobLaneDescriptor.unknown, laneContext())
-        assertContains(columns.errorMessage!!, "attributes=columns")
-
         val failed = worker(source, FakeOpener(emptyMap()), CapturingOutput())
         failed.loadSourceResolution(WorkerDefinitionResolution.Failed("dangling source"))
         val failureAttempt = failed.payloadFlow(JobLaneDescriptor.unknown, laneContext())
@@ -509,12 +491,33 @@ class ReadWorkerTest {
 
 
     @Test
-    fun supersetPreinspectsGlobalManifestAndEmitsAttrsFirstProjectedRecords() = runBlocking {
+    fun beforeRunItemsAreTypedFromTheSourcesUnitsAndUnitsAreOfferedAsTheSample() {
+        val aShape = LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("a")))
+        val bShape = LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("b")))
+        val source = FakeSource(manifest(unit("a"), unit("b")))
+        val opener = FakeOpener(emptyMap(), mapOf("a" to aShape, "b" to bShape))
+
+        val items = worker(source, opener, CapturingOutput(), schemaMode = DataReadCore.schemaSuperset)
+            .payloadFlow(JobLaneDescriptor.unknown, laneContext(DesignReadBudget.editor))
+        assertNull(items.errorMessage)
+        assertEquals("Inferred from 2 of 2 values", items.provenance)
+        val record = assertIs<DataType.Record>(items.lane.contract.payload().structural)
+        assertEquals(listOf("a", "b"), record.fields.map { it.id.name })
+
+        val units = worker(source, opener, CapturingOutput(), emit = ReadWorker.emitUnits)
+            .payloadFlow(JobLaneDescriptor.unknown, laneContext(DesignReadBudget.editor))
+        assertEquals(2, units.lane.sample?.values?.size)
+        assertEquals(true, units.lane.sample?.complete)
+        assertEquals(2, opener.inspectCount, "offering units inspects nothing")
+    }
+
+
+    @Test
+    fun supersetPreinspectsGlobalManifestAndEmitsProjectedRecords() = runBlocking {
         val aShape = LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("a")))
         val bShape = LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("b")))
         val source = FakeSource(manifest(
-            DataUnit(linkedMapOf("date" to "one"), listOf(part("a"))),
-            DataUnit(linkedMapOf("group" to "two"), listOf(part("b")))))
+            unit("a"), unit("b")))
         val opener = FakeOpener(
             mapOf(
                 "a" to { FakeCursor(aShape, listOf(FlatFileRecord.of("A"))) },
@@ -524,17 +527,16 @@ class ReadWorkerTest {
 
         worker(
             source, opener, CapturingOutput(messages),
-            attributes = ReadWorker.attributesColumns,
             schemaMode = DataReadCore.schemaSuperset).run(CountingControl())
 
         assertEquals(2, opener.inspectCount)
-        assertEquals(listOf("date", "group", "a", "b"),
+        assertEquals(listOf("a", "b"),
             testProjection(messages.first()).header.values.map { it.text })
         assertEquals(
-            listOf("one", LegacyDataShapeBridge.missingCellValue, "A", LegacyDataShapeBridge.missingCellValue),
+            listOf("A", LegacyDataShapeBridge.missingCellValue),
             testRecord(messages[0]).toList())
         assertEquals(
-            listOf(LegacyDataShapeBridge.missingCellValue, "two", LegacyDataShapeBridge.missingCellValue, "B"),
+            listOf(LegacyDataShapeBridge.missingCellValue, "B"),
             testRecord(messages[1]).toList())
     }
 
@@ -591,14 +593,13 @@ class ReadWorkerTest {
         output: ChannelOutput<Any?>,
         emit: String = ReadWorker.emitItems,
         role: String = "",
-        attributes: String = ReadWorker.attributesIgnore,
         sourceKey: String = "source",
         resolvedLocation: ObjectLocation = sourceLocation,
         schemaMode: String = DataReadCore.schemaStrict
     ): ReadWorker {
         val worker = ReadWorker(
-            output, ObjectReference.parse("input"), emit, role, attributes,
-            workerLocation, DataOpenerLookup(opener), schemaMode)
+            output, ObjectReference.parse("input"), role,
+            workerLocation, DataOpenerLookup(opener), schemaMode, emit)
         worker.loadSourceResolution(
             WorkerDefinitionResolution.Resolved(
                 resolvedLocation, Digest.ofUtf8(sourceKey), source))
@@ -617,9 +618,10 @@ class ReadWorkerTest {
     private fun manifest(vararg units: DataUnit): DataManifest = DataManifest(units.toList())
 
 
-    private fun laneContext(): JobLaneContext {
+    private fun laneContext(budget: DesignReadBudget? = null): JobLaneContext {
         return JobLaneContext(
-            BindingSchema.empty, GraphStructure.empty, ReadWorker::class.java.classLoader)
+            BindingSchema.empty, GraphStructure.empty, ReadWorker::class.java.classLoader,
+            budget?.let { DesignReader().session(it) })
     }
 
 

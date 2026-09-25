@@ -28,8 +28,10 @@ import tech.kzen.lib.common.reflect.Reflect
  * The output is a fresh flat record of nullable scalars (`JobDataValues.projectedRecord`): every leaf is
  * copied as text inside the callback, so a row never aliases the element's native storage — an owned element
  * (E9) is read while the callback holds it and closes when the framework lets it go; the rows outlive it and
- * inherit no owner. The output contract is known statically from the upstream contract ([payloadFlow]) and
- * re-bound at run time only when the element contract differs from the static one (a dynamic lane).
+ * inherit no owner. Each row keeps the element's metadata (plain data, shared rather than copied), and a path
+ * may read the metadata too (`meta.name`). The output contract is known statically from the upstream contract
+ * ([payloadFlow]) and re-bound at run time only when the element contract differs from the static one (a
+ * dynamic lane).
  */
 @Reflect
 class PathProjectionWorker(
@@ -58,7 +60,8 @@ class PathProjectionWorker(
         elements += 1
         for (row in rowsOfElement) {
             rows += 1
-            emit.send(JobDataValues.projectedRecord(outputContract, FlatFileRecord.of(row.texts()), row.states()))
+            val projected = JobDataValues.projectedRecord(outputContract, FlatFileRecord.of(row.texts()), row.states())
+            emit.send(projected.withMetadata(element.metadata))
         }
     }
 
@@ -90,7 +93,8 @@ class PathProjectionWorker(
         val bound = PathBinding.bind(paths, input.contract)
         val contract = bound.contract
             ?: return JobLaneAttempt(JobLaneDescriptor.unknown, bound.errorMessage())
-        return JobLaneAttempt(JobLaneDescriptor(contract), null)
+        val output = input.contract.metadata?.let { contract.withMetadata(it) } ?: contract
+        return JobLaneAttempt(JobLaneDescriptor(output), null)
     }
 
 

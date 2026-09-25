@@ -3,6 +3,7 @@
 package tech.kzen.auto.common.objects.document.logic
 
 import tech.kzen.auto.common.data.schema.HeaderListing
+import tech.kzen.lib.common.exec.BooleanExecutionValue
 import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.ListExecutionValue
 import tech.kzen.lib.common.exec.MapExecutionValue
@@ -32,6 +33,11 @@ import tech.kzen.lib.common.exec.data.type.DataContract
  * editor marks — and is absent whenever the error has no position there. When several findings are joined
  * into one [errorMessage] the compile error is joined FIRST, so the offset describes the leading part; the
  * rest of a joined message has no position by nature.
+ *
+ * [provenance] says where a type read from data came from (a Job Worker typed from the values its input lane
+ * offered before Run, e.g. "Inferred from 41 of 256 values"); null for a declared type. [partial] marks such a
+ * type read from only part of the data, because a design-time limit cut the reading short: a later validation
+ * reads on.
  */
 data class StepValidation(
     val typeMetadata: TypeMetadata?,
@@ -39,7 +45,9 @@ data class StepValidation(
     val warningMessage: String? = null,
     val errorOffset: Int? = null,
     val flatColumns: HeaderListing? = null,
-    val contract: DataContract? = null
+    val contract: DataContract? = null,
+    val provenance: String? = null,
+    val partial: Boolean = false
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -49,6 +57,8 @@ data class StepValidation(
         private const val errorOffsetKey = "errorOffset"
         private const val flatColumnsKey = "flatColumns"
         private const val contractKey = "contract"
+        private const val provenanceKey = "provenance"
+        private const val partialKey = "partial"
 
         fun ofMapExecutionValue(executionValue: MapExecutionValue): StepValidation {
             val typeExecutionValue = executionValue[typeMetadataKey]
@@ -120,7 +130,11 @@ data class StepValidation(
                 ?.takeUnless { it == NullExecutionValue }
                 ?.let(DataContract::ofExecutionValue)
 
-            return StepValidation(typeMetadata, errorMessage, warningMessage, errorOffset, flatColumns, contract)
+            val provenance = (executionValue[provenanceKey] as? TextExecutionValue)?.value
+            val partial = (executionValue[partialKey] as? BooleanExecutionValue)?.value ?: false
+
+            return StepValidation(
+                typeMetadata, errorMessage, warningMessage, errorOffset, flatColumns, contract, provenance, partial)
         }
     }
 
@@ -137,7 +151,9 @@ data class StepValidation(
             flatColumnsKey to (flatColumns?.let {
                 ListExecutionValue(it.asCollection().map(::TextExecutionValue))
             } ?: NullExecutionValue),
-            contractKey to (contract?.asExecutionValue() ?: NullExecutionValue)
+            contractKey to (contract?.asExecutionValue() ?: NullExecutionValue),
+            provenanceKey to ExecutionValue.of(provenance),
+            partialKey to BooleanExecutionValue.of(partial)
         ))
     }
 }

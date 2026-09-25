@@ -94,7 +94,8 @@ class JobExternalBridgeTest {
                 result, "the bridge routes the request to the serving Worker and returns its reply")
             @Suppress("UNCHECKED_CAST")
             val slice = success.value.get() as Map<String, Any?>
-            assertEquals(listOf("id", "name"), slice["header"])
+            // The payload's columns, then its metadata: the file each row was parsed from
+            assertEquals(listOf("id", "name", "meta.parent"), slice["header"])
             assertTrue(
                 (slice["rows"] as List<*>).isNotEmpty(),
                 "the bridge serves the live preview slice (non-empty rows)")

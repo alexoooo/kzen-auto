@@ -5,10 +5,12 @@ import tech.kzen.lib.common.exec.data.type.DataField
 import tech.kzen.lib.common.exec.data.type.DataType
 import tech.kzen.lib.common.exec.data.type.DefinitionId
 import tech.kzen.lib.common.exec.data.type.FieldId
+import tech.kzen.lib.common.exec.data.type.MetadataContract
 import tech.kzen.lib.common.exec.data.type.ScalarKind
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -96,6 +98,27 @@ class PathBindingTest {
         assertTrue(messages.getValue("symbol[*]").contains("needs a list or map"), messages.toString())
         assertTrue(messages.getValue("tags[*].price").contains("'key' or 'value'"), messages.toString())
         assertTrue(messages.getValue("tags[*]").contains("must continue"), messages.toString())
+    }
+
+
+    @Test
+    fun metadataIsReachedByMetaOrByABareNameOnlyTheMetadataHas() {
+        val withMetadata = contract.withMetadata(MetadataContract(DataType.Record(listOf(
+            DataField(FieldId("name"), text),
+            DataField(FieldId("symbol"), number)))))
+
+        fun resolved(path: String): PathBinding.Resolution.At =
+            assertIs<PathBinding.Resolution.At>(PathBinding.resolve(withMetadata, ProjectionPath.parse(path)))
+
+        assertEquals(listOf(BoundStep.Metadata, BoundStep.Field(FieldId("name"))), resolved("meta.name").steps)
+        assertEquals(listOf(BoundStep.Metadata, BoundStep.Field(FieldId("name"))), resolved("name").steps)
+        assertEquals(listOf(BoundStep.Field(FieldId("symbol"))), resolved("symbol").steps, "the payload wins a bare name")
+        assertEquals(listOf(BoundStep.Field(FieldId("symbol"))), resolved("this.symbol").steps)
+        assertEquals(number, resolved("meta.symbol").contract.structural)
+        assertEquals("name", ProjectionPath.parse("meta.name").defaultOutputName())
+
+        val missing = PathBinding.resolve(contract, ProjectionPath.parse("meta.name"))
+        assertEquals("the value has no metadata", assertIs<PathBinding.Resolution.Failed>(missing).message)
     }
 
 

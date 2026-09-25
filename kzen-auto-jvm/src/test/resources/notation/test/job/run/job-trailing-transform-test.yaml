@@ -1,0 +1,11 @@
+# JobValidatorTest, JobChannelDerivationTest, JobChannelSynthesisTest: a Transform as the last Worker, its output not yet wired
+main:
+  is: Job
+
+main.workers/source:
+  is: FormulaSourceWorker
+  code: 42
+
+main.workers/Filter:
+  is: FilterWorker
+  where: "true"

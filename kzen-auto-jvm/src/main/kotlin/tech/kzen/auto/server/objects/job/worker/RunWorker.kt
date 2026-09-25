@@ -113,7 +113,7 @@ class RunWorker(
                 is BindingState.Bound -> state.value
             }
         }
-        emit.send(output)
+        emit.send(output.withMetadata(element.metadata))
     }
 
 
@@ -158,7 +158,8 @@ class RunWorker(
     // The nested-Logic host emits its child's main result as a fresh payload, so the output lane's type is
     // the callee's declared main result type (the RunStep precedent): a Script callee declares it in its
     // `results` signature, a Job callee derives it via JobSignatureCapability; any other flavour (or a void
-    // callee) approximates to nullable Any. No flat part on the output lane (the child result is a payload).
+    // callee) approximates to nullable Any. No flat part on the output lane (the child result is a payload); the
+    // output keeps the element's metadata.
     override fun payloadFlow(input: JobLaneDescriptor, context: JobLaneContext): JobLaneAttempt {
         val graphNotation = context.graphStructure.graphNotation
         val instructionsDocument = graphNotation.documents[instructions.documentPath]
@@ -191,7 +192,8 @@ class RunWorker(
                     DataContract(DataType.Dynamic(nullable = true))
             }
 
-        return JobLaneAttempt(JobLaneDescriptor(childMainContract), argumentError)
+        val output = input.contract.metadata?.let { childMainContract.withMetadata(it) } ?: childMainContract
+        return JobLaneAttempt(JobLaneDescriptor(output), argumentError)
     }
 
 

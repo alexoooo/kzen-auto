@@ -16,6 +16,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import tech.kzen.auto.common.objects.document.job.JobChannelDerivation
 import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.auto.common.paradigm.job.api.ChannelClient
+import tech.kzen.auto.server.data.design.DesignReadBudget
 import tech.kzen.auto.server.objects.job.JobValidator
 import tech.kzen.auto.common.paradigm.job.api.Worker
 import tech.kzen.auto.server.exec.LogicCompilerServices
@@ -196,13 +197,22 @@ class JobRun internal constructor(
         // The static payload-type walk (shared with the editor's detached JobValidator through the cache — a
         // hit reuses the editor's entry, a miss computes on THIS run's instances): each Worker's inferred
         // INPUT payload type is threaded into its control, so runtime expression compiles use the same
-        // receiver the walk (and the editor's cards) derived.
+        // receiver the walk (and the editor's cards) derived. A run that pruned a Worker (e.g. one with several
+        // outputs, one of them unconsumed) validates on the editor's own instances instead, so the shared entry
+        // still types it.
         val jobValidation = services.jobValidationCache.jobValidation(
-            jobLocation.documentPath, graphDefinition
-        ) {
-            JobValidator.validate(
-                jobLocation.documentPath, graphDefinition, graphInstance, graphEnvironment,
-                workerDefinitionContext)
+            jobLocation.documentPath, graphDefinition, DesignReadBudget.run
+        ) { design ->
+            if (workers.size == workerLocations.size) {
+                JobValidator.validate(
+                    jobLocation.documentPath, graphDefinition, graphInstance, graphEnvironment,
+                    workerDefinitionContext, design)
+            }
+            else {
+                JobValidator.validateDetached(
+                    jobLocation.documentPath, graphDefinition, services.notationMetadataReader, graphEnvironment,
+                    design)
+            }
         }
         val upstreamByDownstream = JobChannelDerivation
             .derive(graphDefinition.graphStructure, jobLocation.documentPath)
@@ -289,6 +299,8 @@ class JobRun internal constructor(
                             ?.let { jobValidation.workerValidations[it]?.typeMetadata }
                         val inputContract = upstreamByDownstream[location.objectPath]
                             ?.let { jobValidation.workerValidations[it]?.contract }
+                        // Its own OUTPUT contract: a Worker typed from data before Run holds the run to it
+                        val outputContract = jobValidation.workerValidations[location.objectPath]?.contract
                         val scopes = upstreamScopes.getValue(location)
                         async {
                             try {
@@ -298,7 +310,7 @@ class JobRun internal constructor(
                                         worker, childLogicHost, objectStableMapper,
                                         workerScratchDir, workerOutputDir,
                                         execution.inputs, jobParameters, jobResults,
-                                        inputPayloadType, inputContract, resultCollector,
+                                        inputPayloadType, inputContract, outputContract, resultCollector,
                                         ledger, location,
                                         draining = { scopes.any { it.lending() } }),
                                     inputs = DataBindings.bind(BindingSchema.empty),

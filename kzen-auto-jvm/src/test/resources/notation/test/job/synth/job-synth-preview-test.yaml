@@ -12,6 +12,9 @@ main.workers/reader:
   files:
     - location: build/job-synth-preview/input.csv
 
+main.workers/reader Parse:
+  is: Parse
+
 main.workers/preview:
   is: PreviewWorker
   sample: 1000

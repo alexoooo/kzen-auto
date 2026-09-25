@@ -32,6 +32,8 @@ import tech.kzen.auto.server.data.DataOpenerLookup
 import tech.kzen.auto.server.objects.datasource.format.ConfiguredDelimitedTestFormats
 import tech.kzen.auto.server.data.OperationalDataOpener
 import tech.kzen.auto.server.data.configuredTestDataPart
+import tech.kzen.auto.server.data.design.DesignReadBudget
+import tech.kzen.auto.server.data.design.DesignReader
 import tech.kzen.auto.server.data.read.OperationalDataCursor
 import tech.kzen.auto.server.objects.job.channel.JobChannel
 import tech.kzen.auto.server.objects.job.worker.testJobValue
@@ -40,6 +42,8 @@ import tech.kzen.auto.server.objects.job.worker.testRecord
 import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.auto.server.objects.job.worker.JobLaneDescriptor
 import tech.kzen.auto.server.objects.job.worker.JobLaneContext
+import tech.kzen.auto.server.objects.job.worker.JobLaneSample
+import tech.kzen.auto.server.objects.job.worker.content.FileValues
 import tech.kzen.auto.server.objects.job.worker.definition.WorkerDefinitionResolution
 import tech.kzen.lib.common.exec.data.binding.BindingSchema
 import tech.kzen.lib.common.exec.data.type.DataContract
@@ -63,14 +67,16 @@ import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.time.Duration
 
 
-class ReadPartWorkerTest {
+class ParseWorkerTest {
     private val workerLocation = ObjectLocation(
-        DocumentPath.parse("test/read-part-worker-test.yaml"),
-        ObjectPath.parse("main.workers/readPart"))
+        DocumentPath.parse("test/parse-worker-test.yaml"),
+        ObjectPath.parse("main.workers/parse"))
 
 
     @Test
@@ -122,7 +128,7 @@ class ReadPartWorkerTest {
 
 
     @Test
-    fun attributesPrependInOrderAndCollisionClosesCursor() = runBlocking {
+    fun unitAttributesJoinTheParentMetadataAndThePayloadStaysTheItem() = runBlocking {
         val shape = LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("value")))
         val attributes = linkedMapOf("date" to "2026-08-24", "group" to "A")
         val unit = DataUnit(attributes, listOf(part("ok")))
@@ -130,25 +136,15 @@ class ReadPartWorkerTest {
         worker(
             BatchInput(listOf(unit)),
             FakeOpener(mapOf("ok" to { FakeCursor(shape, listOf(FlatFileRecord.of("7"))) })),
-            CapturingOutput(messages),
-            attributes = ReadPartWorker.attributesColumns)
+            CapturingOutput(messages))
             .run(CountingControl())
 
-        assertEquals(listOf("date", "group", "value"),
-            testProjection(messages.single()).header.values.map { it.text })
-        assertEquals(listOf("2026-08-24", "A", "7"), testRecord(messages.single()).toList())
-
-        val collisionCursor = FakeCursor(shape, listOf(FlatFileRecord.of("8")))
-        val collision = DataUnit(mapOf("value" to "collision"), listOf(part("bad")))
-        val failure = assertFailsWith<IllegalStateException> {
-            worker(
-                BatchInput(listOf(collision)),
-                FakeOpener(mapOf("bad" to { collisionCursor })),
-                CapturingOutput(), attributes = ReadPartWorker.attributesColumns)
-                .run(CountingControl())
-        }
-        assertContains(failure.message!!, "value")
-        assertTrue(collisionCursor.closed)
+        val message = messages.single()
+        assertEquals(listOf("value"), testProjection(message).header.values.map { it.text })
+        assertEquals(listOf("7"), testRecord(message).toList())
+        assertEquals(
+            mapOf("parent" to mapOf("date" to "2026-08-24", "group" to "A")),
+            JobDataValues.boundary(checkNotNull(message.metadata).value))
     }
 
 
@@ -230,7 +226,7 @@ class ReadPartWorkerTest {
         val failedOutput = CapturingOutput()
         val failed = worker(
             BatchInput(emptyList()), FakeOpener(emptyMap()), failedOutput,
-            attributes = "invalid")
+            schemaMode = "invalid")
         assertFailsWith<IllegalArgumentException> {
             failed.run(CountingControl())
         }
@@ -261,7 +257,7 @@ class ReadPartWorkerTest {
 
 
     @Test
-    fun readWorkerSnapshotIsClosedWhenWorkerIsReplacedByReadPart() = runBlocking {
+    fun readWorkerSnapshotIsClosedWhenWorkerIsReplacedByParse() = runBlocking {
         val cursor = FakeCursor(
             LegacyDataShapeBridge.payload(TypeMetadata.string), (0 until 10).map { it })
         val source = object: DataSource {
@@ -275,7 +271,7 @@ class ReadPartWorkerTest {
         }
         val read = ReadWorker(
             CapturingOutput(batchSize = 2), ObjectReference.parse("input"),
-            ReadWorker.emitItems, "", ReadWorker.attributesIgnore,
+            "",
             workerLocation, DataOpenerLookup(FakeOpener(mapOf("items" to { cursor }))),
             DataReadCore.schemaStrict)
         read.loadSourceResolution(
@@ -296,24 +292,24 @@ class ReadPartWorkerTest {
 
 
     @Test
-    fun readPartSnapshotIsClosedWhenWorkerIsReplacedByReadWorker() = runBlocking {
+    fun parseSnapshotIsClosedWhenWorkerIsReplacedByReadWorker() = runBlocking {
         val cursor = FakeCursor(
             LegacyDataShapeBridge.payload(TypeMetadata.string), (0 until 10).map { it })
-        val readPart = worker(
+        val parse = worker(
             BatchInput(listOf(DataUnit.of(part("items")))),
             FakeOpener(mapOf("items" to { cursor })),
             CapturingOutput(batchSize = 2))
         val parked = CompletableDeferred<Unit>()
         val release = CompletableDeferred<Unit>()
-        val job = launch { readPart.run(ParkingControl(parked, release)) }
+        val job = launch { parse.run(ParkingControl(parked, release)) }
         parked.await()
-        val captured = readPart.captureMigrationState()
+        val captured = parse.captureMigrationState()
         job.cancelAndJoin()
         assertTrue(!cursor.closed)
 
         val read = ReadWorker(
             CapturingOutput(), ObjectReference.parse("input"),
-            ReadWorker.emitItems, "", ReadWorker.attributesIgnore,
+            "",
             workerLocation, DataOpenerLookup(FakeOpener(emptyMap())))
         read.loadMigrationState(captured)
 
@@ -571,74 +567,6 @@ class ReadPartWorkerTest {
 
 
     @Test
-    fun changedAttributesWithEmptyAttributesReopensAndSkipsTheEmittedPrefix() = runBlocking {
-        val shape = LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("value")))
-        val unit = DataUnit.of(part("items"))
-        val oldCursor = FakeCursor(
-            shape, listOf(FlatFileRecord.of("1"), FlatFileRecord.of("2")))
-        val firstMessages = mutableListOf<DataValue>()
-        val parked = CompletableDeferred<Unit>()
-        val release = CompletableDeferred<Unit>()
-        val first = worker(
-            BatchInput(listOf(unit)), FakeOpener(mapOf("items" to { oldCursor })),
-            CapturingOutput(firstMessages, batchSize = 1))
-        val job = launch { first.run(ParkingControl(parked, release)) }
-        parked.await()
-        val captured = first.captureMigrationState()
-        job.cancelAndJoin()
-
-        val reopened = FakeCursor(
-            shape, listOf(FlatFileRecord.of("1"), FlatFileRecord.of("2")))
-        val resumedMessages = mutableListOf<DataValue>()
-        val resumed = worker(
-            BatchInput(emptyList()), FakeOpener(mapOf("items" to { reopened })),
-            CapturingOutput(resumedMessages), attributes = ReadPartWorker.attributesColumns)
-        resumed.loadMigrationState(captured)
-        resumed.run(CountingControl())
-
-        assertTrue(oldCursor.closed)
-        assertTrue(reopened.closed)
-        assertEquals(listOf("1", "2"),
-            (firstMessages + resumedMessages).map { testRecord(it).getString(0) })
-    }
-
-
-    @Test
-    fun changedAttributesWithNonemptyAttributesFailsOnEffectiveShapeBeforeNextSend() = runBlocking {
-        val unit = DataUnit(mapOf("group" to "A"), listOf(part("items")))
-        val shape = LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("value")))
-        val oldCursor = FakeCursor(
-            shape,
-            listOf(FlatFileRecord.of("1"), FlatFileRecord.of("2")))
-        val parked = CompletableDeferred<Unit>()
-        val release = CompletableDeferred<Unit>()
-        val first = worker(
-            BatchInput(listOf(unit)), FakeOpener(mapOf("items" to { oldCursor })),
-            CapturingOutput(batchSize = 1))
-        val job = launch { first.run(ParkingControl(parked, release)) }
-        parked.await()
-        val captured = first.captureMigrationState()
-        job.cancelAndJoin()
-
-        val reopened = FakeCursor(
-            shape, listOf(FlatFileRecord.of("1"), FlatFileRecord.of("2")))
-        val resumedMessages = mutableListOf<DataValue>()
-        val resumed = worker(
-            BatchInput(emptyList()), FakeOpener(mapOf("items" to { reopened })),
-            CapturingOutput(resumedMessages),
-            attributes = ReadPartWorker.attributesColumns)
-        resumed.loadMigrationState(captured)
-        assertTrue(oldCursor.closed)
-        val failure = assertFailsWith<IllegalStateException> {
-            resumed.run(CountingControl())
-        }
-        assertContains(failure.message!!, "Data shape mismatch")
-        assertEquals(emptyList(), resumedMessages)
-        assertTrue(reopened.closed)
-    }
-
-
-    @Test
     fun itemPositionIsClaimedBeforeSendAndReopenedCursorSkipsIt() = runBlocking {
         val unit = DataUnit.of(part("items"))
         val firstCursor = FakeCursor(LegacyDataShapeBridge.payload(TypeMetadata.string), listOf("first", "second"))
@@ -661,7 +589,7 @@ class ReadPartWorkerTest {
 
 
     @Test
-    fun payloadFlowAcceptsOnlyUnknownOrNonNullableDataUnitAndNeverInfersOutput() {
+    fun payloadFlowAcceptsContentOrANonNullableDataUnit() {
         val worker = worker(BatchInput(emptyList()), FakeOpener(emptyMap()), CapturingOutput())
         val unknown = worker.payloadFlow(JobLaneDescriptor.unknown, laneContext())
         assertNull(unknown.errorMessage)
@@ -672,6 +600,11 @@ class ReadPartWorkerTest {
         assertNull(valid.errorMessage)
         assertNull(valid.lane.payloadType)
         assertNull(valid.lane.flatColumns)
+
+        val content = worker.payloadFlow(
+            JobLaneDescriptor(FileValues.contract(emptyList(), null)), laneContext())
+        assertNull(content.errorMessage)
+        assertNotNull(content.lane.contract.metadata)
 
         val nullable = worker.payloadFlow(
             JobLaneDescriptor(TypeMetadata(
@@ -740,17 +673,86 @@ class ReadPartWorkerTest {
     }
 
 
+    @Test
+    fun beforeRunTypesItsOutputFromTheSampledValuesWithProvenance() {
+        val aShape = LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("id", "a")))
+        val bShape = LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("id", "b")))
+        val opener = FakeOpener(emptyMap(), mapOf("a" to aShape, "b" to bShape))
+        val worker = worker(
+            BatchInput(emptyList()), opener, CapturingOutput(), schemaMode = DataReadCore.schemaSuperset)
+        val sample = JobLaneSample(
+            listOf(DataUnit.of(part("a")), DataUnit.of(part("b"))).map(JobDataValues::lift), 5)
+        val dataUnit = TypeMetadata(dataUnitClassName(), emptyList(), false).toDataContract()
+
+        val attempt = worker.payloadFlow(
+            JobLaneDescriptor(dataUnit, sample = sample), laneContext(DesignReadBudget.editor))
+
+        assertNull(attempt.errorMessage)
+        assertEquals("Inferred from 2 of 5 values", attempt.provenance)
+        assertEquals(false, attempt.partial)
+        val record = assertIs<DataType.Record>(attempt.lane.contract.payload().structural)
+        assertEquals(listOf("id", "a", "b"), record.fields.map { it.id.name })
+        assertEquals(listOf(false, true, true), record.fields.map { it.optional })
+        assertEquals(2, opener.inspectCount)
+    }
+
+
+    @Test
+    fun beforeRunADeadlineReachedLeavesTheOutputUnknownAndPartial() {
+        val shape = LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("a")))
+        val worker = worker(BatchInput(emptyList()), FakeOpener(emptyMap(), mapOf("a" to shape)), CapturingOutput())
+        val sample = JobLaneSample(listOf(JobDataValues.lift(DataUnit.of(part("a")))), 1)
+        val dataUnit = TypeMetadata(dataUnitClassName(), emptyList(), false).toDataContract()
+
+        val attempt = worker.payloadFlow(
+            JobLaneDescriptor(dataUnit, sample = sample), laneContext(DesignReadBudget(256, Duration.ZERO)))
+
+        assertNull(attempt.errorMessage)
+        assertTrue(attempt.partial)
+        assertIs<DataType.Dynamic>(attempt.lane.contract.payload().structural)
+    }
+
+
+    @Test
+    fun runKeepsItsValidatedTypeAndFailsByNameOnAFieldOutsideIt() = runBlocking {
+        val validated = LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("a", "b")))
+        val narrower = LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("a")))
+        val wider = LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("a", "c")))
+        val validatedContract = DataContract(
+            (validated.itemType.structural as DataType.Record).let { record ->
+                DataType.Record(record.fields.map { it.copy(optional = true) }, record.nullable)
+            },
+            validated.itemType.nativeByPath)
+        val messages = mutableListOf<DataValue>()
+        val control = CountingControl().also { it.validatedOutput = validatedContract }
+
+        val failure = assertFailsWith<IllegalStateException> {
+            worker(
+                BatchInput(listOf(DataUnit.of(part("narrow")), DataUnit.of(part("wide")))),
+                FakeOpener(mapOf(
+                    "narrow" to { FakeCursor(narrower, listOf(FlatFileRecord.of("1"))) },
+                    "wide" to { FakeCursor(wider, listOf(FlatFileRecord.of("2", "3"))) })),
+                CapturingOutput(messages),
+                schemaMode = DataReadCore.schemaSuperset)
+                .run(control)
+        }
+
+        assertEquals(listOf("a", "b"), testProjection(messages.single()).header.values.map { it.text })
+        assertContains(failure.message!!, "wide")
+        assertContains(failure.message!!, "fields outside the type validated before the run: c")
+    }
+
+
     private fun worker(
         input: ChannelInput<*>,
         opener: DataOpener,
         output: ChannelOutput<DataValue>,
         role: String = "",
-        attributes: String = ReadPartWorker.attributesIgnore,
         schemaMode: String = DataReadCore.schemaStrict
-    ): ReadPartWorker {
-        return ReadPartWorker(
-            input, output, role, attributes, ConfiguredDelimitedTestFormats.csv(), workerLocation,
-            DataOpenerLookup(opener), schemaMode)
+    ): ParseWorker {
+        return ParseWorker(
+            input, output, role, ConfiguredDelimitedTestFormats.csv(), workerLocation,
+            DataOpenerLookup(opener), { error("No configured format lookup: $it") }, schemaMode)
     }
 
 
@@ -771,9 +773,10 @@ class ReadPartWorkerTest {
         }
 
 
-    private fun laneContext(): JobLaneContext {
+    private fun laneContext(budget: DesignReadBudget? = null): JobLaneContext {
         return JobLaneContext(
-            BindingSchema.empty, GraphStructure.empty, ReadPartWorker::class.java.classLoader)
+            BindingSchema.empty, GraphStructure.empty, ParseWorker::class.java.classLoader,
+            budget?.let { DesignReader().session(it) })
     }
 
 
@@ -859,6 +862,7 @@ class ReadPartWorkerTest {
 
 
     private open class CountingControl: JobControl {
+        var validatedOutput: DataContract? = null
         var checkpointCount = 0
         var blockingCount = 0
         val progressValues = mutableListOf<Map<String, Any?>>()
@@ -871,7 +875,7 @@ class ReadPartWorkerTest {
             blockingCount += 1
             return block()
         }
-        override fun scratchDir(): String = error("ReadPart needs no scratch directory")
+        override fun scratchDir(): String = error("Parse needs no scratch directory")
         override fun publishProgress(
             location: ObjectLocation,
             value: Map<String, Any?>,
@@ -880,7 +884,8 @@ class ReadPartWorkerTest {
             progressValues.add(value)
         }
         override suspend fun host(instructions: ObjectLocation, input: Any?) =
-            error("ReadPart hosts no child")
+            error("Parse hosts no child")
+        override fun outputContract(): DataContract? = validatedOutput
     }
 
 

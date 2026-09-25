@@ -18,16 +18,16 @@ class LogicSourceWorker(
     instructions: ObjectLocation?,
     arguments: List<String>,
     schema: RecordSchema?,
-    emit: String,
     role: String,
-    attributes: String,
     selfLocation: ObjectLocation,
     @Service openerLookup: DataOpenerLookup,
-    schemaMode: String = DataReadCore.schemaSuperset
+    schemaMode: String = DataReadCore.schemaSuperset,
+    emit: String = emitItems
 ): InlineDataSourceWorker(
-    output, emit, role, attributes, selfLocation, openerLookup, schemaMode,
+    output, role, selfLocation, openerLookup, schemaMode,
     LogicDataSource(instructions, arguments, schema),
-    compatibilityKey(instructions, arguments, schema)
+    compatibilityKey(instructions, arguments, schema),
+    emit
 ) {
     companion object {
         internal fun compatibilityKey(

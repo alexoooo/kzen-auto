@@ -109,7 +109,7 @@ class FilterWorker(
             "filter", where, input.contract,
             input.payloadType ?: TypeMetadata.anyNullable,
             context.classLoader, context.parameters)
-        return JobLaneAttempt(input, attempt.error)
+        return JobLaneAttempt(input, attempt.error, attempt.warning)
     }
 
 

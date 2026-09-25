@@ -41,11 +41,10 @@ main.workers/mainUnit:
   code: unit
 
 main.workers/mainItems:
-  is: ReadPartWorker
+  is: Parse
   input: main.channels/mainUnit
   output: main.channels/mainItems
   role: main
-  attributes: columns
 
 main.workers/mainWrite:
   is: ExportWriterWorker
@@ -55,6 +54,10 @@ main.workers/mainWrite:
     compression: none
     path: 'build/dated-sales/output/${date}.csv'
   result: main
+  columns:
+    - path: meta.parent.date
+      as: date
+    - "*"
 
 main.workers/referenceUnit:
   is: FormulaSourceWorker
@@ -62,7 +65,7 @@ main.workers/referenceUnit:
   code: unit
 
 main.workers/referenceItems:
-  is: ReadPartWorker
+  is: Parse
   input: main.channels/referenceUnit
   output: main.channels/referenceItems
   role: reference
@@ -81,3 +84,6 @@ main.workers/referenceWrite:
     format: csv
     compression: none
     path: 'build/dated-sales/reference-output/${date}.csv'
+  columns:
+    - "*"
+    - meta.observed

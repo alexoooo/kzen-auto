@@ -86,7 +86,17 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > notation (synthesized `is: Channel` / `is: DuplexChannel` objects + filled port refs) and re-derives a
 > normal GraphDefinition — creators, the run loop, and migrate carryover stay unchanged — with
 > deterministic names (`JobConventions.autoSynthChannelName` = `ch__<upstreamLeaf>__<outPort>`) so
-> ObjectStableId-keyed migration carryover survives unrelated edits. Per-output-port channel config
+> ObjectStableId-keyed migration carryover survives unrelated edits. A Worker's only output that nothing
+> consumes (`JobChannelDerivation`'s `openOutputs` — typically the last Worker's, before a consumer is
+> inserted) gets an **implicit Preview**: the run copy inserts a `PreviewWorker` right after that Worker at
+> `JobConventions.implicitPreviewPath` (`main.workers/pv__<leaf>__<outPort>`, never saved), and the ordinary
+> derivation then wires it like any adjacent pair, so the Worker runs and its output is sampled.
+> `JobLogicCompiler` launches it beside the saved Workers; the editor reads its trace by the stable id minted
+> from that deterministic location and draws the sample (`PreviewSampleView`, shared with the Preview card)
+> under the last Worker's outgoing pipe. An output still open after that (one of several) stays blank, so the
+> re-definition — transitively successful, like its input — prunes its Worker; validation gives such outputs
+> a transient channel (`synthesizeOpenOutputs`, via `JobValidator.validateDetached`) so the Worker is still
+> typed. Per-output-port channel config
 > (batchSize / capacity) lives on the **upstream Worker** in a free-form `channels.<outputPort>` map —
 > deliberately undeclared in the Worker base's `meta` (no card editor, no "Missing" definition drop,
 > still persisted in notation) so it follows the Worker across rename and reorder; precedence is Worker
@@ -139,19 +149,37 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > lending, the `checkpoint()` of every Worker downstream of it (and its own) does not park
 > (`EngineJobControl.draining`, topology from `JobChannelTopology`), so a pause or live edit lands with the
 > source between entries and a bounded channel below it keeps draining; `JobControl.retain` and `yieldResult`
-> refuse a lent element by name, since a hold past the callback would hang the source (`Write` and `ReadPartWorker`
-> over an `Entry` consume it inside the callback and emit independent values); the lender is either a source
-> (`CursorSourceWorker`) or the `Extract` transform below the one `File` selector (`emit` defaults to
-> `auto`, which `JobReadEmit` settles from the step below: a `FileConsumer`-marked Worker — `Extract`, `Read part`
-> — gets whole files as `DataUnit`s, anything else their contents, with the `WholeFile` format forcing whole
-> files for a source; `ExtractWorker` opens each as a `.tar.gz` and lends its members, nested
-> archives through an `Entry` input), both over the shared lend / await-release loop `CursorLending`; reading a
-> tar(.gz) rather than extracting it yields its table of contents (`ArchiveListingFormat`, one row per member
-> whose `kind` is a DM14 symbol set `{file, directory, link, other}`, content-detected; an automatic `File` over
-> explicitly picked files still publishes a static contract when each name's structured family admits only
-> formats of one declared shape — `FilenameDetection`, shared with the detector, reading the registered formats
-> from the validated graph snapshot); a file no installed format claims stays in the selection as
-> `UndetectedFormat` and is refused only when a reader opens it; a `TakeWorker` downstream of any
+> refuse a lent element by name, since a hold past the callback would hang the source (`Write` and `Parse`
+> over an archive member consume it inside the callback and emit independent values); the lender is either a source
+> (`CursorSourceWorker`) or the `Extract` transform, both over the shared lend / await-release loop `CursorLending`.
+> **Values are payload + metadata** (`kzen/docs/plans/2026-09-24_values-metadata-and-design-time-types.md`): the
+> `DataValue` / `DataContract` of kzen-lib carry typed metadata beside the payload, and Workers keep it on transform,
+> relate it as `parent` on expansion and set it at sources; expressions see the payload by bare name or `this.x`,
+> metadata by bare name or `meta.x`. **Selecting and reading are separate Workers.** `File` selects files and reads
+> none — each value is the file's `Content` with `{name, path, size, modified, kind}` plus Name-pattern values as
+> metadata (`FileValues`); `Extract` opens a file value as a `.tar.gz` and lends its members as the same kind of value
+> with the archive as `parent`; `Parse` owns `format` and reads what a value holds (a selected file, sampled for
+> automatic detection like any file; a member read once, picked by name via `FilenameDetection`; a `DataUnit`'s
+> parts) into items whose metadata is `{parent}`. Reading a tar(.gz) rather than extracting it yields its table of
+> contents (`ArchiveListingFormat`, one row per member whose `kind` is a DM14 symbol set
+> `{file, directory, link, other}`); a file no installed format claims is
+> `UndetectedFormat`, refused only when a reader opens it.
+> **Types before Run (VM3).** Validation may look at data, but only through `DesignReader`
+> (`server/data/design/`): each validation pass gets a `DesignReadSession` bounded by a `DesignReadBudget` (256
+> values; 2.5 s for the editor, 30 s at run start), whose reads are recorded as `DesignEvidence` (what was looked
+> at, rechecked by digest) and whose part shapes and resolved read specs are cached by content fingerprint. A lane
+> can offer a sample of the values it would carry (`JobLaneSample` on `JobLaneDescriptor`: `File` its first selected
+> files, `Read` in units mode its data source's units; identity Workers pass it on), and `Parse` — or `Read` in
+> items mode, over its units — types itself from it through `DesignShapeInference`, merging by its `schemaMode`;
+> the step's `StepValidation` then carries `provenance` ("Inferred from 41 of 256 values") and, when the deadline
+> cut the pass short, `partial`, which the editor shows as "Reading data…" and re-asks for after a second.
+> `JobValidationCache` reuses a validation only while all its evidence rechecks unchanged and never a partial one,
+> so a run revalidates against the data as it is at run start; `JobRun` then hands each Worker its validated output
+> contract (`JobControl.outputContract()`) and `Parse` / `Read` hold every part to it (`DataReadCore.fitShape`),
+> failing by name on a field outside it instead of re-typing mid-run. The browser keeps no copy of how data is
+> typed: column-aware editors read the upstream Worker's validated contract off `JobValidationChannel`
+> (`JobUpstreamSchema`), after a live Summary.
+> A `TakeWorker` downstream of any
 > source ends the run cleanly, the closed downstream (`DownstreamClosedException`) completing the source,
 > transform and expanding drive loops without draining; a live edit that changes a running source's selection (a
 > `File` selection, a `Read` data source: `WorkerBase.migrationKey`, read from notation by the

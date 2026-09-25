@@ -33,7 +33,7 @@ main.workers/read:
   output: main.channels/units
 
 main.workers/readPart:
-  is: ReadPartWorker
+  is: Parse
   input: main.channels/units
   output: main.channels/raw
   role: main

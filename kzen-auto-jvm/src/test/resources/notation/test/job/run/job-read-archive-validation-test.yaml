@@ -7,6 +7,10 @@ main.workers/archives:
     - location: build/job-read-archive-validation/first.tar.gz
     - location: build/job-read-archive-validation/second.tgz
 
+main.workers/listing:
+  is: Parse
+  format: auto-jvm/datasource/configured-delimited-format.yaml#ArchiveListing
+
 main.workers/write:
   is: CsvWriterWorker
   path: build/job-read-archive-validation/output.csv

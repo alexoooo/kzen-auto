@@ -1,4 +1,4 @@
-# JobValidatorTest: a known non-file lane (Int) upstream of Extract is a static validation error with the Units hint
+# JobValidatorTest: a known non-file lane (Int) upstream of Extract is a static validation error naming what it found
 main:
   is: Job
 

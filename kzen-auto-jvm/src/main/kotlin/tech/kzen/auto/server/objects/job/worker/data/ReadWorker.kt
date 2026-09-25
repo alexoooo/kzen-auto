@@ -8,17 +8,25 @@ import tech.kzen.auto.common.data.model.DataManifest
 import tech.kzen.auto.common.data.model.DataRole
 import tech.kzen.auto.common.data.model.DataUnit
 import tech.kzen.auto.common.data.schema.DataShape
-import tech.kzen.auto.common.data.schema.LegacyDataShapeBridge
 import tech.kzen.auto.common.objects.document.job.JobConventions
-import tech.kzen.auto.common.objects.document.job.JobReadEmit
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.server.data.DataOpenerLookup
+import tech.kzen.auto.server.data.design.DesignReadSession
 import tech.kzen.auto.server.objects.job.worker.Emitter
 import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.lib.common.exec.data.type.DataContract
+import tech.kzen.lib.common.exec.data.type.DataType
+import tech.kzen.lib.common.exec.data.type.FieldId
+import tech.kzen.lib.common.exec.data.type.MetadataContract
+import tech.kzen.lib.common.exec.data.type.ScalarKind
+import tech.kzen.lib.common.exec.data.value.DataOverlay
 import tech.kzen.lib.common.exec.data.value.DataValue
+import tech.kzen.lib.common.exec.data.value.LiteralDataValues
+import tech.kzen.lib.common.exec.data.value.ValueMetadata
 import tech.kzen.auto.server.objects.job.worker.SourceWorker
 import tech.kzen.auto.server.objects.job.worker.JobLaneDescriptor
+import tech.kzen.auto.server.objects.job.worker.JobLaneSample
 import tech.kzen.auto.server.objects.job.worker.JobLaneAttempt
 import tech.kzen.auto.server.objects.job.worker.JobLaneContext
 import tech.kzen.auto.server.objects.job.worker.definition.WorkerDefinitionContext
@@ -34,39 +42,43 @@ import kotlin.reflect.typeOf
 
 
 /**
- * Source-generic reader for resolved data manifests. Item mode opens each selected part in manifest order;
- * unit mode emits each [DataUnit] whole; left automatic, [JobReadEmit] picks between them from the step below.
+ * Source-generic reader for resolved data manifests. With `emit=items` it opens each selected part in manifest order
+ * and emits its items; with `emit=units` it emits each [DataUnit] whole, its attributes as the value's metadata (the
+ * payload for a Run per unit, or a `Parse` below). The mode is the Worker's own setting, never its neighbour's.
  * A manifest and positional cursor are migration state, so directory changes cannot alter a resumed run. Cursor
  * pulls always use the resumed Worker's [JobControl].
  *
  * Item mode fixes one effective shape across every part and unit. Default `schemaMode=superset` inspects the
  * selected manifest first and projects compatible tabular parts to one ordered union; `schemaMode=strict`
  * requires every effective shape to match exactly. Mixed tabular/payload or incompatible payload shapes fail.
- * `attributes=columns` prepends ordered unit attributes to tabular records and rejects name collisions.
  * A fresh resolution appends one immutable trace event containing the full manifest digest/count and a bounded
  * first-units teaser; a migrated carried manifest is not resolved or logged again.
- * For a stream of already-resolved [DataUnit] payloads, use [ReadPartWorker]. Fan-out to several independent
+ * Before Run (docs/plans/2026-09-24_values-metadata-and-design-time-types.md, R5), item mode reads its item type from
+ * the source's data when the source declares none ([DesignShapeInference]), and unit mode offers its first units as
+ * the lane's sample; the resolved manifest is the validation's evidence. A run holds every part to the validated
+ * type ([DataReadCore.fitShape], R6).
+ * To read a stream of file values or data units, use `Parse` ([ParseWorker]). Fan-out to several independent
  * readers still requires duplicate FormulaSource/manual channel wiring until J6 adds first-class fan-out.
  */
 @Reflect
 open class ReadWorker(
     output: ChannelOutput<DataValue>,
     private val source: ObjectReference?,
-    private val emit: String,
     private val role: String,
-    private val attributes: String,
     private val selfLocation: ObjectLocation,
     @Service private val openerLookup: DataOpenerLookup,
-    private val schemaMode: String = DataReadCore.schemaSuperset
+    private val schemaMode: String = DataReadCore.schemaSuperset,
+    private val emit: String = emitItems
 ): SourceWorker(output, selfLocation) {
     companion object {
-        const val emitItems = JobReadEmit.items
-        const val emitUnits = JobReadEmit.units
-        const val attributesIgnore = "ignore"
-        const val attributesColumns = "columns"
+        const val emitItems = "items"
+        const val emitUnits = "units"
 
         // The described record, exactly as each emitted unit lifts, so downstream ordinal accessors line up
         private val dataUnitContract by lazy { JobDataValues.describe(typeOf<DataUnit>()) }
+        // A unit's attributes are known only once resolved (read them by name, `meta["date"]`)
+        private val unitMetadataContract = MetadataContract.empty
+        private val text = DataContract(DataType.Scalar(ScalarKind.Text))
         private val logger = LoggerFactory.getLogger(ReadWorker::class.java)
         private val sourceAttribute = AttributeName("source")
     }
@@ -79,10 +91,6 @@ open class ReadWorker(
         lazy { error("Worker definition context is not loaded") }
     private var compatibilityKey: Digest? = null
 
-    // The declared emit with `auto` settled: units when the source passes files whole or the step below takes
-    // files, otherwise items. Fixed per definition load, so it is part of the compatibility key.
-    private var effectiveEmit: String = JobReadEmit.items
-
     private var manifest: DataManifest? = null
     private var finished = false
     private var emitted = 0L
@@ -90,6 +98,8 @@ open class ReadWorker(
     private var partIndex = 0
     private var itemIndex = 0L
     private var shapeBaseline: DataReadCore.ShapeBaseline? = null
+    // The type this Worker was validated with: every part must fit it (R6)
+    private var validatedShape: DataReadCore.ShapeBaseline? = null
     private var inspectedShapes: Map<String, DataShape>? = null
     private var cursor: DataCursor? = null
 
@@ -110,8 +120,7 @@ open class ReadWorker(
                 "Unable to prepare data source definition dependency: ${e.message}"))
             return
         }
-        loadSourceResolution(
-            resolved, dependencyDigests, JobReadEmit.effective(emit, context.graphStructure(), selfLocation))
+        loadSourceResolution(resolved, dependencyDigests)
     }
 
 
@@ -127,8 +136,7 @@ open class ReadWorker(
 
     internal fun loadSourceResolution(
         resolution: WorkerDefinitionResolution,
-        dependencyDigests: List<Digest> = emptyList(),
-        adjacentEmit: String = emit
+        dependencyDigests: List<Digest> = emptyList()
     ) {
         sourceResolution =
             if (resolution is WorkerDefinitionResolution.Resolved && resolution.value !is DataSource) {
@@ -140,22 +148,13 @@ open class ReadWorker(
                 resolution
             }
 
-        val passesFilesWhole =
-            ((sourceResolution as? WorkerDefinitionResolution.Resolved)?.value as? DataSource)?.passesFilesWhole == true
-        effectiveEmit = when {
-            emit == JobReadEmit.automatic && passesFilesWhole -> JobReadEmit.units
-            adjacentEmit == JobReadEmit.automatic -> JobReadEmit.items
-            else -> adjacentEmit
-        }
-
         compatibilityKey = (sourceResolution as? WorkerDefinitionResolution.Resolved)?.let {
             Digest.build {
                 addDigestible(it.location)
                 addDigest(it.cacheKey)
                 dependencyDigests.forEach(::addDigest)
-                addUtf8(effectiveEmit)
+                addUtf8(emit)
                 addUtf8(role)
-                addUtf8(attributes)
                 addUtf8(schemaMode)
             }
         }
@@ -170,11 +169,12 @@ open class ReadWorker(
 
         val context = WorkerDataContext(control)
         val activeManifest = manifest ?: resolveManifest(context, control).also { manifest = it }
-        if (effectiveEmit == emitUnits) {
+        if (this.emit == emitUnits) {
             emitUnits(activeManifest, emit)
         }
         else {
-            if (schemaMode == DataReadCore.schemaSuperset && shapeBaseline == null) {
+            validatedShape = DataReadCore.validatedShape(control.outputContract())
+            if (schemaMode == DataReadCore.schemaSuperset && shapeBaseline == null && validatedShape == null) {
                 prepareSuperset(activeManifest, context)
             }
             emitItems(activeManifest, context, emit, control)
@@ -197,7 +197,7 @@ open class ReadWorker(
                 inspected[partKey(unitIndex, partIndex)] = shape
                 candidates.add(DataReadCore.ShapeCandidate(
                     shape,
-                    attributeValues(unit),
+                    null,
                     origin))
             }
         }
@@ -236,8 +236,17 @@ open class ReadWorker(
             val unit = activeManifest.units[unitIndex]
             unitIndex += 1
             emitted += 1
-            emitter.send(JobDataValues.lift(unit))
+            emitter.send(unitValue(unit))
         }
+    }
+
+
+    /** A unit sent whole: its attributes are the value's metadata. */
+    private fun unitValue(unit: DataUnit): DataValue {
+        val metadata = DataOverlay.record(null, unit.attributes.map { (name, value) ->
+            FieldId(name) to LiteralDataValues.lift(value, text)
+        })
+        return JobDataValues.lift(unit).withMetadata(ValueMetadata.of(metadata))
     }
 
 
@@ -273,12 +282,15 @@ open class ReadWorker(
                     DataReadCore.skipItems(control, activeCursor, itemIndex)
                 }
                 val origin = "unit $unitIndex part $partIndex (${part.ref.display()})"
-                val attributeValues = attributeValues(unit)
                 val candidate = DataReadCore.effectiveShape(
                     activeCursor.shape,
-                    attributeValues,
+                    null,
                     origin)
-                if (inspectedShapes == null) {
+                val validated = validatedShape
+                if (validated != null) {
+                    shapeBaseline = DataReadCore.fitShape(validated, candidate, schemaMode)
+                }
+                else if (inspectedShapes == null) {
                     shapeBaseline = DataReadCore.establishShape(shapeBaseline, candidate)
                 }
             }
@@ -287,7 +299,7 @@ open class ReadWorker(
                 control,
                 activeCursor,
                 requireNotNull(shapeBaseline),
-                attributeValues(unit),
+                null,
                 claimBeforeSend = {
                     itemIndex += 1
                     emitted += 1
@@ -305,11 +317,6 @@ open class ReadWorker(
 
 
     private fun partKey(unitIndex: Int, partIndex: Int): String = "$unitIndex:$partIndex"
-
-
-    private fun attributeValues(unit: DataUnit): Map<String, String>? {
-        return if (attributes == attributesColumns) unit.attributes else null
-    }
 
 
     override suspend fun onClose() {
@@ -378,29 +385,73 @@ open class ReadWorker(
                 JobLaneDescriptor.unknown,
                 (sourceResolution as WorkerDefinitionResolution.Failed).message)
         val dataSource = resolved.value as DataSource
-        if (effectiveEmit == emitUnits) {
-            return JobLaneAttempt(
-                JobLaneDescriptor(dataUnitContract), null)
+        val design = context.design
+        if (emit == emitUnits) {
+            val lane = dataUnitContract.withMetadata(unitMetadataContract)
+            if (design == null) {
+                return JobLaneAttempt(JobLaneDescriptor(lane), null)
+            }
+            return when (val read = designManifest(dataSource, design)) {
+                is DesignManifest.Read -> JobLaneAttempt(
+                    JobLaneDescriptor(lane, sample = JobLaneSample(
+                        read.manifest.units.take(design.budget.maxValues).map(::unitValue),
+                        read.manifest.units.size)),
+                    null)
+                is DesignManifest.Unread -> JobLaneAttempt(JobLaneDescriptor(lane), null, read.warning)
+                DesignManifest.Limited -> JobLaneAttempt(JobLaneDescriptor(lane), null, partial = true)
+            }
         }
 
         val staticShape = dataSource.staticShape(
             role.takeIf { it.isNotBlank() }?.let(::DataRole), configuredFormats)
-        if (attributes == attributesColumns) {
-            return if (staticShape != null && LegacyDataShapeBridge.headerOrNull(staticShape) == null) {
-                JobLaneAttempt(
-                    JobLaneDescriptor.unknown,
-                    "attributes=columns requires record data, found ${staticShape.itemType.structural}")
-            }
-            else {
-                JobLaneAttempt(JobLaneDescriptor.unknown, null)
-            }
+        if (staticShape != null) {
+            return JobLaneAttempt(JobLaneDescriptor(staticShape.itemType), null)
         }
-
-        if (staticShape == null) {
+        if (design == null) {
             return JobLaneAttempt(JobLaneDescriptor.unknown, null)
         }
-        return JobLaneAttempt(JobLaneDescriptor(staticShape.itemType), null)
+        return when (val read = designManifest(dataSource, design)) {
+            is DesignManifest.Read -> {
+                val units = read.manifest.units
+                DesignShapeInference
+                    .infer(
+                        minOf(units.size, design.budget.maxValues), units.size, design, openerLookup, schemaMode
+                    ) { _, index ->
+                        DataReadCore.parts(units[index], role, index)
+                    }
+                    .attempt(JobLaneDescriptor.unknown.contract)
+            }
+            is DesignManifest.Unread -> JobLaneAttempt(JobLaneDescriptor.unknown, null, read.warning)
+            DesignManifest.Limited -> JobLaneAttempt(JobLaneDescriptor.unknown, null, partial = true)
+        }
     }
+
+
+    private sealed interface DesignManifest {
+        class Read(val manifest: DataManifest): DesignManifest
+        class Unread(val warning: String?): DesignManifest
+        data object Limited: DesignManifest
+    }
+
+
+    /** The source's manifest before Run, recorded as evidence so a change to the data makes the validation stale. */
+    private fun designManifest(dataSource: DataSource, design: DesignReadSession): DesignManifest =
+        try {
+            design
+                .observe(
+                    "the data of ${selfLocation.objectPath.name.value}",
+                    { dataSource.resolve(it).manifest },
+                    DataManifest::digest)
+                ?.let { DesignManifest.Read(it.value) }
+                ?: DesignManifest.Limited
+        }
+        catch (_: UnsupportedOperationException) {
+            // A source that runs logic to resolve is known only in a run
+            DesignManifest.Unread(null)
+        }
+        catch (e: Exception) {
+            DesignManifest.Unread("Data not read before Run: ${e.message}")
+        }
 
 
     override fun progress(snapshot: Any?): Map<String, Any?> {
@@ -417,11 +468,8 @@ open class ReadWorker(
 
 
     private fun configError(): String? {
-        if (!JobReadEmit.isKnown(emit)) {
+        if (emit != emitItems && emit != emitUnits) {
             return "Unknown Read emit mode: $emit"
-        }
-        if (effectiveEmit == emitItems && attributes != attributesIgnore && attributes != attributesColumns) {
-            return "Unknown Read attributes mode: $attributes"
         }
         if (schemaMode != DataReadCore.schemaStrict && schemaMode != DataReadCore.schemaSuperset) {
             return "Unknown Read schema mode: $schemaMode"

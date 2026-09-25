@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.objects.job.worker
 
+import tech.kzen.auto.common.objects.document.job.path.WriterColumnSpec
 import tech.kzen.auto.common.objects.document.report.spec.output.OutputExportSpec
 import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
@@ -37,7 +38,8 @@ import kotlin.time.Clock
  * mirroring [tech.kzen.auto.server.objects.report.exec.output.export.CharsetExportEncoder], and the shared
  * [ExportCompression.wrap] none/zip/gz seam (extracted from `CompressedExportWriter` so both call it). The
  * column header is written once (from the first record's header, via `render` — matching Report's
- * `ExportFormatter`), then each record follows.
+ * `ExportFormatter`), then each record follows. `columns` chooses how a value is flattened, as for
+ * [CsvWriterWorker] (default: the payload's columns; a path adds a metadata field or a nested scalar).
  *
  * `export` is an [OutputExportSpec]: `format` (csv / tsv), `compression` (none / zip / gz), and `path` — a
  * pattern resolved with `${time}` = now, `${extension}` = the format+compression extension, `${report}` = this
@@ -70,7 +72,9 @@ class ExportWriterWorker(
     private val result: String,
     private val selfLocation: ObjectLocation,
     @Service private val fileListingAction: FileListingAction,
-    @Service private val cachedKotlinCompiler: CachedKotlinCompiler
+    @Service private val cachedKotlinCompiler: CachedKotlinCompiler,
+
+    private val columns: WriterColumnSpec = WriterColumnSpec.payloadFields
 ):
     SinkWorker(input, selfLocation)
 {
@@ -90,6 +94,7 @@ class ExportWriterWorker(
     private var outputPath: Path? = null
     private var headerWritten = false
     private var written = 0L
+    private val writerColumns = WriterColumns(columns)
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -118,14 +123,15 @@ class ExportWriterWorker(
 
     override suspend fun onElement(element: DataValue, control: JobControl) {
         val out = out!!
-        val projection = JobDataValues.projection(element)
-        val elementHeader = projection.header
-        val record = JobDataValues.record(projection)
+        val row = writerColumns.row(element, control)
+        val record =
+            if (writerColumns.payloadFieldsOnly && row.projection != null) JobDataValues.record(row.projection)
+            else FlatFileRecord.of(writerColumns.fields(row))
         control.runBlockingIo {
             if (!headerWritten) {
                 // The column header, once — rendered exactly as Report's ExportFormatter (`render` disambiguates
                 // duplicate-occurrence columns, e.g. "amount (2)").
-                writeRow(out, FlatFileRecord.of(elementHeader.values.map { it.render() }))
+                writeRow(out, FlatFileRecord.of(writerColumns.header(row) { it.render() }))
                 headerWritten = true
             }
             writeRow(out, record)
@@ -162,10 +168,9 @@ class ExportWriterWorker(
 
 
     override fun payloadFlow(input: JobLaneDescriptor, context: JobLaneContext): JobLaneAttempt {
-        return JobLaneAttempt(
-            input,
-            WriterResultValidation.staticError(
-                result, selfLocation, context, cachedKotlinCompiler))
+        val resultError = WriterResultValidation.staticError(result, selfLocation, context, cachedKotlinCompiler)
+        val columnsError = writerColumns.staticError(input.contract)
+        return JobLaneAttempt(input, listOfNotNull(resultError, columnsError).joinToString("; ").ifBlank { null })
     }
 
 

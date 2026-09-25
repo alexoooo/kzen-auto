@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.objects.job.worker
 
 import tech.kzen.auto.common.data.schema.HeaderListing
+import tech.kzen.auto.server.data.design.DesignReadSession
 import tech.kzen.auto.server.objects.job.value.ColumnProjectionDescriptor
 import tech.kzen.lib.common.exec.data.type.DataContract
 import tech.kzen.lib.common.exec.data.type.DataField
@@ -10,6 +11,7 @@ import tech.kzen.lib.common.exec.data.type.FieldId
 import tech.kzen.lib.common.exec.data.type.ResolvedDataContract
 import tech.kzen.lib.common.exec.data.type.ScalarKind
 import tech.kzen.lib.common.exec.data.type.toDataContract
+import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.exec.data.binding.BindingSchema
 import tech.kzen.lib.common.model.structure.GraphStructure
@@ -17,10 +19,14 @@ import tech.kzen.lib.common.util.digest.Digest
 import tech.kzen.lib.platform.ClassName
 
 
-/** The single static authority for a Job lane. */
+/**
+ * The single static authority for a Job lane. [sample] is a few of the values the lane would carry, when its producer
+ * can offer them at design time (see [JobLaneSample]); it is not part of the lane's type.
+ */
 class JobLaneDescriptor(
     val contract: DataContract,
-    val resolved: ResolvedDataContract? = null
+    val resolved: ResolvedDataContract? = null,
+    val sample: JobLaneSample? = null
 ) {
     constructor(
         payloadType: TypeMetadata?,
@@ -130,14 +136,38 @@ class JobLaneDescriptor(
 }
 
 
+/**
+ * [provenance] says where a type read from data came from, e.g. how many of the lane's values it was inferred from;
+ * [partial] marks it read from only part of them, because a design-time limit cut the reading short.
+ */
 class JobLaneAttempt(
     val lane: JobLaneDescriptor,
-    val errorMessage: String?
+    val errorMessage: String?,
+    val warningMessage: String? = null,
+    val provenance: String? = null,
+    val partial: Boolean = false
 )
 
 
+/**
+ * A few of the values a lane would carry, offered at design time (docs/plans/2026-09-24_values-metadata-and-design-
+ * time-types.md, R5): the first [values] of [total], the same values a run would send (lifted payload and metadata),
+ * holding no open resource. A Worker that forwards its input unchanged forwards the sample too, so a filter above a
+ * reader widens what the reader types itself from, never narrows it.
+ */
+class JobLaneSample(
+    val values: List<DataValue>,
+    val total: Int
+) {
+    val complete: Boolean
+        get() = values.size == total
+}
+
+
+/** [design] reads data for this validation pass; null where validation may not look at data. */
 class JobLaneContext(
     val parameters: BindingSchema,
     val graphStructure: GraphStructure,
-    val classLoader: ClassLoader
+    val classLoader: ClassLoader,
+    val design: DesignReadSession? = null
 )

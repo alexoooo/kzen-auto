@@ -5,6 +5,7 @@ import tech.kzen.lib.common.exec.data.type.DataField
 import tech.kzen.lib.common.exec.data.type.DataType
 import tech.kzen.lib.common.exec.data.type.DefinitionId
 import tech.kzen.lib.common.exec.data.type.FieldId
+import tech.kzen.lib.common.exec.data.type.MetadataContract
 import tech.kzen.lib.common.exec.data.type.ScalarKind
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -51,6 +52,30 @@ class ContractPathTreeTest {
         assertEquals(listOf("parent.symbol", "parent.executions", "parent.notes", "parent.tags", "parent.parent"),
             parentChildren.map { it.path.asString() })
         assertEquals(ContractPathTree.Kind.Reference("Order"), parentChildren[4].kind)
+    }
+
+
+    @Test
+    fun metadataIsTheLastRootAndOpensIntoItsFields() {
+        val file = DataType.Record(listOf(DataField(FieldId("name"), text)))
+        val metadata = MetadataContract(DataType.Record(listOf(
+            DataField(FieldId("year"), number),
+            DataField(FieldId("parent"), file))))
+        val withMetadata = contract.withMetadata(metadata)
+
+        val roots = ContractPathTree.roots(withMetadata)
+        assertEquals(listOf("symbol", "executions", "notes", "tags", "parent", "meta"), roots.map { it.label })
+        val meta = roots.last()
+        assertEquals(ContractPathTree.Kind.Record, meta.kind)
+
+        val metaChildren = ContractPathTree.children(withMetadata, meta)
+        assertEquals(listOf("meta.year", "meta.parent"), metaChildren.map { it.path.asString() })
+        assertTrue(metaChildren[0].selectable)
+        assertEquals(listOf("meta.parent.name"),
+            ContractPathTree.children(withMetadata, metaChildren[1]).map { it.path.asString() })
+
+        val noFields = contract.withMetadata(MetadataContract.empty)
+        assertEquals(5, ContractPathTree.roots(noFields).size, "metadata without fields offers no root")
     }
 
 

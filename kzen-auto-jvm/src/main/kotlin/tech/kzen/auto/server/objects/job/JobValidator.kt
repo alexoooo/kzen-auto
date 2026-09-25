@@ -9,6 +9,8 @@ import tech.kzen.auto.common.objects.document.job.model.JobValidation
 import tech.kzen.auto.common.objects.document.logic.StepValidation
 import tech.kzen.auto.common.objects.document.logic.ValidationDigestEcho
 import tech.kzen.auto.common.paradigm.detached.DetachedAction
+import tech.kzen.auto.server.data.design.DesignReadBudget
+import tech.kzen.auto.server.data.design.DesignReadSession
 import tech.kzen.auto.server.objects.job.worker.WorkerBase
 import tech.kzen.auto.server.objects.job.worker.JobLaneDescriptor
 import tech.kzen.auto.server.objects.job.worker.JobLaneAttempt
@@ -45,7 +47,8 @@ import tech.kzen.lib.common.service.store.LocalGraphStore
  * time via [tech.kzen.auto.common.paradigm.job.control.JobControl.payloadType]).
  *
  * The walk needs live Worker instances, so [execute] synthesizes the channels and instantiates the Job graph
- * exactly as a run compile would (the ScriptValidator instantiate-to-validate precedent) — behind
+ * as a run compile would, plus a transient channel on any output still open after that ([validateDetached]; the
+ * ScriptValidator instantiate-to-validate precedent) — behind
  * [JobValidationCache], which also serves the run path ([tech.kzen.auto.server.exec.job.JobRun]), so editor
  * requests and run compiles share entries. A Worker missing from the instance graph (a pruned blank-reference
  * Worker, e.g. a RunWorker with no callee chosen) gets NO entry — pruned is not broken (it simply does not
@@ -66,7 +69,8 @@ class JobValidator(
             graphInstance: GraphInstance,
             environment: GraphEnvironment,
             definitionContext: WorkerDefinitionContext = WorkerDefinitionContext(
-                graphDefinition, graphInstance, environment)
+                graphDefinition, graphInstance, environment),
+            design: DesignReadSession? = null
         ): JobValidation {
             val graphStructure = graphDefinition.graphStructure
             val graphNotation = graphStructure.graphNotation
@@ -80,7 +84,8 @@ class JobValidator(
             val context = JobLaneContext(
                 JobSignatureCapability.signature(graphStructure, jobMainLocation).inputs,
                 graphStructure,
-                ClassLoaderUtils.dynamicParentClassLoader())
+                ClassLoaderUtils.dynamicParentClassLoader(),
+                design)
             // The saved (pre-synthesis) structure drives the derivation — the same rule the client draws
             // pipes from — giving each downstream Worker its single inferred upstream.
             val upstreamByDownstream: Map<ObjectPath, ObjectPath> = JobChannelDerivation
@@ -123,9 +128,11 @@ class JobValidator(
                     .joinToString("; ")
                     .ifBlank { null }
                 workerValidations[workerPath] = StepValidation(
-                    attempt.lane.payloadType, joinedError,
+                    attempt.lane.payloadType, joinedError, attempt.warningMessage,
                     flatColumns = attempt.lane.flatColumns,
-                    contract = attempt.lane.contract)
+                    contract = attempt.lane.contract,
+                    provenance = attempt.provenance,
+                    partial = attempt.partial)
             }
 
             for ((path, error) in resultErrors) {
@@ -133,6 +140,28 @@ class JobValidator(
             }
 
             return JobValidation(workerValidations)
+        }
+
+
+        /**
+         * [validate] on instances of its own, synthesized as a run would be except that every open output also
+         * gets a transient channel ([JobChannelSynthesis.synthesizeOpenOutputs]): a Worker with an output nothing
+         * consumes that no implicit Preview takes (one of several) — which a run prunes — is still typed.
+         */
+        fun validateDetached(
+            documentPath: DocumentPath,
+            graphDefinition: GraphDefinition,
+            notationMetadataReader: NotationMetadataReader,
+            environment: GraphEnvironment,
+            design: DesignReadSession? = null
+        ): JobValidation {
+            val synthesis = JobChannelSynthesis(notationMetadataReader)
+                .synthesizeOpenOutputs(graphDefinition, documentPath)
+            val filteredDefinition = synthesis.graphDefinition.filterTransitive(documentPath)
+            val graphInstance = GraphCreator.createGraph(filteredDefinition, environment)
+            return validate(
+                documentPath, graphDefinition, graphInstance, environment,
+                WorkerDefinitionContext(graphDefinition, graphInstance, environment), design)
         }
 
 
@@ -204,18 +233,10 @@ class JobValidator(
 
         // A cache hit skips channel synthesis, graph filtering and instantiation entirely (keyed on the FULL
         // definition — linked-callee edits must invalidate — matching the run path's key).
-        val jobValidation = jobValidationCache.jobValidation(documentPath, transitiveSuccessful) {
-            val synthesis = JobChannelSynthesis(notationMetadataReader)
-                .synthesize(transitiveSuccessful, documentPath)
-            val filteredDefinition = synthesis.graphDefinition.filterTransitive(documentPath)
-
-            val graphInstance = GraphCreator.createGraph(filteredDefinition, environment)
-
-            validate(
-                documentPath,
-                transitiveSuccessful,
-                graphInstance,
-                environment)
+        val jobValidation = jobValidationCache.jobValidation(
+            documentPath, transitiveSuccessful, DesignReadBudget.editor
+        ) { design ->
+            validateDetached(documentPath, transitiveSuccessful, notationMetadataReader, environment, design)
         }
 
         return ExecutionSuccess

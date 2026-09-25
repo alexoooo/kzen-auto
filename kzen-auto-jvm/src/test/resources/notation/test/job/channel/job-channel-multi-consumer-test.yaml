@@ -13,11 +13,19 @@ main.channels/keptA:
 main.channels/keptB:
   is: Channel
 
+main.channels/reader files:
+  is: Channel
+
 main.workers/reader:
   is: FileSourceWorker
-  output: main.channels/raw
+  output: main.channels/reader files
   files:
     - location: build/job-channel-multi-consumer/input.csv
+
+main.workers/reader Parse:
+  is: Parse
+  input: main.channels/reader files
+  output: main.channels/raw
 
 main.workers/filterA:
   is: FilterWorker

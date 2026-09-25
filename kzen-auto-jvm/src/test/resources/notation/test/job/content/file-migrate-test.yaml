@@ -18,11 +18,19 @@ main.channels/rows:
 main.channels/summarized:
   is: Channel
 
+main.channels/read files:
+  is: Channel
+
 main.workers/read:
   is: FileSourceWorker
-  output: main.channels/rows
+  output: main.channels/read files
   files:
     - location: build/content-scope/file-migrate/big.csv
+
+main.workers/read Parse:
+  is: Parse
+  input: main.channels/read files
+  output: main.channels/rows
   format: main.formats/csv
 
 main.workers/summary:

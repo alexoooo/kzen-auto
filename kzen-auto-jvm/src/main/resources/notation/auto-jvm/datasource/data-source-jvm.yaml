@@ -1,9 +1,10 @@
-FileDataSourceConfig:
+# Which files: shared by the File data source (which also reads them, in its `format`) and the File Worker (which
+# only selects them).
+FileSelectionConfig:
   abstract: true
   directory: ""
   filter: ""
   files: []
-  format: auto-jvm/datasource/configured-delimited-format.yaml#AutomaticFormat
   groupPattern: ""
   missing: fail
 
@@ -30,9 +31,6 @@ FileDataSourceConfig:
         of:
           - String
           - String
-    format:
-      is: ConfiguredRecordFormat
-      editor: SelectDataFormatEditor
     groupPattern:
       is: String
       label: "Name pattern"
@@ -44,6 +42,16 @@ FileDataSourceConfig:
       values:
         fail: "Stop with an error"
         skip: "Skip it"
+
+
+FileDataSourceConfig:
+  abstract: true
+  is: FileSelectionConfig
+  format: auto-jvm/datasource/configured-delimited-format.yaml#AutomaticFormat
+  meta:
+    format:
+      is: ConfiguredRecordFormat
+      editor: SelectDataFormatEditor
 
 
 FileDataSource:

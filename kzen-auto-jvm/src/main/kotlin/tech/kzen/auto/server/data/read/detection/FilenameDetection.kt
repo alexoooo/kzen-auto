@@ -86,4 +86,29 @@ object FilenameDetection {
             .distinct()
             .singleOrNull()
     }
+
+
+    /**
+     * The one format [fileName] alone selects among [formats], for content that cannot be sampled ahead of
+     * reading (a member of an archive, read once from its stream): the automatic candidate whose extensions
+     * name the file's, else the single candidate of its structured family; null when the name admits none or
+     * several.
+     */
+    fun formatFor(fileName: String, formats: List<ConfiguredRecordFormat>): ConfiguredRecordFormat? {
+        val hints = effectiveHints(hints(fileName), fileName)
+        val extension = hints.filenameExtension?.lowercase()
+            ?: return null
+        val candidates = formats.filter { it.automaticDetectionCandidate }
+        val exact = candidates.filter { extension in exactExtensions(it) }
+        if (exact.size == 1) {
+            return exact.single()
+        }
+        val hint = classify(hints, formats.flatMap { it.hintMetadata }.distinct())
+        if (hint?.hintClass != FormatHintClass.StructuredFamily) {
+            return null
+        }
+        return candidates
+            .filter { structuredEligible(hints, hint, exactExtensions(it), structuredFamilies(it)) }
+            .singleOrNull()
+    }
 }

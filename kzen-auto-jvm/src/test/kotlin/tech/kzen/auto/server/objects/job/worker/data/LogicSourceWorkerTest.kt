@@ -8,6 +8,7 @@ import tech.kzen.auto.common.data.model.DataPart
 import tech.kzen.auto.common.data.model.DataRef
 import tech.kzen.auto.common.data.model.DataRole
 import tech.kzen.auto.common.data.model.DataUnit
+import tech.kzen.auto.common.data.schema.LegacyDataShapeBridge
 import tech.kzen.auto.common.objects.document.data.schema.DataSchemaFieldListSpec
 import tech.kzen.auto.common.objects.document.data.schema.DataSchemaFieldSpec
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
@@ -34,16 +35,15 @@ class LogicSourceWorkerTest {
 
 
     @Test
-    fun directlyOwnedLogicSourceHostsAndEmitsUnits() = runBlocking {
+    fun directlyOwnedLogicSourceHostsAndEmitsItems() = runBlocking {
         val messages = mutableListOf<DataValue>()
         val control = HostingControl()
         LogicSourceWorker(
             capturing(messages), instructions, listOf("date"), null,
-            ReadWorker.emitUnits, "ignored", "ignored", workerLocation,
-            DataOpenerLookup(UnusedOpener))
+            "", workerLocation, DataOpenerLookup(ItemsOpener), DataReadCore.schemaStrict)
             .run(control)
 
-        assertEquals(listOf(unit("result.csv")), messages.map(JobDataValues::boundary))
+        assertEquals(listOf<Any?>("x", "y"), messages.map(JobDataValues::boundary))
         assertEquals(instructions, control.instructions)
         assertEquals("2026-08-24", control.input)
     }
@@ -78,9 +78,16 @@ class LogicSourceWorkerTest {
     }
 
 
-    private object UnusedOpener: DataOpener {
-        override suspend fun open(context: tech.kzen.auto.common.data.api.DataContext, part: DataPart): DataCursor =
-            error("Unit mode does not open parts")
+    private object ItemsOpener: DataOpener {
+        override suspend fun open(context: tech.kzen.auto.common.data.api.DataContext, part: DataPart): DataCursor {
+            val items = listOf("x", "y").map { JobDataValues.lift(it) }.iterator()
+            return object: DataCursor {
+                override val shape = LegacyDataShapeBridge.runtimeUnknown()
+                override fun hasNext() = items.hasNext()
+                override fun next() = items.next()
+                override fun close() {}
+            }
+        }
     }
 
 

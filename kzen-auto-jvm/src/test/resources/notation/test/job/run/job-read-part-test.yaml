@@ -13,7 +13,7 @@ main.workers/units:
   emit: units
 
 main.workers/items:
-  is: ReadPartWorker
+  is: Parse
   role: main
 
 main.workers/write:

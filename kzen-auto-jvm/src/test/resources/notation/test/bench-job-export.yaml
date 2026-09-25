@@ -6,6 +6,9 @@ main.workers/reader:
   files:
     - location: build/bench/exp/input.csv
 
+main.workers/reader Parse:
+  is: Parse
+
 main.workers/filter:
   is: ValueSetFilterWorker
   filter:
@@ -25,3 +28,6 @@ main.workers/export:
     format: csv
     compression: none
     path: build/bench/exp/job-export.csv
+  columns:
+    - "*"
+    - meta.total

@@ -21,7 +21,6 @@ main.workers/Archive:
   files:
     - location: build/content-scope/two/input.tar.gz
     - location: build/content-scope/two/second.tar.gz
-  emit: units
   output: main.channels/files
 
 main.workers/Extract:

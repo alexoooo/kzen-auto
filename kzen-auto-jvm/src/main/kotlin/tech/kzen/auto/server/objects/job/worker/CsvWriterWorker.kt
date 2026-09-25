@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.objects.job.worker
 
+import tech.kzen.auto.common.objects.document.job.path.WriterColumnSpec
 import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.server.objects.job.value.JobDataValues
@@ -18,10 +19,12 @@ import java.nio.file.Path
 
 
 /**
- * The CSV output stage as a Job Worker (analogue of `CompressedExportWriter`, minus compression). Writes each
- * value's column projection (a scalar value projects to a synthetic `value` column, so a scalar stream
- * writes a `value` column). When [header] is true the column names are written once (from the first batch)
- * before the records; when false (a headerless round-trip) only records are written. Fields are written with RFC-4180 quoting that is
+ * The CSV output stage as a Job Worker (analogue of `CompressedExportWriter`, minus compression). [columns]
+ * chooses how each value is flattened into a row: by default (or `*`) the payload's column projection (a scalar
+ * value projects to a synthetic `value` column, so a scalar stream writes a `value` column); a path entry adds
+ * a metadata field (`meta.name`) or a nested scalar as a further column, named by its alias or default name.
+ * When [header] is true the column names are written once (from the first batch) before the records; when
+ * false (a headerless round-trip) only records are written. Fields are written with RFC-4180 quoting that is
  * DELIMITER-AWARE: a field is quoted when it contains the [delimiter], a quote, or a line break, and quotes
  * are escaped by doubling (the same rules as `FlatFileRecord.writeCsvField`, but parameterized on the
  * configured delimiter rather than hard-coding the comma — so a `;`-delimited round-trip is correct).
@@ -47,7 +50,9 @@ class CsvWriterWorker(
 
     private val selfLocation: ObjectLocation,
     @Service private val fileListingAction: FileListingAction,
-    @Service private val cachedKotlinCompiler: CachedKotlinCompiler
+    @Service private val cachedKotlinCompiler: CachedKotlinCompiler,
+
+    private val columns: WriterColumnSpec = WriterColumnSpec.payloadFields
 ):
     SinkWorker(input, selfLocation)
 {
@@ -58,6 +63,8 @@ class CsvWriterWorker(
     private var outputPath: Path? = null
     private var headerWritten = false
     private var written = 0L
+
+    private val writerColumns = WriterColumns(columns)
 
 
     override suspend fun onStart(control: JobControl) {
@@ -77,14 +84,20 @@ class CsvWriterWorker(
 
     override suspend fun onElement(element: DataValue, control: JobControl) {
         val writer = writer.requireOwned()
-        val projection = JobDataValues.projection(element)
-        val elementHeader = projection.header
+        val row = writerColumns.row(element, control)
         control.runBlockingIo {
             if (header && !headerWritten) {
-                writeRecord(writer, FlatFileRecord.of(elementHeader.values.map { it.text }))
+                writeRecord(writer, FlatFileRecord.of(writerColumns.header(row) { it.text }))
                 headerWritten = true
             }
-            writeProjection(writer, projection)
+            var count = 0
+            writerColumns.forEachField(row) { value ->
+                if (count++ > 0) {
+                    writer.write(delimiter)
+                }
+                writeField(writer, value)
+            }
+            writer.newLine()
             written += 1
         }
     }
@@ -115,10 +128,9 @@ class CsvWriterWorker(
 
 
     override fun payloadFlow(input: JobLaneDescriptor, context: JobLaneContext): JobLaneAttempt {
-        return JobLaneAttempt(
-            input,
-            WriterResultValidation.staticError(
-                result, selfLocation, context, cachedKotlinCompiler))
+        val resultError = WriterResultValidation.staticError(result, selfLocation, context, cachedKotlinCompiler)
+        val columnsError = writerColumns.staticError(input.contract)
+        return JobLaneAttempt(input, listOfNotNull(resultError, columnsError).joinToString("; ").ifBlank { null })
     }
 
 
@@ -129,20 +141,6 @@ class CsvWriterWorker(
                 writer.write(delimiter)
             }
             writeField(writer, record.getString(fieldIndex))
-        }
-        writer.newLine()
-    }
-
-
-    private fun writeProjection(
-        writer: BufferedWriter,
-        projection: tech.kzen.auto.server.objects.job.value.ColumnProjection
-    ) {
-        for (fieldIndex in 0 until projection.size) {
-            if (fieldIndex > 0) {
-                writer.write(delimiter)
-            }
-            writeField(writer, projection.render(fieldIndex))
         }
         writer.newLine()
     }

@@ -10,10 +10,18 @@ main:
 main.channels/rows:
   is: Channel
 
+main.channels/Archive files:
+  is: Channel
+
 main.workers/Archive:
   is: FileSourceWorker
   files:
     - location: build/content-scope/listing/input.tar.gz
+  output: main.channels/Archive files
+
+main.workers/Archive Parse:
+  is: Parse
+  input: main.channels/Archive files
   output: main.channels/rows
 
 main.workers/collect:

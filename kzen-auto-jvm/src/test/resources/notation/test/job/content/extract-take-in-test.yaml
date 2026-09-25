@@ -23,7 +23,6 @@ main.workers/Archive:
   is: FileSourceWorker
   files:
     - location: build/content-scope/take-in/input.tar.gz
-  emit: units
   output: main.channels/files
 
 main.workers/Extract:

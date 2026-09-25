@@ -9,10 +9,15 @@ import tech.kzen.lib.common.exec.data.type.ScalarKind
  * What the design-time path picker offers at each position of the upstream contract (E8 item 2), one level
  * at a time so a recursive reference is expanded only on demand and nothing about the source is executed:
  * a record's fields; for a list or map field, its `[*]` element (a scalar element is itself the leaf, a map's
- * entry offers `key` and `value`); a reference stays a collapsed node until it is expanded. Derived purely
+ * entry offers `key` and `value`); a reference stays a collapsed node until it is expanded. A value with metadata
+ * adds a last root, `meta`, that opens into the metadata's fields (`meta.name`, `meta.parent.name`). Derived purely
  * from the contract through [PathBinding.resolve], so what is offered is exactly what the runtime binds.
  */
 object ContractPathTree {
+    private val metadataPath = ProjectionPath(listOf(
+        ProjectionPathSegment.Field(ProjectionPath.Facet.Metadata.qualifier)))
+
+
     sealed interface Kind {
         data class Leaf(val scalar: ScalarKind): Kind
         data object Record: Kind
@@ -37,9 +42,15 @@ object ContractPathTree {
     }
 
 
-    /** The top-level fields of [upstream] (empty when it is not a record). */
-    fun roots(upstream: DataContract): List<Candidate> =
-        fields(upstream, null)
+    /** The top-level fields of [upstream]'s payload (none when it is not a record), then `meta` if it has metadata. */
+    fun roots(upstream: DataContract): List<Candidate> {
+        val payload = fields(upstream, null)
+        val metadata = upstream.metadata?.structural
+        if (metadata == null || metadata.fields.isEmpty()) {
+            return payload
+        }
+        return payload + Candidate(metadataPath, ProjectionPath.Facet.Metadata.qualifier, Kind.Record)
+    }
 
 
     /**
@@ -81,6 +92,10 @@ object ContractPathTree {
     private fun fields(upstream: DataContract, path: ProjectionPath?): List<Candidate> {
         val contract = if (path == null) {
             upstream
+        }
+        else if (path == metadataPath) {
+            upstream.metadata?.contract
+                ?: return emptyList()
         }
         else {
             (PathBinding.resolve(upstream, path) as? PathBinding.Resolution.At)?.contract

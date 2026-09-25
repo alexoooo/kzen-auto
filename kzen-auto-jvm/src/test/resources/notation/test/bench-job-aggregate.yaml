@@ -6,6 +6,9 @@ main.workers/reader:
   files:
     - location: build/bench/agg/input.csv
 
+main.workers/reader Parse:
+  is: Parse
+
 main.workers/pivot:
   is: PivotWorker
   pivot:

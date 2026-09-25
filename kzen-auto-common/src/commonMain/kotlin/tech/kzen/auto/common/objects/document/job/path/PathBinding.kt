@@ -11,6 +11,8 @@ import tech.kzen.lib.common.exec.data.type.renderName
 /**
  * Binds a [PathProjectionSpec] against the upstream record contract (E8 runtime rules, shared with the
  * design-time picker so both report the same errors):
+ * - a path starts in the payload, or in the metadata for a leading `meta` (or a bare first name only the
+ *   metadata has); a leading `this` names the payload explicitly;
  * - a field must exist on the record at that point (a recursive reference is expanded on demand, one level per
  *   step, so a recursive contract binds finitely);
  * - `[*]` unnests a list or a map — after a map's `[*]` only `key` or `value` may follow;
@@ -76,9 +78,28 @@ object PathBinding {
 
     fun resolve(upstream: DataContract, path: ProjectionPath): Resolution {
         val steps = ArrayList<BoundStep>()
-        var current = upstream
+        var current = upstream.payload()
+        var segments = path.segments
+        when (ProjectionPath.facetOf(path)) {
+            ProjectionPath.Facet.Metadata -> {
+                current = upstream.metadata?.contract
+                    ?: return Resolution.Failed("the value has no metadata")
+                steps.add(BoundStep.Metadata)
+                segments = segments.drop(1)
+            }
+            ProjectionPath.Facet.Payload -> segments = segments.drop(1)
+            null -> {
+                // A bare name is the payload's, else the metadata's: the same precedence as expressions
+                val metadata = upstream.metadata?.contract
+                val first = (segments.first() as ProjectionPathSegment.Field).name
+                if (metadata != null && !hasField(current, first) && hasField(metadata, first)) {
+                    current = metadata
+                    steps.add(BoundStep.Metadata)
+                }
+            }
+        }
         var afterEntries = false
-        for (segment in path.segments) {
+        for (segment in segments) {
             val structural = current.expanded().structural
             when (segment) {
                 is ProjectionPathSegment.Field -> {
@@ -122,6 +143,13 @@ object PathBinding {
             }
         }
         return Resolution.At(current, steps, afterEntries)
+    }
+
+
+    private fun hasField(contract: DataContract, name: String): Boolean {
+        val record = contract.expanded().structural as? DataType.Record
+            ?: return false
+        return record.fields.any { it.id.name == name && it.id.occurrence == 0 }
     }
 
 

@@ -11,20 +11,18 @@ import tech.kzen.auto.server.exec.job.JobLogicCompiler
 import tech.kzen.auto.server.exec.report.ReportLogicCompiler
 import tech.kzen.auto.server.exec.report.ReportRun
 import tech.kzen.auto.server.objects.job.value.JobDataValues
-import tech.kzen.auto.server.objects.job.value.JobValueClaim
-import tech.kzen.auto.server.objects.job.value.RecordOutputBuilder
+import tech.kzen.lib.common.exec.data.value.DataOverlay
+import tech.kzen.lib.common.exec.data.value.LiteralDataValues
 import tech.kzen.auto.server.objects.report.ReportDocument
 import tech.kzen.auto.server.objects.report.model.ReportRunContext
 import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.lib.common.exec.engine.Outcome
-import tech.kzen.lib.common.exec.LongExecutionValue
 import tech.kzen.lib.common.exec.data.type.DataContract
 import tech.kzen.lib.common.exec.data.type.DataField
 import tech.kzen.lib.common.exec.data.type.DataType
 import tech.kzen.lib.common.exec.data.type.FieldId
 import tech.kzen.lib.common.exec.data.type.ScalarKind
 import tech.kzen.lib.common.exec.data.value.DataNode
-import tech.kzen.lib.common.exec.data.value.DataState
 import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.lib.common.exec.data.value.DefaultDataAdapterRegistry
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
@@ -158,10 +156,10 @@ object JobReportBenchmark {
             benchmark(Scenario.S0, "flat-value-direct", rows, runs) {
                 lambdaExecution { directFlatValueLoop(rows) }
             },
-            benchmark(Scenario.S0, "flat-value+8-appends", rows, runs) {
+            benchmark(Scenario.S0, "flat-value+8-metadata", rows, runs) {
                 lambdaExecution { flatBuilderLoop(rows) }
             },
-            benchmark(Scenario.S0, "native-value+8-appends", rows, runs) {
+            benchmark(Scenario.S0, "native-value+8-metadata", rows, runs) {
                 lambdaExecution { nativeBuilderLoop(rows) }
             })
     }
@@ -410,16 +408,11 @@ object JobReportBenchmark {
             record.attachHeader(flatValueHeader)
             var value = DataValue(record, DataNode(0))
             for (fieldIndex in calculatedFields.indices) {
-                val builder = RecordOutputBuilder.open(JobValueClaim(value, exclusive = true))
-                builder.append(
-                    calculatedFields[fieldIndex],
-                    DataType.Scalar(ScalarKind.Integer(64)),
-                    DataState.Present,
-                    LongExecutionValue(fieldIndex.toLong()))
-                value = builder.finish()
-                check(builder.projectionCount == 0 && builder.appendCount == 1)
+                value = DataOverlay.withMetadataFields(value, listOf(
+                    calculatedFields[fieldIndex] to LiteralDataValues.lift(fieldIndex.toLong())))
             }
-            checksum += value.access.readLong(value.access.field(value.root, calculatedFields.last()))
+            val metadata = value.metadata!!
+            checksum += metadata.access.readLong(metadata.access.field(metadata.root, calculatedFields.last()))
         }
         blackhole = checksum.toInt()
     }
@@ -430,19 +423,12 @@ object JobReportBenchmark {
         DefaultDataAdapterRegistry().use { registry ->
             repeat(rows) { index ->
                 var value = registry.lift(BuilderReading(index.toString(), index + 0.5))
-                var projections = 0
                 for (fieldIndex in calculatedFields.indices) {
-                    val builder = RecordOutputBuilder.open(JobValueClaim(value, exclusive = true))
-                    builder.append(
-                        calculatedFields[fieldIndex],
-                        DataType.Scalar(ScalarKind.Integer(64)),
-                        DataState.Present,
-                        LongExecutionValue(fieldIndex.toLong()))
-                    value = builder.finish()
-                    projections += builder.projectionCount
+                    value = DataOverlay.withMetadataFields(value, listOf(
+                        calculatedFields[fieldIndex] to LiteralDataValues.lift(fieldIndex.toLong())))
                 }
-                check(projections == 1)
-                checksum += value.access.readLong(value.access.field(value.root, calculatedFields.last()))
+                val metadata = value.metadata!!
+                checksum += metadata.access.readLong(metadata.access.field(metadata.root, calculatedFields.last()))
             }
         }
         blackhole = checksum.toInt()

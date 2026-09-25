@@ -193,9 +193,7 @@ object DataReadCanary {
         val worker = ReadWorker(
             channel.newProducer(),
             ObjectReference.parse("input"),
-            ReadWorker.emitItems,
             DataRole.main.name,
-            ReadWorker.attributesIgnore,
             workerLocation,
             DataOpenerLookup(opener),
             DataReadCore.schemaStrict)

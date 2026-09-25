@@ -9,40 +9,15 @@
 # job-*-test.yaml fixtures under src/test/resources/notation/test/job/.
 
 
-# Marker (JobConventions.isFileConsumer): a Worker that takes files whole rather than their contents. A source
-# left on automatic emit hands the adjacent FileConsumer each file unread instead of opening it.
-FileConsumer:
-  abstract: true
-
-
 DataReadWorkerConfig:
   abstract: true
-  emit: auto
   role: ""
-  attributes: ignore
   schemaMode: superset
   meta:
-    emit:
-      is: String
-      editor: SelectValuesEditor
-      label: "Send on"
-      description: "Automatic sends whole files to a step that takes files (such as Extract), otherwise their contents."
-      values:
-        auto: "Automatic"
-        items: "What is inside each file"
-        units: "Each file, whole"
     role:
       is: String
       label: "Part to read"
       description: "Only for sources whose files come in several named parts. Leave empty otherwise."
-    attributes:
-      is: String
-      editor: SelectValuesEditor
-      label: "Values from file names"
-      description: "What to do with the values that Name pattern picks out of each file name."
-      values:
-        ignore: "Leave out"
-        columns: "Add as columns"
     schemaMode:
       is: String
       editor: SelectValuesEditor
@@ -55,16 +30,34 @@ DataReadWorkerConfig:
         strict: "Every file must have exactly the same columns"
 
 
-# Resolves one DataSource manifest per run, then emits either whole units or the items of one role. The source
+# What a manifest reader sends: the items inside each unit, or each unit whole with its attributes as metadata.
+# Its own setting, never decided by the Worker below.
+DataReadEmitConfig:
+  abstract: true
+  emit: items
+  meta:
+    emit:
+      is: String
+      editor: SelectValuesEditor
+      label: "Send"
+      values:
+        items: "What is inside"
+        units: "Each unit, whole"
+      details:
+        items: "The rows (or other items) of the selected part, one value each"
+        units: "One value per unit, for a Run per unit or a Parse below; its attributes become metadata"
+
+
+# Resolves one DataSource manifest per run, then emits the items of one role, or each unit whole. The source
 # remains a nominal reference so blank, cross-document, and dangling values stay representable for validation;
-# the Worker resolves it from the compiled run snapshot. Item mode fixes one shape across the manifest, and
-# attributes=columns prepends ordered unit attributes to tabular records.
+# the Worker resolves it from the compiled run snapshot. One item shape is fixed across the manifest.
 ReadWorker:
   abstract: true
   is:
     - Worker
     - DataSourceShapeProvider
     - DataReadWorkerConfig
+    - DataReadEmitConfig
   title: "Read"
   class: tech.kzen.auto.server.objects.job.worker.data.ReadWorker
   output: ""
@@ -86,14 +79,14 @@ ReadWorker:
       by: Self
 
 
-# Reads files through the same manifest, projection, and migration engine as ReadWorker while owning its file
-# selection directly as ordinary Worker configuration.
+# Selects files, one value per file: the file's content (opaque) with its name, path, size, modified time, kind
+# and Name-pattern values as metadata. Reads nothing: `Parse`, `Extract` or `Write` below decide what is done
+# with the content.
 FileSourceWorker:
   abstract: true
   is:
     - Worker
-    - DataReadWorkerConfig
-    - FileDataSourceConfig
+    - FileSelectionConfig
   title: "File"
   class: tech.kzen.auto.server.objects.job.worker.data.FileSourceWorker
   display: FileSourceWorkerDisplay
@@ -115,6 +108,7 @@ LogicSourceWorker:
   is:
     - Worker
     - DataReadWorkerConfig
+    - DataReadEmitConfig
     - LogicDataSourceConfig
   title: "Logic"
   class: tech.kzen.auto.server.objects.job.worker.data.LogicSourceWorker
@@ -129,22 +123,19 @@ LogicSourceWorker:
       by: Self
 
 
-# Expands each incoming DataUnit payload into the items of its selected role. Blank role accepts only a unit with
-# one distinct role. Output shape stays unknown because the unit carries refs, not a source declaration. An
-# incoming Entry (an `Extract` transform's lent element) is read as records with `format` (borrowed elements §3.8).
-ReadPartWorker:
+# Reads what each incoming value holds — a file, an archive member, or a DataUnit's parts of the selected role —
+# and emits its items, each with the incoming value's metadata as `parent`. `format` applies to content (a file is
+# sampled when it is automatic; an archive member is chosen by its name); a DataUnit's parts carry their own.
+Parse:
   abstract: true
   is:
     - Worker
-    - FileConsumer
-  title: "Read part"
-  class: tech.kzen.auto.server.objects.job.worker.data.ReadPartWorker
+    - DataReadWorkerConfig
+  title: "Parse"
+  class: tech.kzen.auto.server.objects.job.worker.data.ParseWorker
   input: ""
   output: ""
-  role: ""
-  attributes: ignore
-  schemaMode: superset
-  format: auto-jvm/datasource/configured-delimited-format.yaml#ConfiguredCsv
+  format: auto-jvm/datasource/configured-delimited-format.yaml#AutomaticFormat
   meta:
     input:
       is: ChannelInput
@@ -154,19 +145,6 @@ ReadPartWorker:
       is: ChannelOutput
       creator: JobChannelCreator
       editor: SelectChannelEditor
-    role: String
-    attributes:
-      is: String
-      editor: SelectValuesEditor
-      values:
-        ignore: "Ignore"
-        columns: "As columns"
-    schemaMode:
-      is: String
-      editor: SelectValuesEditor
-      values:
-        superset: "Ordered superset"
-        strict: "Strict"
     format:
       is: ConfiguredRecordFormat
       editor: SelectDataFormatEditor
@@ -261,17 +239,14 @@ ValueSetFilterWorker:
       by: Self
 
 
-# Appends one calculated column per `formula` entry (arbitrary Kotlin expression over the record's columns,
-# with the lane's inferred payload type as the RECEIVER — members bare, `payload` alias — and the Job's
-# declared parameters also in scope, bare and typed), using the contract-native Job expression compiler.
-# `formula` is a column-name -> Kotlin map (FormulaSpec). The separate `payload` expression TRANSFORMS the
-# message's payload (its raw value replaces it; empty = pass-through): same scope, but its columns are the
-# flat part as received (no auto-flatten), so it can promote flat columns into a typed payload
-# (`payload: Amount`) or map a typed stream (`payload: payload * 10`). Both lanes evaluate against
-# the INCOMING message — formulas cannot see the new payload, nor each other's outputs.
-# `carry` applies only when `payload` replaces the value: blank/none drops the incoming fields, `all` retains
-# every field (including this Worker's calculated fields), and a map selects source FieldIds with an optional
-# renamed target (`city: ""`, `0|amount: total`).
+# Keeps or replaces each value's payload, and adds metadata (a value is payload + metadata, like a message's
+# payload and headers). Each `formula` entry (FormulaSpec: name -> Kotlin) is a scalar expression whose result
+# becomes a metadata field of that name, replacing one the value already has. The separate `payload` expression
+# REPLACES the payload with its result (empty = keep it), e.g. promoting fields into a typed payload
+# (`payload: Amount`) or mapping a typed stream (`payload: payload * 10`). The output keeps the incoming
+# metadata. Expression scope, innermost first: the payload (`this`; its members and record fields bare), the
+# metadata (fields bare, or `meta.x`), then the Job's declared parameters. Both lanes evaluate against the
+# INCOMING value — formulas cannot see the new payload, nor each other's outputs.
 FormulaWorker:
   abstract: true
   is: Worker
@@ -281,7 +256,6 @@ FormulaWorker:
   output: ""
   formula: {}
   payload: ""
-  carry: ""
   meta:
     input:
       is: ChannelInput
@@ -297,22 +271,9 @@ FormulaWorker:
     payload:
       is: String
       multiline: true
-    carry:
-      is: FormulaCarrySpec
-      editor: FormulaCarryEditor
     selfLocation:
       is: ObjectLocation
       by: Self
-
-FormulaCarrySpec:
-  abstract: true
-  class: tech.kzen.auto.common.objects.document.job.FormulaCarrySpec
-  meta:
-    ref:
-      by: FormulaCarrySpecDefiner
-
-FormulaCarrySpecDefiner:
-  class: tech.kzen.auto.common.objects.document.job.FormulaCarrySpec$Definer
 
 
 # Passthrough analytics Worker: summarizes every record flowing through it (per-column count / numeric stats /
@@ -450,7 +411,9 @@ SortWorker:
       by: Self
 
 
-# Writes records to a delimited file with RFC-4180 quoting (delimiter-aware). With header=false (a headerless
+# Writes records to a delimited file with RFC-4180 quoting (delimiter-aware). `columns` (WriterColumnSpec) chooses
+# how each value becomes a row: `*` (the default) is the payload's top-level columns, and a path entry (`meta.name`,
+# `instrument.symbol`, or `{path, as}`) adds a metadata field or nested scalar. With header=false (a headerless
 # round-trip) only the records are written.
 CsvWriterWorker:
   abstract: true
@@ -461,6 +424,7 @@ CsvWriterWorker:
   path: ""
   delimiter: ","
   header: true
+  columns: []
   meta:
     input:
       is: ChannelInput
@@ -469,6 +433,9 @@ CsvWriterWorker:
     path: String
     delimiter: String
     header: Boolean
+    columns:
+      is: WriterColumnSpec
+      editor: WriterColumnsEditor
     selfLocation:
       is: ObjectLocation
       by: Self
@@ -478,9 +445,9 @@ CsvWriterWorker:
 # → optional compression — so a Job export is byte-identical to Report's over the same data. `export` is an
 # OutputExportSpec: `format` (csv/tsv), `compression` (none/zip/gz, via the shared ExportCompression.wrap seam),
 # and `path` (a pattern; ${time}/${extension} resolved, ${report} = this Worker's own document name, ${group}
-# empty for the single stream). The column header is written once from the first record. A SinkWorker: opens the
-# file in onStart, closes (finalizes the compression container) in onClose; live edit RESTARTS (re-truncates),
-# the WorkerBase sink default.
+# empty for the single stream). `columns` (WriterColumnSpec) flattens each value as for CsvWriterWorker. The column
+# header is written once from the first record. A SinkWorker: opens the file in onStart, closes (finalizes the
+# compression container) in onClose; live edit RESTARTS (re-truncates), the WorkerBase sink default.
 ExportWriterWorker:
   abstract: true
   is: ResultYielder
@@ -491,6 +458,7 @@ ExportWriterWorker:
     format: csv
     compression: none
     path: "../work/output/${report}_${time}.${extension}"
+  columns: []
   meta:
     input:
       is: ChannelInput
@@ -499,6 +467,9 @@ ExportWriterWorker:
     export:
       is: OutputExportSpec
       editor: ExportSpecEditor
+    columns:
+      is: WriterColumnSpec
+      editor: WriterColumnsEditor
     selfLocation:
       is: ObjectLocation
       by: Self
@@ -625,16 +596,14 @@ RunWorker:
 
 
 # ---------------------------------------------------------------------------------------------------------------------
-# Borrowed elements (docs/plans/2026-09-16_borrowed-elements.md): Extract opens each incoming file — a whole
-# file from the File or Read source above it, or an Entry of an enclosing archive — as a .tar.gz and lends
-# its members to the Workers downstream, advancing only once the member's last hold is released; Write and
-# Read part consume an Entry inside their callback and emit independent values (a Written record, rows).
+# Borrowed elements (docs/plans/2026-09-16_borrowed-elements.md): Extract opens each incoming file — a selected
+# file from File, or a member of an enclosing archive — as a .tar.gz and lends its members, as file values, to the
+# Workers downstream, advancing only once the member's last hold is released; Write and Parse read a member inside
+# their callback and emit independent values (a Written record, rows).
 
 Extract:
   abstract: true
-  is:
-    - Worker
-    - FileConsumer
+  is: Worker
   title: "Extract"
   class: tech.kzen.auto.server.objects.job.worker.content.ExtractWorker
   input: ""

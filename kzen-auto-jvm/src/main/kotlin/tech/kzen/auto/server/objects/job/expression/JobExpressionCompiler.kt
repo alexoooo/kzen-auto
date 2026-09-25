@@ -13,6 +13,8 @@ import tech.kzen.lib.common.exec.data.type.DataContract
 import tech.kzen.lib.common.exec.data.type.DataPathSegment
 import tech.kzen.lib.common.exec.data.type.DataType
 import tech.kzen.lib.common.exec.data.type.DataTypePath
+import tech.kzen.lib.common.exec.data.type.FieldId
+import tech.kzen.lib.common.exec.data.type.MetadataContract
 import tech.kzen.lib.common.exec.data.type.ScalarKind
 import tech.kzen.lib.common.exec.data.type.toDataContract
 import tech.kzen.auto.server.objects.job.value.JobDataValues
@@ -25,11 +27,31 @@ import tech.kzen.lib.platform.ClassNames
 import tech.kzen.lib.platform.ClassNames.asTopLevelImport
 
 
-/** Compiles contract-native Job expressions with ordinal record accessors and explicit keyed access. */
+/**
+ * Compiles contract-native Job expressions with ordinal record accessors and explicit keyed access.
+ *
+ * An expression sees every facet of the value through one scope, innermost first:
+ * - the payload: `this` (the native payload when it has one, otherwise the record's fields), its members by bare
+ *   name, and `payload` as an alias;
+ * - the value's metadata ([DataContract.metadata]): each field a typed property by bare name (`year`,
+ *   `parent.name`), and all of it as `meta`;
+ * - the Job's parameters by bare name.
+ * A bare name resolves to the innermost facet that has it; `this.x` and `meta.x` always reach the payload and the
+ * metadata. A bare name the expression uses that an inner facet shadows is reported as a warning.
+ */
 class JobExpressionCompiler(
     private val cachedKotlinCompiler: CachedKotlinCompiler,
     private val kotlinSyntaxValidator: KotlinSyntaxValidator
 ) {
+    companion object {
+        const val metaName = "meta"
+        const val payloadName = "payload"
+
+        // An identifier not reached through a qualifier (`x.name`), bare or back-ticked
+        private val bareName = Regex("""(?<![.\w`])(`[^`]+`|[A-Za-z_]\w*)""")
+    }
+
+
     data class Compiled(
         val expression: JobCalculatedExpression<Any?>,
         val contract: DataContract,
@@ -39,8 +61,12 @@ class JobExpressionCompiler(
 
     data class Attempt(
         val compiled: Compiled?,
-        val error: String?
-    )
+        val error: String?,
+        val warnings: List<String> = emptyList()
+    ) {
+        val warning: String?
+            get() = warnings.joinToString("; ").ifBlank { null }
+    }
 
 
     fun validateSyntax(expression: String): String? =
@@ -56,7 +82,22 @@ class JobExpressionCompiler(
         parameters: BindingSchema = BindingSchema.empty
     ): Attempt {
         unsupportedBoundary(input.structural)?.let { return Attempt(null, it) }
-        collisionError(input, parameters)?.let { return Attempt(null, it) }
+        input.metadata?.let { metadata -> unsupportedBoundary(metadata.structural) }
+            ?.let { return Attempt(null, "Metadata: $it") }
+        val warnings = shadowWarnings(expression, input, parameters)
+        val attempt = compileScoped(name, expression, input, modelType, classLoader, parameters)
+        return attempt.copy(warnings = warnings)
+    }
+
+
+    private fun compileScoped(
+        name: String,
+        expression: String,
+        input: DataContract,
+        modelType: TypeMetadata,
+        classLoader: ClassLoader,
+        parameters: BindingSchema
+    ): Attempt {
         val code = generate(name, expression, input, modelType, parameters)
         val error = cachedKotlinCompiler.tryCompile(code, classLoader)
         if (error != null) {
@@ -105,24 +146,42 @@ class JobExpressionCompiler(
         parameters: BindingSchema = BindingSchema.empty
     ): KotlinCode {
         val className = "JobExpression_${name.replace(Regex("\\W+"), "_")}"
-        val accessors = accessors(input)
-        val imports = imports(modelType, parameters, accessors.map { it.type })
+        val payload = input.payload()
+        val accessors = accessors(payload)
+        val metadataClasses = metadataClasses(input.metadata ?: MetadataContract.empty)
+        val imports = imports(
+            modelType,
+            parameters,
+            accessors.map { it.type } + metadataClasses.flatMap { it.properties.mapNotNull { p -> p.type } })
+
         val accessorCode = accessors.joinToString("\n") { accessor ->
-            "val ${accessor.name} get(): ${accessor.type.toSimple()} {" +
+            "        val ${accessor.name} get(): ${accessor.type.toSimple()} {" +
                     " return field(${accessor.ordinal}) as ${accessor.type.toSimple()} }"
         }
-        val keyedAccessCode = when (input.structural) {
+        val keyedAccessCode = when (payload.structural) {
             is DataType.Dynamic,
             is DataType.Mapping,
             is DataType.Record ->
-                "fun key(name: String): Any? = JobExpressionValues.keyed(inputValue, name)"
+                "        fun key(name: String): Any? = JobExpressionValues.keyed(inputValue, name)"
             else -> ""
         }
         val parameterCode = parameters.definitions.withIndex().joinToString("\n") { indexed ->
             val accessorName = ExpressionUtils.escapeKotlinVariableName(indexed.value.name.value)
             val type = indexed.value.typeMetadata().toSimple()
-            "val $accessorName get(): $type { return parameterValues[${indexed.index}] as $type }"
+            "    val $accessorName get(): $type { return parameterValues[${indexed.index}] as $type }"
         }
+        val metadataCode = metadataClasses.joinToString("\n\n") { it.code() }
+
+        // A payload with no native type of its own is its record fields: `this` is then the fields scope
+        val metaScope = "${metadataClasses.first().name}(inputValue.metadata?.value)"
+        val body =
+            if (modelType.className != ClassNames.kotlinAny) {
+                "with($metaScope) { with(Fields()) { with($payloadName) { run {\n$expression\n        } } } }"
+            }
+            else {
+                "with($metaScope) { with(Fields()) { run {\n$expression\n        } } }"
+            }
+
         val model = modelType.toSimple()
         val probe = ExpressionReturnTypeInference.probePropertyName
         val source = """
@@ -136,11 +195,15 @@ class $className: JobCalculatedExpression<$model> {
     private fun field(ordinal: Int): Any? =
         JobExpressionValues.projected(checkNotNull(projection), ordinal)
 
+$parameterCode
+
+    inner class Fields {
 $keyedAccessCode
 
 $accessorCode
+    }
 
-$parameterCode
+$metadataCode
 
     override fun setParameters(values: List<Any?>) {
         parameterValues = values
@@ -152,12 +215,8 @@ $parameterCode
         return $probe(model)
     }
 
-    private val $probe = { payload: $model ->
-        with(payload) {
-            run {
-$expression
-            }
-        }
+    private val $probe = { $payloadName: $model ->
+        $body
     }
 }
 """
@@ -188,12 +247,113 @@ $expression
         }
 
 
-    private fun collisionError(contract: DataContract, parameters: BindingSchema): String? {
-        val names = accessors(contract).mapTo(mutableSetOf()) { it.name }
-        val collision = parameters.definitions.firstOrNull {
-            ExpressionUtils.escapeKotlinVariableName(it.name.value) in names
-        } ?: return null
-        return "Parameter '${collision.name.value}' collides with an input field - rename one of them"
+    //-----------------------------------------------------------------------------------------------------------------
+    /** One generated class per metadata record: the root (which also answers to `meta`) and each nested record. */
+    private class MetadataClass(
+        val name: String,
+        val root: Boolean,
+        val properties: List<MetadataProperty>
+    ) {
+        fun code(): String {
+            val lines = properties.joinToString("\n") { it.code() }
+            val qualifier = if (root) "        val $metaName: $name get() = this\n" else ""
+            // By name too, for metadata whose fields are known only once the value exists (a unit's attributes)
+            val keyed = "        operator fun get(name: String): Any? = JobExpressionValues.metadataKeyed(node, name)\n"
+            return "    class $name(private val node: DataValue?) {\n$qualifier$keyed$lines\n    }"
+        }
+    }
+
+
+    /** A metadata field: a leaf read at the boundary with its [type], or a nested record's [recordClass]. */
+    private class MetadataProperty(
+        val name: String,
+        val field: FieldId,
+        val nullable: Boolean,
+        val type: TypeMetadata?,
+        val recordClass: String?
+    ) {
+        fun code(): String {
+            val fieldName = field.name.replace("\\", "\\\\").replace("\"", "\\\"").replace("$", "\\$")
+            val fieldArgs = "node, \"$fieldName\", ${field.occurrence}"
+            if (recordClass != null) {
+                return if (nullable) {
+                    "        val $name: $recordClass? get() = " +
+                            "JobExpressionValues.metadataRecord($fieldArgs, true)?.let { $recordClass(it) }"
+                }
+                else {
+                    "        val $name: $recordClass get() = " +
+                            "$recordClass(JobExpressionValues.metadataRecord($fieldArgs, false))"
+                }
+            }
+            val leafType = checkNotNull(type)
+            val simple = leafType.toSimple()
+            return "        val $name: $simple get() = " +
+                    "JobExpressionValues.metadataField($fieldArgs, ${leafType.nullable}) as $simple"
+        }
+    }
+
+
+    private fun metadataClasses(metadata: MetadataContract): List<MetadataClass> {
+        val classes = mutableListOf<MetadataClass>()
+        fun visit(contract: DataContract, root: Boolean): String {
+            val index = classes.size
+            val name = "Meta$index"
+            classes += MetadataClass(name, root, emptyList())
+            val record = contract.expanded().structural as? DataType.Record
+            val properties = record?.fields.orEmpty().mapNotNull { field ->
+                val propertyName = ExpressionUtils.escapeKotlinVariableName(
+                    HeaderLabel(field.id.name, field.id.occurrence))
+                if (root && propertyName == metaName) {
+                    // The qualifier wins over a metadata field of the same name
+                    return@mapNotNull null
+                }
+                val child = contract.child(DataPathSegment.Field(field.id))
+                val nullable = field.optional || child.structural.nullable
+                if (child.expanded().structural is DataType.Record) {
+                    MetadataProperty(propertyName, field.id, nullable, null, visit(child, root = false))
+                }
+                else {
+                    MetadataProperty(propertyName, field.id, nullable, child.typeMetadata(field.optional), null)
+                }
+            }
+            classes[index] = MetadataClass(name, root, properties)
+            return name
+        }
+        visit(metadata.contract, root = true)
+        return classes
+    }
+
+
+    private fun metadataNames(metadata: MetadataContract?): Set<String> {
+        val record = metadata?.structural
+            ?: return emptySet()
+        return record.fields.mapTo(mutableSetOf()) {
+            ExpressionUtils.escapeKotlinVariableName(HeaderLabel(it.id.name, it.id.occurrence))
+        }
+    }
+
+
+    /** Bare names [expression] uses that resolve to an inner facet while an outer facet also has them. */
+    private fun shadowWarnings(expression: String, input: DataContract, parameters: BindingSchema): List<String> {
+        val payloadNames = accessors(input.payload()).mapTo(mutableSetOf()) { it.name }
+        val metadataNames = metadataNames(input.metadata)
+        val used = bareName.findAll(expression).map { it.value }.toSet()
+
+        val warnings = mutableListOf<String>()
+        for (name in (payloadNames intersect metadataNames).filter { it in used }) {
+            warnings += "'$name' is the payload's; the metadata's is $metaName.$name"
+        }
+        for (parameter in parameters.definitions) {
+            val name = ExpressionUtils.escapeKotlinVariableName(parameter.name.value)
+            if (name !in used) {
+                continue
+            }
+            when (name) {
+                in payloadNames -> warnings += "'$name' is the payload's, not the parameter"
+                in metadataNames -> warnings += "'$name' is the metadata's, not the parameter"
+            }
+        }
+        return warnings
     }
 
 

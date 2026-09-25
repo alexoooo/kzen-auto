@@ -6,6 +6,9 @@ main.workers/read:
   files:
     - location: build/job-read/inline-input.csv
 
+main.workers/read Parse:
+  is: Parse
+
 main.workers/write:
   is: CsvWriterWorker
   path: build/job-read/inline-output.csv

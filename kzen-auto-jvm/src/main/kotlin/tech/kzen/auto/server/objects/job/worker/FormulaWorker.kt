@@ -1,38 +1,39 @@
 package tech.kzen.auto.server.objects.job.worker
 
 import tech.kzen.auto.common.data.schema.HeaderListing
-import tech.kzen.auto.common.objects.document.job.FormulaCarrySpec
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
 import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
-import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.auto.server.objects.job.expression.JobExpressionCompiler
 import tech.kzen.auto.server.objects.job.expression.JobExpressionValues
-import tech.kzen.auto.server.objects.job.value.CalculatedFieldValue
-import tech.kzen.auto.server.objects.job.value.CarriedField
-import tech.kzen.auto.server.objects.job.value.CarrySelection
-import tech.kzen.auto.server.objects.job.value.ColumnProjection
-import tech.kzen.auto.server.objects.job.value.FormulaValueTransformer
 import tech.kzen.auto.server.objects.job.value.JobDataValues
-import tech.kzen.auto.server.objects.job.value.RecordOverlay
-import tech.kzen.auto.server.objects.job.value.JobValueClaim
-import tech.kzen.auto.server.objects.report.exec.calc.ColumnValue
 import tech.kzen.auto.server.util.ClassLoaderUtils
+import tech.kzen.lib.common.exec.BinaryExecutionValue
+import tech.kzen.lib.common.exec.BooleanExecutionValue
+import tech.kzen.lib.common.exec.LongExecutionValue
+import tech.kzen.lib.common.exec.NumberExecutionValue
+import tech.kzen.lib.common.exec.ScalarExecutionValue
+import tech.kzen.lib.common.exec.TextExecutionValue
 import tech.kzen.lib.common.exec.data.type.DataContract
-import tech.kzen.lib.common.exec.data.type.DataField
 import tech.kzen.lib.common.exec.data.type.DataType
-import tech.kzen.lib.common.exec.data.type.DataTypePath
 import tech.kzen.lib.common.exec.data.type.FieldId
-import tech.kzen.lib.common.exec.data.type.ScalarKind
+import tech.kzen.lib.common.exec.data.value.DataOverlay
 import tech.kzen.lib.common.exec.data.value.DataValue
+import tech.kzen.lib.common.exec.data.value.LiteralDataValues
+import tech.kzen.lib.common.exec.data.value.ValueMetadata
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
 
 
-/** Contract-typed calculated fields and payload replacement over the incoming Job value. */
+/**
+ * Keeps or replaces each value's payload, and adds metadata. Each [formula] entry is a scalar expression whose
+ * result becomes a metadata field of that name (replacing one the value already has); a non-blank [payload]
+ * expression replaces the payload. Both see the incoming value, so neither observes the other's result, and the
+ * output keeps the incoming metadata.
+ */
 @Reflect
 class FormulaWorker(
     input: ChannelInput<*>,
@@ -40,38 +41,17 @@ class FormulaWorker(
 
     private val formula: FormulaSpec,
     private val payload: String,
-    private val carry: FormulaCarrySpec,
     private val selfLocation: ObjectLocation,
 
     @Service private val jobExpressionCompiler: JobExpressionCompiler
 ):
     TransformWorker(input, output, selfLocation)
 {
-    companion object {
-        private val valueHeader = HeaderListing.ofUnique(listOf("value"))
-
-        private fun requiresSyntheticProjection(contract: DataContract): Boolean {
-            if (contract.nativeByPath[DataTypePath.root] == null) return false
-            return when (val structural = contract.structural) {
-                is DataType.Record -> false
-                is DataType.Mapping -> structural.value !is DataType.Scalar
-                is DataType.Scalar -> false
-                else -> true
-            }
-        }
-    }
-
     private val classLoader = ClassLoaderUtils.dynamicParentClassLoader()
     private val formulaEntries = formula.formulas.entries.toList()
     private val formulaNames = HeaderListing.ofUnique(formulaEntries.map { it.key })
+    private val formulaFields = formulaNames.values.map { FieldId(it.text, it.occurrence) }
     private val payloadTransform = payload.isNotBlank()
-    private val carrySelection = when {
-        carry.all -> CarrySelection.All()
-        carry.fields.isEmpty() -> CarrySelection.None
-        else -> CarrySelection.Selected(carry.fields.map {
-            CarriedField(parseFieldId(it.source), it.rename?.let(::parseFieldId))
-        })
-    }
 
     private var compiledForContract: DataContract? = null
     private var compiledColumns: List<JobExpressionCompiler.Compiled> = listOf()
@@ -87,7 +67,6 @@ class FormulaWorker(
             return
         }
 
-        val originalPayload = JobDataValues.native(element)
         val inputContract = control.inputContract()
             ?.takeUnless { it.structural is DataType.Dynamic }
             ?: element.contract
@@ -98,85 +77,59 @@ class FormulaWorker(
             compilePayload(inputContract, control)
         }
 
-        val nativeMetadata = element.contract.nativeByPath[DataTypePath.root]
-        val requiresSyntheticProjection =
-            element.access !is FlatFileRecord && requiresSyntheticProjection(element.contract)
-        if (requiresSyntheticProjection) {
-            val synthetic = JobDataValues.nativeRecord(
-                valueHeader,
-                FlatFileRecord.of(ColumnValue.toText(originalPayload)),
-                checkNotNull(originalPayload),
-                checkNotNull(nativeMetadata))
-            val evaluationProjection =
-                if (element.contract.structural is DataType.Record) JobDataValues.projection(element)
-                else JobDataValues.projection(synthetic)
-            val calculated = calculatedFields(originalPayload, element, evaluationProjection)
-            val replacement = if (payloadTransform) {
-                replacement(originalPayload, element, evaluationProjection)
-            }
-            else {
-                null
-            }
-            val result = FormulaValueTransformer.transform(
-                JobValueClaim(synthetic, exclusive = true),
-                calculate = { calculated },
-                replace = replacement?.let { value -> { _: ColumnProjection -> value } },
-                carry = carrySelection)
-            computed += 1
-            emit.send(inheriting(result.value, element, control))
-            return
+        val originalPayload = JobDataValues.native(element)
+        val projection = when (inputContract.structural) {
+            is DataType.Record, is DataType.Scalar -> JobDataValues.projection(element)
+            else -> null
         }
 
-        val result = FormulaValueTransformer.transform(
-            JobValueClaim(element, exclusive = true),
-            calculate = { projection -> calculatedFields(originalPayload, element, projection) },
-            replace = if (payloadTransform) {{ projection ->
-                replacement(originalPayload, element, projection)
-            }} else null,
-            carry = carrySelection)
+        val calculated = formulaEntries.indices.map { index ->
+            val compiled = compiledColumns[index]
+            val scalarType = compiled.contract.structural as DataType.Scalar
+            val (_, encoded) = JobExpressionValues.scalar(
+                compiled.expression.evaluate(originalPayload, element, projection),
+                scalarType)
+            formulaFields[index] to LiteralDataValues.lift(literal(encoded), DataContract(scalarType))
+        }
+        val outputPayload =
+            if (payloadTransform) {
+                val compiled = checkNotNull(compiledPayload)
+                JobDataValues.lift(
+                    compiled.expression.evaluate(originalPayload, element, projection),
+                    compiled.contract)
+            }
+            else {
+                element.payload()
+            }
+        val metadata =
+            if (calculated.isEmpty()) element.metadata
+            else ValueMetadata.of(DataOverlay.record(element.metadata?.value, calculated))
 
         computed += 1
-        emit.send(inheriting(result.value, element, control))
+        emit.send(inheriting(outputPayload.withMetadata(metadata), element, control))
     }
 
 
-    // E9 item 3: the output may hold anything reachable from the input (a replaced payload, a carried native
-    // record), so a non-scalar output keeps the input's native open until its own consumer is done; a scalar
-    // carries no owner. Nothing is copied or inspected — only the ledger's owner set is propagated.
+    // E9 item 3: the output may hold anything reachable from the input (a replaced payload, the kept one), so a
+    // non-scalar output keeps the input's native open until its own consumer is done; a scalar carries no owner.
+    // Nothing is copied or inspected — only the ledger's owner set is propagated.
     private fun inheriting(output: DataValue, input: DataValue, control: JobControl): DataValue {
         control.ownership()?.inherit(output, input)
         return output
     }
 
 
-    private fun calculatedFields(
-        originalPayload: Any?,
-        element: DataValue,
-        projection: ColumnProjection
-    ): List<CalculatedFieldValue> = formulaEntries.indices.map { index ->
-        val compiled = compiledColumns[index]
-        val scalarType = compiled.contract.structural as DataType.Scalar
-        val (state, encoded) = JobExpressionValues.scalar(
-            compiled.expression.evaluate(originalPayload, element, projection),
-            scalarType)
-        CalculatedFieldValue(
-            FieldId(formulaNames.values[index].text, formulaNames.values[index].occurrence),
-            scalarType,
-            encoded,
-            state)
-    }
-
-
-    private fun replacement(
-        originalPayload: Any?,
-        element: DataValue,
-        projection: ColumnProjection
-    ): DataValue {
-        val compiled = checkNotNull(compiledPayload)
-        return JobDataValues.lift(
-            compiled.expression.evaluate(originalPayload, element, projection),
-            compiled.contract)
-    }
+    /** The literal form of an encoded calculated scalar: metadata is plain data, with no JVM type of its own. */
+    private fun literal(encoded: ScalarExecutionValue?): Any? =
+        when (encoded) {
+            null -> null
+            is BooleanExecutionValue -> encoded.value
+            is LongExecutionValue -> encoded.value
+            is NumberExecutionValue -> encoded.value
+            is TextExecutionValue -> encoded.value
+            is BinaryExecutionValue -> encoded.value
+            else -> error("Unexpected calculated value: $encoded")
+        }
 
 
     private suspend fun compileFormulas(contract: DataContract, control: JobControl) {
@@ -200,18 +153,6 @@ class FormulaWorker(
     }
 
 
-    private fun parseFieldId(encoded: String): FieldId {
-        val delimiter = encoded.indexOf('|')
-        if (delimiter > 0) {
-            val occurrence = encoded.substring(0, delimiter).toIntOrNull()
-            if (occurrence != null) {
-                return FieldId(encoded.substring(delimiter + 1), occurrence)
-            }
-        }
-        return FieldId(encoded, 0)
-    }
-
-
     private suspend fun compilePayload(contract: DataContract, control: JobControl) {
         val parameters = control.parameters()
         val receiverType = control.payloadType() ?: TypeMetadata.anyNullable
@@ -232,95 +173,73 @@ class FormulaWorker(
     }
 
 
+    //-----------------------------------------------------------------------------------------------------------------
     override fun payloadFlow(input: JobLaneDescriptor, context: JobLaneContext): JobLaneAttempt {
+        if (formulaEntries.isEmpty() && !payloadTransform) {
+            return JobLaneAttempt(input, null)
+        }
+
         if (input.contract.structural is DataType.Dynamic) {
-            val formulaError = formulaEntries.firstNotNullOfOrNull { (name, expression) ->
+            val syntaxError = formulaEntries.firstNotNullOfOrNull { (name, expression) ->
                 jobExpressionCompiler.validateSyntax(expression)?.let { "$name: $it" }
-            }
-            if (formulaError != null) {
-                return JobLaneAttempt(input, formulaError)
-            }
-            val payloadError = if (payloadTransform) {
-                jobExpressionCompiler.validateSyntax(payload)
-            }
-            else {
-                null
-            }
-            val output = if (formulaEntries.isEmpty() && !payloadTransform) {
-                input
-            }
-            else {
-                JobLaneDescriptor.unknown
-            }
-            return JobLaneAttempt(output, payloadError)
+            } ?: payload.takeIf { payloadTransform }?.let { jobExpressionCompiler.validateSyntax(it) }
+
+            // A payload of unknown type still has known metadata; each calculated field's type waits for Run
+            val calculated = formulaFields.map { it to DataContract(DataType.Dynamic()) }
+            val outputPayload =
+                if (payloadTransform) DataContract(DataType.Dynamic())
+                else input.contract.payload()
+            val output = outputPayload.withMetadataOf(input.contract, calculated)
+            return JobLaneAttempt(JobLaneDescriptor(output), syntaxError)
         }
 
         val receiverType = input.payloadType ?: TypeMetadata.anyNullable
-        val calculatedFields = mutableListOf<DataField>()
-        for ((name, expression) in formulaEntries) {
+        val warnings = mutableListOf<String>()
+        val calculated = mutableListOf<Pair<FieldId, DataContract>>()
+        for ((index, entry) in formulaEntries.withIndex()) {
+            val (name, expression) = entry
             val attempt = jobExpressionCompiler.compile(
                 name, expression, input.contract, receiverType, context.classLoader, context.parameters)
+            warnings += attempt.warnings.map { "$name: $it" }
             val compiled = attempt.compiled
-            if (compiled == null) {
-                return JobLaneAttempt(input, "$name: ${attempt.error ?: "Unable to compile"}")
-            }
+                ?: return JobLaneAttempt(input, "$name: ${attempt.error ?: "Unable to compile"}")
             val scalar = compiled.contract.structural as? DataType.Scalar
                 ?: return JobLaneAttempt(
                     input,
                     "$name: calculated Job fields must be scalar, found ${compiled.contract.structural}")
-            val label = formulaNames.values[calculatedFields.size]
-            calculatedFields += DataField(FieldId(label.text, label.occurrence), scalar)
-        }
-        val widened = appendCalculated(input, calculatedFields)
-        if (!payloadTransform) {
-            return JobLaneAttempt(widened, null)
+            calculated += formulaFields[index] to DataContract(scalar)
         }
 
-        val payloadAttempt = jobExpressionCompiler.compile(
-            selfLocation.objectPath.name.value,
-            payload,
-            input.contract,
-            receiverType,
-            context.classLoader,
-            context.parameters)
-        val replacement = payloadAttempt.compiled
-            ?: return JobLaneAttempt(JobLaneDescriptor.unknown, payloadAttempt.error)
-        val replacementLane = JobLaneDescriptor(replacement.contract)
-        return JobLaneAttempt(appendCarried(replacementLane, widened), null)
+        val outputPayload =
+            if (payloadTransform) {
+                val attempt = jobExpressionCompiler.compile(
+                    selfLocation.objectPath.name.value,
+                    payload,
+                    input.contract,
+                    receiverType,
+                    context.classLoader,
+                    context.parameters)
+                warnings += attempt.warnings
+                attempt.compiled?.contract
+                    ?: return JobLaneAttempt(JobLaneDescriptor.unknown, attempt.error)
+            }
+            else {
+                input.contract.payload()
+            }
+
+        val output = outputPayload.withMetadataOf(input.contract, calculated)
+        return JobLaneAttempt(
+            JobLaneDescriptor(output), null, warnings.joinToString("; ").ifBlank { null })
     }
 
 
-    private fun appendCarried(
-        replacement: JobLaneDescriptor,
-        widened: JobLaneDescriptor
-    ): JobLaneDescriptor {
-        if (carrySelection == CarrySelection.None) {
-            return replacement
-        }
-        if (replacement.contract.structural !is DataType.Record && replacement.contract.structural !is DataType.Scalar ||
-            widened.contract.structural !is DataType.Record && widened.contract.structural !is DataType.Scalar
-        ) return JobLaneDescriptor.unknown
-        return JobLaneDescriptor(RecordOverlay.carryContract(replacement.contract, widened.contract, carrySelection))
-    }
-
-
-    private fun appendCalculated(
-        input: JobLaneDescriptor,
-        calculated: List<DataField>
-    ): JobLaneDescriptor {
-        if (calculated.isEmpty()) {
-            return input
-        }
-        val contract = if (requiresSyntheticProjection(input.contract)) {
-            DataContract(
-                DataType.Record(listOf(DataField(FieldId("value"), DataType.Scalar(ScalarKind.Text)))),
-                input.contract.nativeByPath.filterKeys { it == DataTypePath.root })
-        }
-        else input.contract
-        if (contract.structural !is DataType.Record && contract.structural !is DataType.Scalar) {
-            return JobLaneDescriptor.unknown
-        }
-        return JobLaneDescriptor(RecordOverlay.appendContract(contract, calculated))
+    /** This payload contract with [input]'s metadata, plus the [calculated] fields set on it. */
+    private fun DataContract.withMetadataOf(
+        input: DataContract,
+        calculated: List<Pair<FieldId, DataContract>>
+    ): DataContract {
+        val carried = input.metadata?.let { withMetadata(it) } ?: this
+        return DataOverlay.withMetadataFields(carried, calculated)
     }
 
 

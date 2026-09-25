@@ -4,7 +4,6 @@ import org.apache.commons.compress.archivers.tar.TarArchiveEntry
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
 import tech.kzen.auto.server.objects.job.worker.content.ContentDescriptor
-import tech.kzen.auto.server.objects.job.worker.content.Entry
 import java.io.BufferedInputStream
 import java.io.InputStream
 import java.nio.file.Files
@@ -12,19 +11,20 @@ import java.nio.file.Path
 
 
 /**
- * Streams the file entries of a `.tar.gz` in archive order, one [Entry] at a time (spike: tar over gzip is
- * hard-wired; the design's negotiated container access is not built). Selection runs on the header, before an
- * element exists, so a non-matching entry costs one skip. Advancing invalidates the previous entry's content
- * and lets the archive stream skip whatever of it was not read; closing the cursor closes the archive. The
- * caller advances only after the previous entry is released (the lending Worker's responsibility, not this
- * class's). The archive bytes come from a file ([Path]) or from any stream — an entry of an enclosing archive,
- * for nested extraction — described by [parent].
+ * Streams the file entries of a `.tar.gz` in archive order, one member's [TarEntryContent] at a time (spike: tar
+ * over gzip is hard-wired; the design's negotiated container access is not built). The content's descriptor
+ * carries the header's name, size and modification time. Selection runs on the header, before an element
+ * exists, so a non-matching entry costs one skip. Advancing invalidates the previous entry's content and lets the
+ * archive stream skip whatever of it was not read; closing the cursor closes the archive. The caller advances
+ * only after the previous entry is released (the lending Worker's responsibility, not this class's). The archive
+ * bytes come from a file ([Path]) or from any stream — an entry of an enclosing archive, for nested extraction
+ * — described by [parent].
  */
 class TarGzEntryCursor(
     private val parent: ContentDescriptor,
     bytes: InputStream,
     select: (String) -> Boolean
-): Iterator<Entry>, AutoCloseable {
+): Iterator<TarEntryContent>, AutoCloseable {
     constructor(path: Path, select: (String) -> Boolean): this(
         ContentDescriptor(path.fileName.toString(), Files.size(path), Files.getLastModifiedTime(path).toMillis()),
         Files.newInputStream(path),
@@ -100,7 +100,7 @@ class TarGzEntryCursor(
     }
 
 
-    override fun next(): Entry {
+    override fun next(): TarEntryContent {
         if (!hasNext()) throw NoSuchElementException()
         val header = pending!!
         pending = null
@@ -108,7 +108,7 @@ class TarGzEntryCursor(
         val content = TarEntryContent(descriptor, archiveName, archive)
         current = content
         produced.add(content)
-        return Entry(header.name, header.size, descriptor.modifiedEpochMillis, Entry.kindFile, content, parent)
+        return content
     }
 
 

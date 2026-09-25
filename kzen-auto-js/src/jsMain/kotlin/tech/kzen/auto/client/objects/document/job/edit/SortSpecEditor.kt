@@ -19,10 +19,7 @@ import tech.kzen.auto.client.objects.document.common.edit.CommonEditUtils
 import tech.kzen.auto.client.objects.document.bridge.DocumentBridge
 import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.objects.document.job.JobSummaryStore
-import tech.kzen.auto.client.objects.document.job.source.DataSourceResolveStore
-import tech.kzen.auto.client.objects.document.job.source.DataSourceResolveStoreKey
-import tech.kzen.auto.client.objects.document.job.source.DataSourceShapeStore
-import tech.kzen.auto.client.objects.document.job.source.DataSourceShapeStoreKey
+import tech.kzen.auto.client.objects.document.job.JobValidationChannel
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RComponent
@@ -33,6 +30,7 @@ import tech.kzen.auto.client.wrap.contextValue
 import tech.kzen.auto.client.wrap.installContextType
 import tech.kzen.auto.client.wrap.select.SelectOption
 import tech.kzen.auto.common.data.schema.HeaderLabel
+import tech.kzen.auto.common.objects.document.job.model.JobValidation
 import tech.kzen.auto.common.objects.document.report.spec.sort.SortColumnSpec
 import tech.kzen.auto.common.objects.document.report.spec.sort.SortSpec
 import tech.kzen.lib.common.model.attribute.AttributePath
@@ -80,7 +78,7 @@ class SortSpecEditor(
     RComponent<AttributeEditorProps, SortSpecEditorState>(props),
     LocalGraphStore.Observer,
     JobSummaryStore.Observer,
-    DataSourceShapeStore.GlobalObserver
+    JobValidationChannel.Observer
 {
     //-----------------------------------------------------------------------------------------------------------------
     @Reflect
@@ -110,8 +108,7 @@ class SortSpecEditor(
 
 
     private var summaryStore: JobSummaryStore? = null
-    private var resolveStore: DataSourceResolveStore? = null
-    private var shapeStore: DataSourceShapeStore? = null
+    private var validationChannel: JobValidationChannel? = null
 
 
     init {
@@ -136,8 +133,7 @@ class SortSpecEditor(
         mounted = true
         val bridge = contextValue<DocumentBridge?>()
         summaryStore = bridge?.channel(JobSummaryStore.Key)?.also { it.observe(this) }
-        resolveStore = bridge?.lookup(DataSourceResolveStoreKey)
-        shapeStore = bridge?.lookup(DataSourceShapeStoreKey)?.also { it.observeAll(this) }
+        validationChannel = bridge?.channel(JobValidationChannel.Key)?.also { it.observe(this) }
         async {
             // Unobserve runs synchronously on unmount, so registering after it would leak this observer.
             if (mounted) {
@@ -151,7 +147,7 @@ class SortSpecEditor(
         mounted = false
         props.mirroredGraphStore.unobserve(this)
         summaryStore?.unobserve(this)
-        shapeStore?.unobserveAll(this)
+        validationChannel?.unobserve(this)
     }
 
 
@@ -178,7 +174,7 @@ class SortSpecEditor(
     }
 
 
-    override fun onDataSourceShapesChanged() {
+    override fun onJobValidation(validation: JobValidation?) {
         props.clientStateGlobal.current()?.graphStructure()?.let(::refresh)
     }
 
@@ -197,8 +193,7 @@ class SortSpecEditor(
             graphStructure,
             props.objectLocation,
             summaryStore?.current().orEmpty(),
-            resolveStore,
-            shapeStore)?.columns?.values.orEmpty()
+            validationChannel?.current())?.columns?.values.orEmpty()
         if (state.columns != nextColumns || state.availableColumns != nextAvailable) {
             setState {
                 columns = nextColumns

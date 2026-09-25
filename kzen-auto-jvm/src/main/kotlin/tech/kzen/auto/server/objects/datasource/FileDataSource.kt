@@ -130,8 +130,41 @@ class FileDataSource(
     }
 
 
-    override val passesFilesWhole: Boolean
-        get() = !format.readsContent
+    /**
+     * The selected files with the values their names yield ([groupPattern] captures), without reading or
+     * resolving a format: `File` selects, `Parse` reads. Missing files follow [missing]; a directory fails.
+     */
+    suspend fun select(context: DataContext): List<SelectedFile> {
+        require(missing == missingFail || missing == missingSkip) {
+            "Unknown missing-file policy: $missing"
+        }
+        val regularFiles = validateSelection(list(context), mutableListOf())
+        return regularFiles.map { (_, info) -> SelectedFile(info, groupAttributes(info.name)) }
+    }
+
+
+    /** The names of the values a file's name yields, in order: the named captures, or `group` for one unnamed. */
+    fun captureNames(): List<String> {
+        if (groupPattern.isBlank()) {
+            return emptyList()
+        }
+        val captures = captureGroups(groupPattern)
+        val named = captures.mapNotNull { it.name }
+        if (named.isNotEmpty()) {
+            return named
+        }
+        require(captures.size == 1) {
+            "Group pattern must contain named captures or exactly one unnamed capture: $groupPattern"
+        }
+        return listOf(groupAttribute)
+    }
+
+
+    /** One file of [select]: its listing, and the values its name yields. */
+    class SelectedFile(
+        val info: DataLocationInfo,
+        val captures: Map<String, String>
+    )
 
 
     override fun staticShape(

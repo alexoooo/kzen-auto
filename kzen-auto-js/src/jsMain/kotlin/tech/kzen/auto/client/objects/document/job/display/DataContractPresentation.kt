@@ -34,10 +34,12 @@ internal object DataContractPresentation {
             "Error", display.message, listOf(display.message), error)
         DataContractDisplay.Dynamic -> Presentation(
             "Dynamic", "Runtime-keyed dynamic contract", emptyList(), dynamic)
-        is DataContractDisplay.Contract -> contract(display.contract, display.shape)
+        DataContractDisplay.Reading -> Presentation(
+            "Reading data…", "Reading data before Run; the type follows", emptyList(), muted)
+        is DataContractDisplay.Contract -> contract(display.contract, display.shape, display.provenance)
     }
 
-    private fun contract(contract: DataContract, shape: DataShape?): Presentation {
+    private fun contract(contract: DataContract, shape: DataShape?, provenance: String?): Presentation {
         val details = mutableListOf<String>()
         contract.nativeByPath.entries.sortedBy { it.key.toString() }.forEach { (path, metadata) ->
             details.add("JVM $path: ${metadata.className.asString()}")
@@ -53,7 +55,14 @@ internal object DataContractPresentation {
                 details.add("${diagnostic.severity.name}: ${diagnostic.code}$location — ${diagnostic.message}")
             }
         }
-        return Presentation(typeLabel(contract), typeTitle(contract), details, normal)
+        val metadataFields = contract.metadata?.structural?.fields.orEmpty()
+        val summary = typeLabel(contract) +
+            (if (metadataFields.isEmpty()) "" else " + ${metadataFields.size} metadata") +
+            (if (provenance == null) "" else " · inferred")
+        val title = typeTitle(contract) +
+            (if (metadataFields.isEmpty()) "" else " · metadata: ${metadataFields.joinToString { it.id.name }}") +
+            (provenance?.let { " · $it" } ?: "")
+        return Presentation(summary, title, details, normal)
     }
 
     fun typeLabel(contract: DataContract): String {

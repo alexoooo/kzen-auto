@@ -1,7 +1,6 @@
 package tech.kzen.auto.server.objects.job
 
 import tech.kzen.auto.common.data.model.DataUnit
-import tech.kzen.auto.common.objects.document.job.JobChannelSynthesis
 import tech.kzen.auto.common.objects.document.job.model.JobValidation
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.data.read.archive.ArchiveListingReaderCapability
@@ -16,7 +15,6 @@ import tech.kzen.lib.common.model.structure.notation.cqrs.UpdateInAttributeComma
 import tech.kzen.lib.common.model.structure.notation.cqrs.UpsertAttributeCommand
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.exec.data.type.DataType
-import tech.kzen.lib.common.service.context.GraphCreator
 import tech.kzen.lib.common.service.notation.NotationReducer
 import tech.kzen.lib.platform.ClassName
 import kotlin.test.AfterTest
@@ -38,8 +36,8 @@ import kotlin.test.assertNull
  * rejected, supertype accepted, nullable-into-non-nullable rejected), and the unknown-column lane, where
  * validation degrades to syntax rather than switching off: a manually-wired CSV pipeline of well-formed
  * expressions yields no false errors, while malformed source on a CSV lane is still caught.
- * Drives the same synthesize + filter + instantiate steps as [JobValidator.execute] (and
- * [tech.kzen.auto.server.exec.job.JobRun]), without the detached/cache layers.
+ * Drives [JobValidator.validateDetached], the compute behind [JobValidator.execute], without the cache layer; a
+ * last Worker whose output nothing consumes yet is still typed.
  */
 class JobValidatorTest {
     //-----------------------------------------------------------------------------------------------------------------
@@ -121,7 +119,7 @@ class JobValidatorTest {
         val readPart = units.workerValidations[ObjectPath.parse("main.workers/readPart")]
         assertNotNull(readPart)
         assertNull(readPart.errorMessage, "Read(units) supplies the required non-null DataUnit lane")
-        assertNull(readPart.typeMetadata, "ReadPart output is intentionally unknown without a source declaration")
+        assertNull(readPart.typeMetadata, "Parse output is intentionally unknown without a source declaration")
     }
 
 
@@ -138,12 +136,12 @@ class JobValidatorTest {
 
 
     @Test
-    fun automaticArchiveNamesPublishTheListingContractWithoutReadingFiles() {
+    fun archiveListingParsePublishesTheListingContractWithoutReadingFiles() {
         val validation = validate("test/job/run/job-read-archive-validation-test.yaml")
-        val archives = validation.workerValidations[ObjectPath.parse("main.workers/archives")]
-        assertNotNull(archives)
-        assertNull(archives.errorMessage)
-        assertEquals(ArchiveListingReaderCapability.shape.itemType, archives.contract)
+        val listing = validation.workerValidations[ObjectPath.parse("main.workers/listing")]
+        assertNotNull(listing)
+        assertNull(listing.errorMessage)
+        assertEquals(ArchiveListingReaderCapability.shape.itemType, listing.contract?.payload())
     }
 
 
@@ -225,12 +223,31 @@ class JobValidatorTest {
 
 
     @Test
-    fun extractRejectsKnownNonFileInputWithTheUnitsHint() {
+    fun extractRejectsKnownNonFileInputByName() {
         val validation = validate("test/job/content/extract-wrong-input-test.yaml")
         val extract = validation.workerValidations[ObjectPath.parse("main.workers/Extract")]
         assertNotNull(extract)
-        assertContains(extract.errorMessage ?: "", "Emit set to Units")
+        assertContains(extract.errorMessage ?: "", "Extract needs file content")
         assertContains(extract.errorMessage ?: "", "Int")
+    }
+
+
+    @Test
+    fun trailingExtractValidatesBeforeItsOutputIsWired() {
+        // The last Worker's output is still blank: it is typed all the same, so its outgoing pipe shows the type
+        val validation = validate("test/job/content/extract-trailing-test.yaml")
+        val extract = assertNotNull(validation.workerValidations[ObjectPath.parse("main.workers/Extract")])
+        assertNull(extract.errorMessage)
+        assertNotNull(extract.contract, "the Entry lane is known before a consumer is inserted")
+    }
+
+
+    @Test
+    fun trailingTransformValidatesBeforeItsOutputIsWired() {
+        val validation = validate("test/job/run/job-trailing-transform-test.yaml")
+        assertEquals(TypeMetadata.int, typeOf(validation, "main.workers/source"))
+        assertEquals(TypeMetadata.int, typeOf(validation, "main.workers/Filter"))
+        assertEquals(listOf(), validation.workerValidations.values.mapNotNull { it.errorMessage })
     }
 
 
@@ -342,12 +359,14 @@ class JobValidatorTest {
         // job-filter-expression-test wires its channels MANUALLY (non-blank ports), so the order-driven
         // derivation contributes no connections: every lane is unknown, so the Filter's `where` over runtime
         // CSV columns is only parsed — `amount.number > 2` references columns that cannot resolve here, and
-        // must NOT be reported. No payload type shows either.
+        // must NOT be reported. No payload type shows either, except the File's own: its content, known statically.
         val validation = validate("test/job/report/job-filter-expression-test.yaml")
 
         for ((path, entry) in validation.workerValidations) {
             assertNull(entry.errorMessage, "no false static error on $path")
-            assertNull(entry.typeMetadata, "no payload type on the flat lane $path")
+            if (path != ObjectPath.parse("main.workers/reader")) {
+                assertNull(entry.typeMetadata, "no payload type on the flat lane $path")
+            }
         }
     }
 
@@ -403,12 +422,7 @@ class JobValidatorTest {
         val graphNotation = AutoTestUtils.readNotation()
         val graphDefinition = AutoTestUtils.graphDefinitionAttempt(graphNotation).transitiveSuccessful
 
-        val synthesis = JobChannelSynthesis(context.notationMetadataReader)
-            .synthesize(graphDefinition, documentPath)
-        val filteredDefinition = synthesis.graphDefinition.filterTransitive(documentPath)
-        val graphInstance = GraphCreator.createGraph(filteredDefinition, context.graphEnvironment)
-
-        return JobValidator.validate(
-            documentPath, graphDefinition, graphInstance, context.graphEnvironment)
+        return JobValidator.validateDetached(
+            documentPath, graphDefinition, context.notationMetadataReader, context.graphEnvironment)
     }
 }

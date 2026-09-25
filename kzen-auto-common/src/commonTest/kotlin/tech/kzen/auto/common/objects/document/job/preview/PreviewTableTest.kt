@@ -36,4 +36,14 @@ class PreviewTableTest {
         assertEquals("null", table.rows.first()[1].kind)
         assertEquals("absent", table.rows.last()[1].kind)
     }
+
+    @Test
+    fun metadataFieldsFollowThePayloadColumnsWithAMetaPrefix() {
+        val metadata = PreviewNode("record", "1 field", listOf(PreviewNode("scalar", "a.csv", name = "name")))
+        val row = PreviewNode("record", "1 field", listOf(PreviewNode("scalar", "1", name = "name")), metadata = metadata)
+        val table = PreviewTable(listOf(row, PreviewNode("scalar", "root")))
+        assertEquals(listOf("name", "value", "meta.name"), table.columns.map { it.label })
+        assertEquals(listOf("1", "Absent", "a.csv"), table.rows.first().map { it.text })
+        assertEquals("absent", table.rows.last().last().kind)
+    }
 }

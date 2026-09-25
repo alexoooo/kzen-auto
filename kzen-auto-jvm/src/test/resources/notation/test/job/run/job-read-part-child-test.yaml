@@ -13,7 +13,7 @@ main.workers/unit:
   code: unit
 
 main.workers/items:
-  is: ReadPartWorker
+  is: Parse
   role: main
 
 main.workers/write:

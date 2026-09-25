@@ -18,6 +18,9 @@ main.workers/CSV Reader:
   is: FileSourceWorker
   files:
     - location: build/job-synth-spaced/input.csv
+
+main.workers/CSV Reader Parse:
+  is: Parse
   format: main.formats/input
 
 main.workers/Formula:

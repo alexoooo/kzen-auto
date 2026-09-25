@@ -2,6 +2,7 @@ package tech.kzen.auto.server.objects.job.worker.content.tar
 
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import tech.kzen.auto.server.data.content.SequentialByteContent
+import tech.kzen.auto.server.objects.job.worker.LentElement
 import tech.kzen.auto.server.objects.job.worker.content.Content
 import tech.kzen.auto.server.objects.job.worker.content.ContentDescriptor
 import tech.kzen.auto.server.objects.job.worker.content.ContentLifetime
@@ -13,12 +14,15 @@ import tech.kzen.auto.server.objects.job.worker.content.ContentLifetime
  * read fails by name instead of reading the next entry's bytes. Closing the opened handle never closes
  * the archive; it records whether the entry was read to its end ([consumed]) or closed with bytes remaining
  * ([closedEarly]), which the cursor skips before advancing.
+ *
+ * A lent element (docs/plans/2026-09-16_borrowed-elements.md §3.1), because its lifetime is the cursor's: the
+ * run adopts it at the pull, and its [close] — the last hold's release — is the cue to advance.
  */
 class TarEntryContent internal constructor(
     private val descriptor: ContentDescriptor,
     private val archiveName: String,
     private val archive: TarArchiveInputStream
-): Content {
+): Content, LentElement {
     @Volatile private var opened = false
     @Volatile private var atEnd = false
     @Volatile private var handleClosed = false
@@ -52,6 +56,17 @@ class TarEntryContent internal constructor(
     /** The release (the entry's last hold, or the cursor advancing): nothing may read this entry any more. */
     override fun release() {
         invalidated = true
+    }
+
+
+    override fun lentName(): String = "entry '${descriptor.name}'"
+
+    override fun lender(): String = "'$archiveName'"
+
+
+    /** The last hold's release: the cursor may advance. */
+    override fun close() {
+        release()
     }
 
 

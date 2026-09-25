@@ -1,0 +1,11 @@
+# JobValidatorTest: Extract as the last Worker, its output not yet wired, still validates its File input
+main:
+  is: Job
+
+main.workers/File:
+  is: FileSourceWorker
+  files:
+    - location: build/content-scope/trailing/input.tar.gz
+
+main.workers/Extract:
+  is: Extract

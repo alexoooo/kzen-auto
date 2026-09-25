@@ -17,6 +17,9 @@ main.workers/reader:
   files:
     - location: build/job-engine-linear/input.csv
 
+main.workers/reader Parse:
+  is: Parse
+
 main.workers/filter:
   is: FilterWorker
   where: 'flag == "yes"'

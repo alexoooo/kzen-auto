@@ -27,6 +27,8 @@ import tech.kzen.lib.common.exec.data.type.DataContract
 import tech.kzen.lib.common.exec.data.type.DataField
 import tech.kzen.lib.common.exec.data.type.FieldId
 import tech.kzen.lib.common.exec.data.type.ScalarKind
+import tech.kzen.lib.common.exec.data.shape.ShapeProvenance
+import tech.kzen.lib.common.exec.data.shape.ShapeStability
 import tech.kzen.lib.common.exec.data.value.DataState
 import tech.kzen.lib.common.exec.data.value.DataNode
 import tech.kzen.lib.common.exec.data.value.DataValue
@@ -142,7 +144,7 @@ object DataReadCore {
 
     /**
      * Pulls and converts one item, then claims its durable position immediately before handing the message to
-     * the channel. Keeping this ordering in the shared read core prevents ReadPartWorker and later readers from
+     * the channel. Keeping this ordering in the shared read core prevents ParseWorker and later readers from
      * copying the migration-sensitive claim-before-send sequence.
      *
      * @return false only when the cursor is exhausted; no claim or send occurs in that case.
@@ -264,6 +266,68 @@ object DataReadCore {
                 "${candidate.origin} (${describe(candidate.shape)})"
         }
         return baseline
+    }
+
+
+    /**
+     * The shape a run holds its reads to when its Worker was typed from data before Run (docs/plans/2026-09-24_values-
+     * metadata-and-design-time-types.md, R6): the payload of [validated], the Worker's validated output contract; null
+     * when validation left it unknown, so the run establishes its shape from what it reads.
+     */
+    fun validatedShape(validated: DataContract?): ShapeBaseline? {
+        val payload = validated?.payload()
+            ?: return null
+        if (payload.structural is DataType.Dynamic) {
+            return null
+        }
+        return ShapeBaseline(
+            DataShape(payload, ShapeProvenance.Inferred, ShapeStability.Stable),
+            "the type validated before the run")
+    }
+
+
+    /**
+     * Holds [candidate], the shape of a part as the run opens it, to [validated]: it fits when it is that shape, or,
+     * under `superset`, when every field it has is a validated field of the same contract and every field it lacks is
+     * optional there (read as absent). A part that does not fit fails by name: the data changed since validation, and
+     * the Workers below were compiled against the validated type.
+     */
+    fun fitShape(
+        validated: ShapeBaseline,
+        candidate: ShapeBaseline,
+        schemaMode: String
+    ): ShapeBaseline {
+        if (validated.shape.itemType == candidate.shape.itemType) {
+            return validated
+        }
+        val validatedRecord = validated.shape.itemType.structural as? DataType.Record
+        val candidateRecord = candidate.shape.itemType.structural as? DataType.Record
+        check(schemaMode == schemaSuperset &&
+                validatedRecord != null &&
+                candidateRecord != null &&
+                validatedRecord.nullable == candidateRecord.nullable) {
+            "${candidate.origin} does not match ${validated.origin}: found ${describe(candidate.shape)}, " +
+                "validated ${describe(validated.shape)}; validate the Job again"
+        }
+        val validatedFields = contractFields(validated.shape.itemType, validatedRecord.fields, validated.origin)
+            .associateBy { it.field.id }
+        val candidateFields = contractFields(candidate.shape.itemType, candidateRecord.fields, candidate.origin)
+        val outside = candidateFields
+            .filter { validatedFields[it.field.id]?.contract != it.contract }
+            .map { it.field.id }
+        check(outside.isEmpty()) {
+            "${candidate.origin} has fields outside ${validated.origin}: " +
+                "${outside.joinToString { it.name }}; validate the Job again"
+        }
+        val present = candidateFields.map { it.field.id }.toSet()
+        val lacking = validatedRecord.fields
+            .filter { !it.optional && it.id !in present }
+            .map { it.id }
+        check(lacking.isEmpty()) {
+            "${candidate.origin} lacks fields of ${validated.origin}: " +
+                "${lacking.joinToString { it.name }}; validate the Job again"
+        }
+        return validated
     }
 
 

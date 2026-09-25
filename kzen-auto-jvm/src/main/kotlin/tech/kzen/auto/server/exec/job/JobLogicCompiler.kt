@@ -54,7 +54,8 @@ object JobLogicCompiler {
 
         val workerLocations = documentNotation
             .directNestedObjectPaths(NotationConventions.mainObjectPath, JobConventions.workersAttributeName)
-            .map { ObjectLocation(documentPath, it) }
+            .map { ObjectLocation(documentPath, it) } +
+            synthesis.implicitWorkers
 
         // Derived from the SAVED notation (the pre-synthesis structure, matching what the client sees):
         // inputs from the `parameters` declarations, outputs from the declared `results` signature map — not

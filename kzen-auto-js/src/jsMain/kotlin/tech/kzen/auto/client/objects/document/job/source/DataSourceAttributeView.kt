@@ -15,6 +15,7 @@ import tech.kzen.auto.client.objects.document.bridge.DocumentBridgeContext
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeView
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeViewProps
 import tech.kzen.auto.client.objects.document.common.scope.ObjectScopedComponent
+import tech.kzen.auto.client.objects.document.job.JobValidationChannel
 import tech.kzen.auto.client.objects.document.job.display.DataContractDisplay
 import tech.kzen.auto.client.objects.document.job.display.DataContractView
 import tech.kzen.auto.client.service.global.ClientState
@@ -31,8 +32,10 @@ import tech.kzen.auto.common.data.schema.AuthoredRecordSchemaDraft
 import tech.kzen.auto.common.data.schema.RecordSchemaConventions
 import tech.kzen.auto.common.objects.document.custom.CustomConventions
 import tech.kzen.auto.common.objects.document.data.schema.DataSchemaConventions
+import tech.kzen.auto.common.objects.document.job.model.JobValidation
 import tech.kzen.lib.common.exec.RequestParams
-import tech.kzen.lib.common.exec.data.shape.DataShapeResult
+import tech.kzen.lib.common.exec.data.type.DataContract
+import tech.kzen.lib.common.exec.data.type.DataType
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.attribute.AttributeSegment
@@ -60,8 +63,7 @@ class DataSourceAttributeView(
     props: DataSourceAttributeViewProps
 ) :
     ObjectScopedComponent<DataSourceAttributeViewProps, DataSourceAttributeViewState>(props),
-    DataSourceResolveStore.Observer,
-    DataSourceShapeStore.Observer
+    JobValidationChannel.Observer
 {
     companion object {
         private val formatAttributeName = AttributeName("format")
@@ -93,11 +95,8 @@ class DataSourceAttributeView(
 
 
     private val objectLocator = StageObjectLocator(props.navigationGlobal)
-    private var resolveStore: DataSourceResolveStore? = null
-    private var shapeStore: DataSourceShapeStore? = null
+    private var validationChannel: JobValidationChannel? = null
     private var observedSource: ObjectLocation? = null
-    private var observedShapeKey: DataSourceShapeStore.Key? = null
-    private var inspectAfterResolve = false
 
 
     override fun DataSourceAttributeViewState.init(props: DataSourceAttributeViewProps) {
@@ -105,25 +104,24 @@ class DataSourceAttributeView(
         sourceLocation = null
         sourceType = null
         missingReference = null
-        resolveState = null
-        shapeState = null
+        validation = null
         authoring = false
         authoringError = null
     }
 
 
     override fun componentDidMount() {
-        resolveStore = contextValue<DocumentBridge?>()?.lookup(DataSourceResolveStoreKey)
-        shapeStore = contextValue<DocumentBridge?>()?.lookup(DataSourceShapeStoreKey)
+        validationChannel = contextValue<DocumentBridge?>()?.channel(JobValidationChannel.Key)?.also {
+            it.observe(this)
+        }
         super.componentDidMount()
+        onJobValidation(validationChannel?.current())
     }
 
 
     override fun componentWillUnmount() {
-        observedSource?.let { resolveStore?.unobserve(it, this) }
-        observedShapeKey?.let { shapeStore?.unobserve(it, this) }
+        validationChannel?.unobserve(this)
         observedSource = null
-        observedShapeKey = null
         super.componentWillUnmount()
     }
 
@@ -144,7 +142,7 @@ class DataSourceAttributeView(
         }
         val missingReference = rawReference.takeIf { it.isNotEmpty() && sourceLocation == null }
 
-        rebind(sourceLocation)
+        observedSource = sourceLocation
         if (state.openDocumentPath == clientState.navigationRoute.documentPath &&
                 state.sourceLocation == sourceLocation &&
                 state.sourceType == sourceType &&
@@ -162,77 +160,23 @@ class DataSourceAttributeView(
     }
 
 
-    private fun rebind(source: ObjectLocation?) {
-        if (observedSource == source) {
-            return
-        }
-        observedSource?.let { resolveStore?.unobserve(it, this) }
-        observedShapeKey?.let { shapeStore?.unobserve(it, this) }
-        observedShapeKey = null
-        onDataSourceShapeState(null)
-        inspectAfterResolve = false
-        observedSource = source
-        if (source == null) {
-            onDataSourceResolveState(null)
-        }
-        else {
-            resolveStore?.observe(source, this)
+    override fun onJobValidation(validation: JobValidation?) {
+        val next = validation?.workerValidations?.get(props.objectLocation.objectPath)
+        if (state.validation != next) {
+            setState { this.validation = next }
         }
     }
 
 
-    override fun onDataSourceResolveState(state: DataSourceResolveStore.State?) {
-        val source = observedSource
-        val manifest = state?.result?.manifest
-        if (source != null && manifest != null) {
-            bindShape(DataSourceShapeStore.Key.of(source, manifest))
-            if (inspectAfterResolve && !state.resolving) {
-                inspectAfterResolve = false
-                shapeStore?.inspect(source, manifest)
-            }
+    /** A record type read from data before Run, which can be saved as an editable schema. */
+    private fun inferredContract(): DataContract? {
+        val validation = state.validation
+            ?: return null
+        if (validation.provenance == null || validation.errorMessage != null) {
+            return null
         }
-        if (this.state.resolveState != state) {
-            setState {
-                resolveState = state
-            }
-        }
+        return validation.contract?.payload()?.takeIf { it.structural is DataType.Record }
     }
-
-
-    private fun bindShape(key: DataSourceShapeStore.Key) {
-        if (observedShapeKey == key) {
-            return
-        }
-        observedShapeKey?.let { shapeStore?.unobserve(it, this) }
-        observedShapeKey = key
-        shapeStore?.observe(key, this)
-    }
-
-
-    override fun onDataSourceShapeState(state: DataSourceShapeStore.State?) {
-        if (this.state.shapeState != state) {
-            setState { shapeState = state }
-        }
-    }
-
-
-    private fun onInspect() {
-        val source = observedSource
-            ?: return
-        val manifest = state.resolveState?.result?.manifest
-        if (manifest == null) {
-            inspectAfterResolve = true
-            resolveStore?.resolve(source)
-        }
-        else {
-            bindShape(DataSourceShapeStore.Key.of(source, manifest))
-            shapeStore?.inspect(source, manifest)
-        }
-    }
-
-
-    private fun observedContract() =
-        (state.shapeState?.aggregate as? DataShapeResult.Observed)?.shape?.itemType
 
 
     private fun editableFormatLocation(): ObjectLocation? {
@@ -256,7 +200,7 @@ class DataSourceAttributeView(
         if (state.authoring) {
             return
         }
-        val contract = observedContract()
+        val contract = inferredContract()
             ?: return
         val draft = AuthoredRecordSchemaDraft.from(contract)
             ?: return
@@ -372,7 +316,6 @@ class DataSourceAttributeView(
 
                 val type = state.sourceType ?: "Data source"
                 +"$type \"${source.objectPath.name.value}\""
-                teaser()?.let { +" · $it" }
                 icon("material-symbols:open-in-new") {
                     style = unsafeJso {
                         fontSize = 1.em
@@ -381,35 +324,18 @@ class DataSourceAttributeView(
                 }
             }
 
-            renderInspection()
+            renderValidatedType()
         }
     }
 
 
-    private fun ChildrenBuilder.renderInspection() {
-        val contractDisplay = DataSourceInspectionDisplay.of(
-            state.resolveState, state.shapeState, inspectAfterResolve)
-        val loading = contractDisplay == DataContractDisplay.Loading
-
-        div {
-            css {
-                display = Display.flex
-                alignItems = AlignItems.center
-                gap = 0.4.em
-            }
-            Button {
-                variant = ButtonVariant.outlined
-                size = Size.small
-                disabled = loading
-                onClick = { onInspect() }
-                +(if (loading) "Inspecting…" else "Inspect")
-            }
-            DataContractView::class.react {
-                display = contractDisplay
-            }
+    // What this Worker's items are, as validation typed them: declared, or read from the source's data before Run
+    private fun ChildrenBuilder.renderValidatedType() {
+        DataContractView::class.react {
+            display = DataContractDisplay.of(state.validation)
         }
 
-        val draft = observedContract()?.let(AuthoredRecordSchemaDraft::from)
+        val draft = inferredContract()?.let(AuthoredRecordSchemaDraft::from)
         if (draft != null) {
             Button {
                 variant = ButtonVariant.text
@@ -419,7 +345,7 @@ class DataSourceAttributeView(
                     "Create a shared format before materializing the schema"
                 }
                 else {
-                    "Create an editable schema from this bounded observation"
+                    "Create an editable schema from the type read before Run"
                 }
                 onClick = { onCreateSchema() }
                 +(if (state.authoring) "Creating schema…" else "Create editable schema")
@@ -434,18 +360,5 @@ class DataSourceAttributeView(
                 +error
             }
         }
-    }
-
-
-    private fun teaser(): String? {
-        val units = state.resolveState?.result?.manifest?.units
-            ?: return null
-        val count = "${units.size} ${if (units.size == 1) "unit" else "units"}"
-        val firstName = units.firstOrNull()
-            ?.parts
-            ?.firstOrNull()
-            ?.ref
-            ?.let { ref -> ref.asLocationOrNull()?.fileName() ?: ref.display() }
-        return if (firstName == null) count else "$count · $firstName"
     }
 }

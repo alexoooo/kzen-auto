@@ -10,11 +10,19 @@ main.channels/queries:
   is: DuplexChannel
   external: true
 
+main.channels/reader files:
+  is: Channel
+
 main.workers/reader:
   is: FileSourceWorker
-  output: main.channels/raw
+  output: main.channels/reader files
   files:
     - location: build/job-preview/input.csv
+
+main.workers/reader Parse:
+  is: Parse
+  input: main.channels/reader files
+  output: main.channels/raw
 
 main.workers/preview:
   is: PreviewWorker

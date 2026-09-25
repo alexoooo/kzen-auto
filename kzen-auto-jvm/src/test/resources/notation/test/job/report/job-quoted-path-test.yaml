@@ -5,11 +5,19 @@ main.channels/data:
   is: Channel
   capacity: 8
 
+main.channels/reader files:
+  is: Channel
+
 main.workers/reader:
   is: FileSourceWorker
-  output: main.channels/data
+  output: main.channels/reader files
   files:
     - location: '"build/job-quoted-path/input.csv"'
+
+main.workers/reader Parse:
+  is: Parse
+  input: main.channels/reader files
+  output: main.channels/data
 
 main.workers/writer:
   is: CsvWriterWorker

@@ -262,11 +262,10 @@ class DataSourceActionsTest {
         val result = DataResolveResult.ofExecutionValue(
             assertIs<ExecutionSuccess>(outcome, outcome.toString()).value)
 
+        // File selects without reading, so its hosted source takes each file whole rather than detecting a format
         val detail = result.resolutionDetails.single()
-        assertEquals(FormatSelectionKind.Automatic, detail.selection)
-        assertEquals(FormatResolutionBasis.Extension, detail.basis)
-        assertEquals("Plain text", detail.displayLabel)
-        assertTrue(detail.concreteFormatReference.orEmpty().endsWith("#PlainText"), detail.toString())
+        assertEquals(FormatSelectionKind.Explicit, detail.selection)
+        assertEquals("Whole file", detail.displayLabel)
         assertEquals(
             canonical(markdownExisting),
             result.manifest.units.single().parts.single().ref.id)

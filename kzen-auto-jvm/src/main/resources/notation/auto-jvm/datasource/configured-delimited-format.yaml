@@ -214,14 +214,3 @@ ArchiveListingFormat:
 
 ArchiveListing:
   is: ArchiveListingFormat
-
-WholeFileFormat:
-  abstract: true
-  is: ConfiguredRecordFormat
-  class: tech.kzen.auto.server.objects.datasource.format.WholeFileFormat
-  title: "Whole file (don't read)"
-  extensions: []
-  catalogVisible: true
-
-WholeFile:
-  is: WholeFileFormat

@@ -6,6 +6,7 @@ import tech.kzen.auto.server.exec.job.ownership.RunOwnershipLedger
 import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.lib.common.exec.data.type.DataContract
 import tech.kzen.lib.common.exec.data.value.DataValue
+import tech.kzen.lib.common.exec.data.value.ValueMetadata
 
 
 /**
@@ -24,9 +25,9 @@ class AcquiredItem internal constructor(
         get() = hold.isActive
 
 
-    /** Lifts the native, carrying the owners the run attached at the pull. */
-    fun lift(ledger: RunOwnershipLedger?, contract: DataContract?): DataValue {
-        val value = JobDataValues.lift(native, contract)
+    /** Lifts the native with [metadata], carrying the owners the run attached at the pull. */
+    fun lift(ledger: RunOwnershipLedger?, contract: DataContract?, metadata: ValueMetadata? = null): DataValue {
+        val value = JobDataValues.lift(native, contract).withMetadata(metadata)
         if (ledger != null && !owners.isEmpty) {
             ledger.attach(value, owners)
         }

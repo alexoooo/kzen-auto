@@ -10,6 +10,9 @@ main.workers/reader:
   is: FileSourceWorker
   files:
     - location: build/bench/agg/input-headerless.csv
+
+main.workers/reader Parse:
+  is: Parse
   format: main.formats/input
 
 main.workers/pivot:

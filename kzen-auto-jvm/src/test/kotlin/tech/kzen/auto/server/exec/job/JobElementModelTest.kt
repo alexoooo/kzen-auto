@@ -195,12 +195,12 @@ class JobElementModelTest {
 
 
     @Test
-    fun formulaReplacementCarriesThePrivateWideningInDeclaredOrder() {
-        val output = Path.of("build/job-formula-carry/output.csv")
+    fun formulaCalculatedFieldsTravelAsMetadataThatAWriterColumnSelects() {
+        val output = Path.of("build/job-formula-metadata/output.csv")
         Files.createDirectories(output.parent)
         Files.deleteIfExists(output)
 
-        val engine = newEngine("test/job/message/job-formula-carry-test.yaml")
+        val engine = newEngine("test/job/message/job-formula-metadata-test.yaml")
         val outcome = try {
             runBlocking {
                 engine.resume()
@@ -213,7 +213,7 @@ class JobElementModelTest {
 
         assertIs<Outcome.Success>(outcome, "outcome: $outcome")
         assertEquals(
-            listOf("kind,qty,price,total", "sale,2,3,6"),
+            listOf("kind,total", "sale,6"),
             Files.readAllLines(output))
     }
 

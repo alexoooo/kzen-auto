@@ -6,7 +6,7 @@ main.workers/source:
   code: 42
 
 main.workers/readPart:
-  is: ReadPartWorker
+  is: Parse
 
 main.workers/write:
   is: CsvWriterWorker

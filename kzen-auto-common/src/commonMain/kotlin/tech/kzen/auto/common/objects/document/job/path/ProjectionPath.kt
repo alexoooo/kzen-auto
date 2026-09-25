@@ -7,10 +7,13 @@ import tech.kzen.lib.common.util.digest.Digestible
 /**
  * A path over an incoming record contract (E8): dotted field names with an optional `[*]` after a field that
  * is a list or map — `instrument.symbol`, `executions[*].price`, `attributes[*].value.price`. `[*]` unnests:
- * one output row per element, and after a map's `[*]` the entry exposes `key` and `value`. The default output
- * name is the full path joined with `.` with the wildcards dropped (`executions[*].trade.venue` →
- * `executions.trade.venue`); an alias on the entry overrides it. Parsing is syntactic only — binding against
- * a contract ([PathBinding]) is where a name is checked to exist and a leaf to be scalar.
+ * one output row per element, and after a map's `[*]` the entry exposes `key` and `value`. A path starts in the
+ * value's payload; a leading `meta` starts it in the value's metadata instead (`meta.parent.name`), and a leading
+ * `this` names the payload explicitly. A bare path whose first name is not the payload's but is the metadata's
+ * resolves into the metadata. The default output name is the full path joined with `.` with the wildcards and a
+ * leading `meta` / `this` dropped (`executions[*].trade.venue` → `executions.trade.venue`); an alias on the entry
+ * overrides it. Parsing is syntactic only — binding against a contract ([PathBinding]) is where a name is
+ * checked to exist and a leaf to be scalar.
  */
 data class ProjectionPath(
     val segments: List<ProjectionPathSegment>
@@ -38,6 +41,26 @@ data class ProjectionPath(
             }
             return ProjectionPath(segments)
         }
+
+
+        /** The facet a path names explicitly by its first segment (`meta.` or `this.`), or null for a bare path. */
+        fun facetOf(path: ProjectionPath): Facet? {
+            if (path.segments.size < 2) {
+                return null
+            }
+            return when ((path.segments.first() as ProjectionPathSegment.Field).name) {
+                Facet.Metadata.qualifier -> Facet.Metadata
+                Facet.Payload.qualifier -> Facet.Payload
+                else -> null
+            }
+        }
+    }
+
+
+    /** Which part of a value a path starts in: its payload (`this`) or its metadata (`meta`). */
+    enum class Facet(val qualifier: String) {
+        Payload("this"),
+        Metadata("meta")
     }
 
 
@@ -63,9 +86,12 @@ data class ProjectionPath(
     }
 
 
-    /** The output-name convention: the field names joined with `.`, wildcards dropped. */
-    fun defaultOutputName(): String =
-        segments.filterIsInstance<ProjectionPathSegment.Field>().joinToString(separator.toString()) { it.name }
+    /** The output-name convention: the field names joined with `.`, wildcards and a leading `meta` / `this` dropped. */
+    fun defaultOutputName(): String {
+        val names = segments.filterIsInstance<ProjectionPathSegment.Field>().map { it.name }
+        val unqualified = if (facetOf(this) != null && names.size > 1) names.drop(1) else names
+        return unqualified.joinToString(separator.toString())
+    }
 
 
     override fun digest(sink: Digest.Sink) {

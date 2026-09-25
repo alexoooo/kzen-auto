@@ -11,7 +11,7 @@ import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
  * The state is deliberately separate from a file source's runtime `directory` and `filter`: neither browsing nor
  * removing the last explicit selection may turn the directory last visited by the chooser into a runtime directory
  * query. A `browser: <attribute path>` scalar in the selection attribute's metadata opts into the separate state;
- * `FileDataSourceConfig` declares it once, so every file source and source Worker inherits it.
+ * `FileSelectionConfig` declares it once, so every file source and the File Worker inherit it.
  *
  * An absent marker means the editor keeps navigation in component state and persists only the selection — the safe
  * default for any third-party attribute that has not

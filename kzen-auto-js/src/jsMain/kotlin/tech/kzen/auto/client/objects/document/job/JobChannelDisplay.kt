@@ -46,7 +46,9 @@ internal object JobChannelDisplayStyle {
 //---------------------------------------------------------------------------------------------------------------------
 external interface JobChannelDisplayProps: Props {
     var upstreamName: String
-    var downstreamName: String
+
+    // Null for the last Worker's output, which nothing consumes until a Worker is inserted below it
+    var downstreamName: String?
 
     // The upstream Worker whose per-output config (batchSize / capacity) this channel carries, and the output
     // port that config is keyed under. Handed back on toggle / clear so JobController opens this channel's inline
@@ -87,8 +89,9 @@ external interface JobChannelDisplayProps: Props {
 
 
 //---------------------------------------------------------------------------------------------------------------------
-// The gold channel drawn in the gap between two adjacent Worker cards the order-driven rule connects, echoing
-// Flow's Pipe so a connector reads distinctly from a node. The channel is synthesized + order-managed, so the
+// The gold channel drawn in the gap between two adjacent Worker cards the order-driven rule connects (or below
+// the last Worker, whose output shows before a consumer is inserted), echoing Flow's Pipe so a connector reads
+// distinctly from a node. The channel is synthesized + order-managed, so the
 // saved notation keeps Worker ports blank and carries no Channel objects on the common path. This one component
 // owns BOTH states: collapsed (a downward chevron; clicking it opens the editor) and expanded (an inline card
 // that tunes this channel's batchSize / capacity, stored on the upstream Worker's `channels.<port>` map so they
@@ -163,6 +166,13 @@ class JobChannelDisplay(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private fun routeTitle(): String =
+        props.downstreamName
+            ?.let { props.upstreamName + " → " + it }
+            ?: (props.upstreamName + " output (a run previews it until a Worker below uses it)")
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     // The COLLAPSED gold chevron pointing down into the Worker card below it, marking the channel between two
     // adjacent Workers. When customized, a caption below the chevron shows the override values so they're
     // visible without expanding.
@@ -204,7 +214,7 @@ class JobChannelDisplay(
                     }
                     cursor = Cursor.pointer
                 }
-                title = "${props.upstreamName} → ${props.downstreamName} " +
+                title = "${routeTitle()} " +
                         "(batch size ${props.batchSize}, capacity ${props.capacity}) — " +
                         if (customized) "customized; click to edit" else "click to customize"
 
@@ -249,7 +259,7 @@ class JobChannelDisplay(
     private fun ChildrenBuilder.renderExpanded() {
         val workerLocation = props.upstreamWorker
         val outputPort = props.outputPort
-        val routeTitle = props.upstreamName + " → " + props.downstreamName
+        val routeTitle = routeTitle()
 
         div {
             css {

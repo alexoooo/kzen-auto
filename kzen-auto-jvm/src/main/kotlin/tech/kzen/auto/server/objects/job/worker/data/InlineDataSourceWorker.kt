@@ -14,16 +14,15 @@ import tech.kzen.lib.common.exec.data.value.DataValue
 /** Reader whose DataSource configuration is owned by the Worker rather than referenced as a graph object. */
 abstract class InlineDataSourceWorker(
     output: ChannelOutput<DataValue>,
-    emit: String,
     role: String,
-    attributes: String,
     selfLocation: ObjectLocation,
     openerLookup: DataOpenerLookup,
     schemaMode: String,
     final override val hostedDataSource: DataSource,
-    dataSourceCompatibilityKey: Digest
+    dataSourceCompatibilityKey: Digest,
+    emit: String = emitItems
 ): ReadWorker(
-    output, null, emit, role, attributes, selfLocation, openerLookup, schemaMode
+    output, null, role, selfLocation, openerLookup, schemaMode, emit
 ), DataSourceHost {
     private val directResolution = WorkerDefinitionResolution.Resolved(
         selfLocation, dataSourceCompatibilityKey, hostedDataSource)

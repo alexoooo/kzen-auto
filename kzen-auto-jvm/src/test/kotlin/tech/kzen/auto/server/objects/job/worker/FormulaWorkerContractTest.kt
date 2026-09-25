@@ -4,7 +4,6 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import tech.kzen.auto.common.data.model.DataUnit
-import tech.kzen.auto.common.objects.document.job.FormulaCarrySpec
 import tech.kzen.auto.common.objects.document.report.spec.FormulaSpec
 import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.api.ChannelInputIterator
@@ -19,6 +18,7 @@ import tech.kzen.lib.common.exec.data.type.FieldId
 import tech.kzen.lib.common.exec.data.type.ScalarKind
 import tech.kzen.lib.common.exec.data.type.toDataContract
 import tech.kzen.lib.common.exec.data.value.DataValue
+import tech.kzen.lib.common.exec.data.value.DefaultDataAdapterRegistry
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.GraphStructure
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
@@ -45,10 +45,13 @@ class FormulaWorkerContractTest {
 
 
     @Test
-    fun nestedRecordsKeepTheirShapeAndOpaqueInputsUseSyntheticProjection() {
+    fun calculatedFieldsBecomeMetadataAndThePayloadIsKept() {
         val native = TypeMetadata(ClassName(DataUnit::class.qualifiedName!!), emptyList(), false)
-        assertSynthetic(worker().payloadFlow(
-            JobLaneDescriptor(native.toDataContract()), laneContext()), native)
+        val opaque = native.toDataContract()
+        val opaqueOutput = worker().payloadFlow(JobLaneDescriptor(opaque), laneContext())
+        assertNull(opaqueOutput.errorMessage)
+        assertEquals(opaque, opaqueOutput.lane.contract.payload())
+        assertMetadata(listOf("flatDate" to ScalarKind.Text), opaqueOutput)
 
         val nested = DataContract(
             DataType.Record(listOf(DataField(
@@ -59,41 +62,64 @@ class FormulaWorkerContractTest {
             mapOf(DataTypePath.root to native))
         val output = worker().payloadFlow(JobLaneDescriptor(nested), laneContext())
         assertNull(output.errorMessage)
-        val record = assertIs<DataType.Record>(output.lane.contract.structural)
-        assertEquals(listOf("nested", "flatDate"), record.fields.map { it.id.name })
-        assertIs<DataType.Mapping>(record.fields.first().type)
-        assertEquals(native, output.lane.contract.nativeByPath[DataTypePath.root])
+        assertEquals(nested, output.lane.contract.payload())
+        assertMetadata(listOf("flatDate" to ScalarKind.Text), output)
     }
 
 
     @Test
-    fun nativeFieldMetadataSurvivesCalculatedColumnsAndChainedValidation() {
-        tech.kzen.lib.common.exec.data.value.DefaultDataAdapterRegistry().use { registry ->
-            val item = tech.kzen.auto.server.objects.job.value.RecordOverlayTest.Item(
-                "2019-12-30", "AAPL", "source",
-                tech.kzen.auto.server.objects.job.value.RecordOverlayTest.Day(true, emptyList(), emptyMap()), null)
-            val contract = registry.lift(item).contract
+    fun laterFormulasSeeEarlierMetadataByBareName() {
+        DefaultDataAdapterRegistry().use { registry ->
+            val contract = registry.lift(Item("2019-12-30", "AAPL", Day(true))).contract
             val first = worker("test", "symbol.length").payloadFlow(JobLaneDescriptor(contract), laneContext())
             assertNull(first.errorMessage)
-            assertEquals(contract.nativeByPath, first.lane.contract.nativeByPath)
-            assertEquals(ScalarKind.Integer(32),
-                (first.lane.contract.child(tech.kzen.lib.common.exec.data.type.DataPathSegment.Field(FieldId("test"))).structural as DataType.Scalar).kind)
-            val next = worker("checked", "test == symbol.length && day.open").payloadFlow(first.lane, laneContext())
+            assertEquals(contract, first.lane.contract.payload())
+            assertMetadata(listOf("test" to ScalarKind.Integer(32)), first)
+
+            val next = worker("checked", "test == symbol.length && day.open && meta.test > 0")
+                .payloadFlow(first.lane, laneContext())
             assertNull(next.errorMessage)
-            assertEquals(7, (next.lane.contract.structural as DataType.Record).fields.size)
+            assertNull(next.warningMessage)
+            assertEquals(contract, next.lane.contract.payload())
+            assertMetadata(listOf("test" to ScalarKind.Integer(32), "checked" to ScalarKind.Boolean), next)
         }
     }
 
 
-    private fun assertSynthetic(attempt: JobLaneAttempt, native: TypeMetadata) {
-        assertNull(attempt.errorMessage)
-        val record = assertIs<DataType.Record>(attempt.lane.contract.structural)
-        assertEquals(listOf("value", "flatDate"), record.fields.map { it.id.name })
-        assertEquals(
-            listOf(ScalarKind.Text, ScalarKind.Text),
-            record.fields.map { assertIs<DataType.Scalar>(it.type).kind })
-        assertEquals(native, attempt.lane.contract.nativeByPath[DataTypePath.root])
+    @Test
+    fun aBareNameTheMetadataSharesWithThePayloadResolvesToThePayloadWithAWarning() {
+        DefaultDataAdapterRegistry().use { registry ->
+            val contract = registry.lift(Item("2019-12-30", "AAPL", Day(true))).contract
+            val first = worker("symbol", "\"MSFT\"").payloadFlow(JobLaneDescriptor(contract), laneContext())
+            val shadowed = worker("same", "symbol == meta.symbol").payloadFlow(first.lane, laneContext())
+            assertNull(shadowed.errorMessage)
+            assertEquals("same: 'symbol' is the payload's; the metadata's is meta.symbol", shadowed.warningMessage)
+
+            val explicit = worker("same", "this.symbol == meta.symbol").payloadFlow(first.lane, laneContext())
+            assertNull(explicit.warningMessage)
+        }
     }
+
+
+    @Test
+    fun aDynamicPayloadStillHasItsCalculatedMetadataNamed() {
+        val output = worker().payloadFlow(JobLaneDescriptor.unknown, laneContext())
+        assertNull(output.errorMessage)
+        assertIs<DataType.Dynamic>(output.lane.contract.structural)
+        val metadata = assertIs<DataType.Record>(output.lane.contract.metadata!!.structural)
+        assertEquals(listOf("flatDate"), metadata.fields.map { it.id.name })
+        assertIs<DataType.Dynamic>(metadata.fields.single().type)
+    }
+
+
+    private fun assertMetadata(expected: List<Pair<String, ScalarKind>>, attempt: JobLaneAttempt) {
+        val metadata = assertIs<DataType.Record>(attempt.lane.contract.metadata!!.structural)
+        assertEquals(expected, metadata.fields.map { it.id.name to assertIs<DataType.Scalar>(it.type).kind })
+    }
+
+
+    data class Item(val date: String, val symbol: String, val day: Day)
+    data class Day(val open: Boolean)
 
 
     private fun worker(name: String = "flatDate", expression: String = "\"2026-09-01\""): FormulaWorker = FormulaWorker(
@@ -101,7 +127,6 @@ class FormulaWorkerContractTest {
         IgnoredOutput,
         FormulaSpec(mapOf(name to expression)),
         "",
-        FormulaCarrySpec.none,
         ObjectLocation.parse("test/formula-worker-contract.yaml#main.workers/formula"),
         context.jobExpressionCompiler)
 

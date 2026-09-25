@@ -74,6 +74,7 @@ class EngineJobControl(
     private val jobResults: BindingSchema,
     private val inputPayloadType: TypeMetadata?,
     private val inputContract: DataContract?,
+    private val outputContract: DataContract?,
     private val resultCollector: JobResultCollector,
     /** The run's ownership ledger (E9): shared by every Worker of the run, torn down after they join. */
     override val ledger: RunOwnershipLedger,
@@ -213,6 +214,11 @@ class EngineJobControl(
 
     override fun inputContract(): DataContract? {
         return inputContract
+    }
+
+
+    override fun outputContract(): DataContract? {
+        return outputContract
     }
 
 

@@ -16,7 +16,11 @@ class PreviewCapture(
     private val maximumBytes: Int = 256 * 1_024,
     private val maximumNanos: Long = 50_000_000
 ) {
-    fun capture(value: DataValue): PreviewNode = Writer(value).capture()
+    fun capture(value: DataValue): PreviewNode {
+        val payload = Writer(value).capture()
+        val metadata = value.metadata ?: return payload
+        return payload.copy(metadata = Writer(metadata.value).capture())
+    }
 
     private inner class Writer(private val value: DataValue) {
         private val started = System.nanoTime()

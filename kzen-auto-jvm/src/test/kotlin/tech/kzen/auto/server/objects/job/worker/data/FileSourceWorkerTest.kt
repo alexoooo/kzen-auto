@@ -5,24 +5,13 @@ import org.junit.Test
 import tech.kzen.auto.common.data.DataSourceConventions
 import tech.kzen.auto.common.data.file.FileSelectionEntry
 import tech.kzen.auto.common.data.file.FileSelectionBrowserConventions
-import tech.kzen.auto.common.data.schema.HeaderListing
-import tech.kzen.auto.common.objects.document.data.schema.DataSchemaFieldListSpec
-import tech.kzen.auto.common.objects.document.data.schema.DataSchemaFieldSpec
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
-import tech.kzen.auto.server.data.DataOpenerLookup
-import tech.kzen.auto.server.data.ConfiguredDataOpener
 import tech.kzen.auto.server.data.FileListingAction
-import tech.kzen.auto.server.data.SchemaCache
-import tech.kzen.auto.server.objects.data.schema.DataSchemaDocument
-import tech.kzen.auto.server.objects.datasource.FileDataSource
-import tech.kzen.auto.server.objects.datasource.format.ConfiguredDelimitedTestFormats
-import tech.kzen.auto.server.objects.datasource.format.ConfiguredRecordFormatLookup
+import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.auto.server.objects.job.worker.content.FileContent
 import tech.kzen.auto.server.objects.job.worker.testJobValue
-import tech.kzen.auto.server.objects.job.worker.testProjection
-import tech.kzen.auto.server.objects.job.worker.testRecord
 import tech.kzen.lib.common.exec.data.value.DataValue
-import tech.kzen.auto.server.objects.job.worker.definition.WorkerDefinitionResolution
 import tech.kzen.auto.server.objects.report.exec.input.parse.csv.CsvReportDefiner
 import tech.kzen.auto.server.service.plugin.HostReportDefinitionRepository
 import tech.kzen.auto.server.util.AutoTestUtils
@@ -31,14 +20,12 @@ import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.attribute.AttributePath
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
-import tech.kzen.lib.common.model.location.ObjectReference
 import tech.kzen.lib.common.model.obj.ObjectPath
-import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
-import tech.kzen.lib.common.util.digest.Digest
 import java.nio.file.Files
 import kotlin.io.path.writeText
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 
@@ -49,81 +36,39 @@ class FileSourceWorkerTest {
 
 
     @Test
-    fun directlyOwnedFileSourceMatchesNominalRead() = runBlocking {
+    fun fileSelectsEachFileAsItsContentWithItsDescriptionAsMetadata() = runBlocking {
         val directory = Files.createTempDirectory("file-source-worker")
         try {
             val first = directory.resolve("2026-a.csv").also { it.writeText("left,shared\n1,A\n") }
-            val second = directory.resolve("2026-b.csv").also { it.writeText("shared,right\nB,2\n") }
+            val second = directory.resolve("2027-b.csv").also { it.writeText("shared,right\nB,2\n") }
             val files = listOf(first, second).map {
                 mapOf(FileSelectionEntry.locationKey to it.toString())
             }
-            val repository = HostReportDefinitionRepository(listOf(CsvReportDefiner()))
-            val listing = FileListingAction(repository)
-            val opener = DataOpenerLookup(ConfiguredDataOpener(
-                SchemaCache(WorkUtils(directory.resolve("cache")))))
+            val listing = FileListingAction(HostReportDefinitionRepository(listOf(CsvReportDefiner())))
 
-            val directMessages = mutableListOf<DataValue>()
-            val format = ConfiguredDelimitedTestFormats.csv()
+            val messages = mutableListOf<DataValue>()
             FileSourceWorker(
-                capturing(directMessages), "", "", files, format, "(?<year>\\d{4})", "fail",
-                ReadWorker.emitItems, "", ReadWorker.attributesColumns, workerLocation, opener, listing,
-                missingFormatLookup)
+                capturing(messages), "", "", files, "(?<year>\\d{4})", "fail", workerLocation, listing)
                 .run(DirectControl)
 
-            val source = FileDataSource(
-                "", "", files, format, "(?<year>\\d{4})", "fail", listing)
-            val nominalMessages = mutableListOf<DataValue>()
-            val nominal = ReadWorker(
-                capturing(nominalMessages), ObjectReference.parse("files"), ReadWorker.emitItems, "",
-                ReadWorker.attributesColumns, workerLocation, opener)
-            nominal.loadSourceResolution(WorkerDefinitionResolution.Resolved(
-                ObjectLocation(workerLocation.documentPath, ObjectPath.parse("main.sources/files")),
-                Digest.ofUtf8("files"), source))
-            nominal.run(DirectControl)
+            assertEquals(2, messages.size)
+            val content = assertIs<FileContent>(JobDataValues.native(messages.first()))
+            assertEquals(first.toString(), content.path.toString())
 
-            assertEquals(nominalMessages.map(::messageValue), directMessages.map(::messageValue))
+            @Suppress("UNCHECKED_CAST")
+            val metadata = JobDataValues.boundary(checkNotNull(messages.first().metadata).value) as Map<String, Any?>
+            assertEquals("2026-a.csv", metadata["name"])
+            assertEquals(16L, metadata["size"])
+            assertEquals("file", metadata["kind"])
+            assertEquals("2026", metadata["year"])
             assertEquals(
-                listOf("year", "left", "shared", "right"),
-                testProjection(directMessages.first()).header.values.map { it.text })
+                listOf("name", "path", "size", "modified", "kind", "year"),
+                metadata.keys.toList())
+            assertEquals("2027", (JobDataValues.boundary(checkNotNull(messages.last().metadata).value) as Map<*, *>)["year"])
         }
         finally {
             WorkUtils.recursivelyDeleteDir(directory)
         }
-    }
-
-
-    @Test
-    fun compatibilityKeyCoversOnlyEffectiveFileSourceConfiguration() {
-        val files = listOf(mapOf(FileSelectionEntry.locationKey to "a.csv"))
-        val schema = schema("a")
-        val format = ConfiguredDelimitedTestFormats.csv(schema)
-        val base = FileSourceWorker.compatibilityKey(
-            "dir", "filter", files, format, "group", "fail")
-        val variants = listOf(
-            FileSourceWorker.compatibilityKey(
-                "other", "filter", files, format, "group", "fail"),
-            FileSourceWorker.compatibilityKey(
-                "dir", "other", files, format, "group", "fail"),
-            FileSourceWorker.compatibilityKey(
-                "dir", "filter", listOf(mapOf(FileSelectionEntry.locationKey to "b.csv")),
-                format, "group", "fail"),
-            FileSourceWorker.compatibilityKey(
-                "dir", "filter", files, ConfiguredDelimitedTestFormats.csv(schema, delimiter = "\t"),
-                "group", "fail"),
-            FileSourceWorker.compatibilityKey(
-                "dir", "filter", files, ConfiguredDelimitedTestFormats.csv(schema, "ISO-8859-1"),
-                "group", "fail"),
-            FileSourceWorker.compatibilityKey(
-                "dir", "filter", files, format, "other", "fail"),
-            FileSourceWorker.compatibilityKey(
-                "dir", "filter", files, format, "group", "skip"),
-            FileSourceWorker.compatibilityKey(
-                "dir", "filter", files, ConfiguredDelimitedTestFormats.csv(schema("b")),
-                "group", "fail"))
-
-        assertTrue(variants.all { it != base })
-        assertEquals(base, FileSourceWorker.compatibilityKey(
-            "dir", "filter", files, format, "group", "fail"))
     }
 
 
@@ -170,15 +115,6 @@ class FileSourceWorkerTest {
     }
 
 
-    private fun schema(name: String): DataSchemaDocument = DataSchemaDocument(
-        DataSchemaFieldListSpec(linkedMapOf(name to DataSchemaFieldSpec(TypeMetadata.string))))
-
-
-    private fun messageValue(message: DataValue): Pair<HeaderListing, List<String>> {
-        return testProjection(message).header to testRecord(message).toList()
-    }
-
-
     private fun capturing(messages: MutableList<DataValue>): ChannelOutput<Any?> {
         return object: ChannelOutput<Any?> {
             override suspend fun send(element: Any?) {
@@ -202,12 +138,5 @@ class FileSourceWorkerTest {
         ) {}
         override suspend fun host(instructions: ObjectLocation, input: Any?) =
             error("File reader hosts no child")
-    }
-
-
-    companion object {
-        private val missingFormatLookup = ConfiguredRecordFormatLookup { reference ->
-            error("Unexpected per-file format lookup: $reference")
-        }
     }
 }

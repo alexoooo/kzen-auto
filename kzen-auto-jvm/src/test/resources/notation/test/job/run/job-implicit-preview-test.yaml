@@ -1,0 +1,12 @@
+# JobImplicitPreviewTest: the last Worker's output is not wired to anything, so the run samples it through an
+# implicit Preview instead of leaving the Filter unrun. The Filter keeps the 50 elements above 50.
+main:
+  is: Job
+
+main.workers/source:
+  is: FormulaSourceWorker
+  code: "(1..100)"
+
+main.workers/Filter:
+  is: FilterWorker
+  where: payload > 50

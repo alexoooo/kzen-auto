@@ -16,9 +16,10 @@ import kotlin.reflect.full.createType
  * ([JobDataValues.boundary] — the native object a lifted value carries, or a map/list/scalar snapshot) and
  * answers with an `Iterator` of output objects, or null for none; [onCompleteBlocking] may add trailing
  * outputs. The framework runs each callback through [JobControl.runBlockingIo], lifts and emits every output,
- * and closes a returned iterator that is [AutoCloseable] once it is drained. Stateful analysis (a per-symbol
- * book across a day) lives in the subclass's fields, which is what live-edit migration preserves when the
- * subclass overrides the capture/load hooks of [WorkerBase].
+ * and closes a returned iterator that is [AutoCloseable] once it is drained; an output keeps the metadata of the
+ * element it came from (trailing outputs have none). Stateful analysis (a per-symbol book across a day) lives in
+ * the subclass's fields, which is what live-edit migration preserves when the subclass overrides the
+ * capture/load hooks of [WorkerBase].
  */
 abstract class JavaTransformWorker @JvmOverloads constructor(
     input: ChannelInput<*>,
@@ -58,9 +59,12 @@ abstract class JavaTransformWorker @JvmOverloads constructor(
     protected open fun independentOutputs(): Boolean = false
 
 
-    final override fun payloadFlow(input: JobLaneDescriptor, context: JobLaneContext): JobLaneAttempt =
-        staticOutputContract()?.let { JobLaneAttempt(JobLaneDescriptor(it), null) }
-            ?: super.payloadFlow(input, context)
+    final override fun payloadFlow(input: JobLaneDescriptor, context: JobLaneContext): JobLaneAttempt {
+        val output = staticOutputContract()
+            ?: return super.payloadFlow(input, context)
+        val withMetadata = input.contract.metadata?.let { output.withMetadata(it) } ?: output
+        return JobLaneAttempt(JobLaneDescriptor(withMetadata), null)
+    }
 
 
     private fun staticOutputContract(): DataContract? =
@@ -90,7 +94,8 @@ abstract class JavaTransformWorker @JvmOverloads constructor(
         val inheriting = element != null && !independentOutputs()
         try {
             while (outputs.hasNext()) {
-                val output = JobDataValues.lift(outputs.next(), staticOutputContract())
+                val lifted = JobDataValues.lift(outputs.next(), staticOutputContract())
+                val output = element?.metadata?.let { lifted.withMetadata(it) } ?: lifted
                 if (inheriting) {
                     control.ownership()?.inherit(output, element!!)
                 }

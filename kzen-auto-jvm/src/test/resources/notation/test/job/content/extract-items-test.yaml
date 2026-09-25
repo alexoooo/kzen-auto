@@ -1,5 +1,5 @@
-# ExtractWorkerTest "items": File (emit left automatic) -> Extract -> Write; Extract takes files, so File hands
-# the archive on whole instead of listing it
+# ExtractWorkerTest "items": File -> Extract -> Write; File selects the archive and Extract opens its content
+# (nothing reads it as rows in between)
 main:
   is: Job
   results:

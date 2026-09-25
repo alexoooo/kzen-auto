@@ -15,7 +15,11 @@ import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.util.digest.Digest
 
 
-/** Client-only results of explicit, user-triggered bounded part inspection. No notation walk calls this store. */
+/**
+ * Client-only results of explicit, user-triggered inspection of single parts, for authoring a file's explicit format
+ * (locking its observed columns). Nothing here types a Job: a Worker's type before Run is the server's validation
+ * (docs/plans/2026-09-24_values-metadata-and-design-time-types.md, R5), and no notation walk calls this store.
+ */
 class DataSourceShapeStore(
     private val restClient: ClientRestApi
 ) {
@@ -37,30 +41,6 @@ class DataSourceShapeStore(
         }
         fun invalidateAll() = current.keys.toList().forEach(::invalidate)
         fun isCurrent(key: Key, epoch: Int): Boolean = current[key] == epoch
-    }
-
-
-    companion object {
-        internal fun aggregate(parts: Collection<PartState>): DataShapeResult? {
-            val settled = parts.filterNot { it.inspecting }
-            if (settled.size != parts.size || settled.any { it.error != null }) {
-                return null
-            }
-            val results = settled.mapNotNull { it.result }
-            if (results.size != settled.size || results.any { it == DataShapeResult.Unavailable }) {
-                return DataShapeResult.Unavailable
-            }
-            val shapes = results.map { (it as DataShapeResult.Observed).shape }
-            val first = shapes.firstOrNull() ?: return DataShapeResult.Unavailable
-            return if (shapes.all { it == first }) {
-                DataShapeResult.Observed(first)
-            }
-            else {
-                // A source-wide summary must not erase incompatible field types into a legacy text header.
-                // Per-lane strict/superset projection combines the complete contracts with its configured policy.
-                DataShapeResult.Unavailable
-            }
-        }
     }
 
 
@@ -86,14 +66,8 @@ class DataSourceShapeStore(
 
 
     data class State(
-        val parts: Map<DataPart, PartState>,
-        val aggregate: DataShapeResult?
+        val parts: Map<DataPart, PartState>
     )
-
-
-    fun interface Observer {
-        fun onDataSourceShapeState(state: State?)
-    }
 
 
     fun interface GlobalObserver {
@@ -103,7 +77,6 @@ class DataSourceShapeStore(
 
     private val epochs = Epochs()
     private val states = mutableMapOf<Key, State>()
-    private val observers = mutableMapOf<Key, MutableSet<Observer>>()
     private val globalObservers = mutableSetOf<GlobalObserver>()
     private var mounted = false
 
@@ -116,26 +89,8 @@ class DataSourceShapeStore(
     fun unmount() {
         mounted = false
         invalidateAll()
-        observers.clear()
         globalObservers.clear()
     }
-
-
-    fun observe(key: Key, observer: Observer) {
-        observers.getOrPut(key, ::mutableSetOf).add(observer)
-        observer.onDataSourceShapeState(states[key])
-    }
-
-
-    fun unobserve(key: Key, observer: Observer) {
-        observers[key]?.remove(observer)
-        if (observers[key]?.isEmpty() == true) {
-            observers.remove(key)
-        }
-    }
-
-
-    fun state(key: Key): State? = states[key]
 
 
     /** Exact preview-part lookup: equality includes the resolved read spec and expected content fingerprint. */
@@ -166,10 +121,10 @@ class DataSourceShapeStore(
         val key = Key.of(source, manifest)
         val epoch = issue(key)
         val uniqueParts = manifest.units.flatMap { it.parts }.distinct()
-        publish(key, State(uniqueParts.associateWith { PartState(true, null, null) }, null))
+        publish(key, State(uniqueParts.associateWith { PartState(true, null, null) }))
 
         async {
-            var current = states[key] ?: State(emptyMap(), null)
+            var current = states[key] ?: State(emptyMap())
             for (part in uniqueParts) {
                 val partState = inspectPart(source, part)
                 if (!mounted || !epochs.isCurrent(key, epoch)) {
@@ -204,10 +159,8 @@ class DataSourceShapeStore(
     }
 
 
-    private fun stateWith(state: State, part: DataPart, partState: PartState): State {
-        val nextParts = state.parts + (part to partState)
-        return State(nextParts, aggregate(nextParts.values))
-    }
+    private fun stateWith(state: State, part: DataPart, partState: PartState): State =
+        State(state.parts + (part to partState))
 
 
     private fun issue(key: Key): Int {
@@ -227,7 +180,6 @@ class DataSourceShapeStore(
 
     private fun publish(key: Key, state: State) {
         states[key] = state
-        observers[key]?.toList()?.forEach { it.onDataSourceShapeState(state) }
         globalObservers.toList().forEach { it.onDataSourceShapesChanged() }
     }
 }

@@ -234,7 +234,9 @@ class ExtractMigrationTest {
             engine.migrate(edited, paused = false)
             val outcome = runBlocking { engine.await() }
             val failed = assertIs<Outcome.Failed>(outcome)
-            assertContains(failed.message, "inside entry 'big.csv'")
+            // Either the archive's source or the Parse reading the member fails first; both name the member
+            assertContains(failed.message, "was interrupted inside")
+            assertContains(failed.message, "big.csv")
         }
         finally {
             engine.close()

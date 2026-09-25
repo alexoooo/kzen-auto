@@ -39,9 +39,8 @@ main.workers/unit:
   code: unit
 
 main.workers/items:
-  is: ReadPartWorker
+  is: Parse
   role: main
-  attributes: columns
 
 main.workers/copy:
   is: FormulaWorker
@@ -52,3 +51,8 @@ main.workers/write:
   is: CsvWriterWorker
   path: 'build/job-per-unit/output/${outputDate}.csv'
   result: main
+  columns:
+    - path: meta.parent.date
+      as: date
+    - "*"
+    - meta.copied

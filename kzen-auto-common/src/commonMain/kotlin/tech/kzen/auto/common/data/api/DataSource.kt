@@ -26,10 +26,6 @@ interface DataSource {
     fun staticShape(role: DataRole?, configuredFormats: Lazy<List<ConfiguredRecordFormat>>): DataShape? = null
 
 
-    /** True when the source is configured to hand each file on whole rather than have it read. */
-    val passesFilesWhole: Boolean
-        get() = false
-
 
     /** Weak definition references whose content affects the manifest and therefore live-run migration. */
     fun definitionDependencies(): List<ObjectLocation> = emptyList()

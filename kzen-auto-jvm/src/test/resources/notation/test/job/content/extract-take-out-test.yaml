@@ -27,7 +27,6 @@ main.workers/Archive:
   is: FileSourceWorker
   files:
     - location: build/content-scope/take-out/input.tar.gz
-  emit: units
   output: main.channels/files
 
 main.workers/Extract:
@@ -38,7 +37,7 @@ main.workers/Extract:
   output: main.channels/entries
 
 main.workers/Read:
-  is: ReadPartWorker
+  is: Parse
   input: main.channels/entries
   output: main.channels/rows
   format: main.formats/csv

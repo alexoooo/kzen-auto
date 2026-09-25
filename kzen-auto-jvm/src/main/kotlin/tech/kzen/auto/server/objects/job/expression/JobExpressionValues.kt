@@ -14,6 +14,11 @@ import tech.kzen.lib.common.exec.data.type.ScalarKind
 import tech.kzen.lib.common.exec.data.value.DataState
 import tech.kzen.lib.common.exec.data.value.DataValue
 import java.math.BigDecimal
+import java.time.Duration
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalTime
+import java.util.UUID
 
 
 /** Exact structural value bridge used by generated Job expressions. */
@@ -21,7 +26,7 @@ object JobExpressionValues {
     fun projected(projection: ColumnProjection, ordinal: Int): Any? {
         return when (projection.state(ordinal)) {
             DataState.Absent, DataState.Null -> null
-            DataState.Present -> JobDataValues.boundary(DataValue(
+            DataState.Present -> boundary(DataValue(
                 projection.value.access,
                 projection.node(ordinal)))
         }
@@ -37,7 +42,59 @@ object JobExpressionValues {
         }
         return when (value.access.state(node)) {
             DataState.Absent, DataState.Null -> null
-            DataState.Present -> JobDataValues.boundary(DataValue(value.access, node))
+            DataState.Present -> boundary(DataValue(value.access, node))
+        }
+    }
+
+
+    /** The metadata field of [record] (a value's metadata, or a record nested in it) at the boundary. */
+    fun metadataField(record: DataValue?, name: String, occurrence: Int, nullable: Boolean): Any? {
+        val field = metadataRecord(record, name, occurrence, nullable)
+            ?: return null
+        return boundary(field)
+    }
+
+
+    /** The metadata field [name] of [record] at the boundary, null when absent: `meta["name"]` in an expression. */
+    fun metadataKeyed(record: DataValue?, name: String): Any? =
+        metadataRecord(record, name, 0, true)?.let(::boundary)
+
+
+    /** The metadata field of [record] as a value, null when it is null or absent and [nullable] allows it. */
+    fun metadataRecord(record: DataValue?, name: String, occurrence: Int, nullable: Boolean): DataValue? {
+        if (record == null) {
+            check(nullable) { "The value has no metadata '$name'" }
+            return null
+        }
+        val node = record.access.field(record.root, FieldId(name, occurrence))
+        return when (record.access.state(node)) {
+            DataState.Absent, DataState.Null -> {
+                check(nullable) { "The value's metadata '$name' is missing" }
+                null
+            }
+            DataState.Present -> DataValue(record.access, node)
+        }
+    }
+
+
+    /**
+     * [JobDataValues.boundary], with the temporal and UUID scalars (stored as their canonical text) parsed to the
+     * JVM types the compiler declares for them, so a `modified` metadata field is a `java.time.Instant` in an
+     * expression; [scalar] is the inverse.
+     */
+    private fun boundary(value: DataValue): Any? {
+        val type = value.type as? DataType.Scalar
+            ?: return JobDataValues.boundary(value)
+        if (value.access.state(value.root) != DataState.Present) {
+            return null
+        }
+        return when (type.kind) {
+            ScalarKind.Date -> LocalDate.parse(value.access.readText(value.root))
+            ScalarKind.Time -> LocalTime.parse(value.access.readText(value.root))
+            ScalarKind.Instant -> Instant.parse(value.access.readText(value.root))
+            ScalarKind.Duration -> Duration.parse(value.access.readText(value.root))
+            ScalarKind.Uuid -> UUID.fromString(value.access.readText(value.root))
+            else -> JobDataValues.boundary(value)
         }
     }
 

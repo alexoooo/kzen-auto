@@ -10,8 +10,10 @@ main.workers/transform:
   formula:
     total: 'this["qty"]!! * this["price"]!!'
   payload: 'mapOf("kind" to "sale")'
-  carry: all
 
 main.workers/write:
   is: CsvWriterWorker
-  path: build/job-formula-carry/output.csv
+  path: build/job-formula-metadata/output.csv
+  columns:
+    - "*"
+    - meta.total

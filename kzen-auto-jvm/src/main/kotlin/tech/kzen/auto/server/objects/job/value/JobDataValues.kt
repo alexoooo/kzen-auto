@@ -94,9 +94,9 @@ internal object JobDataValues {
                 MappingColumn(FieldId(scalarText(key)), key)
             }
             return ColumnProjectionDescriptor.from(
-                value.contract, MappingKeyProjection(entries)).bind(value)
+                value.payloadContract, MappingKeyProjection(entries)).bind(value)
         }
-        return ColumnProjectionDescriptor.from(value.contract).bind(value)
+        return ColumnProjectionDescriptor.from(value.payloadContract).bind(value)
     }
 
     private fun scalarText(value: tech.kzen.lib.common.exec.ScalarExecutionValue): String =

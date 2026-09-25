@@ -37,7 +37,7 @@ main.workers/run:
   is: RunWorker
   instructions: test/datasource/logic/job-dated-etl-child-test.yaml#main
   arguments:
-    date: 'attributes["date"]'
+    date: 'meta["date"] as String'
 
 main.workers/outputs:
   is: ResultSinkWorker

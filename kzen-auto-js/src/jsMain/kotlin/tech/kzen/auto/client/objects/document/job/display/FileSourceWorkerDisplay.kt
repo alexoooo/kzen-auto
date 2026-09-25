@@ -66,9 +66,6 @@ class FileSourceWorkerDisplay(
 {
     companion object {
         private val filesAttributeName = AttributeName("files")
-
-        // Settled by the step below (JobReadEmit) or by the Whole file format, so the card offers no switch for it.
-        private val emitAttributeName = AttributeName("emit")
     }
 
 
@@ -166,7 +163,7 @@ class FileSourceWorkerDisplay(
             this.clientStateGlobal = props.clientStateGlobal
             this.mirroredGraphStore = props.mirroredGraphStore
             this.common = props.common
-            hiddenAttributes = setOf(filesAttributeName, emitAttributeName)
+            hiddenAttributes = setOf(filesAttributeName)
             attributeDisclosure = "Advanced"
             headerRight = toggleChannel?.let { channel -> { it: ChildrenBuilder -> it.renderToggle(channel) } }
             bodyBefore = { bodyBuilder -> bodyBuilder.renderFileSelection() }

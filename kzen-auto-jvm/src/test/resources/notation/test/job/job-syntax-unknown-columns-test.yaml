@@ -16,6 +16,9 @@ main.workers/reader:
   is: FileSourceWorker
   files:
     - location: build/job-syntax-unknown-columns/input.csv
+
+main.workers/reader Parse:
+  is: Parse
   format: main.formats/input
 
 main.workers/formula:

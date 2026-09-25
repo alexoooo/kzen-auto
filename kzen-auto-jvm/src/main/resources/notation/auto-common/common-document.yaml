@@ -544,6 +544,19 @@ PathProjectionSpecDefiner:
   class: tech.kzen.auto.common.objects.document.job.path.PathProjectionSpec$Definer
 
 
+# A writer's column selection (`*` = the payload's top-level columns, plus path entries such as `meta.name` or
+# `{path, as}`), for the Job CsvWriterWorker to carry directly. Job-native, like PathProjectionSpec.
+WriterColumnSpec:
+  abstract: true
+  class: tech.kzen.auto.common.objects.document.job.path.WriterColumnSpec
+  meta:
+    ref:
+      by: WriterColumnSpecDefiner
+
+WriterColumnSpecDefiner:
+  class: tech.kzen.auto.common.objects.document.job.path.WriterColumnSpec$Definer
+
+
 # The export config as a standalone attribute type (a map with format / compression / path), for the Job
 # ExportWriterWorker to carry it directly — the Report document instead nests it inside OutputSpec (output.export).
 OutputExportSpec:

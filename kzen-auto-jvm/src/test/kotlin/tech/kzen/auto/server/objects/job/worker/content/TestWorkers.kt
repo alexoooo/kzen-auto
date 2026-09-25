@@ -49,7 +49,7 @@ class StashingWorker(
                 throw e
             }
         }
-        stashed = (JobDataValues.native(element) as Entry).content
+        stashed = JobDataValues.native(element) as Content
     }
 }
 
@@ -86,7 +86,8 @@ class FailingWorker(
     selfLocation: ObjectLocation
 ): TransformWorker(input, output, selfLocation) {
     override suspend fun onElement(element: DataValue, emit: Emitter, control: JobControl) {
-        throw IllegalStateException("injected failure on '${(JobDataValues.native(element) as Entry).name}'")
+        val name = (JobDataValues.native(element) as Content).descriptor().name
+        throw IllegalStateException("injected failure on '$name'")
     }
 }
 
@@ -107,9 +108,9 @@ class BlockingWorker(
     }
 
     override suspend fun onElement(element: DataValue, emit: Emitter, control: JobControl) {
-        val entry = JobDataValues.native(element) as Entry
+        val content = JobDataValues.native(element) as Content
         control.runBlockingIo {
-            entry.content.open().read(ByteArray(16), 0, 16)
+            content.open().read(ByteArray(16), 0, 16)
         }
         entered.countDown()
         awaitCancellation()
@@ -117,7 +118,7 @@ class BlockingWorker(
 }
 
 
-/** Records the `label` column of each record derived from an entry (a Formula's output, which inherits its owners). */
+/** Records the `label` metadata field of each value derived from an entry (a Formula's output, which inherits its owners). */
 @Reflect
 class LabelsWorker(
     input: ChannelInput<*>,
@@ -133,7 +134,7 @@ class LabelsWorker(
     }
 
     override suspend fun onElement(element: DataValue, emit: Emitter, control: JobControl) {
-        val projection = JobDataValues.projection(element)
+        val projection = JobDataValues.projection(checkNotNull(element.metadata).value)
         val index = (0 until projection.size).first { projection.field(it).name == "label" }
         labels.add(projection.readText(index))
     }

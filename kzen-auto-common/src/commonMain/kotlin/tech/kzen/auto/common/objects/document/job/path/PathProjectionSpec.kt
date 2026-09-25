@@ -47,56 +47,72 @@ data class PathProjectionSpec(
         private val aliasSegment = AttributeSegment.ofKey(aliasKey)
 
 
-        fun ofNotation(attributeNotation: ListAttributeNotation): PathProjectionSpec {
-            val entries = attributeNotation.values.map { item ->
-                when (item) {
-                    is ScalarAttributeNotation -> PathProjectionEntry(ProjectionPath.parse(item.asString()))
+        fun ofNotation(attributeNotation: ListAttributeNotation): PathProjectionSpec =
+            PathProjectionSpec(attributeNotation.values.map { entryOfNotation(it) })
 
-                    is MapAttributeNotation -> {
-                        val path = (item.map[pathSegment] as? ScalarAttributeNotation)?.asString()
-                            ?: throw IllegalArgumentException("Path entry needs a '$pathKey': $item")
-                        val alias = (item.map[aliasSegment] as? ScalarAttributeNotation)?.asString()
-                        PathProjectionEntry(ProjectionPath.parse(path), alias?.takeIf { it.isNotBlank() })
-                    }
 
-                    else -> throw IllegalArgumentException("Path entry must be a path or a {path, as} map: $item")
+        /** One entry: a bare path string, or a map `{path: …, as: …}`. */
+        fun entryOfNotation(item: AttributeNotation): PathProjectionEntry =
+            when (item) {
+                is ScalarAttributeNotation -> PathProjectionEntry(ProjectionPath.parse(item.asString()))
+
+                is MapAttributeNotation -> {
+                    val path = (item.map[pathSegment] as? ScalarAttributeNotation)?.asString()
+                        ?: throw IllegalArgumentException("Path entry needs a '$pathKey': $item")
+                    val alias = (item.map[aliasSegment] as? ScalarAttributeNotation)?.asString()
+                    PathProjectionEntry(ProjectionPath.parse(path), alias?.takeIf { it.isNotBlank() })
                 }
+
+                else -> throw IllegalArgumentException("Path entry must be a path or a {path, as} map: $item")
             }
-            return PathProjectionSpec(entries)
-        }
 
 
         //-------------------------------------------------------------------------------------------------------------
         // Canonical command builders for the Job PathProjectionEditor — mutate the ordered `paths` list that
         // [ofNotation] reads, so the editor applies these instead of hand-rolling notation commands (the SortSpec
         // precedent). An entry without an alias is written as a bare path string; with one, as a {path, as} map.
+        // [attributePath] is the list edited: `paths` by default, a writer's `columns` for [WriterColumnSpec].
 
-        fun addCommand(mainLocation: ObjectLocation, path: ProjectionPath): NotationCommand {
+        fun addCommand(
+            mainLocation: ObjectLocation,
+            path: ProjectionPath,
+            attributePath: AttributePath = pathsAttributePath
+        ): NotationCommand {
             return InsertListItemInAttributeCommand(
                 mainLocation,
-                pathsAttributePath,
+                attributePath,
                 PositionRelation.afterLast,
                 entryNotation(path, null))
         }
 
 
-        fun removeCommand(mainLocation: ObjectLocation, index: Int): NotationCommand {
+        fun removeCommand(
+            mainLocation: ObjectLocation,
+            index: Int,
+            attributePath: AttributePath = pathsAttributePath
+        ): NotationCommand {
             return RemoveInAttributeCommand(
                 mainLocation,
-                pathsAttributePath.nest(AttributeSegment.ofIndex(index)),
+                attributePath.nest(AttributeSegment.ofIndex(index)),
                 false)
         }
 
 
-        fun aliasCommand(mainLocation: ObjectLocation, index: Int, path: ProjectionPath, alias: String?): NotationCommand {
+        fun aliasCommand(
+            mainLocation: ObjectLocation,
+            index: Int,
+            path: ProjectionPath,
+            alias: String?,
+            attributePath: AttributePath = pathsAttributePath
+        ): NotationCommand {
             return UpdateInAttributeCommand(
                 mainLocation,
-                pathsAttributePath.nest(AttributeSegment.ofIndex(index)),
+                attributePath.nest(AttributeSegment.ofIndex(index)),
                 entryNotation(path, alias?.takeIf { it.isNotBlank() }))
         }
 
 
-        private fun entryNotation(path: ProjectionPath, alias: String?): AttributeNotation {
+        fun entryNotation(path: ProjectionPath, alias: String?): AttributeNotation {
             if (alias == null) {
                 return ScalarAttributeNotation(path.asString())
             }
