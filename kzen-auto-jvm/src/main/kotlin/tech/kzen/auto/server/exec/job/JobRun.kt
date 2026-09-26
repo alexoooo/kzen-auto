@@ -33,6 +33,7 @@ import tech.kzen.lib.common.exec.engine.LogicFailure
 import tech.kzen.lib.common.exec.engine.disposal.SettleDisposalPolicy
 import tech.kzen.lib.common.exec.engine.restoredAs
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
@@ -252,6 +253,9 @@ class JobRun internal constructor(
         // A source suspended awaiting the release of a lent element is blocked for the verdict (borrowed elements
         // §3.3): a Deferred wait, not a channel op, so the channels alone would under-count it
         val borrowingSources = workers.mapNotNull { it.second as? BorrowingSource }
+        // Progress a Worker makes inside one item (Write copying a large member) moves no channel element, so the
+        // Workers report it here (JobControl.reportActivity) for the stall warning to count
+        val activity = AtomicLong()
         val deadlockMonitor = JobDeadlockMonitor(
             streamChannels.values, activeWorkers, externalClients.isNotEmpty(),
             awaitingRelease = { borrowingSources.count { it.awaitingRelease() } },
@@ -260,7 +264,8 @@ class JobRun internal constructor(
                     LogicFailure("Job deadlock: all workers blocked on channels with no progress"))
             },
             progressMark = {
-                ledger.activityCount() + streamChannels.values.sumOf { it.transferredElements().toLong() }
+                ledger.activityCount() + activity.get() +
+                    streamChannels.values.sumOf { it.transferredElements().toLong() }
             },
             onStall = { stalled ->
                 if (stalled && ledger.liveCount() > 0) {
@@ -312,7 +317,8 @@ class JobRun internal constructor(
                                         execution.inputs, jobParameters, jobResults,
                                         inputPayloadType, inputContract, outputContract, resultCollector,
                                         ledger, location,
-                                        draining = { scopes.any { it.lending() } }),
+                                        draining = { scopes.any { it.lending() } },
+                                        activity),
                                     inputs = DataBindings.bind(BindingSchema.empty),
                                     // These frames are live SIMULTANEOUSLY, which is the one shape the engine's
                                     // ambient-context model is not specified for (logic-spec §6): two Workers

@@ -130,7 +130,9 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > aggregates: a Worker's progress carries its `holds`, the root emits a `$job-ownership` report (holds by
 > holder, queued elements per channel, live / closed counts), and `JobDeadlockMonitor`'s clock adds a lower,
 > non-failing no-progress threshold that logs and flags the holders (a stalled arena source behind a Sort
-> names the Sort) without touching the deadlock verdict; the warning stays on while the run serves an external
+> names the Sort) without touching the deadlock verdict; progress is elements moved, natives adopted or closed,
+> and in-item work a Worker reports via `JobControl.reportActivity` (Write's copy, per chunk) — never merely
+> being inside blocking I/O, which a permit-parked source's pull also is; the warning stays on while the run serves an external
 > channel (a Preview), where only the verdict is suspended. A `JavaTransformWorker` whose outputs are deliberate
 > copies (rows of scalars read off a native) declares `independentOutputs()`: its rows carry no owner, the
 > element closes when the callback returns, and a Sort after it retains rows, not natives (HS25). **Object-graph paths (E8).** `PathProjectionWorker`

@@ -48,6 +48,7 @@ import kotlin.time.Clock
  * The content is read inside the callback, under [JobControl.runBlockingIo]; nothing of it is kept, so its source
  * advances as soon as the callback returns. The copy honours the interrupt a stop delivers between chunks (file
  * reads do not), so stopping inside a large entry ends the Write as cancelled without publishing the partial file.
+ * Each chunk is reported as activity ([JobControl.reportActivity]), so a long copy is not taken for a stall.
  */
 @Reflect
 class WriteWorker(
@@ -141,7 +142,7 @@ class WriteWorker(
             }
         }
 
-        val size = control.runBlockingIo { writeAndPublish(content, target) }
+        val size = control.runBlockingIo { writeAndPublish(content, target, control) }
         val ref = WriterFilePath.finalizedRef(target, control, fileListingAction)
         written += 1
         emit.send(JobDataValues.lift(Written(entryName, ref, size), writtenContract).withMetadata(element.metadata))
@@ -153,7 +154,7 @@ class WriteWorker(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun writeAndPublish(content: Content, target: Path): Long {
+    private fun writeAndPublish(content: Content, target: Path, control: JobControl): Long {
         Files.createDirectories(target.parent)
         val temporary = Files.createTempFile(target.parent, ".${target.fileName}.", ".part")
         var published = false
@@ -168,6 +169,8 @@ class WriteWorker(
                         val count = source.read(buffer, 0, buffer.size)
                         if (count < 0) break
                         sink.write(buffer, 0, count)
+                        // One large member can take minutes, with no element moving meanwhile
+                        control.reportActivity()
                     }
                 }
             }

@@ -30,6 +30,7 @@ import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.atomic.AtomicLong
 
 
 /**
@@ -79,7 +80,9 @@ class EngineJobControl(
     /** The run's ownership ledger (E9): shared by every Worker of the run, torn down after they join. */
     override val ledger: RunOwnershipLedger,
     private val workerLocation: ObjectLocation,
-    private val draining: () -> Boolean
+    private val draining: () -> Boolean,
+    /** The run's in-item activity count, read by the stall warning (see [reportActivity]). */
+    private val activity: AtomicLong = AtomicLong()
 ): JobControl, RunOwnershipControl {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -149,6 +152,12 @@ class EngineJobControl(
         // thread nor stalls the pause / step barrier. One offload per Worker at a time (the Worker awaits it),
         // so the Worker's single-threaded field invariant holds.
         return execution.blocking(block)
+    }
+
+
+    // Called from a blocking body on the elastic pool, concurrently with other Workers: hence the atomic
+    override fun reportActivity() {
+        activity.incrementAndGet()
     }
 
 

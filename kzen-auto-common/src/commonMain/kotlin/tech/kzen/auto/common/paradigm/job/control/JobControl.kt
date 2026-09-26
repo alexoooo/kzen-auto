@@ -73,6 +73,15 @@ interface JobControl {
 
 
     /**
+     * Marks that this Worker is making progress inside a single item — e.g. a chunk of bytes copied — which the
+     * run's stall warning cannot otherwise see: it watches items move through channels, so a long copy of one
+     * item would read as a stall. Cheap and safe to call from a [runBlockingIo] body, per chunk. Only a Worker
+     * whose own work on one item can take seconds needs it; the default ignores it.
+     */
+    fun reportActivity() {}
+
+
+    /**
      * The declared parameters of this Job — its typed input signature, derived from the document's `parameters`
      * branch of ParameterBinding declarations (see
      * [tech.kzen.auto.common.objects.document.job.JobSignatureCapability]). A Worker that compiles user

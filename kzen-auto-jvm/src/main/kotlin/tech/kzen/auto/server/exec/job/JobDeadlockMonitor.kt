@@ -39,11 +39,14 @@ import java.util.concurrent.atomic.AtomicInteger
  * would keep `inFlight` bouncing and break the controller's [awaitQuiescent][tech.kzen.lib.server.exec.engine.RunEngine.awaitQuiescent].
  *
  * **Stall warning (E9 item 5).** The same clock carries a lower, NON-failing threshold: when [progressMark]
- * (channel transfers plus the ownership ledger's adoptions and closes) has not advanced for [stallThreshold]
- * consecutive polls while Workers are live, [onStall] fires once with `true` — the run names the holders of
- * its owned natives — and once with `false` when progress resumes. A source parked on a host permit behind an
- * accumulator looks exactly like slow I/O, so only the interval, never the state combination, warns; the
- * failing deadlock threshold above is untouched.
+ * (channel transfers, the ownership ledger's adoptions and closes, and the in-item activity Workers report
+ * through [JobControl.reportActivity][tech.kzen.auto.common.paradigm.job.control.JobControl.reportActivity])
+ * has not advanced for [stallThreshold] consecutive polls while Workers are live, [onStall] fires once with
+ * `true` — the run names the holders of its owned natives — and once with `false` when progress resumes. A
+ * source parked on a host permit behind an accumulator looks exactly like slow I/O, so only the interval, never
+ * the state combination, warns; the failing deadlock threshold above is untouched. Being inside blocking I/O is
+ * deliberately not progress (that parked source's pull is blocking I/O too): only reported work is, so a Write
+ * copying one large entry stays quiet while its bytes flow.
  */
 class JobDeadlockMonitor(
     private val streamChannels: Collection<JobChannel>,
