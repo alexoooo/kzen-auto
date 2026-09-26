@@ -139,8 +139,9 @@ class ExtractWorkerTest {
         val outcome = harness.run("test/job/content/extract-filter-test.yaml")
 
         assertIs<Outcome.Success>(outcome)
-        assertEquals(setOf("bar.csv.gz", "sub/data.bin.gz", "baz.txt.gz"), listFiles(out))
-        assertEquals(nestedBytes.toList(), inflate(out.resolve("sub/data.bin.gz")).toList())
+        // A member is named by its file name; its folders are in its path
+        assertEquals(setOf("bar.csv.gz", "data.bin.gz", "baz.txt.gz"), listFiles(out))
+        assertEquals(nestedBytes.toList(), inflate(out.resolve("data.bin.gz")).toList())
 
         val cursor = cursors.single()
         assertEquals(4, cursor.produced.size)
@@ -384,7 +385,7 @@ class ExtractWorkerTest {
         val outcome = harness.run("test/job/content/extract-formula-test.yaml")
 
         assertIs<Outcome.Success>(outcome)
-        assertEquals(listOf("foo.txt!", "bar.csv!", "sub/data.bin!", "baz.txt!"), LabelsWorker.labels.toList())
+        assertEquals(listOf("foo.txt!", "bar.csv!", "data.bin!", "baz.txt!"), LabelsWorker.labels.toList())
         val cursor = cursors.single()
         assertEquals(4, cursor.produced.size)
         assertTrue(cursor.produced.all { it.isInvalidated })

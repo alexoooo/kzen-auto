@@ -27,8 +27,8 @@ import tech.kzen.lib.platform.ClassName
  * (docs/plans/2026-09-16_borrowed-elements.md §3.2, §3.5; the "Entries" transform of the 2026-09-15 content
  * analysis §7). The input is a file value — a selected file from `File`, or a member of an enclosing archive, so
  * `Extract → Extract` unpacks nested archives — and each member is the same kind of value (see [FileValues]):
- * its [Content] as the payload, and metadata `{name, path, size, modified, kind, parent}` where `name` and `path`
- * are the member's path in the archive and `parent` is the archive's own metadata.
+ * its [Content] as the payload, and metadata `{name, path, size, modified, parent}` where `name` is the member's
+ * file name, `path` its path in the archive (`data/m-1.csv`), and `parent` the archive's own metadata.
  *
  * Each member's content is a lent element ([CursorLending]): it is valid only until the cursor advances, so the
  * next is read only once the member's last downstream hold is released; a Worker that would keep it past its
@@ -92,7 +92,8 @@ class ExtractWorker(
     private fun memberMetadata(member: TarEntryContent, parent: ValueMetadata?): ValueMetadata {
         val descriptor = member.descriptor()
         return FileValues.metadata(
-            descriptor.name,
+            // Tar paths are always '/'-separated
+            descriptor.name.substringAfterLast('/'),
             descriptor.name,
             // A tar header always records the member's size
             checkNotNull(descriptor.length) { "Archive member '${descriptor.name}' has no size" },
