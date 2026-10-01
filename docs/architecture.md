@@ -838,10 +838,10 @@ alone — the `.itch` hint only narrows the candidates to that structured family
 `manageLogs = false`) and serving each with `embeddedServer(CIO, port, "127.0.0.1") { ktorMain(context) }`; the
 host reverse-proxies `/<prefix>/<workspace>/**` to those loopback servers with a synchronous, flush-per-chunk relay
 (SSE arrives incrementally; a `StreamingResponseBody` would buffer it) under kzen-shell's header rules, and stops
-server-then-context. `../kzen-sample-embed-spring` is that host on Spring Boot 4 (HS23), the sample plugin on its
+server-then-context. `../kzen-sample/spring-embed` is that host on Spring Boot 4 (HS23), the sample plugin on its
 class path as plugin zero.
 
-The sibling `../kzen-sample-plugin` is the example (`ItchReaderCapability` over a plain-Java core,
+The sample `../kzen-sample/itch-plugin` is the example (`ItchReaderCapability` over a plain-Java core,
 `WorldCitiesReaderCapability` as the minimal blocking reader, both discovered through `META-INF/services` with
 their formats as bundled-notation `ConfiguredRecordFormat` objects). When working on a plugin: it compiles against
 `kzen-auto-plugin` from mavenLocal, so make sure `./gradlew :kzen-auto-plugin:publishToMavenLocal` ran after any

@@ -13,7 +13,7 @@ Five Gradle subprojects:
 - **`kzen-auto-common`** — Kotlin Multiplatform shared code (`commonMain`/`jvmMain`/`jsMain`/`commonTest`). Models, paradigms (e.g. reporting), and shared services consumed by both client and server.
 - **`kzen-auto-jvm`** — Ktor/Netty server. Hosts the backend, serves the JS bundle, owns server-side execution of automation tasks.
 - **`kzen-auto-js`** — Kotlin/JS browser frontend. React + kotlin-wrappers DSL.
-- **`kzen-auto-plugin`** — the public, **in-development SPI**, versioned with the coordinated release train. Downstream plugins (e.g. `../kzen-sample-plugin`) compile against this and only this. It is JVM-only and deliberately exposes kzen-lib's value contract; evolve it through measured migrations and rebuild every known consumer.
+- **`kzen-auto-plugin`** — the public, **in-development SPI**, versioned with the coordinated release train. Downstream plugins (e.g. `../kzen-sample/itch-plugin`) compile against this and only this. It is JVM-only and deliberately exposes kzen-lib's value contract; evolve it through measured migrations and rebuild every known consumer.
 - **`kzen-auto-test`** — blackbox end-to-end self-test harness. JVM-only; spawns two kzen-auto JVMs (tester + SUT) and drives them through Chrome via the Script feature. See [`kzen-auto-test/AGENTS.md`](kzen-auto-test/AGENTS.md).
 
 ## File safety & git hygiene
@@ -140,5 +140,5 @@ The user's own dev servers are usually running — kzen-auto on `127.0.0.1:8080`
 - **JS client architecture** → [`docs/js-architecture.md`](docs/js-architecture.md) (Controller / Store / State / Observer patterns, render discipline, document folder convention, React DSL wrapper).
 - **Foundational concepts (kzen-lib)** → [`../kzen-lib/docs/architecture.md`](../kzen-lib/docs/architecture.md).
 - **Composite build + toolchain rules** → [`../kzen/AGENTS.md`](../kzen/AGENTS.md).
-- **Plugin example** → `../kzen-sample-plugin/`; **embedding example** (a Spring Boot host: one runtime, a context + loopback server per workspace, a streaming servlet proxy) → `../kzen-sample-embed-spring/`.
+- **Plugin example** → `../kzen-sample/itch-plugin/`; **embedding example** (a Spring Boot host: one runtime, a context + loopback server per workspace, a streaming servlet proxy) → `../kzen-sample/spring-embed/`.
 - **Downstream consumer** → `../kzen-project/` (built on top of kzen-auto, not just kzen-lib).

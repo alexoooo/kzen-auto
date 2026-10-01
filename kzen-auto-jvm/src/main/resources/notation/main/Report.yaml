@@ -11,7 +11,7 @@ main:
         - location: C:/Users/ostro/IdeaProjects/kzen-auto/build.gradle.kts
           coordinate: Text
   output:
-    type: Explore
+    type: Export
     explore:
       start: 1
       count: 10
