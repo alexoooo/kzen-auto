@@ -431,6 +431,9 @@ class JobController(
                     workerProgress = progress
                 }
             }
+            // A card following another Worker's progress (the File table, the reader taking its files) renders
+            // deep under the generic managers, so it reads the whole map off the bridge
+            contextValue<DocumentBridge?>()?.channel(JobProgressChannel.Key)?.publish(progress)
             val snapshot = runProgress?.traceSnapshot
             if (snapshot != state.traceSnapshot) {
                 setState {
@@ -1017,9 +1020,11 @@ class JobController(
                         graphNotation, output.worker, mainLocation,
                         output.outputPort, JobConventions.capacityAttributeName, "0")
                     batchSizeFallback = JobChannelDisplay.effectiveDefaultValue(
-                        graphNotation, mainLocation, JobConventions.batchSizeAttributeName, "1024")
+                        graphNotation, output.worker, mainLocation,
+                        output.outputPort, JobConventions.batchSizeAttributeName, "1024")
                     capacityFallback = JobChannelDisplay.effectiveDefaultValue(
-                        graphNotation, mainLocation, JobConventions.capacityAttributeName, "0")
+                        graphNotation, output.worker, mainLocation,
+                        output.outputPort, JobConventions.capacityAttributeName, "0")
                     this.expanded = expanded
                     onToggle = onPipeToggle
                     onClear = onChannelClear

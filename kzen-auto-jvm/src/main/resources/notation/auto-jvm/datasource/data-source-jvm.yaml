@@ -61,6 +61,10 @@ FileDataSource:
     - FileDataSourceConfig
   title: "File"
   class: tech.kzen.auto.server.objects.datasource.FileDataSource
+  meta:
+    selfLocation:
+      is: ObjectLocation
+      by: Self
 
 
 LogicDataSourceConfig:

@@ -38,6 +38,10 @@ import tech.kzen.lib.common.exec.data.type.DataContract
  * offered before Run, e.g. "Inferred from 41 of 256 values"); null for a declared type. [partial] marks such a
  * type read from only part of the data, because a design-time limit cut the reading short: a later validation
  * reads on.
+ *
+ * [details] is what a Worker found out about its input before Run beyond the type — the format it detected, the
+ * parts its input's units hold, the sizes of the files it selected. Opaque like a Worker's run progress: any value
+ * [ExecutionValue.of] accepts, keyed by names the Worker's own display / editors read (CC-17); empty for Script.
  */
 data class StepValidation(
     val typeMetadata: TypeMetadata?,
@@ -47,7 +51,8 @@ data class StepValidation(
     val flatColumns: HeaderListing? = null,
     val contract: DataContract? = null,
     val provenance: String? = null,
-    val partial: Boolean = false
+    val partial: Boolean = false,
+    val details: Map<String, Any?> = mapOf()
 ) {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -59,6 +64,7 @@ data class StepValidation(
         private const val contractKey = "contract"
         private const val provenanceKey = "provenance"
         private const val partialKey = "partial"
+        private const val detailsKey = "details"
 
         fun ofMapExecutionValue(executionValue: MapExecutionValue): StepValidation {
             val typeExecutionValue = executionValue[typeMetadataKey]
@@ -133,8 +139,21 @@ data class StepValidation(
             val provenance = (executionValue[provenanceKey] as? TextExecutionValue)?.value
             val partial = (executionValue[partialKey] as? BooleanExecutionValue)?.value ?: false
 
+            // Lenient like `warning`: absent (or written by a peer that predates it) decodes as empty
+            @Suppress("UNCHECKED_CAST")
+            val details = (executionValue[detailsKey] as? MapExecutionValue)?.get() as? Map<String, Any?>
+                ?: mapOf()
+
             return StepValidation(
-                typeMetadata, errorMessage, warningMessage, errorOffset, flatColumns, contract, provenance, partial)
+                typeMetadata,
+                errorMessage,
+                warningMessage,
+                errorOffset,
+                flatColumns,
+                contract,
+                provenance,
+                partial,
+                details)
         }
     }
 
@@ -143,7 +162,7 @@ data class StepValidation(
     fun asExecutionValue(): ExecutionValue {
         val metadataExecutionValue = typeMetadata?.asExecutionValue() ?: NullExecutionValue
 
-        return MapExecutionValue(mapOf(
+        val values = linkedMapOf(
             typeMetadataKey to metadataExecutionValue,
             errorMessageKey to ExecutionValue.of(errorMessage),
             warningMessageKey to ExecutionValue.of(warningMessage),
@@ -153,7 +172,10 @@ data class StepValidation(
             } ?: NullExecutionValue),
             contractKey to (contract?.asExecutionValue() ?: NullExecutionValue),
             provenanceKey to ExecutionValue.of(provenance),
-            partialKey to BooleanExecutionValue.of(partial)
-        ))
+            partialKey to BooleanExecutionValue.of(partial))
+        if (details.isNotEmpty()) {
+            values[detailsKey] = ExecutionValue.of(details)
+        }
+        return MapExecutionValue(values)
     }
 }

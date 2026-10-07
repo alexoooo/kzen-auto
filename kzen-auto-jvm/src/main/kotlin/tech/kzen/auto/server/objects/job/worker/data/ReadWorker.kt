@@ -9,6 +9,7 @@ import tech.kzen.auto.common.data.model.DataRole
 import tech.kzen.auto.common.data.model.DataUnit
 import tech.kzen.auto.common.data.schema.DataShape
 import tech.kzen.auto.common.objects.document.job.JobConventions
+import tech.kzen.auto.common.objects.document.job.JobReadConventions
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.server.data.DataOpenerLookup
@@ -413,6 +414,8 @@ open class ReadWorker(
         return when (val read = designManifest(dataSource, design)) {
             is DesignManifest.Read -> {
                 val units = read.manifest.units
+                // The part names the source's units hold, for the "Part to read" choice (JobReadConventions)
+                val roles = units.flatMap { unit -> unit.parts.map { it.role.name } }.distinct()
                 DesignShapeInference
                     .infer(
                         minOf(units.size, design.budget.maxValues), units.size, design, openerLookup, schemaMode
@@ -420,6 +423,9 @@ open class ReadWorker(
                         DataReadCore.parts(units[index], role, index)
                     }
                     .attempt(JobLaneDescriptor.unknown.contract)
+                    .withDetails(mapOf(
+                        JobReadConventions.readsUnitsKey to true,
+                        JobReadConventions.rolesKey to roles))
             }
             is DesignManifest.Unread -> JobLaneAttempt(JobLaneDescriptor.unknown, null, read.warning)
             DesignManifest.Limited -> JobLaneAttempt(JobLaneDescriptor.unknown, null, partial = true)

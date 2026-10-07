@@ -49,7 +49,8 @@ class SequentialContentStack(
                 check(required == ContentCapabilityIdentity.sequentialBytes) {
                     "No consumer is implemented for content capability $required"
                 }
-                val decodedBytes = ContentCodingStack.wrap(handle.bytes, codings, control, ref.display(), part)
+                val sourceBytes = SourceByteCountingContent(handle.bytes, control)
+                val decodedBytes = ContentCodingStack.wrap(sourceBytes, codings, control, ref.display(), part)
                 owner = null
                 return OpenedReaderByteInput(decodedBytes, control, handle.observedFingerprint)
             }

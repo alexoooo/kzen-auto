@@ -49,6 +49,15 @@ FileSourceWorkerDisplay:
   attributeViewManager: AttributeViewManager
 
 
+# Parse: the detected format under Format, bytes read of the file being read in the header, and "Part to read"
+# only when the input's units hold several parts.
+ParseWorkerDisplay:
+  is: WorkerDisplay
+  class: tech.kzen.auto.client.objects.document.job.display.ParseWorkerDisplay$Wrapper
+  attributeEditorManager: AttributeEditorManager
+  attributeViewManager: AttributeViewManager
+
+
 PreviewWorkerDisplay:
   is: WorkerDisplay
   class: tech.kzen.auto.client.objects.document.job.display.PreviewWorkerDisplay$Wrapper
@@ -83,6 +92,13 @@ ResultWorkerDisplay:
 SelectChannelEditor:
   is: AttributeEditor
   class: tech.kzen.auto.client.objects.document.job.edit.SelectChannelEditor$Wrapper
+
+
+# Part picker: a reading Worker's `role` as a choice among the part names its validation found in the units it
+# reads; the ordinary text field while they are unknown.
+SelectPartRoleEditor:
+  is: AttributeEditor
+  class: tech.kzen.auto.client.objects.document.job.edit.SelectPartRoleEditor$Wrapper
 
 
 # Calculated-column map editor: edits a FormulaWorker's `formula` attribute (a FormulaSpec — column-name ->

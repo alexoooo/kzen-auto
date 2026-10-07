@@ -23,19 +23,23 @@ data class JobWorkerProgress(
     val outcome: WorkerOutcome? = null
 ) {
     // Generic numeric coercion of one progress key — no Worker schema named here. Shared by the displays that
-    // read the conventional "count" key (over the wire an integer can arrive as Long / Int / Double / String).
-    fun longValue(key: String): Long? {
-        return when (val value = progressMap[key]) {
-            is Long -> value
-            is Int -> value.toLong()
-            is Double -> value.toLong()
-            is String -> value.toLongOrNull()
-            else -> null
-        }
-    }
+    // read the conventional "count" key.
+    fun longValue(key: String): Long? =
+        longOf(progressMap[key])
 
 
     companion object {
+        /** A wire number as a Long: over the wire an integer can arrive as Long / Int / Double / String. */
+        fun longOf(value: Any?): Long? =
+            when (value) {
+                is Long -> value
+                is Int -> value.toLong()
+                is Double -> value.toLong()
+                is String -> value.toLongOrNull()
+                else -> null
+            }
+
+
         fun ofProgressMap(status: String?, raw: Any?, outcomeRaw: Any? = null): JobWorkerProgress {
             val map = raw as? Map<*, *>
 

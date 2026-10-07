@@ -20,15 +20,20 @@ import tech.kzen.auto.client.objects.document.common.file.FileBrowser
 import tech.kzen.auto.client.objects.document.common.file.FileBrowserToggleChannel
 import tech.kzen.auto.client.objects.document.common.file.FileBrowserToggleKey
 import tech.kzen.auto.client.objects.document.common.file.FileResolutionPresentation
+import tech.kzen.auto.client.objects.document.common.file.FileRowStatus
 import tech.kzen.auto.client.objects.document.common.file.FileSelectionTable
 import tech.kzen.auto.client.objects.document.common.file.fileBrowserToggle
 import tech.kzen.auto.client.objects.document.common.file.format.FormatOverrideEditorHost
 import tech.kzen.auto.client.objects.document.common.file.format.FormatOverrideTransition
 import tech.kzen.auto.client.objects.document.common.file.format.RestFormatMaterializationClient
+import tech.kzen.auto.client.objects.document.job.JobProgressChannel
+import tech.kzen.auto.client.objects.document.job.JobValidationChannel
+import tech.kzen.auto.client.objects.document.job.JobWorkerProgress
 import tech.kzen.auto.client.objects.document.job.source.DataFormatStore
 import tech.kzen.auto.client.objects.document.job.source.DataFormatStoreKey
 import tech.kzen.auto.client.objects.document.job.source.DataSourceShapeStore
 import tech.kzen.auto.client.objects.document.job.source.DataSourceShapeStoreKey
+import tech.kzen.auto.client.objects.document.job.source.file.FileReadProgress
 import tech.kzen.auto.client.objects.document.job.source.file.FileResolutionStore
 import tech.kzen.auto.client.objects.document.job.source.file.FileResolutionStoreKey
 import tech.kzen.auto.client.service.global.ClientStateGlobal
@@ -46,6 +51,8 @@ import tech.kzen.auto.common.data.file.FileSelectionSpec
 import tech.kzen.auto.common.data.format.FileFormatCatalog
 import tech.kzen.auto.common.data.format.FormatMaterializationActionRequest
 import tech.kzen.auto.common.data.format.FormatMaterializationIntent
+import tech.kzen.auto.common.objects.document.job.JobChannelDerivation
+import tech.kzen.auto.common.objects.document.job.model.JobValidation
 import tech.kzen.auto.common.objects.document.plugin.model.CommonDataEncodingSpec
 import tech.kzen.auto.common.objects.document.plugin.model.CommonPluginCoordinate
 import tech.kzen.auto.common.util.data.DataLocation
@@ -101,6 +108,11 @@ external interface FileSelectionEditorState : State {
     var fileResolutions: Map<DataLocation, FileResolutionPresentation>
     var resolutions: Map<DataLocation, FileResolutionStore.Resolution>
     var shapeRevision: Int
+
+    // Inside a Job only (see FileReadProgress): the sizes its validation lists, and how far a run reading the
+    // selection has got; null otherwise, which leaves those columns out.
+    var sizeByLocation: Map<String, Long>?
+    var statusByLocation: Map<String, FileRowStatus>?
 }
 
 
@@ -127,7 +139,9 @@ class FileSelectionEditor(
     FileBrowserToggleChannel.Observer,
     DataFormatStore.Observer,
     FileResolutionStore.Observer,
-    DataSourceShapeStore.GlobalObserver
+    DataSourceShapeStore.GlobalObserver,
+    JobValidationChannel.Observer,
+    JobProgressChannel.Observer
 {
     companion object {
         private val legacyPathsAttributeName = AttributeName("paths")
@@ -239,6 +253,8 @@ class FileSelectionEditor(
     private var listingEpoch = 0
     private var requestedListing: Pair<String, String>? = null
     private var observedResolutionKeys = emptySet<FileResolutionStore.Key>()
+    private var listedFiles = listOf<FileReadProgress.ListedFile>()
+    private var readerProgress: JobWorkerProgress? = null
 
     private val committer = AttributeCommitter(
         graphStore = { this.props.mirroredGraphStore },
@@ -278,6 +294,8 @@ class FileSelectionEditor(
         fileResolutions = emptyMap()
         resolutions = emptyMap()
         shapeRevision = 0
+        sizeByLocation = null
+        statusByLocation = null
     }
 
 
@@ -293,6 +311,14 @@ class FileSelectionEditor(
         dataSourceShapeStore()?.observeAll(this)
         bindResolutions(state.selected.orEmpty(), currentGraphNotation())
         ensureListingLoaded()
+        validationChannel()?.let { channel ->
+            channel.observe(this)
+            onJobValidation(channel.current())
+        }
+        progressChannel()?.let { channel ->
+            channel.observe(this)
+            onJobProgress(channel.current())
+        }
     }
 
 
@@ -317,6 +343,8 @@ class FileSelectionEditor(
         documentToggleChannel()?.unobserve(props.objectLocation, this)
         dataFormatStore()?.unobserve(this)
         dataSourceShapeStore()?.unobserveAll(this)
+        validationChannel()?.unobserve(this)
+        progressChannel()?.unobserve(this)
         val resolutionStore = fileResolutionStore()
         observedResolutionKeys.forEach { resolutionStore?.unobserve(it, this) }
         observedResolutionKeys = emptySet()
@@ -342,6 +370,49 @@ class FileSelectionEditor(
 
     private fun dataSourceShapeStore(): DataSourceShapeStore? {
         return contextValue<DocumentBridge?>()?.lookup(DataSourceShapeStoreKey)
+    }
+
+
+    // Published only by a Job; elsewhere these stay empty and so do the Size and Read columns
+    private fun validationChannel(): JobValidationChannel? {
+        return contextValue<DocumentBridge?>()?.channel(JobValidationChannel.Key)
+    }
+
+
+    private fun progressChannel(): JobProgressChannel? {
+        return contextValue<DocumentBridge?>()?.channel(JobProgressChannel.Key)
+    }
+
+
+    override fun onJobValidation(validation: JobValidation?) {
+        val details = validation?.workerValidations?.get(props.objectLocation.objectPath)?.details
+        listedFiles = details?.let(FileReadProgress::listedFiles).orEmpty()
+        refreshReadProgress()
+    }
+
+
+    // Follows whichever Worker takes this one's files, through the read conventions alone (CC-17)
+    override fun onJobProgress(progress: Map<ObjectLocation, JobWorkerProgress>) {
+        val graphStructure = props.clientStateGlobal.current()?.graphStructure()
+        readerProgress = graphStructure
+            ?.let { JobChannelDerivation.consumerOf(it, props.objectLocation) }
+            ?.let { progress[it] }
+        refreshReadProgress()
+    }
+
+
+    private fun refreshReadProgress() {
+        val sizes = listedFiles
+            .takeIf { it.isNotEmpty() }
+            ?.associate { it.location to it.size }
+        val statuses = FileReadProgress.of(listedFiles, readerProgress)?.rows
+        if (sizes == state.sizeByLocation && statuses == state.statusByLocation) {
+            return
+        }
+        setState {
+            sizeByLocation = sizes
+            statusByLocation = statuses
+        }
     }
 
 
@@ -882,6 +953,8 @@ class FileSelectionEditor(
             perEntryFormat = readsFormat()
             formatCatalog = state.formatCatalog
             resolutionByLocation = state.fileResolutions
+            sizeByLocation = state.sizeByLocation
+            statusByLocation = state.statusByLocation
             onCheckedChanged = { next -> setState { selectedChecked = next } }
             onFormatChanged = ::changeFormat
             onEncodingChanged = ::changeEncoding

@@ -64,6 +64,10 @@ external interface WorkerDisplayDefaultProps: WorkerDisplayProps {
     // places the remaining ordinary editors behind a native, keyboard-accessible details control.
     var hiddenAttributes: Set<AttributeName>?
     var attributeDisclosure: String?
+
+    // The header's live status, for a per-type display that can say it better than key=value (Parse's bytes read
+    // of the file it is on); returning null falls back to the generic rendering. Same plain-function-type caveat.
+    var statusText: ((JobWorkerProgress?) -> String?)?
 }
 
 
@@ -175,7 +179,8 @@ class WorkerDisplayDefault(
             }
 
             cardHeader {
-                statusText(props.common.progress)?.let { status ->
+                val progress = props.common.progress
+                (props.statusText?.invoke(progress) ?: statusText(progress))?.let { status ->
                     span {
                         css {
                             fontFamily = FontFamily.monospace

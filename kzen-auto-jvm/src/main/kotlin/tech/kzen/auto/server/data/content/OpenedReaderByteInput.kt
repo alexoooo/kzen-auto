@@ -12,6 +12,9 @@ class OpenedReaderByteInput internal constructor(
 ): ReaderByteInput, AutoCloseable {
     override val expandedBytesRead: Long get() = control.expandedBytesRead
 
+    /** The source bytes read so far, beneath any coding: the read's progress through the stored content. */
+    val sourceBytesRead: Long get() = control.sourceBytesRead
+
     private var closed = false
 
 

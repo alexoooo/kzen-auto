@@ -2,7 +2,7 @@ package tech.kzen.auto.server.data.design
 
 import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
-import tech.kzen.auto.common.data.read.ResolvedReadSpec
+import tech.kzen.auto.common.data.format.FormatResolutionResult
 import tech.kzen.auto.common.data.schema.DataShape
 import tech.kzen.lib.common.util.digest.Digest
 
@@ -19,7 +19,8 @@ import tech.kzen.lib.common.util.digest.Digest
 class DesignReader {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        // Inspected parts and resolved reads across every open editor; each entry is small (a shape, a read spec)
+        // Inspected parts and resolved reads across every open editor; each entry is small (a shape, a read spec
+        // with how it was chosen)
         private const val cacheSize = 16_384L
     }
 
@@ -29,7 +30,7 @@ class DesignReader {
         .maximumSize(cacheSize)
         .build()
 
-    private val reads: Cache<Digest, ResolvedReadSpec> = Caffeine.newBuilder()
+    private val reads: Cache<Digest, FormatResolutionResult> = Caffeine.newBuilder()
         .maximumSize(cacheSize)
         .build()
 
@@ -48,11 +49,11 @@ class DesignReader {
     }
 
 
-    internal fun cachedRead(key: Digest): ResolvedReadSpec? =
+    internal fun cachedRead(key: Digest): FormatResolutionResult? =
         reads.getIfPresent(key)
 
 
-    internal fun storeRead(key: Digest, read: ResolvedReadSpec) {
+    internal fun storeRead(key: Digest, read: FormatResolutionResult) {
         reads.put(key, read)
     }
 }

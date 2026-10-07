@@ -28,11 +28,13 @@ import tech.kzen.auto.server.context.KzenAutoConfig
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.data.configuredTestDataPart
 import tech.kzen.auto.server.objects.datasource.format.ConfiguredDelimitedTestFormats
+import tech.kzen.auto.server.objects.datasource.format.ConfiguredRecordFormatLookup
 import tech.kzen.auto.server.util.WorkUtils
 import tech.kzen.lib.common.exec.ExecutionFailure
 import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionSuccess
 import tech.kzen.lib.common.exec.RequestParams
+import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.util.ImmutableByteArray
 import java.nio.file.Files
@@ -58,6 +60,9 @@ class DataSourceActionsTest {
         private val validSource = ObjectLocation.parse("main/data-source-actions-test.yaml#main.sources/input")
         private val brokenSource = ObjectLocation.parse("main/data-source-actions-test.yaml#main.sources/broken")
         private val declaredSource = ObjectLocation.parse("main/data-source-actions-test.yaml#main.sources/declared")
+        private val builtInCsvSource =
+            ObjectLocation.parse("main/data-source-actions-test.yaml#main.sources/builtInCsv")
+        private val twinCsvSource = ObjectLocation.parse("main/data-source-actions-test.yaml#main.sources/twinCsv")
         private val plainSource = ObjectLocation.parse("main/data-source-actions-test.yaml#main.sources/plain")
         private val workerSource = ObjectLocation.parse("main/data-source-actions-test.yaml#main.workers/markdown")
         private val logicSource = ObjectLocation.parse("main/data-source-actions-test.yaml#main.sources/logic")
@@ -102,6 +107,18 @@ class DataSourceActionsTest {
                   files:
                     - location: '${declaredExisting.toString().replace('\\', '/')}'
 
+                main.sources/builtInCsv:
+                  is: FileDataSource
+                  format: auto-jvm/datasource/configured-delimited-format.yaml#ConfiguredCsv
+                  files:
+                    - location: '${existing.toString().replace('\\', '/')}'
+
+                main.sources/twinCsv:
+                  is: FileDataSource
+                  format: main/data-source-actions-test.yaml#main.twinCsv
+                  files:
+                    - location: '${existing.toString().replace('\\', '/')}'
+
                 main.sources/plain:
                   is: FileDataSource
                   files:
@@ -119,6 +136,12 @@ class DataSourceActionsTest {
                   compatibleStructuredFamilies:
                     - declared-csv
                   schema: main/data-source-actions-schema.yaml#main
+
+                main.twinCsv:
+                  is: auto-jvm/datasource/configured-delimited-format.yaml#AuthoredDelimitedFormat
+                  delimiter: ','
+                  header: present
+                  schema: ""
 
                 main.hiddenFormat:
                   is: ConfiguredCsv
@@ -531,6 +554,15 @@ class DataSourceActionsTest {
         assertTrue(references.none { it.endsWith("#main.abstractFormat") }, references.toString())
         assertTrue(references.none { it.endsWith("#main.brokenFormat") }, references.toString())
 
+        // A project format sets no title of its own, so it is labelled by name, not by the "CSV" it inherits
+        val declaredReference = "main/data-source-actions-test.yaml#main.declaredFormat"
+        val declared = catalog.formats.single { it.reference == declaredReference }
+        assertEquals(ObjectLocation.parse(declaredReference).objectPath.name.value, declared.label)
+        assertEquals("data-source-actions-test", declared.projectDocument)
+        val builtInCsv = catalog.formats.single { it.reference.endsWith("#ConfiguredCsv") }
+        assertEquals("CSV", builtInCsv.label)
+        assertNull(builtInCsv.projectDocument)
+
         val preflight = context.configuredRecordFormatRegistry.preflight(
             "main/data-source-actions-test.yaml#main.declaredFormat")
         assertEquals("main/data-source-actions-test.yaml#main.declaredFormat", preflight.reference)
@@ -554,7 +586,9 @@ class DataSourceActionsTest {
         assertTrue(candidates.none { it.formatReference == hiddenPlainText })
 
         val programmatic = ConfiguredDelimitedTestFormats.csv(delimiter = "^")
-        assertNull(context.configuredRecordFormatRegistry.preflight(programmatic))
+        assertNull(context.configuredRecordFormatRegistry.preflight(
+            programmatic, AttributeLocation(
+            ObjectLocation.parse("main/not-in-graph.yaml#main"), ConfiguredRecordFormatLookup.formatAttributePath)))
         assertEquals(references, context.configuredRecordFormatRegistry.catalog().formats.map { it.reference })
 
         val failure = assertFailsWith<IllegalArgumentException> {
@@ -563,6 +597,28 @@ class DataSourceActionsTest {
         }
         assertTrue(failure.message.orEmpty().contains("main.brokenFormat"), failure.message)
         assertTrue(failure.message.orEmpty().contains("failed to define"), failure.message)
+    }
+
+
+    // A project format with the same settings as a built-in is still its own coordinate: the reference a
+    // resolution reports is the one the source's `format` names, never one guessed from the format's settings
+    @Test
+    fun aSourceReportsTheFormatItNamesEvenWhenAnotherHasTheSameSettings() = runBlocking {
+        for ((source, expected) in listOf(
+                builtInCsvSource to "auto-jvm/datasource/configured-delimited-format.yaml#ConfiguredCsv",
+                twinCsvSource to "main/data-source-actions-test.yaml#main.twinCsv")) {
+            val outcome = execute(source)
+            val result = DataResolveResult.ofExecutionValue(
+                assertIs<ExecutionSuccess>(outcome, outcome.toString()).value)
+            assertEquals(expected, result.resolutionDetails.single().concreteFormatReference, source.asString())
+
+            // A value-identical instance from elsewhere (a run's own snapshot) is labelled by its attribute too
+            val injected = ConfiguredDelimitedTestFormats.csv()
+            val preflight = context.configuredRecordFormatRegistry.preflight(
+                injected, AttributeLocation(source, ConfiguredRecordFormatLookup.formatAttributePath))
+            assertEquals(expected, preflight?.reference)
+            assertTrue(preflight?.format === injected)
+        }
     }
 
 

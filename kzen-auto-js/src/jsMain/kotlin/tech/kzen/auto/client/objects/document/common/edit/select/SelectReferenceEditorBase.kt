@@ -120,6 +120,9 @@ abstract class SelectReferenceEditorBase<P: AttributeEditorProps, S: SelectRefer
     final override suspend fun onCommandSuccess(
         event: NotationEvent, graphDefinition: GraphDefinitionAttempt, attachment: LocalGraphStore.Attachment
     ) {
+        if (hostRemoved(graphDefinition)) {
+            return
+        }
         onNotationEvent(event, graphDefinition)
     }
 
@@ -129,11 +132,28 @@ abstract class SelectReferenceEditorBase<P: AttributeEditorProps, S: SelectRefer
     ) {}
 
 
-    override suspend fun onStoreRefresh(graphDefinitionAttempt: GraphDefinitionAttempt) {}
+    final override suspend fun onStoreRefresh(graphDefinitionAttempt: GraphDefinitionAttempt) {
+        if (hostRemoved(graphDefinitionAttempt)) {
+            return
+        }
+        onGraphRefresh(graphDefinitionAttempt)
+    }
+
+
+    // The store notifies before React unmounts the editor of a just-removed host, and a notation lookup on it
+    // throws "Missing" back into the command that removed it, reporting a delete that succeeded as failed (the
+    // stale-location skip ClientStateGlobal.deliver makes for its observers). A renamed host is skipped the same
+    // way; the re-render that follows carries the new location.
+    private fun hostRemoved(graphDefinition: GraphDefinitionAttempt): Boolean =
+        props.objectLocation !in graphDefinition.graphStructure.graphNotation.coalesce
 
 
     // React to a committed notation change: adopt a rename via [setSelected], and/or recompute the candidates.
     protected abstract suspend fun onNotationEvent(event: NotationEvent, graphDefinition: GraphDefinitionAttempt)
+
+
+    // React to the store reloading the whole graph; the host is known to still exist.
+    protected open suspend fun onGraphRefresh(graphDefinitionAttempt: GraphDefinitionAttempt) {}
 
 
     //-----------------------------------------------------------------------------------------------------------------

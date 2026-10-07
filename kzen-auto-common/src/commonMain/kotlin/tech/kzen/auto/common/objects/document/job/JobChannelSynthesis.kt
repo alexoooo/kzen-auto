@@ -87,7 +87,8 @@ class JobChannelSynthesis(
 
         var augmentedDoc: DocumentNotation = documentNotation
         for (connection in derivation.connections) {
-            augmentedDoc = wireOneWay(augmentedDoc, connection, defaultBatchSize, defaultCapacity)
+            augmentedDoc = wireOneWay(
+                structure.graphNotation, augmentedDoc, connection, defaultBatchSize, defaultCapacity)
         }
         for (serve in derivation.serves) {
             augmentedDoc = wireServe(augmentedDoc, serve, defaultCapacity)
@@ -168,12 +169,11 @@ class JobChannelSynthesis(
                 val channelName = ObjectName(JobConventions.autoSynthChannelName(workerPath, outputPort))
                 val channelObjectPath = channelObjectPath(channelName)
                 val channelRef = channelObjectPath.asString()
-                val workerNotation = augmentedDoc.objects.notations.map[workerPath]
                 val batchSize = workerConfigValue(
-                    workerNotation, outputPort, JobConventions.batchSizeAttributeName)
+                    structure.graphNotation, objectLocation, outputPort, JobConventions.batchSizeAttributeName)
                     ?: defaultBatchSize
                 val capacity = workerConfigValue(
-                    workerNotation, outputPort, JobConventions.capacityAttributeName)
+                    structure.graphNotation, objectLocation, outputPort, JobConventions.capacityAttributeName)
                     ?: defaultCapacity
 
                 var channelNotation = ObjectNotation.ofParent(JobConventions.channelObjectName)
@@ -263,6 +263,7 @@ class JobChannelSynthesis(
 
 
     private fun wireOneWay(
+        graphNotation: GraphNotation,
         documentNotation: DocumentNotation,
         connection: JobChannelDerivation.Connection,
         defaultBatchSize: String?,
@@ -274,15 +275,14 @@ class JobChannelSynthesis(
         val channelRef = channelObjectPath.asString()
 
         // Per-output config lives on the upstream Worker in its `channels.<outputPort>` map (absent = inherit):
-        // its own non-blank value wins, else the Job-wide default. Living on the Worker, it follows the Worker
-        // across rename / reorder — the channel object carries no name-coupled override. Keyed by output port so
-        // a Worker can tune each of its output channels independently.
-        val upstreamNotation = documentNotation.objects.notations.map[connection.upstreamWorker.objectPath]
+        // the Worker's own non-blank value wins, then its archetype's, else the Job-wide default. Living on the
+        // Worker, it follows the Worker across rename / reorder — the channel object carries no name-coupled
+        // override. Keyed by output port so a Worker can tune each of its output channels independently.
         val batchSize = workerConfigValue(
-            upstreamNotation, connection.outputPort, JobConventions.batchSizeAttributeName)
+            graphNotation, connection.upstreamWorker, connection.outputPort, JobConventions.batchSizeAttributeName)
             ?: defaultBatchSize
         val capacity = workerConfigValue(
-            upstreamNotation, connection.outputPort, JobConventions.capacityAttributeName)
+            graphNotation, connection.upstreamWorker, connection.outputPort, JobConventions.capacityAttributeName)
             ?: defaultCapacity
 
         var channelNotation = ObjectNotation.ofParent(JobConventions.channelObjectName)
@@ -296,16 +296,18 @@ class JobChannelSynthesis(
     }
 
 
-    // The Worker's OWN `channels.<outputPort>.<knob>` value, or null when unset / blank so the caller falls back
-    // to the Job-wide default. Read from the Worker's own notation (not inheritance-resolved — the Worker
-    // archetype declares no default map).
+    // The Worker's `channels.<outputPort>.<knob>` value, or null when unset / blank so the caller falls back to
+    // the Job-wide default. Inheritance-resolved per leaf, so a Worker type's archetype can declare its own
+    // default (File hands over one file at a time) beneath the Worker's own value and above the Job-wide one.
+    // Read from the saved notation: synthesis fills ports and channels, never these knobs.
     private fun workerConfigValue(
-        workerNotation: ObjectNotation?,
+        graphNotation: GraphNotation,
+        workerLocation: ObjectLocation,
         outputPort: AttributeName,
         knob: AttributeName
     ): String? {
-        return workerNotation
-            ?.get(JobConventions.workerOutputKnobPath(outputPort, knob))
+        return graphNotation
+            .firstAttribute(workerLocation, JobConventions.workerOutputKnobPath(outputPort, knob))
             ?.asString()
             ?.ifBlank { null }
     }

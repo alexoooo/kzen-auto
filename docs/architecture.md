@@ -101,9 +101,13 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > typed. Per-output-port channel config
 > (batchSize / capacity) lives on the **upstream Worker** in a free-form `channels.<outputPort>` map —
 > deliberately undeclared in the Worker base's `meta` (no card editor, no "Missing" definition drop,
-> still persisted in notation) so it follows the Worker across rename and reorder; precedence is Worker
-> value > Job-wide default on `main` (`main.batchSize` / `main.capacity`) > archetype default, with the
-> shared path builders in `JobConventions` keeping server synthesis and client editors agreeing. Every Job
+> still persisted in notation) so it follows the Worker across rename and reorder; precedence is the Worker's
+> own value > its Worker archetype's (looked up per knob through inheritance, `graphNotation.firstAttribute`) >
+> Job-wide default on `main` (`main.batchSize` / `main.capacity`) > the `Channel` default, with the
+> shared path builders in `JobConventions` keeping server synthesis and client editors agreeing. `File` uses the
+> archetype tier: its body sets `channels.output` to `batchSize: 1`, `capacity: 0`, a rendezvous, so it hands
+> over one file at a time and its `send` returns only once the consumer has taken the file — a Job-wide
+> `capacity` does not deepen it. The card's "customized" cue still reads only the Worker's own value. Every Job
 > channel carries one `DataValue`: flat files keep their direct `FlatFileRecord` `ValueAccess`, native values
 > retain their native root, and literal/projected values use the same structural access ABI. Column Workers bind
 > a `ColumnProjection` only when needed, while Formula/output Workers use exclusive `RecordOutputBuilder` claims
@@ -180,6 +184,19 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > items mode, over its units — types itself from it through `DesignShapeInference`, merging by its `schemaMode`;
 > the step's `StepValidation` then carries `provenance` ("Inferred from 41 of 256 values") and, when the deadline
 > cut the pass short, `partial`, which the editor shows as "Reading data…" and re-asks for after a second.
+> A step's `StepValidation` also carries `details`, an opaque `Map<String, Any?>` copied from
+> `JobLaneAttempt.details` (decoded leniently, like `provenance`) that only the Worker's own card and editors
+> read (CC-17). What one Worker says to another goes through the keys in `JobReadConventions` (kzen-auto-common)
+> and nothing else: in validation details, `File` lists its `files` (`location` as its selection row writes it,
+> `path` as a reader names it, `size`), and `Parse` / `Read` report `readsUnits`, the part names they sampled
+> (`roles`, which turn "Part to read" into a select and hide it on `Parse` when there is nothing to choose) and
+> `Parse`'s `detectedFormats` under Automatic; in progress, a reader publishes `units` (inputs read to the end)
+> and, while one is open, `readName` / `readPath` / `readBytes` / `readSize` / `readFormat`, cleared between
+> inputs. `readBytes` counts the stored bytes beneath any content coding (`SourceByteCountingContent`, exposed as
+> `OperationalDataCursor.sourceBytesRead`), so a gzip file's progress runs against its size on disk. The client
+> shares the polled progress through `JobProgressChannel` (next to `JobValidationChannel` on the `DocumentBridge`),
+> which is how the `File` table and header follow whichever single consumer reads its files
+> (`FileReadProgress`), without knowing that consumer is `Parse`.
 > `JobValidationCache` reuses a validation only while all its evidence rechecks unchanged and never a partial one,
 > so a run revalidates against the data as it is at run start; `JobRun` then hands each Worker its validated output
 > contract (`JobControl.outputContract()`) and `Parse` / `Read` hold every part to it (`DataReadCore.fitShape`),

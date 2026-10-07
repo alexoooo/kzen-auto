@@ -27,6 +27,7 @@ import tech.kzen.auto.plugin.model.record.FlatRecordHeader
 import tech.kzen.auto.server.data.DataOpenerLookup
 import tech.kzen.auto.server.data.OperationalDataOpener
 import tech.kzen.auto.server.data.configuredTestDataPart
+import tech.kzen.auto.common.objects.document.job.JobReadConventions
 import tech.kzen.auto.server.data.design.DesignReadBudget
 import tech.kzen.auto.server.data.design.DesignReader
 import tech.kzen.auto.server.data.read.OperationalDataCursor
@@ -503,6 +504,8 @@ class ReadWorkerTest {
         assertEquals("Inferred from 2 of 2 values", items.provenance)
         val record = assertIs<DataType.Record>(items.lane.contract.payload().structural)
         assertEquals(listOf("a", "b"), record.fields.map { it.id.name })
+        assertEquals(true, items.details[JobReadConventions.readsUnitsKey])
+        assertEquals(listOf("main"), items.details[JobReadConventions.rolesKey], "the source's part names")
 
         val units = worker(source, opener, CapturingOutput(), emit = ReadWorker.emitUnits)
             .payloadFlow(JobLaneDescriptor.unknown, laneContext(DesignReadBudget.editor))

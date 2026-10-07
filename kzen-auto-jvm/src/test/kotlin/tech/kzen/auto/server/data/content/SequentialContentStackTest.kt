@@ -7,6 +7,7 @@ import tech.kzen.auto.common.data.model.DataPart
 import tech.kzen.auto.common.data.model.DataRole
 import tech.kzen.auto.common.data.model.DataSourceId
 import tech.kzen.auto.common.data.read.CharacterDecodingSpec
+import tech.kzen.auto.common.data.read.ContentCapabilityIdentity
 import tech.kzen.auto.common.data.read.ContentCodingSpec
 import tech.kzen.auto.common.data.read.DataContentFingerprint
 import tech.kzen.auto.common.data.read.DelimitedDialectSpec
@@ -76,6 +77,35 @@ class SequentialContentStackTest {
         finally {
             Files.deleteIfExists(plain)
             Files.deleteIfExists(gzip)
+        }
+    }
+
+
+    @Test
+    fun sourceBytesCountTheStoredContentBeneathTheCoding() = runBlocking {
+        val text = "name,value\n" + "alpha,1\n".repeat(1000)
+        val stored = gzip(text.encodeToByteArray())
+        val file = Files.createTempFile("content-stack", ".gz")
+        try {
+            Files.write(file, stored)
+            val input = localStack().openBytes(
+                DirectDataContext, localRef(file), null, listOf(ContentCodingSpec.gzip),
+                ContentCapabilityIdentity.sequentialBytes, policy)
+            input.use {
+                assertEquals(0, it.sourceBytesRead)
+                val buffer = ByteArray(64)
+                var expanded = 0L
+                while (true) {
+                    val count = it.read(buffer, 0, buffer.size)
+                    if (count == -1) break
+                    expanded += count
+                }
+                assertEquals(text.length.toLong(), expanded)
+                assertEquals(stored.size.toLong(), it.sourceBytesRead)
+            }
+        }
+        finally {
+            Files.deleteIfExists(file)
         }
     }
 

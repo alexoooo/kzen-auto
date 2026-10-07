@@ -16,6 +16,7 @@ DataReadWorkerConfig:
   meta:
     role:
       is: String
+      editor: SelectPartRoleEditor
       label: "Part to read"
       description: "Only for sources whose files come in several named parts. Leave empty otherwise."
     schemaMode:
@@ -81,7 +82,10 @@ ReadWorker:
 
 # Selects files, one value per file: the file's content (opaque) with its name, path, size, modified time, kind
 # and Name-pattern values as metadata. Reads nothing: `Parse`, `Extract` or `Write` below decide what is done
-# with the content.
+# with the content. Its output defaults to a one-file rendezvous (`channels`, undeclared in `meta` like every
+# Worker's): a file is handed over only when the reader below takes it, so the files are read one by one and the
+# File card's progress follows the reader instead of reporting every file sent at once. A Job-wide default does
+# not override it; the Worker's own `channels` does.
 FileSourceWorker:
   abstract: true
   is:
@@ -90,6 +94,10 @@ FileSourceWorker:
   title: "File"
   class: tech.kzen.auto.server.objects.job.worker.data.FileSourceWorker
   display: FileSourceWorkerDisplay
+  channels:
+    output:
+      batchSize: 1
+      capacity: 0
   output: ""
   meta:
     output:
@@ -133,6 +141,7 @@ Parse:
     - DataReadWorkerConfig
   title: "Parse"
   class: tech.kzen.auto.server.objects.job.worker.data.ParseWorker
+  display: ParseWorkerDisplay
   input: ""
   output: ""
   format: auto-jvm/datasource/configured-delimited-format.yaml#AutomaticFormat

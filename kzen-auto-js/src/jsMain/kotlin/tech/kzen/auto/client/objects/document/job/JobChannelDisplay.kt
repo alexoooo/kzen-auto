@@ -106,8 +106,8 @@ class JobChannelDisplay(
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         // The channel's EFFECTIVE value for [knob]: the upstream Worker's own non-blank value for that output
-        // port, else the document-level default. Mirrors the server precedence (Worker output config > Job
-        // default > archetype).
+        // port, else the default it falls back to. Mirrors the server precedence (JobChannelSynthesis: Worker
+        // output config > Worker archetype's > Job default > Channel archetype).
         fun effectiveChannelValue(
             graphNotation: GraphNotation,
             workerLocation: ObjectLocation,
@@ -117,19 +117,32 @@ class JobChannelDisplay(
             archetypeDefault: String
         ): String {
             ownChannelValue(graphNotation, workerLocation, outputPort, knob)?.let { return it }
-            return effectiveDefaultValue(graphNotation, mainLocation, knob, archetypeDefault)
+            return effectiveDefaultValue(
+                graphNotation, workerLocation, mainLocation, outputPort, knob, archetypeDefault)
         }
 
 
-        // The document-level default for [knob] a customization falls back to: the Job-wide value on `main`
-        // (flat, blank treated as unset), else the archetype default. This is the fallback shown by a config
+        // The default for [knob] a customization falls back to: the Worker type's own default (an archetype's
+        // `channels.<outputPort>.<knob>`, e.g. File's one-file handoff), else the Job-wide value on `main` (flat,
+        // blank treated as unset), else the Channel archetype default. This is the fallback shown by a config
         // field when the Worker's own value is unset.
         fun effectiveDefaultValue(
             graphNotation: GraphNotation,
+            workerLocation: ObjectLocation,
             mainLocation: ObjectLocation,
+            outputPort: AttributeName,
             knob: AttributeName,
             archetypeDefault: String
         ): String {
+            val knobPath = JobConventions.workerOutputKnobPath(outputPort, knob)
+            val typeDefault = graphNotation.inheritanceChain(workerLocation)
+                .asSequence()
+                .filter { it != workerLocation }
+                .mapNotNull { graphNotation.firstAttribute(it, knobPath)?.asString()?.ifBlank { null } }
+                .firstOrNull()
+            if (typeDefault != null) {
+                return typeDefault
+            }
             val jobDefault = graphNotation.firstAttribute(mainLocation, AttributePath.ofName(knob))
                 ?.asString()?.ifBlank { null }
             return jobDefault ?: archetypeDefault

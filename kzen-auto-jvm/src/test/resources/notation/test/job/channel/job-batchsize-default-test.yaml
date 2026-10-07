@@ -1,6 +1,7 @@
 # Job-wide batchSize / capacity defaults (JobChannelDefaultTest): `main` sets non-archetype batchSize / capacity
 # and, with all Worker ports blank and no Channel objects, JobChannelSynthesis must stamp those defaults onto
-# every auto-synthesized channel (reader.output -> filter.input, filter.output -> writer.input).
+# every auto-synthesized channel (filter.output -> writer.input) — except one whose upstream Worker type declares
+# its own default: File's archetype one-file rendezvous (reader.output -> filter.input) is not overridden.
 
 
 main:

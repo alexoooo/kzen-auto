@@ -132,7 +132,8 @@ class JobValidator(
                     flatColumns = attempt.lane.flatColumns,
                     contract = attempt.lane.contract,
                     provenance = attempt.provenance,
-                    partial = attempt.partial)
+                    partial = attempt.partial,
+                    details = attempt.details)
             }
 
             for ((path, error) in resultErrors) {

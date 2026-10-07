@@ -10,10 +10,12 @@ import tech.kzen.lib.common.service.notation.NotationConventions
 
 abstract class DocumentArchetype {
     companion object {
-        fun archetypeName(
+        // Read as a reference: a document's `is` is normally the bare archetype name, but a qualified one
+        // (`auto-common/common-document.yaml#CustomDocument`) names the same archetype
+        private fun archetypeReference(
             graphNotation: GraphNotation,
             documentPath: DocumentPath
-        ): ObjectName? {
+        ): ObjectReference? {
             val document = graphNotation.documents[documentPath]
                 ?: return null
 
@@ -23,18 +25,27 @@ abstract class DocumentArchetype {
             return mainObject
                 .attributes[NotationConventions.isAttributeName]
                 ?.asString()
-                ?.let { ObjectName(it) }
+                ?.let { ObjectReference.parse(it) }
         }
 
 
+        fun archetypeName(
+            graphNotation: GraphNotation,
+            documentPath: DocumentPath
+        ): ObjectName? {
+            return archetypeReference(graphNotation, documentPath)?.name?.objectName
+        }
+
+
+        // Null for an archetype the graph does not hold, so one broken document cannot take down every caller
         fun archetypeLocation(
             graphNotation: GraphNotation,
             documentPath: DocumentPath
         ): ObjectLocation? {
-            val parentName = archetypeName(graphNotation, documentPath)
+            val reference = archetypeReference(graphNotation, documentPath)
                 ?: return null
 
-            return graphNotation.coalesce.locate(ObjectReference.ofRootName(parentName))
+            return graphNotation.coalesce.locateOptional(reference)
         }
     }
 }

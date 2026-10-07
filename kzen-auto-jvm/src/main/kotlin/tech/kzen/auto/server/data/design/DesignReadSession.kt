@@ -7,7 +7,7 @@ import tech.kzen.auto.common.data.format.ConfiguredRecordFormat
 import tech.kzen.auto.common.data.model.DataPart
 import tech.kzen.auto.common.data.model.DataRef
 import tech.kzen.auto.common.data.read.DataContentFingerprint
-import tech.kzen.auto.common.data.read.ResolvedReadSpec
+import tech.kzen.auto.common.data.format.FormatResolutionResult
 import tech.kzen.auto.common.data.schema.DataShape
 import tech.kzen.auto.server.data.DataOpenerLookup
 import tech.kzen.auto.server.objects.datasource.DesignDataContext
@@ -103,13 +103,16 @@ class DesignReadSession internal constructor(
     }
 
 
-    /** How [format] reads [ref], resolved once per fingerprinted content (automatic detection samples it). */
+    /**
+     * How [format] reads [ref], with how that read was chosen (the format automatic detection picked), resolved once
+     * per fingerprinted content (automatic detection samples it).
+     */
     suspend fun resolvedRead(
         format: ConfiguredRecordFormat,
         ref: DataRef,
         fingerprint: DataContentFingerprint?,
-        resolve: suspend () -> ResolvedReadSpec
-    ): ResolvedReadSpec {
+        resolve: suspend () -> FormatResolutionResult
+    ): FormatResolutionResult {
         val key = fingerprint?.let {
             Digest.build {
                 addUtf8(format::class.qualifiedName ?: format::class.toString())

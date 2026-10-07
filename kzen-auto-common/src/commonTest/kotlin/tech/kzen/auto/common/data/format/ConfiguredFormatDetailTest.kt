@@ -1,7 +1,9 @@
 package tech.kzen.auto.common.data.format
 
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 
@@ -19,6 +21,17 @@ class ConfiguredFormatDetailTest {
 
         assertFalse(decoded.perFileOverrideAvailable)
         assertTrue(decoded.columnLockingAvailable)
+    }
+
+
+    @Test
+    fun projectDocumentRoundTripsAndIsAbsentForABuiltIn() {
+        val project = ConfiguredFormatDetail(
+            "main/Custom.yaml#main.objects/Measurements", "Measurements", emptyList(), projectDocument = "Custom")
+        val builtIn = ConfiguredFormatDetail("formats.yaml#CSV", "CSV", listOf("csv"))
+
+        assertEquals("Custom", ConfiguredFormatDetail.ofCollection(project.asCollection()).projectDocument)
+        assertNull(ConfiguredFormatDetail.ofCollection(builtIn.asCollection()).projectDocument)
     }
 
 

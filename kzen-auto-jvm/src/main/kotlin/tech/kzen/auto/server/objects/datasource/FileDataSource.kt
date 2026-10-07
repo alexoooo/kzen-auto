@@ -28,6 +28,8 @@ import tech.kzen.auto.server.data.read.detection.FormatDetectionException
 import tech.kzen.auto.server.objects.datasource.format.ConfiguredRecordFormatLookup
 import tech.kzen.auto.server.objects.datasource.format.ConfiguredRecordFormatPreflight
 import tech.kzen.auto.server.objects.datasource.format.UndetectedFormat
+import tech.kzen.lib.common.model.location.AttributeLocation
+import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
 
@@ -43,7 +45,9 @@ class FileDataSource(
     @Service private val fileListingAction: FileListingAction,
     @Service private val formatLookup: ConfiguredRecordFormatLookup = unavailableFormatLookup,
     @Service private val resolutionBudgetFactory: SourceFormatResolutionBudgetFactory =
-        SourceFormatResolutionBudgetFactory()
+        SourceFormatResolutionBudgetFactory(),
+    // Absent when a Worker builds the source in code: its format then has no graph coordinate
+    selfLocation: ObjectLocation? = null
 ): FileResolutionDataSource {
     companion object {
         const val missingFail = "fail"
@@ -60,6 +64,11 @@ class FileDataSource(
 
     private val files = files.map(FileSelectionEntry::ofCollection)
 
+    // Where [format] came from: the reference a resolution reports is the one this attribute names
+    private val formatAttribute = selfLocation?.let {
+        AttributeLocation(it, ConfiguredRecordFormatLookup.formatAttributePath)
+    }
+
 
     override suspend fun resolve(context: DataContext): DataResolveResult {
         require(missing == missingFail || missing == missingSkip) {
@@ -67,7 +76,7 @@ class FileDataSource(
         }
 
         return resolutionBudgetFactory.create().withinDeadline {
-            val sourceFormat = formatLookup.preflight(format)
+            val sourceFormat = formatAttribute?.let { formatLookup.preflight(format, it) }
             val selected = list(context)
             val diagnostics = mutableListOf<DataDiagnostic>()
             val regularFiles = validateSelection(selected, diagnostics)
@@ -93,7 +102,7 @@ class FileDataSource(
         entry: FileSelectionEntry
     ): DataResolveResult {
         return resolutionBudgetFactory.create().withinDeadline {
-            val sourceFormat = formatLookup.preflight(format)
+            val sourceFormat = formatAttribute?.let { formatLookup.preflight(format, it) }
             val selected = selectedFile(context, entry)
             require(selected.isNotEmpty()) {
                 "Selected file is not in this source's selection: ${entry.location.asString()}"
@@ -139,7 +148,7 @@ class FileDataSource(
             "Unknown missing-file policy: $missing"
         }
         val regularFiles = validateSelection(list(context), mutableListOf())
-        return regularFiles.map { (_, info) -> SelectedFile(info, groupAttributes(info.name)) }
+        return regularFiles.map { (entry, info) -> SelectedFile(info, groupAttributes(info.name), entry) }
     }
 
 
@@ -160,10 +169,14 @@ class FileDataSource(
     }
 
 
-    /** One file of [select]: its listing, and the values its name yields. */
+    /**
+     * One file of [select]: its listing, the values its name yields, and the selection row naming it (null when a
+     * directory scan found it), whose location is as written rather than resolved like [DataLocationInfo.path].
+     */
     class SelectedFile(
         val info: DataLocationInfo,
-        val captures: Map<String, String>
+        val captures: Map<String, String>,
+        val entry: FileSelectionEntry? = null
     )
 
 

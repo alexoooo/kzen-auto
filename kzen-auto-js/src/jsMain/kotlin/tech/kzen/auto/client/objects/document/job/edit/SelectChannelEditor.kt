@@ -93,7 +93,7 @@ class SelectChannelEditor(
     }
 
 
-    override suspend fun onStoreRefresh(graphDefinitionAttempt: GraphDefinitionAttempt) {
+    override suspend fun onGraphRefresh(graphDefinitionAttempt: GraphDefinitionAttempt) {
         setOptions(channelOptions(graphDefinitionAttempt.graphStructure.graphNotation))
     }
 

@@ -10,6 +10,7 @@ import tech.kzen.auto.common.data.format.FormatMaterializationResult
 import tech.kzen.auto.common.data.format.FormatSelectionKind
 import tech.kzen.auto.common.data.format.detection.DetectionCandidateMetadata
 import tech.kzen.auto.common.data.format.detection.FormatHintMetadata
+import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.auto.server.data.TextEncodingCatalog
 import tech.kzen.auto.server.data.read.ReaderCapabilityRegistry
 import tech.kzen.auto.server.data.read.detection.FilenameDetection
@@ -18,7 +19,11 @@ import tech.kzen.auto.server.service.exec.GraphInstanceCache
 import tech.kzen.auto.server.service.exec.ObjectInstanceAttempt
 import tech.kzen.auto.server.service.exec.ServerGraphDefinition
 import tech.kzen.lib.common.model.definition.GraphDefinition
+import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.model.location.ObjectLocation
+import tech.kzen.lib.common.model.location.ObjectReference
+import tech.kzen.lib.common.model.location.ObjectReferenceHost
+import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.service.notation.NotationConventions
 import tech.kzen.lib.common.service.store.LocalGraphStore
 
@@ -28,21 +33,37 @@ class ConfiguredRecordFormatRegistry(
     private val graphInstanceCache: GraphInstanceCache,
     private val readerCapabilities: ReaderCapabilityRegistry
 ): ConfiguredRecordFormatLookup {
-    suspend fun catalog(): FileFormatCatalog = FileFormatCatalog(
-        registeredFormats().map { registered ->
-            val authoring = registered.format.authoringCapabilityIdentity
-                ?.let(readerCapabilities::authoringFor)
-            ConfiguredFormatDetail(
-                registered.reference.asString(),
-                registered.format.title,
-                registered.format.extensions,
-                registered.format.authoringCapabilityIdentity,
-                registered.format.overrideEditorReference,
-                authoring != null,
-                authoring?.supportsColumnLocking == true,
-                registered.format.selectionKind == FormatSelectionKind.Explicit && registered.format.readsContent)
-        },
-        TextEncodingCatalog.available())
+    suspend fun catalog(): FileFormatCatalog {
+        val graphNotation = graphStore.graphDefinition().graphStructure.graphNotation
+        return FileFormatCatalog(
+            registeredFormats().map { registered ->
+                val authoring = registered.format.authoringCapabilityIdentity
+                    ?.let(readerCapabilities::authoringFor)
+                val reference = registered.reference
+                val inProject = reference.documentPath.startsWith(NotationConventions.mainDocumentNesting)
+                ConfiguredFormatDetail(
+                    reference.asString(),
+                    if (inProject) projectLabel(graphNotation, reference) else registered.format.title,
+                    registered.format.extensions,
+                    registered.format.authoringCapabilityIdentity,
+                    registered.format.overrideEditorReference,
+                    authoring != null,
+                    authoring?.supportsColumnLocking == true,
+                    registered.format.selectionKind == FormatSelectionKind.Explicit &&
+                        registered.format.readsContent,
+                    reference.documentPath.name.value.takeIf { inProject })
+            },
+            TextEncodingCatalog.available())
+    }
+
+
+    // A project format's own title, else its object name: the title it inherits names its format type ("Delimited"),
+    // which would make it indistinguishable from a built-in in the list
+    private fun projectLabel(graphNotation: GraphNotation, reference: ObjectLocation): String =
+        graphNotation.directAttribute(reference, AutoConventions.titleAttributePath)
+            ?.asString()
+            ?.takeIf { it.isNotBlank() }
+            ?: reference.objectPath.name.value
 
 
     suspend fun resolve(
@@ -57,27 +78,24 @@ class ConfiguredRecordFormatRegistry(
     }
 
 
-    override suspend fun preflight(format: ConfiguredRecordFormat): ConfiguredRecordFormatPreflight? {
-        val registered = availableFormats()
-        val exact = registered.filter { it.format === format }
-        if (exact.size == 1) {
-            return exact.single().asPreflight()
-        }
-        require(exact.isEmpty()) { "Injected configured format has ambiguous graph identity" }
-
-        val semantic = registered.filter {
-            it.format::class == format::class && it.format.digest() == format.digest()
-        }
-        if (semantic.isEmpty()) {
-            // Programmatically constructed and test-local formats still resolve strictly through their own
-            // immutable config. With no graph coordinate there is no stable reference to publish in the catalog.
+    // The injected instance is kept: what is read stays the snapshot its owner was built from, only the reference
+    // comes from the graph
+    override suspend fun preflight(
+        format: ConfiguredRecordFormat,
+        injectedBy: AttributeLocation
+    ): ConfiguredRecordFormatPreflight? {
+        val graphNotation = graphStore.graphDefinition().graphStructure.graphNotation
+        val owner = injectedBy.objectLocation
+        if (owner !in graphNotation.coalesce) {
             return null
         }
-        require(semantic.size == 1) {
-            "Injected configured format has ambiguous value-identical graph coordinates: " +
-                semantic.joinToString { it.reference.asString() }
-        }
-        return semantic.single().asPreflight()
+        val reference = graphNotation.firstAttribute(owner, injectedBy.attributePath)
+            ?.asString()
+            ?.let(ObjectReference::parse)
+            ?: return null
+        val location = graphNotation.coalesce.locateOptional(reference, ObjectReferenceHost.ofLocation(owner))
+            ?: return null
+        return ConfiguredRecordFormatPreflight(location.asString(), format)
     }
 
 
@@ -182,10 +200,7 @@ class ConfiguredRecordFormatRegistry(
     private data class RegisteredConfiguredFormat(
         val reference: ObjectLocation,
         val format: ConfiguredRecordFormat
-    ) {
-        fun asPreflight(): ConfiguredRecordFormatPreflight =
-            ConfiguredRecordFormatPreflight(reference.asString(), format)
-    }
+    )
 
 
     companion object {

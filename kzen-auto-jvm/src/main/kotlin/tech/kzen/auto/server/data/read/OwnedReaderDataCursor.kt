@@ -3,6 +3,7 @@ package tech.kzen.auto.server.data.read
 import tech.kzen.auto.common.data.api.DataCursor
 import tech.kzen.auto.common.data.read.CursorAdoptionIdentity
 import tech.kzen.auto.common.data.schema.DataShape
+import tech.kzen.auto.server.data.content.OpenedReaderByteInput
 import tech.kzen.lib.common.exec.data.value.DataValue
 
 
@@ -12,6 +13,7 @@ class OwnedReaderDataCursor(
     override val adoptionIdentity: CursorAdoptionIdentity
 ): OperationalDataCursor {
     override val shape: DataShape get() = delegate.shape
+    override val sourceBytesRead: Long? get() = (owner as? OpenedReaderByteInput)?.sourceBytesRead
 
     private var closed = false
 

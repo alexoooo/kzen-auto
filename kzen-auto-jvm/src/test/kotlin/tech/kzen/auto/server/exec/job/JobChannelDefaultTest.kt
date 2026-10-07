@@ -23,7 +23,9 @@ import kotlin.test.assertTrue
  *  - the Job-wide defaults declared on `main` are stamped onto every auto-synthesized channel (the common path
  *    carries no `is: Channel` object, so a channel would otherwise only ever get the archetype defaults 1024/0);
  *  - per-channel config lives on the UPSTREAM Worker in its `channels.<outputPort>` map, so it wins over the
- *    Job-wide default AND follows the Worker across a rename — there is no name-coupled override object.
+ *    Job-wide default AND follows the Worker across a rename — there is no name-coupled override object;
+ *  - a Worker archetype's own `channels` map (File's one-file handoff) is inherited beneath the Worker's value
+ *    and above the Job-wide default.
  */
 class JobChannelDefaultTest {
     @Test
@@ -36,17 +38,27 @@ class JobChannelDefaultTest {
 
         // Two adjacent-Worker connections (reader->filter, filter->writer) => two synthesized one-way channels.
         assertEquals(2, result.channelLocations.size, "expected two synthesized channels")
-
-        for (channelLocation in result.channelLocations) {
-            assertEquals(
-                "32", channelValue(augmentedNotation, channelLocation, JobConventions.batchSizeAttributeName),
-                "batchSize on $channelLocation")
-            assertEquals(
-                "4", channelValue(augmentedNotation, channelLocation, JobConventions.capacityAttributeName),
-                "capacity on $channelLocation")
-        }
-
         assertTrue(result.channelLocations.all { it.objectPath.name.value.startsWith("ch__") })
+
+        val filterChannel = channelLocation(documentPath, "ch__filter__output")
+        assertEquals("32", channelValue(augmentedNotation, filterChannel, JobConventions.batchSizeAttributeName))
+        assertEquals("4", channelValue(augmentedNotation, filterChannel, JobConventions.capacityAttributeName))
+    }
+
+
+    @Test
+    fun workerArchetypeDefaultWinsOverJobWideDefault() {
+        val documentPath = DocumentPath.parse("test/job/channel/job-batchsize-default-test.yaml")
+
+        val graphNotation = AutoTestUtils.readNotation()
+        val result = synthesize(graphNotation, documentPath)
+        val augmentedNotation = result.graphDefinition.graphStructure.graphNotation
+
+        // The File archetype declares a one-file rendezvous on its output: the reader declares nothing itself,
+        // and the Job-wide 32 / 4 does not override the Worker type's own default.
+        val readerChannel = channelLocation(documentPath, "ch__reader__output")
+        assertEquals("1", channelValue(augmentedNotation, readerChannel, JobConventions.batchSizeAttributeName))
+        assertEquals("0", channelValue(augmentedNotation, readerChannel, JobConventions.capacityAttributeName))
     }
 
 

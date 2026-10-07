@@ -138,15 +138,25 @@ class JobLaneDescriptor(
 
 /**
  * [provenance] says where a type read from data came from, e.g. how many of the lane's values it was inferred from;
- * [partial] marks it read from only part of them, because a design-time limit cut the reading short.
+ * [partial] marks it read from only part of them, because a design-time limit cut the reading short. [details] is
+ * what the Worker found out about its input beyond the type, read by its own display / editors
+ * ([tech.kzen.auto.common.objects.document.logic.StepValidation.details]).
  */
 class JobLaneAttempt(
     val lane: JobLaneDescriptor,
     val errorMessage: String?,
     val warningMessage: String? = null,
     val provenance: String? = null,
-    val partial: Boolean = false
-)
+    val partial: Boolean = false,
+    val details: Map<String, Any?> = mapOf()
+) {
+    fun withDetails(added: Map<String, Any?>): JobLaneAttempt {
+        if (added.isEmpty()) {
+            return this
+        }
+        return JobLaneAttempt(lane, errorMessage, warningMessage, provenance, partial, details + added)
+    }
+}
 
 
 /**

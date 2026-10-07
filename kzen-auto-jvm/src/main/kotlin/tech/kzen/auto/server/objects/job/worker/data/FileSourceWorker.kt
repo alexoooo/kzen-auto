@@ -2,6 +2,7 @@ package tech.kzen.auto.server.objects.job.worker.data
 
 import tech.kzen.auto.common.data.api.DataSource
 import tech.kzen.auto.common.data.model.DataRef
+import tech.kzen.auto.common.objects.document.job.JobReadConventions
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.server.data.FileListingAction
@@ -134,7 +135,17 @@ class FileSourceWorker(
         val sample = JobLaneSample(
             files.take(design.budget.maxValues).map { lift(it, captureNames) },
             files.size)
-        return JobLaneAttempt(JobLaneDescriptor(contract, sample = sample), null)
+        // The selected files' sizes, for the File card to show each one's and to weigh read progress by bytes
+        val listed = files.map {
+            mapOf(
+                JobReadConventions.fileLocationKey to (it.entry?.location ?: it.info.path).asString(),
+                JobReadConventions.filePathKey to it.info.path.asString(),
+                JobReadConventions.fileSizeKey to it.info.size)
+        }
+        return JobLaneAttempt(
+            JobLaneDescriptor(contract, sample = sample),
+            null,
+            details = mapOf(JobReadConventions.filesKey to listed))
     }
 
 

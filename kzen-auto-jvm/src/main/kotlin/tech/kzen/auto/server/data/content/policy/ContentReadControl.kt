@@ -15,6 +15,10 @@ class ContentReadControl(
     var expandedBytesRead: Long = 0
         private set
 
+    /** Bytes taken from the source beneath any coding, counted by `SourceByteCountingContent`. */
+    var sourceBytesRead: Long = 0
+        private set
+
 
     fun beginOperation() {
         if (operationStarted == null) {
@@ -43,5 +47,11 @@ class ContentReadControl(
     fun recordExpandedBytes(count: Int) {
         require(count >= 0) { "Expanded byte count must not be negative" }
         expandedBytesRead += count
+    }
+
+
+    fun recordSourceBytes(count: Int) {
+        require(count >= 0) { "Source byte count must not be negative" }
+        sourceBytesRead += count
     }
 }

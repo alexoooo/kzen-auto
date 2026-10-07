@@ -8,7 +8,11 @@ import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorMa
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeViewManager
 import tech.kzen.auto.client.objects.document.common.file.FileBrowserToggleChannel
 import tech.kzen.auto.client.objects.document.common.file.FileBrowserToggleKey
+import tech.kzen.auto.client.objects.document.common.file.FileRowStatus
 import tech.kzen.auto.client.objects.document.common.file.fileBrowserToggle
+import tech.kzen.auto.client.objects.document.job.JobProgressChannel
+import tech.kzen.auto.client.objects.document.job.JobWorkerProgress
+import tech.kzen.auto.client.objects.document.job.source.file.FileReadProgress
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.wrap.RPureComponent
@@ -16,6 +20,8 @@ import tech.kzen.auto.client.wrap.contextValue
 import tech.kzen.auto.client.wrap.installContextType
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
+import tech.kzen.auto.common.objects.document.job.JobChannelDerivation
+import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
@@ -40,6 +46,10 @@ external interface FileSourceWorkerDisplayState: State {
     // Mirrors the shared channel's openness for this card. The channel owns the fact; this is what React compares
     // to decide there is anything to redraw (RPureComponent skips an update whose state shallow-compares equal).
     var browserOpen: Boolean
+
+    // The progress of the Worker reading this one's files, from the document's progress broadcast (see
+    // FileReadProgress); null when nothing reads them or before a run.
+    var readerProgress: JobWorkerProgress?
 }
 
 
@@ -55,6 +65,9 @@ external interface FileSourceWorkerDisplayState: State {
  *
  * Report's Input panel is the precedent: the browser is a mode the panel is in, so the control that changes it
  * belongs beside the panel's name, not in the body it rearranges.
+ *
+ * During a run the header says how much of the selection the Worker below has read, by bytes, rather than how
+ * many files were handed over (FileReadProgress); the table under it shows the same per file.
  */
 @Suppress("unused")
 class FileSourceWorkerDisplay(
@@ -62,7 +75,8 @@ class FileSourceWorkerDisplay(
 ):
     RPureComponent<FileSourceWorkerDisplayProps, FileSourceWorkerDisplayState>(props),
     ClientStateGlobal.Observer,
-    FileBrowserToggleChannel.Observer
+    FileBrowserToggleChannel.Observer,
+    JobProgressChannel.Observer
 {
     companion object {
         private val filesAttributeName = AttributeName("files")
@@ -99,20 +113,30 @@ class FileSourceWorkerDisplay(
     override fun FileSourceWorkerDisplayState.init(props: FileSourceWorkerDisplayProps) {
         selectionEmpty = true
         browserOpen = false
+        readerProgress = null
     }
 
 
     private var toggleChannel: FileBrowserToggleChannel? = null
 
 
+    private fun progressChannel(): JobProgressChannel? =
+        contextValue<DocumentBridge?>()?.channel(JobProgressChannel.Key)
+
+
     override fun componentDidMount() {
         props.clientStateGlobal.observe(this)
         toggleChannel?.observe(props.common.objectLocation, this)
+        progressChannel()?.let { channel ->
+            channel.observe(this)
+            onJobProgress(channel.current())
+        }
     }
 
 
     override fun componentWillUnmount() {
         props.clientStateGlobal.unobserve(this)
+        progressChannel()?.unobserve(this)
         toggleChannel?.unobserve(props.common.objectLocation, this)
         toggleChannel?.unhost(props.common.objectLocation)
     }
@@ -136,6 +160,20 @@ class FileSourceWorkerDisplay(
         if (state.selectionEmpty != selectionEmpty) {
             setState {
                 this.selectionEmpty = selectionEmpty
+            }
+        }
+    }
+
+
+    // Whichever Worker takes this one's files, followed through the read conventions alone (CC-17)
+    override fun onJobProgress(progress: Map<ObjectLocation, JobWorkerProgress>) {
+        val readerProgress = props.clientStateGlobal.current()
+            ?.graphStructure()
+            ?.let { JobChannelDerivation.consumerOf(it, props.common.objectLocation) }
+            ?.let { progress[it] }
+        if (state.readerProgress != readerProgress) {
+            setState {
+                this.readerProgress = readerProgress
             }
         }
     }
@@ -168,7 +206,22 @@ class FileSourceWorkerDisplay(
             headerRight = toggleChannel?.let { channel -> { it: ChildrenBuilder -> it.renderToggle(channel) } }
             bodyBefore = { bodyBuilder -> bodyBuilder.renderFileSelection() }
             bodyExtra = null
+            statusText = ::readStatusText
         }
+    }
+
+
+    // "1 of 2 files read · 43% of 1.4 GB"; null (the generic counts) until a reader reports on the files
+    private fun readStatusText(progress: JobWorkerProgress?): String? {
+        val files = FileReadProgress.listedFiles(props.common.validation?.details.orEmpty())
+        val read = FileReadProgress.of(files, state.readerProgress)
+            ?: return null
+        val done = read.rows.values.count { it == FileRowStatus.Done }
+        val parts = listOfNotNull(
+            progress?.status,
+            "$done of ${files.size} files read",
+            read.percent()?.let { "$it% of ${FormatUtils.readableFileSize(read.bytesTotal)}" })
+        return parts.joinToString(" · ")
     }
 
 

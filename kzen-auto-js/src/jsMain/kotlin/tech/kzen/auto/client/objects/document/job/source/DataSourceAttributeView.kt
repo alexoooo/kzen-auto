@@ -68,6 +68,10 @@ class DataSourceAttributeView(
     companion object {
         private val formatAttributeName = AttributeName("format")
         private val schemaAttributeName = AttributeName("schema")
+
+        // The schema is saved into the source's format, which must be one defined in the project to be editable
+        private const val noEditableFormatMessage =
+            "The source's format must be one you defined in a Custom document (with + Add) to save a schema into it"
     }
 
 
@@ -206,7 +210,7 @@ class DataSourceAttributeView(
             ?: return
         val format = editableFormatLocation()
         if (format == null) {
-            setState { authoringError = "Create a shared format before creating an editable schema." }
+            setState { authoringError = noEditableFormatMessage }
             return
         }
         val graphStructure = props.clientStateGlobal.current()?.graphStructure()
@@ -342,7 +346,7 @@ class DataSourceAttributeView(
                 size = Size.small
                 disabled = state.authoring
                 title = if (editableFormatLocation() == null) {
-                    "Create a shared format before materializing the schema"
+                    noEditableFormatMessage
                 }
                 else {
                     "Create an editable schema from the type read before Run"

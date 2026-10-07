@@ -8,6 +8,7 @@ import react.Key
 import react.Props
 import react.State
 import react.dom.html.ReactHTML.div
+import react.dom.html.ReactHTML.span
 import react.dom.html.ReactHTML.table
 import react.dom.html.ReactHTML.tbody
 import react.dom.html.ReactHTML.td
@@ -20,6 +21,7 @@ import tech.kzen.auto.client.wrap.select.muiAutocompleteField
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.data.file.FileSelectionEntry
 import tech.kzen.auto.common.data.format.FileFormatCatalog
+import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.auto.common.util.data.DataLocation
 import web.cssom.*
 
@@ -42,6 +44,11 @@ external interface FileSelectionTableProps: Props {
     var formatCatalog: FileFormatCatalog?
     var resolutionByLocation: Map<DataLocation, FileResolutionPresentation>
 
+    // Keyed by the row's location string. Null when unknown, which omits the column: sizes come from a Job's
+    // validation of the selection, statuses from a run reading it (see FileRowStatus).
+    var sizeByLocation: Map<String, Long>?
+    var statusByLocation: Map<String, FileRowStatus>?
+
     var onCheckedChanged: (Set<DataLocation>) -> Unit
     var onFormatChanged: (Int, String) -> Unit
     var onEncodingChanged: (Int, String) -> Unit
@@ -58,6 +65,12 @@ class FileSelectionTable(props: FileSelectionTableProps):
     RPureComponent<FileSelectionTableProps, FileSelectionTableState>(props)
 {
     companion object {
+        private val doneColor = Color("#2e7d32")
+        private val readTrackColor = Color("#e0e0e0")
+        private val readBarColor = Color("#1976d2")
+        private val readBarWidth = 5.em
+
+
         internal fun additionalError(presentation: FileResolutionPresentation): String? =
             presentation.error?.takeUnless { it == presentation.summary }
     }
@@ -131,6 +144,12 @@ class FileSelectionTable(props: FileSelectionTableProps):
                 }
                 fileTableHeaderCell { +"#" }
                 fileTableHeaderCell { +"File" }
+                if (props.sizeByLocation != null) {
+                    fileTableHeaderCell { +"Size" }
+                }
+                if (props.statusByLocation != null) {
+                    fileTableHeaderCell { +"Read" }
+                }
                 if (props.showDetails && props.perEntryFormat) {
                     fileTableHeaderCell { +"Format" }
                     fileTableHeaderCell { +"Encoding" }
@@ -195,6 +214,22 @@ class FileSelectionTable(props: FileSelectionTableProps):
                 }
             }
 
+            props.sizeByLocation?.let { sizes ->
+                td {
+                    css {
+                        paddingLeft = 0.5.em; paddingRight = 0.5.em; whiteSpace = WhiteSpace.nowrap; color = NamedColor.gray
+                    }
+                    sizes[entry.location.asString()]?.let { +FormatUtils.readableFileSize(it) }
+                }
+            }
+
+            props.statusByLocation?.let { statuses ->
+                td {
+                    css { paddingLeft = 0.5.em; paddingRight = 0.5.em; whiteSpace = WhiteSpace.nowrap }
+                    statuses[entry.location.asString()]?.let { renderStatus(it) }
+                }
+            }
+
             if (props.showDetails && props.perEntryFormat) {
                 val format = entry.format?.asString().orEmpty()
                 val encoding = entry.encoding?.asString().orEmpty()
@@ -209,6 +244,48 @@ class FileSelectionTable(props: FileSelectionTableProps):
                 ) {
                     props.onEncodingChanged(index, it)
                 } }
+            }
+        }
+    }
+
+
+    private fun ChildrenBuilder.renderStatus(status: FileRowStatus) {
+        when (status) {
+            FileRowStatus.Pending -> span {
+                css { color = NamedColor.gray }
+                +"pending"
+            }
+
+            FileRowStatus.Done -> span {
+                css { color = doneColor }
+                +"done"
+            }
+
+            is FileRowStatus.Reading -> {
+                val percent = status.percent()
+                div {
+                    css { display = Display.flex; alignItems = AlignItems.center; gap = 0.4.em }
+                    div {
+                        css {
+                            width = readBarWidth
+                            height = 0.4.em
+                            borderRadius = 2.px
+                            backgroundColor = readTrackColor
+                            overflow = Overflow.hidden
+                        }
+                        div {
+                            css {
+                                width = (percent ?: 0).pct
+                                height = 100.pct
+                                backgroundColor = readBarColor
+                            }
+                        }
+                    }
+                    span {
+                        css { fontSize = 0.85.em }
+                        +(percent?.let { "$it%" } ?: "reading")
+                    }
+                }
             }
         }
     }

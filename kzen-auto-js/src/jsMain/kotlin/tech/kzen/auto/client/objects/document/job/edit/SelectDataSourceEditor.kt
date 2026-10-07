@@ -109,7 +109,7 @@ class SelectDataSourceEditor(
     }
 
 
-    override suspend fun onStoreRefresh(graphDefinitionAttempt: GraphDefinitionAttempt) {
+    override suspend fun onGraphRefresh(graphDefinitionAttempt: GraphDefinitionAttempt) {
         refresh(graphDefinitionAttempt.graphStructure.graphNotation)
     }
 

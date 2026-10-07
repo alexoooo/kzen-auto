@@ -14,6 +14,7 @@ import tech.kzen.auto.plugin.api.data.ReaderOpenRequest
 import tech.kzen.auto.server.data.content.OpenedReaderByteInput
 import tech.kzen.auto.server.data.content.SequentialByteContent
 import tech.kzen.auto.server.data.content.SequentialContentStack
+import tech.kzen.auto.server.data.content.SourceByteCountingContent
 import tech.kzen.auto.server.data.content.coding.ContentCodingStack
 import tech.kzen.auto.server.data.content.local.LocalDataContentProvider
 import tech.kzen.auto.server.data.content.policy.ContentReadControl
@@ -79,7 +80,11 @@ class ConfiguredDataOpener(
         var owner: AutoCloseable = bytes
         try {
             val decodedBytes = ContentCodingStack.wrap(
-                bytes, part.resolvedRead.contentCodings, control, part.ref.display(), part.role.name)
+                SourceByteCountingContent(bytes, control),
+                part.resolvedRead.contentCodings,
+                control,
+                part.ref.display(),
+                part.role.name)
             owner = decodedBytes
             val input = OpenedReaderByteInput(decodedBytes, control, fingerprint)
             owner = input

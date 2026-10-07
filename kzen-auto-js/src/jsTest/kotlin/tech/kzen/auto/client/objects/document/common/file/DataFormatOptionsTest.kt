@@ -6,6 +6,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 
 class DataFormatOptionsTest {
@@ -58,6 +59,32 @@ class DataFormatOptionsTest {
 
         assertNotNull(formats.singleOrNull { it.value == "Parquet" }?.detail)
         assertNotNull(encodings.singleOrNull { it.value == "EBCDIC" }?.detail)
+    }
+
+
+    // Built-in only: no group headers at all
+    @Test
+    fun withoutProjectFormatsTheListIsUngrouped() {
+        assertTrue(DataFormatOptions.formats(catalog, "").all { it.group == null })
+    }
+
+
+    // A format defined in a project document follows the built-ins, in its own group, saying where it lives
+    @Test
+    fun projectFormatsAreGroupedAfterTheBuiltInsWithTheirDocument() {
+        val withProject = catalog.copy(formats = listOf(
+            ConfiguredFormatDetail(
+                "main/Custom.yaml#main.objects/Measurements", "Measurements", listOf(),
+                projectDocument = "Custom")
+        ) + catalog.formats)
+
+        val options = DataFormatOptions.formats(withProject, "")
+
+        assertEquals("main/Custom.yaml#main.objects/Measurements", options.last().value)
+        assertEquals("In Custom", options.last().detail)
+        assertEquals(
+            listOf("Built-in", "Built-in", "Defined in this project"),
+            options.map { it.group })
     }
 
 

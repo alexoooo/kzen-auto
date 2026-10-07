@@ -22,6 +22,7 @@ import tech.kzen.auto.common.data.read.CursorAdoptionIdentity
 import tech.kzen.auto.common.data.schema.DataShape
 import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.auto.common.data.schema.LegacyDataShapeBridge
+import tech.kzen.auto.common.objects.document.job.JobReadConventions
 import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.api.ChannelInputIterator
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
@@ -103,6 +104,51 @@ class ParseWorkerTest {
         assertEquals(7, control.blockingCount, "three items, two exhausted pulls, and two closes")
         assertEquals(1L, control.progressValues.last()["units"])
         assertEquals(3L, control.progressValues.last()["emitted"])
+    }
+
+
+    @Test
+    fun progressFollowsTheSourceBytesOfThePartBeingReadAndClearsAfterIt() = runBlocking {
+        val ref = DataRef(null, "/data/big.csv", mapOf(DataRef.sizeKey to "40"))
+        val unit = DataUnit.of(configuredTestDataPart(DataRole.main, ref, null))
+        val cursor = FakeCursor(
+            LegacyDataShapeBridge.payload(TypeMetadata.string), listOf("a", "b", "c", "d"), bytesPerItem = 10)
+        val control = CountingControl()
+        worker(BatchInput(listOf(unit)), FakeOpener(mapOf(ref.id to { cursor })), CapturingOutput(batchSize = 1))
+            .run(control)
+
+        val reading = control.progressValues.filter { JobReadConventions.readPathKey in it }
+        assertTrue(reading.isNotEmpty())
+        for (progress in reading) {
+            assertEquals("big.csv", progress[JobReadConventions.readNameKey])
+            assertEquals("/data/big.csv", progress[JobReadConventions.readPathKey])
+            assertEquals(40L, progress[JobReadConventions.readSizeKey])
+        }
+        val bytes = reading.map { it[JobReadConventions.readBytesKey] as Long }
+        assertEquals(bytes.sorted(), bytes, "bytes read only grow")
+        assertEquals(40L, bytes.last())
+        assertNull(control.progressValues.last()[JobReadConventions.readPathKey], "nothing is being read once done")
+    }
+
+
+    @Test
+    fun beforeRunUnitInputReportsThatAPartAppliesAndTheSampledPartNames() {
+        val worker = worker(BatchInput(emptyList()), FakeOpener(emptyMap()), CapturingOutput())
+        val sample = JobLaneSample(
+            listOf(
+                DataUnit.of(part("m", "main"), part("r1", "reference")),
+                DataUnit.of(part("r2", "reference"))
+            ).map(JobDataValues::lift), 2)
+        val dataUnit = TypeMetadata(dataUnitClassName(), emptyList(), false).toDataContract()
+
+        val attempt = worker.payloadFlow(JobLaneDescriptor(dataUnit, sample = sample), laneContext())
+
+        assertEquals(true, attempt.details[JobReadConventions.readsUnitsKey])
+        assertEquals(listOf("main", "reference"), attempt.details[JobReadConventions.rolesKey])
+
+        val content = worker.payloadFlow(
+            JobLaneDescriptor(FileValues.contract(emptyList(), null)), laneContext())
+        assertNull(content.details[JobReadConventions.readsUnitsKey], "a part never applies to content")
     }
 
 
@@ -823,6 +869,7 @@ class ParseWorkerTest {
             val identity = adoptionIdentity(part)
             return object: OperationalDataCursor, DataCursor by cursor {
                 override val adoptionIdentity = identity
+                override val sourceBytesRead: Long? get() = (cursor as? FakeCursor)?.bytesRead
             }
         }
 
@@ -834,7 +881,8 @@ class ParseWorkerTest {
 
     private class FakeCursor(
         shape: DataShape?,
-        items: List<Any?>
+        items: List<Any?>,
+        private val bytesPerItem: Long = 0
     ): DataCursor {
         override val shape: DataShape = shape ?: LegacyDataShapeBridge.runtimeUnknown()
         private val registry = DefaultDataAdapterRegistry()
@@ -851,10 +899,14 @@ class ParseWorkerTest {
             }
         }.iterator()
         var closed = false
+        var bytesRead = 0L
 
 
         override fun hasNext(): Boolean = iterator.hasNext()
-        override fun next(): DataValue = iterator.next()
+        override fun next(): DataValue {
+            bytesRead += bytesPerItem
+            return iterator.next()
+        }
         override fun close() {
             closed = true
         }
