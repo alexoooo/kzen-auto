@@ -2,25 +2,18 @@ main:
   is: Job
   capacity: 10
 
-main.workers/Multi-File Reader:
-  is: MultiFileReaderWorker
-  paths:
-    - "C:/~/data/measurements-100000.txt"
-  delimiter: ";"
-  header: false
+main.workers/File:
+  is: FileSourceWorker
+  browser:
+    directory: C:/~/data
+    filter: ""
+  files:
+    - location: C:/~/data/measurements-100000.txt
+    - location: C:/~/data/measurements-10000000.txt
 
-main.workers/Pivot:
-  is: PivotWorker
-  pivot:
-    rows:
-      - "0|c0"
-    values:
-      "0|c1":
-        - Count
-        - Sum
-        - Average
-        - Min
-        - Max
+main.workers/Parse:
+  is: Parse
+  format: auto-jvm/datasource/configured-delimited-format.yaml#AutomaticFormat
 
-main.workers/Preview:
-  is: PreviewWorker
+main.workers/Export:
+  is: ExportWriterWorker

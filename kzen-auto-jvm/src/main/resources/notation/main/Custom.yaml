@@ -4,6 +4,8 @@
 
 main:
   is: CustomDocument
+  exports:
+    - main.objects/AuthoredDelimitedFormat
 
 # Runs once when triggered and returns a greeting built from its `named` reference.
 HelloAction:
@@ -53,3 +55,9 @@ main.objects/Hello:
 main.objects/Counter:
   is: CountingTask
   named: DefaultGreeter
+
+main.objects/AuthoredDelimitedFormat:
+  is: auto-jvm/datasource/configured-delimited-format.yaml#AuthoredDelimitedFormat
+  delimiter: ','
+  header: present
+  schema: ""

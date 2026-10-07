@@ -1,0 +1,19 @@
+main:
+  is: Job
+
+main.workers/File:
+  is: FileSourceWorker
+  browser:
+    directory: C:/~
+    filter: ""
+  files:
+    - location: C:/~/data.tar.gz
+
+main.workers/Extract:
+  is: Extract
+
+main.workers/Write:
+  is: Write
+  directory: C:/~/tmp/test
+  name: ${name}_${time}${extension}
+  existing: fail
