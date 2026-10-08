@@ -99,6 +99,7 @@ open class ReadWorker(
     private var partIndex = 0
     private var itemIndex = 0L
     private var shapeBaseline: DataReadCore.ShapeBaseline? = null
+    private var projection: RecordProjection? = null
     // The type this Worker was validated with: every part must fit it (R6)
     private var validatedShape: DataReadCore.ShapeBaseline? = null
     private var inspectedShapes: Map<String, DataShape>? = null
@@ -251,6 +252,12 @@ open class ReadWorker(
     }
 
 
+    // The column mapping into the shape baseline, planned once per file rather than once per row
+    private fun projectionFor(cursor: DataCursor): RecordProjection =
+        DataReadCore.projection(projection, cursor.shape, requireNotNull(shapeBaseline), null)
+            .also { projection = it }
+
+
     private suspend fun emitItems(
         activeManifest: DataManifest,
         context: WorkerDataContext,
@@ -299,8 +306,7 @@ open class ReadWorker(
             val emittedItem = DataReadCore.emitNext(
                 control,
                 activeCursor,
-                requireNotNull(shapeBaseline),
-                null,
+                projectionFor(activeCursor),
                 claimBeforeSend = {
                     itemIndex += 1
                     emitted += 1

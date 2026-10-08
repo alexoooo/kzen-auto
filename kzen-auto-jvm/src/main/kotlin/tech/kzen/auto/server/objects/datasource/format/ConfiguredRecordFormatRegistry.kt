@@ -14,6 +14,7 @@ import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.auto.server.data.TextEncodingCatalog
 import tech.kzen.auto.server.data.read.ReaderCapabilityRegistry
 import tech.kzen.auto.server.data.read.detection.FilenameDetection
+import tech.kzen.auto.server.data.write.RecordWriterCapabilityRegistry
 import tech.kzen.auto.server.service.exec.ExecutionGraphErrors
 import tech.kzen.auto.server.service.exec.GraphInstanceCache
 import tech.kzen.auto.server.service.exec.ObjectInstanceAttempt
@@ -31,7 +32,8 @@ import tech.kzen.lib.common.service.store.LocalGraphStore
 class ConfiguredRecordFormatRegistry(
     private val graphStore: LocalGraphStore,
     private val graphInstanceCache: GraphInstanceCache,
-    private val readerCapabilities: ReaderCapabilityRegistry
+    private val readerCapabilities: ReaderCapabilityRegistry,
+    private val writerCapabilities: RecordWriterCapabilityRegistry
 ): ConfiguredRecordFormatLookup {
     suspend fun catalog(): FileFormatCatalog {
         val graphNotation = graphStore.graphDefinition().graphStructure.graphNotation
@@ -51,7 +53,8 @@ class ConfiguredRecordFormatRegistry(
                     authoring?.supportsColumnLocking == true,
                     registered.format.selectionKind == FormatSelectionKind.Explicit &&
                         registered.format.readsContent,
-                    reference.documentPath.name.value.takeIf { inProject })
+                    reference.documentPath.name.value.takeIf { inProject },
+                    writerCapabilities.writerFor(registered.format) != null)
             },
             TextEncodingCatalog.available())
     }

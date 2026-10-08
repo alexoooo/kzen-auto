@@ -1,0 +1,21 @@
+# Child Script for RecyclableRouteTest route "run": returns the value it was given, so a pooled record that
+# reached it by identity would come back out of the run.
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.Any
+      generics: []
+      nullable: false
+
+main.parameters/item:
+  is: ParameterBinding
+  type:
+    class: kotlin.Any
+    generics: []
+    nullable: false
+  default: 0
+
+main.steps/Identity:
+  is: ResultStep
+  code: "item"

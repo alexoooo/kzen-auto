@@ -2,6 +2,7 @@ package tech.kzen.auto.server.objects.job.value
 
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.auto.plugin.model.record.FlatRecordHeader
+import tech.kzen.auto.server.data.read.FlatRecordBacked
 import tech.kzen.lib.common.exec.ScalarExecutionValue
 import tech.kzen.lib.common.exec.data.problem.DataProblem
 import tech.kzen.lib.common.exec.data.type.DataContract
@@ -14,11 +15,14 @@ import tech.kzen.lib.common.exec.data.value.ValueAccess
 
 /** Materialized record plus a retained native root and optional per-field absence/null state. */
 internal class ProjectedRecordValueAccess(
-    val record: FlatFileRecord,
+    override val flatRecord: FlatFileRecord,
     private val header: FlatRecordHeader,
     val states: List<DataState>?,
     private val nativeRoot: Any?
-): ValueAccess by record {
+):
+    ValueAccess by flatRecord,
+    FlatRecordBacked
+{
     override fun contract(node: DataNode): DataContract =
         if (node.token == 0L) header.contract else header.contractAt(fieldIndex(node))
 
@@ -27,37 +31,37 @@ internal class ProjectedRecordValueAccess(
 
     override fun scalar(node: DataNode): ScalarExecutionValue {
         requirePresent(node)
-        return record.scalar(node)
+        return flatRecord.scalar(node)
     }
 
     override fun readBoolean(node: DataNode): Boolean {
         requirePresent(node)
-        return record.readBoolean(node)
+        return flatRecord.readBoolean(node)
     }
 
     override fun readLong(node: DataNode): Long {
         requirePresent(node)
-        return record.readLong(node)
+        return flatRecord.readLong(node)
     }
 
     override fun readDouble(node: DataNode): Double {
         requirePresent(node)
-        return record.readDouble(node)
+        return flatRecord.readDouble(node)
     }
 
     override fun readText(node: DataNode): String {
         requirePresent(node)
-        return record.readText(node)
+        return flatRecord.readText(node)
     }
 
     override fun readBinary(node: DataNode): ByteArray {
         requirePresent(node)
-        return record.readBinary(node)
+        return flatRecord.readBinary(node)
     }
 
     override fun native(node: DataNode): Any {
         if (node.token == 0L && nativeRoot != null) return nativeRoot
-        return record.native(node)
+        return flatRecord.native(node)
     }
 
     private fun fieldIndex(node: DataNode): Int {

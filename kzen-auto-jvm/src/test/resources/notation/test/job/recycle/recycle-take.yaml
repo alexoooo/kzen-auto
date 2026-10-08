@@ -1,0 +1,14 @@
+# RecyclableRouteTest route "take" (archetypes in recycle-test.yaml): source → take (closes its input early) → sink.
+main:
+  is: Job
+
+main.workers/source:
+  is: RecyclingSourceWorker
+  count: 10000
+
+main.workers/take:
+  is: TakeWorker
+  count: 5
+
+main.workers/sink:
+  is: RecyclableSinkWorker

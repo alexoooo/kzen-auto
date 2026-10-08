@@ -15,7 +15,8 @@ data class ConfiguredFormatDetail(
     val authoringAvailable: Boolean = false,
     val columnLockingAvailable: Boolean = false,
     val perFileOverrideAvailable: Boolean = true,
-    val projectDocument: String? = null
+    val projectDocument: String? = null,
+    val writable: Boolean = false
 ) {
     companion object {
         private const val referenceKey = "reference"
@@ -27,6 +28,7 @@ data class ConfiguredFormatDetail(
         private const val columnLockingAvailableKey = "columnLockingAvailable"
         private const val perFileOverrideAvailableKey = "perFileOverrideAvailable"
         private const val projectDocumentKey = "projectDocument"
+        private const val writableKey = "writable"
 
         @Suppress("UNCHECKED_CAST")
         fun ofCollection(collection: Map<String, Any?>): ConfiguredFormatDetail = ConfiguredFormatDetail(
@@ -38,7 +40,8 @@ data class ConfiguredFormatDetail(
             collection[authoringAvailableKey] as? Boolean ?: false,
             collection[columnLockingAvailableKey] as? Boolean ?: false,
             collection[perFileOverrideAvailableKey] as? Boolean ?: true,
-            collection[projectDocumentKey] as? String)
+            collection[projectDocumentKey] as? String,
+            collection[writableKey] as? Boolean ?: false)
     }
 
 
@@ -51,5 +54,6 @@ data class ConfiguredFormatDetail(
         authoringAvailableKey to authoringAvailable,
         columnLockingAvailableKey to columnLockingAvailable,
         perFileOverrideAvailableKey to perFileOverrideAvailable,
-        projectDocumentKey to projectDocument)
+        projectDocumentKey to projectDocument,
+        writableKey to writable)
 }

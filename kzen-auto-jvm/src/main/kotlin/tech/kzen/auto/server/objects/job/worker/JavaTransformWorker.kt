@@ -5,6 +5,7 @@ import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.api.ChannelServer
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.auto.server.objects.job.value.recycle.Recyclable
 import tech.kzen.lib.common.exec.data.type.DataContract
 import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -98,6 +99,7 @@ abstract class JavaTransformWorker @JvmOverloads constructor(
                 val output = element?.metadata?.let { lifted.withMetadata(it) } ?: lifted
                 if (inheriting) {
                     control.ownership()?.inherit(output, element)
+                    Recyclable.forfeitDerived(output, element)
                 }
                 emit.send(output)
             }

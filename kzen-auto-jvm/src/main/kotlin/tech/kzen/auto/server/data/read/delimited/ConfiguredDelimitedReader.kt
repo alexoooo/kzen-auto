@@ -6,19 +6,11 @@ import tech.kzen.auto.common.data.read.ReadOperationalPolicy
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.auto.plugin.model.record.FlatRecordHeader
 import tech.kzen.auto.server.data.content.SequentialCharacterContent
-import tech.kzen.lib.common.exec.ScalarExecutionValue
-import tech.kzen.lib.common.exec.data.problem.DataProblem
 import tech.kzen.lib.common.exec.data.type.DataContract
 import tech.kzen.lib.common.exec.data.type.DataField
 import tech.kzen.lib.common.exec.data.type.DataType
 import tech.kzen.lib.common.exec.data.type.FieldId
 import tech.kzen.lib.common.exec.data.type.ScalarKind
-import tech.kzen.lib.common.exec.data.type.VariantId
-import tech.kzen.lib.common.exec.data.value.DataAccessException
-import tech.kzen.lib.common.exec.data.value.DataNode
-import tech.kzen.lib.common.exec.data.value.DataState
-import tech.kzen.lib.common.exec.data.value.DataValue
-import tech.kzen.lib.common.exec.data.value.ValueAccess
 import java.math.BigDecimal
 import java.math.BigInteger
 
@@ -103,7 +95,7 @@ class ConfiguredDelimitedReader private constructor(
                 return declared?.let { declaredPlan(it) }
                     ?: ProjectionPlan(observedTextContract(emptyList()), IntArray(0))
             }
-            val labels = header.fields.map { it.text }
+            val labels = List(header.fieldCount) { header.text(it) }
             val emptyColumn = labels.indexOfFirst(String::isEmpty)
             if (emptyColumn >= 0) {
                 throw DelimitedReadException(
@@ -140,7 +132,7 @@ class ConfiguredDelimitedReader private constructor(
             if (declared != null) {
                 invalid(context, "Infer-labels is only valid without a declared schema")
             }
-            val width = first?.fields?.size ?: 0
+            val width = first?.fieldCount ?: 0
             val labels = (0 until width).map { "c$it" }
             return ProjectionPlan(observedTextContract(labels), labels.indices.toList().toIntArray())
         }
@@ -166,22 +158,37 @@ class ConfiguredDelimitedReader private constructor(
 
     private var logicalRecordIndex = 0L
 
+    // One per file: every row shares its header, and the number parse in a cell's cache reuses one scratch
+    private val header = FlatRecordHeader(contract)
+    private val numberScratch = LongArray(2)
+
+
+    /**
+     * The next row, its cells copied out of the parser's reused buffer into a record of their own. A row
+     * allocates that record, its null flags when it has a null, and its value.
+     */
     fun read(): DelimitedRecord? {
         val raw = pending?.also { pending = null } ?: parser.readRecord() ?: return null
         logicalRecordIndex++
-        if (raw.fields.size != physicalByOutput.size) {
+        if (raw.fieldCount != physicalByOutput.size) {
             throw DelimitedReadException(
                 DelimitedReadException.width, context, logicalRecordIndex,
-                columnIndex = minOf(raw.fields.size, physicalByOutput.size) + 1,
-                detail = "Expected ${physicalByOutput.size} fields but found ${raw.fields.size}")
+                columnIndex = minOf(raw.fieldCount, physicalByOutput.size) + 1,
+                detail = "Expected ${physicalByOutput.size} fields but found ${raw.fieldCount}")
         }
-        val decoded = physicalByOutput.mapIndexed { outputIndex, physicalIndex ->
-            typed.decode(outputIndex, raw.fields[physicalIndex], logicalRecordIndex)
+        val backing = FlatFileRecord(raw.contentLength, physicalByOutput.size)
+        var nulls: BooleanArray? = null
+        for (outputIndex in physicalByOutput.indices) {
+            val isNull = typed.decode(outputIndex, raw, physicalByOutput[outputIndex], logicalRecordIndex, backing)
+            if (isNull) {
+                val flags = nulls ?: BooleanArray(physicalByOutput.size)
+                flags[outputIndex] = true
+                nulls = flags
+            }
         }
-        val backing = FlatFileRecord.of(decoded.map { it.text })
-        backing.attachHeader(FlatRecordHeader(contract))
-        val access = NullAwareFlatRecordAccess(backing, decoded.map { it.isNull }.toBooleanArray())
-        return DelimitedRecord(backing, access, DataValue(access, DataNode(0)))
+        backing.populateCaches(numberScratch)
+        backing.attachHeader(header)
+        return DelimitedRecord(backing, nulls)
     }
 
     override fun close() = input.close()
@@ -190,37 +197,84 @@ class ConfiguredDelimitedReader private constructor(
 }
 
 
-private class NullAwareFlatRecordAccess(
-    private val backing: FlatFileRecord,
-    private val nulls: BooleanArray
-): ValueAccess by backing {
-    override fun state(node: DataNode): DataState {
-        if (node.token == 0L) return DataState.Present
-        val index = node.token.toInt() - 1
-        if (index !in nulls.indices) return backing.state(node)
-        return if (nulls[index]) DataState.Null else DataState.Present
+/**
+ * The record [Parser] last read, overwritten by its next read: field characters back to back with their end
+ * offsets (as [FlatFileRecord] lays them out), and each field's character span in the input, for error messages.
+ */
+private class RawRecord {
+    companion object {
+        private const val initialCharacters = 256
+        private const val initialFields = 16
     }
 
-    override fun scalar(node: DataNode): ScalarExecutionValue = present(node) { backing.scalar(node) }
-    override fun readBoolean(node: DataNode): Boolean = present(node) { backing.readBoolean(node) }
-    override fun readLong(node: DataNode): Long = present(node) { backing.readLong(node) }
-    override fun readDouble(node: DataNode): Double = present(node) { backing.readDouble(node) }
-    override fun readText(node: DataNode): String = present(node) { backing.readText(node) }
-    override fun readBinary(node: DataNode): ByteArray = present(node) { backing.readBinary(node) }
-    override fun activeVariant(node: DataNode): VariantId = present(node) { backing.activeVariant(node) }
-    override fun selected(node: DataNode): DataNode = present(node) { backing.selected(node) }
+    var content = CharArray(initialCharacters)
+        private set
+    var contentLength = 0
+        private set
+    var fieldCount = 0
+        private set
+    private var ends = IntArray(initialFields)
 
-    private fun <T> present(node: DataNode, action: () -> T): T {
-        if (state(node) == DataState.Null) {
-            throw DataAccessException(DataProblem(DataProblem.invalidState, "Cannot read a null flat field"))
+    // Start and end offset of each field, in pairs
+    private var spans = LongArray(2 * initialFields)
+
+
+    fun clear() {
+        contentLength = 0
+        fieldCount = 0
+    }
+
+    fun append(character: Char) {
+        if (contentLength == content.size) {
+            content = content.copyOf(2 * content.size)
         }
-        return action()
+        content[contentLength++] = character
+    }
+
+    /** The length of the field being read, not yet committed. */
+    fun openFieldLength(): Int = contentLength - start(fieldCount)
+
+    /** Ends the field being read; trimming drops its leading and trailing whitespace, as `String.trim` does. */
+    fun commit(trim: Boolean, spanStart: Long, spanEnd: Long) {
+        if (trim) {
+            trimOpenField()
+        }
+        if (fieldCount == ends.size) {
+            ends = ends.copyOf(2 * ends.size)
+            spans = spans.copyOf(2 * spans.size)
+        }
+        ends[fieldCount] = contentLength
+        spans[2 * fieldCount] = spanStart
+        spans[2 * fieldCount + 1] = spanEnd
+        fieldCount++
+    }
+
+    private fun trimOpenField() {
+        val start = start(fieldCount)
+        var from = start
+        var to = contentLength
+        while (from < to && content[from].isWhitespace()) from++
+        while (to > from && content[to - 1].isWhitespace()) to--
+        if (from > start) {
+            content.copyInto(content, start, from, to)
+        }
+        contentLength = start + (to - from)
+    }
+
+    fun start(field: Int): Int = if (field == 0) 0 else ends[field - 1]
+    fun length(field: Int): Int = ends[field] - start(field)
+    fun text(field: Int): String = String(content, start(field), length(field))
+    fun span(field: Int): LongRange = spans[2 * field]..spans[2 * field + 1]
+
+    fun textEquals(field: Int, text: String): Boolean {
+        val start = start(field)
+        if (length(field) != text.length) return false
+        for (i in text.indices) {
+            if (content[start + i] != text[i]) return false
+        }
+        return true
     }
 }
-
-
-private data class RawField(val text: String, val span: LongRange)
-private data class RawRecord(val fields: List<RawField>)
 
 
 private data class SyntaxSpec(
@@ -295,43 +349,26 @@ private class Parser(
     var skippedComments = 0L
         private set
 
+    // The record being read, and where in it: reused from one record to the next
+    private val record = RawRecord()
+    private var fieldStart = 0L
+    private var fieldQuoted = false
+    private var recordCharacters = 0
+
+
+    /** The next record, in the buffer the following call overwrites; null at the end of the input. */
     fun readRecord(): RawRecord? {
         initialize()
         while (commentPrefix != null && chars.consumePrefix(commentPrefix)) {
             skipPhysicalLine()
             skippedComments++
         }
+        record.clear()
         var state = ParserState.Start
-        val fields = mutableListOf<RawField>()
-        val field = StringBuilder()
-        var fieldStart = chars.offset
-        var fieldQuoted = false
-        var recordCharacters = 0
+        fieldStart = chars.offset
+        fieldQuoted = false
+        recordCharacters = 0
         var sawInput = false
-
-        fun budgetCharacter() {
-            recordCharacters++
-            if (recordCharacters > limits.record) budget("record-character", limits.record)
-            if (recordCharacters and 1023 == 0) checkpoint()
-        }
-        fun append(character: Char) {
-            field.append(character)
-            if (field.length > limits.field) budget("field-character", limits.field)
-        }
-        fun commitField(endOffset: Long) {
-            if (fields.size >= limits.fields) budget("field-count", limits.fields)
-            val value = if (syntax.trimUnquoted && !fieldQuoted) field.toString().trim() else field.toString()
-            fields.add(RawField(value, fieldStart..(endOffset - 1).coerceAtLeast(fieldStart)))
-            field.setLength(0)
-            fieldQuoted = false
-            fieldStart = chars.offset
-        }
-        fun complete(endOffset: Long): RawRecord {
-            commitField(endOffset)
-            physicalRecordIndex++
-            checkpoint()
-            return RawRecord(fields)
-        }
 
         while (true) {
             val next = chars.read()
@@ -388,6 +425,34 @@ private class Parser(
         }
     }
 
+    private fun budgetCharacter() {
+        recordCharacters++
+        if (recordCharacters > limits.record) budget("record-character", limits.record)
+        if (recordCharacters and 1023 == 0) checkpoint()
+    }
+
+    private fun append(character: Char) {
+        record.append(character)
+        if (record.openFieldLength() > limits.field) budget("field-character", limits.field)
+    }
+
+    private fun commitField(endOffset: Long) {
+        if (record.fieldCount >= limits.fields) budget("field-count", limits.fields)
+        record.commit(
+            syntax.trimUnquoted && !fieldQuoted,
+            fieldStart,
+            (endOffset - 1).coerceAtLeast(fieldStart))
+        fieldQuoted = false
+        fieldStart = chars.offset
+    }
+
+    private fun complete(endOffset: Long): RawRecord {
+        commitField(endOffset)
+        physicalRecordIndex++
+        checkpoint()
+        return record
+    }
+
     private fun initialize() {
         if (initialized) return
         initialized = true
@@ -433,15 +498,24 @@ private class CharacterInput(private val input: SequentialCharacterContent) {
     private var size = 0
     private var index = 0
     private var sourceOffset = 0L
-    private val replay = ArrayDeque<ReadCharacter>()
     var offset = 0L
         private set
 
+    // Characters given back by a prefix that did not match, as a stack: the top is read next
+    private var replayCodes = IntArray(0)
+    private var replayOffsets = LongArray(0)
+    private var replaySize = 0
+
+    // The characters a prefix match has read so far, reused from one match to the next
+    private var consumedCodes = IntArray(0)
+    private var consumedOffsets = LongArray(0)
+
+
     fun read(): Int {
-        if (replay.isNotEmpty()) {
-            val next = replay.removeFirst()
-            offset = next.offset + 1
-            return next.code
+        if (replaySize > 0) {
+            replaySize--
+            offset = replayOffsets[replaySize] + 1
+            return replayCodes[replaySize]
         }
         while (index >= size) {
             size = input.read(buffer)
@@ -456,14 +530,20 @@ private class CharacterInput(private val input: SequentialCharacterContent) {
     }
 
     fun consumePrefix(prefix: String): Boolean {
-        val consumed = ArrayList<ReadCharacter>(prefix.length)
+        if (consumedCodes.size < prefix.length) {
+            consumedCodes = IntArray(prefix.length)
+            consumedOffsets = LongArray(prefix.length)
+        }
+        var consumed = 0
         for (expected in prefix) {
             val code = read()
             if (code < 0) {
                 unread(consumed)
                 return false
             }
-            consumed += ReadCharacter(code, offset - 1)
+            consumedCodes[consumed] = code
+            consumedOffsets[consumed] = offset - 1
+            consumed++
             if (code != expected.code) {
                 unread(consumed)
                 return false
@@ -472,16 +552,20 @@ private class CharacterInput(private val input: SequentialCharacterContent) {
         return true
     }
 
-    private fun unread(consumed: List<ReadCharacter>) {
-        for (index in consumed.indices.reversed()) replay.addFirst(consumed[index])
-        if (consumed.isNotEmpty()) offset = consumed.first().offset
+    private fun unread(consumed: Int) {
+        if (replayCodes.size < replaySize + consumed) {
+            val capacity = maxOf(2 * replayCodes.size, replaySize + consumed)
+            replayCodes = replayCodes.copyOf(capacity)
+            replayOffsets = replayOffsets.copyOf(capacity)
+        }
+        for (index in consumed - 1 downTo 0) {
+            replayCodes[replaySize] = consumedCodes[index]
+            replayOffsets[replaySize] = consumedOffsets[index]
+            replaySize++
+        }
+        if (consumed > 0) offset = consumedOffsets[0]
     }
-
-    private data class ReadCharacter(val code: Int, val offset: Long)
 }
-
-
-private data class DecodedField(val text: String, val isNull: Boolean)
 
 
 internal fun validateDelimitedTypedConfig(
@@ -500,6 +584,8 @@ private class TypedDecoder(
 ) {
     private val fields = (contract.structural as DataType.Record).fields
     private val overrides: Map<String, FieldDecodeOverride>
+    private val scalars: List<DataType.Scalar>
+    private val nullTokens: List<String?>
 
     init {
         require(policy.malformedValue == "fail-part") {
@@ -530,40 +616,63 @@ private class TypedDecoder(
                 else -> invalid("Field '${field.id.name}' uses unsupported kind $kind")
             }
         }
+        scalars = fields.map { it.type as DataType.Scalar }
+        nullTokens = fields.map { overrides[it.id.name]?.nullToken ?: policy.nullToken }
     }
 
-    fun decode(index: Int, raw: RawField, recordIndex: Long): DecodedField {
-        val field = fields[index]
-        val scalar = field.type as DataType.Scalar
-        val nullToken = overrides[field.id.name]?.nullToken ?: policy.nullToken
-        if (nullToken != null && raw.text == nullToken) {
-            if (!scalar.nullable) failure(recordIndex, field.id.name, raw.span, "Null token in non-nullable field")
-            return DecodedField("", true)
+    /**
+     * Appends field [index], read from field [physical] of [raw], to [target]: text as it is (a Boolean once
+     * validated), a number in its canonical form. True when the field is null; its cell is then empty.
+     */
+    fun decode(index: Int, raw: RawRecord, physical: Int, recordIndex: Long, target: FlatFileRecord): Boolean {
+        val scalar = scalars[index]
+        val nullToken = nullTokens[index]
+        if (nullToken != null && raw.textEquals(physical, nullToken)) {
+            if (!scalar.nullable) {
+                failure(recordIndex, fields[index].id.name, raw.span(physical), "Null token in non-nullable field")
+            }
+            target.add("")
+            return true
         }
-        val canonical = try {
-            when (val kind = scalar.kind) {
-                ScalarKind.Text -> raw.text
-                ScalarKind.Boolean -> when (raw.text) {
-                    "true", "false" -> raw.text
-                    else -> error("Boolean must be 'true' or 'false'")
+        when (val kind = scalar.kind) {
+            ScalarKind.Text ->
+                target.add(raw.content, raw.start(physical), raw.length(physical))
+
+            ScalarKind.Boolean -> {
+                if (!raw.textEquals(physical, "true") && !raw.textEquals(physical, "false")) {
+                    malformed(index, raw, physical, recordIndex)
                 }
-                ScalarKind.Decimal -> BigDecimal(raw.text).stripTrailingZeros().let {
-                    if (it.signum() == 0) "0" else it.toString()
+                target.add(raw.content, raw.start(physical), raw.length(physical))
+            }
+
+            else -> {
+                val canonical = try {
+                    canonicalNumber(raw.text(physical), kind)
                 }
-                is ScalarKind.Floating -> if (kind.bits == 32) {
-                    raw.text.toFloat().also { require(it.isFinite()) }.toString()
-                } else {
-                    raw.text.toDouble().also { require(it.isFinite()) }.toString()
+                catch (e: Exception) {
+                    malformed(index, raw, physical, recordIndex)
                 }
-                is ScalarKind.Integer -> canonicalInteger(raw.text, kind)
-                else -> error("Unsupported kind $kind")
+                target.add(canonical)
             }
         }
-        catch (e: Exception) {
-            failure(recordIndex, field.id.name, raw.span, "Malformed ${scalar.kind} value")
-        }
-        return DecodedField(canonical, false)
+        return false
     }
+
+    private fun canonicalNumber(text: String, kind: ScalarKind): String = when (kind) {
+        ScalarKind.Decimal -> BigDecimal(text).stripTrailingZeros().let {
+            if (it.signum() == 0) "0" else it.toString()
+        }
+        is ScalarKind.Floating -> if (kind.bits == 32) {
+            text.toFloat().also { require(it.isFinite()) }.toString()
+        } else {
+            text.toDouble().also { require(it.isFinite()) }.toString()
+        }
+        is ScalarKind.Integer -> canonicalInteger(text, kind)
+        else -> error("Unsupported kind $kind")
+    }
+
+    private fun malformed(index: Int, raw: RawRecord, physical: Int, recordIndex: Long): Nothing =
+        failure(recordIndex, fields[index].id.name, raw.span(physical), "Malformed ${scalars[index].kind} value")
 
     private fun canonicalInteger(text: String, kind: ScalarKind.Integer): String {
         val value = BigInteger(text)

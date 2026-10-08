@@ -9,6 +9,7 @@ import tech.kzen.auto.common.paradigm.job.control.ValueLease
 import tech.kzen.auto.server.exec.job.ownership.LeaseHolder
 import tech.kzen.auto.server.exec.job.ownership.RunOwnershipLedger
 import tech.kzen.auto.server.exec.job.ownership.ValueLeases
+import tech.kzen.auto.server.objects.job.value.recycle.Recyclable
 import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.lib.common.reflect.Reflect
 import java.util.Collections
@@ -53,6 +54,10 @@ import java.util.concurrent.atomic.AtomicInteger
  * releases the batch's leases — a failed send closes what it adopted — except under cancellation, where the
  * run's teardown (or a migration's carryover) owns them. Unbound (no ledger), the channel behaves as before.
  *
+ * **Recyclable values.** A pooled element ([Recyclable]) never reaches the ledger, bound or not: its send takes
+ * one hold and puts the object's shared token in the lease slot, so it batches like an unowned element and every
+ * lease release path above and below lets it go exactly once. A raw read forfeits it as it is handed out.
+ *
  * **Migration carryover:** a state migration (pause / edit config / continue) tears the running graph down and
  * rebuilds it, so the in-flight elements a live channel holds would otherwise be lost. [drainBuffered] snapshots
  * everything a channel still holds — the not-yet-dispatched remainder of a framework loop's active batch, a raw
@@ -72,6 +77,8 @@ class JobChannel(
     //-----------------------------------------------------------------------------------------------------------------
     // Elements per physical transfer unit (the batch granularity). At least 1 so a source always makes progress.
     private val batchSize: Int = batchSize.coerceAtLeast(1)
+
+    private val capacity: Int = capacity.coerceAtLeast(0)
 
     private val channel: Channel<Batch> =
         if (capacity <= 0) {
@@ -104,11 +111,20 @@ class JobChannel(
     @Volatile
     private var consumerClosed = false
 
-    // Count of endpoints (consumers + producers) currently suspended on a channel op: a consumer awaiting the
-    // next batch, or a producer parked on a full channel. The Job-level deadlock monitor
-    // ([tech.kzen.auto.server.exec.job.JobDeadlockMonitor]) sums this across a run's stream channels — when EVERY
-    // non-terminal Worker is blocked on a channel, the pipeline can make no progress, so the Job is deadlocked.
-    private val blocked = AtomicInteger(0)
+    // Set as the last producer closes, before the consumer is resumed with the end of the stream.
+    @Volatile
+    private var producersClosed = false
+
+    // Endpoints currently suspended on a channel op: the consumer awaiting the next batch, and producers parked on
+    // a full channel. The Job-level deadlock monitor ([tech.kzen.auto.server.exec.job.JobDeadlockMonitor]) sums
+    // [blockedCount] across a run's stream channels — when EVERY non-terminal Worker is blocked on a channel, the
+    // pipeline can make no progress, so the Job is deadlocked.
+    private val blockedConsumers = AtomicInteger(0)
+    private val blockedProducers = AtomicInteger(0)
+
+    // Batches whose send has returned less those received: a suspended endpoint stays counted until its thread
+    // resumes it, so this tells one already handed a batch (or relieved of one) from one still waiting.
+    private val sentNotReceived = AtomicInteger(0)
 
     // Elements sitting in the channel's buffer (batches sent, not yet received) — the occupancy the run's
     // diagnostics report (E9 item 4/5); maintained around each send / receive, so momentarily approximate.
@@ -147,14 +163,22 @@ class JobChannel(
 
     private fun closeOneProducer() {
         if (openProducers.decrementAndGet() <= 0) {
+            producersClosed = true
             channel.close()
         }
     }
 
 
-    /** Endpoints currently suspended on a channel op (consumers awaiting a batch + producers on a full channel). */
+    /**
+     * Endpoints suspended on a channel op that nothing has yet resumed: the consumer awaiting a batch while the
+     * stream is open and none is in transit, and producers parked on a full channel. One already resumed but
+     * still waiting for a thread is not blocked, however long a loaded machine leaves it undispatched.
+     */
     fun blockedCount(): Int {
-        return blocked.get()
+        val inTransit = sentNotReceived.get()
+        val consumers = if (inTransit <= 0 && !producersClosed) blockedConsumers.get() else 0
+        val producers = if (inTransit >= capacity && !consumerClosed) blockedProducers.get() else 0
+        return consumers + producers
     }
 
 
@@ -175,8 +199,8 @@ class JobChannel(
 
 
     // Bracket a suspending channel op so a Worker parked in it counts toward [blockedCount] for the run's
-    // deadlock monitor, and stops counting the instant it resumes (a delivered batch, EOF, or cancellation).
-    private suspend fun <R> tracked(await: suspend () -> R): R {
+    // deadlock monitor until it resumes (a delivered batch, EOF, or cancellation).
+    private suspend fun <R> tracked(blocked: AtomicInteger, await: suspend () -> R): R {
         blocked.incrementAndGet()
         try {
             return await()
@@ -236,6 +260,7 @@ class JobChannel(
             if (received.isSuccess) {
                 val batch = received.getOrThrow()
                 queued.addAndGet(-batch.size)
+                sentNotReceived.decrementAndGet()
                 bufferedByIdentity.add(batch)
                 add(batch)
             }
@@ -316,6 +341,13 @@ class JobChannel(
             if (consumerClosed) {
                 throw downstreamClosed()
             }
+            val recyclable = Recyclable.of(element)
+            if (recyclable != null) {
+                recyclable.hold()
+                pending.add(element)
+                pendingLeases.add(recyclable.token)
+                return
+            }
             // The transport-transfer boundary (E9): the channel's hold is taken here, before whoever handed the
             // value over lets go of theirs, so the count never touches zero mid-hop.
             val lease = ownership?.let { it.ledger.hold(element, it.holder) }
@@ -342,9 +374,10 @@ class JobChannel(
             try {
                 if (!channel.trySend(batch).isSuccess) {
                     parked = true
-                    tracked { channel.send(batch) }
+                    tracked(blockedProducers) { channel.send(batch) }
                 }
                 queued.addAndGet(batch.size)
+                sentNotReceived.incrementAndGet()
             }
             catch (e: CancellationException) {
                 // Delivered or not, the batch is the teardown's (or, at a migration barrier, the carryover's)
@@ -422,6 +455,7 @@ class JobChannel(
                 val batch = channel.tryReceive().getOrNull()
                     ?: break
                 queued.addAndGet(-batch.size)
+                sentNotReceived.decrementAndGet()
                 ValueLeases.releaseAll(batch.leases.filterNotNull())
             }
         }
@@ -432,7 +466,9 @@ class JobChannel(
             val batch = nextBatch()
                 ?: return null
             transferred.addAndGet(batch.size)
-            batch.leases.filterNotNullTo(rawOutstanding)
+            for (lease in batch.leases) {
+                lease?.let(::handOut)
+            }
             return batch.elements
         }
 
@@ -441,7 +477,7 @@ class JobChannel(
             releaseRaw()
             val carried = nextElement()
                 ?: return null
-            carried.lease?.let { rawOutstanding.add(it) }
+            carried.lease?.let(::handOut)
             return carried.element
         }
 
@@ -465,7 +501,7 @@ class JobChannel(
                         ended = true
                         return false
                     }
-                    carried.lease?.let { rawOutstanding.add(it) }
+                    carried.lease?.let(::handOut)
                     nextElement = carried.element
                     hasNextElement = true
                     return true
@@ -501,6 +537,14 @@ class JobChannel(
                 remaining.clear()
                 held = null
             }
+        }
+
+
+        // A raw reader is untrusted to drop what it read by its next pull, so a pooled element is forfeited
+        // as it is handed out; its token is then released like any other lease
+        private fun handOut(lease: ValueLease) {
+            (lease as? Recyclable.Token)?.recyclable?.forfeit()
+            rawOutstanding.add(lease)
         }
 
 
@@ -553,9 +597,10 @@ class JobChannel(
                 return Batch(elements, leases)
             }
 
-            val batch = tracked { channel.receiveCatching().getOrNull() }
+            val batch = tracked(blockedConsumers) { channel.receiveCatching().getOrNull() }
                 ?: return null
             queued.addAndGet(-batch.size)
+            sentNotReceived.decrementAndGet()
             return batch
         }
     }

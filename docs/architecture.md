@@ -139,8 +139,43 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > being inside blocking I/O, which a permit-parked source's pull also is; the warning stays on while the run serves an external
 > channel (a Preview), where only the verdict is suspended. A `JavaTransformWorker` whose outputs are deliberate
 > copies (rows of scalars read off a native) declares `independentOutputs()`: its rows carry no owner, the
-> element closes when the callback returns, and a Sort after it retains rows, not natives (HS25). **Object-graph paths (E8).** `PathProjectionWorker`
-> turns paths over the incoming contract (`executions[*].price`, `attributes[*].value.price`, an optional
+> element closes when the callback returns, and a Sort after it retains rows, not natives (HS25).
+> **Recyclable values (WR2).** A pooled value (`server/objects/job/value/recycle/`: a `Recyclable` reached through
+> its `RecyclableAccess`, from its producing Worker's `RecyclablePool`) returns to its pool once nothing can read
+> it, without the ledger: each channel slot takes one hold and carries the object's shared token as its lease (no
+> flush at send), a Transform / Sink callback takes that token over, and the last release recycles the object.
+> Whatever may keep a value past its callback forfeits it instead — `retain`, `snapshot`, `JobDataValues.boundary`
+> (a Run child, a `JavaTransformWorker`), a non-scalar Formula / Java output computed from it, a raw channel read —
+> and it becomes an ordinary value the GC reclaims; a Job expression reads through `JobDataValues.callbackObject`,
+> which keeps it pooled. The rule: a pooled object may leak, but is never recycled early.
+> **Bytes and Format (WR3).** Bytes travel two ways. `Content` is a handle the consumer pulls (`open()`), one element
+> per file. `Bytes` (`worker/content/`) is a chunk the producer pushes in-band, one output spanning many elements:
+> like `Content` an opaque native with no properties, read only inside the callback (`length()`,
+> `writeTo(OutputStream)`), but pooled — its `PooledBytes` slot is the `Recyclable` access and hands the same
+> `Bytes` out by identity — so a consumer copies it before its callback returns. `Format` (`worker/format/`)
+> encodes each record as one chunk with metadata `{name, parent}` (`parent` is the record's own metadata, so
+> `${parent.name}` is its file). The boundary rule: an output is a maximal run of consecutive chunks with the same
+> `name`, its first chunk carries the header, and no records means no chunks, so no output. The encoder is made
+> from the input lane's contract, so what the format cannot write is a validation error before Run; a record it
+> cannot write fails the run by its position.
+> **Write over Bytes (WR4).** `WriteWorker` picks its path from the input lane before Run: `Content` writes one
+> file per element, `Bytes` one file per run of equal `name`, and anything else (rows) is a validation error naming
+> `Format`. A run's destination comes from its first chunk through Write's own `name` template (`${extension}` is
+> the compression suffix, so `output.csv.gz`); `existing: skip` drops the whole run. Each chunk is appended to the
+> open temporary inside its callback; the run's end publishes by atomic move and emits one `Written`. A name that
+> returns after another, or two names reaching one file, fail the run by name, as does an empty name; failure or
+> cancellation deletes the temporary. **Live edit (WR8).** Both Workers carry the open output across a live edit:
+> `Format` its last name, so the output continues with no second header, and `Write` the open temporary and stream,
+> its ended outputs, counts and `${time}`. An edit is compatible unless it changes the output's bytes or where they
+> go. `Format`'s format, columns or input header (an encoding digest), or `Write`'s directory, name template or
+> compression, discards the open output, which is not published and starts again with the records after the edit.
+> A published file is always a whole output, and the rest of a cut output would have to reach the same file.
+> `Write` learns of `Format`'s edit in-band: the restarting chunk carries a `Bytes` restart mark. For its own
+> edit, `Write` keeps the header its output began with (each chunk marks its header bytes) and puts it ahead of the
+> next chunk. An edited `Format` name names only the records that follow, so a new name ends the output as any
+> change of name does. `existing` was judged when the output began and applies from the next one. The `Content`
+> path keeps no output open, so a live edit restarts it.
+> **Object-graph paths (E8).** `PathProjectionWorker` turns paths over the incoming contract (`executions[*].price`, `attributes[*].value.price`, an optional
 > alias) into a flat record of nullable scalars, unnesting `[*]` lists and maps (same list → one iteration,
 > different lists → cross product, null intermediate → null cells, empty list → no rows); the binding rules
 > (`PathBinding`, kzen-auto-common) are shared with the design-time picker so both report the same errors,

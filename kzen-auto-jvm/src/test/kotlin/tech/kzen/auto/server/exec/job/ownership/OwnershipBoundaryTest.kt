@@ -11,6 +11,8 @@ import tech.kzen.auto.server.exec.job.JobLogic
 import tech.kzen.auto.server.exec.job.JobLogicCompiler
 import tech.kzen.auto.server.exec.job.JobOwnershipReport
 import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.auto.server.objects.job.worker.PreviewWorker
+import tech.kzen.auto.server.objects.job.worker.preview.PreviewCapture
 import tech.kzen.auto.server.objects.job.worker.test.GatedCountingSinkWorker
 import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.lib.common.exec.data.binding.BindingName
@@ -66,6 +68,7 @@ class OwnershipBoundaryTest {
 
     @AfterTest
     fun tearDown() {
+        PreviewWorker.captureNanos = PreviewCapture.defaultMaximumNanos
         if (::context.isInitialized) {
             context.close()
         }
@@ -76,6 +79,7 @@ class OwnershipBoundaryTest {
     @Test
     fun previewReleasesNestedOwnedValuesAndKeepsDetachedContent() {
         OwnedSourceWorker.kind = OwnedSourceWorker.kindOrder
+        PreviewWorker.captureNanos = Long.MAX_VALUE
         val engine = newEngine(document("preview"))
         try {
             engine.resume()
@@ -97,6 +101,7 @@ class OwnershipBoundaryTest {
     @Test
     fun formulaPreviewReleasesNestedOwnedValuesAndKeepsCalculatedContent() {
         OwnedSourceWorker.kind = OwnedSourceWorker.kindOrder
+        PreviewWorker.captureNanos = Long.MAX_VALUE
         val engine = newEngine(document("formula-preview"))
         try {
             engine.resume()

@@ -1,0 +1,83 @@
+# Worker archetypes for RecyclableRouteTest (WR2, pooled values through the Job's channels and Workers): a source
+# emitting pooled records, a reading sink, an expanding transform and a plain-Java identity transform.
+# One Job per document (workers are discovered under `main`): see recycle-<route>.yaml.
+
+
+RecyclingSourceWorker:
+  abstract: true
+  is: Worker
+  title: "Recycling Source (test)"
+  class: tech.kzen.auto.server.objects.job.value.recycle.RecyclingSourceWorker
+  output: ""
+  count: 5
+  meta:
+    output:
+      is: ChannelOutput
+      creator: JobChannelCreator
+    count: Int
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
+RecyclableSinkWorker:
+  abstract: true
+  is: Worker
+  title: "Recyclable Sink (test)"
+  class: tech.kzen.auto.server.objects.job.value.recycle.RecyclableSinkWorker
+  input: ""
+  label: sink
+  note: ""
+  gate: false
+  failAt: -1
+  meta:
+    input:
+      is: ChannelInput
+      creator: JobChannelCreator
+    label: String
+    note: String
+    gate: Boolean
+    failAt: Int
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
+FanOutRecordWorker:
+  abstract: true
+  is: Worker
+  title: "Fan-out Record (test)"
+  class: tech.kzen.auto.server.objects.job.value.recycle.FanOutRecordWorker
+  input: ""
+  output: ""
+  fanOut: 3
+  meta:
+    input:
+      is: ChannelInput
+      creator: JobChannelCreator
+    output:
+      is: ChannelOutput
+      creator: JobChannelCreator
+    fanOut: Int
+    selfLocation:
+      is: ObjectLocation
+      by: Self
+
+
+IdentityJavaTransformWorker:
+  abstract: true
+  is: Worker
+  title: "Identity Java Transform (test)"
+  class: tech.kzen.auto.server.objects.job.value.recycle.IdentityJavaTransformWorker
+  input: ""
+  output: ""
+  meta:
+    input:
+      is: ChannelInput
+      creator: JobChannelCreator
+    output:
+      is: ChannelOutput
+      creator: JobChannelCreator
+    selfLocation:
+      is: ObjectLocation
+      by: Self

@@ -88,7 +88,8 @@ class OwnedRouteTest {
 
     @Test
     fun sortRetainsUntilItsOwnEmissionAndTheSinkStillSeesEveryElementOpen() {
-        assertIs<Outcome.Success>(run("sort"))
+        val outcome = run("sort")
+        assertIs<Outcome.Success>(outcome, outcome.toString())
         val observed = ObservingSinkWorker.of("sink")
         assertEquals(listOf<Any?>("a", "b", "c"), observed.map { it.value }, "sorted by name")
         assertTrue(observed.all { it.openAtReceipt == true }, "the Sort's holds outlived the source")

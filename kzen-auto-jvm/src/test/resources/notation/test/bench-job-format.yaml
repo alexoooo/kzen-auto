@@ -1,0 +1,47 @@
+# JobReportBenchmark S4: bench-job-export.yaml with Format(CSV) -> Write in place of Export, byte-identical to the
+# Report export.
+main:
+  is: Job
+  results:
+    main:
+      class: kotlin.Any
+      generics: []
+      nullable: true
+
+main.workers/reader:
+  is: FileSourceWorker
+  files:
+    - location: build/bench/exp/input.csv
+
+main.workers/reader Parse:
+  is: Parse
+
+main.workers/filter:
+  is: ValueSetFilterWorker
+  filter:
+    "0|flag":
+      type: RequireAny
+      values:
+        - yes
+
+main.workers/formula:
+  is: FormulaWorker
+  formula:
+    total: "qty.toBigDecimal() * price.toBigDecimal()"
+
+main.workers/format:
+  is: Format
+  name: job-format.csv
+  columns:
+    - "*"
+    - meta.total
+
+main.workers/write:
+  is: Write
+  directory: build/bench/exp
+  compression: none
+  existing: replace
+
+main.workers/written:
+  is: ResultSinkWorker
+  keep: last

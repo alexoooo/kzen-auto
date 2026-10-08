@@ -14,7 +14,6 @@ import tech.kzen.auto.server.exec.job.ownership.LeaseHolder
 import tech.kzen.auto.common.paradigm.job.control.ValueLease
 import tech.kzen.auto.server.data.DataOpenerLookup
 import tech.kzen.auto.server.data.read.OperationalDataCursor
-import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.lib.common.exec.BinaryExecutionValue
 import tech.kzen.lib.common.exec.BooleanExecutionValue
 import tech.kzen.lib.common.exec.LongExecutionValue
@@ -29,10 +28,7 @@ import tech.kzen.lib.common.exec.data.type.FieldId
 import tech.kzen.lib.common.exec.data.type.ScalarKind
 import tech.kzen.lib.common.exec.data.shape.ShapeProvenance
 import tech.kzen.lib.common.exec.data.shape.ShapeStability
-import tech.kzen.lib.common.exec.data.value.DataState
-import tech.kzen.lib.common.exec.data.value.DataNode
 import tech.kzen.lib.common.exec.data.value.DataValue
-import tech.kzen.auto.plugin.model.record.FlatFileRecord
 
 
 /**
@@ -152,8 +148,7 @@ object DataReadCore {
     suspend fun emitNext(
         control: JobControl,
         cursor: DataCursor,
-        effectiveShape: ShapeBaseline,
-        unitAttributes: Map<String, String>?,
+        projection: RecordProjection,
         claimBeforeSend: () -> Unit,
         send: suspend (DataValue) -> Unit
     ): Boolean {
@@ -165,11 +160,7 @@ object DataReadCore {
         // The producer hold lasts through conversion and send; released with no channel hold taken (a
         // conversion failure, a cancel before the send), it closes the item
         try {
-            val message = message(
-                cursor.shape,
-                effectiveShape,
-                requireNotNull(pull.item),
-                unitAttributes)
+            val message = projection.message(requireNotNull(pull.item))
             claimBeforeSend()
             send(message)
         }
@@ -442,60 +433,25 @@ object DataReadCore {
     }
 
 
+    /** One item as a message of [effectiveShape]; a reader keeps a [projection] for the file instead. */
     fun message(
         cursorShape: DataShape,
         effectiveShape: ShapeBaseline,
         item: DataValue,
         unitAttributes: Map<String, String>?
-    ): DataValue {
-        if (cursorShape.itemType.structural !is DataType.Record) {
-            return item
-        }
-
-        if (unitAttributes == null && cursorShape.itemType == effectiveShape.shape.itemType) {
-            return item
-        }
-
-        val cursorRecord = cursorShape.itemType.structural as DataType.Record
-        val effectiveRecord = effectiveShape.shape.itemType.structural as? DataType.Record
-            ?: error("Effective flat-record shape is not a record: ${effectiveShape.shape}")
-        val cursorFields = cursorRecord.fields.associateBy { it.id }
-        val cursorFieldNames = cursorFields.keys.mapTo(mutableSetOf()) { it.name }
-        val values = ArrayList<String>(effectiveRecord.fields.size)
-        val states = ArrayList<DataState>(effectiveRecord.fields.size)
-        for (field in effectiveRecord.fields) {
-            val attribute = unitAttributes?.get(field.id.name)
-                .takeIf { field.id.occurrence == 0 && field.id.name !in cursorFieldNames }
-            if (attribute != null) {
-                values.add(attribute)
-                states.add(DataState.Present)
-                continue
-            }
-            if (field.id !in cursorFields) {
-                values.add("")
-                states.add(DataState.Absent)
-                continue
-            }
-            val node = item.access.field(item.root, field.id)
-            val state = item.access.state(node)
-            states.add(state)
-            values.add(if (state == DataState.Present) renderScalar(item, node, field) else "")
-        }
-        val projected = FlatFileRecord.of(values)
-        return JobDataValues.projectedRecord(effectiveShape.shape.itemType, projected, states)
-    }
+    ): DataValue =
+        RecordProjection(cursorShape, effectiveShape, unitAttributes).message(item)
 
 
-    private fun renderScalar(
-        item: DataValue,
-        node: DataNode,
-        field: DataField
-    ): String {
-        check(field.type is DataType.Scalar) {
-            "Data field ${field.id} requires scalar materialization, found ${field.type}"
-        }
-        return scalarText(item.access.scalar(node))
-    }
+    /** The [previous] plan while it still fits its file's cursor, else a new one: planned once per file. */
+    fun projection(
+        previous: RecordProjection?,
+        cursorShape: DataShape,
+        effectiveShape: ShapeBaseline,
+        unitAttributes: Map<String, String>?
+    ): RecordProjection =
+        previous?.takeIf { it.plans(cursorShape, effectiveShape, unitAttributes) }
+            ?: RecordProjection(cursorShape, effectiveShape, unitAttributes)
 
 
     /** A scalar's text form for a flat record cell — the one rendering a reader and the path projection share. */

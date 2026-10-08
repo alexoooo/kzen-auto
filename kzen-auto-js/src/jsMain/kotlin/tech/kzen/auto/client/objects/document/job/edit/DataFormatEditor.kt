@@ -29,7 +29,10 @@ import tech.kzen.lib.common.service.store.MirroredGraphStore
 
 
 //---------------------------------------------------------------------------------------------------------------------
-/** Selects an explicit shared format or one format-owned text encoding from the server catalogue. */
+/**
+ * Selects an explicit shared format or one format-owned text encoding from the server catalogue. The attribute's
+ * `writable: true` metadata limits the formats to those that can write.
+ */
 @Suppress("unused")
 class DataFormatEditor(
     props: DataFormatEditorProps
@@ -84,6 +87,12 @@ class DataFormatEditor(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    companion object {
+        private const val writableKey = "writable"
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     init {
         installContextType(DocumentBridgeContext)
     }
@@ -92,6 +101,7 @@ class DataFormatEditor(
     override fun DataFormatEditorState.init(props: DataFormatEditorProps) {
         catalog = null
         value = null
+        writableOnly = false
     }
 
 
@@ -124,20 +134,30 @@ class DataFormatEditor(
 
 
     override fun onClientState(clientState: ClientState) {
-        val value = (clientState
-            .graphStructure()
+        val graphStructure = clientState.graphStructure()
+        val value = (graphStructure
             .graphNotation
             .firstAttribute(props.objectLocation, props.attributeName)
                 as? ScalarAttributeNotation)
             ?.value
             .orEmpty()
+        val writableOnly = graphStructure
+            .graphMetadata
+            .get(props.objectLocation)
+            ?.attributes
+            ?.get(props.attributeName)
+            ?.attributeMetadataNotation
+            ?.get(writableKey)
+            ?.asBoolean()
+            ?: false
 
-        if (state.value == value) {
+        if (state.value == value && state.writableOnly == writableOnly) {
             return
         }
 
         setState {
             this.value = value
+            this.writableOnly = writableOnly
         }
     }
 
@@ -165,7 +185,9 @@ class DataFormatEditor(
             ?: return
 
         val options = when (props.kind) {
-            Kind.Format -> DataFormatOptions.formats(state.catalog, value)
+            Kind.Format ->
+                if (state.writableOnly) DataFormatOptions.writableFormats(state.catalog, value)
+                else DataFormatOptions.formats(state.catalog, value)
             Kind.Encoding -> DataFormatOptions.encodings(state.catalog, value)
         }
 

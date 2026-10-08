@@ -60,7 +60,7 @@ abstract class FlatRecordValueAccess: ValueAccess {
 
     override fun field(node: DataNode, field: FieldId): DataNode {
         if (node.token != 0L) invalid("field is valid only for the flat-record root")
-        val index = header().indexOf(field.name, field.occurrence)
+        val index = header().indexOf(field)
         if (index < 0 || index >= dataFieldCount()) invalid("Unknown flat-record field '$field'")
         return DataNode(index.toLong() + 1)
     }

@@ -89,6 +89,21 @@ class DataFormatOptionsTest {
 
 
     @Test
+    fun writableFormatsOfferOnlyTheFormatsThatWrite() {
+        val withWriter = catalog.copy(formats = listOf(
+            catalog.formats[0].copy(writable = true),
+            catalog.formats[1]))
+
+        assertEquals(
+            listOf("configured.yaml#ConfiguredCsv"),
+            DataFormatOptions.writableFormats(withWriter, "").map { it.value })
+        assertEquals(
+            listOf("configured.yaml#ConfiguredCsv", "configured.yaml#ConfiguredText"),
+            DataFormatOptions.writableFormats(withWriter, "configured.yaml#ConfiguredText").map { it.value })
+    }
+
+
+    @Test
     fun aKnownValueIsNotDuplicatedAsAnUnknownOne() {
         assertEquals(1, DataFormatOptions.formats(catalog, "configured.yaml#ConfiguredCsv")
             .count { it.value == "configured.yaml#ConfiguredCsv" })

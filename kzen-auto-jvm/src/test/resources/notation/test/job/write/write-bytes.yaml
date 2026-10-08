@@ -1,0 +1,30 @@
+# WriteWorkerTest: rows Parsed and Formatted into chunks of Bytes, which Write puts in files (the Format name, the
+# compression and the existing policy are edited per test).
+main:
+  is: Job
+  results:
+    main:
+      class: kotlin.Any
+      generics: []
+      nullable: true
+
+main.workers/files:
+  is: FileSourceWorker
+  directory: build/write-worker/in
+  filter: .csv
+
+main.workers/parse:
+  is: Parse
+  format: auto-jvm/datasource/configured-delimited-format.yaml#ConfiguredCsv
+
+main.workers/format:
+  is: Format
+
+main.workers/write:
+  is: Write
+  directory: build/write-worker/out
+  compression: none
+
+main.workers/collect:
+  is: ResultSinkWorker
+  keep: all

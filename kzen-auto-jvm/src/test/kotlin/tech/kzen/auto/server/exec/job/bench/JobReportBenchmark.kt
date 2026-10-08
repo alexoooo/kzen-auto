@@ -55,6 +55,7 @@ object JobReportBenchmark {
     private val aggregateJob = DocumentPath.parse("test/bench-job-aggregate.yaml")
     private val headerlessAggregateJob = DocumentPath.parse("test/bench-job-aggregate-headerless.yaml")
     private val exportJob = DocumentPath.parse("test/bench-job-export.yaml")
+    private val formatJob = DocumentPath.parse("test/bench-job-format.yaml")
     private val aggregateReport = DocumentPath.parse("test/bench-report-aggregate.yaml")
     private val exportReport = DocumentPath.parse("test/bench-report-export.yaml")
 
@@ -74,6 +75,7 @@ object JobReportBenchmark {
     private val aggregateInlineOutput = Path.of("build/bench/agg/inline-output.csv")
     private val exportInput = Path.of("build/bench/exp/input.csv")
     private val jobExportOutput = Path.of("build/bench/exp/job-export.csv")
+    private val jobFormatOutput = Path.of("build/bench/exp/job-format.csv")
     private val reportExportOutput = Path.of("build/bench/exp/report-export.csv")
 
     @Volatile
@@ -102,6 +104,7 @@ object JobReportBenchmark {
             if (Scenario.S2.name in selected) addAll(benchmarkAggregate(rows, runs))
             if (Scenario.S2H.name in selected) addAll(benchmarkHeaderlessAggregate(rows, runs))
             if (Scenario.S3.name in selected) addAll(benchmarkExport(rows, runs))
+            if (Scenario.S4.name in selected) addAll(benchmarkFormat(rows, runs))
         }
         printResults(results)
     }
@@ -141,6 +144,13 @@ object JobReportBenchmark {
         runJobOnce(exportJob)
         runReportOnce(exportReport)
         assertEquals(-1L, Files.mismatch(jobExportOutput, reportExportOutput))
+    }
+
+    fun verifyFormat(rows: Int) {
+        BenchmarkData.writeWide(rows, exportInput)
+        runJobOnce(formatJob)
+        runReportOnce(exportReport)
+        assertEquals(-1L, Files.mismatch(jobFormatOutput, reportExportOutput))
     }
 
 
@@ -198,6 +208,15 @@ object JobReportBenchmark {
             benchmark(Scenario.S3, "job", rows, runs) { prepareJob(exportJob) },
             benchmark(Scenario.S3, "report", rows, runs) { prepareReport(exportReport) })
         assertEquals(-1L, Files.mismatch(jobExportOutput, reportExportOutput))
+        return results
+    }
+
+    private fun benchmarkFormat(rows: Int, runs: Int): List<BenchmarkResult> {
+        BenchmarkData.writeWide(rows, exportInput)
+        val results = listOf(
+            benchmark(Scenario.S4, "job-format-write", rows, runs) { prepareJob(formatJob) },
+            benchmark(Scenario.S4, "report", rows, runs) { prepareReport(exportReport) })
+        assertEquals(-1L, Files.mismatch(jobFormatOutput, reportExportOutput))
         return results
     }
 
@@ -486,7 +505,8 @@ object JobReportBenchmark {
         S1("inline"),
         S2("inline"),
         S2H("job"),
-        S3("report")
+        S3("report"),
+        S4("report")
     }
 
     private interface PreparedExecution: AutoCloseable {

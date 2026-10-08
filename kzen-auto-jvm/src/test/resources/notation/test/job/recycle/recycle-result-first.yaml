@@ -1,0 +1,16 @@
+# RecyclableRouteTest route "result-first" (archetypes in recycle-test.yaml): source → result (keep first).
+main:
+  is: Job
+  results:
+    main:
+      class: kotlin.Any
+      generics: []
+      nullable: true
+
+main.workers/source:
+  is: RecyclingSourceWorker
+  count: 5
+
+main.workers/collect:
+  is: ResultSinkWorker
+  keep: first

@@ -17,6 +17,7 @@ import tech.kzen.auto.common.data.read.TypedDecodePolicy
 import tech.kzen.auto.common.data.schema.RecordSchema
 import tech.kzen.auto.common.data.schema.declaredShape
 import tech.kzen.auto.server.data.read.delimited.ConfiguredDelimitedReaderCapability
+import tech.kzen.auto.server.data.write.delimited.ConfiguredDelimitedWriterCapability
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.util.digest.Digest
 
@@ -53,7 +54,11 @@ class ConfiguredDelimitedFormat(
     override val columnsLocked: Boolean
         get() = schema != null
 
-    private val baseConfig = DelimitedReadConfig(
+    override val writerCapabilityIdentity: String
+        get() = ConfiguredDelimitedWriterCapability.identity
+
+    /** The format's own configuration, before a request's explicit encoding; writing uses it as it is. */
+    val baseConfig = DelimitedReadConfig(
         RecordFramingSpec(recordSeparator),
         DelimitedDialectSpec(
             delimiter,

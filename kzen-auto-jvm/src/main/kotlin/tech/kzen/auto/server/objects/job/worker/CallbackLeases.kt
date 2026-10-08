@@ -3,6 +3,7 @@ package tech.kzen.auto.server.objects.job.worker
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.common.paradigm.job.control.ValueLease
 import tech.kzen.auto.server.exec.job.ownership.RunOwnershipControl
+import tech.kzen.auto.server.objects.job.value.recycle.Recyclable
 import tech.kzen.lib.common.exec.data.value.DataValue
 
 
@@ -16,13 +17,20 @@ import tech.kzen.lib.common.exec.data.value.DataValue
  * element costs a no-op lease.
  */
 internal object CallbackLeases {
-    /** Transform / Sink: the channel's hold becomes the callback's (released once the callback holds). */
+    /**
+     * Transform / Sink: the channel's hold becomes the callback's (released once the callback holds). A pooled
+     * element's channel token is moved as it is, with no second count: the ledger has no hold to give it.
+     */
     suspend fun transferring(
         control: JobControl,
         element: DataValue,
         channelLease: ValueLease?,
         callback: suspend () -> Unit
     ) {
+        if (channelLease is Recyclable.Token) {
+            holdingLease(channelLease, callback)
+            return
+        }
         val callbackLease = if (channelLease != null) hold(control, element) else ValueLease.none
         channelLease?.release()
         holdingLease(callbackLease, callback)

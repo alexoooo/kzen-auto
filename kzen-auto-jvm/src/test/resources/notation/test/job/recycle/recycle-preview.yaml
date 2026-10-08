@@ -1,0 +1,10 @@
+# RecyclableRouteTest route "preview" (archetypes in recycle-test.yaml): source → preview (keeps detached copies).
+main:
+  is: Job
+
+main.workers/source:
+  is: RecyclingSourceWorker
+  count: 5
+
+main.workers/preview:
+  is: PreviewWorker

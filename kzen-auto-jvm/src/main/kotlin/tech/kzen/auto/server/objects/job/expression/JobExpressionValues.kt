@@ -78,13 +78,14 @@ object JobExpressionValues {
 
 
     /**
-     * [JobDataValues.boundary], with the temporal and UUID scalars (stored as their canonical text) parsed to the
-     * JVM types the compiler declares for them, so a `modified` metadata field is a `java.time.Instant` in an
-     * expression; [scalar] is the inverse.
+     * [JobDataValues.callbackObject], with the temporal and UUID scalars (stored as their canonical text) parsed to
+     * the JVM types the compiler declares for them, so a `modified` metadata field is a `java.time.Instant` in an
+     * expression; [scalar] is the inverse. An expression runs inside its Worker's callback, so a pooled value it
+     * reads stays pooled.
      */
     private fun boundary(value: DataValue): Any? {
         val type = value.type as? DataType.Scalar
-            ?: return JobDataValues.boundary(value)
+            ?: return JobDataValues.callbackObject(value)
         if (value.access.state(value.root) != DataState.Present) {
             return null
         }
@@ -94,7 +95,7 @@ object JobExpressionValues {
             ScalarKind.Instant -> Instant.parse(value.access.readText(value.root))
             ScalarKind.Duration -> Duration.parse(value.access.readText(value.root))
             ScalarKind.Uuid -> UUID.fromString(value.access.readText(value.root))
-            else -> JobDataValues.boundary(value)
+            else -> JobDataValues.callbackObject(value)
         }
     }
 

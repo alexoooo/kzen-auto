@@ -49,6 +49,10 @@ interface ConfiguredRecordFormat: Digestible {
     val columnsLocked: Boolean
         get() = false
 
+    /** Names the server-side record writer that encodes records in this format; null for a format that only reads. */
+    val writerCapabilityIdentity: String?
+        get() = null
+
 
     @Suppress("DEPRECATION")
     suspend fun resolve(request: FormatResolutionRequest): FormatResolutionResult {

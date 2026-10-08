@@ -19,6 +19,7 @@ import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.server.exec.engine.RunEngine
 import java.nio.file.Files
 import java.nio.file.Path
+import kotlin.time.Duration
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -36,6 +37,9 @@ class JobDesignTimeTypeTest {
     private val directory = Path.of("build/job-design-time")
     private val input = directory.resolve("in")
     private lateinit var context: KzenAutoContext
+
+    // What the files type Parse as is under test, not how much of them a deadline lets a loaded JVM read
+    private val unhurriedBudget = DesignReadBudget(DesignReadBudget.editor.maxValues, Duration.INFINITE)
 
 
     @Before
@@ -60,7 +64,7 @@ class JobDesignTimeTypeTest {
         val graphDefinition = AutoTestUtils.graphDefinitionAttempt(AutoTestUtils.readNotation()).transitiveSuccessful
         val validation = JobValidator.validateDetached(
             document, graphDefinition, context.notationMetadataReader, context.graphEnvironment,
-            DesignReader().session(DesignReadBudget.editor))
+            DesignReader().session(unhurriedBudget))
 
         val parse = assertNotNull(validation.workerValidations[ObjectPath.parse("main.workers/parse")])
         assertNull(parse.errorMessage)

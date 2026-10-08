@@ -62,8 +62,8 @@ external interface FileNameTemplateEditorState: State {
     var value: String
     var label: String?
 
-    // The `${…}` placeholders the input's metadata offers (dotted into records such as `parent`), then the
-    // writer's own; null with [note] when the upstream contract isn't known
+    // The `${…}` placeholders the input offers (its columns, where the Worker reads them, then its metadata dotted
+    // into records such as `parent`), then the Worker's own; null with [note] when the upstream contract isn't known
     var placeholders: List<FileNameTemplateEditor.Placeholder>?
     var note: String?
 
@@ -73,13 +73,13 @@ external interface FileNameTemplateEditorState: State {
 
 //---------------------------------------------------------------------------------------------------------------------
 /**
- * A file-name template over the value's metadata — `Write`'s `name` ([tech.kzen.auto.server.objects.job.worker
- * .content.WriteWorker]): the text itself, plus an insert button beside it (as a Script expression inserts a
- * step reference) whose menu lists each `${…}` placeholder and inserts the chosen one at the caret. The
- * placeholders are the scalar fields of the upstream Worker's metadata contract (from the Job's validation, as
- * the path pickers read it — [JobUpstreamSchema.upstreamContract]), dotted into nested records such as
- * `parent.name`, then the writer's own, declared with a description each by `meta.<attr>.placeholders`
- * (`extension` and `time` for Write). Wired via `editor: FileNameTemplateEditor`.
+ * A file-name template over the input's values — the `name` of `Write` and `Format`: the text itself, plus an
+ * insert button beside it (as a Script expression inserts a step reference) whose menu lists each `${…}`
+ * placeholder and inserts the chosen one at the caret. The placeholders come from the upstream Worker's contract
+ * (from the Job's validation, as the path pickers read it — [JobUpstreamSchema.upstreamContract]): its payload's
+ * columns when `meta.<attr>.columnPlaceholders` is true (Format reads a column by name), then its metadata's
+ * scalar fields, dotted into nested records such as `parent.name`; then the Worker's own, declared with a
+ * description each by `meta.<attr>.placeholders`. Wired via `editor: FileNameTemplateEditor`.
  */
 @Suppress("unused")
 class FileNameTemplateEditor(
@@ -119,12 +119,18 @@ class FileNameTemplateEditor(
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private val placeholdersAttributePath = AttributePath.parse("placeholders")
+        private const val columnPlaceholdersKey = "columnPlaceholders"
+
+        // A column a template can name: one segment of the server's placeholder grammar (FileNameTemplate); a
+        // dotted name would read as a metadata path
+        private val columnName = Regex("[A-Za-z_][A-Za-z0-9_]*")
 
         // Deep enough for an archive member's archive's archive; a metadata record is plain data, never cyclic
         private const val maximumDepth = 3
 
-        private const val ownGroup = "This file"
-        private const val writerGroup = "Written"
+        private const val columnGroup = "Columns"
+        private const val ownMetadataGroup = "This value"
+        private const val workerGroup = "This Worker"
 
         private val noteColor = Color("rgba(0, 0, 0, 0.6)")
 
@@ -151,11 +157,32 @@ class FileNameTemplateEditor(
         }
 
 
-        // Metadata fields group by where they come from: the file itself, then each `parent.` level
+        /**
+         * What a template over values of [upstream] can insert: the payload's columns when [columns], the metadata's
+         * scalar paths, then [own].
+         */
+        fun placeholders(upstream: DataContract, columns: Boolean, own: List<Placeholder>): List<Placeholder> {
+            val payload =
+                if (columns) {
+                    scalarPaths(upstream.payload())
+                        .filter { (path, _) -> columnName.matches(path) }
+                        .map { (path, type) -> Placeholder(path, columnGroup, type) }
+                }
+                else {
+                    listOf()
+                }
+            val metadata = upstream.metadata?.let { metadata ->
+                scalarPaths(metadata.contract).map { (path, type) -> Placeholder(path, metadataGroup(path), type) }
+            }.orEmpty()
+            return payload + metadata + own
+        }
+
+
+        // Metadata fields group by where they come from: the value itself, then each `parent.` level
         private fun metadataGroup(path: String): String {
             val parents = path.split('.').dropLast(1)
             return when {
-                parents.isEmpty() -> ownGroup
+                parents.isEmpty() -> ownMetadataGroup
                 else -> "From " + parents.joinToString(" → ")
             }
         }
@@ -235,31 +262,30 @@ class FileNameTemplateEditor(
             ?: ""
         val value = if (pending) state.value else stored
 
-        val writerPlaceholders = (graphStructure
+        val attributeMetadata = graphStructure
             .graphMetadata
             .get(props.objectLocation)
             ?.attributes
             ?.get(props.attributeName)
             ?.attributeMetadataNotation
+        val workerPlaceholders = (attributeMetadata
             ?.get(placeholdersAttributePath.toNesting())
                 as? MapAttributeNotation)
             ?.map
             ?.entries
-            ?.map { (key, description) -> Placeholder(key.asKey(), writerGroup, description.asString() ?: "") }
+            ?.map { (key, description) -> Placeholder(key.asKey(), workerGroup, description.asString() ?: "") }
             ?: listOf()
+        val columns = attributeMetadata?.get(columnPlaceholdersKey)?.asBoolean() ?: false
 
         val (upstream, upstreamNote) =
             JobUpstreamSchema.upstreamContract(graphStructure, props.objectLocation, validation)
-        val metadata = upstream?.metadata
         val placeholders = when {
-            metadata != null ->
-                scalarPaths(metadata.contract).map { (path, type) -> Placeholder(path, metadataGroup(path), type) } +
-                    writerPlaceholders
-            else -> writerPlaceholders.takeIf { it.isNotEmpty() }
-        }
+            upstream != null -> placeholders(upstream, columns, workerPlaceholders)
+            else -> workerPlaceholders
+        }.takeIf { it.isNotEmpty() }
         val note = when {
             upstream == null -> upstreamNote
-            metadata == null -> "The input carries no metadata"
+            upstream.metadata == null && !columns -> "The input carries no metadata"
             else -> null
         }
 

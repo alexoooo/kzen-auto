@@ -1,0 +1,17 @@
+# Worker archetypes for FormatWorkerTest (WR3, Format's chunks of Bytes): a sink copying each chunk inside its
+# callback. One Job per document (workers are discovered under `main`): see format-<route>.yaml.
+
+
+BytesSinkWorker:
+  abstract: true
+  is: Worker
+  title: "Bytes Sink (test)"
+  class: tech.kzen.auto.server.objects.job.worker.format.BytesSinkWorker
+  input: ""
+  meta:
+    input:
+      is: ChannelInput
+      creator: JobChannelCreator
+    selfLocation:
+      is: ObjectLocation
+      by: Self

@@ -1,0 +1,14 @@
+# RecyclableRouteTest route "filter" (archetypes in recycle-test.yaml): source → filter (even ids) → sink.
+main:
+  is: Job
+
+main.workers/source:
+  is: RecyclingSourceWorker
+  count: 100
+
+main.workers/filter:
+  is: FilterWorker
+  where: id % 2L == 0L
+
+main.workers/sink:
+  is: RecyclableSinkWorker

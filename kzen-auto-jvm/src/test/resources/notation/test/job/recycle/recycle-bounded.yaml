@@ -1,0 +1,41 @@
+# RecyclableRouteTest route "bounded" (archetypes in recycle-test.yaml): source → filter → formula (metadata only)
+# → sink over small channels, so the pool stays at the in-flight count however long the stream.
+main:
+  is: Job
+
+main.channels/items:
+  is: Channel
+  capacity: 2
+  batchSize: 16
+
+main.channels/kept:
+  is: Channel
+  capacity: 2
+  batchSize: 16
+
+main.channels/calculated:
+  is: Channel
+  capacity: 2
+  batchSize: 16
+
+main.workers/source:
+  is: RecyclingSourceWorker
+  output: main.channels/items
+  count: 20000
+
+main.workers/filter:
+  is: FilterWorker
+  input: main.channels/items
+  output: main.channels/kept
+  where: id >= 0L
+
+main.workers/formula:
+  is: FormulaWorker
+  input: main.channels/kept
+  output: main.channels/calculated
+  formula:
+    double: id * 2
+
+main.workers/sink:
+  is: RecyclableSinkWorker
+  input: main.channels/calculated

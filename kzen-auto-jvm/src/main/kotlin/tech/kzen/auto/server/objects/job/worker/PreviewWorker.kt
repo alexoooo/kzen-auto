@@ -38,7 +38,7 @@ class PreviewWorker(
     private var windowBytes = 0
     private var count = 0L
     private var windowLimited = false
-    private val capture = PreviewCapture()
+    private val capture = PreviewCapture(maximumNanos = captureNanos)
 
     override suspend fun onElement(element: DataValue, emit: Emitter, control: JobControl) {
         val item = capture.capture(element)
@@ -126,6 +126,14 @@ class PreviewWorker(
 
     companion object {
         private const val maximumWindowBytes = 8 * 1_024 * 1_024
+
+        /**
+         * Test seam: the time budget of each item's capture, read when a Preview is created. A test asserting what
+         * a Preview shows lifts it, since a cold or loaded JVM can spend the default budget on a value's first read
+         * (kotlin-reflect initializing a native's properties) and truncate the item.
+         */
+        @Volatile
+        internal var captureNanos = PreviewCapture.defaultMaximumNanos
     }
 
 

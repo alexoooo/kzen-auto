@@ -22,6 +22,11 @@ internal object DataFormatOptions {
         formatOptions(catalog?.formats.orEmpty(), current)
 
 
+    /** The formats that can write; a current one that cannot is still listed, so the field reads back. */
+    fun writableFormats(catalog: FileFormatCatalog?, current: String): Array<SelectOption> =
+        formatOptions(catalog?.formats.orEmpty().filter { it.writable || it.reference == current }, current)
+
+
     fun entryFormats(catalog: FileFormatCatalog?, current: String): Array<SelectOption> =
         withDefault(
             formatOptions(catalog?.formats.orEmpty().filter { it.perFileOverrideAvailable }, current),

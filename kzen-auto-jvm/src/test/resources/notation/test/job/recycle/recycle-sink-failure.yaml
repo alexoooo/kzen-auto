@@ -1,0 +1,12 @@
+# RecyclableRouteTest route "sink-failure" (archetypes in recycle-test.yaml): source → sink failing on its fourth
+# element, mid-batch.
+main:
+  is: Job
+
+main.workers/source:
+  is: RecyclingSourceWorker
+  count: 100
+
+main.workers/sink:
+  is: RecyclableSinkWorker
+  failAt: 3

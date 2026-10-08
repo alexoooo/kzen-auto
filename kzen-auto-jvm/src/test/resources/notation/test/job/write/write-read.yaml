@@ -1,0 +1,21 @@
+  # WriteWorkerTest: the rows of the CSV files in a directory (the written outputs, or the inputs by an edit).
+main:
+  is: Job
+  results:
+    main:
+      class: kotlin.Any
+      generics: []
+      nullable: true
+
+main.workers/files:
+  is: FileSourceWorker
+  directory: build/write-worker/out
+  filter: .csv
+
+main.workers/parse:
+  is: Parse
+  format: auto-jvm/datasource/configured-delimited-format.yaml#ConfiguredCsv
+
+main.workers/collect:
+  is: ResultSinkWorker
+  keep: all

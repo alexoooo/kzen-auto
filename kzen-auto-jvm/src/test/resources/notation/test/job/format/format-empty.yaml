@@ -1,0 +1,17 @@
+# FormatWorkerTest: a file with a header and no records.
+main:
+  is: Job
+
+main.workers/files:
+  is: FileSourceWorker
+  directory: build/format-worker/empty
+  filter: .csv
+
+main.workers/parse:
+  is: Parse
+
+main.workers/format:
+  is: Format
+
+main.workers/sink:
+  is: BytesSinkWorker

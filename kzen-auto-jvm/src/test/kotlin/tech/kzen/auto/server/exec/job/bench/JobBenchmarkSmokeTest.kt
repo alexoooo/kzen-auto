@@ -25,4 +25,9 @@ class JobBenchmarkSmokeTest {
     fun exportMatchesReport() {
         JobReportBenchmark.verifyExport(smokeRows)
     }
+
+    @Test
+    fun formatAndWriteMatchReport() {
+        JobReportBenchmark.verifyFormat(smokeRows)
+    }
 }

@@ -1,0 +1,17 @@
+# FormatWorkerTest: many records through Format's pool of chunks.
+main:
+  is: Job
+
+main.workers/files:
+  is: FileSourceWorker
+  directory: build/format-worker/recycle
+  filter: .csv
+
+main.workers/parse:
+  is: Parse
+
+main.workers/format:
+  is: Format
+
+main.workers/sink:
+  is: BytesSinkWorker

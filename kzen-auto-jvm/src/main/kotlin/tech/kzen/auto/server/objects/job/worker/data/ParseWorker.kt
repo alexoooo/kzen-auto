@@ -123,6 +123,7 @@ class ParseWorker(
     private var partIndex = 0
     private var itemIndex = 0L
     private var shapeBaseline: DataReadCore.ShapeBaseline? = null
+    private var projection: RecordProjection? = null
 
     // The type this Worker was validated with, read from data before Run: every part must fit it (R6)
     private var validatedShape: DataReadCore.ShapeBaseline? = null
@@ -325,6 +326,12 @@ class ParseWorker(
     }
 
 
+    // The column mapping into the shape baseline, planned once per file rather than once per row
+    private fun projectionFor(cursor: DataCursor): RecordProjection =
+        DataReadCore.projection(projection, cursor.shape, requireNotNull(shapeBaseline), null)
+            .also { projection = it }
+
+
     private suspend fun readCurrentUnit(unit: DataUnit, emitter: Emitter, control: JobControl) {
         val parts = DataReadCore.parts(unit, role, completedUnits)
         val context = WorkerDataContext(control)
@@ -375,8 +382,7 @@ class ParseWorker(
             val emittedItem = DataReadCore.emitNext(
                 control,
                 activeCursor,
-                requireNotNull(shapeBaseline),
-                null,
+                projectionFor(activeCursor),
                 claimBeforeSend = {
                     itemIndex += 1
                     unitEmittedOrdinal += 1
@@ -429,8 +435,7 @@ class ParseWorker(
                 val emitted = DataReadCore.emitNext(
                     control,
                     opened,
-                    requireNotNull(shapeBaseline),
-                    null,
+                    projectionFor(opened),
                     claimBeforeSend = { totalEmitted += 1 },
                     send = { emitter.send(it.withMetadata(itemMetadata)) })
                 if (!emitted) {

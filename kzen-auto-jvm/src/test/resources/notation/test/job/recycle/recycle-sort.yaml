@@ -1,0 +1,15 @@
+# RecyclableRouteTest route "sort" (archetypes in recycle-test.yaml): source → sort (retains to end-of-stream) → sink.
+main:
+  is: Job
+
+main.workers/source:
+  is: RecyclingSourceWorker
+  count: 20
+
+main.workers/sort:
+  is: SortWorker
+  sort:
+    "0|name": true
+
+main.workers/sink:
+  is: RecyclableSinkWorker

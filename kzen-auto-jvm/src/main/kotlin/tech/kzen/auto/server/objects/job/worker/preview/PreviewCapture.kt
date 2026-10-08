@@ -15,7 +15,7 @@ class PreviewCapture(
     private val maximumNodes: Int = 2_000,
     private val maximumText: Int = 4_096,
     private val maximumBytes: Int = 256 * 1_024,
-    private val maximumNanos: Long = 50_000_000
+    private val maximumNanos: Long = defaultMaximumNanos
 ) {
     fun capture(value: DataValue): PreviewNode {
         val payload = Writer(value).capture()
@@ -148,6 +148,9 @@ class PreviewCapture(
     }
 
     companion object {
+        /** Wall-clock budget of one capture, so a slow-to-read value cannot hold up the Worker sampling it. */
+        const val defaultMaximumNanos = 50_000_000L
+
         private const val markerReserveBytes = 1_024
         private const val nodeOverheadBytes = 128
         private const val maximumEncodedBytesPerChar = 6

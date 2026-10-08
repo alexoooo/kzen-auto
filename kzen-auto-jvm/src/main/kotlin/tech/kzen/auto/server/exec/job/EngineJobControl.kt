@@ -8,6 +8,7 @@ import tech.kzen.auto.server.exec.job.ownership.RunOwnershipControl
 import tech.kzen.auto.server.exec.job.ownership.RunOwnershipLedger
 import tech.kzen.auto.server.objects.job.worker.LentElement
 import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.auto.server.objects.job.value.recycle.Recyclable
 import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.ListExecutionValue
 import tech.kzen.lib.common.exec.MapExecutionValue
@@ -245,8 +246,12 @@ class EngineJobControl(
 
     // A Worker's own hold past its callback (an accumulator). A lent element is refused by name (borrowed
     // elements §3.3): its source waits for the release before it advances, so a hold that outlives the callback
-    // would hang the run rather than keep the element.
+    // would hang the run rather than keep the element. A pooled value is forfeited: kept, it is an ordinary value.
     override fun retain(value: DataValue): ValueLease {
+        Recyclable.of(value)?.let { recyclable ->
+            recyclable.forfeit()
+            return ValueLease.none
+        }
         val owners = ledger.owners(value)
         lentOwner(owners)?.let { lent ->
             throw IllegalStateException(
@@ -286,7 +291,12 @@ class EngineJobControl(
     }
 
 
+    // A pooled value is forfeited and kept as it is, like an unowned one
     override fun snapshot(value: DataValue): DataValue {
+        Recyclable.of(value)?.let { recyclable ->
+            recyclable.forfeit()
+            return value
+        }
         if (ledger.owners(value).isEmpty) {
             return value
         }

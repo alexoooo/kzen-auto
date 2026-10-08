@@ -7,6 +7,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.auto.server.exec.job.JobDeadlockMonitor
 import tech.kzen.auto.server.exec.job.JobOwnershipReport
 import tech.kzen.auto.server.objects.job.worker.content.ContentTestHarness.Companion.collected
@@ -379,14 +380,19 @@ class ExtractWorkerTest {
         }
 
         val engine = harness.start("test/job/content/extract-stop-write-test.yaml")
-        val reports = CopyOnWriteArrayList<Any>()
+        val stalls = CopyOnWriteArrayList<Map<*, *>>()
         val outcome = try {
             runBlocking {
                 val terminal = async { engine.await() }
                 engine.resume()
                 while (!terminal.isCompleted) {
-                    engine.snapshot().root.live[Address.of(JobOwnershipReport.addressMarker)]?.get()
-                        ?.let { reports.add(it) }
+                    // The run's final ownership accounting lands on the same address as it settles, so only a
+                    // report marked stalled is a warning
+                    val report = engine.snapshot().root.live[Address.of(JobOwnershipReport.addressMarker)]?.get()
+                        as? Map<*, *>
+                    if (report?.get(JobConventions.ownershipStalledKey) == true) {
+                        stalls.add(report)
+                    }
                     // Suspends, so the awaiting coroutine on this same thread gets to see the run settle
                     delay(10)
                 }
@@ -398,7 +404,7 @@ class ExtractWorkerTest {
         }
 
         assertIs<Outcome.Success>(outcome)
-        assertEquals(emptyList(), reports.distinct(), "no stall reported while the entry was copied")
+        assertEquals(emptyList(), stalls.distinct(), "no stall reported while the entry was copied")
     }
 
 

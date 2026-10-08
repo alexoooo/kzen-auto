@@ -41,11 +41,22 @@ class ConfiguredFormatDetailTest {
             "formats.yaml#CSV",
             "CSV",
             listOf("csv"))
-            .asCollection() - setOf("perFileOverrideAvailable", "columnLockingAvailable")
+            .asCollection() - setOf("perFileOverrideAvailable", "columnLockingAvailable", "writable")
 
         val decoded = ConfiguredFormatDetail.ofCollection(encoded)
 
         assertTrue(decoded.perFileOverrideAvailable)
         assertFalse(decoded.columnLockingAvailable)
+        assertFalse(decoded.writable)
+    }
+
+
+    @Test
+    fun writabilityRoundTripsThroughTheCatalogValue() {
+        val csv = ConfiguredFormatDetail("formats.yaml#CSV", "CSV", listOf("csv"), writable = true)
+        val text = ConfiguredFormatDetail("formats.yaml#PlainText", "Plain text", listOf("txt"))
+
+        assertTrue(ConfiguredFormatDetail.ofCollection(csv.asCollection()).writable)
+        assertFalse(ConfiguredFormatDetail.ofCollection(text.asCollection()).writable)
     }
 }

@@ -1,0 +1,20 @@
+# ParseWorkerAutomaticTest: small text files whose format and header Parse detects (Automatic), columns combined.
+main:
+  is: Job
+  results:
+    main:
+      class: kotlin.Any
+      generics: []
+      nullable: true
+
+main.workers/files:
+  is: FileSourceWorker
+  directory: build/parse-automatic/in
+  filter: .txt
+
+main.workers/parse:
+  is: Parse
+
+main.workers/collect:
+  is: ResultSinkWorker
+  keep: all

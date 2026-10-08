@@ -1,0 +1,13 @@
+# RecyclableRouteTest route "java" (archetypes in recycle-test.yaml): source → plain-Java identity transform → sink.
+main:
+  is: Job
+
+main.workers/source:
+  is: RecyclingSourceWorker
+  count: 5
+
+main.workers/java:
+  is: IdentityJavaTransformWorker
+
+main.workers/sink:
+  is: RecyclableSinkWorker

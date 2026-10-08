@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.objects.job.worker
 
 import tech.kzen.auto.common.data.schema.HeaderLabel
+import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.auto.common.objects.document.job.path.PathBinding
 import tech.kzen.auto.common.objects.document.job.path.PathBindingError
 import tech.kzen.auto.common.objects.document.job.path.PathBindingResult
@@ -9,6 +10,7 @@ import tech.kzen.auto.common.objects.document.job.path.WriterColumnSpec
 import tech.kzen.auto.common.objects.document.job.path.WriterColumnSpec.WriterColumn
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.server.objects.job.value.ColumnProjection
+import tech.kzen.auto.server.objects.job.value.ColumnProjectionDescriptor
 import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.lib.common.exec.data.type.DataContract
 import tech.kzen.lib.common.exec.data.type.DataType
@@ -56,20 +58,26 @@ class WriterColumns(
 
 
     /** The column names of [row], each payload column rendered by [payloadName]. */
-    fun header(row: Row, payloadName: (HeaderLabel) -> String): List<String> {
-        val payloadNames = { checkNotNull(row.projection).header.values.map(payloadName) }
-        if (spec.columns.isEmpty()) {
-            return payloadNames()
+    fun header(row: Row, payloadName: (HeaderLabel) -> String): List<String> =
+        names(payloadName, { checkNotNull(row.projection).header }, { checkNotNull(binding) })
+
+
+    /**
+     * The column names of every value of [contract], known before any value arrives: the names [header] gives
+     * each of them. Fails by name ([tech.kzen.lib.common.exec.data.problem.DataException]) when the payload has no
+     * static column projection.
+     */
+    fun header(contract: DataContract, payloadName: (HeaderLabel) -> String): List<String> =
+        names(payloadName, { ColumnProjectionDescriptor.from(contract.payload()).header }, { bind(contract) })
+
+
+    /** The path columns' texts of [element], bound against [contract]; null when there are no path columns. */
+    fun pathValues(element: DataValue, contract: DataContract): Array<String?>? {
+        if (pathColumns.isEmpty()) {
+            return null
         }
-        val names = ArrayList<String>()
-        var pathIndex = 0
-        for (column in spec.columns) {
-            when (column) {
-                WriterColumn.PayloadFields -> names += payloadNames()
-                is WriterColumn.Path -> names += checkNotNull(binding).paths[pathIndex++].outputName
-            }
-        }
-        return names
+        bindingFor(contract)
+        return checkNotNull(evaluator).rows(element).single().values
     }
 
 
@@ -111,6 +119,26 @@ class WriterColumns(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    private fun names(
+        payloadName: (HeaderLabel) -> String,
+        payloadHeader: () -> HeaderListing,
+        paths: () -> PathBindingResult
+    ): List<String> {
+        if (spec.columns.isEmpty()) {
+            return payloadHeader().values.map(payloadName)
+        }
+        val names = ArrayList<String>()
+        var pathIndex = 0
+        for (column in spec.columns) {
+            when (column) {
+                WriterColumn.PayloadFields -> names += payloadHeader().values.map(payloadName)
+                is WriterColumn.Path -> names += paths().paths[pathIndex++].outputName
+            }
+        }
+        return names
+    }
+
+
     private fun boundColumns(element: DataValue, control: JobControl): PathBindingResult? {
         if (pathColumns.isEmpty()) {
             return null
@@ -118,13 +146,18 @@ class WriterColumns(
         val inputContract = control.inputContract()
             ?.takeUnless { it.structural is DataType.Dynamic }
             ?: element.contract
+        return bindingFor(inputContract)
+    }
+
+
+    private fun bindingFor(contract: DataContract): PathBindingResult {
         val current = binding
-        if (current != null && boundFor == inputContract) {
+        if (current != null && boundFor == contract) {
             return current
         }
-        val bound = bind(inputContract)
+        val bound = bind(contract)
         check(bound.isValid) { "Columns: ${bound.errorMessage()}" }
-        boundFor = inputContract
+        boundFor = contract
         binding = bound
         evaluator = PathRowEvaluator(bound.paths)
         return bound

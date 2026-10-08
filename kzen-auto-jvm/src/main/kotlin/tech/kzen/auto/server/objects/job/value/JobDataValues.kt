@@ -14,6 +14,7 @@ import tech.kzen.lib.common.exec.data.value.DataNode
 import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.auto.plugin.api.data.Borrowed
 import tech.kzen.auto.server.exec.job.ownership.NativeIdentityRegistry
+import tech.kzen.auto.server.objects.job.value.recycle.Recyclable
 import tech.kzen.lib.common.exec.data.value.DefaultDataAdapterRegistry
 import tech.kzen.lib.common.exec.data.value.DataAccessException
 import tech.kzen.lib.common.exec.data.value.ValueAccess
@@ -66,8 +67,15 @@ internal object JobDataValues {
         contract: DataContract,
         record: FlatFileRecord,
         states: List<DataState>
+    ): DataValue =
+        projectedRecord(FlatRecordHeader(contract), record, states)
+
+    /** A record under a [header] its reader built once for the file, rather than once per row. */
+    fun projectedRecord(
+        header: FlatRecordHeader,
+        record: FlatFileRecord,
+        states: List<DataState>
     ): DataValue {
-        val header = FlatRecordHeader(contract)
         record.attachHeader(header)
         val access = ProjectedRecordValueAccess(record, header, states, null)
         return DataValue(access, DataNode(0))
@@ -114,11 +122,12 @@ internal object JobDataValues {
             else -> FlatFileRecord.of((0 until projection.size).map(projection::render))
         }
 
+    /** The payload a framework Worker reads inside its callback; a pooled value stays pooled (see [callbackObject]). */
     fun native(value: DataValue): Any? {
         if (value.access.state(value.root) == DataState.Null) {
             return null
         }
-        if (value.contract.nativeByPath[DataTypePath.root] != null) {
+        if (value.payloadContract.nativeByPath[DataTypePath.root] != null) {
             return value.access.native(value.root)
         }
         if (value.access is FlatFileRecord) {
@@ -134,11 +143,25 @@ internal object JobDataValues {
                 ScalarKind.Binary -> value.access.readBinary(value.root)
                 else -> value.access.readText(value.root)
             }
-            else -> boundary(value)
+            else -> callbackObject(value)
         }
     }
 
+    /**
+     * [value] as an ordinary object for code outside the Job's channels (a child Logic, a plugin): the receiver
+     * may keep it, so a pooled value is forfeited.
+     */
     fun boundary(value: DataValue): Any? {
+        Recyclable.forfeit(value)
+        return callbackObject(value)
+    }
+
+    /**
+     * [value] as [boundary] materializes it, for code that runs inside the current callback and keeps nothing
+     * past it (a Job expression's reads): a pooled value stays pooled. What such code returns leaves through a
+     * Worker's own output, which forfeits the input when it may carry it (`Recyclable.forfeitDerived`).
+     */
+    fun callbackObject(value: DataValue): Any? {
         scalarNativeProjection(value)?.let { return it }
         return boundaryNode(value.access, value.root)
     }
@@ -153,7 +176,7 @@ internal object JobDataValues {
         if (value.access.state(value.root) != DataState.Present || value.type !is DataType.Scalar) {
             return null
         }
-        val native = value.contract.nativeByPath[DataTypePath.root] ?: return null
+        val native = value.payloadContract.nativeByPath[DataTypePath.root] ?: return null
         return when (native.className.asString()) {
             "kotlin.Boolean", "java.lang.Boolean" -> value.access.readBoolean(value.root)
             "kotlin.Byte", "java.lang.Byte" -> value.access.readLong(value.root).toByte()
@@ -175,13 +198,21 @@ internal object JobDataValues {
             DataState.Null -> return null
             DataState.Present -> {}
         }
-        try {
-            return access.native(node)
+        val contract = access.contract(node).expanded()
+        val type = contract.structural
+        // Only a node that declares a native facet, or has no structure to fall back on, is asked for it: a node
+        // without one fails the read (a flat record and each of its fields). A declared native may still refuse (a
+        // literal's canonical scalar) and falls back to structure.
+        if (contract.nativeByPath[DataTypePath.root] != null ||
+                type is DataType.Opaque || type is DataType.Dynamic || type is DataType.Reference) {
+            try {
+                return access.native(node)
+            }
+            catch (_: DataAccessException) {
+                // Continue with structural materialization.
+            }
         }
-        catch (_: DataAccessException) {
-            // Continue with structural materialization.
-        }
-        return when (val type = access.contract(node).expanded().structural) {
+        return when (type) {
             is DataType.Scalar -> scalarBoundary(access, node, type.kind)
             is DataType.Record -> LinkedHashMap<String, Any?>(type.fields.size).also { result ->
                 for (field in type.fields) {

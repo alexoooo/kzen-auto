@@ -79,20 +79,23 @@ class DesignReadSessionTest {
             }
             JobValidation.empty
         }
-        val budget = DesignReadBudget(256, 200.milliseconds)
+        // A pass that must complete gets all the time it needs, so a loaded JVM cannot cut it short; one that
+        // must be cut short waits on a read longer than its deadline
+        val unhurried = DesignReadBudget(256, Duration.INFINITE)
+        val short = DesignReadBudget(256, 200.milliseconds)
 
-        cache.jobValidation(document, graphDefinition, budget, compute)
-        cache.jobValidation(document, graphDefinition, budget, compute)
+        cache.jobValidation(document, graphDefinition, unhurried, compute)
+        cache.jobValidation(document, graphDefinition, unhurried, compute)
         assertEquals(1, computed, "unchanged evidence reuses the validation")
 
         data = "b"
-        cache.jobValidation(document, graphDefinition, budget, compute)
+        cache.jobValidation(document, graphDefinition, unhurried, compute)
         assertEquals(2, computed, "changed data validates again")
 
         limit = true
         data = "c"
-        cache.jobValidation(document, graphDefinition, budget, compute)
-        cache.jobValidation(document, graphDefinition, budget, compute)
+        cache.jobValidation(document, graphDefinition, short, compute)
+        cache.jobValidation(document, graphDefinition, short, compute)
         assertEquals(4, computed, "a pass the deadline cut short is never reused")
     }
 }

@@ -1,0 +1,16 @@
+# RecyclableRouteTest route "formula-metadata" (archetypes in recycle-test.yaml): source → formula (metadata only,
+# so the output shares the record's access) → sink.
+main:
+  is: Job
+
+main.workers/source:
+  is: RecyclingSourceWorker
+  count: 50
+
+main.workers/formula:
+  is: FormulaWorker
+  formula:
+    double: id * 2
+
+main.workers/sink:
+  is: RecyclableSinkWorker

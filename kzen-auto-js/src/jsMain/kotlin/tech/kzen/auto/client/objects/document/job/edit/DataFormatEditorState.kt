@@ -7,4 +7,5 @@ import tech.kzen.auto.common.data.format.FileFormatCatalog
 external interface DataFormatEditorState: State {
     var catalog: FileFormatCatalog?
     var value: String?
+    var writableOnly: Boolean
 }

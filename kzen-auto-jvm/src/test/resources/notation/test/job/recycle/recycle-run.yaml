@@ -1,0 +1,15 @@
+# RecyclableRouteTest route "run" (archetypes in recycle-test.yaml): source → run (a child Script returning its
+# input) → sink.
+main:
+  is: Job
+
+main.workers/source:
+  is: RecyclingSourceWorker
+  count: 5
+
+main.workers/run:
+  is: RunWorker
+  instructions: "test/job/recycle/recycle-identity-child.yaml#main"
+
+main.workers/sink:
+  is: RecyclableSinkWorker

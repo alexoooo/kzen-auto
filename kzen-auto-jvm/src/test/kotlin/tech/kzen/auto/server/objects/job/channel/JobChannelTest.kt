@@ -1,17 +1,23 @@
 package tech.kzen.auto.server.objects.job.channel
 
 import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.Test
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.lib.common.exec.data.value.DataValue
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
 import kotlin.test.assertEquals
 
 
 /**
- * Direct unit test of [JobChannel]'s migration carryover — no graph, no notation. Workers emit single ELEMENTS
+ * Direct unit test of [JobChannel]'s migration carryover and of the blocked count its deadlock monitor reads — no
+ * graph, no notation. Workers emit single ELEMENTS
  * ([ChannelOutput.send] buffers them; [ChannelOutput.flush] sends the buffer as one batch), and a state
  * migration snapshots a channel's in-flight elements ([JobChannel.drainBuffered]) before teardown and re-seeds
  * them into the rebuilt channel ([JobChannel.preload]), which then delivers that carryover ahead of the live
@@ -21,10 +27,51 @@ import kotlin.test.assertEquals
  * states easy to reason about element-by-element; the channel capacity is then counted in one-element batches.
  */
 class JobChannelTest {
+    private val awaitMillis = 10_000L
+
+
     // Emit one element as its own batch (send buffers; flush sends the batch, suspending under backpressure).
     private suspend fun ChannelOutput<DataValue>.emit(element: Any?) {
         send(JobDataValues.lift(element))
         flush()
+    }
+
+
+    private suspend fun awaitBlockedCount(channel: JobChannel, count: Int) {
+        withTimeout(awaitMillis) {
+            while (channel.blockedCount() != count) {
+                delay(1)
+            }
+        }
+    }
+
+
+    // One thread a test can occupy, so a coroutine resumed on it waits to be dispatched as on a loaded machine
+    private class StarvableThread: AutoCloseable {
+        private val executor = Executors.newSingleThreadExecutor()
+        val dispatcher = executor.asCoroutineDispatcher()
+        private var release = CountDownLatch(0)
+
+        // Returns once the thread is occupied, so whatever coroutine last ran on it has suspended
+        fun occupy() {
+            val occupied = CountDownLatch(1)
+            val release = CountDownLatch(1)
+            this.release = release
+            executor.execute {
+                occupied.countDown()
+                release.await()
+            }
+            occupied.await()
+        }
+
+        fun free() {
+            release.countDown()
+        }
+
+        override fun close() {
+            free()
+            dispatcher.close()
+        }
     }
 
 
@@ -132,5 +179,76 @@ class JobChannelTest {
         }
         rebuiltSender.join()
         assertEquals(listOf<Any?>(1, 2, 3, 4, 5), received)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    @Test
+    fun aConsumerHandedABatchOrTheEndIsNotBlockedWhileItWaitsForItsThread() = runBlocking {
+        // A woken endpoint still waiting for a thread can resume on its own, so it must not count toward a
+        // deadlock verdict however long a loaded machine leaves it undispatched
+        val channel = JobChannel(capacity = 0, batchSize = 1)
+        val producer = channel.newProducer()
+        StarvableThread().use { consumerThread ->
+            val consumer = launch(consumerThread.dispatcher) {
+                while (true) {
+                    channel.input.receive() ?: break
+                }
+            }
+            awaitBlockedCount(channel, 1)
+            consumerThread.occupy()
+            producer.emit("a")
+            assertEquals(0, channel.blockedCount(), "handed a batch")
+
+            consumerThread.free()
+            awaitBlockedCount(channel, 1)
+            consumerThread.occupy()
+            producer.close()
+            assertEquals(0, channel.blockedCount(), "handed the end of the stream")
+
+            consumerThread.free()
+            consumer.join()
+        }
+    }
+
+
+    @Test
+    fun aProducerWhoseBatchWasTakenIsNotBlockedWhileItWaitsForItsThread() = runBlocking {
+        val channel = JobChannel(capacity = 0, batchSize = 1)
+        val producer = channel.newProducer()
+        StarvableThread().use { producerThread ->
+            val sender = launch(producerThread.dispatcher) {
+                producer.emit("a")
+            }
+            awaitBlockedCount(channel, 1)
+            producerThread.occupy()
+            assertEquals("a", JobDataValues.boundary(channel.input.receive()!!))
+            assertEquals(0, channel.blockedCount())
+
+            producerThread.free()
+            sender.join()
+        }
+    }
+
+
+    @Test
+    fun endpointsNothingCanResumeStillCountAsBlocked() = runBlocking {
+        // A consumer of a channel no producer ever opened, and a producer on a full channel nobody reads
+        val orphan = JobChannel(capacity = 0, batchSize = 1)
+        val reader = launch(start = CoroutineStart.UNDISPATCHED) {
+            orphan.input.receive()
+        }
+        assertEquals(1, orphan.blockedCount())
+
+        val unread = JobChannel(capacity = 1, batchSize = 1)
+        val producer = unread.newProducer()
+        val writer = launch(start = CoroutineStart.UNDISPATCHED) {
+            producer.emit("a")
+            producer.emit("b")
+        }
+        assertEquals(1, unread.blockedCount())
+
+        reader.cancel()
+        writer.cancel()
     }
 }

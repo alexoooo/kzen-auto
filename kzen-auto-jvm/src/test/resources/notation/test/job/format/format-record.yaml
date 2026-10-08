@@ -1,0 +1,23 @@
+# FormatWorkerTest: a format with no quote, given a record whose field holds its delimiter.
+main:
+  is: Job
+
+main.formats/bare:
+  is: ConfiguredCsv
+  catalogVisible: false
+  quote: ""
+
+main.workers/files:
+  is: FileSourceWorker
+  directory: build/format-worker/record
+  filter: .csv
+
+main.workers/parse:
+  is: Parse
+
+main.workers/format:
+  is: Format
+  format: main.formats/bare
+
+main.workers/sink:
+  is: BytesSinkWorker

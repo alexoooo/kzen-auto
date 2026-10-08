@@ -27,6 +27,7 @@ import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.server.context.KzenAutoConfig
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.data.configuredTestDataPart
+import tech.kzen.auto.server.objects.datasource.format.ConfiguredDelimitedFormat
 import tech.kzen.auto.server.objects.datasource.format.ConfiguredDelimitedTestFormats
 import tech.kzen.auto.server.objects.datasource.format.ConfiguredRecordFormatLookup
 import tech.kzen.auto.server.util.WorkUtils
@@ -597,6 +598,27 @@ class DataSourceActionsTest {
         }
         assertTrue(failure.message.orEmpty().contains("main.brokenFormat"), failure.message)
         assertTrue(failure.message.orEmpty().contains("failed to define"), failure.message)
+    }
+
+
+    @Test
+    fun catalogMarksTheDelimitedFormatsWritable() = runBlocking {
+        val writable = context.configuredRecordFormatRegistry.catalog().formats
+            .associate { it.reference.substringAfter('#') to it.writable }
+
+        for (name in listOf(
+                "ConfiguredCsv", "ConfiguredTsv", "ConfiguredSemicolon", "ConfiguredPipe",
+                "main.declaredFormat", "main.twinCsv")) {
+            assertEquals(true, writable[name], name)
+        }
+        for (name in listOf("AutomaticFormat", "PlainText", "ArchiveListing")) {
+            assertEquals(false, writable[name], name)
+        }
+
+        // The writer's tests stand in for the built-in CSV with this configuration
+        val builtInCsv = context.configuredRecordFormatRegistry.preflight(
+            "auto-jvm/datasource/configured-delimited-format.yaml#ConfiguredCsv").format
+        assertEquals(ConfiguredDelimitedTestFormats.csv().baseConfig, (builtInCsv as ConfiguredDelimitedFormat).baseConfig)
     }
 
 

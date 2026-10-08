@@ -32,6 +32,7 @@ import tech.kzen.auto.server.data.content.provider.DataContentProviderLookup
 import tech.kzen.auto.server.data.read.ReaderCapabilityRegistry
 import tech.kzen.auto.server.data.read.detection.AutomaticFormatResolver
 import tech.kzen.auto.server.data.read.detection.DetectionSampleAcquirer
+import tech.kzen.auto.server.data.write.RecordWriterCapabilityRegistry
 import tech.kzen.auto.server.data.format.SourceFormatResolutionBudgetFactory
 import tech.kzen.auto.server.objects.datasource.format.ConfiguredRecordFormatLookup
 import tech.kzen.auto.server.objects.datasource.format.ConfiguredRecordFormatRegistry
@@ -261,6 +262,7 @@ class KzenAutoContext private constructor(
     val sourceFormatResolutionBudgetFactory = SourceFormatResolutionBudgetFactory()
     // Per-context capability instances from the runtime's provider descriptors (the SPI makes no thread-safety demand)
     val readerCapabilityRegistry = ReaderCapabilityRegistry.forRuntime(runtime)
+    val recordWriterCapabilityRegistry = RecordWriterCapabilityRegistry.withBuiltInWriters()
     val configuredDataOpener = ConfiguredDataOpener(
         schemaCache, readerCapabilityRegistry, sequentialContentStack)
     val dataOpenerLookup = DataOpenerLookup(configuredDataOpener)
@@ -292,6 +294,7 @@ class KzenAutoContext private constructor(
         .put(ClassName(ColumnListingAction::class.qualifiedName!!), columnListingAction)
         .put(ClassName(SchemaCache::class.qualifiedName!!), schemaCache)
         .put(ClassName(DataOpenerLookup::class.qualifiedName!!), dataOpenerLookup)
+        .put(ClassName(RecordWriterCapabilityRegistry::class.qualifiedName!!), recordWriterCapabilityRegistry)
         .put(ClassName(SourceFormatResolutionBudgetFactory::class.qualifiedName!!), sourceFormatResolutionBudgetFactory)
         .put(ClassName(AutomaticFormatResolver::class.qualifiedName!!)) { automaticFormatResolver }
         .put(ClassName(ConfiguredRecordFormatLookup::class.qualifiedName!!)) { configuredRecordFormatRegistry }
@@ -328,7 +331,7 @@ class KzenAutoContext private constructor(
     val graphInstanceCache = GraphInstanceCache(graphCreator, graphEnvironment)
 
     val configuredRecordFormatRegistry = ConfiguredRecordFormatRegistry(
-        graphStore, graphInstanceCache, readerCapabilityRegistry)
+        graphStore, graphInstanceCache, readerCapabilityRegistry, recordWriterCapabilityRegistry)
 
     val automaticFormatResolver = AutomaticFormatResolver(
         configuredRecordFormatRegistry,

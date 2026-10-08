@@ -45,6 +45,55 @@ class DelimitedProbeTest {
     }
 
     @Test
+    fun smallFileWithAHeaderOverOneTwoOrThreeRowsReadsItsHeader() = runBlocking {
+        val header = "station,date,temperature"
+        val rows = listOf("s1,2026-01-01,12.5", "s2,2026-01-01,14", "s1,2026-01-02,13.1")
+        for (count in 1..rows.size) {
+            val text = (listOf(header) + rows.take(count)).joinToString("\n")
+            assertEquals("present", headerPolicy(text), text)
+        }
+    }
+
+
+    @Test
+    fun integersAndDecimalsInOneColumnAreOneNumericColumn() = runBlocking {
+        assertEquals("present", headerPolicy("name,count,price\nalice,1,2.5\nbob,2,3\ncarol,3,-0.75"))
+        assertEquals("present", headerPolicy("name,price\nalice,2.5\nbob,3"))
+    }
+
+
+    @Test
+    fun isoDatesAndTimesBelowATextLabelAreHeaderEvidence() = runBlocking {
+        assertEquals("present", headerPolicy("event,day\nlaunch,2026-01-01\nreview,2026-02-01"))
+        assertEquals("present", headerPolicy(
+            "event,at\nlaunch,2026-01-01T09:30:00\nreview,2026-02-01T10:00:00Z\nclose,2026-03-01"))
+    }
+
+
+    @Test
+    fun aDateColumnDecidesWhenTheNumericColumnHoldsText() = runBlocking {
+        assertEquals("present", headerPolicy(
+            "station,date,temperature\ns1,2026-01-01,12.5\ns2,2026-01-01,\"14,1\"\ns1,2026-01-02,13"))
+    }
+
+
+    @Test
+    fun smallHeaderlessFilesKeepRowOne() = runBlocking {
+        assertEquals("infer-labels", headerPolicy("s1,2026-01-01,12.5\ns2,2026-01-02,14"))
+        assertEquals("infer-labels", headerPolicy("s1,2026-01-01,12.5\ns2,2026-01-02,14\ns3,2026-01-03,9.5"))
+        assertEquals("infer-labels", headerPolicy("alice,1\nbob,2.5"))
+        assertEquals("infer-labels", headerPolicy("Alice,Toronto,Canada\nBob,Ottawa,Canada\nCarol,Lyon,France"))
+    }
+
+
+    @Test
+    fun aColumnMixingTextWithNumbersOrDatesIsNoEvidence() = runBlocking {
+        assertEquals("infer-labels", headerPolicy("name,value\nalice,1\nbob,yes"))
+        assertEquals("infer-labels", headerPolicy("name,value\nalice,2026-01-01\nbob,7"))
+    }
+
+
+    @Test
     fun exactHintAllowsHeaderOnlyAndRejectsContainedSyntax() = runBlocking {
         val hints = NormalizedFormatHints.of(filenameExtension = "csv")
         val matched = assertIs<ReaderProbeResult.Matched>(probe(
@@ -155,6 +204,11 @@ class DelimitedProbeTest {
         assertIs<ReaderProbeResult.NoMatch>(result)
         assertEquals(3, considered)
     }
+
+    private suspend fun headerPolicy(text: String): String =
+        (assertIs<ReaderProbeResult.Matched>(probe(text), text).canonicalConfig as DelimitedReadConfig)
+            .header.policy
+
 
     private suspend fun probe(
         text: String,

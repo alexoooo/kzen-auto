@@ -8,6 +8,7 @@ import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.server.objects.job.expression.JobExpressionCompiler
 import tech.kzen.auto.server.objects.job.expression.JobExpressionValues
 import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.auto.server.objects.job.value.recycle.Recyclable
 import tech.kzen.auto.server.util.ClassLoaderUtils
 import tech.kzen.lib.common.exec.BinaryExecutionValue
 import tech.kzen.lib.common.exec.BooleanExecutionValue
@@ -112,9 +113,11 @@ class FormulaWorker(
 
     // E9 item 3: the output may hold anything reachable from the input (a replaced payload, the kept one), so a
     // non-scalar output keeps the input's native open until its own consumer is done; a scalar carries no owner.
-    // Nothing is copied or inspected — only the ledger's owner set is propagated.
+    // Nothing is copied or inspected — only the ledger's owner set is propagated. For the same reason a pooled input
+    // behind a payload transform is forfeited.
     private fun inheriting(output: DataValue, input: DataValue, control: JobControl): DataValue {
         control.ownership()?.inherit(output, input)
+        Recyclable.forfeitDerived(output, input)
         return output
     }
 

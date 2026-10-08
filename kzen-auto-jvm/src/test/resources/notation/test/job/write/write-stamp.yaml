@@ -1,0 +1,33 @@
+# WriteWorkerTest: as write-bytes.yaml, with each chunk stamped on its way to Write, so Write's reads of it can be
+# checked against the pool's generation.
+main:
+  is: Job
+  results:
+    main:
+      class: kotlin.Any
+      generics: []
+      nullable: true
+
+main.workers/files:
+  is: FileSourceWorker
+  directory: build/write-worker/in
+  filter: .csv
+
+main.workers/parse:
+  is: Parse
+  format: auto-jvm/datasource/configured-delimited-format.yaml#ConfiguredCsv
+
+main.workers/format:
+  is: Format
+
+main.workers/stamp:
+  is: ChunkStampWorker
+
+main.workers/write:
+  is: Write
+  directory: build/write-worker/out
+  compression: none
+
+main.workers/collect:
+  is: ResultSinkWorker
+  keep: all

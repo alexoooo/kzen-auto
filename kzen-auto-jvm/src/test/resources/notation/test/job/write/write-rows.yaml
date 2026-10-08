@@ -1,0 +1,26 @@
+# WriteWorkerTest: rows straight into Write, with no Format to make bytes of them.
+main:
+  is: Job
+  results:
+    main:
+      class: kotlin.Any
+      generics: []
+      nullable: true
+
+main.workers/files:
+  is: FileSourceWorker
+  directory: build/write-worker/in
+  filter: .csv
+
+main.workers/parse:
+  is: Parse
+  format: auto-jvm/datasource/configured-delimited-format.yaml#ConfiguredCsv
+
+main.workers/write:
+  is: Write
+  directory: build/write-worker/out
+  compression: none
+
+main.workers/collect:
+  is: ResultSinkWorker
+  keep: all

@@ -1,0 +1,18 @@
+# FormatWorkerTest: records named by a column, so the outputs alternate.
+main:
+  is: Job
+
+main.workers/files:
+  is: FileSourceWorker
+  directory: build/format-worker/column
+  filter: .csv
+
+main.workers/parse:
+  is: Parse
+
+main.workers/format:
+  is: Format
+  name: "${group}${extension}"
+
+main.workers/sink:
+  is: BytesSinkWorker

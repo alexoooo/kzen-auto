@@ -1,0 +1,15 @@
+# RecyclableRouteTest route "formula-listing" (archetypes in recycle-test.yaml): source → formula (a non-scalar
+# payload, which may embed the record) → sink.
+main:
+  is: Job
+
+main.workers/source:
+  is: RecyclingSourceWorker
+  count: 50
+
+main.workers/formula:
+  is: FormulaWorker
+  payload: listOf(id, name)
+
+main.workers/sink:
+  is: RecyclableSinkWorker

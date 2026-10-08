@@ -81,7 +81,7 @@ class DataReadCoreTest {
         val events = mutableListOf<String>()
 
         val emitted = DataReadCore.emitNext(
-            TrackingControl(), cursor, baseline, null,
+            TrackingControl(), cursor, DataReadCore.projection(null, cursor.shape, baseline, null),
             claimBeforeSend = { events.add("claim") },
             send = {
                 events.add("send")
@@ -91,7 +91,7 @@ class DataReadCoreTest {
         assertTrue(emitted)
         assertEquals(listOf("claim", "send"), events)
         assertFalse(DataReadCore.emitNext(
-            TrackingControl(), cursor, baseline, null,
+            TrackingControl(), cursor, DataReadCore.projection(null, cursor.shape, baseline, null),
             claimBeforeSend = { events.add("unexpected claim") },
             send = { events.add("unexpected send") }))
         assertEquals(listOf("claim", "send"), events)

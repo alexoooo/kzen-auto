@@ -138,9 +138,10 @@ WriterColumnsEditor:
   class: tech.kzen.auto.client.objects.document.job.edit.WriterColumnsEditor$Wrapper
 
 
-# File-name template editor: edits a `${...}` template over the value's metadata (Write's `name`) as text plus an insert
-# menu of the placeholders the upstream Worker's metadata contract offers (dotted into records such as `parent`), then
-# the writer's own, described in `meta.<attr>.placeholders`. Selected via `editor: FileNameTemplateEditor`.
+# File-name template editor: edits a `${...}` template over the input's values (the `name` of Write and Format) as
+# text plus an insert menu of the placeholders the upstream Worker's contract offers: its columns when
+# `meta.<attr>.columnPlaceholders` is true, its metadata (dotted into records such as `parent`), then the Worker's
+# own, described in `meta.<attr>.placeholders`. Selected via `editor: FileNameTemplateEditor`.
 FileNameTemplateEditor:
   is: AttributeEditor
   class: tech.kzen.auto.client.objects.document.job.edit.FileNameTemplateEditor$Wrapper
@@ -171,7 +172,10 @@ MultiFileInputEditor:
 
 # Data-format selects: one component behind two registrations, offering the formats and text encodings the
 # SERVER has installed (DataSourceActions.fileFormats) rather than asking for a coordinate or charset name to be
-# typed from memory. Blank means "decide for me" in both, and reads as the "Default" option.
+# typed from memory. Neither offers a blank choice or can be cleared; for a format, "decide for me" is the
+# catalogue's Automatic format, picked like any other. A saved value the server does not offer stays listed as "not
+# offered by this server". A format attribute whose metadata says `writable: true` (Format's) is offered only the formats that can
+# write.
 SelectDataFormatEditor:
   is: AttributeEditor
   class: tech.kzen.auto.client.objects.document.job.edit.DataFormatEditor$FormatWrapper
@@ -267,6 +271,13 @@ ExtractTool:
   is: RibbonTool
   parent: JobGroup_Transforms
   delegate: Extract
+
+
+# Records to bytes in a format, for Write
+FormatTool:
+  is: RibbonTool
+  parent: JobGroup_Transforms
+  delegate: Format
 
 
 FilterTool:

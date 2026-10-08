@@ -114,10 +114,10 @@ class RunOwnershipLedger(
     private fun closeableRoot(value: DataValue): AutoCloseable? {
         // A scalar's native is a boxed primitive, a string, a decimal or bytes: never closeable, and the common
         // case, decided by one type check
-        if (value.contract.structural is DataType.Scalar) {
+        if (value.type is DataType.Scalar) {
             return null
         }
-        val rootNative = value.contract.nativeByPath[DataTypePath.root]
+        val rootNative = value.payloadContract.nativeByPath[DataTypePath.root]
             ?: return null
         if (closeableByClass[rootNative.className] == false) {
             return null
@@ -135,7 +135,7 @@ class RunOwnershipLedger(
      * parent stays open while the child is in flight. A scalar never inherits.
      */
     fun inherit(child: DataValue, parent: DataValue) {
-        if (child === parent || child.contract.structural is DataType.Scalar) {
+        if (child === parent || child.type is DataType.Scalar) {
             return
         }
         val parentOwners = owners(parent)

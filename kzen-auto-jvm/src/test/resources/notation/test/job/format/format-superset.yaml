@@ -1,0 +1,19 @@
+# FormatWorkerTest: two files with different columns, Parsed to their superset, then Formatted (the name and the
+# format are edited per test).
+main:
+  is: Job
+
+main.workers/files:
+  is: FileSourceWorker
+  directory: build/format-worker/superset
+  filter: .csv
+
+main.workers/parse:
+  is: Parse
+  schemaMode: superset
+
+main.workers/format:
+  is: Format
+
+main.workers/sink:
+  is: BytesSinkWorker

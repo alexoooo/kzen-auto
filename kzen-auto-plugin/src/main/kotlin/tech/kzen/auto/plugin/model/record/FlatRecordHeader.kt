@@ -27,7 +27,10 @@ class FlatRecordHeader(
     }
 
     fun indexOf(name: String, occurrence: Int): Int =
-        indexByField[FieldId(name, occurrence)] ?: -1
+        indexOf(FieldId(name, occurrence))
+
+    fun indexOf(field: FieldId): Int =
+        indexByField[field] ?: -1
 
     fun contractAt(index: Int): DataContract = contractByIndex[index]
 }

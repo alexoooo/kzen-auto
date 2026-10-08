@@ -1,0 +1,23 @@
+# FormatWorkerTest: a format whose schema names other columns than the records have.
+main:
+  is: Job
+
+main.formats/schema:
+  is: ConfiguredCsv
+  catalogVisible: false
+  schema: test/job/content/content-schema-test.yaml#main
+
+main.workers/files:
+  is: FileSourceWorker
+  directory: build/format-worker/superset
+  filter: .csv
+
+main.workers/parse:
+  is: Parse
+
+main.workers/format:
+  is: Format
+  format: main.formats/schema
+
+main.workers/sink:
+  is: BytesSinkWorker

@@ -85,13 +85,24 @@ class FlowRun(
     private val graphEnvironment: GraphEnvironment
 ) {
     //-----------------------------------------------------------------------------------------------------------------
-    private companion object {
+    internal companion object {
         // A checkpoint that took longer than this to return means the engine paused/stepped at it — always
         // trace those (stepping fidelity). Below it we are free-running, so per-vertex traces are throttled.
-        const val steppingGapNanos = 50_000_000L      // 50 ms
+        private const val steppingGapNanos = 50_000_000L      // 50 ms
 
         // During free-running, emit at most one trace per vertex per this window.
-        const val traceThrottleNanos = 100_000_000L   // 100 ms
+        private const val traceThrottleNanos = 100_000_000L   // 100 ms
+
+        /** Wall-clock budget of a traced message's snapshot, so a slow-to-read value cannot hold up the run. */
+        const val defaultSnapshotMillis = 100L
+
+        /**
+         * Test seam: the time budget of each traced message's snapshot. A test asserting what a trace shows lifts
+         * it, since a cold or loaded JVM can spend the default budget on a value's first structural read
+         * (kotlin-reflect initializing its properties) and trace it as unavailable.
+         */
+        @Volatile
+        var snapshotMillis = defaultSnapshotMillis
     }
 
 
@@ -733,7 +744,7 @@ class FlowRun(
             maximumElements = 256,
             maximumTextLength = TraceDisplay.maxFlowTraceChars,
             maximumBinaryBytes = TraceDisplay.maxFlowTraceChars,
-            maximumDurationMillis = 100))) {
+            maximumDurationMillis = snapshotMillis))) {
             is SnapshotResult.Complete -> snapshot.snapshot.value
             SnapshotResult.Redacted -> ExecutionValue.of("<redacted>")
             is SnapshotResult.Rejected -> ExecutionValue.of(

@@ -3,6 +3,8 @@ package tech.kzen.auto.server.exec.job
 import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.exec.LogicCompilerServices
+import tech.kzen.auto.server.objects.job.worker.PreviewWorker
+import tech.kzen.auto.server.objects.job.worker.preview.PreviewCapture
 import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionSuccess
@@ -49,6 +51,7 @@ class JobExternalBridgeTest {
 
     @AfterTest
     fun tearDown() {
+        PreviewWorker.captureNanos = PreviewCapture.defaultMaximumNanos
         if (::context.isInitialized) {
             context.close()
         }
@@ -58,6 +61,7 @@ class JobExternalBridgeTest {
     //-----------------------------------------------------------------------------------------------------------------
     @Test
     fun externalBridgeServesLivePreviewSliceWhileRunning() {
+        PreviewWorker.captureNanos = Long.MAX_VALUE
         val rows = 100
         writeCsv(inputCsv, rows)
         context = KzenAutoContext.forTest()

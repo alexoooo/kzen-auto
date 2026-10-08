@@ -13,8 +13,10 @@ import tech.kzen.auto.plugin.api.data.ReaderProbeStrength
 import tech.kzen.auto.plugin.api.data.StrictCharacterView
 import tech.kzen.auto.server.data.content.SequentialCharacterContent
 import java.math.BigDecimal
-import java.math.BigInteger
 import java.nio.charset.Charset
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.OffsetDateTime
 import kotlin.time.TimeSource
 
 
@@ -186,6 +188,11 @@ internal object DelimitedProbe {
     }
 
 
+    /**
+     * Row one is a header when its values are distinct identifier-like labels and at least one column below holds
+     * one value class (Boolean, number, ISO date/time) its label does not have. Without such a column, as in an
+     * all-text table, nothing tells a header from data, so row one stays data under positional labels.
+     */
     private fun hasHeaderEvidence(rows: List<List<String>>): Boolean {
         if (rows.size < 2) return false
         val first = rows.first()
@@ -193,20 +200,25 @@ internal object DelimitedProbe {
             first.any { !identifierLabel.matches(it) }) return false
 
         return first.indices.any { column ->
-            val below = rows.drop(1).map { it[column] }.filter(String::isNotEmpty)
-            if (below.isEmpty()) return@any false
-            val classification = classify(below.first()) ?: return@any false
-            below.all { classify(it) == classification } && classify(first[column]) != classification
+            val classes = rows.drop(1).map { it[column] }.filter(String::isNotEmpty).map(::classify).distinct()
+            val classification = classes.singleOrNull() ?: return@any false
+            classify(first[column]) != classification
         }
     }
 
 
-    private fun classify(value: String): ValueClass? {
-        if (value == "true" || value == "false") return ValueClass.Boolean
-        if (runCatching { BigInteger(value) }.isSuccess) return ValueClass.Integer
-        if (runCatching { BigDecimal(value) }.isSuccess) return ValueClass.Decimal
-        return null
+    private fun classify(value: String): ValueClass? = when {
+        value == "true" || value == "false" -> ValueClass.Boolean
+        runCatching { BigDecimal(value) }.isSuccess -> ValueClass.Number
+        isoTemporal(value) -> ValueClass.Temporal
+        else -> null
     }
+
+
+    private fun isoTemporal(value: String): Boolean =
+        runCatching { LocalDate.parse(value) }.isSuccess ||
+            runCatching { LocalDateTime.parse(value) }.isSuccess ||
+            runCatching { OffsetDateTime.parse(value) }.isSuccess
 
 
     private fun framingCandidates(
@@ -256,7 +268,7 @@ internal object DelimitedProbe {
         val rows: List<List<String>>
     )
 
-    private enum class ValueClass { Boolean, Integer, Decimal }
+    private enum class ValueClass { Boolean, Number, Temporal }
 
 
     private class StringCharacterContent(private val text: String): SequentialCharacterContent {

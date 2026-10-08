@@ -1,0 +1,21 @@
+# Worker archetypes for WriteWorkerTest (WR4, Write over Bytes): a pass-through stamping each chunk. One Job per
+# document (workers are discovered under `main`): see write-<route>.yaml.
+
+
+ChunkStampWorker:
+  abstract: true
+  is: Worker
+  title: "Chunk Stamp (test)"
+  class: tech.kzen.auto.server.objects.job.worker.content.ChunkStampWorker
+  input: ""
+  output: ""
+  meta:
+    input:
+      is: ChannelInput
+      creator: JobChannelCreator
+    output:
+      is: ChannelOutput
+      creator: JobChannelCreator
+    selfLocation:
+      is: ObjectLocation
+      by: Self

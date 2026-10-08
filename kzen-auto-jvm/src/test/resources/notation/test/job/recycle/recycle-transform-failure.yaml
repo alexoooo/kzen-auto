@@ -1,0 +1,16 @@
+# RecyclableRouteTest route "transform-failure" (archetypes in recycle-test.yaml): source → formula failing on id 3,
+# mid-batch → sink.
+main:
+  is: Job
+
+main.workers/source:
+  is: RecyclingSourceWorker
+  count: 100
+
+main.workers/formula:
+  is: FormulaWorker
+  formula:
+    checked: 'if (id == 3L) error("recycle fixture failure") else id'
+
+main.workers/sink:
+  is: RecyclableSinkWorker
