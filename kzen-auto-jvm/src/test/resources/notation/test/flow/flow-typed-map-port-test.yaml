@@ -1,0 +1,50 @@
+# A port typed `Map<String, List<Int>>` in notation: the nested list's element type is checked by what the
+# run-time map holds, not by the erased classes of the map and its lists.
+
+TypedMapPassVertex:
+  abstract: true
+  is: FlowVertex
+  icon: "material-symbols:block"
+  title: "Typed Map Pass (test)"
+  class: tech.kzen.auto.server.exec.flow.test.TypedPassVertex
+  meta:
+    input:
+      is: RequiredInput
+      of:
+        is: Map
+        of:
+          - String
+          - is: List
+            of: Int
+      by: FlowWiring
+    output:
+      is: RequiredOutput
+      by: FlowWiring
+
+
+#######################################################################################################################
+
+main:
+  is: Flow
+  vertices:
+  - FtmapInput
+  - FtmapPass
+  - FtmapOutput
+  edges: []
+
+FtmapInput:
+  is: FlowInput
+  parameter: "x"
+  row: 0
+  column: 0
+
+FtmapPass:
+  is: TypedMapPassVertex
+  row: 1
+  column: 0
+
+FtmapOutput:
+  is: FlowOutput
+  result: "out"
+  row: 2
+  column: 0

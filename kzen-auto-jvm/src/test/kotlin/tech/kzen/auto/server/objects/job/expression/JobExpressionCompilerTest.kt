@@ -15,8 +15,12 @@ import tech.kzen.lib.common.exec.data.type.DataType
 import tech.kzen.lib.common.exec.data.type.DataPathSegment
 import tech.kzen.lib.common.exec.data.type.DefinitionId
 import tech.kzen.lib.common.exec.data.type.FieldId
+import tech.kzen.lib.common.exec.data.type.MetadataContract
 import tech.kzen.lib.common.exec.data.type.ScalarKind
 import tech.kzen.lib.common.exec.data.value.DataState
+import tech.kzen.lib.common.exec.data.value.LiteralDataValues
+import tech.kzen.lib.common.exec.data.value.ValueMetadata
+import tech.kzen.lib.common.exec.data.value.recordOf
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import java.math.BigDecimal
 import java.nio.file.Path
@@ -251,6 +255,111 @@ class JobExpressionCompilerTest {
             "Job expression boundary does not support unsigned 64-bit integers",
             attempt.error)
     }
+
+
+    @Test
+    fun recursiveMetadataIsOneClassThatRefersToItself() {
+        val contract = DataContract(DataType.Dynamic()).withMetadata(recursiveMetadata())
+        val code = compiler.generate("lineage", "origin.name", contract, TypeMetadata.anyNullable)
+
+        // The root, and one class for the definition however deep the value goes
+        assertEquals(listOf("Meta0", "Meta1"), metadataClassNames(code.sourceText))
+        assertTrue(code.sourceText.contains("val origin: Meta1 get()"), code.sourceText)
+        assertTrue(code.sourceText.contains("val parent: Meta1? get()"), code.sourceText)
+
+        // The compile cache key depends on the contract's content, not on how it was built or decoded
+        val decoded = DataContract.ofExecutionValue(contract.asExecutionValue())
+        assertEquals(
+            code.signature(),
+            compiler.generate("lineage", "origin.name", decoded, TypeMetadata.anyNullable).signature())
+    }
+
+
+    @Test
+    fun recursiveMetadataEvaluatesTypedAndKeyedThroughTwoLevels() {
+        val contract = DataContract(DataType.Dynamic()).withMetadata(recursiveMetadata())
+        val attempt = compiler.compile(
+            "lineage",
+            "listOf(origin.name, origin.parent?.name, meta.origin.parent?.parent?.name, " +
+                    "origin.parent?.parent?.get(\"name\"), origin.parent?.parent?.parent?.name ?: \"-\")" +
+                    ".joinToString(\"/\")",
+            contract,
+            TypeMetadata.anyNullable,
+            classLoader)
+        val compiled = assertNotNull(attempt.compiled, attempt.error)
+        assertEquals(DataType.Scalar(ScalarKind.Text), compiled.contract.structural)
+
+        val value = JobDataValues.lift(linkedMapOf("amount" to BigDecimal.ONE))
+            .withMetadata(lineageMetadata())
+        assertEquals("c/b/a/a/-", compiled.expression.evaluate(null, value, null))
+    }
+
+
+    @Test
+    fun mutuallyRecursiveMetadataIsOneClassPerDefinition() {
+        val folderId = DefinitionId("test.Folder")
+        val fileId = DefinitionId("test.File")
+        val name = DataField(FieldId("name"), DataType.Scalar(ScalarKind.Text))
+        val metadata = MetadataContract(
+            DataType.Record(listOf(DataField(FieldId("file"), DataType.Reference(fileId)))),
+            mapOf(
+                folderId to DataType.Record(listOf(
+                    name, DataField(FieldId("readme"), DataType.Reference(fileId, nullable = true)))),
+                fileId to DataType.Record(listOf(
+                    name, DataField(FieldId("folder"), DataType.Reference(folderId, nullable = true))))))
+        val contract = DataContract(DataType.Dynamic()).withMetadata(metadata)
+
+        val attempt = compiler.compile(
+            "readme", "file.folder?.readme?.folder?.name", contract, TypeMetadata.anyNullable, classLoader)
+
+        val compiled = assertNotNull(attempt.compiled, attempt.error)
+        assertEquals(DataType.Scalar(ScalarKind.Text, nullable = true), compiled.contract.structural)
+        val source = compiler.generate(
+            "readme", "file.folder?.readme?.folder?.name", contract, TypeMetadata.anyNullable).sourceText
+        assertEquals(listOf("Meta0", "Meta1", "Meta2"), metadataClassNames(source))
+        assertTrue(source.contains("val folder: Meta2? get()"), source)
+        assertTrue(source.contains("val readme: Meta1? get()"), source)
+    }
+
+
+    @Test
+    fun nestedMetadataRecordsWithoutDefinitionsKeepAClassEach() {
+        val name = DataField(FieldId("name"), DataType.Scalar(ScalarKind.Text))
+        val file = DataType.Record(listOf(name))
+        val member = DataType.Record(listOf(name, DataField(FieldId("parent"), file)))
+        val contract = DataContract(DataType.Dynamic()).withMetadata(MetadataContract(DataType.Record(listOf(
+            DataField(FieldId("parent"), member)))))
+
+        val code = compiler.generate("names", "parent.parent.name", contract, TypeMetadata.anyNullable)
+
+        assertEquals(listOf("Meta0", "Meta1", "Meta2"), metadataClassNames(code.sourceText))
+        assertTrue(code.sourceText.contains("val parent: Meta1 get()"), code.sourceText)
+        assertTrue(code.sourceText.contains("val parent: Meta2 get()"), code.sourceText)
+    }
+
+
+    private val nodeId = DefinitionId("test.Node")
+
+
+    /** Metadata `origin: Node` with `Node(name: String, parent: Node?)`. */
+    private fun recursiveMetadata(): MetadataContract = MetadataContract(
+        DataType.Record(listOf(DataField(FieldId("origin"), DataType.Reference(nodeId)))),
+        mapOf(nodeId to DataType.Record(listOf(
+            DataField(FieldId("name"), DataType.Scalar(ScalarKind.Text)),
+            DataField(FieldId("parent"), DataType.Reference(nodeId, nullable = true))))))
+
+
+    /** `c`, whose parent is `b`, whose parent is `a`. */
+    private fun lineageMetadata(): ValueMetadata {
+        val a = recordOf("name" to "a", "parent" to null)
+        val b = recordOf("name" to "b", "parent" to a)
+        val c = recordOf("name" to "c", "parent" to b)
+        return ValueMetadata.of(LiteralDataValues.lift(recordOf("origin" to c), recursiveMetadata().contract))
+    }
+
+
+    private fun metadataClassNames(source: String): List<String> =
+        Regex("""class (Meta\d+)\(""").findAll(source).map { it.groupValues[1] }.toList()
 
 
     private fun recordContract(): DataContract = DataContract(DataType.Record(listOf(

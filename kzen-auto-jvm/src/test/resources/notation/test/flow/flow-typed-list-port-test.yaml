@@ -1,0 +1,47 @@
+# A port typed `List<String>` in notation accepts a run-time list by what it holds: the JVM erases the
+# list's own type argument, so the message's class alone can never prove `List<String>`.
+
+TypedListPassVertex:
+  abstract: true
+  is: FlowVertex
+  icon: "material-symbols:block"
+  title: "Typed List Pass (test)"
+  class: tech.kzen.auto.server.exec.flow.test.TypedPassVertex
+  meta:
+    input:
+      is: RequiredInput
+      of:
+        is: List
+        of: String
+      by: FlowWiring
+    output:
+      is: RequiredOutput
+      by: FlowWiring
+
+
+#######################################################################################################################
+
+main:
+  is: Flow
+  vertices:
+  - FtlistInput
+  - FtlistPass
+  - FtlistOutput
+  edges: []
+
+FtlistInput:
+  is: FlowInput
+  parameter: "x"
+  row: 0
+  column: 0
+
+FtlistPass:
+  is: TypedListPassVertex
+  row: 1
+  column: 0
+
+FtlistOutput:
+  is: FlowOutput
+  result: "out"
+  row: 2
+  column: 0

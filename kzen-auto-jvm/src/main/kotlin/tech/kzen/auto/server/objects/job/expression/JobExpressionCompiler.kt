@@ -13,6 +13,7 @@ import tech.kzen.lib.common.exec.data.type.DataContract
 import tech.kzen.lib.common.exec.data.type.DataPathSegment
 import tech.kzen.lib.common.exec.data.type.DataType
 import tech.kzen.lib.common.exec.data.type.DataTypePath
+import tech.kzen.lib.common.exec.data.type.DefinitionId
 import tech.kzen.lib.common.exec.data.type.FieldId
 import tech.kzen.lib.common.exec.data.type.MetadataContract
 import tech.kzen.lib.common.exec.data.type.ScalarKind
@@ -248,7 +249,10 @@ $metadataCode
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    /** One generated class per metadata record: the root (which also answers to `meta`) and each nested record. */
+    /**
+     * One generated class per metadata record: the root (which also answers to `meta`) and each nested record, except
+     * that every occurrence of a named definition shares one class, so a recursive record's class refers to itself.
+     */
     private class MetadataClass(
         val name: String,
         val root: Boolean,
@@ -295,10 +299,12 @@ $metadataCode
 
     private fun metadataClasses(metadata: MetadataContract): List<MetadataClass> {
         val classes = mutableListOf<MetadataClass>()
-        fun visit(contract: DataContract, root: Boolean): String {
+        val definitionClasses = mutableMapOf<DefinitionId, String>()
+        fun visit(contract: DataContract, root: Boolean, definition: DefinitionId?): String {
             val index = classes.size
             val name = "Meta$index"
             classes += MetadataClass(name, root, emptyList())
+            definition?.let { definitionClasses[it] = name }
             val record = contract.expanded().structural as? DataType.Record
             val properties = record?.fields.orEmpty().mapNotNull { field ->
                 val propertyName = ExpressionUtils.escapeKotlinVariableName(
@@ -310,7 +316,10 @@ $metadataCode
                 val child = contract.child(DataPathSegment.Field(field.id))
                 val nullable = field.optional || child.structural.nullable
                 if (child.expanded().structural is DataType.Record) {
-                    MetadataProperty(propertyName, field.id, nullable, null, visit(child, root = false))
+                    val reference = (field.type as? DataType.Reference)?.id
+                    val recordClass = reference?.let { definitionClasses[it] }
+                        ?: visit(child, root = false, reference)
+                    MetadataProperty(propertyName, field.id, nullable, null, recordClass)
                 }
                 else {
                     MetadataProperty(propertyName, field.id, nullable, child.typeMetadata(field.optional), null)
@@ -319,7 +328,7 @@ $metadataCode
             classes[index] = MetadataClass(name, root, properties)
             return name
         }
-        visit(metadata.contract, root = true)
+        visit(metadata.contract, root = true, definition = null)
         return classes
     }
 

@@ -479,7 +479,7 @@ class FlowRun(
 
             val message = activeVertices[stableId(sourceVertex.objectLocation)]?.message
             if (message != null) {
-                validatePort(input.contract, message, instance.reference::class.java.classLoader, inputAttribute.value)
+                validatePort(input.contract, message, instance.reference::class.java, inputAttribute.value)
                 input.set(message, JobDataValues.boundary(message))
             }
             else {
@@ -498,7 +498,7 @@ class FlowRun(
     private fun validatePort(
         expected: DataContract,
         actual: DataValue,
-        owner: ClassLoader,
+        owner: Class<*>,
         label: String
     ) {
         val resolved = nativeTypeResolver.resolve(expected, owner)
