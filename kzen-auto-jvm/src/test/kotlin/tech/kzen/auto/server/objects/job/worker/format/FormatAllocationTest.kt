@@ -24,6 +24,7 @@ import tech.kzen.lib.common.exec.data.value.DataState
 import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.lib.common.exec.data.value.LiteralDataValues
 import tech.kzen.lib.common.exec.data.value.ValueMetadata
+import tech.kzen.lib.common.exec.data.value.overlay.MetadataShape
 import tech.kzen.lib.common.util.digest.Digest
 import java.io.ByteArrayOutputStream
 import java.lang.management.ManagementFactory
@@ -44,9 +45,12 @@ class FormatAllocationTest {
     private val freshMetadataCount = 1024
     private val freshMetadataWarmup = 20_000
     private val freshMetadataRecords = 50_000
-    // The chunk's metadata object, most of it the validation of its contract a ValueMetadata makes (about 3.7 KB);
-    // building the contract itself per record costs about 14 KB
-    private val freshMetadataBudgetBytes = 6_000L
+    // The chunk's metadata record, plus comparing the parent's contract with the shape's when it is an equal
+    // object rather than the same; building the record's contract per record costs about 14 KB, and validating it
+    // alone about 3.7 KB
+    private val freshMetadataBudgetBytes = 1_000L
+    // The chunk's metadata record alone: a few small objects
+    private val shapedMetadataBudgetBytes = 500L
 
     private val threads = ManagementFactory.getThreadMXBean() as com.sun.management.ThreadMXBean
 
@@ -101,12 +105,41 @@ class FormatAllocationTest {
         if (!threads.isThreadAllocatedMemoryEnabled) {
             threads.isThreadAllocatedMemoryEnabled = true
         }
-        val record = FlatFileRecord.of(listOf("x", "1", "first"))
-        record.attachHeader(FlatRecordHeader(payload))
         val parents = List(freshMetadataCount) { index ->
             ValueMetadata.of(DataOverlay.record(metadata.value, listOf(
                 FieldId("total") to LiteralDataValues.lift(index.toString(), DataContract(text)))))
         }
+
+        val perRecord = perRecordWithParents(parents)
+
+        println("WR9 Format allocation with fresh parent metadata: $perRecord bytes per record")
+        assertTrue(perRecord < freshMetadataBudgetBytes, "$perRecord bytes per record")
+    }
+
+
+    /** Parent metadata made per row by one shape, as a Formula makes it, shares one contract object. */
+    @Test
+    fun freshParentMetadataOfOneShapeCostsOnlyTheChunkRecord() {
+        if (!threads.isThreadAllocatedMemoryEnabled) {
+            threads.isThreadAllocatedMemoryEnabled = true
+        }
+        val total = DataContract(text)
+        val shape = MetadataShape(metadata.contract, listOf(FieldId("total") to total))
+        val parents = List(freshMetadataCount) { index ->
+            shape.metadata(metadata, listOf(LiteralDataValues.lift(index.toString(), total)))
+        }
+
+        val perRecord = perRecordWithParents(parents)
+
+        println("WR11 Format allocation with fresh parent metadata of one shape: $perRecord bytes per record")
+        assertTrue(perRecord < shapedMetadataBudgetBytes, "$perRecord bytes per record")
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun perRecordWithParents(parents: List<ValueMetadata>): Long {
+        val record = FlatFileRecord.of(listOf("x", "1", "first"))
+        record.attachHeader(FlatRecordHeader(payload))
         val records = parents.map { DataValue(record, DataNode(0), it) }
         val chunker = chunker("\${file}\${extension}")
 
@@ -118,14 +151,10 @@ class FormatAllocationTest {
         for (i in 0 until freshMetadataRecords) {
             recycle(chunker.chunk(records[i % records.size], i + 1L))
         }
-        val perRecord = (threads.currentThreadAllocatedBytes - before) / freshMetadataRecords
-
-        println("WR9 Format allocation with fresh parent metadata: $perRecord bytes per record")
-        assertTrue(perRecord < freshMetadataBudgetBytes, "$perRecord bytes per record")
+        return (threads.currentThreadAllocatedBytes - before) / freshMetadataRecords
     }
 
 
-    //-----------------------------------------------------------------------------------------------------------------
     private fun chunker(template: String): FormatChunker {
         val format = ConfiguredDelimitedTestFormats.csv()
         val columns = WriterColumns(WriterColumnSpec.payloadFields)

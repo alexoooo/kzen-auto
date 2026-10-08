@@ -4,10 +4,10 @@ import tech.kzen.auto.server.data.write.RecordEncoder
 import tech.kzen.auto.server.objects.job.value.recycle.RecyclablePool
 import tech.kzen.auto.server.objects.job.worker.content.PooledBytes
 import tech.kzen.lib.common.exec.data.type.DataContract
-import tech.kzen.lib.common.exec.data.type.MetadataContract
 import tech.kzen.lib.common.exec.data.value.DataAccessException
 import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.lib.common.exec.data.value.ValueMetadata
+import tech.kzen.lib.common.exec.data.value.overlay.MetadataShape
 import tech.kzen.lib.common.util.digest.Digest
 
 
@@ -20,7 +20,8 @@ import tech.kzen.lib.common.util.digest.Digest
  * the output another one left open ([resume]), any other must start over ([restart]).
  *
  * Allocates nothing per value once the pool is warm, as long as the name and the incoming metadata object repeat;
- * a new metadata object costs the chunk's [ChunkMetadata], whose contract is reused while the parent's is equal.
+ * a new metadata object costs the chunk's metadata record, its [ChunkMetadata.shape] reused while the parent's
+ * contract is the same.
  */
 internal class FormatChunker(
     private val encoder: RecordEncoder,
@@ -33,7 +34,7 @@ internal class FormatChunker(
     companion object {
         /** The chunks' contract: [PooledBytes.contract] with `{name, parent}`, `parent` only when [parent] is known. */
         fun contract(parent: DataContract?): DataContract =
-            PooledBytes.contract.withMetadata(MetadataContract.of(ChunkMetadata.contract(parent)))
+            PooledBytes.contract.withMetadata(ChunkMetadata.shape(parent).contract)
     }
 
 
@@ -43,7 +44,7 @@ internal class FormatChunker(
     private var incoming: ValueMetadata? = null
     private var metadata: ValueMetadata? = null
     private var nameValue: DataValue? = null
-    private var shape: ChunkMetadata.Shape? = null
+    private var shape: MetadataShape? = null
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -106,12 +107,12 @@ internal class FormatChunker(
         val name = nameValue
             ?: ChunkMetadata.name(checkNotNull(currentName)).also { nameValue = it }
 
-        val parentContract = parent?.value?.payloadContract
+        val values = ChunkMetadata.values(name, parent)
         val current = shape
         val reused =
-            if (current != null && current.parent == parentContract) current
-            else ChunkMetadata.Shape(parentContract).also { shape = it }
+            if (current != null && current.fits(null, values)) current
+            else ChunkMetadata.shape(parent?.value?.payloadContract).also { shape = it }
 
-        return reused.metadata(name, parent)
+        return reused.metadata(null, values)
     }
 }

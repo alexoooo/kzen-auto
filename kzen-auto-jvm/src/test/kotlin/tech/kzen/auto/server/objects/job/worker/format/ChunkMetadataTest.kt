@@ -72,11 +72,11 @@ class ChunkMetadataTest {
 
     @Test
     fun aShapeServesEveryParentOfItsContract() {
-        val shape = ChunkMetadata.Shape(row("1").value.payloadContract)
+        val shape = ChunkMetadata.shape(row("1").value.payloadContract)
         val name = ChunkMetadata.name("out.csv")
 
-        val first = shape.metadata(name, row("1"))
-        val second = shape.metadata(name, row("2"))
+        val first = shape.metadata(null, ChunkMetadata.values(name, row("1")))
+        val second = shape.metadata(null, ChunkMetadata.values(name, row("2")))
 
         assertSame(first.access.contract(first.root), second.access.contract(second.root))
         assertEquals("1", FileNameTemplate.metadataText(first.value, "parent.total"))
@@ -86,7 +86,8 @@ class ChunkMetadataTest {
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun metadata(name: String, parent: ValueMetadata?): ValueMetadata =
-        ChunkMetadata.Shape(parent?.value?.payloadContract).metadata(ChunkMetadata.name(name), parent)
+        ChunkMetadata.shape(parent?.value?.payloadContract)
+            .metadata(null, ChunkMetadata.values(ChunkMetadata.name(name), parent))
 
 
     private fun overlay(name: String, parent: ValueMetadata?): ValueMetadata {

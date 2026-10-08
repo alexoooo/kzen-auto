@@ -98,8 +98,8 @@ class FlowRun(
 
         /**
          * Test seam: the time budget of each traced message's snapshot. A test asserting what a trace shows lifts
-         * it, since a cold or loaded JVM can spend the default budget on a value's first structural read
-         * (kotlin-reflect initializing its properties) and trace it as unavailable.
+         * it: the budget is wall-clock, so on a loaded machine a reading thread that waits that long for a CPU
+         * traces the message as unavailable.
          */
         @Volatile
         var snapshotMillis = defaultSnapshotMillis

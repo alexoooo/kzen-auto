@@ -7,6 +7,7 @@ import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.lib.common.exec.*
 import tech.kzen.lib.common.exec.data.type.*
 import tech.kzen.lib.common.exec.data.value.*
+import tech.kzen.lib.common.exec.data.value.budget.ReadPreparation
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import java.util.concurrent.CancellationException
 import kotlin.test.*
@@ -78,6 +79,32 @@ class PreviewCaptureTest {
     }
 
     @Test
+    fun preparingATypesReaderIsNotChargedToTheTimeBudget() {
+        val original = LiteralDataValues.lift(recordOf("first" to "a", "second" to "b"))
+        var prepared = false
+        val coldType = object: ValueAccess by original.access {
+            override fun field(node: DataNode, field: FieldId): DataNode {
+                if (!prepared) {
+                    prepared = true
+                    ReadPreparation.prepare { Thread.sleep(overBudgetMillis) }
+                }
+                return original.access.field(node, field)
+            }
+        }
+        val snapshot = PreviewCapture().capture(DataValue(coldType, original.root))
+        assertFalse(snapshot.partial, snapshot.encode())
+        assertEquals(listOf("a", "b"), snapshot.children.map { it.text })
+    }
+
+    @Test
+    fun slowReadingIsStillCutAtTheTimeBudget() {
+        val snapshot = PreviewCapture().capture(JobDataValues.lift(List(3) { SlowGetter() }))
+        assertTrue(snapshot.partial)
+        assertEquals("Preview limit reached", snapshot.children.first().children.single().text)
+        assertEquals("2 more omitted", snapshot.children.last().text)
+    }
+
+    @Test
     fun recursiveContractsDetectCyclesWithoutCallingNativeToString() {
         val id = DefinitionId("node")
         val type = DataType.Record(listOf(DataField(FieldId("next"), DataType.Reference(id))))
@@ -131,6 +158,18 @@ class PreviewCaptureTest {
             override fun state(node: DataNode): DataState = throw CancellationException()
         }
         assertFailsWith<CancellationException> { capture.capture(DataValue(cancelled, backing.root)) }
+    }
+
+    companion object {
+        private const val overBudgetMillis = 3 * PreviewCapture.defaultMaximumNanos / 1_000_000
+    }
+
+    class SlowGetter {
+        val value: String
+            get() {
+                Thread.sleep(overBudgetMillis)
+                return "x"
+            }
     }
 
     class Detail(var open: Boolean)

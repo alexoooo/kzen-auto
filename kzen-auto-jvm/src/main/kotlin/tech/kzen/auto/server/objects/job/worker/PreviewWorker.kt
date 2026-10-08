@@ -129,8 +129,8 @@ class PreviewWorker(
 
         /**
          * Test seam: the time budget of each item's capture, read when a Preview is created. A test asserting what
-         * a Preview shows lifts it, since a cold or loaded JVM can spend the default budget on a value's first read
-         * (kotlin-reflect initializing a native's properties) and truncate the item.
+         * a Preview shows lifts it: the budget is wall-clock, so on a loaded machine a reading thread that waits that
+         * long for a CPU truncates the item.
          */
         @Volatile
         internal var captureNanos = PreviewCapture.defaultMaximumNanos

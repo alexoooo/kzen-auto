@@ -23,6 +23,7 @@ import tech.kzen.lib.common.exec.data.value.DataOverlay
 import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.lib.common.exec.data.value.LiteralDataValues
 import tech.kzen.lib.common.exec.data.value.ValueMetadata
+import tech.kzen.lib.common.exec.data.value.overlay.MetadataShape
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.reflect.Reflect
@@ -56,6 +57,8 @@ class FormulaWorker(
 
     private var compiledForContract: DataContract? = null
     private var compiledColumns: List<JobExpressionCompiler.Compiled> = listOf()
+    private var calculatedContracts: List<DataContract> = listOf()
+    private var metadataShape: MetadataShape? = null
     private var compiledPayloadForContract: DataContract? = null
     private var compiledPayload: JobExpressionCompiler.Compiled? = null
 
@@ -84,13 +87,13 @@ class FormulaWorker(
             else -> null
         }
 
-        val calculated = formulaEntries.indices.map { index ->
-            val compiled = compiledColumns[index]
-            val scalarType = compiled.contract.structural as DataType.Scalar
+        val calculated = ArrayList<DataValue>(formulaEntries.size)
+        for (index in formulaEntries.indices) {
+            val contract = calculatedContracts[index]
             val (_, encoded) = JobExpressionValues.scalar(
-                compiled.expression.evaluate(originalPayload, element, projection),
-                scalarType)
-            formulaFields[index] to LiteralDataValues.lift(literal(encoded), DataContract(scalarType))
+                compiledColumns[index].expression.evaluate(originalPayload, element, projection),
+                contract.structural as DataType.Scalar)
+            calculated += LiteralDataValues.lift(literal(encoded), contract)
         }
         val outputPayload =
             if (payloadTransform) {
@@ -104,7 +107,7 @@ class FormulaWorker(
             }
         val metadata =
             if (calculated.isEmpty()) element.metadata
-            else ValueMetadata.of(DataOverlay.record(element.metadata?.value, calculated))
+            else metadataShape(element.metadata, calculated).metadata(element.metadata, calculated)
 
         computed += 1
         emit.send(inheriting(outputPayload.withMetadata(metadata), element, control))
@@ -119,6 +122,17 @@ class FormulaWorker(
         control.ownership()?.inherit(output, input)
         Recyclable.forfeitDerived(output, input)
         return output
+    }
+
+
+    /** The shape of the metadata [calculated] sets on [base], kept while their contracts stay the same. */
+    private fun metadataShape(base: ValueMetadata?, calculated: List<DataValue>): MetadataShape {
+        val current = metadataShape
+        if (current != null && current.fits(base, calculated)) {
+            return current
+        }
+        return MetadataShape(base?.contract, formulaFields.zip(calculatedContracts))
+            .also { metadataShape = it }
     }
 
 
@@ -152,6 +166,7 @@ class FormulaWorker(
             }
         }
         compiledColumns.forEach { it.expression.setParameters(parameterValues) }
+        calculatedContracts = compiledColumns.map { DataContract(it.contract.structural as DataType.Scalar) }
         compiledForContract = contract
     }
 

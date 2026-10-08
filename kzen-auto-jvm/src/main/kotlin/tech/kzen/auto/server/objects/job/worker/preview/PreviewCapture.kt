@@ -4,9 +4,11 @@ import tech.kzen.auto.common.objects.document.job.preview.PreviewNode
 import tech.kzen.lib.common.exec.*
 import tech.kzen.lib.common.exec.data.type.*
 import tech.kzen.lib.common.exec.data.value.*
+import tech.kzen.lib.common.exec.data.value.budget.ReadBudget
 import tech.kzen.lib.platform.ClassNames.simple
 import java.util.IdentityHashMap
 import java.util.concurrent.CancellationException
+import kotlin.time.Duration.Companion.nanoseconds
 
 /** Partial display capture; strict result snapshots remain governed by DataSnapshot. */
 class PreviewCapture(
@@ -24,7 +26,7 @@ class PreviewCapture(
     }
 
     private inner class Writer(private val value: DataValue) {
-        private val started = System.nanoTime()
+        private val budget = ReadBudget(maximumNanos.nanoseconds)
         private val ancestors = IdentityHashMap<Any, Boolean>()
         private var nodes = 0
         private var bytes = 0
@@ -36,7 +38,7 @@ class PreviewCapture(
         }
 
         private fun exhausted(): Boolean = nodes >= maximumNodes || bytes >= maximumBytes - markerReserveBytes ||
-                System.nanoTime() - started > maximumNanos
+                budget.exhausted()
 
         private fun read(node: DataNode, declared: DataContract, depth: Int): PreviewNode = guarded {
             if (depth > maximumDepth || exhausted()) return@guarded marker("truncated", "Preview limit reached")
@@ -148,7 +150,7 @@ class PreviewCapture(
     }
 
     companion object {
-        /** Wall-clock budget of one capture, so a slow-to-read value cannot hold up the Worker sampling it. */
+        /** Wall-clock [ReadBudget] of one capture, so a slow-to-read value cannot hold up the Worker sampling it. */
         const val defaultMaximumNanos = 50_000_000L
 
         private const val markerReserveBytes = 1_024
