@@ -39,6 +39,8 @@ import tech.kzen.lib.common.exec.data.shape.ShapeStability
 import java.io.ByteArrayOutputStream
 import java.nio.file.Files
 import java.util.zip.GZIPOutputStream
+import org.junit.Rule
+import org.junit.rules.TemporaryFolder
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -54,6 +56,9 @@ class SequentialContentStackTest {
         private val policy = ContentReadPolicy(1024 * 1024, 10.seconds, 100)
         private val utf8 = CharacterDecodingSpec("UTF-8", "permit", "report", "report")
     }
+
+    @get:Rule
+    val temp: TemporaryFolder = TemporaryFolder.builder().assureDeletion().build()
 
 
     @Test
@@ -258,7 +263,7 @@ class SequentialContentStackTest {
 
         assertFailsWith<IllegalArgumentException> {
             ConfiguredDataOpener(
-                SchemaCache(WorkUtils.temporary("invalid-delimiter-quote")),
+                SchemaCache(WorkUtils(temp.newFolder("invalid-delimiter-quote").toPath())),
                 contentStack = stack
             ).open(DirectDataContext, part)
         }
@@ -317,7 +322,7 @@ class SequentialContentStackTest {
                 timeoutMillis = 10_000))
 
             val shape = ConfiguredDataOpener(
-                SchemaCache(WorkUtils.temporary("inspection-coverage")),
+                SchemaCache(WorkUtils(temp.newFolder().toPath())),
                 contentStack = stack,
                 policies = policies
             ).inspectShape(DirectDataContext, part)
@@ -468,7 +473,7 @@ class SequentialContentStackTest {
 
         assertFailsWith<ContentTimeoutException> {
             ConfiguredDataOpener(
-                SchemaCache(WorkUtils.temporary("inspection-repeated-read-timeout")),
+                SchemaCache(WorkUtils(temp.newFolder("inspection-repeated-read-timeout").toPath())),
                 contentStack = stack,
                 policies = policies
             ).inspectShape(DirectDataContext, part)

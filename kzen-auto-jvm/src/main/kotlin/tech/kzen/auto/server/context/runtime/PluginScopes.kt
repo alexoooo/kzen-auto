@@ -1,5 +1,7 @@
 package tech.kzen.auto.server.context.runtime
 
+import java.net.URLClassLoader
+
 
 /** The discovered universe: the application scope first, then folder scopes in directory-name order. */
 class PluginScopes(
@@ -23,5 +25,17 @@ class PluginScopes(
 
     fun get(id: PluginScopeId): PluginScope? {
         return all.firstOrNull { it.id == id }
+    }
+
+
+    /**
+     * Releases the folder scopes' jars, which their loaders otherwise hold open until garbage collection (on
+     * Windows, blocking deleting or replacing them). Only for a universe that is not pinned: a pinned
+     * universe's loaders serve the process for its lifetime.
+     */
+    internal fun closeFolderLoaders() {
+        for (scope in loadedFolders) {
+            (scope.classLoader as? URLClassLoader)?.close()
+        }
     }
 }

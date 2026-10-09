@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.context.runtime.boot
 
+import org.junit.Rule
 import org.junit.Test
 import tech.kzen.auto.server.context.KzenAutoConfig
 import tech.kzen.auto.server.context.KzenAutoContext
@@ -29,9 +30,13 @@ import kotlin.test.assertTrue
  * availability rule), host/kzen key collisions, and the suppressible logs area.
  */
 class WorkRootAndHostBootTest {
+    @get:Rule
+    val temp = BootTemporaryFolder()
+
+
     @Test
     fun `work roots host services and logs area`() {
-        val universe = PluginUniverseBuilder(Files.createTempDirectory("universe"))
+        val universe = PluginUniverseBuilder(temp.newFolder("universe").toPath())
         universe.plugin("five") {
             jar("five.jar") {
                 javaClass("fixture.five.Repo", "package fixture.five;\npublic interface Repo { String name(); }")
@@ -58,8 +63,8 @@ class WorkRootAndHostBootTest {
         val runtime = KzenAutoRuntime.initialize(KzenAutoRuntimeConfig(universe.root()))
         val needsRepo = ClassName("fixture.five.NeedsRepo")
 
-        val rootA = Files.createTempDirectory("work-a")
-        val rootB = Files.createTempDirectory("work-b")
+        val rootA = temp.newFolder("work-a").toPath()
+        val rootB = temp.newFolder("work-b").toPath()
         val a = context(rootA)
         val b = context(rootB)
         try {
@@ -80,7 +85,7 @@ class WorkRootAndHostBootTest {
             val marker = b.jobWorkPool.scratchBase().resolve("marker")
             Files.createDirectories(marker.parent)
             Files.writeString(marker, "b")
-            val c = context(Files.createTempDirectory("work-c"))
+            val c = context(temp.newFolder("work-c").toPath())
             c.close()
             assertTrue(Files.exists(marker))
             assertTrue(a.jobWorkPool.scratchBase().startsWith(rootA.toRealPath()))
@@ -95,7 +100,7 @@ class WorkRootAndHostBootTest {
             }
             @Suppress("UNCHECKED_CAST")
             val host = KzenAutoHost.builder().service(repoInterface as Class<Any>, proxy).build()
-            val providing = context(Files.createTempDirectory("work-host"), host)
+            val providing = context(temp.newFolder("work-host").toPath(), host)
             try {
                 assertEquals(PluginAvailability.Availability.Available, providing.pluginAvailability.of(needsRepo))
                 assertEquals(PluginAvailability.Availability.Unavailable(listOf(ClassName("fixture.five.Repo"))),
@@ -109,7 +114,7 @@ class WorkRootAndHostBootTest {
 
             // A host key kzen already provides fails creation by name, and the claim is rolled back
             val colliding = KzenAutoHost.builder().service(KzenAutoConfig::class.java, a.config).build()
-            val collisionRoot = Files.createTempDirectory("work-collision")
+            val collisionRoot = temp.newFolder("work-collision").toPath()
             val collision = assertFailsWith<IllegalStateException> { context(collisionRoot, colliding) }
             assertTrue(collision.message!!.contains("Service already registered"), collision.message)
             assertFalse(runtime.workRoots.isClaimed(collisionRoot.toRealPath()), "a failed creation leaves no claim")
@@ -123,7 +128,7 @@ class WorkRootAndHostBootTest {
 
             // Logs area is presented only when the context manages logs
             assertNotNull(a.managedStorageRegistry.find("logs"))
-            val quiet = context(Files.createTempDirectory("work-quiet"), manageLogs = false)
+            val quiet = context(temp.newFolder("work-quiet").toPath(), manageLogs = false)
             try {
                 assertNull(quiet.managedStorageRegistry.find("logs"))
             }
@@ -142,7 +147,7 @@ class WorkRootAndHostBootTest {
 
 
     private fun context(root: Path, host: KzenAutoHost = KzenAutoHost.empty, manageLogs: Boolean = true): KzenAutoContext {
-        val moduleRoot = Files.createTempDirectory("module")
+        val moduleRoot = temp.newFolder().toPath()
         Files.createDirectories(moduleRoot.resolve("src/main/resources/notation/main"))
         return KzenAutoContext.create(KzenAutoConfig(
             jsModuleName = "kzen-auto-js", moduleRoot = moduleRoot, workRoot = root, hostServices = host, manageLogs = manageLogs))

@@ -40,6 +40,8 @@ import tech.kzen.lib.common.exec.TextExecutionValue
 import tech.kzen.lib.common.exec.data.shape.ShapeProvenance
 import tech.kzen.auto.server.util.WorkUtils
 import kotlinx.coroutines.runBlocking
+import org.junit.Rule
+import org.junit.rules.TemporaryFolder
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -48,6 +50,10 @@ import kotlin.test.assertContains
 
 
 class ReaderCapabilityRegistryTest {
+    @get:Rule
+    val temp: TemporaryFolder = TemporaryFolder.builder().assureDeletion().build()
+
+
     @Test
     fun resolvesCanonicalConfigWithoutReaderNameBranch() {
         val registry = ReaderCapabilityRegistry.withConfiguredReaders()
@@ -133,7 +139,7 @@ class ReaderCapabilityRegistryTest {
         val provider = FakeObjectStoreProvider(
             "payload".encodeToByteArray(), fingerprint, expectedId = "opaque-key")
         val opener = ConfiguredDataOpener(
-            SchemaCache(WorkUtils.temporary("plugin-reader-spi")),
+            SchemaCache(WorkUtils(temp.newFolder("plugin-reader-spi").toPath())),
             registry,
             SequentialContentStack(DataContentProviderLookup(
                 LocalDataContentProvider(), mapOf(source to provider))))
@@ -163,7 +169,7 @@ class ReaderCapabilityRegistryTest {
         val provider = FakeObjectStoreProvider(
             "unread".encodeToByteArray(), fingerprint, expectedId = "opaque-key")
         val opener = ConfiguredDataOpener(
-            SchemaCache(WorkUtils.temporary("failing-plugin-reader-spi")),
+            SchemaCache(WorkUtils(temp.newFolder("failing-plugin-reader-spi").toPath())),
             ReaderCapabilityRegistry(listOf(OpeningFailureCapability)),
             SequentialContentStack(DataContentProviderLookup(
                 LocalDataContentProvider(), mapOf(source to provider))))
@@ -191,7 +197,7 @@ class ReaderCapabilityRegistryTest {
         val fingerprint = fakeFingerprint("inspection-failure-v1")
         val provider = CloseFailureProvider(fingerprint)
         val opener = ConfiguredDataOpener(
-            SchemaCache(WorkUtils.temporary("inspection-failure-reader-spi")),
+            SchemaCache(WorkUtils(temp.newFolder("inspection-failure-reader-spi").toPath())),
             ReaderCapabilityRegistry(listOf(InspectionFailureCapability)),
             SequentialContentStack(DataContentProviderLookup(
                 LocalDataContentProvider(), mapOf(source to provider))))
@@ -225,7 +231,7 @@ class ReaderCapabilityRegistryTest {
             cancelOnRead = true,
             expectedId = "opaque-key")
         val opener = ConfiguredDataOpener(
-            SchemaCache(WorkUtils.temporary("pull-failure-reader-spi")),
+            SchemaCache(WorkUtils(temp.newFolder("pull-failure-reader-spi").toPath())),
             ReaderCapabilityRegistry(listOf(TestServiceReaderCapability())),
             SequentialContentStack(DataContentProviderLookup(
                 LocalDataContentProvider(), mapOf(source to provider))))

@@ -52,7 +52,14 @@ class KzenAutoRuntime private constructor(
                             "a second initialization asked for $normalized"))
                 }
                 val scopes = PluginScopeDiscovery.discover(normalized.pluginRoot, ClassLoaderUtils.applicationClassLoader())
-                val contributions = PluginContributionDiscovery.discover(scopes)
+                val contributions = try {
+                    PluginContributionDiscovery.discover(scopes)
+                }
+                catch (e: Throwable) {
+                    // Nothing pins a universe that failed to boot, so nothing else would release its jars
+                    scopes.closeFolderLoaders()
+                    throw e
+                }
                 val runtime = KzenAutoRuntime(normalized, scopes, contributions)
                 runtime.registerMirrors()
                 instance = runtime

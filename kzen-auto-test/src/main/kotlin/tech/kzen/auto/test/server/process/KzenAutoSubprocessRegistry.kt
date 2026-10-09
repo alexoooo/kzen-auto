@@ -60,7 +60,9 @@ object KzenAutoSubprocessRegistry {
         try {
             entry.tempDir?.let { FixtureCopier.deleteRecursively(it) }
         }
-        catch (ignored: Throwable) {
+        catch (e: Throwable) {
+            // Not fatal to the run, but a leftover temp dir must be traceable to its cause
+            println("[harness] could not delete ${entry.tempDir}: $e")
         }
     }
 }

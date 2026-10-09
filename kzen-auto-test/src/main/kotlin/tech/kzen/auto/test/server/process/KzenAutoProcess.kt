@@ -25,7 +25,8 @@ class KzenAutoProcess private constructor(
             jar: Path,
             cwd: Path,
             port: Int,
-            jvmArgs: List<String> = emptyList()
+            jvmArgs: List<String> = emptyList(),
+            args: List<String> = emptyList()
         ): KzenAutoProcess {
             require(jar.toFile().isFile) {
                 "kzen-auto jar not found: ${jar.toAbsolutePath()} " +
@@ -37,6 +38,7 @@ class KzenAutoProcess private constructor(
                 add("-jar")
                 add(jar.toAbsolutePath().normalize().toString())
                 add("--server.port=$port")
+                addAll(args)
                 addAll(managedChildArgs())
             }
             return spawn(name, command, cwd, port)

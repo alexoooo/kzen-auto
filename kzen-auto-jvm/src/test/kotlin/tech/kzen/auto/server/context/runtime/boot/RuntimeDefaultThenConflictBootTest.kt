@@ -1,11 +1,11 @@
 package tech.kzen.auto.server.context.runtime.boot
 
+import org.junit.Rule
 import org.junit.Test
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.context.runtime.KzenAutoRuntime
 import tech.kzen.auto.server.context.runtime.KzenAutoRuntimeConfig
 import tech.kzen.auto.server.context.runtime.PluginBootException
-import java.nio.file.Files
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
@@ -18,6 +18,10 @@ import kotlin.test.assertSame
  * embedding host initialize before their first context.
  */
 class RuntimeDefaultThenConflictBootTest {
+    @get:Rule
+    val temp = BootTemporaryFolder()
+
+
     @Test
     fun `implicit default initialization then a conflicting explicit one fails`() {
         System.clearProperty(KzenAutoRuntimeConfig.pluginRootSystemProperty)
@@ -27,7 +31,7 @@ class RuntimeDefaultThenConflictBootTest {
             assertEquals(1, context.runtime.scopes.all.size)
             assertSame(context.runtime, KzenAutoRuntime.current())
 
-            val root = Files.createTempDirectory("universe")
+            val root = temp.newFolder("universe").toPath()
             assertFailsWith<PluginBootException> { KzenAutoRuntime.initialize(KzenAutoRuntimeConfig(root)) }
             assertSame(context.runtime, KzenAutoRuntime.initialize(KzenAutoRuntimeConfig.standalone))
         }

@@ -1,6 +1,8 @@
 package tech.kzen.auto.server.data
 
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import tech.kzen.auto.common.data.model.DataPart
 import tech.kzen.auto.common.data.model.DataRef
 import tech.kzen.auto.common.data.model.DataRole
@@ -26,6 +28,9 @@ class SchemaCacheTest {
     private val encoding = CommonDataEncodingSpec.ofString("UTF-8")
     private val shape = LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("a", "b")))
 
+    @get:Rule
+    val temp: TemporaryFolder = TemporaryFolder.builder().assureDeletion().build()
+
 
     @Test
     fun exactKeyIncludesEveryEffectiveDimension() {
@@ -46,7 +51,7 @@ class SchemaCacheTest {
 
     @Test
     fun diskRoundTripDoesNotTurnPeekIntoIo() {
-        val work = WorkUtils.temporary("schema-cache-disk")
+        val work = WorkUtils(temp.newFolder("schema-cache-disk").toPath())
         SchemaCache(work).put(key(), shape)
 
         val fresh = SchemaCache(work)
@@ -59,7 +64,7 @@ class SchemaCacheTest {
     @Test
     fun diskEntryFromOtherCodeIsAMissForTheSameContent() {
         // The stale-shape bug: a reader rebuilt with a different declared shape must not be served the old one
-        val work = WorkUtils.temporary("schema-cache-code")
+        val work = WorkUtils(temp.newFolder("schema-cache-code").toPath())
         SchemaCache(work).put(key(code = Digest.ofUtf8("old build")), shape)
 
         val fresh = SchemaCache(work)
@@ -70,7 +75,7 @@ class SchemaCacheTest {
 
     @Test
     fun corruptDiskEntryIsAReusableMiss() {
-        val work = WorkUtils.temporary("schema-cache-corrupt")
+        val work = WorkUtils(temp.newFolder("schema-cache-corrupt").toPath())
         val cache = SchemaCache(work)
         val bundle = cache.bundleKey(key())
         val shapeFile = work.resolve("${SchemaCache.indexDirName}/$bundle/shape.json")
@@ -84,7 +89,7 @@ class SchemaCacheTest {
 
     @Test
     fun legacyDiskEntryIsAHarmlessMissAndCanBeReplaced() {
-        val work = WorkUtils.temporary("schema-cache-legacy")
+        val work = WorkUtils(temp.newFolder("schema-cache-legacy").toPath())
         val cache = SchemaCache(work)
         val bundle = cache.bundleKey(key())
         val shapeFile = work.resolve("${SchemaCache.indexDirName}/$bundle/shape.json")
@@ -108,7 +113,7 @@ class SchemaCacheTest {
 
     @Test
     fun managedDeleteInvalidatesMemoryAndDiskTogether() {
-        val work = WorkUtils.temporary("schema-cache-managed")
+        val work = WorkUtils(temp.newFolder("schema-cache-managed").toPath())
         val cache = SchemaCache(work)
         cache.put(key(), shape)
         val bundle = cache.bundleKey(key())

@@ -92,11 +92,19 @@ class CachedKotlinCompilerStorageTest {
 
     //-----------------------------------------------------------------------------------------------------------------
     private val workUtils = WorkUtils.temporary("cached-kotlin-compiler-storage-test")
+    private val compilers = mutableListOf<CachedKotlinCompiler>()
 
 
+    // A loaded entry holds its jar open, which would block the delete on Windows
     @AfterTest
     fun tearDown() {
-        WorkUtils.recursivelyDeleteDir(workUtils.base())
+        compilers.forEach { it.releaseLoaded() }
+        WorkUtils.deleteDirThrowing(workUtils.base())
+    }
+
+
+    private fun cached(compiler: KotlinCompiler): CachedKotlinCompiler {
+        return CachedKotlinCompiler(compiler, workUtils).also { compilers.add(it) }
     }
 
 
@@ -126,7 +134,7 @@ class CachedKotlinCompilerStorageTest {
     @Test
     fun deleteEntryReleasesJarLockAndAllowsRecompile() {
         val fakeCompiler = JarWritingFakeCompiler()
-        val compiler = CachedKotlinCompiler(fakeCompiler, workUtils)
+        val compiler = cached(fakeCompiler)
         val kotlinCode = code("DeleteMe")
         val classLoader = javaClass.classLoader
 
@@ -152,7 +160,7 @@ class CachedKotlinCompilerStorageTest {
 
     @Test
     fun tryLoadReturnsNullWhenNeverCompiledAndCachesWhenLoaded() {
-        val compiler = CachedKotlinCompiler(JarWritingFakeCompiler(), workUtils)
+        val compiler = cached(JarWritingFakeCompiler())
         val kotlinCode = code("CacheMe")
         val classLoader = javaClass.classLoader
 
@@ -167,7 +175,7 @@ class CachedKotlinCompilerStorageTest {
 
     @Test
     fun cacheHitRefreshesLruSignal() {
-        val compiler = CachedKotlinCompiler(JarWritingFakeCompiler(), workUtils)
+        val compiler = cached(JarWritingFakeCompiler())
         val kotlinCode = code("TouchMe")
         val classLoader = javaClass.classLoader
 
@@ -190,7 +198,7 @@ class CachedKotlinCompilerStorageTest {
         val compilerError = KotlinCompilerError("Expecting an element\n1.. 5x\n      ^", 6)
 
         val fakeCompiler = FailingFakeCompiler(compilerError)
-        val compiler = CachedKotlinCompiler(fakeCompiler, workUtils)
+        val compiler = cached(fakeCompiler)
         val kotlinCode = code("PositionedError")
         val classLoader = javaClass.classLoader
 
@@ -207,7 +215,7 @@ class CachedKotlinCompilerStorageTest {
         val compilerError = KotlinCompilerError("Unable to resolve something")
 
         val fakeCompiler = FailingFakeCompiler(compilerError)
-        val compiler = CachedKotlinCompiler(fakeCompiler, workUtils)
+        val compiler = cached(fakeCompiler)
         val kotlinCode = code("UnpositionedError")
         val classLoader = javaClass.classLoader
 
@@ -223,7 +231,7 @@ class CachedKotlinCompilerStorageTest {
     fun errorFileWithoutHeaderDecodesAsPositionless() {
         // The shape every entry already on disk has: no header line, message from the first byte. Rejecting or
         // ignoring one would silently recompile a user's entire cache.
-        val compiler = CachedKotlinCompiler(JarWritingFakeCompiler(), workUtils)
+        val compiler = cached(JarWritingFakeCompiler())
         val kotlinCode = code("HeaderlessError")
         val message = "Expecting an element\n1.. 5x\n      ^"
 
@@ -241,7 +249,7 @@ class CachedKotlinCompilerStorageTest {
         val perEntryPadBytes = 10_000
         val budgetBytes = 25_000L
 
-        val compiler = CachedKotlinCompiler(JarWritingFakeCompiler(perEntryPadBytes), workUtils)
+        val compiler = cached(JarWritingFakeCompiler(perEntryPadBytes))
         val area = compiler.storageArea(budgetBytes)
         compiler.attachEvictor(StorageLruEvictor(area))
         val classLoader = javaClass.classLoader

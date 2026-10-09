@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.context.runtime.boot
 
+import org.junit.Rule
 import org.junit.Test
 import tech.kzen.auto.server.context.KzenAutoConfig
 import tech.kzen.auto.server.context.KzenAutoContext
@@ -18,16 +19,20 @@ import kotlin.test.assertSame
  * share the one runtime, and the failed scope's diagnostic does not stop any of them.
  */
 class RuntimeSharedByContextsBootTest {
+    @get:Rule
+    val temp = BootTemporaryFolder()
+
+
     @Test
     fun `multiple contexts share the one pinned universe including its failed scope`() {
-        val root = Files.createTempDirectory("universe")
+        val root = temp.newFolder("universe").toPath()
         val universe = PluginUniverseBuilder(root)
         universe.plugin("good") { jar("a.jar") { resource("marker", "1") } }
         universe.plugin("broken") { jar("a.jar") { corrupt() } }
         val runtime = KzenAutoRuntime.initialize(KzenAutoRuntimeConfig(root))
 
         val contexts = (1..3).map {
-            val moduleRoot = Files.createTempDirectory("module-$it")
+            val moduleRoot = temp.newFolder("module-$it").toPath()
             Files.createDirectories(moduleRoot.resolve("src/main/resources/notation/main"))
             KzenAutoContext.create(KzenAutoConfig(
                 jsModuleName = "kzen-auto-js", moduleRoot = moduleRoot, workRoot = moduleRoot.resolve("work")))

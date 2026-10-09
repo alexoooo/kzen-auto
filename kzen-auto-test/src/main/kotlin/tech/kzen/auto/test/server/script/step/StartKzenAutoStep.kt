@@ -50,11 +50,15 @@ class StartKzenAutoStep(
         val resolvedPort = if (port == 0) FreePort.next() else port
         val handle = SutHandle(name, resolvedPort)
 
+        // The standalone work root `../work` resolves against the cwd, which would put it beside the temp dir in the
+        //  shared system temp directory: never deleted, and shared by every SUT of every run. Inside the temp dir it
+        //  is this SUT's alone and goes with it.
         val process = KzenAutoProcess.startFromJar(
             name = name,
             jar = Paths.get(jarPath),
             cwd = tempDir,
-            port = resolvedPort)
+            port = resolvedPort,
+            args = listOf(KzenAutoConfig.workRootPrefix + tempDir.resolve("work")))
 
         KzenAutoSubprocessRegistry.put(name, process, tempDir)
 

@@ -1,6 +1,8 @@
 package tech.kzen.auto.server.data
 
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import tech.kzen.auto.common.data.model.DataRef
 import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.auto.common.objects.document.plugin.model.CommonDataEncodingSpec
@@ -13,10 +15,13 @@ class ColumnListingActionTest {
     private val format = CommonPluginCoordinate.ofString("CSV")
     private val encoding = CommonDataEncodingSpec.ofString("UTF-8")
 
+    @get:Rule
+    val temp: TemporaryFolder = TemporaryFolder.builder().assureDeletion().build()
+
 
     @Test
     fun exactFingerprintHitsAndFreshFingerprintExtractsAgain() {
-        val action = ColumnListingAction(SchemaCache(WorkUtils.temporary("column-listing")))
+        val action = ColumnListingAction(SchemaCache(WorkUtils(temp.newFolder("column-listing").toPath())))
         var extracts = 0
         fun extract(): HeaderListing {
             extracts += 1
@@ -33,7 +38,7 @@ class ColumnListingActionTest {
 
     @Test
     fun noFingerprintNeverStores() {
-        val action = ColumnListingAction(SchemaCache(WorkUtils.temporary("column-listing-plain")))
+        val action = ColumnListingAction(SchemaCache(WorkUtils(temp.newFolder("column-listing-plain").toPath())))
         val ref = DataRef(null, "plain.csv")
         var extracts = 0
         repeat(2) {

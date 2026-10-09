@@ -3,7 +3,9 @@ package tech.kzen.auto.server.objects.datasource
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import tech.kzen.auto.common.data.api.DataContext
 import tech.kzen.auto.common.data.file.FileSelectionEntry
 import tech.kzen.auto.common.data.format.ConfiguredRecordFormat
@@ -19,7 +21,6 @@ import tech.kzen.auto.server.data.format.SourceFormatResolutionPolicy
 import tech.kzen.auto.server.data.read.delimited.ConfiguredDelimitedReaderCapability
 import tech.kzen.auto.server.objects.datasource.format.ConfiguredDelimitedTestFormats
 import tech.kzen.auto.server.service.plugin.HostReportDefinitionRepository
-import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
@@ -36,6 +37,9 @@ class FileDataSourceFormatBudgetTest {
     }
 
     private val listing = FileListingAction(HostReportDefinitionRepository(emptyList()))
+
+    @get:Rule
+    val temp: TemporaryFolder = TemporaryFolder.builder().assureDeletion().build()
 
 
     @Test
@@ -105,7 +109,7 @@ class FileDataSourceFormatBudgetTest {
 
     @Test
     fun heterogeneousColdPartsKeepIndependentSpecsWithoutMajoritySelection() = runBlocking {
-        val directory = Files.createTempDirectory("file-source-no-majority")
+        val directory = temp.newFolder("file-source-no-majority").toPath()
         val files = listOf("first.csv", "minority.tsv", "last.csv").map { name ->
             directory.resolve(name).also { it.writeText("left,right\n1,2\n") }
         }
@@ -140,7 +144,7 @@ class FileDataSourceFormatBudgetTest {
 
 
     private fun inputs(prefix: String, count: Int): List<Path> {
-        val directory = Files.createTempDirectory(prefix)
+        val directory = temp.newFolder(prefix).toPath()
         return (0 until count).map { index ->
             directory.resolve("$index.csv").also { it.writeText("value\n$index\n") }
         }

@@ -1,8 +1,12 @@
 package tech.kzen.auto.server.context.runtime
 
+import org.junit.After
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import tech.kzen.auto.plugin.api.PluginSpiVersion
 import java.nio.file.Files
+import java.nio.file.Path
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
@@ -17,6 +21,11 @@ import kotlin.test.assertTrue
 class PluginScopeDiscoveryTest {
     private val loader = PluginScopeDiscoveryTest::class.java.classLoader
 
+    @get:Rule
+    val temp: TemporaryFolder = TemporaryFolder.builder().assureDeletion().build()
+
+    private val discovered = mutableListOf<PluginScopes>()
+
     private val greeter = """
         package fixture;
         public class Greeter {
@@ -25,15 +34,27 @@ class PluginScopeDiscoveryTest {
     """.trimIndent()
 
 
+    // The scopes' loaders hold their jars open, which would block the delete on Windows
+    @After
+    fun closeScopes() {
+        discovered.forEach { it.closeFolderLoaders() }
+    }
+
+
+    private fun discover(root: Path?): PluginScopes {
+        return PluginScopeDiscovery.discover(root, loader).also { discovered.add(it) }
+    }
+
+
     @Test
     fun `scopes are the application then folders in name order with implicit directory ids`() {
-        val root = Files.createTempDirectory("universe")
+        val root = temp.newFolder("universe").toPath()
         val universe = PluginUniverseBuilder(root)
         universe.plugin("zeta") { jar("a.jar") { javaClass("fixture.Greeter", greeter) } }
         universe.plugin("alpha") { jar("z.jar") { resource("marker.txt", "x") }; jar("a.jar") { resource("other.txt", "y") } }
         Files.writeString(root.resolve("not-a-plugin.txt"), "ignored")
 
-        val scopes = PluginScopeDiscovery.discover(root, loader)
+        val scopes = discover(root)
 
         assertEquals(listOf("application", "alpha", "zeta"), scopes.all.map { it.id.value })
         assertTrue(scopes.application.isApplication)
@@ -52,12 +73,12 @@ class PluginScopeDiscoveryTest {
 
     @Test
     fun `manifest supplies id version and spi`() {
-        val root = Files.createTempDirectory("universe")
+        val root = temp.newFolder("universe").toPath()
         PluginUniverseBuilder(root).plugin("dir-name") {
             jar("p.jar") { manifest("id: renamed\nversion: 1.2.0\nspi: ${PluginSpiVersion.current}\n") }
         }
 
-        val scopes = PluginScopeDiscovery.discover(root, loader)
+        val scopes = discover(root)
         val scope = scopes.get(PluginScopeId("renamed"))
         assertNotNull(scope)
         assertEquals("1.2.0", scope.version)
@@ -67,7 +88,7 @@ class PluginScopeDiscoveryTest {
 
     @Test
     fun `no plugin root means the application scope alone`() {
-        val scopes = PluginScopeDiscovery.discover(null, loader)
+        val scopes = discover(null)
         assertEquals(1, scopes.all.size)
         assertTrue(scopes.folders.isEmpty())
     }
@@ -75,7 +96,7 @@ class PluginScopeDiscoveryTest {
 
     @Test
     fun `a malformed scope fails alone with a named diagnostic`() {
-        val root = Files.createTempDirectory("universe")
+        val root = temp.newFolder("universe").toPath()
         val universe = PluginUniverseBuilder(root)
         universe.plugin("broken") { jar("good.jar") { resource("a", "a") }; jar("bad.jar") { corrupt() } }
         universe.plugin("empty") { file("readme.txt", "no jars here") }
@@ -83,7 +104,7 @@ class PluginScopeDiscoveryTest {
         universe.plugin("bad-manifest") { jar("a.jar") { manifest("id: x\nbogus: 1") } }
         universe.plugin("fine") { jar("a.jar") { resource("a", "a") } }
 
-        val scopes = PluginScopeDiscovery.discover(root, loader)
+        val scopes = discover(root)
 
         val broken = scopes.get(PluginScopeId("broken"))!!
         assertEquals(PluginScope.Status.FAILED, broken.status)
@@ -101,7 +122,7 @@ class PluginScopeDiscoveryTest {
 
     @Test
     fun `duplicate reserved and incompatible ids are boot errors reported together`() {
-        val root = Files.createTempDirectory("universe")
+        val root = temp.newFolder("universe").toPath()
         val universe = PluginUniverseBuilder(root)
         universe.plugin("one") { jar("a.jar") { manifest("id: shared") } }
         universe.plugin("two") { jar("a.jar") { manifest("id: shared") } }

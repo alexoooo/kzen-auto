@@ -242,6 +242,24 @@ tasks.test {
 }
 
 
+// A test that never closes its KzenAutoContext.forTest() context fails the test task by name: each test JVM writes
+// the contexts it leaves open to this directory as it exits (see TestContextLeakGuard).
+tasks.withType<Test>().configureEach {
+    val unclosedContextReportDir = layout.buildDirectory.dir("unclosed-test-contexts/$name").get().asFile
+    systemProperty("kzen.test.unclosedContextReportDir", unclosedContextReportDir.absolutePath)
+    doFirst {
+        unclosedContextReportDir.deleteRecursively()
+    }
+    doLast {
+        val reports = unclosedContextReportDir.listFiles().orEmpty()
+        if (reports.isNotEmpty()) {
+            throw GradleException("KzenAutoContext.forTest() contexts never closed:\n" +
+                reports.joinToString("\n") { it.readText().trim() })
+        }
+    }
+}
+
+
 // Plugin-universe boot tests: the process-global KzenAutoRuntime can be initialized once per JVM and has no
 // reset seam, so every test that initializes it with its own universe (conflicting second initialization,
 // duplicate ids, SPI mismatch, ...) runs in a fresh JVM — one failing boot never poisons the others. The

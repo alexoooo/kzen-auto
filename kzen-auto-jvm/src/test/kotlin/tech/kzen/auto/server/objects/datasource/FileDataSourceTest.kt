@@ -5,7 +5,9 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import tech.kzen.auto.common.data.api.DataContext
 import tech.kzen.auto.common.data.file.FileSelectionEntry
 import tech.kzen.auto.common.data.format.ConfiguredRecordFormat
@@ -55,6 +57,9 @@ class FileDataSourceTest {
     private val listing = FileListingAction(HostReportDefinitionRepository(emptyList()))
     private val noFormats = lazyOf(emptyList<ConfiguredRecordFormat>())
 
+    @get:Rule
+    val temp: TemporaryFolder = TemporaryFolder.builder().assureDeletion().build()
+
     private fun source(
         directory: String = "",
         filter: String = "",
@@ -83,7 +88,7 @@ class FileDataSourceTest {
 
     @Test
     fun directoryResolutionIsOrderedAndFingerprintedOneUnitPerFile() {
-        val directory = Files.createTempDirectory("file-source-order")
+        val directory = temp.newFolder("file-source-order").toPath()
         val later = directory.resolve("z.csv").also { it.writeText("a\n2\n") }
         val first = directory.resolve("a.csv").also { it.writeText("a\n1\n") }
 
@@ -109,7 +114,7 @@ class FileDataSourceTest {
 
     @Test
     fun explicitSelectionWinsAndOverridesDefaults() {
-        val directory = Files.createTempDirectory("file-source-explicit")
+        val directory = temp.newFolder("file-source-explicit").toPath()
         directory.resolve("ignored.csv").writeText("ignored")
         val picked = directory.resolve("chosen.tsv").also { it.writeText("a\tb") }
         val formatLookup = lookup(mapOf("Tsv" to ConfiguredDelimitedTestFormats.tsv()))
@@ -132,7 +137,7 @@ class FileDataSourceTest {
 
     @Test
     fun unregisteredProgrammaticSourceFormatStillResolvesStrictly() {
-        val file = Files.createTempFile("file-source-programmatic", ".csv")
+        val file = temp.newFile("file-source-programmatic.csv").toPath()
             .also { it.writeText("left^right\na^b\n") }
         val programmatic = ConfiguredDelimitedTestFormats.csv(delimiter = "^")
 
@@ -148,8 +153,8 @@ class FileDataSourceTest {
 
     @Test
     fun perFileFormatAndEncodingOverridesApplyIndependently() {
-        val tsvFile = Files.createTempFile("file-source-format-only", ".tsv").also { it.writeText("a\tb") }
-        val encodedFile = Files.createTempFile("file-source-encoding-only", ".csv").also { it.writeText("a,b") }
+        val tsvFile = temp.newFile("file-source-format-only.tsv").toPath().also { it.writeText("a\tb") }
+        val encodedFile = temp.newFile("file-source-encoding-only.csv").toPath().also { it.writeText("a,b") }
         val result = resolve(source(
             files = listOf(
                 picked(tsvFile, format = "Tsv"),
@@ -170,7 +175,7 @@ class FileDataSourceTest {
 
     @Test
     fun unavailableAndAutomaticPerFileFormatOverridesFailBeforeResolution() {
-        val file = Files.createTempFile("file-source-invalid-override", ".csv").also { it.writeText("a,b") }
+        val file = temp.newFile("file-source-invalid-override.csv").toPath().also { it.writeText("a,b") }
         val unavailable = assertFailsWith<IllegalArgumentException> {
             resolve(source(
                 files = listOf(picked(file, format = "Unavailable")),
@@ -194,7 +199,7 @@ class FileDataSourceTest {
     @Test
     fun sourceResolutionRunsColdFormatsConcurrentlyButRetainsAuthoredOrder() {
         val taskCount = 12
-        val directory = Files.createTempDirectory("file-source-budget")
+        val directory = temp.newFolder("file-source-budget").toPath()
         val paths = (0 until taskCount).map { index ->
             directory.resolve("$index.csv").also { it.writeText("value\n$index\n") }
         }
@@ -212,7 +217,7 @@ class FileDataSourceTest {
 
     @Test
     fun explicitSelectionPreservesAuthoredOrder() {
-        val directory = Files.createTempDirectory("file-source-explicit-order")
+        val directory = temp.newFolder("file-source-explicit-order").toPath()
         val alphabeticFirst = directory.resolve("a.csv").also { it.writeText("a") }
         val authoredFirst = directory.resolve("z.csv").also { it.writeText("z") }
 
@@ -228,7 +233,7 @@ class FileDataSourceTest {
 
     @Test
     fun singleFilePreviewDoesNotStatUnrelatedExplicitRows() = runBlocking {
-        val selected = Files.createTempFile("file-source-preview", ".csv").also { it.writeText("a\n1\n") }
+        val selected = temp.newFile("file-source-preview.csv").toPath().also { it.writeText("a\n1\n") }
         // FilePath deliberately permits opaque provider paths that java.nio cannot stat. A full-list implementation
         // would touch this unrelated row and fail before returning the requested preview.
         val unrelatedProviderPath = "\u0000provider-only"
@@ -246,7 +251,7 @@ class FileDataSourceTest {
     fun singleFilePreviewOutsideAnEmptySelectionSaysSo() = runBlocking {
         // The client can ask for a row the server's copy of the selection does not hold yet (a notation write in
         // flight): with no rows and no directory there is nothing to match, and the message must say which
-        val absent = Files.createTempFile("file-source-absent", ".csv").also { it.writeText("a") }
+        val absent = temp.newFile("file-source-absent.csv").toPath().also { it.writeText("a") }
         val source = source()
 
         val failure = assertFailsWith<IllegalArgumentException> {
@@ -261,7 +266,7 @@ class FileDataSourceTest {
 
     @Test
     fun persistedBlankOverridesCannotChangeTheCanonicalConfiguredRead() {
-        val file = Files.createTempFile("file-source-format", ".csv").also { it.writeText("a") }
+        val file = temp.newFile("file-source-format.csv").toPath().also { it.writeText("a") }
         val withDefaults = resolve(source(
             files = listOf(picked(file, "", ""))))
             .manifest.units.single().parts.single()
@@ -273,7 +278,7 @@ class FileDataSourceTest {
 
     @Test
     fun filterUsesContainsAllWordsRatherThanGlobSyntax() {
-        val directory = Files.createTempDirectory("file-source-filter")
+        val directory = temp.newFolder("file-source-filter").toPath()
         directory.resolve("2026-sales.csv").writeText("a")
         directory.resolve("2026-sales.tsv").writeText("a")
 
@@ -284,7 +289,7 @@ class FileDataSourceTest {
 
     @Test
     fun groupPatternUsesOrderedNamedCapturesOrOneUnnamedCapture() {
-        val file = Files.createTempFile("2026-08-sales", ".csv").also { it.writeText("a") }
+        val file = temp.newFile("2026-08-sales.csv").toPath().also { it.writeText("a") }
         val named = resolve(source(
             files = listOf(picked(file)),
             groupPattern = "(?<year>\\d{4})-(?<month>\\d{2})"))
@@ -309,7 +314,7 @@ class FileDataSourceTest {
 
     @Test
     fun missingPolicyEitherFailsOrSkipsWithDiagnostic() {
-        val missing = Files.createTempDirectory("file-source-missing").resolve("absent.csv")
+        val missing = temp.newFolder("file-source-missing").toPath().resolve("absent.csv")
 
         val failure = assertFailsWith<IllegalStateException> {
             resolve(source(files = listOf(picked(missing))))
@@ -325,7 +330,7 @@ class FileDataSourceTest {
 
     @Test
     fun explicitDirectoryIsRejectedAsNotAFile() {
-        val directory = Files.createTempDirectory("file-source-directory")
+        val directory = temp.newFolder("file-source-directory").toPath()
         val failure = assertFailsWith<IllegalStateException> {
             resolve(source(files = listOf(picked(directory))))
         }
@@ -360,12 +365,12 @@ class FileDataSourceTest {
         assertNull(source.staticShape(DataRole("preview"), noFormats))
 
         val formatOverride = source(
-            files = listOf(picked(Files.createTempFile("shape-format-override", ".csv"), format = "Other")),
+            files = listOf(picked(temp.newFile("shape-format-override.csv").toPath(), format = "Other")),
             schema = schema)
         assertNull(formatOverride.staticShape(null, noFormats))
 
         val encodingOverride = source(
-            files = listOf(picked(Files.createTempFile("shape-encoding-override", ".csv"), encoding = "UTF-8")),
+            files = listOf(picked(temp.newFile("shape-encoding-override.csv").toPath(), encoding = "UTF-8")),
             schema = schema)
         assertEquals(shape, encodingOverride.staticShape(null, noFormats))
     }
@@ -375,7 +380,7 @@ class FileDataSourceTest {
     fun explicitFilesPublishTheShapeEveryNameFixes() {
         val shape = ArchiveListingReaderCapability.shape
         val format = NameShapedFormat(".tar.gz", shape)
-        val directory = Files.createTempDirectory("shape-by-name")
+        val directory = temp.newFolder("shape-by-name").toPath()
         val first = picked(directory.resolve("first.tar.gz"))
         val second = picked(directory.resolve("second.tar.gz"))
         val csv = picked(directory.resolve("orders.csv"))

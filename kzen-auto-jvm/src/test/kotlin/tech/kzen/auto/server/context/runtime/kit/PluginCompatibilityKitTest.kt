@@ -1,10 +1,11 @@
 package tech.kzen.auto.server.context.runtime.kit
 
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import tech.kzen.auto.common.objects.document.plugin.model.PluginClassDetail
 import tech.kzen.auto.server.context.runtime.PluginFixtures
 import tech.kzen.auto.server.context.runtime.PluginUniverseBuilder
-import java.nio.file.Files
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
@@ -16,9 +17,13 @@ import kotlin.test.assertTrue
  * universe and a boot-error one can be checked side by side.
  */
 class PluginCompatibilityKitTest {
+    @get:Rule
+    val temp: TemporaryFolder = TemporaryFolder.builder().assureDeletion().build()
+
+
     @Test
     fun `inspect reports scopes contributions service needs shadowing and ambiguity without pinning`() {
-        val root = Files.createTempDirectory("kit")
+        val root = temp.newFolder("kit").toPath()
         val universe = PluginUniverseBuilder(root)
         universe.plugin("alpha") {
             jar("alpha.jar") {
@@ -103,7 +108,7 @@ class PluginCompatibilityKitTest {
 
     @Test
     fun `a boot error universe is reported and can be expected`() {
-        val root = Files.createTempDirectory("kit-boot")
+        val root = temp.newFolder("kit-boot").toPath()
         val universe = PluginUniverseBuilder(root)
         universe.plugin("first") { jar("a.jar") { manifest("id: same\n") } }
         universe.plugin("second") { jar("b.jar") { manifest("id: same\n") } }

@@ -1,10 +1,13 @@
 package tech.kzen.auto.server.context.runtime
 
+import org.junit.After
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import tech.kzen.auto.server.data.read.TestServiceReaderCapability
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.platform.ClassName
-import java.nio.file.Files
+import java.nio.file.Path
 import java.util.jar.JarFile
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -22,10 +25,27 @@ class PluginContributionDiscoveryTest {
     private val appLoader = PluginContributionDiscoveryTest::class.java.classLoader
     private val alphaDoc = "AlphaThing:\n  is: ScriptStep\n  class: fixture.alpha.AlphaWorker\n"
 
+    @get:Rule
+    val temp: TemporaryFolder = TemporaryFolder.builder().assureDeletion().build()
+
+    private val discovered = mutableListOf<PluginScopes>()
+
+
+    // The scopes' loaders hold their jars open, which would block the delete on Windows
+    @After
+    fun closeScopes() {
+        discovered.forEach { it.closeFolderLoaders() }
+    }
+
+
+    private fun discover(root: Path?): PluginScopes {
+        return PluginScopeDiscovery.discover(root, appLoader).also { discovered.add(it) }
+    }
+
 
     @Test
     fun `folders contribute their own notation readers and generated registry with exact origins`() {
-        val root = Files.createTempDirectory("universe")
+        val root = temp.newFolder("universe").toPath()
         val universe = PluginUniverseBuilder(root)
         universe.plugin("alpha") {
             jar("alpha.jar") {
@@ -41,7 +61,7 @@ class PluginContributionDiscoveryTest {
         }
         universe.plugin("beta") { jar("beta.jar") { resource("notation/auto-jvm/beta/beta-doc.yaml", "Beta: {}\n") } }
 
-        val scopes = PluginScopeDiscovery.discover(root, appLoader)
+        val scopes = discover(root)
         val contributions = PluginContributionDiscovery.discover(scopes)
         val application = contributions.first()
         val alpha = contributions.single { it.scopeId == PluginScopeId("alpha") }
@@ -85,12 +105,12 @@ class PluginContributionDiscoveryTest {
 
     @Test
     fun `a folder shipping an application document path is a boot error naming both origins`() {
-        val root = Files.createTempDirectory("universe")
+        val root = temp.newFolder("universe").toPath()
         PluginUniverseBuilder(root).plugin("shadow") {
             jar("shadow.jar") { resource("notation/auto-jvm/job/job-jvm.yaml", "Job: {}\n") }
         }
         val failure = assertFailsWith<PluginBootException> {
-            PluginContributionDiscovery.discover(PluginScopeDiscovery.discover(root, appLoader))
+            PluginContributionDiscovery.discover(discover(root))
         }
         val error = failure.errors.single()
         assertTrue(error.contains("auto-jvm/job/job-jvm.yaml"), error)
@@ -101,7 +121,7 @@ class PluginContributionDiscoveryTest {
 
     @Test
     fun `duplicate reader identities across folders are a boot error`() {
-        val root = Files.createTempDirectory("universe")
+        val root = temp.newFolder("universe").toPath()
         val universe = PluginUniverseBuilder(root)
         for (name in listOf("one", "two")) {
             universe.plugin(name) {
@@ -113,7 +133,7 @@ class PluginContributionDiscoveryTest {
             }
         }
         val failure = assertFailsWith<PluginBootException> {
-            PluginContributionDiscovery.discover(PluginScopeDiscovery.discover(root, appLoader))
+            PluginContributionDiscovery.discover(discover(root))
         }
         val error = failure.errors.single()
         assertTrue(error.contains("same-reader") && error.contains("scope 'one'") && error.contains("scope 'two'"), error)
@@ -122,7 +142,7 @@ class PluginContributionDiscoveryTest {
 
     @Test
     fun `a throwing provider is a named failure on its scope only`() {
-        val root = Files.createTempDirectory("universe")
+        val root = temp.newFolder("universe").toPath()
         val universe = PluginUniverseBuilder(root)
         universe.plugin("bad") {
             jar("bad.jar") {
@@ -138,7 +158,7 @@ class PluginContributionDiscoveryTest {
                 resource(PluginFixtures.servicesEntry(), "fixture.good.Reader\n")
             }
         }
-        val contributions = PluginContributionDiscovery.discover(PluginScopeDiscovery.discover(root, appLoader))
+        val contributions = PluginContributionDiscovery.discover(discover(root))
         val bad = contributions.single { it.scopeId == PluginScopeId("bad") }
         val good = contributions.single { it.scopeId == PluginScopeId("good") }
         assertTrue(bad.readers.isEmpty())

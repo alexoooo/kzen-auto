@@ -4,6 +4,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import org.junit.After
 import org.junit.Test
 import tech.kzen.auto.common.data.file.FileSelectionEntry
 import tech.kzen.auto.common.data.format.ConfiguredRecordFormat
@@ -67,8 +68,14 @@ class ReadWorkerFileIntegrationTest {
     private val repository = HostReportDefinitionRepository(listOf(
         CsvReportDefiner(), TsvReportDefiner(), TextReportDefiner()))
     private val listing = FileListingAction(repository)
-    private val opener = ConfiguredDataOpener(
-        SchemaCache(WorkUtils(Files.createTempDirectory("read-worker-file-cache"))))
+    private val cacheRoot = Files.createTempDirectory("read-worker-file-cache")
+    private val opener = ConfiguredDataOpener(SchemaCache(WorkUtils(cacheRoot)))
+
+
+    @After
+    fun deleteCache() {
+        WorkUtils.deleteDirThrowing(cacheRoot)
+    }
 
 
     @Test

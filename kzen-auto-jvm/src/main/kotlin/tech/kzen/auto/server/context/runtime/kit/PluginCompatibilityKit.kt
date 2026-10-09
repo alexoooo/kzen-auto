@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.context.runtime.kit
 
+import org.slf4j.LoggerFactory
 import tech.kzen.auto.common.objects.document.plugin.model.PluginClassDetail
 import tech.kzen.auto.common.objects.document.plugin.model.PluginScopeDetail
 import tech.kzen.auto.server.context.KzenAutoConfig
@@ -15,6 +16,7 @@ import tech.kzen.auto.server.context.runtime.ScopeContributions
 import tech.kzen.auto.server.objects.plugin.PluginUniverseView
 import tech.kzen.auto.server.service.compile.KotlinCode
 import tech.kzen.auto.server.util.ClassLoaderUtils
+import tech.kzen.auto.server.util.WorkUtils
 import tech.kzen.lib.common.reflect.ReflectionRegistry
 import tech.kzen.lib.platform.ClassName
 import tech.kzen.lib.server.reflect.AggregateClassLoader
@@ -34,9 +36,10 @@ import kotlin.system.exitProcess
  *   same JVM as a healthy one. Class availability is reported as *resolved* with its service needs, since
  *   whether a workspace provides them is a property of a context.
  * - [verify] pins the process-global runtime on the directory (**one universe per JVM**: run it in its own
- *   process, as the `pluginUniverseTest` task does), creates a standalone context, resolves every expected class
- *   through the real mirror and availability view, and proves expression identity: an expression naming the
- *   class compiles against the plugin classpath and resolves to the very `Class` the aggregate loader serves.
+ *   process, as the `pluginUniverseTest` task does), creates a standalone context over a temporary module root
+ *   (deleted when verification ends), resolves every expected class through the real mirror and availability
+ *   view, and proves expression identity: an expression naming the class compiles against the plugin classpath
+ *   and resolves to the very `Class` the aggregate loader serves.
  *
  * The scope rows are the same [PluginScopeDetail] the Plugin document shows, so what the kit prints is what a
  * user would see. Lives in the JVM implementation module deliberately: nothing here belongs on the SPI's
@@ -64,6 +67,8 @@ object PluginCompatibilityKit {
         "[$expectDocumentFlag<path>] [$expectClassFlag<fqcn>] [$expectUnavailableClassFlag<fqcn>] " +
         "[$expectAmbiguousClassFlag<fqcn>] [$expectShadowedClassFlag<fqcn>] [$expectExpressionFlag<fqcn>] " +
         "(each --expect-* flag repeatable)"
+
+    private val logger = LoggerFactory.getLogger(PluginCompatibilityKit::class.java)
 
 
     /**
@@ -131,16 +136,36 @@ object PluginCompatibilityKit {
         val root = pluginRoot.toAbsolutePath().normalize()
         val applicationLoader = ClassLoaderUtils.applicationClassLoader()
 
-        val scopes: PluginScopes
-        val contributions: List<ScopeContributions>
-        try {
-            scopes = PluginScopeDiscovery.discover(root, applicationLoader)
-            contributions = PluginContributionDiscovery.discover(scopes)
+        val scopes = try {
+            PluginScopeDiscovery.discover(root, applicationLoader)
         }
         catch (e: PluginBootException) {
             return report(root, Mode.INSPECT, e.errors, listOf(), mapOf(), expectations)
         }
 
+        // Inspect pins nothing, so it owns the scopes' loaders and releases their jars however it ends
+        try {
+            val contributions = try {
+                PluginContributionDiscovery.discover(scopes)
+            }
+            catch (e: PluginBootException) {
+                return report(root, Mode.INSPECT, e.errors, listOf(), mapOf(), expectations)
+            }
+            val rows = inspectScopes(scopes, contributions, applicationLoader, expectations)
+            return report(root, Mode.INSPECT, listOf(), rows, mapOf(), expectations)
+        }
+        finally {
+            scopes.closeFolderLoaders()
+        }
+    }
+
+
+    private fun inspectScopes(
+        scopes: PluginScopes,
+        contributions: List<ScopeContributions>,
+        applicationLoader: ClassLoader,
+        expectations: KitExpectations
+    ): List<PluginScopeDetail> {
         val aggregate = AggregateClassLoader(
             applicationLoader,
             scopes.loadedFolders.map { AggregateClassLoader.Scope(it.id.value, it.requireClassLoader() as URLClassLoader) })
@@ -169,18 +194,18 @@ object PluginCompatibilityKit {
             }
         }
 
-        val rows = PluginUniverseView.scopeDetails(scopes, contributions, classesByScope,
+        return PluginUniverseView.scopeDetails(scopes, contributions, classesByScope,
             shadowed = { shadowed[it]?.sorted() ?: listOf() },
             ambiguous = { ambiguous[it]?.sorted() ?: listOf() })
-
-        for (scope in scopes.loadedFolders) {
-            (scope.classLoader as? URLClassLoader)?.close()
-        }
-        return report(root, Mode.INSPECT, listOf(), rows, mapOf(), expectations)
     }
 
 
-    fun verify(pluginRoot: Path, expectations: KitExpectations = KitExpectations()): KitReport {
+    fun verify(pluginRoot: Path, expectations: KitExpectations = KitExpectations()): KitReport =
+        verify(pluginRoot, expectations, null)
+
+
+    /** [temporaryParent] holds the temporary module root: the system temp directory when null. */
+    internal fun verify(pluginRoot: Path, expectations: KitExpectations, temporaryParent: Path?): KitReport {
         val root = pluginRoot.toAbsolutePath().normalize()
         val runtime = try {
             KzenAutoRuntime.initialize(KzenAutoRuntimeConfig(root))
@@ -189,29 +214,48 @@ object PluginCompatibilityKit {
             return report(root, Mode.VERIFY, e.errors, listOf(), mapOf(), expectations)
         }
 
-        val moduleRoot = Files.createTempDirectory("kzen-kit-module")
-        Files.createDirectories(moduleRoot.resolve("src/main/resources/notation/main"))
-        val context = KzenAutoContext.create(KzenAutoConfig(
-            jsModuleName = kitModuleName, moduleRoot = moduleRoot, workRoot = moduleRoot.resolve("work")))
+        val moduleRoot =
+            if (temporaryParent == null) Files.createTempDirectory("kzen-kit-module")
+            else Files.createTempDirectory(temporaryParent, "kzen-kit-module")
         try {
-            val availability = context.pluginAvailability
-            for (name in expectations.availableClasses + expectations.unavailableClasses) {
-                availability.of(ClassName(name))
-            }
-            for (name in expectations.shadowedClasses + expectations.ambiguousClasses + expectations.expressionClasses) {
-                try {
-                    Class.forName(name, false, runtime.aggregateClassLoader)
+            Files.createDirectories(moduleRoot.resolve("src/main/resources/notation/main"))
+            val context = KzenAutoContext.create(KzenAutoConfig(
+                jsModuleName = kitModuleName, moduleRoot = moduleRoot, workRoot = moduleRoot.resolve("work")))
+            try {
+                val availability = context.pluginAvailability
+                for (name in expectations.availableClasses + expectations.unavailableClasses) {
+                    availability.of(ClassName(name))
                 }
-                catch (_: Throwable) {
-                    // recorded by the aggregate's diagnostics; the row shows it
+                for (name in expectations.shadowedClasses + expectations.ambiguousClasses + expectations.expressionClasses) {
+                    try {
+                        Class.forName(name, false, runtime.aggregateClassLoader)
+                    }
+                    catch (_: Throwable) {
+                        // recorded by the aggregate's diagnostics; the row shows it
+                    }
                 }
+                val identity = expectations.expressionClasses.sorted().associateWith { expressionIdentity(context, runtime, it) }
+                val rows = PluginUniverseView.scopes(runtime, availability)
+                return report(root, Mode.VERIFY, listOf(), rows, identity, expectations)
             }
-            val identity = expectations.expressionClasses.sorted().associateWith { expressionIdentity(context, runtime, it) }
-            val rows = PluginUniverseView.scopes(runtime, availability)
-            return report(root, Mode.VERIFY, listOf(), rows, identity, expectations)
+            finally {
+                // Releases the probe jars compiled into the work root's code cache
+                context.close()
+            }
         }
         finally {
-            context.close()
+            deleteModuleRoot(moduleRoot)
+        }
+    }
+
+
+    // Best effort: a leftover temporary directory is not worth failing a verification over
+    private fun deleteModuleRoot(moduleRoot: Path) {
+        try {
+            WorkUtils.deleteDirThrowing(moduleRoot)
+        }
+        catch (e: Exception) {
+            logger.warn("Could not delete the kit's temporary module root {}", moduleRoot, e)
         }
     }
 

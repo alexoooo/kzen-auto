@@ -1,12 +1,12 @@
 package tech.kzen.auto.server.context.runtime.boot
 
+import org.junit.Rule
 import org.junit.Test
 import tech.kzen.auto.server.context.runtime.KzenAutoRuntime
 import tech.kzen.auto.server.context.runtime.KzenAutoRuntimeConfig
 import tech.kzen.auto.server.context.runtime.PluginBootException
 import tech.kzen.auto.server.context.runtime.PluginScopeId
 import tech.kzen.auto.server.context.runtime.PluginUniverseBuilder
-import java.nio.file.Files
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
@@ -16,12 +16,16 @@ import kotlin.test.assertTrue
 
 /** Runs in its own JVM (pluginUniverseTest): explicit initialization, identical re-initialization, conflict. */
 class RuntimeInitializationBootTest {
+    @get:Rule
+    val temp = BootTemporaryFolder()
+
+
     @Test
     fun `identical initialization is a no-op and a conflicting one names both configurations`() {
         assertFalse(KzenAutoRuntime.isInitialized())
         assertFailsWith<IllegalStateException> { KzenAutoRuntime.current() }
 
-        val root = Files.createTempDirectory("universe")
+        val root = temp.newFolder("universe").toPath()
         PluginUniverseBuilder(root).plugin("alpha") { jar("a.jar") { resource("marker", "1") } }
         val first = KzenAutoRuntime.initialize(KzenAutoRuntimeConfig(root))
         assertTrue(KzenAutoRuntime.isInitialized())
@@ -33,7 +37,7 @@ class RuntimeInitializationBootTest {
         assertSame(first, KzenAutoRuntime.currentOrDefault())
         assertSame(first, KzenAutoRuntime.current())
 
-        val other = Files.createTempDirectory("universe-other")
+        val other = temp.newFolder("universe-other").toPath()
         val failure = assertFailsWith<PluginBootException> {
             KzenAutoRuntime.initialize(KzenAutoRuntimeConfig(other))
         }

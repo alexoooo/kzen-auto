@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.context.runtime.boot
 
 import kotlinx.coroutines.runBlocking
+import org.junit.Rule
 import org.junit.Test
 import tech.kzen.auto.common.objects.document.plugin.model.PluginClassDetail
 import tech.kzen.auto.common.objects.document.plugin.model.PluginScopeDetail
@@ -24,19 +25,25 @@ import tech.kzen.lib.common.model.structure.notation.cqrs.CreateDocumentCommand
 import tech.kzen.lib.common.service.parse.YamlNotationParser
 import tech.kzen.lib.platform.ClassName
 import java.nio.file.Files
+import kotlin.io.path.listDirectoryEntries
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 
 /**
- * Verify mode pins the universe, so this runs in its own JVM: expected availability, expression identity, and
- * the Plugin document's view read repeatedly from the same pinned state (no new provider instance, equal rows).
+ * Verify mode pins the universe, so this runs in its own JVM: expected availability, expression identity, no
+ * temporary module root left behind by a passing or a failing verification, and the Plugin document's view read
+ * repeatedly from the same pinned state (no new provider instance, equal rows).
  */
 class CompatibilityKitBootTest {
+    @get:Rule
+    val temp = BootTemporaryFolder()
+
+
     @Test
     fun `verify mode proves availability and expression identity and the document view is a cached projection`() {
-        val root = Files.createTempDirectory("kit-verify")
+        val root = temp.newFolder("kit-verify").toPath()
         val universe = PluginUniverseBuilder(root)
         universe.plugin("alpha") {
             jar("alpha.jar") {
@@ -76,6 +83,8 @@ class CompatibilityKitBootTest {
         }
         universe.plugin("broken") { jar("broken.jar") { corrupt() } }
 
+        // Holds each verification's temporary module root, so that it can be seen to go
+        val kitTemp = temp.newFolder("kit-temp").toPath()
         val report = PluginCompatibilityKit.verify(root, KitExpectations(
             loadedScopes = setOf("alpha", "dup-one", "dup-two", "shadow"),
             failedScopes = setOf("broken"),
@@ -85,7 +94,7 @@ class CompatibilityKitBootTest {
             unavailableClasses = setOf("fixture.alpha.NeedsRepo"),
             ambiguousClasses = setOf("fixture.dup.Same"),
             shadowedClasses = setOf(shadowedClass.name),
-            expressionClasses = setOf("fixture.alpha.AlphaGen", "fixture.alpha.Repo")))
+            expressionClasses = setOf("fixture.alpha.AlphaGen", "fixture.alpha.Repo")), kitTemp)
         assertTrue(report.ok, report.problems.toString())
         assertEquals(PluginCompatibilityKit.Mode.VERIFY, report.mode)
         assertEquals(mapOf("fixture.alpha.AlphaGen" to KitReport.identical, "fixture.alpha.Repo" to KitReport.identical),
@@ -97,12 +106,19 @@ class CompatibilityKitBootTest {
         assertEquals(listOf(shadowedClass.name), report.scopes.single { it.id == "shadow" }.shadowedClasses)
         assertFalse(report.scopes.single { it.id == "broken" }.loaded)
 
+        // A verification deletes its temporary module root, whether it passes or fails
+        assertEquals(listOf(), kitTemp.listDirectoryEntries())
+        val failing = PluginCompatibilityKit.verify(
+            root, KitExpectations(availableClasses = setOf("fixture.alpha.Missing")), kitTemp)
+        assertFalse(failing.ok)
+        assertEquals(listOf(), kitTemp.listDirectoryEntries())
+
         // The Plugin document over the same pinned runtime: two reads are equal projections, and the reader
         // provider was constructed exactly as many times as boot (identity) plus contexts (registries) require
         val runtime = KzenAutoRuntime.current()
         val descriptor = runtime.readerDescriptors().single { it.providerClass.name == "fixture.alpha.CountingReader" }
         val constructedField = descriptor.providerClass.getField("constructed")
-        val moduleRoot = Files.createTempDirectory("module-view")
+        val moduleRoot = temp.newFolder("module-view").toPath()
         Files.createDirectories(moduleRoot.resolve("src/main/resources/notation/main"))
         val context = KzenAutoContext.create(KzenAutoConfig(
             jsModuleName = "kzen-auto-js", moduleRoot = moduleRoot, workRoot = moduleRoot.resolve("work")))

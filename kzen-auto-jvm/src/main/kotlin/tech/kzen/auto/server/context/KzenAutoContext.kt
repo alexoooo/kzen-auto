@@ -158,6 +158,7 @@ class KzenAutoContext private constructor(
                 throw failure
             }
             context.temporaryWorkRoot = true
+            TestContextLeakGuard.opened(context.workRootClaim.realPath)
             return context
         }
 
@@ -432,6 +433,10 @@ class KzenAutoContext private constructor(
      * advertised as reusable while a Worker could still be writing to it. Idempotent.
      */
     override fun close() {
+        if (temporaryWorkRoot) {
+            TestContextLeakGuard.closed(workRootClaim.realPath)
+        }
+
         // Cancelling the active run settles its root node, which disposes the run-scoped resources (a browser
         // opened with closePolicy Auto/KeepOnFailure) via the engine.
         val joined = serverLogicController.closeAndJoin()

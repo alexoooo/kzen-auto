@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.context.runtime.boot
 
 import kotlinx.coroutines.runBlocking
+import org.junit.Rule
 import org.junit.Test
 import tech.kzen.auto.common.data.read.ReaderCapabilityIdentity
 import tech.kzen.auto.server.context.KzenAutoConfig
@@ -24,9 +25,13 @@ import kotlin.test.assertTrue
  * generated registration is served through the global mirror ahead of the reflective fallback.
  */
 class RuntimeContributionsBootTest {
+    @get:Rule
+    val temp = BootTemporaryFolder()
+
+
     @Test
     fun `two contexts share descriptors but hold distinct instances`() {
-        val root = Files.createTempDirectory("universe")
+        val root = temp.newFolder("universe").toPath()
         PluginUniverseBuilder(root).plugin("alpha") {
             jar("alpha.jar") {
                 javaClass("fixture.alpha.AlphaReader",
@@ -42,7 +47,7 @@ class RuntimeContributionsBootTest {
         KzenAutoRuntime.initialize(KzenAutoRuntimeConfig(root))
 
         val contexts = (1..2).map {
-            val moduleRoot = Files.createTempDirectory("module-$it")
+            val moduleRoot = temp.newFolder("module-$it").toPath()
             Files.createDirectories(moduleRoot.resolve("src/main/resources/notation/main"))
             KzenAutoContext.create(KzenAutoConfig(
                 jsModuleName = "kzen-auto-js", moduleRoot = moduleRoot, workRoot = moduleRoot.resolve("work")))

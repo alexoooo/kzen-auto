@@ -1,5 +1,6 @@
 package tech.kzen.auto.server.context.runtime.boot
 
+import org.junit.Rule
 import org.junit.Test
 import tech.kzen.auto.server.context.KzenAutoConfig
 import tech.kzen.auto.server.context.KzenAutoContext
@@ -29,12 +30,16 @@ import kotlin.test.assertTrue
  * keeps working after a second context; each context's availability view names missing services.
  */
 class AggregateExpressionBootTest {
+    @get:Rule
+    val temp = BootTemporaryFolder()
+
+
     private val shadowedClass = PluginScopeId::class.java
 
 
     @Test
     fun `expressions mirrors and availability over a two-folder universe`() {
-        val root = Files.createTempDirectory("universe")
+        val root = temp.newFolder("universe").toPath()
         val universe = PluginUniverseBuilder(root)
         universe.plugin("one") {
             jar("one.jar") {
@@ -164,7 +169,7 @@ class AggregateExpressionBootTest {
 
 
     private fun newContext(name: String): KzenAutoContext {
-        val moduleRoot = Files.createTempDirectory("module-$name")
+        val moduleRoot = temp.newFolder("module-$name").toPath()
         Files.createDirectories(moduleRoot.resolve("src/main/resources/notation/main"))
         return KzenAutoContext.create(KzenAutoConfig(
             jsModuleName = "kzen-auto-js", moduleRoot = moduleRoot, workRoot = moduleRoot.resolve("work")))

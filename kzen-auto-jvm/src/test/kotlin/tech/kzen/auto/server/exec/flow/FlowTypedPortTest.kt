@@ -136,8 +136,11 @@ class FlowTypedPortTest {
     }
 
 
+    // A test that runs twice reuses its context: tearDown closes only the last one assigned
     private fun engineFor(documentPathString: String, argument: Any?): RunEngine {
-        context = KzenAutoContext.forTest()
+        if (!::context.isInitialized) {
+            context = KzenAutoContext.forTest()
+        }
 
         val flowLocation = ObjectLocation(DocumentPath.parse(documentPathString), ObjectPath.parse("main"))
 
