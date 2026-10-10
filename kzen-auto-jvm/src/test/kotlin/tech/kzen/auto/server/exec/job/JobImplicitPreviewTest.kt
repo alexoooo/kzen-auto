@@ -6,6 +6,7 @@ import kotlinx.coroutines.withTimeout
 import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.util.AutoTestUtils
+import tech.kzen.auto.server.util.hangGuardMillis
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceQuery
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceSnapshot
@@ -82,7 +83,7 @@ class JobImplicitPreviewTest {
         controller.continueOrStart(runId, attempt)
         runBlocking {
             // Formula compilation runs inside the engine and can exceed the ordinary control wait
-            withTimeout(120_000L) {
+            withTimeout(hangGuardMillis) {
                 while (controller.status().active != null) delay(10L)
             }
         }

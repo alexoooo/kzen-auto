@@ -32,7 +32,8 @@ main.workers/Write:
   input: main.channels/entries
   output: main.channels/written
   directory: build/content-scope/nested/out
-  name: "${parent.name}/${path}${extension}"
+  folder: "${parent.name}"
+  name: "${path}${extension}"
 
 main.workers/collect:
   is: ResultSinkWorker

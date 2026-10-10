@@ -166,6 +166,31 @@ internal object JobDataValues {
         return boundaryNode(value.access, value.root)
     }
 
+    /**
+     * The text of the scalar at [path] (field names, outermost first) in the record [metadata], read as
+     * [callbackObject] reads it: empty for a null scalar; null when a field is absent or the end is not a scalar.
+     */
+    fun metadataText(metadata: DataValue?, vararg path: String): String? {
+        var current = metadata ?: return null
+        for (name in path) {
+            val record = current.type as? DataType.Record
+                ?: return null
+            val field = FieldId(name)
+            if (record.fields.none { it.id == field }) {
+                return null
+            }
+            val node = current.access.field(current.root, field)
+            if (current.access.state(node) != DataState.Present) {
+                return ""
+            }
+            current = DataValue(current.access, node)
+        }
+        if (current.type !is DataType.Scalar) {
+            return null
+        }
+        return callbackObject(current)?.toString() ?: ""
+    }
+
 
     /**
      * Literal/default snapshots have canonical scalar backing (integers are Long), while their contract keeps

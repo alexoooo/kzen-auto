@@ -14,6 +14,7 @@ import tech.kzen.auto.server.objects.job.worker.content.ContentTestHarness.Compa
 import tech.kzen.auto.server.objects.job.worker.content.ContentTestHarness.Companion.prepareCsvArchive
 import tech.kzen.auto.server.objects.job.worker.content.tar.TarGzEntryCursor
 import tech.kzen.auto.server.util.AutoTestUtils
+import tech.kzen.auto.server.util.hangGuardMillis
 import tech.kzen.lib.common.exec.engine.Outcome
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -55,7 +56,6 @@ class ExtractMigrationTest {
         private const val editInsideEntry = 3
         // Enough rows that the pause is requested well inside the entry, few enough that the Summary is quick
         private const val summaryRows = 100_000
-        private const val waitSeconds = 30L
         private const val selectionRefusal = "Source selection of Archive changed. Start a new run to apply it."
     }
 
@@ -244,7 +244,7 @@ class ExtractMigrationTest {
 
 
     private fun awaitSummaryCounting(engine: RunEngine): Long {
-        val deadlineNanos = System.nanoTime() + TimeUnit.SECONDS.toNanos(waitSeconds)
+        val deadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(hangGuardMillis)
         while (true) {
             val count = harness.workerProgress(engine, summaryWorker, "count") as? Long ?: 0L
             if (count > 0L) {
@@ -281,13 +281,13 @@ class ExtractMigrationTest {
         fun intercept(stream: OutputStream): OutputStream {
             if (seen.incrementAndGet() == atEntry) {
                 reached.countDown()
-                check(released.await(waitSeconds, TimeUnit.SECONDS)) { "gate never released" }
+                check(released.await(hangGuardMillis, TimeUnit.MILLISECONDS)) { "gate never released" }
             }
             return stream
         }
 
         fun awaitReached() {
-            check(reached.await(waitSeconds, TimeUnit.SECONDS)) { "writer never reached entry $atEntry" }
+            check(reached.await(hangGuardMillis, TimeUnit.MILLISECONDS)) { "writer never reached entry $atEntry" }
         }
 
         fun release() {

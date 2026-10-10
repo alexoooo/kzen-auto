@@ -7,6 +7,7 @@ import tech.kzen.auto.server.exec.LogicCompilerServices
 import tech.kzen.auto.server.exec.job.JobLogicCompiler
 import tech.kzen.auto.server.objects.job.worker.javafixture.CollectingSinkWorker
 import tech.kzen.auto.server.util.AutoTestUtils
+import tech.kzen.auto.server.util.hangGuardMillis
 import tech.kzen.lib.common.exec.engine.Outcome
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -30,7 +31,6 @@ import kotlin.test.assertTrue
 class RunOwnershipTeardownTest {
     private val documentPath = DocumentPath.parse("test/job/ownership/adopting-source-test.yaml")
     private val jobLocation = ObjectLocation(documentPath, ObjectPath.parse("main"))
-    private val latchTimeoutSeconds = 10L
 
     private lateinit var context: KzenAutoContext
 
@@ -72,7 +72,7 @@ class RunOwnershipTeardownTest {
         val outcome = try {
             runBlocking {
                 engine.resume()
-                assertTrue(adopted.await(latchTimeoutSeconds, TimeUnit.SECONDS))
+                assertTrue(adopted.await(hangGuardMillis, TimeUnit.MILLISECONDS))
                 engine.cancel()
                 // The source is parked in a blocking wait: nothing may close while it could still be using the resource
                 Thread.sleep(200)

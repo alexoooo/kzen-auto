@@ -2,7 +2,10 @@ package tech.kzen.auto.server.service.compile
 
 import org.jetbrains.kotlin.com.intellij.psi.PsiErrorElement
 import org.jetbrains.kotlin.com.intellij.psi.util.PsiTreeUtil
+import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtPsiFactory
+import org.jetbrains.kotlin.psi.KtStringTemplateEntryWithExpression
+import org.jetbrains.kotlin.psi.KtStringTemplateExpression
 
 
 /**
@@ -29,6 +32,10 @@ class KotlinSyntaxValidator {
         // parameter list and mask an error. The newlines keep the expression's own offsets un-shifted.
         private const val probePrefix = "fun probe() {\n"
         private const val probeSuffix = "\n}"
+
+        // A raw string template is parsed as one, assigned so it is an expression wherever it sits
+        private const val rawQuotes = "\"\"\""
+        private const val templatePrefix = "val probe = $rawQuotes"
     }
 
 
@@ -39,18 +46,50 @@ class KotlinSyntaxValidator {
      *  both render identically on a Worker's card.
      */
     fun validate(expression: String): String? {
-        val probeCode = probePrefix + expression + probeSuffix
-
-        // Parsing is stateless and frontend-independent (both frontends read the same PSI tree and its
-        // PsiErrorElements; nothing is resolved), so the one standing project serves every check
-        val probeFile = KtPsiFactory(KotlinApplicationEnvironment.project, markGenerated = false)
-            .createFile(probeFileName, probeCode)
+        val probeFile = parse(probePrefix + expression + probeSuffix)
 
         val error = PsiTreeUtil.findChildOfType(probeFile, PsiErrorElement::class.java)
             ?: return null
 
         return render(expression, error.errorDescription, error.textOffset - probePrefix.length)
     }
+
+
+    /**
+     * The parts of the Kotlin raw string template whose content is [body], as the parser reads them, whatever an
+     * inserted expression holds (a `}` or a `"` in its own strings). Fails on a syntax error, rendered against
+     * [body] as [validate] renders one, or when [body] holds `"""`, which would end the string.
+     */
+    fun rawStringTemplate(body: String): KotlinStringTemplate {
+        require(rawQuotes !in body) { "$rawQuotes would end the template" }
+        val probeFile = parse(templatePrefix + body + rawQuotes)
+
+        PsiTreeUtil.findChildOfType(probeFile, PsiErrorElement::class.java)?.let { error ->
+            throw IllegalArgumentException(
+                render(body, error.errorDescription, error.textOffset - templatePrefix.length))
+        }
+
+        val template = checkNotNull(PsiTreeUtil.findChildOfType(probeFile, KtStringTemplateExpression::class.java))
+        return KotlinStringTemplate(template.entries.map { entry ->
+            if (entry is KtStringTemplateEntryWithExpression) {
+                val expression = entry.expression
+                    ?: throw IllegalArgumentException(
+                        render(body, "Expecting an expression", entry.textOffset - templatePrefix.length))
+                KotlinStringTemplate.Part.Inserted(expression.text)
+            }
+            else {
+                KotlinStringTemplate.Part.Literal(entry.text)
+            }
+        })
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    // Parsing is stateless and frontend-independent (both frontends read the same PSI tree and its
+    // PsiErrorElements; nothing is resolved), so the one standing project serves every check
+    private fun parse(code: String): KtFile =
+        KtPsiFactory(KotlinApplicationEnvironment.project, markGenerated = false)
+            .createFile(probeFileName, code)
 
 
     //-----------------------------------------------------------------------------------------------------------------

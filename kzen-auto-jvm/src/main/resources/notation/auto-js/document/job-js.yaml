@@ -58,6 +58,22 @@ ParseWorkerDisplay:
   attributeViewManager: AttributeViewManager
 
 
+# Format: records and bytes encoded, in the header.
+FormatWorkerDisplay:
+  is: WorkerDisplay
+  class: tech.kzen.auto.client.objects.document.job.display.output.FormatWorkerDisplay$Wrapper
+  attributeEditorManager: AttributeEditorManager
+  attributeViewManager: AttributeViewManager
+
+
+# Write: the file being written and the bytes on disk in the header; under it, each edit that discarded open files.
+WriteWorkerDisplay:
+  is: WorkerDisplay
+  class: tech.kzen.auto.client.objects.document.job.display.output.WriteWorkerDisplay$Wrapper
+  attributeEditorManager: AttributeEditorManager
+  attributeViewManager: AttributeViewManager
+
+
 PreviewWorkerDisplay:
   is: WorkerDisplay
   class: tech.kzen.auto.client.objects.document.job.display.PreviewWorkerDisplay$Wrapper
@@ -138,13 +154,13 @@ WriterColumnsEditor:
   class: tech.kzen.auto.client.objects.document.job.edit.WriterColumnsEditor$Wrapper
 
 
-# File-name template editor: edits a `${...}` template over the input's values (the `name` of Write and Format) as
-# text plus an insert menu of the placeholders the upstream Worker's contract offers: its columns when
-# `meta.<attr>.columnPlaceholders` is true, its metadata (dotted into records such as `parent`), then the Worker's
-# own, described in `meta.<attr>.placeholders`. Selected via `editor: FileNameTemplateEditor`.
-FileNameTemplateEditor:
+# Kotlin field editor: edits a Kotlin expression over the input's values (Format's Group by), or the body of a Kotlin
+# string template when `meta.<attr>.template` is true (Write's Sub-folder and File name), as text plus an insert
+# menu of what the upstream Worker's contract offers: its columns, its metadata (dotted into records such as
+# `parent`), then the Worker's own, described in `meta.<attr>.placeholders`. Selected via `editor: KotlinFieldEditor`.
+KotlinFieldEditor:
   is: AttributeEditor
-  class: tech.kzen.auto.client.objects.document.job.edit.FileNameTemplateEditor$Wrapper
+  class: tech.kzen.auto.client.objects.document.job.edit.KotlinFieldEditor$Wrapper
 
 
 # Export-config editor: edits an ExportWriterWorker's `export` attribute (an OutputExportSpec — format /

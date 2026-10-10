@@ -2,6 +2,7 @@ package tech.kzen.auto.server.exec.job.ownership
 
 import org.junit.Test
 import tech.kzen.auto.plugin.api.data.Borrowed
+import tech.kzen.auto.server.util.hangGuardMillis
 import tech.kzen.lib.common.exec.data.type.FieldId
 import tech.kzen.lib.common.exec.data.value.DataAccessException
 import tech.kzen.lib.common.exec.data.value.DefaultDataAdapterRegistry
@@ -166,7 +167,7 @@ class RunOwnershipLedgerTest {
                 }
             }
             start.countDown()
-            assertTrue(done.await(10, TimeUnit.SECONDS))
+            assertTrue(done.await(hangGuardMillis, TimeUnit.MILLISECONDS))
         }
         finally {
             pool.shutdownNow()

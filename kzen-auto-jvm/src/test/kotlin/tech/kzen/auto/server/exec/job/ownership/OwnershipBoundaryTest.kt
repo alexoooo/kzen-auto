@@ -15,6 +15,7 @@ import tech.kzen.auto.server.objects.job.worker.PreviewWorker
 import tech.kzen.auto.server.objects.job.worker.preview.PreviewCapture
 import tech.kzen.auto.server.objects.job.worker.test.GatedCountingSinkWorker
 import tech.kzen.auto.server.util.AutoTestUtils
+import tech.kzen.auto.server.util.hangGuardMillis
 import tech.kzen.lib.common.exec.data.binding.BindingName
 import tech.kzen.lib.common.exec.data.binding.BindingState
 import tech.kzen.lib.common.exec.data.binding.DataBindings
@@ -50,9 +51,6 @@ import kotlin.test.assertTrue
  * the earlier sessions still close exactly once.
  */
 class OwnershipBoundaryTest {
-    private val runTimeoutMillis = 120_000L
-    private val latchTimeoutSeconds = 10L
-
     private lateinit var context: KzenAutoContext
 
 
@@ -83,7 +81,7 @@ class OwnershipBoundaryTest {
         val engine = newEngine(document("preview"))
         try {
             engine.resume()
-            assertIs<Outcome.Success>(runBlocking { withTimeout(runTimeoutMillis) { engine.await() } })
+            assertIs<Outcome.Success>(runBlocking { withTimeout(hangGuardMillis) { engine.await() } })
             assertTrue(OwnedSourceWorker.orders.all { it.closes == 1 })
             val progress = engine.snapshot().root.children.mapNotNull {
                 it.live[Address.of("\$job-progress")]?.get() as? Map<*, *>
@@ -105,7 +103,7 @@ class OwnershipBoundaryTest {
         val engine = newEngine(document("formula-preview"))
         try {
             engine.resume()
-            assertIs<Outcome.Success>(runBlocking { withTimeout(runTimeoutMillis) { engine.await() } })
+            assertIs<Outcome.Success>(runBlocking { withTimeout(hangGuardMillis) { engine.await() } })
             assertTrue(OwnedSourceWorker.orders.all { it.closes == 1 })
             val progress = engine.snapshot().root.children.mapNotNull {
                 it.live[Address.of("\$job-progress")]?.get() as? Map<*, *>
@@ -128,7 +126,7 @@ class OwnershipBoundaryTest {
         val engine = newEngine(document("formula-cancel"))
         try {
             engine.resume()
-            awaitCondition("Formula output queued", runTimeoutMillis) {
+            awaitCondition("Formula output queued") {
                 engine.snapshot().root.children.any {
                     val progress = it.live[Address.of("\$job-progress")]?.get() as? Map<*, *>
                     ((progress?.get("computed") as? Number)?.toLong() ?: 0L) >= 1L
@@ -136,7 +134,7 @@ class OwnershipBoundaryTest {
             }
             assertTrue(OwnedSourceWorker.orders.any { it.closes == 0 })
             engine.cancel()
-            assertIs<Outcome.Cancelled>(runBlocking { withTimeout(runTimeoutMillis) { engine.await() } })
+            assertIs<Outcome.Cancelled>(runBlocking { withTimeout(hangGuardMillis) { engine.await() } })
         }
         finally { engine.close() }
         assertTrue(OwnedSourceWorker.orders.isNotEmpty())
@@ -222,7 +220,7 @@ class OwnershipBoundaryTest {
             engine.awaitQuiescent()
             assertTrue(OwnedSourceWorker.resources.none { it.isClosed }, "held by the Sort / the channel across the cut")
             engine.migrate(editedLogic, paused = false)
-            val outcome = runBlocking { withTimeout(runTimeoutMillis) { engine.await() } }
+            val outcome = runBlocking { withTimeout(hangGuardMillis) { engine.await() } }
             assertIs<Outcome.Success>(outcome)
             val sortProgress = engine.snapshot().root.children
                 .map { it.stableId.value + ": " + it.status + " " + it.live[Address.of("\$job-progress")]?.get() }
@@ -256,7 +254,7 @@ class OwnershipBoundaryTest {
             assertEquals(2L, (holds[sortHolder] as Number).toLong())
             assertFalse(engine.snapshot().root.status.toString().contains("Failed"), "a warning, not a verdict")
             engine.cancel()
-            assertIs<Outcome.Cancelled>(runBlocking { withTimeout(runTimeoutMillis) { engine.await() } })
+            assertIs<Outcome.Cancelled>(runBlocking { withTimeout(hangGuardMillis) { engine.await() } })
         }
         finally {
             engine.close()
@@ -286,7 +284,7 @@ class OwnershipBoundaryTest {
         engine.snapshot().root.live[Address.of(JobOwnershipReport.addressMarker)]?.get() as? Map<*, *>
 
 
-    private fun awaitCondition(what: String, timeoutMillis: Long = latchTimeoutSeconds * 1000, condition: () -> Boolean) {
+    private fun awaitCondition(what: String, timeoutMillis: Long = hangGuardMillis, condition: () -> Boolean) {
         val deadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMillis)
         while (!condition()) {
             assertTrue(System.nanoTime() < deadlineNanos, "timed out waiting for $what")
@@ -309,7 +307,7 @@ class OwnershipBoundaryTest {
         val engine = newEngine(documentPath)
         return try {
             runBlocking {
-                withTimeout(runTimeoutMillis) {
+                withTimeout(hangGuardMillis) {
                     engine.resume()
                     engine.await()
                 }

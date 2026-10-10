@@ -1,5 +1,5 @@
-# JobReportBenchmark S4: bench-job-export.yaml with Format(CSV) -> Write in place of Export, byte-identical to the
-# Report export.
+# JobReportBenchmark S4 grouped: bench-job-format.yaml with Format grouped by `cat`, so its records go to four
+# interleaved outputs, one file each.
 main:
   is: Job
   results:
@@ -31,14 +31,14 @@ main.workers/formula:
 
 main.workers/format:
   is: Format
+  groupBy: cat
   columns:
     - "*"
     - meta.total
 
 main.workers/write:
   is: Write
-  directory: build/bench/exp
-  name: "job-format${extension}"
+  directory: build/bench/exp/grouped
   compression: none
   existing: replace
 

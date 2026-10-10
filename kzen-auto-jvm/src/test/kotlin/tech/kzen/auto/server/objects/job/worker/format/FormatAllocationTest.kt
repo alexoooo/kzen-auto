@@ -33,10 +33,10 @@ import kotlin.test.assertTrue
 
 
 /**
- * Format's steady state allocates nothing per record: a flat record (Parse's rows, including a superset's absent
- * field) is read in place, its name resolved into a reused builder (a column and a metadata field, repeating), and
- * encoded into a recycled chunk that keeps its value. Measured as this thread's allocated bytes, a chunk's cycle
- * through a channel (hold, release) included; the number is printed for the session record.
+ * Format's steady state allocates nothing per record when records are not grouped: a flat record (Parse's rows,
+ * including a superset's absent field) is read in place and encoded into a recycled chunk that keeps its value.
+ * Measured as this thread's allocated bytes, a chunk's cycle through a channel (hold, release) included; the number
+ * is printed for the session record.
  */
 class FormatAllocationTest {
     private val warmupRecords = 50_000
@@ -74,18 +74,21 @@ class FormatAllocationTest {
             flat("x", "1", "first"),
             flat("x", "say \"hi\"", "a,b"),
             projected("x", "3"))
-        val chunker = chunker("\${file}-\${group}\${extension}")
+        val chunker = chunker()
+        val out = ArrayList<DataValue>()
 
-        val first = chunker.chunk(records[0], 1)
-        assertEquals("group,value,extra\nx,1,first\n", copy(first))
-        recycle(first)
+        chunker.chunk(records[0], 1, out)
+        assertEquals("group,value,extra\nx,1,first\n", copy(out.single()))
+        recycle(out)
         for (i in 1 until warmupRecords) {
-            recycle(chunker.chunk(records[i % records.size], i + 1L))
+            chunker.chunk(records[i % records.size], i + 1L, out)
+            recycle(out)
         }
 
         val before = threads.currentThreadAllocatedBytes
         for (i in 0 until measuredRecords) {
-            recycle(chunker.chunk(records[i % records.size], i + 1L))
+            chunker.chunk(records[i % records.size], i + 1L, out)
+            recycle(out)
         }
         val allocated = threads.currentThreadAllocatedBytes - before
 
@@ -141,27 +144,29 @@ class FormatAllocationTest {
         val record = FlatFileRecord.of(listOf("x", "1", "first"))
         record.attachHeader(FlatRecordHeader(payload))
         val records = parents.map { DataValue(record, DataNode(0), it) }
-        val chunker = chunker("\${file}\${extension}")
+        val chunker = chunker()
+        val out = ArrayList<DataValue>()
 
         for (i in 0 until freshMetadataWarmup) {
-            recycle(chunker.chunk(records[i % records.size], i + 1L))
+            chunker.chunk(records[i % records.size], i + 1L, out)
+            recycle(out)
         }
 
         val before = threads.currentThreadAllocatedBytes
         for (i in 0 until freshMetadataRecords) {
-            recycle(chunker.chunk(records[i % records.size], i + 1L))
+            chunker.chunk(records[i % records.size], i + 1L, out)
+            recycle(out)
         }
         return (threads.currentThreadAllocatedBytes - before) / freshMetadataRecords
     }
 
 
-    private fun chunker(template: String): FormatChunker {
+    private fun chunker(): FormatChunker {
         val format = ConfiguredDelimitedTestFormats.csv()
         val columns = WriterColumns(WriterColumnSpec.payloadFields)
         val cells = FormatCells(columns, contract)
         val encoder = ConfiguredDelimitedWriterCapability.encoder(format, columns.header(contract) { it.render() })
-        val name = FormatName(template, ".csv", cells, contract)
-        return FormatChunker(encoder, cells, name, RecyclablePool { PooledBytes(it) }, Digest.empty)
+        return FormatChunker(encoder, cells, null, false, "csv", RecyclablePool { PooledBytes(it) }, Digest.empty)
     }
 
 
@@ -186,10 +191,13 @@ class FormatAllocationTest {
     }
 
 
-    // What a channel does with a sent chunk: holds it, then releases it once its consumer's callback returns
-    private fun recycle(chunk: DataValue) {
-        val slot = Recyclable.of(chunk)!!
-        slot.hold()
-        slot.release()
+    // What a channel does with each sent chunk: holds it, then releases it once its consumer's callback returns
+    private fun recycle(chunks: MutableList<DataValue>) {
+        for (chunk in chunks) {
+            val slot = Recyclable.of(chunk)!!
+            slot.hold()
+            slot.release()
+        }
+        chunks.clear()
     }
 }

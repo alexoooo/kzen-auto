@@ -46,6 +46,7 @@ import tech.kzen.auto.server.objects.job.worker.JobLaneContext
 import tech.kzen.auto.server.objects.job.worker.JobLaneSample
 import tech.kzen.auto.server.objects.job.worker.content.FileValues
 import tech.kzen.auto.server.objects.job.worker.definition.WorkerDefinitionResolution
+import tech.kzen.auto.server.util.hangGuardMillis
 import tech.kzen.lib.common.exec.data.binding.BindingSchema
 import tech.kzen.lib.common.exec.data.type.DataContract
 import tech.kzen.lib.common.exec.data.type.DataField
@@ -441,7 +442,7 @@ class ParseWorkerTest {
             outputChannel.newProducer())
         val job = launch { first.run(ParkingControl(parked, release)) }
 
-        withTimeout(5_000) {
+        withTimeout(hangGuardMillis) {
             while (outputChannel.blockedCount() == 0) {
                 yield()
             }

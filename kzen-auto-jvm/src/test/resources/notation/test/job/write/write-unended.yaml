@@ -1,5 +1,4 @@
-# WriteWorkerTest: rows Parsed and Formatted into chunks of Bytes, which Write puts in files (the grouping, the
-# names, the compression and the existing policy are edited per test).
+# WriteWorkerTest: as write-bytes.yaml, with the chunks that end an output dropped on their way to Write.
 main:
   is: Job
   results:
@@ -19,6 +18,9 @@ main.workers/parse:
 
 main.workers/format:
   is: Format
+
+main.workers/drop:
+  is: ChunkEndDropWorker
 
 main.workers/write:
   is: Write

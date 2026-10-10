@@ -6,7 +6,6 @@ import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.auto.server.objects.job.value.recycle.Recyclable
 import tech.kzen.auto.server.objects.job.worker.SinkWorker
 import tech.kzen.auto.server.objects.job.worker.content.Bytes
-import tech.kzen.auto.server.objects.job.worker.content.FileNameTemplate
 import tech.kzen.auto.server.objects.job.worker.content.FileValues
 import tech.kzen.auto.server.objects.job.worker.content.PooledBytes
 import tech.kzen.lib.common.exec.data.value.DataValue
@@ -21,7 +20,8 @@ import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Test sink copying each [Bytes] chunk inside its callback, as a writer must, and recording what it copied: the
- * chunk's `name`, its parent's `parent.name` (the file a record came from), and its bytes. A chunk that is not held
+ * chunk's `group` and `format.extension`, its parent's `parent.name` (the file a record came from), its bytes, and
+ * whether it ends its output. A chunk that is not held
  * while it is read, or is recycled while it is copied, is counted in [usedAfterRecycle]; [slots] collects the pooled
  * objects seen, so a test can bound how many the pool created.
  */
@@ -33,9 +33,11 @@ class BytesSinkWorker(
     SinkWorker(input, selfLocation)
 {
     class Chunk(
-        val name: String?,
+        val group: String?,
+        val extension: String?,
         val file: String?,
-        val bytes: ByteArray
+        val bytes: ByteArray,
+        val ends: Boolean
     ) {
         val text: String
             get() = bytes.decodeToString()
@@ -73,8 +75,10 @@ class BytesSinkWorker(
         }
         val metadata = element.metadata?.value
         chunks += Chunk(
-            FileNameTemplate.metadataText(metadata, FileValues.name),
-            FileNameTemplate.metadataText(metadata, "${FileValues.parent}.${FileValues.parent}.${FileValues.name}"),
-            copy.toByteArray())
+            JobDataValues.metadataText(metadata, ChunkMetadata.group),
+            JobDataValues.metadataText(metadata, ChunkMetadata.format, ChunkMetadata.extension),
+            JobDataValues.metadataText(metadata, FileValues.parent, FileValues.parent, FileValues.name),
+            copy.toByteArray(),
+            bytes.endsOutput())
     }
 }

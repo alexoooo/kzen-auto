@@ -2,26 +2,26 @@ package tech.kzen.auto.server.util
 
 import tech.kzen.auto.server.service.impl.ServerLogicController
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunState
+import java.util.concurrent.TimeUnit
 import kotlin.test.fail
 
 
 private const val pollIntervalMillis = 10L
-private const val pollAttempts = 500
 
 
 /**
  * A control verb returns as soon as the engine accepts it, and the run then advances on the engine's own
- * threads — so any assertion about a run's state has to poll for it. Fails the test after
- * [pollAttempts] × [pollIntervalMillis] (5 seconds) instead of hanging.
+ * threads — so any assertion about a run's state has to poll for it. Fails the test after [hangGuardMillis]
+ * instead of hanging.
  */
 fun awaitCondition(failureMessage: () -> String, condition: () -> Boolean) {
-    repeat(pollAttempts) {
-        if (condition()) {
-            return
+    val deadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(hangGuardMillis)
+    while (!condition()) {
+        if (System.nanoTime() >= deadlineNanos) {
+            fail(failureMessage())
         }
         Thread.sleep(pollIntervalMillis)
     }
-    fail(failureMessage())
 }
 
 

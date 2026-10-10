@@ -7,6 +7,7 @@ import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.exec.LogicCompilerServices
 import tech.kzen.auto.server.exec.job.JobLogicCompiler
 import tech.kzen.auto.server.util.AutoTestUtils
+import tech.kzen.auto.server.util.hangGuardMillis
 import tech.kzen.lib.common.exec.engine.Outcome
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -26,8 +27,6 @@ import kotlin.test.assertTrue
  * a direct fold over the same objects.
  */
 class PathProjectionRouteTest {
-    private val runTimeoutMillis = 120_000L
-
     private lateinit var context: KzenAutoContext
 
 
@@ -88,7 +87,7 @@ class PathProjectionRouteTest {
         val engine = RunEngine(jobLogic, context.objectStableMapper.objectStableId(jobLocation))
         return try {
             runBlocking {
-                withTimeout(runTimeoutMillis) {
+                withTimeout(hangGuardMillis) {
                     engine.resume()
                     engine.await()
                 }

@@ -307,7 +307,7 @@ class WriterColumnsEditor(
                     fontSize = 0.8.em
                     color = Color("rgba(0, 0, 0, 0.6)")
                 }
-                +(if (index == null) "every payload column (the default)" else "every payload column")
+                +"every payload column"
             }
         }
     }

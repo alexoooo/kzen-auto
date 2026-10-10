@@ -11,6 +11,7 @@ import tech.kzen.auto.server.objects.job.worker.javafixture.CollectingSinkWorker
 import tech.kzen.auto.server.objects.job.worker.javafixture.JavaCountingSource
 import tech.kzen.auto.server.objects.job.worker.test.GatedCountingSinkWorker
 import tech.kzen.auto.server.util.AutoTestUtils
+import tech.kzen.auto.server.util.hangGuardMillis
 import tech.kzen.lib.common.exec.engine.Outcome
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
 import tech.kzen.lib.common.model.attribute.AttributeName
@@ -41,8 +42,6 @@ import kotlin.test.assertTrue
  * list (delivered prefix skipped, its duplicates closed at once).
  */
 class OwnedSourceRouteTest {
-    private val runTimeoutMillis = 120_000L
-    private val latchTimeoutSeconds = 10L
     private val migrationTotal = 40
 
     private lateinit var context: KzenAutoContext
@@ -133,14 +132,14 @@ class OwnedSourceRouteTest {
         val outcome = try {
             runBlocking {
                 engine.resume()
-                assertTrue(parked.await(latchTimeoutSeconds, TimeUnit.SECONDS), "the sink parked in its callback")
+                assertTrue(parked.await(hangGuardMillis, TimeUnit.MILLISECONDS), "the sink parked in its callback")
                 // The source is now waiting on the permit only "a"'s close would return: cancel lands while the
                 // sink's callback is active and the source is inside its blocking pull
                 engine.cancel()
                 Thread.sleep(200)
                 assertTrue(OwnedSourceWorker.resources.none { it.isClosed }, "nothing closes under an active callback")
                 proceed.countDown()
-                withTimeout(runTimeoutMillis) { engine.await() }
+                withTimeout(hangGuardMillis) { engine.await() }
             }
         }
         finally {
@@ -185,7 +184,7 @@ class OwnedSourceRouteTest {
                 engine.pause()
                 engine.awaitQuiescent()
                 engine.cancel()
-                assertIs<Outcome.Cancelled>(withTimeout(runTimeoutMillis) { engine.await() })
+                assertIs<Outcome.Cancelled>(withTimeout(hangGuardMillis) { engine.await() })
             }
         }
         finally {
@@ -213,7 +212,7 @@ class OwnedSourceRouteTest {
             engine.awaitQuiescent()
             assertEquals(0L, GatedCountingSinkWorker.received.get())
             engine.migrate(editedLogic, paused = false)
-            val outcome = runBlocking { withTimeout(runTimeoutMillis) { engine.await() } }
+            val outcome = runBlocking { withTimeout(hangGuardMillis) { engine.await() } }
             assertIs<Outcome.Success>(outcome)
             assertEquals(migrationTotal.toLong(), GatedCountingSinkWorker.received.get(), "every element once")
         }
@@ -225,7 +224,7 @@ class OwnedSourceRouteTest {
 
     // The gated sink never drains: the source fills the buffer and parks mid-send — a stable state
     private fun awaitParkedSource() {
-        val deadlineNanos = System.nanoTime() + TimeUnit.SECONDS.toNanos(latchTimeoutSeconds)
+        val deadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(hangGuardMillis)
         while (ClosingStreams.evaluations.get() == 0) {
             assertTrue(System.nanoTime() < deadlineNanos, "the source never evaluated its stream")
             Thread.sleep(1)
@@ -243,7 +242,7 @@ class OwnedSourceRouteTest {
         val engine = newEngine(documentPath)
         return try {
             runBlocking {
-                withTimeout(runTimeoutMillis) {
+                withTimeout(hangGuardMillis) {
                     engine.resume()
                     engine.await()
                 }

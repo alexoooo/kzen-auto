@@ -173,11 +173,11 @@ class DelimitedRecordEncoderTest {
         for (case in cases) {
             val encoder = ConfiguredDelimitedWriterCapability.encoder(case.dialect.format(), names)
             val output = DataRecordBuffer()
-            encoder.encodeRecord(ListCells(listOf("kept", "kept")), output)
+            encoder.encodeRecord(encoder.openOutput(), ListCells(listOf("kept", "kept")), output)
             val before = output.bytes.copyOf(output.bytesLength)
 
             val failure = assertFailsWith<IllegalArgumentException>(case.toString()) {
-                encoder.encodeRecord(ListCells(case.row), output)
+                encoder.encodeRecord(encoder.openOutput(), ListCells(case.row), output)
             }
 
             assertTrue(failure.message!!.contains(case.expected), "$case: ${failure.message}")
@@ -214,7 +214,7 @@ class DelimitedRecordEncoderTest {
     fun aHeaderNameThatCannotBeWrittenNamesTheColumn() {
         val encoder = ConfiguredDelimitedWriterCapability.encoder(Dialect(escape = "none").format(), listOf("say \"x\""))
 
-        val failure = assertFailsWith<IllegalArgumentException> { encoder.encodeHeader(DataRecordBuffer()) }
+        val failure = assertFailsWith<IllegalArgumentException> { encoder.encodeHeader(encoder.openOutput(), DataRecordBuffer()) }
 
         assertTrue(failure.message!!.contains("the name of column 'say \"x\"'"), failure.message)
     }
@@ -235,9 +235,9 @@ class DelimitedRecordEncoderTest {
         val encoder = ConfiguredDelimitedWriterCapability.encoder(Dialect(bom = "require").format(), listOf("a"))
         val output = DataRecordBuffer()
 
-        encoder.encodeHeader(output)
-        encoder.encodeRecord(ListCells(listOf("x")), output)
-        encoder.encodeHeader(output)
+        encoder.encodeHeader(encoder.openOutput(), output)
+        encoder.encodeRecord(encoder.openOutput(), ListCells(listOf("x")), output)
+        encoder.encodeHeader(encoder.openOutput(), output)
 
         val bom = "﻿".toByteArray(Charsets.UTF_8)
         assertContentEquals(bom + "a\nx\n".toByteArray() + bom + "a\n".toByteArray(),
@@ -304,13 +304,13 @@ class DelimitedRecordEncoderTest {
             for (i in 0 until warmupRecords) {
                 output.clear()
                 cells.row = rowsWithoutNulls[i % rowsWithoutNulls.size]
-                encoder.encodeRecord(cells, output)
+                encoder.encodeRecord(encoder.openOutput(), cells, output)
             }
             val before = threads.currentThreadAllocatedBytes
             for (i in 0 until measuredRecords) {
                 output.clear()
                 cells.row = rowsWithoutNulls[i % rowsWithoutNulls.size]
-                encoder.encodeRecord(cells, output)
+                encoder.encodeRecord(encoder.openOutput(), cells, output)
             }
             val allocated = threads.currentThreadAllocatedBytes - before
 
@@ -395,9 +395,9 @@ class DelimitedRecordEncoderTest {
     private fun write(format: ConfiguredDelimitedFormat, names: List<String>, rows: List<List<String?>>): ByteArray {
         val encoder = ConfiguredDelimitedWriterCapability.encoder(format, names)
         val output = DataRecordBuffer()
-        encoder.encodeHeader(output)
+        encoder.encodeHeader(encoder.openOutput(), output)
         for (row in rows) {
-            encoder.encodeRecord(ListCells(row), output)
+            encoder.encodeRecord(encoder.openOutput(), ListCells(row), output)
         }
         return output.bytes.copyOf(output.bytesLength)
     }

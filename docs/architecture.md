@@ -153,28 +153,37 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > like `Content` an opaque native with no properties, read only inside the callback (`length()`,
 > `writeTo(OutputStream)`), but pooled — its `PooledBytes` slot is the `Recyclable` access and hands the same
 > `Bytes` out by identity — so a consumer copies it before its callback returns. `Format` (`worker/format/`)
-> encodes each record as one chunk with metadata `{name, parent}` (`parent` is the record's own metadata, so
-> `${parent.name}` is its file). The boundary rule: an output is a maximal run of consecutive chunks with the same
-> `name`, its first chunk carries the header, and no records means no chunks, so no output. The encoder is made
-> from the input lane's contract, so what the format cannot write is a validation error before Run; a record it
-> cannot write fails the run by its position.
-> **Write over Bytes (WR4).** `WriteWorker` picks its path from the input lane before Run: `Content` writes one
-> file per element, `Bytes` one file per run of equal `name`, and anything else (rows) is a validation error naming
-> `Format`. A run's destination comes from its first chunk through Write's own `name` template (`${extension}` is
-> the compression suffix, so `output.csv.gz`); `existing: skip` drops the whole run. Each chunk is appended to the
-> open temporary inside its callback; the run's end publishes by atomic move and emits one `Written`. A name that
-> returns after another, or two names reaching one file, fail the run by name, as does an empty name; failure or
-> cancellation deletes the temporary. **Live edit (WR8).** Both Workers carry the open output across a live edit:
-> `Format` its last name, so the output continues with no second header, and `Write` the open temporary and stream,
-> its ended outputs, counts and `${time}`. An edit is compatible unless it changes the output's bytes or where they
-> go. `Format`'s format, columns or input header (an encoding digest), or `Write`'s directory, name template or
-> compression, discards the open output, which is not published and starts again with the records after the edit.
-> A published file is always a whole output, and the rest of a cut output would have to reach the same file.
-> `Write` learns of `Format`'s edit in-band: the restarting chunk carries a `Bytes` restart mark. For its own
-> edit, `Write` keeps the header its output began with (each chunk marks its header bytes) and puts it ahead of the
-> next chunk. An edited `Format` name names only the records that follow, so a new name ends the output as any
-> change of name does. `existing` was judged when the output began and applies from the next one. The `Content`
-> path keeps no output open, so a live edit restarts it.
+> encodes each record as one chunk with metadata `{group, format, parent}`: `group` is the text of its Group by
+> expression (Kotlin, Filter's scope; `""` for every record when blank), `format` holds the format's extension,
+> `parent` the record's own metadata (so `${parent.name}` is its file). Outputs are groups (FG2): each group is one
+> output, framed once by the encoder (`RecordEncoder.openOutput()` gives the per-output state its header, records
+> and footer share), its first chunk carrying the header and its last the footer, marked `endsOutput` (possibly no
+> bytes, as CSV's). When outputs end is Format's `groupEnd`: `end` keeps every group open to the end of input, so
+> its records may arrive anywhere; `change` ends one as the next group starts, and a group that comes back fails
+> the run. No records means no chunks, so no output. The encoder and Group by are made from the input lane's
+> contract, so what the format cannot write, or a Group by that does not compile, is a validation error before
+> Run; a record it cannot write fails the run by its position.
+> **Write over Bytes (WR4, FG2).** `WriteWorker` picks its path from the input lane before Run: `Content` writes one
+> file per element, `Bytes` one file per group, any number open at once, and anything else (rows) is a validation
+> error naming `Format`. Where a file goes is `directory`, then Sub-folder (`folder`) and File name (`name`), each
+> the body of a Kotlin string template (`WritePathTemplate`) over the value's metadata, the Job's parameters and
+> Write's own `compression`, `extension` (`.csv.gz`) and `time`. The parts come from the Kotlin parser, and every
+> inserted value is made safe (no `/` or other path character, no Windows device name), so only a `/` typed in
+> Sub-folder makes folders. A blank File name is `${name}${extension}` for files and
+> `${group.ifEmpty { "output" }}${extension}` for bytes, shown in the field. An output's destination comes from its
+> first chunk; `existing: skip` drops the whole output. Each chunk is appended to its output's open temporary
+> inside its callback; its `endsOutput` chunk publishes it by atomic move and emits one `Written`. Two groups
+> reaching one file fail the run by name, as does a name left empty, `.` or `..`, or input that ends with an output
+> still open; failure or cancellation deletes the temporaries. **Live edit (WR8).** Both Workers carry the open
+> outputs across a live edit: `Format` its open groups, so each continues with no second header, and `Write` the
+> open temporaries and streams, the destinations taken, counts and `${time}`. An edit is compatible unless it
+> changes the outputs' bytes or where they go. `Format`'s format, columns, input header, Group by or `groupEnd` (an
+> encoding digest), or `Write`'s directory, Sub-folder, File name or compression, discards every open output, which
+> is not published and starts again with the records after the edit; Write's progress says so. A published file is
+> always a whole output. `Write` learns of `Format`'s edit in-band: a zero-byte chunk marked `discardsOutput` per
+> open output. For its own edit, `Write` keeps the header each output began with (each chunk marks its header
+> bytes) and puts it ahead of the group's next chunk. `existing` was judged when an output began and applies from
+> the next one. The `Content` path keeps no output open, so a live edit restarts it.
 > **Object-graph paths (E8).** `PathProjectionWorker` turns paths over the incoming contract (`executions[*].price`, `attributes[*].value.price`, an optional
 > alias) into a flat record of nullable scalars, unnesting `[*]` lists and maps (same list → one iteration,
 > different lists → cross product, null intermediate → null cells, empty list → no rows); the binding rules

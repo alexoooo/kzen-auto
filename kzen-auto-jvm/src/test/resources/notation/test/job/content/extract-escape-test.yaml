@@ -32,7 +32,7 @@ main.workers/Write:
   input: main.channels/entries
   output: main.channels/written
   directory: build/content-scope/escape/out
-  # The in-archive path keeps the member's folders, "../" included
+  # The in-archive path, "../" included
   name: "${path}${extension}"
 
 main.workers/collect:

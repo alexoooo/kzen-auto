@@ -5,6 +5,7 @@ import tech.kzen.auto.plugin.model.data.DataRecordBuffer
 import tech.kzen.auto.server.data.read.delimited.ConfiguredDelimitedReaderCapability
 import tech.kzen.auto.server.data.write.RecordCells
 import tech.kzen.auto.server.data.write.RecordEncoder
+import tech.kzen.auto.server.data.write.RecordOutputState
 import tech.kzen.lib.common.exec.data.type.DataType
 import java.nio.charset.Charset
 import java.nio.charset.CharsetEncoder
@@ -145,7 +146,11 @@ class DelimitedRecordEncoder(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    override fun encodeHeader(output: DataRecordBuffer) {
+    override fun openOutput(): RecordOutputState =
+        RecordOutputState.Stateless
+
+
+    override fun encodeHeader(state: RecordOutputState, output: DataRecordBuffer) {
         staging.charsLength = 0
         if (writesByteOrderMark) {
             reserve(1)
@@ -163,12 +168,16 @@ class DelimitedRecordEncoder(
     }
 
 
-    override fun encodeRecord(cells: RecordCells, output: DataRecordBuffer) {
+    override fun encodeRecord(state: RecordOutputState, cells: RecordCells, output: DataRecordBuffer) {
         require(cells.size == columns.size) { "$title: expected ${columns.size} cells but found ${cells.size}" }
         staging.charsLength = 0
         appendLine(cells, 0, false)
         encodeStaging(output, false)
     }
+
+
+    // Every line ends itself, so an output needs nothing after its last
+    override fun encodeFooter(state: RecordOutputState, output: DataRecordBuffer) {}
 
 
     //-----------------------------------------------------------------------------------------------------------------

@@ -42,7 +42,8 @@ main.workers/Write:
   output: main.channels/written
   directory: build/content-scope/time/out
   compression: none
-  name: "${time}/${name}"
+  folder: "$time"
+  name: "$name"
 
 main.workers/collect:
   is: ResultSinkWorker

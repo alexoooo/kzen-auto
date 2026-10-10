@@ -4,6 +4,8 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import tech.kzen.auto.common.objects.document.job.JobFieldConventions
+import tech.kzen.auto.common.objects.document.job.JobOutputConventions
 import tech.kzen.auto.server.data.design.DesignReadBudget
 import tech.kzen.auto.server.data.design.DesignReader
 import tech.kzen.auto.server.objects.job.JobValidator
@@ -11,9 +13,13 @@ import tech.kzen.auto.server.objects.job.worker.content.Bytes
 import tech.kzen.auto.server.objects.job.worker.content.ContentTestHarness
 import tech.kzen.auto.server.objects.job.worker.content.FileValues
 import tech.kzen.auto.server.util.AutoTestUtils
+import tech.kzen.lib.common.exec.ExecutionValue
+import tech.kzen.lib.common.exec.data.type.DataContract
 import tech.kzen.lib.common.exec.data.type.DataType
 import tech.kzen.lib.common.exec.data.type.DataTypePath
+import tech.kzen.lib.common.exec.data.type.ScalarKind
 import tech.kzen.lib.common.exec.engine.Outcome
+import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
@@ -30,9 +36,11 @@ import kotlin.test.assertTrue
 
 
 /**
- * `Format` (WR3, docs/plans/2026-10-07_format-and-write.md §4.4): each record becomes one pooled chunk of [Bytes]
- * named by the template, the chunk that starts an output carrying the header made from the input lane's columns;
- * what the format cannot write is refused before Run, and a record it cannot write fails the run by its position.
+ * `Format` (WR3, docs/plans/2026-10-07_format-and-write.md §4.4; FG2,
+ * docs/plans/2026-10-09_format-groups-and-write-naming.md §4.3): each record becomes one pooled chunk of [Bytes] in
+ * its group's output, the chunk that starts an output carrying the header made from the input lane's columns and a
+ * last chunk marking its end; what the format cannot write is refused before Run, and a record it cannot write fails
+ * the run by its position.
  */
 class FormatWorkerTest {
     //-----------------------------------------------------------------------------------------------------------------
@@ -64,6 +72,7 @@ class FormatWorkerTest {
         write("superset/a.csv", "name,value\nalpha,1\n")
         write("superset/b.csv", "name,value,extra\nbeta,2,x\n")
         write("column/c.csv", "group,value\nx,1\nx,2\ny,3\nx,4\n")
+        write("sorted/s.csv", "group,value\nx,1\nx,2\ny,3\n")
         write("empty/e.csv", "name,value\n")
         write("record/r.csv", "name,value\nalpha,1\n\"b,c\",2\n")
         write("recycle/big.csv", bigCsv())
@@ -86,37 +95,134 @@ class FormatWorkerTest {
         assertIs<DataType.Opaque>(contract.payload().structural)
         assertEquals(Bytes::class.qualifiedName, contract.nativeByPath[DataTypePath.root]?.className?.asString())
         val metadata = assertNotNull(contract.metadata).structural
-        assertEquals(listOf(FileValues.name, FileValues.parent), metadata.fields.map { it.id.name })
+        assertEquals(
+            listOf(ChunkMetadata.group, ChunkMetadata.format, FileValues.parent),
+            metadata.fields.map { it.id.name })
 
         assertIs<Outcome.Success>(harness.run(superset))
 
+        // Ungrouped, two files are one output: the header once, then the footer (empty for CSV), marked its end
         val chunks = BytesSinkWorker.chunks
-        assertEquals(listOf("output.csv", "output.csv"), chunks.map { it.name })
-        assertEquals(listOf("a.csv", "b.csv"), chunks.map { it.file })
-        assertEquals(listOf("name,value,extra\nalpha,1,\n", "beta,2,x\n"), chunks.map { it.text })
+        assertEquals(listOf("", "", ""), chunks.map { it.group })
+        assertEquals(listOf("csv", "csv", "csv"), chunks.map { it.extension })
+        assertEquals(listOf("a.csv", "b.csv", "b.csv"), chunks.map { it.file })
+        assertEquals(listOf("name,value,extra\nalpha,1,\n", "beta,2,x\n", ""), chunks.map { it.text })
+        assertEquals(listOf(false, false, true), chunks.map { it.ends })
     }
 
 
     @Test
     fun outputsFollowTheParentsName() {
-        val outcome = run(superset, edited(superset, "name", "\${parent.name}"))
+        val outcome = run(superset, edited(superset, "groupBy", "parent.name"))
 
         assertIs<Outcome.Success>(outcome)
         val chunks = BytesSinkWorker.chunks
-        assertEquals(listOf("a.csv", "b.csv"), chunks.map { it.name })
-        assertEquals(listOf("name,value,extra\nalpha,1,\n", "name,value,extra\nbeta,2,x\n"), chunks.map { it.text })
+        assertEquals(listOf("a.csv", "b.csv", "a.csv", "b.csv"), chunks.map { it.group })
+        assertEquals(
+            listOf("name,value,extra\nalpha,1,\n", "name,value,extra\nbeta,2,x\n", "", ""),
+            chunks.map { it.text })
+        assertEquals(listOf(false, false, true, true), chunks.map { it.ends })
     }
 
 
     @Test
-    fun outputsFollowAColumn() {
+    fun groupsInAnyOrderAreEachOneOutputEndedAtTheEnd() {
         assertIs<Outcome.Success>(harness.run(column))
 
         val chunks = BytesSinkWorker.chunks
-        assertEquals(listOf("x.csv", "x.csv", "y.csv", "x.csv"), chunks.map { it.name })
+        assertEquals(listOf("x", "x", "y", "x", "x", "y"), chunks.map { it.group })
         assertEquals(
-            listOf("group,value\nx,1\n", "x,2\n", "group,value\ny,3\n", "group,value\nx,4\n"),
+            listOf("group,value\nx,1\n", "x,2\n", "group,value\ny,3\n", "x,4\n", "", ""),
             chunks.map { it.text })
+        assertEquals(listOf(false, false, false, false, true, true), chunks.map { it.ends })
+    }
+
+
+    @Test
+    fun whenTheGroupChangesEachOutputEndsBeforeTheNextGroupsRecords() {
+        val onChange = edited(column, "groupEnd", FormatWorker.groupEndOnChange)
+        val sorted = edit(onChange, "files", "directory", root.resolve("sorted").toString())
+
+        assertIs<Outcome.Success>(run(column, sorted))
+
+        val chunks = BytesSinkWorker.chunks
+        assertEquals(listOf("x", "x", "x", "y", "y"), chunks.map { it.group })
+        assertEquals(listOf("group,value\nx,1\n", "x,2\n", "", "group,value\ny,3\n", ""), chunks.map { it.text })
+        assertEquals(listOf(false, false, true, false, true), chunks.map { it.ends })
+    }
+
+
+    @Test
+    fun whenTheGroupChangesAGroupThatComesBackFailsTheRun() {
+        val failed = assertIs<Outcome.Failed>(run(column, edited(column, "groupEnd", FormatWorker.groupEndOnChange)))
+
+        assertContains(failed.message,
+            "Record 4: Group 'x' came back after 'y'; " +
+                "set \"Write each file\" to \"At the end\", or sort by the group first")
+    }
+
+
+    @Test
+    fun aGroupByThatDoesNotCompileIsRefusedBeforeRun() {
+        val notation = edited(superset, "groupBy", "nosuch")
+
+        assertContains(assertNotNull(validate(superset, notation).errorMessage), "Group by: ")
+
+        assertIs<Outcome.Failed>(run(superset, notation))
+        assertEquals(0, BytesSinkWorker.chunks.size)
+    }
+
+
+    @Test
+    fun groupByGivesTheTypeOfItsValueBeforeRun() {
+        val typeKey = JobFieldConventions.typeKey(AttributeName("groupBy"))
+
+        val type = validate(superset, edited(superset, "groupBy", "parent.name")).details[typeKey]
+
+        val contract = DataContract.ofExecutionValue(ExecutionValue.of(assertNotNull(type)))
+        assertEquals(ScalarKind.Text, assertIs<DataType.Scalar>(contract.structural).kind)
+        assertNull(validate(superset).details[typeKey])
+    }
+
+
+    @Test
+    fun progressCountsRecordsAndBytes() {
+        val engine = harness.start(superset)
+        try {
+            assertIs<Outcome.Success>(runBlocking {
+                engine.resume()
+                engine.await()
+            })
+
+            val format = formatLocation(superset)
+            assertEquals(2L, harness.workerProgress(engine, format, JobOutputConventions.formatRecordsKey))
+            assertEquals(
+                BytesSinkWorker.chunks.sumOf { it.bytes.size }.toLong(),
+                harness.workerProgress(engine, format, JobOutputConventions.formatBytesKey))
+            assertNull(harness.workerProgress(engine, format, JobOutputConventions.formatGroupsOpenKey))
+        }
+        finally {
+            engine.close()
+        }
+    }
+
+
+    @Test
+    fun progressCountsGroupsWhenGrouped() {
+        val engine = harness.start(column)
+        try {
+            assertIs<Outcome.Success>(runBlocking {
+                engine.resume()
+                engine.await()
+            })
+
+            val format = formatLocation(column)
+            assertEquals(0L, harness.workerProgress(engine, format, JobOutputConventions.formatGroupsOpenKey))
+            assertEquals(2L, harness.workerProgress(engine, format, JobOutputConventions.formatGroupsDoneKey))
+        }
+        finally {
+            engine.close()
+        }
     }
 
 
@@ -166,7 +272,8 @@ class FormatWorkerTest {
     fun chunksAreRecycled() {
         assertIs<Outcome.Success>(harness.run(recycle))
 
-        assertEquals(recycledRows, BytesSinkWorker.chunks.size)
+        // A chunk per record, then the footer's
+        assertEquals(recycledRows + 1, BytesSinkWorker.chunks.size)
         assertEquals(bigCsv(), BytesSinkWorker.text())
         assertEquals(0, BytesSinkWorker.usedAfterRecycle.get())
         val created = BytesSinkWorker.slots.size
@@ -193,11 +300,19 @@ class FormatWorkerTest {
 
 
     private fun formatLocation(document: String): ObjectLocation =
-        ObjectLocation(DocumentPath.parse(document), ObjectPath.parse("main.workers/format"))
+        worker(document, "format")
+
+
+    private fun worker(document: String, name: String): ObjectLocation =
+        ObjectLocation(DocumentPath.parse(document), ObjectPath.parse("main.workers/$name"))
 
 
     private fun edited(document: String, attribute: String, value: String): GraphNotation =
         ContentTestHarness.edit(AutoTestUtils.readNotation(), formatLocation(document), attribute, value)
+
+
+    private fun edit(notation: GraphNotation, worker: String, attribute: String, value: String): GraphNotation =
+        ContentTestHarness.edit(notation, worker(column, worker), attribute, value)
 
 
     private fun validate(document: String, notation: GraphNotation = AutoTestUtils.readNotation()) =

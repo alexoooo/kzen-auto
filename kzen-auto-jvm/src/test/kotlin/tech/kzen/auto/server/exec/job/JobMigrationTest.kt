@@ -6,6 +6,7 @@ import tech.kzen.auto.server.exec.LogicCompilerServices
 import tech.kzen.auto.server.objects.job.worker.test.GatedCountingSinkWorker
 import tech.kzen.auto.server.objects.job.worker.test.GatedSourceWorker
 import tech.kzen.auto.server.util.AutoTestUtils
+import tech.kzen.auto.server.util.hangGuardMillis
 import tech.kzen.lib.common.exec.engine.Address
 import tech.kzen.lib.common.exec.engine.Outcome
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
@@ -153,7 +154,7 @@ class JobMigrationTest {
             // The gated sink (#1) never drains, so the source fills the buffer and parks mid-send at exactly
             // buffer + 1 sends — a stable state the engine quiesces at (no deadlock detection in this port).
             engine.resume()
-            val deadlineNanos = System.nanoTime() + TimeUnit.SECONDS.toNanos(30)
+            val deadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(hangGuardMillis)
             while (GatedSourceWorker.sendsStarted.get() < channelBuffer + 1) {
                 assertTrue(System.nanoTime() < deadlineNanos, "source never filled the channel buffer")
                 Thread.sleep(1)
@@ -203,7 +204,7 @@ class JobMigrationTest {
         val engine = RunEngine(baseLogic, context.objectStableMapper.objectStableId(readJobLocation))
         try {
             engine.resume()
-            val deadlineNanos = System.nanoTime() + TimeUnit.SECONDS.toNanos(30)
+            val deadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(hangGuardMillis)
             while (workerProgress(engine, readPartWorkerLocation, "emitted") == 0L) {
                 assertTrue(System.nanoTime() < deadlineNanos, "ReadPartWorker never reached a mid-unit checkpoint")
                 Thread.sleep(1)

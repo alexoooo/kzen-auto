@@ -12,6 +12,7 @@ import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.auto.server.objects.job.worker.PreviewWorker
 import tech.kzen.auto.server.objects.job.worker.preview.PreviewCapture
 import tech.kzen.auto.server.util.AutoTestUtils
+import tech.kzen.auto.server.util.hangGuardMillis
 import tech.kzen.lib.common.exec.data.binding.BindingName
 import tech.kzen.lib.common.exec.data.binding.BindingState
 import tech.kzen.lib.common.exec.data.binding.DataBindings
@@ -46,8 +47,6 @@ import kotlin.test.assertTrue
  * number of recycles; a read of a recycled record fails by name and is counted.
  */
 class RecyclableRouteTest {
-    private val runTimeoutMillis = 120_000L
-    private val latchTimeoutMillis = 30_000L
     private val settleMillis = 300L
 
     private lateinit var context: KzenAutoContext
@@ -129,7 +128,7 @@ class RecyclableRouteTest {
         val engine = newEngine(document("preview"))
         try {
             engine.resume()
-            assertIs<Outcome.Success>(runBlocking { withTimeout(runTimeoutMillis) { engine.await() } })
+            assertIs<Outcome.Success>(runBlocking { withTimeout(hangGuardMillis) { engine.await() } })
             val items = progressOf(engine, "previewItems")["previewItems"] as List<*>
             assertEquals(5, items.size)
             val first = PreviewNode.decode(items.first() as String)
@@ -212,7 +211,7 @@ class RecyclableRouteTest {
             // Two batches of eight buffered and one parked mid-flush behind the gated sink
             awaitStable("the source parked") { RecyclingSourceWorker.acquired.get() == 24 }
             engine.cancel()
-            assertIs<Outcome.Cancelled>(runBlocking { withTimeout(runTimeoutMillis) { engine.await() } })
+            assertIs<Outcome.Cancelled>(runBlocking { withTimeout(hangGuardMillis) { engine.await() } })
         }
         finally {
             engine.close()
@@ -302,7 +301,7 @@ class RecyclableRouteTest {
 
     // Waits for the condition, then checks it still holds after the pipeline had time to move on
     private fun awaitStable(what: String, condition: () -> Boolean) {
-        val deadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(latchTimeoutMillis)
+        val deadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(hangGuardMillis)
         while (!condition()) {
             assertTrue(System.nanoTime() < deadlineNanos, "timed out waiting for $what")
             Thread.sleep(10)
@@ -328,7 +327,7 @@ class RecyclableRouteTest {
             assertEquals(0, recycles(), "nothing was released before the cut")
             assertTrue(RecyclingSourceWorker.created.all { it.holds() == 1 }, "each in-flight record held once")
             engine.migrate(editedLogic, paused = false)
-            assertIs<Outcome.Success>(runBlocking { withTimeout(runTimeoutMillis) { engine.await() } })
+            assertIs<Outcome.Success>(runBlocking { withTimeout(hangGuardMillis) { engine.await() } })
         }
         finally {
             engine.close()
@@ -345,7 +344,7 @@ class RecyclableRouteTest {
         val engine = newEngine(document(route))
         return try {
             runBlocking {
-                withTimeout(runTimeoutMillis) {
+                withTimeout(hangGuardMillis) {
                     engine.resume()
                     engine.await()
                 }

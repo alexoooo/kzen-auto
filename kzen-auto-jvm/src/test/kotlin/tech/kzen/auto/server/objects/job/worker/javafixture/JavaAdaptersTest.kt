@@ -9,6 +9,7 @@ import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.exec.LogicCompilerServices
 import tech.kzen.auto.server.exec.job.JobLogicCompiler
 import tech.kzen.auto.server.util.AutoTestUtils
+import tech.kzen.auto.server.util.hangGuardMillis
 import tech.kzen.lib.common.exec.MapExecutionValue
 import tech.kzen.lib.common.exec.engine.Outcome
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
@@ -34,7 +35,6 @@ import kotlin.test.assertTrue
 class JavaAdaptersTest {
     private val documentPath = DocumentPath.parse("test/job/plugin/java-adapters-test.yaml")
     private val jobLocation = ObjectLocation(documentPath, ObjectPath.parse("main"))
-    private val latchTimeoutSeconds = 10L
 
     private lateinit var context: KzenAutoContext
 
@@ -98,7 +98,7 @@ class JavaAdaptersTest {
         val outcome = try {
             runBlocking {
                 engine.resume()
-                assertTrue(pulled.await(latchTimeoutSeconds, TimeUnit.SECONDS), "the first pull acquired its item")
+                assertTrue(pulled.await(hangGuardMillis, TimeUnit.MILLISECONDS), "the first pull acquired its item")
                 // The item exists inside the blocking body; cancel before the body returns to the coroutine
                 engine.cancel()
                 proceed.countDown()

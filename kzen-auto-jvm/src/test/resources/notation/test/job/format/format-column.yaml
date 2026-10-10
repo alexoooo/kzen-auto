@@ -1,4 +1,4 @@
-# FormatWorkerTest: records named by a column, so the outputs alternate.
+# FormatWorkerTest: records grouped by a column whose values come back, so the groups interleave.
 main:
   is: Job
 
@@ -12,7 +12,7 @@ main.workers/parse:
 
 main.workers/format:
   is: Format
-  name: "${group}${extension}"
+  groupBy: group
 
 main.workers/sink:
   is: BytesSinkWorker

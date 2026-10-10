@@ -18,7 +18,6 @@ DataReadWorkerConfig:
       is: String
       editor: SelectPartRoleEditor
       label: "Part to read"
-      description: "Only for sources whose files come in several named parts. Leave empty otherwise."
     schemaMode:
       is: String
       editor: SelectValuesEditor
@@ -644,10 +643,12 @@ Write:
   is: Worker
   title: "Write"
   class: tech.kzen.auto.server.objects.job.worker.content.WriteWorker
+  display: WriteWorkerDisplay
   input: ""
   output: ""
   directory: ""
-  name: "${name}${extension}"
+  folder: ""
+  name: ""
   compression: gzip
   existing: fail
   meta:
@@ -662,12 +663,23 @@ Write:
     directory:
       is: String
       editor: DirectoryEditor
+    folder:
+      is: String
+      editor: KotlinFieldEditor
+      template: true
+      label: "Sub-folder"
+      placeholders:
+        extension: "the file's extension, such as .csv.gz"
+        compression: "gz, or nothing"
+        time: "when the run started, as yyyyMMddTHHmmss"
     name:
       is: String
-      editor: FileNameTemplateEditor
-      description: "For files, ${name} is the file's name. For bytes from Format, it is the name Format gave them (such as output.csv), and the record's metadata is under parent: after Parse, ${parent.parent.name} is the source file."
+      editor: KotlinFieldEditor
+      template: true
+      label: "File name"
       placeholders:
-        extension: "the compression's suffix: .gz, or nothing"
+        extension: "the file's extension, such as .csv.gz"
+        compression: "gz, or nothing"
         time: "when the run started, as yyyyMMddTHHmmss"
     compression:
       is: String
@@ -697,19 +709,22 @@ Write:
       by: Self
 
 
-# Encodes each record in a writable `format` as one chunk of Bytes with metadata {name, parent}: `name` is the
-# template resolved per record (a column, a metadata path, or ${extension}), `parent` the record's metadata.
-# Consecutive records with the same name are one output, whose first chunk carries the header. The header comes
-# from the input lane's columns, so a format that cannot write them is refused before Run.
+# Encodes each record in a writable `format` as one chunk of Bytes with metadata {group, format, parent}: `group`
+# is the Kotlin expression `groupBy` over the record ("" when blank), `format` the format's `{extension}`, `parent`
+# the record's metadata. Each group is one output: its first chunk carries the header, and a last chunk its footer,
+# marked as the output's end, either at the end of input or, under `groupEnd: change`, when the next group starts.
+# The header comes from the input lane's columns, so a format that cannot write them is refused before Run.
 Format:
   abstract: true
   is: Worker
   title: "Format"
   class: tech.kzen.auto.server.objects.job.worker.format.FormatWorker
+  display: FormatWorkerDisplay
   input: ""
   output: ""
   format: auto-jvm/datasource/configured-delimited-format.yaml#ConfiguredCsv
-  name: "output${extension}"
+  groupBy: ""
+  groupEnd: end
   columns: []
   meta:
     input:
@@ -724,13 +739,21 @@ Format:
       is: ConfiguredRecordFormat
       editor: SelectDataFormatEditor
       writable: true
-    name:
+    groupBy:
       is: String
-      editor: FileNameTemplateEditor
-      description: "Consecutive records with the same name are one output: a fixed name makes one, ${parent.name} one per source file after Parse, a column one per value (sort by it first)."
-      columnPlaceholders: true
-      placeholders:
-        extension: "the format's extension, such as .csv"
+      editor: KotlinFieldEditor
+      label: "Group by"
+    groupEnd:
+      is: String
+      editor: SelectValuesEditor
+      label: "Write each file"
+      row: options
+      values:
+        end: "At the end"
+        change: "When the group changes"
+      details:
+        end: "Each group's file stays open until the input ends"
+        change: "For input sorted by the group: a group that comes back stops the run"
     columns:
       is: WriterColumnSpec
       editor: WriterColumnsEditor

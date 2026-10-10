@@ -7,6 +7,7 @@ import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.exec.LogicCompilerServices
 import tech.kzen.auto.server.exec.job.JobLogicCompiler
 import tech.kzen.auto.server.util.AutoTestUtils
+import tech.kzen.auto.server.util.hangGuardMillis
 import tech.kzen.lib.common.exec.engine.Outcome
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -28,8 +29,6 @@ import kotlin.test.assertTrue
  * closeable and its parent, on a failing run, and with an arena-backed source at channel capacities 0, 1 and 4.
  */
 class OwnedRouteTest {
-    private val runTimeoutMillis = 120_000L
-
     private lateinit var context: KzenAutoContext
 
 
@@ -151,7 +150,7 @@ class OwnedRouteTest {
         val engine = newEngine(job)
         return try {
             runBlocking {
-                withTimeout(runTimeoutMillis) {
+                withTimeout(hangGuardMillis) {
                     engine.resume()
                     engine.await()
                 }

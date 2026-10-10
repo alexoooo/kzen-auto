@@ -6,6 +6,7 @@ import tech.kzen.auto.server.util.AutoTestUtils
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.delay
+import tech.kzen.auto.server.util.hangGuardMillis
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceQuery
 import tech.kzen.lib.common.model.document.DocumentPath
@@ -40,8 +41,6 @@ class JobFormulaPreviewReproTest {
     private val previewLocation = ObjectLocation(documentPath, ObjectPath.parse("main.workers/Preview"))
 
     private lateinit var context: KzenAutoContext
-    // Formula compilation runs inside the engine and can exceed the ordinary five-second control wait.
-    private val compileAndRunTimeoutMillis = 120_000L
     private val pollIntervalMillis = 10L
 
 
@@ -64,7 +63,7 @@ class JobFormulaPreviewReproTest {
             ?: fail("Unable to start run")
         controller.continueOrStart(runId, attempt)
         runBlocking {
-            withTimeout(compileAndRunTimeoutMillis) {
+            withTimeout(hangGuardMillis) {
                 while (controller.status().active != null) delay(pollIntervalMillis)
             }
         }

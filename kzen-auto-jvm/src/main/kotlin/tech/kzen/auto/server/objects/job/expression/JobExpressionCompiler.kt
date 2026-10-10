@@ -6,6 +6,7 @@ import tech.kzen.auto.server.objects.job.value.ColumnProjection
 import tech.kzen.auto.server.objects.logic.ExpressionReturnTypeInference
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.auto.server.service.compile.KotlinCode
+import tech.kzen.auto.server.service.compile.KotlinStringTemplate
 import tech.kzen.auto.server.service.compile.KotlinSyntaxValidator
 import tech.kzen.lib.common.exec.data.binding.BindingDefinition
 import tech.kzen.lib.common.exec.data.binding.BindingSchema
@@ -72,6 +73,11 @@ class JobExpressionCompiler(
 
     fun validateSyntax(expression: String): String? =
         kotlinSyntaxValidator.validate(expression)
+
+
+    /** The parts of a Kotlin raw string template, for a field that holds one ([KotlinSyntaxValidator.rawStringTemplate]). */
+    fun rawStringTemplate(body: String): KotlinStringTemplate =
+        kotlinSyntaxValidator.rawStringTemplate(body)
 
 
     fun compile(

@@ -8,6 +8,7 @@ import tech.kzen.auto.server.objects.job.worker.content.ContentTestHarness.Compa
 import tech.kzen.auto.server.objects.job.worker.content.ContentTestHarness.Companion.jobLocation
 import tech.kzen.auto.server.objects.job.worker.content.ContentTestHarness.Companion.prepareCsvFile
 import tech.kzen.auto.server.util.AutoTestUtils
+import tech.kzen.auto.server.util.hangGuardMillis
 import tech.kzen.lib.common.exec.engine.Outcome
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -37,7 +38,6 @@ class FileSourceMigrationTest {
     companion object {
         private const val document = "test/job/content/file-migrate-test.yaml"
         private const val rows = 100_000
-        private const val waitSeconds = 30L
         private const val selectionRefusal = "Source selection of read changed. Start a new run to apply it."
     }
 
@@ -101,7 +101,7 @@ class FileSourceMigrationTest {
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun awaitSummaryCounting(engine: RunEngine): Long {
-        val deadlineNanos = System.nanoTime() + TimeUnit.SECONDS.toNanos(waitSeconds)
+        val deadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(hangGuardMillis)
         while (true) {
             val count = harness.workerProgress(engine, summary, "count") as? Long ?: 0L
             if (count > 0L) {

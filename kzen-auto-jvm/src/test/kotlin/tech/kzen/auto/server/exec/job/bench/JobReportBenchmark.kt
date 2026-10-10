@@ -56,6 +56,7 @@ object JobReportBenchmark {
     private val headerlessAggregateJob = DocumentPath.parse("test/bench-job-aggregate-headerless.yaml")
     private val exportJob = DocumentPath.parse("test/bench-job-export.yaml")
     private val formatJob = DocumentPath.parse("test/bench-job-format.yaml")
+    private val groupedFormatJob = DocumentPath.parse("test/bench-job-format-grouped.yaml")
     private val aggregateReport = DocumentPath.parse("test/bench-report-aggregate.yaml")
     private val exportReport = DocumentPath.parse("test/bench-report-export.yaml")
 
@@ -76,6 +77,8 @@ object JobReportBenchmark {
     private val exportInput = Path.of("build/bench/exp/input.csv")
     private val jobExportOutput = Path.of("build/bench/exp/job-export.csv")
     private val jobFormatOutput = Path.of("build/bench/exp/job-format.csv")
+    private val groupedFormatOutputs = listOf("cat0", "cat2", "cat4", "cat6")
+        .map { Path.of("build/bench/exp/grouped/$it.csv") }
     private val reportExportOutput = Path.of("build/bench/exp/report-export.csv")
 
     @Volatile
@@ -215,8 +218,14 @@ object JobReportBenchmark {
         BenchmarkData.writeWide(rows, exportInput)
         val results = listOf(
             benchmark(Scenario.S4, "job-format-write", rows, runs) { prepareJob(formatJob) },
+            benchmark(Scenario.S4, "job-format-grouped", rows, runs) { prepareJob(groupedFormatJob) },
             benchmark(Scenario.S4, "report", rows, runs) { prepareReport(exportReport) })
         assertEquals(-1L, Files.mismatch(jobFormatOutput, reportExportOutput))
+        // The same records in four files, each with its own header
+        val headerBytes = Files.newBufferedReader(jobFormatOutput).use { it.readLine() }.length + 1L
+        assertEquals(
+            Files.size(jobFormatOutput) + (groupedFormatOutputs.size - 1) * headerBytes,
+            groupedFormatOutputs.sumOf { Files.size(it) })
         return results
     }
 

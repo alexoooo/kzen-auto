@@ -14,6 +14,7 @@ import tech.kzen.auto.server.objects.job.worker.content.ContentTestHarness.Compa
 import tech.kzen.auto.server.objects.job.worker.content.ContentTestHarness.Companion.listFiles
 import tech.kzen.auto.server.objects.job.worker.content.ContentTestHarness.Companion.prepare
 import tech.kzen.auto.server.objects.job.worker.content.tar.TarGzEntryCursor
+import tech.kzen.auto.server.util.hangGuardMillis
 import tech.kzen.lib.common.exec.engine.Address
 import tech.kzen.lib.common.exec.engine.Outcome
 import java.io.ByteArrayOutputStream
@@ -156,16 +157,17 @@ class ExtractWorkerTest {
 
 
     @Test
-    fun nameInterpolatesParentName() {
+    fun folderInterpolatesParentName() {
         val directory = prepare("nested", standardEntries)
         val out = directory.resolve("out")
 
         val outcome = harness.run("test/job/content/extract-nested-test.yaml")
 
         assertIs<Outcome.Success>(outcome)
+        // An inserted value never makes a folder: the member's path is one file name, its '/' replaced
         assertEquals(
             setOf("input.tar.gz/foo.txt.gz", "input.tar.gz/bar.csv.gz",
-                "input.tar.gz/sub/data.bin.gz", "input.tar.gz/baz.txt.gz"),
+                "input.tar.gz/sub_data.bin.gz", "input.tar.gz/baz.txt.gz"),
             listFiles(out))
     }
 
@@ -287,7 +289,7 @@ class ExtractWorkerTest {
             runBlocking {
                 val terminal = async { engine.await() }
                 engine.resume()
-                assertTrue(BlockingWorker.entered.await(30, TimeUnit.SECONDS), "worker never entered the entry")
+                assertTrue(BlockingWorker.entered.await(hangGuardMillis, TimeUnit.MILLISECONDS), "worker never entered the entry")
                 engine.cancel()
                 terminal.await()
             }
@@ -332,7 +334,7 @@ class ExtractWorkerTest {
             runBlocking {
                 val terminal = async { engine.await() }
                 engine.resume()
-                assertTrue(entered.await(30, TimeUnit.SECONDS), "Write never started copying")
+                assertTrue(entered.await(hangGuardMillis, TimeUnit.MILLISECONDS), "Write never started copying")
                 engine.cancel()
 
                 // Extract's own teardown runs right after the cancel; the archive must survive it
@@ -413,7 +415,7 @@ class ExtractWorkerTest {
         var interrupted = false
         while (true) {
             try {
-                if (latch.await(30, TimeUnit.SECONDS)) break
+                if (latch.await(hangGuardMillis, TimeUnit.MILLISECONDS)) break
                 throw AssertionError("test never released the write")
             }
             catch (_: InterruptedException) {
@@ -445,15 +447,14 @@ class ExtractWorkerTest {
 
     //-----------------------------------------------------------------------------------------------------------------
     @Test
-    fun escapingEntryNameFailsByNameAndWritesNothing() {
+    fun anEntryPathThatClimbsIsWrittenInsideTheDirectory() {
         val directory = prepare("escape", listOf("ok.txt" to fooBytes, "../escape.txt" to fooBytes))
         val out = directory.resolve("out")
 
         val outcome = harness.run("test/job/content/extract-escape-test.yaml")
 
-        val failed = assertIs<Outcome.Failed>(outcome)
-        assertContains(failed.message, "../escape.txt")
-        assertEquals(setOf("ok.txt.gz"), listFiles(out))
+        assertIs<Outcome.Success>(outcome)
+        assertEquals(setOf("ok.txt.gz", ".._escape.txt.gz"), listFiles(out))
         assertFalse(Files.exists(directory.resolve("escape.txt.gz")))
         assertFalse(Files.exists(directory.resolve("escape.txt")))
     }

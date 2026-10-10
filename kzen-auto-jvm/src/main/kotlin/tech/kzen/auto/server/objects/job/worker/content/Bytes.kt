@@ -12,15 +12,19 @@ import java.io.OutputStream
  * It is pooled ([PooledBytes]): once the callback returns, the same object may already hold the next chunk. A
  * consumer that needs the bytes later copies them (with [writeTo]) before its callback returns.
  *
- * The chunk that starts an output tells its consumer two things: which of its bytes are the output's header
- * ([headerLength], [copyHeader]), so the consumer can start that output again itself, and whether its producer gave
- * up the output it had open ([restartsOutput]: a live edit changed how it encodes), so what the consumer holds of
- * that output must not be published.
+ * Which output a chunk belongs to is in its metadata; how that output starts and ends is marked here, by its
+ * producer:
+ * - the chunk that starts an output says which of its bytes are the output's header ([headerLength],
+ *   [copyHeader]), so the consumer can start that output again itself;
+ * - the chunk that ends an output holds its footer, possibly no bytes ([endsOutput]): the output is complete;
+ * - a chunk of no bytes may instead discard the output ([discardsOutput]: a live edit changed how its producer
+ *   encodes), so what the consumer holds of it must not be published.
  */
 class Bytes internal constructor() {
     private val buffer = DataRecordBuffer()
     private var headerLength = 0
-    private var restartsOutput = false
+    private var discardsOutput = false
+    private var endsOutput = false
 
 
     fun length(): Int =
@@ -37,10 +41,11 @@ class Bytes internal constructor() {
         buffer
 
 
-    /** Set by the producer for every chunk it fills; zero and false for a chunk that continues an output. */
-    internal fun mark(headerLength: Int, restartsOutput: Boolean) {
+    /** Set by the producer for every chunk it fills; zero and false for a chunk inside an output. */
+    internal fun mark(headerLength: Int, discardsOutput: Boolean, endsOutput: Boolean) {
         this.headerLength = headerLength
-        this.restartsOutput = restartsOutput
+        this.discardsOutput = discardsOutput
+        this.endsOutput = endsOutput
     }
 
 
@@ -48,11 +53,15 @@ class Bytes internal constructor() {
         headerLength
 
 
-    internal fun restartsOutput(): Boolean =
-        restartsOutput
+    internal fun discardsOutput(): Boolean =
+        discardsOutput
 
 
-    /** A copy of the header this chunk begins with; empty for a chunk that continues an output. */
+    internal fun endsOutput(): Boolean =
+        endsOutput
+
+
+    /** A copy of the header this chunk begins with; empty for a chunk inside an output. */
     internal fun copyHeader(): ByteArray =
         buffer.bytes.copyOf(headerLength)
 }

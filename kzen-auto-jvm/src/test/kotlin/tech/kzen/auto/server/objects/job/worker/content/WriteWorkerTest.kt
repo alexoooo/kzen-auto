@@ -5,6 +5,8 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import tech.kzen.auto.common.objects.document.job.JobFieldConventions
+import tech.kzen.auto.common.objects.document.job.JobOutputConventions
 import tech.kzen.auto.server.data.design.DesignReadBudget
 import tech.kzen.auto.server.data.design.DesignReader
 import tech.kzen.auto.server.objects.job.JobValidator
@@ -13,7 +15,9 @@ import tech.kzen.auto.server.objects.job.worker.content.ContentTestHarness.Compa
 import tech.kzen.auto.server.objects.job.worker.content.ContentTestHarness.Companion.jobLocation
 import tech.kzen.auto.server.objects.job.worker.content.ContentTestHarness.Companion.listFiles
 import tech.kzen.auto.server.util.AutoTestUtils
+import tech.kzen.auto.server.util.hangGuardMillis
 import tech.kzen.lib.common.exec.engine.Outcome
+import tech.kzen.lib.common.model.attribute.AttributeName
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
@@ -21,6 +25,7 @@ import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
 import tech.kzen.lib.platform.collect.toPersistentList
+import tech.kzen.lib.server.exec.engine.RunEngine
 import java.io.FilterOutputStream
 import java.io.IOException
 import java.io.OutputStream
@@ -41,11 +46,13 @@ import kotlin.test.assertTrue
 
 
 /**
- * `Write` over chunks of `Bytes` (WR4, docs/plans/2026-10-07_format-and-write.md §4.5): each maximal run of chunks
- * with the same name is one file, published by atomic move with one `Written`; a name that returns is refused; a
- * failure or cancellation leaves no file and no temporary; and rows reach `Write` only through `Format`. A live
- * edit (WR8) keeps the open output, or, when it changes how the output is encoded or placed, discards it and starts
- * it again; either way the output is well-formed.
+ * `Write` over chunks of `Bytes` (WR4, docs/plans/2026-10-07_format-and-write.md §4.5; FG2,
+ * docs/plans/2026-10-09_format-groups-and-write-naming.md §4.1, §4.4): each group's chunks are one file, any number
+ * open at once, published by atomic move with one `Written` when its producer marks its end; two groups written to
+ * one file are refused; a failure or cancellation leaves no file and no temporary; and rows reach `Write` only
+ * through `Format`. Where a file goes is its sub-folder and name templates, every inserted value made safe. A live
+ * edit (WR8) keeps the open outputs, or, when it changes how they are encoded or placed, discards each and starts it
+ * again; either way every output is well-formed.
  */
 class WriteWorkerTest {
     //-----------------------------------------------------------------------------------------------------------------
@@ -54,6 +61,7 @@ class WriteWorkerTest {
         private const val stampDocument = "test/job/write/write-stamp.yaml"
         private const val rowsDocument = "test/job/write/write-rows.yaml"
         private const val readDocument = "test/job/write/write-read.yaml"
+        private const val unendedDocument = "test/job/write/write-unended.yaml"
 
         private val root = Path.of("build/write-worker")
         private val inDirectory = root.resolve("in")
@@ -61,12 +69,14 @@ class WriteWorkerTest {
 
         private const val manyRows = 20_000
         private const val gateAtWrite = 100
-        private const val waitSeconds = 30L
+        // Past the first flush of Write's 128 KiB stream buffer, so bytes have reached the file
+        private const val gateAfterFirstFlush = 15_000
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     private val harness = ContentTestHarness()
+    private val write = worker(bytesDocument, "write")
 
 
     @Before
@@ -107,7 +117,7 @@ class WriteWorkerTest {
         writeInput("a.csv", "name,value\nalpha,1\nbeta,2\n")
         writeInput("b.csv", "name,value\ngamma,3\n")
 
-        val outcome = run(bytesDocument, edited(bytesDocument, "format", "name", "\${parent.name}"))
+        val outcome = run(bytesDocument, perSource())
 
         val written = collected(outcome).map { it as Written }
         assertEquals(listOf("a.csv", "b.csv"), written.map { it.name })
@@ -125,37 +135,64 @@ class WriteWorkerTest {
 
         val outcome = run(bytesDocument, edited(bytesDocument, "write", "compression", WriteWorker.compressionGzip))
 
-        assertEquals(listOf("output.csv"), writtenNames(outcome))
+        assertEquals(listOf("output.csv.gz"), writtenNames(outcome))
         assertEquals(setOf("output.csv.gz"), listFiles(outDirectory))
         assertEquals("name,value\nalpha,1\ngamma,3\n", inflate(outDirectory.resolve("output.csv.gz")))
     }
 
 
     @Test
-    fun aNameThatReturnsIsRefusedByName() {
+    fun groupsInAnyOrderAreEachOneWholeFile() {
         writeInput("c.csv", "group,value\nx,1\nx,2\ny,3\nx,4\n")
 
-        val outcome = run(bytesDocument, edited(bytesDocument, "format", "name", "\${group}\${extension}"))
+        val outcome = run(bytesDocument, edited(bytesDocument, "format", "groupBy", "group"))
 
-        val failed = assertIs<Outcome.Failed>(outcome)
-        assertContains(failed.message, "'x.csv' was already written in this run; sort by what the name is built from first")
-        // The outputs that ended before the refusal are published; nothing else, no temporary
+        // Each named by the default for bytes, its group then the extension
+        assertEquals(listOf("x.csv", "y.csv"), writtenNames(outcome))
         assertEquals(setOf("x.csv", "y.csv"), listFiles(outDirectory))
-        assertEquals("group,value\nx,1\nx,2\n", Files.readString(outDirectory.resolve("x.csv")))
+        assertEquals("group,value\nx,1\nx,2\nx,4\n", Files.readString(outDirectory.resolve("x.csv")))
+        assertEquals("group,value\ny,3\n", Files.readString(outDirectory.resolve("y.csv")))
     }
 
 
     @Test
-    fun twoNamesWrittenToOneFileAreRefused() {
-        writeSources()
+    fun whenTheGroupChangesEachFileIsWholeAsItEnds() {
+        writeInput("c.csv", "group,value\nx,1\nx,2\ny,3\n")
 
-        val named = edited(bytesDocument, "format", "name", "\${parent.name}")
-        val outcome = run(bytesDocument, edit(named, worker(bytesDocument, "write"), "name", "merged.csv"))
+        val outcome = run(bytesDocument, onChange("group"))
+
+        assertEquals(listOf("x.csv", "y.csv"), writtenNames(outcome))
+        assertEquals("group,value\nx,1\nx,2\n", Files.readString(outDirectory.resolve("x.csv")))
+        assertEquals("group,value\ny,3\n", Files.readString(outDirectory.resolve("y.csv")))
+    }
+
+
+    @Test
+    fun aGroupThatComesBackWhenTheGroupChangesFailsTheRun() {
+        writeInput("c.csv", "group,value\nx,1\nx,2\ny,3\nx,4\n")
+
+        val outcome = run(bytesDocument, onChange("group"))
 
         val failed = assertIs<Outcome.Failed>(outcome)
-        assertContains(failed.message, "'b.csv' would replace 'a.csv', written to the same file in this run")
-        assertEquals(setOf("merged.csv"), listFiles(outDirectory))
-        assertEquals("name,value\nalpha,1\n", Files.readString(outDirectory.resolve("merged.csv")))
+        assertContains(failed.message, "Group 'x' came back after 'y'")
+        // The run stops as it fails: x's file may have been published by then, whole; y's never is, nor a temporary
+        val files = listFiles(outDirectory)
+        assertTrue(files.isEmpty() || files == setOf("x.csv"), "$files")
+        if (files.isNotEmpty()) {
+            assertEquals("group,value\nx,1\nx,2\n", Files.readString(outDirectory.resolve("x.csv")))
+        }
+    }
+
+
+    @Test
+    fun twoGroupsWrittenToOneFileAreRefused() {
+        writeSources()
+
+        val outcome = run(bytesDocument, edit(perSource(), write, "name", "merged.csv"))
+
+        val failed = assertIs<Outcome.Failed>(outcome)
+        assertContains(failed.message, "'merged.csv' is written by group 'a.csv' and again by group 'b.csv'")
+        assertEquals(emptySet(), listFiles(outDirectory))
     }
 
 
@@ -163,12 +200,117 @@ class WriteWorkerTest {
     fun anEmptyNameIsRefused() {
         writeInput("c.csv", "group,value\n,1\n")
 
-        // With gzip, an empty name would otherwise publish the hidden file ".gz"
-        val notation = edited(bytesDocument, "format", "name", "\${group}")
-        val outcome = run(bytesDocument, edit(notation, worker(bytesDocument, "write"), "compression", WriteWorker.compressionGzip))
+        val grouped = edited(bytesDocument, "format", "groupBy", "group")
+        val outcome = run(bytesDocument, edit(grouped, write, "name", "\$group"))
 
         val failed = assertIs<Outcome.Failed>(outcome)
-        assertContains(failed.message, "Write cannot write bytes with an empty name")
+        assertContains(failed.message, "File name resolved to ''; '' cannot name a file")
+        assertEquals(emptySet(), listFiles(outDirectory))
+    }
+
+
+    @Test
+    fun anOutputWhoseEndNeverComesFailsTheRunByName() {
+        writeSources()
+
+        val outcome = harness.run(unendedDocument)
+
+        val failed = assertIs<Outcome.Failed>(outcome)
+        assertContains(failed.message,
+            "Input ended before the end of 'output.csv'; its producer marks the end of each output")
+        assertEquals(emptySet(), listFiles(outDirectory))
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    @Test
+    fun insertedValuesAreMadeSafeInAFolderAndAName() {
+        writeInput("c.csv", "group,value\n\"a/b:c. \",1\nCON,2\nnul.csv,3\n")
+
+        val grouped = edited(bytesDocument, "format", "groupBy", "group")
+        val outcome = run(bytesDocument, edit(edit(grouped, write, "folder", "\$group"), write, "name", "\$group"))
+
+        assertEquals(listOf("a_b_c/a_b_c", "_CON/_CON", "_nul.csv/_nul.csv"), writtenNames(outcome))
+        assertEquals(setOf("a_b_c/a_b_c", "_CON/_CON", "_nul.csv/_nul.csv"), listFiles(outDirectory))
+    }
+
+
+    @Test
+    fun aSlashTypedInTheSubFolderMakesFolders() {
+        writeSources()
+
+        val notation = edited(bytesDocument, "write", "folder", "x/y")
+        assertNull(validate(bytesDocument, notation).errorMessage)
+
+        assertEquals(listOf("x/y/output.csv"), writtenNames(run(bytesDocument, notation)))
+        assertEquals(setOf("x/y/output.csv"), listFiles(outDirectory))
+    }
+
+
+    @Test
+    fun aSlashTypedInTheNameIsRefusedBeforeRun() {
+        writeSources()
+
+        val notation = edited(bytesDocument, "write", "name", "x/output.csv")
+
+        assertEquals(
+            "File name: '/' would make a folder; put folders in Sub-folder",
+            validate(bytesDocument, notation).errorMessage)
+        assertIs<Outcome.Failed>(run(bytesDocument, notation))
+        assertEquals(emptySet(), listFiles(outDirectory))
+    }
+
+
+    @Test
+    fun aColonTypedInTheNameIsRefusedBeforeRun() {
+        writeSources()
+
+        val notation = edited(bytesDocument, "write", "name", "a:b.csv")
+
+        assertEquals("File name: ':' cannot be in a path", validate(bytesDocument, notation).errorMessage)
+    }
+
+
+    @Test
+    fun aNameOfDotDotFailsTheRunByName() {
+        writeSources()
+
+        val outcome = run(bytesDocument, edited(bytesDocument, "write", "name", ".."))
+
+        val failed = assertIs<Outcome.Failed>(outcome)
+        assertContains(failed.message, "File name resolved to '..'; '..' cannot name a file")
+        assertEquals(emptySet(), listFiles(outDirectory))
+    }
+
+
+    @Test
+    fun aBraceOrSlashInsideAnExpressionsStringIsPartOfTheExpression() {
+        writeSources()
+
+        val notation = edited(bytesDocument, "write", "name", "\${\"a}b/c\"}.txt")
+        assertNull(validate(bytesDocument, notation).errorMessage)
+
+        // The '/' is in a value the expression computes, so it is made safe like any other
+        assertEquals(listOf("a}b_c.txt"), writtenNames(run(bytesDocument, notation)))
+    }
+
+
+    @Test
+    fun aBlankFileNameStandsForTheDefaultForBytesBeforeRun() {
+        val defaultKey = JobFieldConventions.defaultKey(AttributeName("name"))
+
+        assertEquals(WriteWorker.bytesDefaultName, validate(bytesDocument).details[defaultKey])
+    }
+
+
+    @Test
+    fun anExpressionThatDoesNotCompileIsRefusedBeforeRun() {
+        writeSources()
+
+        val notation = edited(bytesDocument, "write", "name", "\${nosuch}.csv")
+
+        assertContains(assertNotNull(validate(bytesDocument, notation).errorMessage), "File name: ")
+        assertIs<Outcome.Failed>(run(bytesDocument, notation))
         assertEquals(emptySet(), listFiles(outDirectory))
     }
 
@@ -273,7 +415,7 @@ class WriteWorkerTest {
         writeInput("big.csv", text)
 
         val outcome = liveEdit(bytesDocument) { notation ->
-            edit(notation, worker(bytesDocument, "write"), "existing", WriteWorker.existingReplace)
+            edit(notation, write, "existing", WriteWorker.existingReplace)
         }
 
         // One header, every row once, one Written, no temporary
@@ -284,36 +426,42 @@ class WriteWorkerTest {
 
 
     @Test
-    fun aLiveEditToFormatsNameThatResolvesTheSameKeepsTheOpenOutput() {
-        val text = numberedCsv(manyRows)
-        writeInput("big.csv", text)
+    fun aLiveEditToWritesNameDiscardsTheOpenOutputAndStartsItUnderTheNewName() {
+        writeInput("big.csv", numberedCsv(manyRows))
 
         val outcome = liveEdit(bytesDocument) { notation ->
-            edit(notation, worker(bytesDocument, "format"), "name", "output.csv")
+            edit(notation, write, "name", "edited\${extension}")
         }
 
-        assertEquals(listOf("output.csv"), writtenNames(outcome))
-        assertEquals(setOf("output.csv"), listFiles(outDirectory))
-        assertEquals(text, Files.readString(outDirectory.resolve("output.csv")))
+        // The output cut by the edit is not published; the renamed one starts behind the header it had
+        assertEquals(listOf("edited.csv"), writtenNames(outcome))
+        assertEquals(setOf("edited.csv"), listFiles(outDirectory))
+        assertRowsAfterTheEdit("id,value", ",", Files.readString(outDirectory.resolve("edited.csv")))
     }
 
 
     @Test
-    fun aLiveEditToFormatsNameEndsTheOpenOutputWhereTheNameChanges() {
+    fun timeIsTheRunsStartAcrossALiveEdit() {
         writeInput("big.csv", numberedCsv(manyRows))
+        val timed = edited(bytesDocument, "write", "folder", "\$time")
 
-        val outcome = liveEdit(bytesDocument) { notation ->
-            edit(notation, worker(bytesDocument, "format"), "name", "edited\${extension}")
+        var folderAtEdit: String? = null
+        val outcome = liveEdit(
+            bytesDocument,
+            notation = timed,
+            atEdit = {
+                folderAtEdit = listFiles(outDirectory).single().substringBefore('/')
+                // Into the next second, so a time taken again would differ
+                Thread.sleep(1_100)
+            }
+        ) { notation ->
+            edit(notation, write, "compression", WriteWorker.compressionGzip)
         }
 
-        // As any change of name: the first output ends at the edit, the next starts with its header; each row once
-        assertEquals(listOf("output.csv", "edited.csv"), writtenNames(outcome))
-        assertEquals(setOf("output.csv", "edited.csv"), listFiles(outDirectory))
-        val before = Files.readString(outDirectory.resolve("output.csv"))
-        val after = Files.readString(outDirectory.resolve("edited.csv"))
-        assertTrue(before.startsWith("id,value\n0,v0\n"))
-        assertTrue(after.startsWith("id,value\n"))
-        assertEquals(numberedCsv(manyRows), before + after.removePrefix("id,value\n"))
+        // The output starts again after the edit, in the folder of the run's start
+        val folder = assertNotNull(folderAtEdit)
+        assertEquals(listOf("$folder/output.csv.gz"), writtenNames(outcome))
+        assertEquals(setOf("$folder/output.csv.gz"), listFiles(outDirectory))
     }
 
 
@@ -321,14 +469,62 @@ class WriteWorkerTest {
     fun aLiveEditToWritesCompressionDiscardsTheOpenOutputAndStartsItAgain() {
         writeInput("big.csv", numberedCsv(manyRows))
 
-        val outcome = liveEdit(bytesDocument) { notation ->
-            edit(notation, worker(bytesDocument, "write"), "compression", WriteWorker.compressionGzip)
+        var discardsReported: Any? = null
+        val outcome = liveEdit(
+            bytesDocument,
+            atEnd = { engine ->
+                discardsReported = harness.workerProgress(
+                    engine, write, JobOutputConventions.writeDiscardsKey)
+            }
+        ) { notation ->
+            edit(notation, write, "compression", WriteWorker.compressionGzip)
         }
 
         // The uncompressed output is never published; the compressed one holds the header and the rows after the edit
-        assertEquals(listOf("output.csv"), writtenNames(outcome))
+        assertEquals(listOf("output.csv.gz"), writtenNames(outcome))
         assertEquals(setOf("output.csv.gz"), listFiles(outDirectory))
         assertRowsAfterTheEdit("id,value", ",", inflate(outDirectory.resolve("output.csv.gz")))
+        // ... and the discard is reported, once, for the one output
+        assertDiscarded(1, discardsReported)
+    }
+
+
+    @Test
+    fun progressNamesTheOpenFileThenCountsThePublishedOne() {
+        writeInput("big.csv", numberedCsv(manyRows))
+        val gate = WriteGate(gateAfterFirstFlush)
+        WriteWorker.encoderInterceptor = gate::intercept
+        val write = write
+
+        val engine = harness.start(bytesDocument)
+        try {
+            engine.resume()
+            gate.awaitReached()
+            engine.pause()
+            gate.release()
+            engine.awaitQuiescent()
+
+            assertEquals(1L, harness.workerProgress(engine, write, JobOutputConventions.writeOpenKey))
+            assertEquals("output.csv", harness.workerProgress(engine, write, JobOutputConventions.writeOpenNameKey))
+            assertEquals(0L, harness.workerProgress(engine, write, JobOutputConventions.writeFilesKey))
+            val midway = assertIs<Long>(harness.workerProgress(engine, write, JobOutputConventions.writeBytesKey))
+            assertTrue(midway > 0, "bytes should be on disk while the output is open")
+
+            engine.resume()
+            assertIs<Outcome.Success>(runBlocking { engine.await() })
+
+            val size = Files.size(outDirectory.resolve("output.csv"))
+            assertTrue(midway < size)
+            assertEquals(0L, harness.workerProgress(engine, write, JobOutputConventions.writeOpenKey))
+            assertNull(harness.workerProgress(engine, write, JobOutputConventions.writeOpenNameKey))
+            assertEquals(1L, harness.workerProgress(engine, write, JobOutputConventions.writeFilesKey))
+            assertEquals(size, harness.workerProgress(engine, write, JobOutputConventions.writeBytesKey))
+            assertNull(harness.workerProgress(engine, write, JobOutputConventions.writeDiscardsKey))
+        }
+        finally {
+            gate.release()
+            engine.close()
+        }
     }
 
 
@@ -361,10 +557,71 @@ class WriteWorkerTest {
                 "auto-jvm/datasource/configured-delimited-format.yaml#ConfiguredTsv")
         }
 
-        // `output${extension}` becomes output.tsv; the CSV output cut by the edit is not published
+        // The default name's extension becomes .tsv; the CSV output cut by the edit is not published
         assertEquals(listOf("output.tsv"), writtenNames(outcome))
         assertEquals(setOf("output.tsv"), listFiles(outDirectory))
         assertRowsAfterTheEdit("id\tvalue", "\t", Files.readString(outDirectory.resolve("output.tsv")))
+    }
+
+
+    @Test
+    fun aGroupedLiveEditToExistingKeepsEveryOpenOutput() {
+        writeInput("big.csv", groupedCsv(manyRows))
+
+        val outcome = liveEdit(bytesDocument, notation = edited(bytesDocument, "format", "groupBy", "group")) { notation ->
+            edit(notation, write, "existing", WriteWorker.existingReplace)
+        }
+
+        assertEquals(listOf("0.csv", "1.csv"), writtenNames(outcome))
+        assertEquals(groupCsv(manyRows, 0), Files.readString(outDirectory.resolve("0.csv")))
+        assertEquals(groupCsv(manyRows, 1), Files.readString(outDirectory.resolve("1.csv")))
+    }
+
+
+    @Test
+    fun aGroupedLiveEditToFormatsColumnsDiscardsEveryOpenOutput() {
+        writeInput("big.csv", groupedCsv(manyRows))
+
+        var discardsReported: Any? = null
+        val outcome = liveEdit(
+            bytesDocument,
+            notation = edited(bytesDocument, "format", "groupBy", "group"),
+            atEnd = { engine ->
+                discardsReported = harness.workerProgress(engine, write, JobOutputConventions.writeDiscardsKey)
+            }
+        ) { notation ->
+            edit(notation, worker(bytesDocument, "format"), "columns", ListAttributeNotation(
+                listOf(ScalarAttributeNotation("id"), ScalarAttributeNotation("value")).toPersistentList()))
+        }
+
+        // Each output starts again with the new header and holds only its rows after the edit
+        assertEquals(listOf("0.csv", "1.csv"), writtenNames(outcome))
+        assertRowsAfterTheEdit("id,value", ",", Files.readString(outDirectory.resolve("0.csv")), 0)
+        assertRowsAfterTheEdit("id,value", ",", Files.readString(outDirectory.resolve("1.csv")), 1)
+        assertDiscarded(2, discardsReported)
+    }
+
+
+    @Test
+    fun aGroupedLiveEditToWritesCompressionStartsEveryOutputAgainBehindItsHeader() {
+        writeInput("big.csv", groupedCsv(manyRows))
+
+        var discardsReported: Any? = null
+        val outcome = liveEdit(
+            bytesDocument,
+            notation = edited(bytesDocument, "format", "groupBy", "group"),
+            atEnd = { engine ->
+                discardsReported = harness.workerProgress(engine, write, JobOutputConventions.writeDiscardsKey)
+            }
+        ) { notation ->
+            edit(notation, write, "compression", WriteWorker.compressionGzip)
+        }
+
+        assertEquals(listOf("0.csv.gz", "1.csv.gz"), writtenNames(outcome))
+        assertEquals(setOf("0.csv.gz", "1.csv.gz"), listFiles(outDirectory))
+        assertRowsAfterTheEdit("id,group,value", ",", inflate(outDirectory.resolve("0.csv.gz")), 0)
+        assertRowsAfterTheEdit("id,group,value", ",", inflate(outDirectory.resolve("1.csv.gz")), 1)
+        assertDiscarded(2, discardsReported)
     }
 
 
@@ -387,7 +644,8 @@ class WriteWorkerTest {
         assertEquals(listOf("output.csv"), writtenNames(outcome))
         assertEquals(setOf("output.csv"), listFiles(outDirectory))
         assertEquals(text, Files.readString(outDirectory.resolve("output.csv")))
-        assertEquals(manyRows, ChunkStampWorker.checked.get())
+        // Each record's chunk, then the footer's (empty for CSV)
+        assertEquals(manyRows + 1, ChunkStampWorker.checked.get())
         assertEquals(0, ChunkStampWorker.unstamped.get())
         assertEquals(0, ChunkStampWorker.usedAfterRecycle.get())
     }
@@ -429,7 +687,7 @@ class WriteWorkerTest {
         assertEquals(listOf("output.csv"), writtenNames(harness.run(stampDocument)))
 
         assertEquals(text, Files.readString(outDirectory.resolve("output.csv")))
-        assertEquals(manyRows, ChunkStampWorker.checked.get())
+        assertEquals(manyRows + 1, ChunkStampWorker.checked.get())
         assertEquals(0, ChunkStampWorker.unstamped.get())
         assertEquals(0, ChunkStampWorker.usedAfterRecycle.get())
     }
@@ -462,18 +720,39 @@ class WriteWorkerTest {
     }
 
 
+    /** Numbered rows in two groups, `0` and `1`, alternating. */
+    private fun groupedCsv(rows: Int): String {
+        val text = StringBuilder("id,group,value\n")
+        for (i in 0 until rows) {
+            text.append(i).append(',').append(i % 2).append(",v").append(i).append('\n')
+        }
+        return text.toString()
+    }
+
+
+    /** The whole output of [group] of [groupedCsv]. */
+    private fun groupCsv(rows: Int, group: Int): String {
+        val text = StringBuilder("id,group,value\n")
+        for (i in group until rows step 2) {
+            text.append(i).append(',').append(group).append(",v").append(i).append('\n')
+        }
+        return text.toString()
+    }
+
+
     /**
-     * Runs [document] up to its [gateAtWrite]-th chunk write, pauses there with the output open, edits the notation
-     * with [edit], and runs the edited Job to the end; [intercept] wraps Write's encoder under the gate, and [atEdit]
-     * looks at the paused run.
+     * Runs [document] as [notation] has it up to its [gateAtWrite]-th chunk write, pauses there with its outputs
+     * open, edits the notation with [edit], and runs the edited Job to the end; [intercept] wraps Write's encoder
+     * under the gate, [atEdit] looks at the paused run, and [atEnd] at the finished one.
      */
     private fun liveEdit(
         document: String,
         intercept: (OutputStream) -> OutputStream = { it },
+        notation: GraphNotation = AutoTestUtils.readNotation(),
         atEdit: () -> Unit = {},
+        atEnd: (RunEngine) -> Unit = {},
         edit: (GraphNotation) -> GraphNotation
     ): Outcome {
-        val notation = AutoTestUtils.readNotation()
         val location = jobLocation(document)
         harness.fresh()
         val base = harness.compile(location, notation)
@@ -488,10 +767,11 @@ class WriteWorkerTest {
             engine.pause()
             gate.release()
             engine.awaitQuiescent()
-            assertTrue(listFiles(outDirectory).single().endsWith(".part"), "the output should be open at the edit")
+            val atEdit = listFiles(outDirectory)
+            assertTrue(atEdit.isNotEmpty() && atEdit.all { it.endsWith(".part") }, "outputs should be open at the edit")
             atEdit()
             engine.migrate(edited, paused = false)
-            runBlocking { engine.await() }
+            runBlocking { engine.await() }.also { atEnd(engine) }
         }
         finally {
             gate.release()
@@ -500,17 +780,34 @@ class WriteWorkerTest {
     }
 
 
-    /** [text] is one [header] and then the numbered rows from some row after the first to the last, each once. */
-    private fun assertRowsAfterTheEdit(header: String, delimiter: String, text: String) {
+    /**
+     * [text] is one [header] and then the numbered rows (of [group] of [groupedCsv], or every row when null) from
+     * some row after the first to the last, each once.
+     */
+    private fun assertRowsAfterTheEdit(header: String, delimiter: String, text: String, group: Int? = null) {
         val lines = text.lines().dropLast(1)
         assertEquals(header, lines.first())
         val ids = lines.drop(1).map { line ->
-            val (id, value) = line.split(delimiter)
-            assertEquals("v$id", value)
+            val cells = line.split(delimiter)
+            val id = cells.first()
+            assertEquals("v$id", cells.last())
             id.toInt()
         }
-        assertTrue(ids.first() > 0, "the rows written before the edit should be gone")
-        assertEquals((ids.first() until manyRows).toList(), ids)
+        val step = if (group == null) 1 else 2
+        assertTrue(ids.first() > (group ?: 0), "the rows written before the edit should be gone")
+        assertEquals((ids.first() until manyRows step step).toList(), ids)
+        if (group != null) {
+            assertEquals(group, ids.first() % 2)
+        }
+    }
+
+
+    /** [reported] is Write's discards progress: one live edit, which discarded [outputs] open outputs. */
+    private fun assertDiscarded(outputs: Long, reported: Any?) {
+        val discards = assertIs<List<*>>(reported)
+        val discard = assertIs<Map<*, *>>(discards.single())
+        assertEquals(outputs, discard[JobOutputConventions.discardOutputsKey])
+        assertTrue(discard[JobOutputConventions.discardAtKey] is Long)
     }
 
 
@@ -530,15 +827,26 @@ class WriteWorkerTest {
         edit(AutoTestUtils.readNotation(), worker(document, worker), attribute, value)
 
 
-    private fun perSource(existing: String): GraphNotation {
-        val named = edited(bytesDocument, "format", "name", "\${parent.name}")
-        return edit(named, worker(bytesDocument, "write"), "existing", existing)
+    /** One output per source file, each named by its group (the source's name). */
+    private fun perSource(): GraphNotation {
+        val grouped = edited(bytesDocument, "format", "groupBy", "parent.name")
+        return edit(grouped, write, "name", "\$group")
     }
 
 
-    private fun validate(document: String) =
+    private fun perSource(existing: String): GraphNotation =
+        edit(perSource(), write, "existing", existing)
+
+
+    private fun onChange(groupBy: String): GraphNotation {
+        val grouped = edited(bytesDocument, "format", "groupBy", groupBy)
+        return edit(grouped, worker(bytesDocument, "format"), "groupEnd", "change")
+    }
+
+
+    private fun validate(document: String, notation: GraphNotation = AutoTestUtils.readNotation()) =
         harness.fresh().let { context ->
-            val graphDefinition = AutoTestUtils.graphDefinitionAttempt(AutoTestUtils.readNotation()).transitiveSuccessful
+            val graphDefinition = AutoTestUtils.graphDefinitionAttempt(notation).transitiveSuccessful
             val validation = JobValidator.validateDetached(
                 DocumentPath.parse(document), graphDefinition, context.notationMetadataReader,
                 context.graphEnvironment, DesignReader().session(DesignReadBudget.editor))
@@ -562,8 +870,10 @@ class WriteWorkerTest {
     }
 
 
-    /** Holds Write inside the first output, at its [gateAtWrite]-th chunk, until released; deaf to interrupts. */
-    private class WriteGate {
+    /** Holds Write inside the first output, at its [gateAt]-th chunk, until released; deaf to interrupts. */
+    private class WriteGate(
+        private val gateAt: Int = gateAtWrite
+    ) {
         private val writes = AtomicInteger()
         private val reached = CountDownLatch(1)
         private val released = CountDownLatch(1)
@@ -571,7 +881,7 @@ class WriteWorkerTest {
         fun intercept(encoded: OutputStream): OutputStream =
             object: FilterOutputStream(encoded) {
                 override fun write(b: ByteArray, off: Int, len: Int) {
-                    if (writes.incrementAndGet() == gateAtWrite) {
+                    if (writes.incrementAndGet() == gateAt) {
                         reached.countDown()
                         awaitRelease()
                     }
@@ -580,7 +890,7 @@ class WriteWorkerTest {
             }
 
         fun awaitReached() {
-            check(reached.await(waitSeconds, TimeUnit.SECONDS)) { "Write never reached chunk $gateAtWrite" }
+            check(reached.await(hangGuardMillis, TimeUnit.MILLISECONDS)) { "Write never reached chunk $gateAt" }
         }
 
         fun release() {
@@ -591,7 +901,7 @@ class WriteWorkerTest {
             var interrupted = false
             while (true) {
                 try {
-                    check(released.await(waitSeconds, TimeUnit.SECONDS)) { "the gate was never released" }
+                    check(released.await(hangGuardMillis, TimeUnit.MILLISECONDS)) { "the gate was never released" }
                     break
                 }
                 catch (_: InterruptedException) {
