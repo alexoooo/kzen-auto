@@ -37,8 +37,16 @@ object JobOutputConventions {
     /** How many outputs are open (being written). */
     const val writeOpenKey = "open"
 
-    /** The file being written, relative to the directory; present only while exactly one output is open. */
-    const val writeOpenNameKey = "openName"
+    /**
+     * The files being written and the files published, each a list of `{path, bytes}` maps where [filePathKey] is
+     * the file's absolute path and [fileBytesKey] its bytes on disk so far. Present once there is one. A periodic
+     * publish carries at most [JobConventions.progressTeaserRowCount] of each (the first open, the latest
+     * published), the final one every published file; [writeFilesKey] and [writeOpenKey] are the counts.
+     */
+    const val writeOpenFilesKey = "openFiles"
+    const val writeWrittenFilesKey = "writtenFiles"
+    const val filePathKey = "path"
+    const val fileBytesKey = "bytes"
 
     /**
      * The open outputs live edits discarded: a list of `{at, outputs}` maps, one per edit, where [discardAtKey] is

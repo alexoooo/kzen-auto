@@ -84,8 +84,8 @@ class WritePathTemplate(
     /** The templates compiled for one input contract. */
     class Compiled(
         private val parameters: BindingSchema,
-        private val folder: JobCalculatedExpression<Any?>?,
-        private val name: JobCalculatedExpression<Any?>,
+        private val folder: JobCalculatedExpression?,
+        private val name: JobCalculatedExpression,
         val warnings: List<String>
     ) {
         /**
@@ -107,7 +107,8 @@ class WritePathTemplate(
                     else -> jobParameter(it.name.value)
                 }
             }
-            val native = JobDataValues.native(element)
+            val readsPayload = folder?.readsPayload == true || name.readsPayload
+            val native = if (readsPayload) JobDataValues.native(element) else null
             val segments = mutableListOf<String>()
             if (folder != null) {
                 folder.setParameters(values)

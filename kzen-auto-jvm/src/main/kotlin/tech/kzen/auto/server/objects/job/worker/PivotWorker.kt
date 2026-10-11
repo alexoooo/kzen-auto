@@ -10,6 +10,7 @@ import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.api.ChannelServer
 import tech.kzen.auto.common.paradigm.job.control.JobControl
+import tech.kzen.auto.server.objects.job.value.ColumnProjections
 import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
@@ -82,6 +83,7 @@ class PivotWorker(
 
     // Opened in onStart (needs the scratch dir from control), closed-and-deleted in onClose. Confined to the work
     // coroutine except for the immutable [PivotView] handle the serve coroutine reads (single-threaded — safe).
+    private val projections = ColumnProjections()
     private var pivotBuilder: PivotBuilder? = null
     private var scratchDir: Path? = null
 
@@ -98,7 +100,7 @@ class PivotWorker(
 
     override suspend fun onElement(element: DataValue, emit: Emitter, control: JobControl) {
         // Accumulate only: the pivot table is emitted once, at end-of-stream (onComplete).
-        val projection = JobDataValues.projection(element)
+        val projection = projections.of(element)
         pivotBuilder!!.add(JobDataValues.record(projection), projection.header)
     }
 

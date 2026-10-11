@@ -130,11 +130,12 @@ class FormatWorkerTest {
         assertIs<Outcome.Success>(harness.run(column))
 
         val chunks = BytesSinkWorker.chunks
-        assertEquals(listOf("x", "x", "y", "x", "x", "y"), chunks.map { it.group })
+        // One input batch: a chunk per group, then the footers
+        assertEquals(listOf("x", "y", "x", "y"), chunks.map { it.group })
         assertEquals(
-            listOf("group,value\nx,1\n", "x,2\n", "group,value\ny,3\n", "x,4\n", "", ""),
+            listOf("group,value\nx,1\nx,2\nx,4\n", "group,value\ny,3\n", "", ""),
             chunks.map { it.text })
-        assertEquals(listOf(false, false, false, false, true, true), chunks.map { it.ends })
+        assertEquals(listOf(false, false, true, true), chunks.map { it.ends })
     }
 
 
@@ -146,9 +147,9 @@ class FormatWorkerTest {
         assertIs<Outcome.Success>(run(column, sorted))
 
         val chunks = BytesSinkWorker.chunks
-        assertEquals(listOf("x", "x", "x", "y", "y"), chunks.map { it.group })
-        assertEquals(listOf("group,value\nx,1\n", "x,2\n", "", "group,value\ny,3\n", ""), chunks.map { it.text })
-        assertEquals(listOf(false, false, true, false, true), chunks.map { it.ends })
+        assertEquals(listOf("x", "x", "y", "y"), chunks.map { it.group })
+        assertEquals(listOf("group,value\nx,1\nx,2\n", "", "group,value\ny,3\n", ""), chunks.map { it.text })
+        assertEquals(listOf(false, true, false, true), chunks.map { it.ends })
     }
 
 
@@ -272,13 +273,13 @@ class FormatWorkerTest {
     fun chunksAreRecycled() {
         assertIs<Outcome.Success>(harness.run(recycle))
 
-        // A chunk per record, then the footer's
-        assertEquals(recycledRows + 1, BytesSinkWorker.chunks.size)
+        // A chunk per input batch, then the footer's
+        assertEquals((recycledRows + channelBatch - 1) / channelBatch + 1, BytesSinkWorker.chunks.size)
         assertEquals(bigCsv(), BytesSinkWorker.text())
         assertEquals(0, BytesSinkWorker.usedAfterRecycle.get())
         val created = BytesSinkWorker.slots.size
         println("WR3 Format pool: $created chunks created for $recycledRows records")
-        assertTrue(created <= 4 * channelBatch, "$created chunks for $recycledRows records")
+        assertTrue(created <= 4, "$created chunks for $recycledRows records")
     }
 
 

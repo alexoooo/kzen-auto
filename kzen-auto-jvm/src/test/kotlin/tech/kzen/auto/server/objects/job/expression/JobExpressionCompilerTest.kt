@@ -68,6 +68,31 @@ class JobExpressionCompilerTest {
 
 
     @Test
+    fun aRecordsPayloadObjectIsReadOnlyByAnExpressionThatNamesIt() {
+        val contract = recordContract()
+        val value = JobDataValues.projectedRecord(
+            contract,
+            FlatFileRecord.of("label", "2.5"),
+            listOf(DataState.Present, DataState.Present))
+        val projection = JobDataValues.projection(value)
+
+        val fields = assertNotNull(compiler.compile(
+            "fields", "key + amount", contract, TypeMetadata.anyNullable, classLoader).compiled)
+        assertFalse(fields.expression.readsPayload)
+        assertEquals("label2.5", fields.expression.evaluate(null, value, projection))
+
+        val named = assertNotNull(compiler.compile(
+            "named", "(payload as Map<*, *>)[\"key\"]", contract, TypeMetadata.anyNullable, classLoader).compiled)
+        assertTrue(named.expression.readsPayload)
+        assertEquals("label", named.expression.evaluate(value, projection))
+
+        // A native receiver is the expression's scope, so it is always read
+        assertTrue(assertNotNull(compiler.compile(
+            "native", "1", contract, TypeMetadata.unit, classLoader).compiled).expression.readsPayload)
+    }
+
+
+    @Test
     fun decimalAccessorAndInferredContractStayExact() {
         val contract = recordContract()
         val attempt = compiler.compile(

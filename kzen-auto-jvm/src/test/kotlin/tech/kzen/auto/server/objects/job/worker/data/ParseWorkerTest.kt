@@ -102,7 +102,7 @@ class ParseWorkerTest {
 
         assertEquals(listOf<Any?>(null, "a", "b"), messages.map(JobDataValues::boundary))
         assertEquals(listOf("reference-a", "reference-b"), opener.opened)
-        assertEquals(7, control.blockingCount, "three items, two exhausted pulls, and two closes")
+        assertEquals(4, control.blockingCount, "one pull per part, each finding its end, and two closes")
         assertEquals(1L, control.progressValues.last()["units"])
         assertEquals(3L, control.progressValues.last()["emitted"])
     }
@@ -227,9 +227,15 @@ class ParseWorkerTest {
     @Test
     fun cadenceCheckpointsThroughoutOneThousandItemExpansion() = runBlocking {
         val items = (0 until 1000).map { "row-$it" }
-        val cursor = FakeCursor(LegacyDataShapeBridge.payload(TypeMetadata.string), items)
-        val control = CountingControl()
+        val cursor = FakeCursor(LegacyDataShapeBridge.payload(TypeMetadata.string), items, bytesPerItem = 1)
         val messages = mutableListOf<DataValue>()
+        val control = object: CountingControl() {
+            override suspend fun checkpoint() {
+                super.checkpoint()
+                // A capture here carries the cursor: nothing it has given up may still be waiting to be sent
+                assertEquals(messages.size.toLong(), cursor.bytesRead, "items pulled ahead at a checkpoint")
+            }
+        }
         worker(
             BatchInput(listOf(DataUnit.of(part("large")))),
             FakeOpener(mapOf("large" to { cursor })),
@@ -238,7 +244,7 @@ class ParseWorkerTest {
 
         assertEquals(items, messages.map(JobDataValues::boundary))
         assertTrue(control.checkpointCount >= 101, "leading checkpoint plus 100 output cadence checkpoints")
-        assertEquals(1002, control.blockingCount)
+        assertEquals(102, control.blockingCount, "one pull per output batch, one finding the end, and the close")
         assertTrue(cursor.closed)
     }
 

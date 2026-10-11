@@ -7,6 +7,7 @@ import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.server.objects.job.expression.JobExpressionCompiler
 import tech.kzen.auto.server.objects.job.expression.JobExpressionValues
+import tech.kzen.auto.server.objects.job.value.ColumnProjections
 import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.auto.server.objects.job.value.recycle.Recyclable
 import tech.kzen.auto.server.util.ClassLoaderUtils
@@ -54,6 +55,7 @@ class FormulaWorker(
     private val formulaNames = HeaderListing.ofUnique(formulaEntries.map { it.key })
     private val formulaFields = formulaNames.values.map { FieldId(it.text, it.occurrence) }
     private val payloadTransform = payload.isNotBlank()
+    private val projections = ColumnProjections()
 
     private var compiledForContract: DataContract? = null
     private var compiledColumns: List<JobExpressionCompiler.Compiled> = listOf()
@@ -61,6 +63,9 @@ class FormulaWorker(
     private var metadataShape: MetadataShape? = null
     private var compiledPayloadForContract: DataContract? = null
     private var compiledPayload: JobExpressionCompiler.Compiled? = null
+
+    // Whether any compiled expression reads the payload object, which is otherwise never materialized
+    private var readsPayload = false
 
     private var computed = 0L
 
@@ -81,9 +86,9 @@ class FormulaWorker(
             compilePayload(inputContract, control)
         }
 
-        val originalPayload = JobDataValues.native(element)
+        val originalPayload = if (readsPayload) JobDataValues.native(element) else null
         val projection = when (inputContract.structural) {
-            is DataType.Record, is DataType.Scalar -> JobDataValues.projection(element)
+            is DataType.Record, is DataType.Scalar -> projections.of(element)
             else -> null
         }
 
@@ -168,6 +173,7 @@ class FormulaWorker(
         compiledColumns.forEach { it.expression.setParameters(parameterValues) }
         calculatedContracts = compiledColumns.map { DataContract(it.contract.structural as DataType.Scalar) }
         compiledForContract = contract
+        readsPayload = compiledReadsPayload()
     }
 
 
@@ -188,7 +194,12 @@ class FormulaWorker(
         expression.expression.setParameters(parameters.definitions.map { control.parameter(it.name.value) })
         compiledPayload = expression
         compiledPayloadForContract = contract
+        readsPayload = compiledReadsPayload()
     }
+
+
+    private fun compiledReadsPayload(): Boolean =
+        compiledColumns.any { it.expression.readsPayload } || compiledPayload?.expression?.readsPayload == true
 
 
     //-----------------------------------------------------------------------------------------------------------------

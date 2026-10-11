@@ -29,6 +29,7 @@ import tech.kzen.auto.client.objects.document.common.file.format.RestFormatMater
 import tech.kzen.auto.client.objects.document.job.JobProgressChannel
 import tech.kzen.auto.client.objects.document.job.JobValidationChannel
 import tech.kzen.auto.client.objects.document.job.JobWorkerProgress
+import tech.kzen.auto.client.objects.document.job.display.ProgressRate
 import tech.kzen.auto.client.objects.document.job.source.DataFormatStore
 import tech.kzen.auto.client.objects.document.job.source.DataFormatStoreKey
 import tech.kzen.auto.client.objects.document.job.source.DataSourceShapeStore
@@ -256,6 +257,9 @@ class FileSelectionEditor(
     private var listedFiles = listOf<FileReadProgress.ListedFile>()
     private var readerProgress: JobWorkerProgress? = null
 
+    // How fast the selection is read, shown on the row being read
+    private val readRate = ProgressRate()
+
     private val committer = AttributeCommitter(
         graphStore = { this.props.mirroredGraphStore },
         objectLocation = { this.props.objectLocation },
@@ -405,7 +409,11 @@ class FileSelectionEditor(
         val sizes = listedFiles
             .takeIf { it.isNotEmpty() }
             ?.associate { it.location to it.size }
-        val statuses = FileReadProgress.of(listedFiles, readerProgress)?.rows
+        val read = FileReadProgress.of(listedFiles, readerProgress)
+        val bytesPerSecond = read?.let { readRate.perSecond(readerProgress, it.bytesRead) }
+        val statuses = read?.rows?.mapValues { (_, status) ->
+            if (status is FileRowStatus.Reading) status.copy(bytesPerSecond = bytesPerSecond) else status
+        }
         if (sizes == state.sizeByLocation && statuses == state.statusByLocation) {
             return
         }

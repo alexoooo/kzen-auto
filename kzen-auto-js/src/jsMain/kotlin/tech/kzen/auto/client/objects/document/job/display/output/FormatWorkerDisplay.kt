@@ -4,6 +4,7 @@ import react.ChildrenBuilder
 import react.State
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeViewManager
+import tech.kzen.auto.client.objects.document.job.display.ProgressRate
 import tech.kzen.auto.client.objects.document.job.display.WorkerDisplayDefault
 import tech.kzen.auto.client.objects.document.job.display.WorkerDisplayProps
 import tech.kzen.auto.client.objects.document.job.display.WorkerDisplayWrapper
@@ -88,6 +89,9 @@ class FormatWorkerDisplay(
     }
 
 
+    private val recordRate = ProgressRate()
+
+
     // Declared by hand because the props hold the location under `common`, not as ObjectScopedProps
     override fun observedObjectLocation(): ObjectLocation = props.common.objectLocation
 
@@ -115,7 +119,7 @@ class FormatWorkerDisplay(
             this.mirroredGraphStore = props.mirroredGraphStore
             this.common = props.common
             hiddenAttributes = if (state.grouped) setOf() else setOf(groupEndAttributeName)
-            statusText = OutputProgressText::format
+            statusText = { OutputProgressText.format(it, recordRate) }
         }
     }
 }

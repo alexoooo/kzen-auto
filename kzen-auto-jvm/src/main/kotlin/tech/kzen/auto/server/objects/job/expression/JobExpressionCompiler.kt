@@ -55,7 +55,7 @@ class JobExpressionCompiler(
 
 
     data class Compiled(
-        val expression: JobCalculatedExpression<Any?>,
+        val expression: JobCalculatedExpression,
         val contract: DataContract,
         val streams: Boolean,
         val streamElementContract: DataContract?
@@ -113,7 +113,7 @@ class JobExpressionCompiler(
         val clazz = cachedKotlinCompiler.tryLoad(code, classLoader)
             ?: return Attempt(null, "Unable to load compiled Job expression")
         @Suppress("UNCHECKED_CAST")
-        val generated = clazz.getDeclaredConstructor().newInstance() as JobCalculatedExpression<Any?>
+        val generated = clazz.getDeclaredConstructor().newInstance() as JobCalculatedExpression
         val inferredType = ExpressionReturnTypeInference.inferReturnKType(clazz)
         val streams = ExpressionReturnTypeInference.isStreamType(inferredType)
         // Design-time shapes come from the adapter registry (E7 item 6), so a record, bean, enum or Set typed
@@ -179,10 +179,13 @@ class JobExpressionCompiler(
         }
         val metadataCode = metadataClasses.joinToString("\n\n") { it.code() }
 
-        // A payload with no native type of its own is its record fields: `this` is then the fields scope
+        // A payload with no native type of its own is its record fields: `this` is then the fields scope, and the
+        // payload as an object is reached only by name
+        val nativeScope = modelType.className != ClassNames.kotlinAny
+        val readsPayload = nativeScope || namesPayload(expression)
         val metaScope = "${metadataClasses.first().name}(inputValue.metadata?.value)"
         val body =
-            if (modelType.className != ClassNames.kotlinAny) {
+            if (nativeScope) {
                 "with($metaScope) { with(Fields()) { with($payloadName) { run {\n$expression\n        } } } }"
             }
             else {
@@ -191,10 +194,14 @@ class JobExpressionCompiler(
 
         val model = modelType.toSimple()
         val probe = ExpressionReturnTypeInference.probePropertyName
+        val probeCall = if (readsPayload) "$probe(model as $model)" else "$probe()"
+        val probeParameter = if (readsPayload) " $payloadName: $model ->" else ""
         val source = """
 $imports
 
-class $className: JobCalculatedExpression<$model> {
+class $className: JobCalculatedExpression {
+    override val readsPayload: Boolean get() = $readsPayload
+
     private lateinit var inputValue: DataValue
     private var projection: ColumnProjection? = null
     private var parameterValues: List<Any?> = listOf()
@@ -216,13 +223,13 @@ $metadataCode
         parameterValues = values
     }
 
-    override fun evaluate(model: $model, value: DataValue, projection: ColumnProjection?): Any? {
+    override fun evaluate(model: Any?, value: DataValue, projection: ColumnProjection?): Any? {
         this.inputValue = value
         this.projection = projection
-        return $probe(model)
+        return $probeCall
     }
 
-    private val $probe = { $payloadName: $model ->
+    private val $probe = {$probeParameter
         $body
     }
 }
@@ -346,6 +353,15 @@ $metadataCode
             ExpressionUtils.escapeKotlinVariableName(HeaderLabel(it.id.name, it.id.occurrence))
         }
     }
+
+
+    /**
+     * Whether [expression] names the payload: with no native type nothing else reaches it (`this` is the fields
+     * scope), so an expression that never names it reads only fields. A name inside a string literal or comment
+     * counts too, which costs a materialization but never misses one.
+     */
+    private fun namesPayload(expression: String): Boolean =
+        bareName.findAll(expression).any { it.value == payloadName || it.value == "`$payloadName`" }
 
 
     /** Bare names [expression] uses that resolve to an inner facet while an outer facet also has them. */

@@ -119,6 +119,9 @@ class FileSourceWorkerDisplay(
 
     private var toggleChannel: FileBrowserToggleChannel? = null
 
+    // How fast the selection is read, across its files
+    private val readRate = ProgressRate()
+
 
     private fun progressChannel(): JobProgressChannel? =
         contextValue<DocumentBridge?>()?.channel(JobProgressChannel.Key)
@@ -211,7 +214,7 @@ class FileSourceWorkerDisplay(
     }
 
 
-    // "1 of 2 files read · 43% of 1.4 GB"; null (the generic counts) until a reader reports on the files
+    // "1 of 2 files read · 43% of 1.4 GB · 45.1 MB/s"; null (the generic counts) until a reader reports on the files
     private fun readStatusText(progress: JobWorkerProgress?): String? {
         val files = FileReadProgress.listedFiles(props.common.validation?.details.orEmpty())
         val read = FileReadProgress.of(files, state.readerProgress)
@@ -220,7 +223,8 @@ class FileSourceWorkerDisplay(
         val parts = listOfNotNull(
             progress?.status,
             "$done of ${files.size} files read",
-            read.percent()?.let { "$it% of ${FormatUtils.readableFileSize(read.bytesTotal)}" })
+            read.percent()?.let { "$it% of ${FormatUtils.readableFileSize(read.bytesTotal)}" },
+            readRate.perSecond(state.readerProgress, read.bytesRead)?.let { ProgressRate.bytesText(it) })
         return parts.joinToString(" · ")
     }
 

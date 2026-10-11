@@ -14,6 +14,12 @@ import tech.kzen.auto.common.data.schema.DataShape
 import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.auto.common.data.schema.LegacyDataShapeBridge
 import tech.kzen.auto.common.paradigm.job.control.JobControl
+import tech.kzen.auto.common.paradigm.job.control.ValueLease
+import tech.kzen.auto.server.exec.job.ownership.CloseCountingResource
+import tech.kzen.auto.server.exec.job.ownership.NativeIdentityRegistry
+import tech.kzen.auto.server.exec.job.ownership.RunOwnershipControl
+import tech.kzen.auto.server.exec.job.ownership.RunOwnershipLedger
+import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.auto.plugin.model.record.FlatRecordHeader
 import tech.kzen.lib.common.exec.data.value.DataNode
@@ -95,6 +101,69 @@ class DataReadCoreTest {
             claimBeforeSend = { events.add("unexpected claim") },
             send = { events.add("unexpected send") }))
         assertEquals(listOf("claim", "send"), events)
+    }
+
+
+    @Test
+    fun emitBatchPullsUpToItsLimitInOneOffloadAndClaimsEachItemBeforeItsSend() = runBlocking {
+        val control = TrackingControl()
+        val cursor = TrackingCursor(
+            listOf("a", "b", "c", "d", "e"), LegacyDataShapeBridge.payload(TypeMetadata.string))
+        val projection = DataReadCore.projection(
+            null, cursor.shape, DataReadCore.ShapeBaseline(cursor.shape, "unit 0 part 0"), null)
+        val events = mutableListOf<String>()
+        var claimed = 0
+        suspend fun emit() = DataReadCore.emitBatch(
+            control, cursor, projection, 3,
+            claimBeforeSend = { claimed += 1 },
+            send = { events.add("$claimed ${JobDataValues.boundary(it)}") })
+
+        assertTrue(emit())
+        assertEquals(1, control.blockingCalls)
+        assertEquals(listOf("1 a", "2 b", "3 c"), events)
+
+        // The second trip finds the end after two items: they are sent, and the end is reported without asking again
+        assertFalse(emit())
+        assertEquals(2, control.blockingCalls)
+        assertEquals(6, cursor.hasNextCalls)
+        assertEquals(listOf("1 a", "2 b", "3 c", "4 d", "5 e"), events)
+    }
+
+
+    @Test
+    fun pullBatchStopsAfterAnItemTheRunHolds() = runBlocking {
+        val control = OwningControl()
+        val resource = CloseCountingResource("owned")
+        val cursor = ValueCursor(listOf(
+            JobDataValues.lift("before"), JobDataValues.lift(resource), JobDataValues.lift("after")))
+
+        val pulled = DataReadCore.pullBatch(control, cursor, 10).items
+
+        assertEquals(2, pulled.size)
+        assertNull(pulled[0].hold)
+        assertFalse(resource.isClosed)
+        pulled[1].hold!!.release()
+        assertTrue(resource.isClosed)
+        assertEquals(1, DataReadCore.pullBatch(control, cursor, 10).items.size)
+    }
+
+
+    @Test
+    fun aFailedSendReleasesTheItemsPulledAheadOfIt() = runBlocking {
+        val control = OwningControl()
+        val resource = CloseCountingResource("unsent")
+        val cursor = ValueCursor(listOf(JobDataValues.lift("first"), JobDataValues.lift(resource)))
+        val shape = LegacyDataShapeBridge.runtimeUnknown()
+        val projection = DataReadCore.projection(
+            null, shape, DataReadCore.ShapeBaseline(shape, "unit 0 part 0"), null)
+
+        assertFailsWith<IllegalStateException> {
+            DataReadCore.emitBatch(
+                control, cursor, projection, 10,
+                claimBeforeSend = {},
+                send = { error("send failed") })
+        }
+        assertEquals(1, resource.closeCount.get())
     }
 
 
@@ -571,6 +640,26 @@ class DataReadCoreTest {
             closeCalls += 1
             closed = true
         }
+    }
+
+
+    private class ValueCursor(
+        values: List<DataValue>
+    ): DataCursor {
+        override val shape: DataShape = LegacyDataShapeBridge.runtimeUnknown()
+        private val remaining = values.iterator()
+        override fun hasNext(): Boolean = remaining.hasNext()
+        override fun next(): DataValue = remaining.next()
+        override fun close() {}
+    }
+
+
+    /** A control inside a run: the pulled items are adopted by its ledger. */
+    private class OwningControl: TrackingControl(), RunOwnershipControl {
+        override val ledger = RunOwnershipLedger(LogicRunId("data-read-core"), NativeIdentityRegistry())
+
+        override fun holdForCallback(value: DataValue): ValueLease =
+            throw UnsupportedOperationException("DataReadCore holds no callback")
     }
 
 

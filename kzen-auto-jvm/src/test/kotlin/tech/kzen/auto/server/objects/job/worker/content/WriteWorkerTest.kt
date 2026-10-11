@@ -5,6 +5,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.auto.common.objects.document.job.JobFieldConventions
 import tech.kzen.auto.common.objects.document.job.JobOutputConventions
 import tech.kzen.auto.server.data.design.DesignReadBudget
@@ -68,9 +69,13 @@ class WriteWorkerTest {
         private val outDirectory = root.resolve("out")
 
         private const val manyRows = 20_000
-        private const val gateAtWrite = 100
+        private const val channelBatch = 1024
+        // Format sends a chunk per input batch (about 11 KB of numberedCsv), so 20 for manyRows, then the footer
+        private const val manyChunks = (manyRows + channelBatch - 1) / channelBatch + 1
+        private const val gateAtWrite = 5
         // Past the first flush of Write's 128 KiB stream buffer, so bytes have reached the file
-        private const val gateAfterFirstFlush = 15_000
+        private const val afterFirstFlush = 15
+        private const val progressThrottleMillis = 200L
     }
 
 
@@ -152,6 +157,34 @@ class WriteWorkerTest {
         assertEquals(setOf("x.csv", "y.csv"), listFiles(outDirectory))
         assertEquals("group,value\nx,1\nx,2\nx,4\n", Files.readString(outDirectory.resolve("x.csv")))
         assertEquals("group,value\ny,3\n", Files.readString(outDirectory.resolve("y.csv")))
+    }
+
+
+    @Test
+    fun theFinalProgressListsEveryWrittenFileByItsAbsolutePathAndTheRunsClock() {
+        writeInput("c.csv", "group,value\nx,1\nx,2\ny,3\nx,4\n")
+
+        harness.fresh()
+        val location = jobLocation(bytesDocument)
+        val notation = edited(bytesDocument, "format", "groupBy", "group")
+        val engine = harness.engine(harness.compile(location, notation), location)
+        try {
+            assertIs<Outcome.Success>(runBlocking {
+                engine.resume()
+                engine.await()
+            })
+
+            val writtenFiles = assertIs<List<*>>(
+                harness.workerProgress(engine, write, JobOutputConventions.writeWrittenFilesKey))
+            assertEquals(
+                listOf("x.csv", "y.csv").map { outDirectory.resolve(it).toAbsolutePath().normalize().toString() },
+                writtenFiles.map { assertIs<Map<*, *>>(it)[JobOutputConventions.filePathKey] }.sortedBy { it as String })
+            val elapsed = assertIs<Long>(harness.workerProgress(engine, write, JobConventions.progressElapsedKey))
+            assertTrue(elapsed >= 0)
+        }
+        finally {
+            engine.close()
+        }
     }
 
 
@@ -490,10 +523,21 @@ class WriteWorkerTest {
 
 
     @Test
-    fun progressNamesTheOpenFileThenCountsThePublishedOne() {
+    fun progressListsTheOpenFileThenThePublishedOne() {
         writeInput("big.csv", numberedCsv(manyRows))
-        val gate = WriteGate(gateAfterFirstFlush)
-        WriteWorker.encoderInterceptor = gate::intercept
+        val gate = WriteGate(afterFirstFlush + 1)
+        // Waits out the progress throttle once bytes are on disk, so the publish after this chunk reports them
+        val written = AtomicInteger()
+        WriteWorker.encoderInterceptor = { encoded ->
+            gate.intercept(object: FilterOutputStream(encoded) {
+                override fun write(b: ByteArray, off: Int, len: Int) {
+                    out.write(b, off, len)
+                    if (written.incrementAndGet() == afterFirstFlush) {
+                        Thread.sleep(progressThrottleMillis + 50)
+                    }
+                }
+            })
+        }
         val write = write
 
         val engine = harness.start(bytesDocument)
@@ -505,7 +549,10 @@ class WriteWorkerTest {
             engine.awaitQuiescent()
 
             assertEquals(1L, harness.workerProgress(engine, write, JobOutputConventions.writeOpenKey))
-            assertEquals("output.csv", harness.workerProgress(engine, write, JobOutputConventions.writeOpenNameKey))
+            val openFiles = assertIs<List<*>>(
+                harness.workerProgress(engine, write, JobOutputConventions.writeOpenFilesKey))
+            val openFile = assertIs<Map<*, *>>(openFiles.single())
+            assertEquals(outDirectory.resolve("output.csv").toAbsolutePath().normalize().toString(), openFile[JobOutputConventions.filePathKey])
             assertEquals(0L, harness.workerProgress(engine, write, JobOutputConventions.writeFilesKey))
             val midway = assertIs<Long>(harness.workerProgress(engine, write, JobOutputConventions.writeBytesKey))
             assertTrue(midway > 0, "bytes should be on disk while the output is open")
@@ -516,9 +563,16 @@ class WriteWorkerTest {
             val size = Files.size(outDirectory.resolve("output.csv"))
             assertTrue(midway < size)
             assertEquals(0L, harness.workerProgress(engine, write, JobOutputConventions.writeOpenKey))
-            assertNull(harness.workerProgress(engine, write, JobOutputConventions.writeOpenNameKey))
+            assertNull(harness.workerProgress(engine, write, JobOutputConventions.writeOpenFilesKey))
             assertEquals(1L, harness.workerProgress(engine, write, JobOutputConventions.writeFilesKey))
             assertEquals(size, harness.workerProgress(engine, write, JobOutputConventions.writeBytesKey))
+            val writtenFiles = assertIs<List<*>>(
+                harness.workerProgress(engine, write, JobOutputConventions.writeWrittenFilesKey))
+            assertEquals(
+                mapOf(
+                    JobOutputConventions.filePathKey to outDirectory.resolve("output.csv").toAbsolutePath().normalize().toString(),
+                    JobOutputConventions.fileBytesKey to size),
+                writtenFiles.single())
             assertNull(harness.workerProgress(engine, write, JobOutputConventions.writeDiscardsKey))
         }
         finally {
@@ -633,6 +687,8 @@ class WriteWorkerTest {
         val outcome = liveEdit(
             stampDocument,
             ChunkStampWorker::intercept,
+            // Write holds a chunk at the gate; upstream must have stamped the next before the pause stops it
+            readyToPause = { ChunkStampWorker.stamped.get() > ChunkStampWorker.checked.get() },
             atEdit = {
                 assertTrue(ChunkStampWorker.stamped.get() > ChunkStampWorker.checked.get(),
                     "chunks should be in flight to Write at the edit")
@@ -645,7 +701,7 @@ class WriteWorkerTest {
         assertEquals(setOf("output.csv"), listFiles(outDirectory))
         assertEquals(text, Files.readString(outDirectory.resolve("output.csv")))
         // Each record's chunk, then the footer's (empty for CSV)
-        assertEquals(manyRows + 1, ChunkStampWorker.checked.get())
+        assertEquals(manyChunks, ChunkStampWorker.checked.get())
         assertEquals(0, ChunkStampWorker.unstamped.get())
         assertEquals(0, ChunkStampWorker.usedAfterRecycle.get())
     }
@@ -687,7 +743,7 @@ class WriteWorkerTest {
         assertEquals(listOf("output.csv"), writtenNames(harness.run(stampDocument)))
 
         assertEquals(text, Files.readString(outDirectory.resolve("output.csv")))
-        assertEquals(manyRows + 1, ChunkStampWorker.checked.get())
+        assertEquals(manyChunks, ChunkStampWorker.checked.get())
         assertEquals(0, ChunkStampWorker.unstamped.get())
         assertEquals(0, ChunkStampWorker.usedAfterRecycle.get())
     }
@@ -743,12 +799,14 @@ class WriteWorkerTest {
     /**
      * Runs [document] as [notation] has it up to its [gateAtWrite]-th chunk write, pauses there with its outputs
      * open, edits the notation with [edit], and runs the edited Job to the end; [intercept] wraps Write's encoder
-     * under the gate, [atEdit] looks at the paused run, and [atEnd] at the finished one.
+     * under the gate, [readyToPause] is awaited before the pause (the gated run's other Workers keep going),
+     * [atEdit] looks at the paused run, and [atEnd] at the finished one.
      */
     private fun liveEdit(
         document: String,
         intercept: (OutputStream) -> OutputStream = { it },
         notation: GraphNotation = AutoTestUtils.readNotation(),
+        readyToPause: () -> Boolean = { true },
         atEdit: () -> Unit = {},
         atEnd: (RunEngine) -> Unit = {},
         edit: (GraphNotation) -> GraphNotation
@@ -764,6 +822,11 @@ class WriteWorkerTest {
         return try {
             engine.resume()
             gate.awaitReached()
+            val deadline = System.currentTimeMillis() + hangGuardMillis
+            while (!readyToPause()) {
+                check(System.currentTimeMillis() < deadline) { "the gated run never became ready to pause" }
+                Thread.sleep(1)
+            }
             engine.pause()
             gate.release()
             engine.awaitQuiescent()

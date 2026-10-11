@@ -111,6 +111,10 @@ class JobRun internal constructor(
         val carried = execution.restoredAs<JobCarryover>()
         val ledger = carried?.ledger ?: RunOwnershipLedger(runId)
 
+        // The clock each Worker's progress is stamped with (see EngineJobControl.publishProgress), so the client
+        // can tell how fast it goes; it rides the carryover, so a live edit doesn't restart it
+        val startedNanos = carried?.startedNanos ?: System.nanoTime()
+
         // One shared instance graph for the whole run: the Channel objects are single shared instances and each
         // Worker's injected endpoint views reference them (via JobChannelCreator) — exactly as the old
         // buildAndLaunch built it.
@@ -157,7 +161,7 @@ class JobRun internal constructor(
         var migrating = false
         execution.onCapture {
             migrating = true
-            JobCarryover(streamChannels.mapValues { (_, channel) -> channel.drainBuffered() }, ledger)
+            JobCarryover(streamChannels.mapValues { (_, channel) -> channel.drainBuffered() }, ledger, startedNanos)
         }
 
         // Sweep this run's whole scratch tree (every file-backed Worker's on-disk store) when the run settles —
@@ -318,7 +322,8 @@ class JobRun internal constructor(
                                         inputPayloadType, inputContract, outputContract, resultCollector,
                                         ledger, location,
                                         draining = { scopes.any { it.lending() } },
-                                        activity),
+                                        activity,
+                                        startedNanos),
                                     inputs = DataBindings.bind(BindingSchema.empty),
                                     // These frames are live SIMULTANEOUSLY, which is the one shape the engine's
                                     // ambient-context model is not specified for (logic-spec §6): two Workers

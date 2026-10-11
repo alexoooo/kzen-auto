@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.objects.job.worker.format
 
 import tech.kzen.auto.server.data.write.RecordOutputState
+import tech.kzen.auto.server.objects.job.worker.content.PooledBytes
 import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.lib.common.exec.data.value.ValueMetadata
 
@@ -10,7 +11,10 @@ import tech.kzen.lib.common.exec.data.value.ValueMetadata
  * what a [FormatChunker] writes into, and what a live edit carries to the next one.
  */
 internal class FormatGroups {
-    /** One open output: its encoder [state], and the metadata of its last chunk, reused while the parent repeats. */
+    /**
+     * One open output: its encoder [state], the metadata of its last chunk, reused while the parent repeats, and the
+     * chunk it is [filling] (with the length of the header it begins with) until its chunker flushes.
+     */
     class Group(
         val key: String,
         val state: RecordOutputState,
@@ -18,6 +22,8 @@ internal class FormatGroups {
     ) {
         var incoming: ValueMetadata? = null
         var metadata: ValueMetadata? = null
+        var filling: PooledBytes? = null
+        var fillingHeader = 0
     }
 
 

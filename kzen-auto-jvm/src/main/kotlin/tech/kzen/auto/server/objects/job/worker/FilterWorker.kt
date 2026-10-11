@@ -4,7 +4,8 @@ import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.server.objects.job.expression.JobExpressionCompiler
-import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.auto.server.objects.job.expression.evaluate
+import tech.kzen.auto.server.objects.job.value.ColumnProjections
 import tech.kzen.auto.server.util.ClassLoaderUtils
 import tech.kzen.lib.common.exec.data.type.DataContract
 import tech.kzen.lib.common.exec.data.type.DataType
@@ -48,6 +49,7 @@ class FilterWorker(
 {
     private val classLoader = ClassLoaderUtils.dynamicParentClassLoader()
     private val passThrough = where.isBlank()
+    private val projections = ColumnProjections()
 
     private var compiledForContract: DataContract? = null
     private var compiled: JobExpressionCompiler.Compiled? = null
@@ -83,10 +85,10 @@ class FilterWorker(
         }
 
         val projection = when (inputContract.structural) {
-            is DataType.Record, is DataType.Scalar -> JobDataValues.projection(element)
+            is DataType.Record, is DataType.Scalar -> projections.of(element)
             else -> null
         }
-        val result = compiled!!.expression.evaluate(JobDataValues.native(element), element, projection)
+        val result = compiled!!.expression.evaluate(element, projection)
         if (truthy(result)) {
             kept += 1
             emit.send(element)

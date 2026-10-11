@@ -158,14 +158,15 @@ class ConfiguredDelimitedReader private constructor(
 
     private var logicalRecordIndex = 0L
 
-    // One per file: every row shares its header, and the number parse in a cell's cache reuses one scratch
+    // One per file: every row shares its header
     private val header = FlatRecordHeader(contract)
-    private val numberScratch = LongArray(2)
 
 
     /**
      * The next row, its cells copied out of the parser's reused buffer into a record of their own. A row
-     * allocates that record, its null flags when it has a null, and its value.
+     * allocates that record, its null flags when it has a null, and its value. Its cells' hash and number caches fill
+     * on first use ([FlatFileRecord.cachedHash]), which assumes one reader at a time: whatever hands a row to several
+     * readers at once fills them first ([FlatFileRecord.populateCaches]).
      */
     fun read(): DelimitedRecord? {
         val raw = pending?.also { pending = null } ?: parser.readRecord() ?: return null
@@ -186,7 +187,6 @@ class ConfiguredDelimitedReader private constructor(
                 nulls = flags
             }
         }
-        backing.populateCaches(numberScratch)
         backing.attachHeader(header)
         return DelimitedRecord(backing, nulls)
     }
@@ -215,6 +215,9 @@ private class RawRecord {
         private set
     private var ends = IntArray(initialFields)
 
+    // Where the field being read starts in [content]
+    private var openStart = 0
+
     // Start and end offset of each field, in pairs
     private var spans = LongArray(2 * initialFields)
 
@@ -222,6 +225,7 @@ private class RawRecord {
     fun clear() {
         contentLength = 0
         fieldCount = 0
+        openStart = 0
     }
 
     fun append(character: Char) {
@@ -231,8 +235,18 @@ private class RawRecord {
         content[contentLength++] = character
     }
 
+    /** Appends [length] characters of [source] from [offset]. */
+    fun append(source: CharArray, offset: Int, length: Int) {
+        val required = contentLength + length
+        if (required > content.size) {
+            content = content.copyOf(maxOf(required, 2 * content.size))
+        }
+        source.copyInto(content, contentLength, offset, offset + length)
+        contentLength = required
+    }
+
     /** The length of the field being read, not yet committed. */
-    fun openFieldLength(): Int = contentLength - start(fieldCount)
+    fun openFieldLength(): Int = contentLength - openStart
 
     /** Ends the field being read; trimming drops its leading and trailing whitespace, as `String.trim` does. */
     fun commit(trim: Boolean, spanStart: Long, spanEnd: Long) {
@@ -247,10 +261,11 @@ private class RawRecord {
         spans[2 * fieldCount] = spanStart
         spans[2 * fieldCount + 1] = spanEnd
         fieldCount++
+        openStart = contentLength
     }
 
     private fun trimOpenField() {
-        val start = start(fieldCount)
+        val start = openStart
         var from = start
         var to = contentLength
         while (from < to && content[from].isWhitespace()) from++
@@ -351,6 +366,8 @@ private class Parser(
 
     // The record being read, and where in it: reused from one record to the next
     private val record = RawRecord()
+    // The quote, or the delimiter again when there is none, so a run stops at either without a null check
+    private val runQuote = syntax.quote ?: syntax.delimiter
     private var fieldStart = 0L
     private var fieldQuoted = false
     private var recordCharacters = 0
@@ -371,6 +388,18 @@ private class Parser(
         var sawInput = false
 
         while (true) {
+            if (state != ParserState.AfterQuote) {
+                // The characters that only extend the field, taken at once; whatever ends the run, or would exceed a
+                // limit, is read one at a time below
+                val taken = chars.takeRun(
+                    record, state == ParserState.Quoted, syntax.delimiter, runQuote, runLimit())
+                if (taken > 0) {
+                    sawInput = true
+                    if (state == ParserState.Start) state = ParserState.Unquoted
+                    budgetRun(taken)
+                }
+            }
+
             val next = chars.read()
             if (next < 0) {
                 if (!sawInput) return null
@@ -428,6 +457,21 @@ private class Parser(
     private fun budgetCharacter() {
         recordCharacters++
         if (recordCharacters > limits.record) budget("record-character", limits.record)
+        if (recordCharacters and 1023 == 0) checkpoint()
+    }
+
+    /**
+     * How many characters a run may take: up to the next checkpoint (each 1024 of the record), and none that would
+     * exceed the record or field limit.
+     */
+    private fun runLimit(): Int =
+        minOf(1024 - (recordCharacters and 1023),
+            limits.record - recordCharacters,
+            limits.field - record.openFieldLength())
+
+    // A run within [runLimit] ends at most at a checkpoint, which it then takes as [budgetCharacter] would
+    private fun budgetRun(taken: Int) {
+        recordCharacters += taken
         if (recordCharacters and 1023 == 0) checkpoint()
     }
 
@@ -529,6 +573,39 @@ private class CharacterInput(private val input: SequentialCharacterContent) {
         return code
     }
 
+    /**
+     * Appends to [record] the buffered characters before the first that ends a run, at most [limit] of them, and
+     * returns how many: in a [quoted] field only [quote] ends one; otherwise also [delimiter], CR and LF. Takes
+     * nothing while characters wait to be read again, or when the buffer is used up ([read] refills it).
+     */
+    fun takeRun(record: RawRecord, quoted: Boolean, delimiter: Char, quote: Char, limit: Int): Int {
+        val from = index
+        if (replaySize > 0 || from >= size) {
+            return 0
+        }
+        val end = if (size - from > limit) from + limit else size
+        var next = from
+        if (quoted) {
+            while (next < end && buffer[next] != quote) next++
+        }
+        else {
+            while (next < end) {
+                val c = buffer[next]
+                if (c == delimiter || c == quote || c == '\r' || c == '\n') break
+                next++
+            }
+        }
+        val taken = next - from
+        if (taken > 0) {
+            record.append(buffer, from, taken)
+            index = next
+            sourceOffset += taken
+            offset = sourceOffset
+        }
+        return taken
+    }
+
+
     fun consumePrefix(prefix: String): Boolean {
         if (consumedCodes.size < prefix.length) {
             consumedCodes = IntArray(prefix.length)
@@ -582,10 +659,20 @@ private class TypedDecoder(
     private val policy: tech.kzen.auto.common.data.read.TypedDecodePolicy,
     private val context: DelimitedReadContext
 ) {
+    private companion object {
+        const val textMode = 0
+        const val booleanMode = 1
+        const val numberMode = 2
+    }
+
     private val fields = (contract.structural as DataType.Record).fields
     private val overrides: Map<String, FieldDecodeOverride>
     private val scalars: List<DataType.Scalar>
-    private val nullTokens: List<String?>
+
+    // Per field, read on every cell: classified once here rather than by comparing kinds per cell
+    private val nullTokens: Array<String?>
+    private val nullable: BooleanArray
+    private val modes: IntArray
 
     init {
         require(policy.malformedValue == "fail-part") {
@@ -617,7 +704,15 @@ private class TypedDecoder(
             }
         }
         scalars = fields.map { it.type as DataType.Scalar }
-        nullTokens = fields.map { overrides[it.id.name]?.nullToken ?: policy.nullToken }
+        nullTokens = Array(fields.size) { overrides[fields[it].id.name]?.nullToken ?: policy.nullToken }
+        nullable = BooleanArray(fields.size) { scalars[it].nullable }
+        modes = IntArray(fields.size) {
+            when (scalars[it].kind) {
+                ScalarKind.Text -> textMode
+                ScalarKind.Boolean -> booleanMode
+                else -> numberMode
+            }
+        }
     }
 
     /**
@@ -625,20 +720,19 @@ private class TypedDecoder(
      * validated), a number in its canonical form. True when the field is null; its cell is then empty.
      */
     fun decode(index: Int, raw: RawRecord, physical: Int, recordIndex: Long, target: FlatFileRecord): Boolean {
-        val scalar = scalars[index]
         val nullToken = nullTokens[index]
         if (nullToken != null && raw.textEquals(physical, nullToken)) {
-            if (!scalar.nullable) {
+            if (!nullable[index]) {
                 failure(recordIndex, fields[index].id.name, raw.span(physical), "Null token in non-nullable field")
             }
             target.add("")
             return true
         }
-        when (val kind = scalar.kind) {
-            ScalarKind.Text ->
+        when (modes[index]) {
+            textMode ->
                 target.add(raw.content, raw.start(physical), raw.length(physical))
 
-            ScalarKind.Boolean -> {
+            booleanMode -> {
                 if (!raw.textEquals(physical, "true") && !raw.textEquals(physical, "false")) {
                     malformed(index, raw, physical, recordIndex)
                 }
@@ -647,7 +741,7 @@ private class TypedDecoder(
 
             else -> {
                 val canonical = try {
-                    canonicalNumber(raw.text(physical), kind)
+                    canonicalNumber(raw.text(physical), scalars[index].kind)
                 }
                 catch (e: Exception) {
                     malformed(index, raw, physical, recordIndex)

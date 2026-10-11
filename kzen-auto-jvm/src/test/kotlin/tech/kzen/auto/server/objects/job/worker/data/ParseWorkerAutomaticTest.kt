@@ -80,6 +80,20 @@ class ParseWorkerAutomaticTest {
                 val file = it as Map<*, *>
                 file[JobReadConventions.detectedFileKey] to file[JobReadConventions.detectedLabelKey]
             })
+
+        // Each column with the files that hold it: the card counts those some files lack
+        assertEquals(2L, parse.details[JobReadConventions.sampledFilesKey])
+        val both = listOf("measurements-1.txt", "measurements-2.txt")
+        assertEquals(
+            listOf(
+                "station" to both,
+                "date" to both,
+                "temperature" to listOf("measurements-1.txt"),
+                "humidity" to listOf("measurements-2.txt")),
+            (parse.details[JobReadConventions.sampledColumnsKey] as List<*>).map {
+                val column = it as Map<*, *>
+                column[JobReadConventions.sampledColumnNameKey] to column[JobReadConventions.sampledColumnFilesKey]
+            })
     }
 
 

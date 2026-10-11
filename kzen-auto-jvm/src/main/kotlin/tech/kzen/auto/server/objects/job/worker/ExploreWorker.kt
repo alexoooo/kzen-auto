@@ -5,6 +5,7 @@ import tech.kzen.auto.common.objects.document.report.output.OutputPreview
 import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.api.ChannelServer
 import tech.kzen.auto.common.paradigm.job.control.JobControl
+import tech.kzen.auto.server.objects.job.value.ColumnProjections
 import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.auto.server.objects.report.exec.output.flat.IndexedCsvTable
@@ -61,6 +62,7 @@ class ExploreWorker(
     // Created lazily on the first record (its constructor needs the stream's header) under the persistent output
     // dir; flushed-and-closed (NOT deleted) in onClose. Confined to the work coroutine except for the immutable
     // [ExploreView] handle the serve coroutine reads (single-threaded — safe; see the class doc).
+    private val projections = ColumnProjections()
     private var table: IndexedCsvTable? = null
     private var outputDir: Path? = null
     private var count = 0L
@@ -80,7 +82,7 @@ class ExploreWorker(
 
 
     override suspend fun onElement(element: DataValue, control: JobControl) {
-        val projection = JobDataValues.projection(element)
+        val projection = projections.of(element)
         val header = projection.header
         val activeTable = table
             ?: control

@@ -145,10 +145,12 @@ PathProjectionEditor:
   class: tech.kzen.auto.client.objects.document.job.edit.PathProjectionEditor$Wrapper
 
 
-# Writer-column editor: edits a writer's `columns` attribute (a WriterColumnSpec) as rows — `*` for every payload
-# column, and path columns (a metadata field such as `meta.name`, or a nested scalar) with an alias and their
-# binding error — picked from the upstream contract in the same picker as PathProjectionEditor, without unnesting.
-# Selected via `editor: WriterColumnsEditor` on CsvWriterWorker's and ExportWriterWorker's `columns` metadata.
+# Writer-column editor: edits a writer's `columns` attribute (a WriterColumnSpec), collapsed to a summary, as a table
+# of the upstream contract's columns — each payload column ticked when the `*` keeps it (its Allow / Exclude
+# patterns, which unticking writes an exact Exclude line into) and renamed in place, and path columns (a metadata
+# field such as `meta.name`, or a nested scalar, never unnesting) ticked to add them, each with an alias and its
+# binding error. Selected via `editor: WriterColumnsEditor` on the `columns` metadata of CsvWriterWorker,
+# ExportWriterWorker and FormatWorker.
 WriterColumnsEditor:
   is: AttributeEditor
   class: tech.kzen.auto.client.objects.document.job.edit.WriterColumnsEditor$Wrapper

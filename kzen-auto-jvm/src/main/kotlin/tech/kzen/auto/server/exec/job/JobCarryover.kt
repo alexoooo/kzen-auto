@@ -14,7 +14,9 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableId
  */
 class JobCarryover(
     val channels: Map<ObjectStableId, ChannelCarryover>,
-    val ledger: RunOwnershipLedger
+    val ledger: RunOwnershipLedger,
+    /** When the run started ([System.nanoTime]): the Workers' progress clock, kept across the edit. */
+    val startedNanos: Long
 ): AutoCloseable {
     override fun close() {
         ledger.closeAll(null)?.let { throw it }

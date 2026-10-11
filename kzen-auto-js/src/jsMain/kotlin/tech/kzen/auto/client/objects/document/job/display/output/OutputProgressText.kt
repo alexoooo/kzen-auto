@@ -1,6 +1,7 @@
 package tech.kzen.auto.client.objects.document.job.display.output
 
 import tech.kzen.auto.client.objects.document.job.JobWorkerProgress
+import tech.kzen.auto.client.objects.document.job.display.ProgressRate
 import tech.kzen.auto.common.objects.document.job.JobOutputConventions
 import tech.kzen.auto.common.util.FormatUtils
 import kotlin.js.Date
@@ -9,20 +10,31 @@ import kotlin.js.Date
 /** What `Format` and `Write` cards say about a run, from their [JobOutputConventions] progress. */
 object OutputProgressText {
     //-----------------------------------------------------------------------------------------------------------------
+    /** A file `Write` is writing ([open]) or has published, by absolute [path], with its bytes on disk so far. */
+    data class WriteFile(
+        val path: String,
+        val bytes: Long,
+        val open: Boolean
+    )
+
+
+    //-----------------------------------------------------------------------------------------------------------------
     /**
-     * "12,345 records · 3.1 MB", then, when records are grouped, "4 groups" and how many are open while only some
-     * are; null before anything is encoded.
+     * "12,345 records · 3.1 MB · 850,000 records/s" ([recordRate] measures the records), then, when records are
+     * grouped, "4 groups" and how many are open while only some are; null before anything is encoded.
      */
-    fun format(progress: JobWorkerProgress?): String? {
+    fun format(progress: JobWorkerProgress?, recordRate: ProgressRate? = null): String? {
         if (progress == null) {
             return null
         }
         val parts = mutableListOf<String>()
         progress.status?.let { parts.add(it) }
-        progress.longValue(JobOutputConventions.formatRecordsKey)?.let { parts.add(count(it, "record")) }
+        val records = progress.longValue(JobOutputConventions.formatRecordsKey)
+        records?.let { parts.add(count(it, "record")) }
         progress.longValue(JobOutputConventions.formatBytesKey)?.takeIf { it > 0 }?.let {
             parts.add(FormatUtils.readableFileSize(it))
         }
+        recordRate?.perSecond(progress, records)?.let { parts.add(ProgressRate.countText(it, "records")) }
         val open = progress.longValue(JobOutputConventions.formatGroupsOpenKey)
         val done = progress.longValue(JobOutputConventions.formatGroupsDoneKey)
         if (open != null && done != null && open + done > 0) {
@@ -35,29 +47,61 @@ object OutputProgressText {
     }
 
 
-    /** "output.csv.gz · 18.4 MB" while one file is open, "1 file · 42.2 MB" once published; null before Run. */
-    fun write(progress: JobWorkerProgress?): String? {
+    /**
+     * "C:\data\output.csv.gz · 18.4 MB · 12.1 MB/s" while the run's only file is written or once it is published
+     * ([byteRate] measures the bytes on disk), "3 files · 2 open · 42.2 MB" when there are more; null before Run.
+     */
+    fun write(progress: JobWorkerProgress?, byteRate: ProgressRate? = null): String? {
         if (progress == null) {
             return null
         }
         val parts = mutableListOf<String>()
         progress.status?.let { parts.add(it) }
-        progress.longValue(JobOutputConventions.writeFilesKey)?.takeIf { it > 0 }?.let { parts.add(count(it, "file")) }
 
+        val published = progress.longValue(JobOutputConventions.writeFilesKey) ?: 0
         val open = progress.longValue(JobOutputConventions.writeOpenKey) ?: 0
-        val openName = progress.progressMap[JobOutputConventions.writeOpenNameKey] as? String
-        when {
-            openName != null -> parts.add(openName)
-            open > 0 -> parts.add("$open open")
+        val only = writeFiles(progress).singleOrNull()?.takeIf { published + open == 1L }
+        if (only != null) {
+            parts.add(only.path)
+        }
+        else {
+            if (published > 0) {
+                parts.add(count(published, "file"))
+            }
+            if (open > 0) {
+                parts.add("$open open")
+            }
         }
 
-        progress.longValue(JobOutputConventions.writeBytesKey)?.takeIf { it > 0 }?.let {
+        val bytes = progress.longValue(JobOutputConventions.writeBytesKey)
+        bytes?.takeIf { it > 0 }?.let {
             parts.add(FormatUtils.readableFileSize(it))
         }
+        byteRate?.perSecond(progress, bytes)?.let { parts.add(ProgressRate.bytesText(it)) }
         progress.longValue(JobOutputConventions.writeSkippedKey)?.takeIf { it > 0 }?.let {
             parts.add("${FormatUtils.decimalSeparator(it)} skipped")
         }
         return parts.joinToString(" · ").takeIf { parts.isNotEmpty() }
+    }
+
+
+    /**
+     * The files `Write` lists: the ones it is writing, then the ones it published (while it runs, only the first
+     * few open and the latest few published, the bounded teaser; once it is done, every published file).
+     */
+    fun writeFiles(progress: JobWorkerProgress?): List<WriteFile> {
+        if (progress == null) {
+            return listOf()
+        }
+        fun files(key: String, open: Boolean): List<WriteFile> =
+            (progress.progressMap[key] as? List<*>).orEmpty().mapNotNull { file ->
+                val fields = file as? Map<*, *> ?: return@mapNotNull null
+                val path = fields[JobOutputConventions.filePathKey] as? String ?: return@mapNotNull null
+                val bytes = JobWorkerProgress.longOf(fields[JobOutputConventions.fileBytesKey]) ?: 0L
+                WriteFile(path, bytes, open)
+            }
+        return files(JobOutputConventions.writeOpenFilesKey, true) +
+            files(JobOutputConventions.writeWrittenFilesKey, false)
     }
 
 

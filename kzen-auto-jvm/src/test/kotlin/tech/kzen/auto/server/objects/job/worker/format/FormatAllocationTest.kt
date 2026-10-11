@@ -34,22 +34,24 @@ import kotlin.test.assertTrue
 
 /**
  * Format's steady state allocates nothing per record when records are not grouped: a flat record (Parse's rows,
- * including a superset's absent field) is read in place and encoded into a recycled chunk that keeps its value.
- * Measured as this thread's allocated bytes, a chunk's cycle through a channel (hold, release) included; the number
- * is printed for the session record.
+ * including a superset's absent field) is read in place and encoded into a recycled chunk that keeps its value, one
+ * chunk per input batch. Measured as this thread's allocated bytes, a chunk's cycle through a channel (hold, release)
+ * included; the number is printed for the session record.
  */
 class FormatAllocationTest {
+    // The records of an input batch, flushed as one chunk
+    private val batchSize = 1024
     private val warmupRecords = 50_000
     private val measuredRecords = 200_000
 
     private val freshMetadataCount = 1024
     private val freshMetadataWarmup = 20_000
     private val freshMetadataRecords = 50_000
-    // The chunk's metadata record, plus comparing the parent's contract with the shape's when it is an equal
-    // object rather than the same; building the record's contract per record costs about 14 KB, and validating it
-    // alone about 3.7 KB
+    // Per chunk, the chunk's metadata record, plus comparing the parent's contract with the shape's when it is an
+    // equal object rather than the same; building the record's contract per chunk costs about 14 KB, and validating
+    // it alone about 3.7 KB
     private val freshMetadataBudgetBytes = 1_000L
-    // The chunk's metadata record alone: a few small objects
+    // Per chunk, the chunk's metadata record alone: a few small objects
     private val shapedMetadataBudgetBytes = 500L
 
     private val threads = ManagementFactory.getThreadMXBean() as com.sun.management.ThreadMXBean
@@ -78,17 +80,16 @@ class FormatAllocationTest {
         val out = ArrayList<DataValue>()
 
         chunker.chunk(records[0], 1, out)
+        chunker.flush(out)
         assertEquals("group,value,extra\nx,1,first\n", copy(out.single()))
         recycle(out)
         for (i in 1 until warmupRecords) {
-            chunker.chunk(records[i % records.size], i + 1L, out)
-            recycle(out)
+            chunk(chunker, records[i % records.size], i + 1L, out)
         }
 
         val before = threads.currentThreadAllocatedBytes
         for (i in 0 until measuredRecords) {
-            chunker.chunk(records[i % records.size], i + 1L, out)
-            recycle(out)
+            chunk(chunker, records[i % records.size], i + 1L, out)
         }
         val allocated = threads.currentThreadAllocatedBytes - before
 
@@ -148,16 +149,24 @@ class FormatAllocationTest {
         val out = ArrayList<DataValue>()
 
         for (i in 0 until freshMetadataWarmup) {
-            chunker.chunk(records[i % records.size], i + 1L, out)
-            recycle(out)
+            chunk(chunker, records[i % records.size], i + 1L, out)
         }
 
         val before = threads.currentThreadAllocatedBytes
         for (i in 0 until freshMetadataRecords) {
-            chunker.chunk(records[i % records.size], i + 1L, out)
-            recycle(out)
+            chunk(chunker, records[i % records.size], i + 1L, out)
         }
         return (threads.currentThreadAllocatedBytes - before) / freshMetadataRecords
+    }
+
+
+    /** Chunks [record], flushing and recycling at the end of each input batch, as Format's drive loop does. */
+    private fun chunk(chunker: FormatChunker, record: DataValue, ordinal: Long, out: MutableList<DataValue>) {
+        chunker.chunk(record, ordinal, out)
+        if (ordinal % batchSize == 0L) {
+            chunker.flush(out)
+            recycle(out)
+        }
     }
 
 

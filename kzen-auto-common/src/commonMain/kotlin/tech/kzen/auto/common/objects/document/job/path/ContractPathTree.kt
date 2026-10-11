@@ -45,11 +45,19 @@ object ContractPathTree {
     /** The top-level fields of [upstream]'s payload (none when it is not a record), then `meta` if it has metadata. */
     fun roots(upstream: DataContract): List<Candidate> {
         val payload = fields(upstream, null)
+        val metadata = metadataRoot(upstream)
+            ?: return payload
+        return payload + metadata
+    }
+
+
+    /** `meta`, the value's metadata, when [upstream] has any. */
+    fun metadataRoot(upstream: DataContract): Candidate? {
         val metadata = upstream.metadata?.structural
         if (metadata == null || metadata.fields.isEmpty()) {
-            return payload
+            return null
         }
-        return payload + Candidate(metadataPath, ProjectionPath.Facet.Metadata.qualifier, Kind.Record)
+        return Candidate(metadataPath, ProjectionPath.Facet.Metadata.qualifier, Kind.Record)
     }
 
 

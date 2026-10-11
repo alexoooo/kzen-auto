@@ -2,11 +2,13 @@ package tech.kzen.auto.server.objects.job.worker.data
 
 import tech.kzen.auto.common.data.api.DataContext
 import tech.kzen.auto.common.data.model.DataPart
+import tech.kzen.auto.common.data.schema.HeaderLabel
 import tech.kzen.auto.server.data.DataOpenerLookup
 import tech.kzen.auto.server.data.design.DesignReadSession
 import tech.kzen.auto.server.objects.job.worker.JobLaneAttempt
 import tech.kzen.auto.server.objects.job.worker.JobLaneDescriptor
 import tech.kzen.lib.common.exec.data.type.DataContract
+import tech.kzen.lib.common.exec.data.type.DataType
 
 
 /**
@@ -16,12 +18,22 @@ import tech.kzen.lib.common.exec.data.type.DataContract
  * (the values its input lane offers) and `Read` (the units of its data source).
  */
 internal object DesignShapeInference {
+    /** A column of the merged payload, rendered as a header names it, and the inspected parts that hold it. */
+    class InferredColumn(
+        val name: String,
+        val origins: List<String>
+    )
+
+
+    /** [columns] are the merged payload's, each with the parts that hold it, of [parts] inspected. */
     class Inference(
         val payload: DataContract?,
         val read: Int,
         val total: Int,
         val partial: Boolean,
-        val error: String?
+        val error: String?,
+        val columns: List<InferredColumn> = listOf(),
+        val parts: Int = 0
     ) {
         /** The lane this inference types: [unknown] with its payload replaced, carrying [unknown]'s metadata. */
         fun attempt(unknown: DataContract): JobLaneAttempt {
@@ -89,6 +101,24 @@ internal object DesignShapeInference {
             catch (e: IllegalStateException) {
                 return Inference(null, read, total, partial, e.message)
             }
-        return Inference(planned.shape.itemType, read, total, partial, null)
+        return Inference(
+            planned.shape.itemType, read, total, partial, null, columns(planned.shape.itemType, candidates),
+            candidates.size)
     }
+
+
+    private fun columns(payload: DataContract, candidates: List<DataReadCore.ShapeCandidate>): List<InferredColumn> {
+        val fields = recordFields(payload)
+            ?: return listOf()
+        val held = candidates.map { candidate -> recordFields(candidate.shape.itemType)?.toSet().orEmpty() }
+        return fields.map { field ->
+            InferredColumn(
+                HeaderLabel(field.name, field.occurrence).render(),
+                candidates.indices.filter { field in held[it] }.map { candidates[it].origin })
+        }
+    }
+
+
+    private fun recordFields(contract: DataContract) =
+        (contract.expanded().structural as? DataType.Record)?.fields?.map { it.id }
 }

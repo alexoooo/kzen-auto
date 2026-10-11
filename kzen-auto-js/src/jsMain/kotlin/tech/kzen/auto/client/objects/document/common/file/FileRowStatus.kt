@@ -9,8 +9,11 @@ sealed interface FileRowStatus {
     data object Pending: FileRowStatus
     data object Done: FileRowStatus
 
-    /** [bytes] is null when the reader cannot count them (it still names the file it is on). */
-    data class Reading(val bytes: Long?, val size: Long): FileRowStatus {
+    /**
+     * [bytes] is null when the reader cannot count them (it still names the file it is on); [bytesPerSecond] is how
+     * fast it reads, when known.
+     */
+    data class Reading(val bytes: Long?, val size: Long, val bytesPerSecond: Double? = null): FileRowStatus {
         fun percent(): Int? =
             bytes?.let { percentOf(it, size) }
     }

@@ -7,7 +7,7 @@ import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.common.paradigm.job.control.ValueLease
 import tech.kzen.auto.server.exec.job.ownership.ValueLeases
-import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.auto.server.objects.job.value.ColumnProjections
 import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
@@ -64,6 +64,7 @@ class SortWorker(
 
     // Every buffered message (whole stream); replaced with a fresh empty list once emitted in onComplete, and
     // carried across a live edit by capture/loadMigrationState.
+    private val projections = ColumnProjections()
     private var buffer = ArrayList<DataValue>()
     private var buffered = 0L
     private var emitted = 0L
@@ -125,7 +126,7 @@ class SortWorker(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun decorate(message: DataValue): Decorated {
-        val projection = JobDataValues.projection(message)
+        val projection = projections.of(message)
         val indices = indicesFor(projection.header)
 
         val texts = Array(ascending.size) { "" }

@@ -290,9 +290,11 @@ class WorkerDisplayDefault(
         // Generic scalar progress entries (read / seen / kept / written / …): every non-structured value the
         // Worker published, rendered key=value. Structured payloads (List / Map values — a Preview teaser, a
         // Summary table) are skipped here; the Worker's own display parses those. No Worker key names appear in
-        // this general card.
+        // this general card, and nor does the run clock the server stamps on every map.
         val scalarEntries = progress.progressMap.entries
-            .filter { (_, value) -> value != null && value !is List<*> && value !is Map<*, *> }
+            .filter { (key, value) ->
+                key != JobConventions.progressElapsedKey && value != null && value !is List<*> && value !is Map<*, *>
+            }
         if (scalarEntries.isNotEmpty()) {
             parts.add(scalarEntries.joinToString(" ") { "${it.key}=${it.value}" })
         }

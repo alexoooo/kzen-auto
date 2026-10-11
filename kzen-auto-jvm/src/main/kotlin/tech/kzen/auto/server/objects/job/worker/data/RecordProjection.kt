@@ -17,8 +17,6 @@ import tech.kzen.lib.common.exec.data.value.DataValue
  * How the items of one cursor become messages of its [effectiveShape] ([DataReadCore.message]), planned once per
  * file: the column mapping, the target header and the cell states shared by rows without a null. A flat item's
  * text cells are copied as character ranges; other cells render through their scalar.
- *
- * Holds a number-parse scratch, so one Worker uses it at a time.
  */
 class RecordProjection internal constructor(
     val cursorShape: DataShape,
@@ -35,7 +33,6 @@ class RecordProjection internal constructor(
     private val cells: List<Cell>?
     private val header: FlatRecordHeader?
     private val presentStates: List<DataState>?
-    private val numberScratch = LongArray(2)
 
 
     init {
@@ -122,7 +119,7 @@ class RecordProjection internal constructor(
                 }
             }
         }
-        record.populateCaches(numberScratch)
+        // Its caches fill on first use, as the reader's rows' do
         return JobDataValues.projectedRecord(
             requireNotNull(header), record, states ?: requireNotNull(presentStates))
     }

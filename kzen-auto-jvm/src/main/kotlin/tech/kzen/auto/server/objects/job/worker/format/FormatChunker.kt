@@ -13,16 +13,18 @@ import tech.kzen.lib.common.util.digest.Digest
 
 /**
  * Format's encoding of one stream of values into chunks, a [PooledBytes] from [pool] each, with metadata
- * `{group, format, parent}` ([ChunkMetadata]). Each value is one chunk of the output of its group ([groupOf], or
- * `""` for every value when null); the chunk that opens an output begins with the encoder's header. An output ends
- * with a chunk holding its footer, marked as its end: at [complete], in the order the outputs opened, or, when
- * [endsOnChange], as soon as a value of another group arrives, so a group that comes back fails.
+ * `{group, format, parent}` ([ChunkMetadata]). The values of a group ([groupOf], or `""` for every value when null)
+ * fill one chunk of its output until [flush], which sends each group's chunk; the chunk that opens an output begins
+ * with the encoder's header, and its `parent` is the metadata of its first value. An output ends with a chunk
+ * holding its footer, marked as its end: at [complete], in the order the outputs opened, or, when [endsOnChange], as
+ * soon as a value of another group arrives, so a group that comes back fails.
  *
  * [encoding] identifies how it writes (format, columns, header, grouping): a chunker of the same encoding continues
- * the outputs another one left open ([resume]), any other discards them ([restart]).
+ * the outputs another one left open ([resume]), any other discards them ([restart]). Only a flushed chunker is
+ * carried: a chunk being filled is not part of [groups]' state.
  *
- * Allocates nothing per value once the pool is warm, as long as the group and the incoming metadata object repeat;
- * a new metadata object costs the chunk's metadata record, its [ChunkMetadata.shape] reused while the parent's
+ * Allocates nothing per value once the pool is warm and the chunks have grown; a chunk whose first value brings a
+ * new metadata object costs the chunk's metadata record, its [ChunkMetadata.shape] reused while the parent's
  * contract is the same.
  */
 internal class FormatChunker(
@@ -79,32 +81,17 @@ internal class FormatChunker(
 
     //-----------------------------------------------------------------------------------------------------------------
     /**
-     * Adds to [out] the chunks of [element], the [ordinal]-th value (from 1), which names it when encoding fails:
-     * any discards, the footer of the output it ends, then its own.
+     * Encodes [element], the [ordinal]-th value (from 1, naming it when encoding fails), into the chunk its group is
+     * filling; adds to [out] any discards and the footer of the output it ends.
      */
     fun chunk(element: DataValue, ordinal: Long, out: MutableList<DataValue>) {
         discardCarried(out)
         try {
             cells.bind(element)
             val group = groupFor(groupOf?.invoke(element) ?: ungrouped, out)
-
-            val slot = pool.acquire()
-            val buffer = slot.bytes.buffer()
-            buffer.bytesLength = 0
-            var headerLength = 0
-            if (group.metadata == null) {
-                encoder.encodeHeader(group.state, buffer)
-                headerLength = buffer.bytesLength
-            }
-            encoder.encodeRecord(group.state, cells, buffer)
-            slot.bytes.mark(headerLength, discardsOutput = false, endsOutput = false)
-
-            val parent = element.metadata
-            if (group.metadata == null || parent !== group.incoming) {
-                group.metadata = chunkMetadata(group.value, parent)
-                group.incoming = parent
-            }
-            out += slot.value(group.metadata)
+            val filling = group.filling
+                ?: start(group, element.metadata)
+            encoder.encodeRecord(group.state, cells, filling.bytes.buffer())
         }
         catch (e: IllegalArgumentException) {
             throw IllegalArgumentException("Record $ordinal: ${e.message}", e)
@@ -115,7 +102,19 @@ internal class FormatChunker(
     }
 
 
-    /** Adds to [out] any discards, then the footer of every open output, in the order they opened. */
+    /** Adds to [out] any discards, then the chunk each open output is filling, in the order they opened. */
+    fun flush(out: MutableList<DataValue>) {
+        discardCarried(out)
+        for (group in groups.open.values) {
+            send(group, out)
+        }
+    }
+
+
+    /**
+     * Adds to [out] any discards, then for every open output, in the order they opened, the chunk it is filling and
+     * its footer.
+     */
     fun complete(out: MutableList<DataValue>) {
         discardCarried(out)
         for (group in groups.open.values) {
@@ -158,7 +157,37 @@ internal class FormatChunker(
     }
 
 
+    /** Starts the chunk [group] fills, with its output's header when it is the first; [parent] names its parent. */
+    private fun start(group: FormatGroups.Group, parent: ValueMetadata?): PooledBytes {
+        val slot = pool.acquire()
+        val buffer = slot.bytes.buffer()
+        buffer.bytesLength = 0
+        if (group.metadata == null) {
+            encoder.encodeHeader(group.state, buffer)
+            group.fillingHeader = buffer.bytesLength
+        }
+        if (group.metadata == null || parent !== group.incoming) {
+            group.metadata = chunkMetadata(group.value, parent)
+            group.incoming = parent
+        }
+        group.filling = slot
+        return slot
+    }
+
+
+    /** Adds to [out] the chunk [group] is filling, if any. */
+    private fun send(group: FormatGroups.Group, out: MutableList<DataValue>) {
+        val slot = group.filling
+            ?: return
+        slot.bytes.mark(group.fillingHeader, discardsOutput = false, endsOutput = false)
+        out += slot.value(group.metadata)
+        group.filling = null
+        group.fillingHeader = 0
+    }
+
+
     private fun footer(group: FormatGroups.Group, out: MutableList<DataValue>) {
+        send(group, out)
         val slot = pool.acquire()
         val buffer = slot.bytes.buffer()
         buffer.bytesLength = 0

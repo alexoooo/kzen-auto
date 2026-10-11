@@ -379,10 +379,11 @@ class ParseWorker(
                 }
             }
 
-            val emittedItem = DataReadCore.emitNext(
+            val emittedItem = DataReadCore.emitBatch(
                 control,
                 activeCursor,
                 projectionFor(activeCursor),
+                emitter.sendsBeforeCheckpoint(),
                 claimBeforeSend = {
                     itemIndex += 1
                     unitEmittedOrdinal += 1
@@ -432,10 +433,11 @@ class ParseWorker(
                 }
 
             while (true) {
-                val emitted = DataReadCore.emitNext(
+                val emitted = DataReadCore.emitBatch(
                     control,
                     opened,
                     projectionFor(opened),
+                    emitter.sendsBeforeCheckpoint(),
                     claimBeforeSend = { totalEmitted += 1 },
                     send = { emitter.send(it.withMetadata(itemMetadata)) })
                 if (!emitted) {
@@ -658,16 +660,32 @@ class ParseWorker(
         // The format automatic detection picks for each sampled file, collected as the inference resolves it
         val detected = mutableListOf<Map<String, Any?>>()
             .takeIf { content && format.selectionKind == FormatSelectionKind.Automatic }
-        val attempt = DesignShapeInference
+        val inference = DesignShapeInference
             .infer(sample.values.size, sample.total, design, openerLookup, schemaMode) { dataContext, index ->
                 partsOf(dataContext, sample.values[index], index, design, detected)
             }
-            .attempt(unknown)
         val formatDetails = detected
             ?.takeIf { it.isNotEmpty() }
             ?.let { mapOf(JobReadConventions.detectedFormatsKey to it.toList()) }
             ?: mapOf()
-        return attempt.withDetails(unitDetails + formatDetails)
+        return inference.attempt(unknown).withDetails(unitDetails + formatDetails + columnDetails(inference))
+    }
+
+
+    /** The sampled files' columns, each with the files (by name) that hold it ([JobReadConventions.sampledColumnsKey]). */
+    private fun columnDetails(inference: DesignShapeInference.Inference): Map<String, Any?> {
+        if (inference.columns.isEmpty()) {
+            return mapOf()
+        }
+        val columns = inference.columns.map { column ->
+            mapOf(
+                JobReadConventions.sampledColumnNameKey to column.name,
+                JobReadConventions.sampledColumnFilesKey to
+                    column.origins.map { it.substringAfterLast('/').substringAfterLast('\\') })
+        }
+        return mapOf(
+            JobReadConventions.sampledColumnsKey to columns,
+            JobReadConventions.sampledFilesKey to inference.parts.toLong())
     }
 
 

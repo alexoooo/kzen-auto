@@ -5,6 +5,7 @@ import react.ChildrenBuilder
 import react.Key
 import react.State
 import react.dom.html.ReactHTML.div
+import react.dom.html.ReactHTML.span
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeViewManager
 import tech.kzen.auto.client.objects.document.common.file.FileRowStatus
@@ -48,6 +49,8 @@ external interface ParseWorkerDisplayState: State {
  * - Under the format (moved to the top of the card), the format automatic detection picked: per sampled file
  *   before Run, for the file being read during it. Shown only when the validation reported a detection, which it
  *   does only for Automatic.
+ * - Under that, the columns the sampled files hold; a column not in all of them says in how many, in gray, and
+ *   names them in its tooltip.
  * - The header gives the file being read, its bytes read of its size, and the rows sent.
  */
 @Suppress("unused")
@@ -61,6 +64,7 @@ class ParseWorkerDisplay(
         private val roleAttributeName = AttributeName("role")
         private val formatAttributeName = AttributeName("format")
         private const val emittedKey = "emitted"
+        private val mutedColor = Color("rgba(0, 0, 0, 0.65)")
     }
 
 
@@ -84,6 +88,11 @@ class ParseWorkerDisplay(
             }
         }
     }
+
+
+    // How fast the file being read is read, and rows come out
+    private val byteRate = ProgressRate()
+    private val rowRate = ProgressRate()
 
 
     override fun ParseWorkerDisplayState.init(props: ParseWorkerDisplayProps) {
@@ -150,7 +159,8 @@ class ParseWorkerDisplay(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    // "measurements.txt · 1.2 GB / 1.4 GB (86%) · 723,968 rows"; null (the generic counts) before anything is read
+    // "measurements.txt · 1.2 GB / 1.4 GB (86%) · 45.1 MB/s · 723,968 rows · 520,331 rows/s"; null (the generic
+    // counts) before anything is read
     private fun readStatusText(progress: JobWorkerProgress?): String? {
         if (progress == null) {
             return null
@@ -162,12 +172,16 @@ class ParseWorkerDisplay(
         val name = progress.progressMap[JobReadConventions.readNameKey] as? String
         if (name != null) {
             parts.add(listOfNotNull(name, bytesText(progress)).joinToString(" · "))
+            byteRate.perSecond(progress, progress.longValue(JobReadConventions.readBytesKey))
+                ?.let { parts.add(ProgressRate.bytesText(it)) }
         }
         else {
             progress.longValue(JobReadConventions.readDoneKey)?.let { parts.add("${FormatUtils.decimalSeparator(it)} read") }
         }
 
-        progress.longValue(emittedKey)?.let { parts.add("${FormatUtils.decimalSeparator(it)} rows") }
+        val rows = progress.longValue(emittedKey)
+        rows?.let { parts.add("${FormatUtils.decimalSeparator(it)} rows") }
+        rowRate.perSecond(progress, rows)?.let { parts.add(ProgressRate.countText(it, "rows")) }
         return parts.joinToString(" · ").takeIf { parts.isNotEmpty() }
     }
 
@@ -198,43 +212,18 @@ class ParseWorkerDisplay(
                 attributeName = formatAttributeName
             }
         }
-        renderDetected()
-    }
-
-
-    private fun ChildrenBuilder.renderDetected() {
-        val detected = (details()[JobReadConventions.detectedFormatsKey] as? List<*>)
-            ?.mapNotNull { it as? Map<*, *> }
-            ?.mapNotNull { file ->
-                val name = file[JobReadConventions.detectedFileKey] as? String ?: return@mapNotNull null
-                val label = file[JobReadConventions.detectedLabelKey] as? String ?: return@mapNotNull null
-                name to label
-            }
-            ?.takeIf { it.isNotEmpty() }
-            ?: return
-
-        val progressMap = props.common.progress?.progressMap.orEmpty()
-        val liveFormat = progressMap[JobReadConventions.readFormatKey] as? String
-        val liveName = progressMap[JobReadConventions.readNameKey] as? String
-        val lines =
-            if (liveFormat != null) {
-                listOf("Detected: $liveFormat" + (liveName?.let { " ($it)" } ?: ""))
-            }
-            else if (detected.map { it.second }.distinct().size == 1) {
-                listOf("Detected: ${detected.first().second}")
-            }
-            else {
-                listOf("Detected:") + detected.map { (name, label) -> "$name: $label" }
-            }
-
+        val detected = detectedLines()
+        val columns = SampledColumn.of(details())
+        if (detected.isEmpty() && columns == null) {
+            return
+        }
         div {
             css {
-                marginTop = (-0.25).em
-                marginBottom = 0.5.em
+                marginBottom = 1.em
                 fontSize = 0.85.em
-                color = Color("rgba(0, 0, 0, 0.65)")
+                color = mutedColor
             }
-            for ((index, line) in lines.withIndex()) {
+            for ((index, line) in detected.withIndex()) {
                 div {
                     key = Key("$index")
                     if (index > 0) {
@@ -243,6 +232,61 @@ class ParseWorkerDisplay(
                     +line
                 }
             }
+            if (columns != null) {
+                renderColumns(columns)
+            }
+        }
+    }
+
+
+    // "Columns: a, b, extra (1)", the count and its tooltip only on a column some sampled files lack
+    private fun ChildrenBuilder.renderColumns(columns: SampledColumn.Sampled) {
+        div {
+            +"Columns: "
+            for ((index, column) in columns.columns.withIndex()) {
+                span {
+                    key = Key("$index")
+                    if (index > 0) {
+                        +", "
+                    }
+                    +column.name
+                    if (column.files.size < columns.fileCount) {
+                        span {
+                            css {
+                                color = NamedColor.gray
+                                cursor = Cursor.help
+                            }
+                            title = column.tooltip(columns.fileCount)
+                            +" (${column.files.size})"
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
+    private fun detectedLines(): List<String> {
+        val detected = (details()[JobReadConventions.detectedFormatsKey] as? List<*>)
+            ?.mapNotNull { it as? Map<*, *> }
+            ?.mapNotNull { file ->
+                val name = file[JobReadConventions.detectedFileKey] as? String ?: return@mapNotNull null
+                val label = file[JobReadConventions.detectedLabelKey] as? String ?: return@mapNotNull null
+                name to label
+            }
+            ?.takeIf { it.isNotEmpty() }
+            ?: return listOf()
+
+        val progressMap = props.common.progress?.progressMap.orEmpty()
+        val liveFormat = progressMap[JobReadConventions.readFormatKey] as? String
+        val liveName = progressMap[JobReadConventions.readNameKey] as? String
+        return when {
+            liveFormat != null ->
+                listOf("Detected: $liveFormat" + (liveName?.let { " ($it)" } ?: ""))
+            detected.map { it.second }.distinct().size == 1 ->
+                listOf("Detected: ${detected.first().second}")
+            else ->
+                listOf("Detected:") + detected.map { (name, label) -> "$name: $label" }
         }
     }
 }

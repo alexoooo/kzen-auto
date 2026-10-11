@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.objects.job.worker.content
 
 import com.linkedin.migz.MiGzOutputStream
+import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.auto.common.objects.document.job.JobFieldConventions
 import tech.kzen.auto.common.objects.document.job.JobOutputConventions
 import tech.kzen.auto.common.util.FormatUtils
@@ -187,6 +188,17 @@ class WriteWorker(
     }
 
 
+    private fun fileProgress(path: String, bytes: Long): Map<String, Any?> =
+        mapOf(JobOutputConventions.filePathKey to path, JobOutputConventions.fileBytesKey to bytes)
+
+
+    /** A published file: its absolute [path] and its size. */
+    private class WrittenFile(
+        val path: String,
+        val bytes: Long
+    )
+
+
     /** How many open outputs the live edit at [atMillis] discarded. */
     private class Discard(
         val atMillis: Long,
@@ -216,6 +228,7 @@ class WriteWorker(
         val written: Long,
         val skipped: Long,
         val publishedBytes: Long,
+        val writtenFiles: List<WrittenFile>,
         val discards: List<Discard>,
         val time: String?
     ): AutoCloseable {
@@ -258,6 +271,9 @@ class WriteWorker(
     private var written = 0L
     private var skipped = 0L
     private var publishedBytes = 0L
+
+    // Each published file, by absolute path, with its size: what the card lists
+    private val writtenFiles = ArrayList<WrittenFile>()
 
     // What live edits discarded, one entry per edit; the latest edit was at editAtMillis
     private val discards = ArrayList<Discard>()
@@ -314,7 +330,7 @@ class WriteWorker(
         }
         val carried = Carried(
             placement, LinkedHashMap(open), HashMap(restarts), HashMap(claimed),
-            written, skipped, publishedBytes, discards.toList(), time)
+            written, skipped, publishedBytes, writtenFiles.toList(), discards.toList(), time)
         open.clear()
         return carried
     }
@@ -331,6 +347,7 @@ class WriteWorker(
         written = state.written
         skipped = state.skipped
         publishedBytes = state.publishedBytes
+        writtenFiles.addAll(state.writtenFiles)
         discards.addAll(state.discards)
         editAtMillis = Clock.System.now().toEpochMilliseconds()
         time = state.time
@@ -347,24 +364,31 @@ class WriteWorker(
     }
 
 
-    override fun progress(snapshot: Any?): Map<String, Any?> {
+    // Every emit is retained, so a periodic publish lists a bounded few files; the final one lists them all
+    override fun progress(snapshot: Any?, force: Boolean): Map<String, Any?> {
         var writing = 0L
-        var writingPath: String? = null
         var openBytes = 0L
+        val openFiles = ArrayList<Map<String, Any?>>()
         for (output in open.values) {
             val counted = output.counted
                 ?: continue
             writing += 1
-            writingPath = output.path
             openBytes += counted.count
+            if (force || openFiles.size < JobConventions.progressTeaserRowCount) {
+                openFiles += fileProgress(output.target.toString(), counted.count)
+            }
         }
         val progress = mutableMapOf<String, Any?>(
             JobOutputConventions.writeFilesKey to written,
             JobOutputConventions.writeSkippedKey to skipped,
             JobOutputConventions.writeBytesKey to publishedBytes + openBytes,
             JobOutputConventions.writeOpenKey to writing)
-        if (writing == 1L) {
-            progress[JobOutputConventions.writeOpenNameKey] = writingPath
+        if (openFiles.isNotEmpty()) {
+            progress[JobOutputConventions.writeOpenFilesKey] = openFiles
+        }
+        if (writtenFiles.isNotEmpty()) {
+            val listed = if (force) writtenFiles else writtenFiles.takeLast(JobConventions.progressTeaserRowCount)
+            progress[JobOutputConventions.writeWrittenFilesKey] = listed.map { fileProgress(it.path, it.bytes) }
         }
         if (discards.isNotEmpty()) {
             progress[JobOutputConventions.writeDiscardsKey] = discards.map {
@@ -642,6 +666,7 @@ class WriteWorker(
         val ref = WriterFilePath.finalizedRef(target, control, fileListingAction)
         written += 1
         publishedBytes += size
+        writtenFiles += WrittenFile(target.toString(), size)
         emit.send(JobDataValues.lift(Written(name, ref, size), writtenContract).withMetadata(metadata))
     }
 

@@ -31,6 +31,7 @@ import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 
 
@@ -83,7 +84,9 @@ class EngineJobControl(
     private val workerLocation: ObjectLocation,
     private val draining: () -> Boolean,
     /** The run's in-item activity count, read by the stall warning (see [reportActivity]). */
-    private val activity: AtomicLong = AtomicLong()
+    private val activity: AtomicLong = AtomicLong(),
+    /** When the run started ([System.nanoTime]), for the elapsed time stamped on progress. */
+    private val runStartedNanos: Long = System.nanoTime()
 ): JobControl, RunOwnershipControl {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -184,10 +187,16 @@ class EngineJobControl(
         if (!force && lastProgressNanos != 0L && now - lastProgressNanos < progressThrottleNanos) {
             return
         }
-        // This Worker's live holds on owned natives ride its ordinary progress (E9 item 5), aggregated only
+        // This Worker's live holds on owned natives ride its ordinary progress (E9 item 5), aggregated only, and
+        // the run's elapsed time stamps it, so the client can work out a rate from two of them
         val holds = ledger.holdsOf(workerHolder)
         @Suppress("NAME_SHADOWING")
-        val value = if (holds == 0) value else LinkedHashMap(value).also { it[JobConventions.progressHoldsKey] = holds }
+        val value = LinkedHashMap(value).also {
+            if (holds != 0) {
+                it[JobConventions.progressHoldsKey] = holds
+            }
+            it[JobConventions.progressElapsedKey] = TimeUnit.NANOSECONDS.toMillis(now - runStartedNanos)
+        }
         lastProgressNanos = now
 
         // The emit address is the Worker node's; the Worker's own stable id (the node's stableId) is what the

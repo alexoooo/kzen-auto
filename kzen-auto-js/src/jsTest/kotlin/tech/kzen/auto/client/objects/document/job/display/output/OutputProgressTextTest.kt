@@ -39,21 +39,44 @@ class OutputProgressTextTest {
 
 
     @Test
-    fun writeNamesTheOpenFileThenCountsThePublishedOnes() {
+    fun writeNamesTheOnlyFileByItsAbsolutePathWhileOpenAndOncePublished() {
+        val path = "C:\\data\\output.csv.gz"
         val writing = progress(mapOf(
             JobOutputConventions.writeFilesKey to 0L,
             JobOutputConventions.writeSkippedKey to 0L,
             JobOutputConventions.writeBytesKey to 19_293_798L,
             JobOutputConventions.writeOpenKey to 1L,
-            JobOutputConventions.writeOpenNameKey to "output.csv.gz"))
+            JobOutputConventions.writeOpenFilesKey to listOf(file(path, 19_293_798L))))
         val done = progress(mapOf(
             JobOutputConventions.writeFilesKey to 1L,
             JobOutputConventions.writeSkippedKey to 0L,
             JobOutputConventions.writeBytesKey to 44_249_908L,
-            JobOutputConventions.writeOpenKey to 0L))
+            JobOutputConventions.writeOpenKey to 0L,
+            JobOutputConventions.writeWrittenFilesKey to listOf(file(path, 44_249_908L))))
 
-        assertEquals("output.csv.gz · 18.3 MB", OutputProgressText.write(writing))
-        assertEquals("1 file · 42.2 MB", OutputProgressText.write(done))
+        assertEquals("$path · 18.3 MB", OutputProgressText.write(writing))
+        assertEquals("$path · 42.2 MB", OutputProgressText.write(done))
+        assertEquals(
+            listOf(OutputProgressText.WriteFile(path, 44_249_908L, false)),
+            OutputProgressText.writeFiles(done))
+    }
+
+
+    @Test
+    fun writeListsTheOpenFilesBeforeThePublishedOnes() {
+        val progress = progress(mapOf(
+            JobOutputConventions.writeFilesKey to 1L,
+            JobOutputConventions.writeOpenKey to 1L,
+            JobOutputConventions.writeBytesKey to 30L,
+            JobOutputConventions.writeOpenFilesKey to listOf(file("/out/b.csv", 10L)),
+            JobOutputConventions.writeWrittenFilesKey to listOf(file("/out/a.csv", 20.0))))
+
+        assertEquals("1 file · 1 open · 30 B", OutputProgressText.write(progress))
+        assertEquals(
+            listOf(
+                OutputProgressText.WriteFile("/out/b.csv", 10L, true),
+                OutputProgressText.WriteFile("/out/a.csv", 20L, false)),
+            OutputProgressText.writeFiles(progress))
     }
 
 
@@ -90,4 +113,9 @@ class OutputProgressTextTest {
 
     private fun progress(map: Map<String, Any?>): JobWorkerProgress =
         JobWorkerProgress(null, map)
+
+
+    // Bytes arrive over the wire as any number type
+    private fun file(path: String, bytes: Any): Map<String, Any?> =
+        mapOf(JobOutputConventions.filePathKey to path, JobOutputConventions.fileBytesKey to bytes)
 }

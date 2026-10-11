@@ -32,8 +32,9 @@ import tech.kzen.lib.common.exec.data.value.DataValue
 
 
 /**
- * Shared cursor drive for data-reading Workers. A pull wraps `hasNext` and `next` in one blocking boundary,
- * cursor handles transfer one-way across migration, and the effective output shape is fixed by the first part.
+ * Shared cursor drive for data-reading Workers. A pull wraps `hasNext` and `next` in one blocking boundary (a batch
+ * of them, in [emitBatch]), cursor handles transfer one-way across migration, and the effective output shape is
+ * fixed by the first part.
  */
 object DataReadCore {
     const val schemaStrict = "strict"
@@ -44,6 +45,16 @@ object DataReadCore {
         val hasItem: Boolean,
         val item: DataValue?,
         val hold: ValueLease? = null
+    )
+
+
+    /**
+     * The items one blocking trip pulled, and whether it found the cursor at its end: a reader's cursor closes itself
+     * when it reports its end, so the end must be remembered rather than asked again.
+     */
+    data class PullBatch(
+        val items: List<Pull>,
+        val exhausted: Boolean
     )
 
 
@@ -124,16 +135,35 @@ object DataReadCore {
 
 
     suspend fun pull(control: JobControl, cursor: DataCursor): Pull {
+        return pullBatch(control, cursor, 1).items.firstOrNull()
+            ?: Pull(false, null)
+    }
+
+
+    /**
+     * Up to [limit] items in one blocking trip, each with the producer hold the run took on it, stopping after the
+     * first item the run holds: an owned item is never pulled ahead of ([tech.kzen.auto.server.objects.job.worker.
+     * SourceIngress.pull]'s rule).
+     */
+    suspend fun pullBatch(control: JobControl, cursor: DataCursor, limit: Int): PullBatch {
         val ledger = control.ownership()
         return control.runBlockingIo {
-            if (cursor.hasNext()) {
+            val pulled = ArrayList<Pull>()
+            var exhausted = false
+            while (pulled.size < limit.coerceAtLeast(1)) {
+                if (!cursor.hasNext()) {
+                    exhausted = true
+                    break
+                }
                 val item = cursor.next()
                 // Adopted inside the blocking body: a cancel winning the return cannot lose a closeable item
-                Pull(true, item, ledger?.hold(item, LeaseHolder.producer))
+                val hold = ledger?.hold(item, LeaseHolder.producer)
+                pulled.add(Pull(true, item, hold))
+                if (hold != null) {
+                    break
+                }
             }
-            else {
-                Pull(false, null)
-            }
+            PullBatch(pulled, exhausted)
         }
     }
 
@@ -152,22 +182,54 @@ object DataReadCore {
         claimBeforeSend: () -> Unit,
         send: suspend (DataValue) -> Unit
     ): Boolean {
-        val pull = pull(control, cursor)
-        if (!pull.hasItem) {
-            return false
-        }
+        return emitBatch(control, cursor, projection, 1, claimBeforeSend, send)
+    }
 
-        // The producer hold lasts through conversion and send; released with no channel hold taken (a
-        // conversion failure, a cancel before the send), it closes the item
+
+    /**
+     * [emitNext] for up to [limit] items pulled in one blocking trip ([pullBatch]), each claimed immediately before
+     * its send. The items pulled ahead are not yet claimed, so nothing may capture the Worker while some are unsent:
+     * [limit] must end the batch at the next send that can checkpoint (the [tech.kzen.auto.server.objects.job.
+     * worker.Emitter.sendsBeforeCheckpoint]), and an owned item, whose send may park, ends the pull.
+     *
+     * @return false once the cursor is exhausted, after sending what the trip pulled before its end.
+     */
+    suspend fun emitBatch(
+        control: JobControl,
+        cursor: DataCursor,
+        projection: RecordProjection,
+        limit: Int,
+        claimBeforeSend: () -> Unit,
+        send: suspend (DataValue) -> Unit
+    ): Boolean {
+        val batch = pullBatch(control, cursor, limit)
+        val pulled = batch.items
+
+        // Each producer hold lasts through its item's conversion and send; released with no channel hold taken (a
+        // conversion failure, a cancel before the send), it closes the item, as do the releases of the items a
+        // failure leaves unsent
+        var next = 0
         try {
-            val message = projection.message(requireNotNull(pull.item))
-            claimBeforeSend()
-            send(message)
+            while (next < pulled.size) {
+                val pull = pulled[next]
+                next += 1
+                try {
+                    val message = projection.message(requireNotNull(pull.item))
+                    claimBeforeSend()
+                    send(message)
+                }
+                finally {
+                    pull.hold?.release()
+                }
+            }
         }
         finally {
-            pull.hold?.release()
+            while (next < pulled.size) {
+                pulled[next].hold?.release()
+                next += 1
+            }
         }
-        return true
+        return !batch.exhausted
     }
 
 

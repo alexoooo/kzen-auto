@@ -136,6 +136,10 @@ object JobConventions {
     // generic card renders it as a scalar entry; a per-item list is never pushed.
     const val progressHoldsKey = "holds"
 
+    // Milliseconds since the run started, stamped by the server on every Worker progress map: two maps give a
+    // rate, and the final one gives the average. A live edit keeps the run's clock.
+    const val progressElapsedKey = "elapsed"
+
     // Keys of the run-level ownership report the Job root emits (E9 item 5): holds by holder name, queued
     // elements per channel, live / closed native counts, and the stall flag set after the no-progress interval.
     const val ownershipHoldsKey = "holds"

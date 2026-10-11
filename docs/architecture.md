@@ -125,7 +125,10 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > `Sequence`, `Iterator` or `java.util.stream.Stream`) the item and the stream's closeable iterator / container
 > are adopted **inside the blocking acquisition** (`SourceIngress`), so a cancel that wins the return dispatch
 > cannot lose them; a producer hold lasts through lift and send, and a closeable stream is detached across a
-> live edit rather than re-evaluated. An owned element flushes the moment it is sent
+> live edit rather than re-evaluated. A pull takes a batch per blocking trip, stopping after an owned item;
+> `Parse` reads ahead only up to its next cadence checkpoint (`DataReadCore.emitBatch`,
+> `Emitter.sendsBeforeCheckpoint`), because a carried cursor must have nothing pulled and unsent when it is
+> captured. An owned element flushes the moment it is sent
 > (channel capacity unchanged), so an item whose close returns a host permit never waits in a producer's buffer;
 > a live edit carries the ledger and every channel lease across the rebuild, and the run's post-join teardown
 > closes whatever is left, a processing failure staying primary over close failures. An owned native never
@@ -153,16 +156,23 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > like `Content` an opaque native with no properties, read only inside the callback (`length()`,
 > `writeTo(OutputStream)`), but pooled — its `PooledBytes` slot is the `Recyclable` access and hands the same
 > `Bytes` out by identity — so a consumer copies it before its callback returns. `Format` (`worker/format/`)
-> encodes each record as one chunk with metadata `{group, format, parent}`: `group` is the text of its Group by
-> expression (Kotlin, Filter's scope; `""` for every record when blank), `format` holds the format's extension,
-> `parent` the record's own metadata (so `${parent.name}` is its file). Outputs are groups (FG2): each group is one
+> encodes the records of one input batch and group as one chunk, sent at the batch's end
+> (`TransformWorker.onBatchEnd`, so no checkpoint finds a chunk half-filled and `Write` pays a blocking trip per
+> batch, not per row), with metadata `{group, format, parent}`: `group` is the text of its Group by expression
+> (Kotlin, Filter's scope; `""` for every record when blank), `format` holds the format's extension, `parent` the
+> metadata of the chunk's first record (so `${parent.name}` is its file). Outputs are groups (FG2): each group is one
 > output, framed once by the encoder (`RecordEncoder.openOutput()` gives the per-output state its header, records
 > and footer share), its first chunk carrying the header and its last the footer, marked `endsOutput` (possibly no
 > bytes, as CSV's). When outputs end is Format's `groupEnd`: `end` keeps every group open to the end of input, so
 > its records may arrive anywhere; `change` ends one as the next group starts, and a group that comes back fails
 > the run. No records means no chunks, so no output. The encoder and Group by are made from the input lane's
 > contract, so what the format cannot write, or a Group by that does not compile, is a validation error before
-> Run; a record it cannot write fails the run by its position.
+> Run; a record it cannot write fails the run by its position. Format's (and CsvWriter's, ExportWriter's) `columns`
+> is a `WriterColumnSpec`: `*` is the payload's columns, narrowed in its map form (FG4,
+> `{path: "*", allow: [..], exclude: [..], as: {c1: value}}`) by `ColumnPatterns` — Report's rule, a column kept
+> when Allow is empty or one Allow pattern matches its whole name and no Exclude pattern does — and renamed per
+> column; the editor's checkboxes write exact-name lines, so the patterns are the whole selection. A pattern that
+> does not compile, or a static contract left with no column, is a validation error.
 > **Write over Bytes (WR4, FG2).** `WriteWorker` picks its path from the input lane before Run: `Content` writes one
 > file per element, `Bytes` one file per group, any number open at once, and anything else (rows) is a validation
 > error naming `Format`. Where a file goes is `directory`, then Sub-folder (`folder`) and File name (`name`), each
@@ -183,7 +193,10 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > always a whole output. `Write` learns of `Format`'s edit in-band: a zero-byte chunk marked `discardsOutput` per
 > open output. For its own edit, `Write` keeps the header each output began with (each chunk marks its header
 > bytes) and puts it ahead of the group's next chunk. `existing` was judged when an output began and applies from
-> the next one. The `Content` path keeps no output open, so a live edit restarts it.
+> the next one. The `Content` path keeps no output open, so a live edit restarts it. Write's progress lists its
+> files by absolute path (`openFiles`, then `writtenFiles` with their sizes): a few while it runs, the bounded
+> teaser every retained emit keeps to, and all of them in the final publish. Every Worker's progress also carries
+> `elapsed` (ms since the run started, a clock a live edit keeps), from which the cards show rates (MB/s, rows/s).
 > **Object-graph paths (E8).** `PathProjectionWorker` turns paths over the incoming contract (`executions[*].price`, `attributes[*].value.price`, an optional
 > alias) into a flat record of nullable scalars, unnesting `[*]` lists and maps (same list → one iteration,
 > different lists → cross product, null intermediate → null cells, empty list → no rows); the binding rules

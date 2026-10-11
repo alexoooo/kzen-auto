@@ -9,6 +9,7 @@ import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.server.objects.job.expression.JobExpressionCompiler
+import tech.kzen.auto.server.objects.job.value.ColumnProjections
 import tech.kzen.auto.server.objects.job.worker.definition.WorkerDefinitionContext
 import tech.kzen.auto.server.util.ClassLoaderUtils
 import tech.kzen.lib.common.exec.engine.LogicSignature
@@ -63,6 +64,7 @@ class RunWorker(
     TransformWorker(input, output, selfLocation)
 {
     private val classLoader = ClassLoaderUtils.dynamicParentClassLoader()
+    private val projections = ColumnProjections()
     private var childSignature: LogicSignature? = null
     private var childIsJob = false
     private var compiledForContract: DataContract? = null
@@ -85,13 +87,14 @@ class RunWorker(
                 compileArguments(inputContract, control)
             }
             val projection = when (inputContract.structural) {
-                is DataType.Record, is DataType.Scalar -> JobDataValues.projection(element)
+                is DataType.Record, is DataType.Scalar -> projections.of(element)
                 else -> null
             }
 
+            val readsPayload = compiledArguments.any { it.second.expression.readsPayload }
+            val model = if (readsPayload) JobDataValues.native(element) else null
             for ((name, compiled) in compiledArguments) {
-                val value = compiled.expression.evaluate(
-                    JobDataValues.native(element), element, projection)
+                val value = compiled.expression.evaluate(model, element, projection)
                 require(value is String || value is Char || value is Boolean || value is Number) {
                     "Run argument '$name' must evaluate to String, Char, Boolean, or Number; found " +
                         (value?.let { it::class.qualifiedName } ?: "null")

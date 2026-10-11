@@ -11,7 +11,7 @@ import tech.kzen.auto.common.objects.document.job.path.WriterColumnSpec.WriterCo
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.server.objects.job.value.ColumnProjection
 import tech.kzen.auto.server.objects.job.value.ColumnProjectionDescriptor
-import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.auto.server.objects.job.value.ColumnProjections
 import tech.kzen.lib.common.exec.data.type.DataContract
 import tech.kzen.lib.common.exec.data.type.DataType
 import tech.kzen.lib.common.exec.data.value.DataValue
@@ -19,8 +19,8 @@ import tech.kzen.lib.common.exec.data.value.DataValue
 
 /**
  * A writer's column selection ([WriterColumnSpec]) applied to each value: `*` is the payload's column
- * projection, a path entry is one further column read through [PathBinding] / [PathRowEvaluator] (a metadata
- * field, or a nested scalar). The path columns bind against the incoming contract, re-bound only when it
+ * projection (the columns its patterns keep, renamed as it says), a path entry is one further column read through
+ * [PathBinding] / [PathRowEvaluator] (a metadata field, or a nested scalar). The path columns bind against the incoming contract, re-bound only when it
  * changes (a dynamic lane); a path that unnests is an error, since a writer emits exactly one row per value.
  */
 class WriterColumns(
@@ -34,6 +34,12 @@ class WriterColumns(
 
 
     private val pathColumns = PathProjectionSpec(spec.pathEntries())
+
+    // Each `*`'s kept payload columns, for the header they were chosen from (a projection's header is its
+    // contract's, so one header object per payload shape)
+    private val indicesFor = arrayOfNulls<HeaderListing>(spec.columns.size)
+    private val indices = arrayOfNulls<IntArray>(spec.columns.size)
+    private val projections = ColumnProjections()
     private var boundFor: DataContract? = null
     private var binding: PathBindingResult? = null
     private var evaluator: PathRowEvaluator? = null
@@ -45,8 +51,8 @@ class WriterColumns(
 
     fun row(element: DataValue, control: JobControl): Row {
         val projection =
-            if (spec.columns.isEmpty() || WriterColumn.PayloadFields in spec.columns) {
-                JobDataValues.projection(element)
+            if (spec.readsPayload()) {
+                projections.of(element)
             }
             else {
                 null
@@ -91,14 +97,31 @@ class WriterColumns(
             return
         }
         var pathIndex = 0
-        for (column in spec.columns) {
+        for ((columnIndex, column) in spec.columns.withIndex()) {
             when (column) {
-                WriterColumn.PayloadFields -> for (index in 0 until checkNotNull(projection).size) {
-                    action(projection.render(index))
+                is WriterColumn.PayloadFields -> {
+                    checkNotNull(projection)
+                    for (index in payloadIndices(columnIndex, projection.header)) {
+                        action(projection.render(index))
+                    }
                 }
                 is WriterColumn.Path -> action(checkNotNull(row.pathValues)[pathIndex++] ?: "")
             }
         }
+    }
+
+
+    /** The payload columns (indices into [header]) that the `*` at [columnIndex] of [spec] keeps, in order. */
+    @PublishedApi
+    internal fun payloadIndices(columnIndex: Int, header: HeaderListing): IntArray {
+        if (indicesFor[columnIndex] === header) {
+            return checkNotNull(indices[columnIndex])
+        }
+        val column = spec.columns[columnIndex] as WriterColumn.PayloadFields
+        val kept = header.values.indices.filter { column.patterns.included(header.values[it].render()) }.toIntArray()
+        indicesFor[columnIndex] = header
+        indices[columnIndex] = kept
+        return kept
     }
 
 
@@ -109,12 +132,31 @@ class WriterColumns(
     }
 
 
-    /** The binding error of the path columns against a known [contract], for the Worker's validation. */
+    /**
+     * What is wrong with the columns, for the Worker's validation: a pattern that doesn't compile, and against a
+     * known [contract] a path that doesn't bind or a selection that keeps no column at all.
+     */
     fun staticError(contract: DataContract): String? {
-        if (pathColumns.isEmpty() || contract.structural is DataType.Dynamic) {
+        val patternErrors = spec.columns
+            .filterIsInstance<WriterColumn.PayloadFields>()
+            .flatMap { it.patterns.errors() }
+        if (patternErrors.isNotEmpty()) {
+            return "Columns: ${patternErrors.joinToString("; ")}"
+        }
+        if (contract.structural is DataType.Dynamic) {
             return null
         }
-        return bind(contract).errorMessage()?.let { "Columns: $it" }
+        if (!pathColumns.isEmpty()) {
+            bind(contract).errorMessage()?.let { return "Columns: $it" }
+        }
+        if (pathColumns.isEmpty() && !spec.isPayloadFieldsOnly() && contract.payload().structural is DataType.Record) {
+            val header = ColumnProjectionDescriptor.from(contract.payload()).header
+            val kept = spec.columns.withIndex().sumOf { (index, _) -> payloadIndices(index, header).size }
+            if (kept == 0) {
+                return "Columns: no payload column is kept (check Allow and Exclude)"
+            }
+        }
+        return null
     }
 
 
@@ -129,9 +171,15 @@ class WriterColumns(
         }
         val names = ArrayList<String>()
         var pathIndex = 0
-        for (column in spec.columns) {
+        for ((columnIndex, column) in spec.columns.withIndex()) {
             when (column) {
-                WriterColumn.PayloadFields -> names += payloadHeader().values.map(payloadName)
+                is WriterColumn.PayloadFields -> {
+                    val header = payloadHeader()
+                    for (index in payloadIndices(columnIndex, header)) {
+                        val label = header.values[index]
+                        names += column.renames[label.render()] ?: payloadName(label)
+                    }
+                }
                 is WriterColumn.Path -> names += paths().paths[pathIndex++].outputName
             }
         }

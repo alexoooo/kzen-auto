@@ -12,6 +12,7 @@ import tech.kzen.auto.server.objects.job.value.recycle.Recyclable
 import tech.kzen.auto.server.objects.job.value.recycle.RecyclablePool
 import tech.kzen.auto.server.objects.job.worker.WriterColumns
 import tech.kzen.auto.server.objects.job.worker.content.Bytes
+import tech.kzen.auto.server.objects.job.worker.content.FileValues
 import tech.kzen.auto.server.objects.job.worker.content.PooledBytes
 import tech.kzen.lib.common.exec.data.type.DataContract
 import tech.kzen.lib.common.exec.data.type.DataField
@@ -19,7 +20,10 @@ import tech.kzen.lib.common.exec.data.type.DataType
 import tech.kzen.lib.common.exec.data.type.FieldId
 import tech.kzen.lib.common.exec.data.type.ScalarKind
 import tech.kzen.lib.common.exec.data.value.DataNode
+import tech.kzen.lib.common.exec.data.value.DataOverlay
 import tech.kzen.lib.common.exec.data.value.DataValue
+import tech.kzen.lib.common.exec.data.value.LiteralDataValues
+import tech.kzen.lib.common.exec.data.value.ValueMetadata
 import tech.kzen.lib.common.util.digest.Digest
 import java.io.ByteArrayOutputStream
 import kotlin.test.Test
@@ -30,7 +34,8 @@ import kotlin.test.assertFailsWith
 
 /**
  * [FormatChunker] over a format that remembers something per output and ends each with a footer: records of
- * interleaved groups go to their own outputs, each framed once, with one footer after its last record.
+ * interleaved groups go to their own outputs, each framed once, with one footer after its last record; the records of
+ * a group between flushes are one chunk.
  */
 class FormatChunkerTest {
     private val text = DataType.Scalar(ScalarKind.Text)
@@ -79,7 +84,8 @@ class FormatChunkerTest {
         val group: String?,
         val text: String,
         val header: Int,
-        val ends: Boolean
+        val ends: Boolean,
+        val file: String? = null
     )
 
 
@@ -93,11 +99,8 @@ class FormatChunkerTest {
 
         assertEquals(
             listOf(
-                Seen("a", "[1", 1, false),
-                Seen("b", "[2", 1, false),
-                Seen("a", ",3", 0, false),
-                Seen("b", ",4", 0, false),
-                Seen("a", ",5", 0, false),
+                Seen("a", "[1,3,5", 1, false),
+                Seen("b", "[2,4", 1, false),
                 Seen("a", "]", 0, true),
                 Seen("b", "]", 0, true)),
             seen)
@@ -115,11 +118,28 @@ class FormatChunkerTest {
 
         assertEquals(
             listOf(
-                Seen("a", "[1", 1, false),
-                Seen("a", ",2", 0, false),
+                Seen("a", "[1,2", 1, false),
                 Seen("a", "]", 0, true),
                 Seen("b", "[3", 1, false),
                 Seen("b", "]", 0, true)),
+            seen)
+    }
+
+
+    @Test
+    fun eachFlushSendsTheRecordsSinceTheLastOneAsOneChunkHeadedByItsFirstRecordsMetadata() {
+        val chunker = chunker(endsOnChange = false)
+        val first = metadata("first")
+
+        val seen = chunk(chunker, "a" to "1", "a" to "2", metadata = listOf(first, metadata("second")))
+            .plus(chunk(chunker, "a" to "3"))
+            .plus(complete(chunker))
+
+        assertEquals(
+            listOf(
+                Seen("a", "[1,2", 1, false, "first"),
+                Seen("a", ",3", 0, false, null),
+                Seen("a", "]", 0, true, null)),
             seen)
     }
 
@@ -146,16 +166,27 @@ class FormatChunkerTest {
 
     private var ordinal = 0L
 
-    private fun chunk(chunker: FormatChunker, vararg records: Pair<String, String>): List<Seen> {
+    /** Chunks [records] as one input batch, the i-th with the i-th of [metadata] if any, then flushes. */
+    private fun chunk(
+        chunker: FormatChunker,
+        vararg records: Pair<String, String>,
+        metadata: List<ValueMetadata?> = emptyList()
+    ): List<Seen> {
         val out = ArrayList<DataValue>()
-        for ((group, value) in records) {
-            val record = FlatFileRecord.of(listOf(group, value))
-            record.attachHeader(FlatRecordHeader(payload))
+        for ((index, record) in records.withIndex()) {
+            val flat = FlatFileRecord.of(listOf(record.first, record.second))
+            flat.attachHeader(FlatRecordHeader(payload))
             ordinal += 1
-            chunker.chunk(DataValue(record, DataNode(0)), ordinal, out)
+            chunker.chunk(DataValue(flat, DataNode(0), metadata.getOrNull(index)), ordinal, out)
         }
+        chunker.flush(out)
         return out.map(::seen)
     }
+
+
+    private fun metadata(file: String): ValueMetadata =
+        ValueMetadata.of(DataOverlay.record(null, listOf(
+            FieldId("file") to LiteralDataValues.lift(file, DataContract(text)))))
 
 
     private fun complete(chunker: FormatChunker): List<Seen> {
@@ -173,7 +204,8 @@ class FormatChunkerTest {
             JobDataValues.metadataText(chunk.metadata?.value, ChunkMetadata.group),
             copy.toString(Charsets.UTF_8),
             bytes.headerLength(),
-            bytes.endsOutput())
+            bytes.endsOutput(),
+            JobDataValues.metadataText(chunk.metadata?.value, FileValues.parent, "file"))
         val slot = Recyclable.of(chunk)!!
         slot.hold()
         slot.release()

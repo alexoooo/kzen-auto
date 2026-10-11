@@ -8,7 +8,7 @@ import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.api.ChannelServer
 import tech.kzen.auto.common.paradigm.job.control.JobControl
-import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.auto.server.objects.job.value.ColumnProjections
 import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.auto.server.objects.report.exec.input.model.header.RecordHeaderIndex
 import tech.kzen.auto.server.objects.report.exec.summary.model.ValueSummaryBuilder
@@ -51,13 +51,14 @@ class SummaryWorker(
     //-----------------------------------------------------------------------------------------------------------------
     // Discovered from the first record's header (all subsequent records map onto it by name). One builder per
     // summarized column, index-aligned with headerIndex.columnHeaders. Confined to onElement (the work coroutine).
+    private val projections = ColumnProjections()
     private var headerIndex: RecordHeaderIndex? = null
     private var builders: List<ValueSummaryBuilder> = listOf()
     private var count = 0L
 
     //-----------------------------------------------------------------------------------------------------------------
     override suspend fun onElement(element: DataValue, emit: Emitter, control: JobControl) {
-        val projection = JobDataValues.projection(element)
+        val projection = projections.of(element)
         val header = projection.header
         val index = ensureInitialized(header)
 

@@ -235,6 +235,48 @@ class ConfiguredDelimitedReaderTest {
     }
 
     @Test
+    fun fieldsReadAcrossTheInputBufferKeepTheirContentSpansAndLimits() {
+        // Long fields cross the 8192-character read buffer; quoted ones hold delimiters, quotes and line breaks
+        val expected = mutableListOf<List<String>>()
+        val input = StringBuilder()
+        for (row in 0 until 300) {
+            val plain = "p$row-" + "a".repeat((row * 37) % 200) + if (row % 50 == 0) "b".repeat(9000) else ""
+            val quoted = "q$row;\"x\"\n" + "c".repeat(row % 7)
+            expected += listOf(plain, quoted, "$row")
+            input.append(plain).append(";\"").append(quoted.replace("\"", "\"\"")).append("\";").append(row)
+                .append('\n')
+        }
+        val badStart = input.length + "last;\"quoted\";".length
+        input.append("last;\"quoted\";x1\n")
+
+        val config = config(contract(
+            "plain" to scalar(ScalarKind.Text),
+            "quoted" to scalar(ScalarKind.Text),
+            "number" to scalar(ScalarKind.Integer(32))))
+        val failure = assertFailsWith<DelimitedReadException> {
+            reader(input.toString(), config).use { reader ->
+                for (row in expected) {
+                    assertEquals(row, reader.read()!!.backing.toList())
+                }
+                reader.read()
+            }
+        }
+        assertEquals(DelimitedReadException.typedValue, failure.category)
+        assertEquals(badStart.toLong()..(badStart + 1L), failure.span)
+
+        val field = 5000
+        reader("a".repeat(field) + ";b", config(textContract(2)),
+            ReadOperationalPolicy(maximumFieldCharacters = field, maximumRecordCharacters = field + 2)).use {
+            assertEquals(listOf("a".repeat(field), "b"), it.read()!!.backing.toList())
+        }
+        assertBudget("a".repeat(field + 1) + ";b", config(textContract(2)),
+            ReadOperationalPolicy(maximumFieldCharacters = field), "field-character")
+        assertBudget("a".repeat(field) + ";bc", config(textContract(2)),
+            ReadOperationalPolicy(maximumRecordCharacters = field + 2), "record-character")
+    }
+
+
+    @Test
     fun cancellationIsCheckedInsideLongRecordsAndKindsResolveBeforeContent() {
         var checks = 0
         reader("a".repeat(2050) + ";x", config(textContract(2)),

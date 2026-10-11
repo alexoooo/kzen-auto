@@ -24,6 +24,7 @@ import tech.kzen.auto.common.data.format.FileFormatCatalog
 import tech.kzen.auto.common.util.FormatUtils
 import tech.kzen.auto.common.util.data.DataLocation
 import web.cssom.*
+import kotlin.math.roundToLong
 
 
 /**
@@ -66,9 +67,10 @@ class FileSelectionTable(props: FileSelectionTableProps):
 {
     companion object {
         private val doneColor = Color("#2e7d32")
-        private val readTrackColor = Color("#e0e0e0")
-        private val readBarColor = Color("#1976d2")
-        private val readBarWidth = 5.em
+
+        // The part of a row that is read, in the done colour: the row is its own progress bar, full once done
+        private val readFill = Color("rgba(46, 125, 50, 0.16)")
+        private val unreadFill = Color("rgba(46, 125, 50, 0)")
 
 
         internal fun additionalError(presentation: FileResolutionPresentation): String? =
@@ -132,7 +134,7 @@ class FileSelectionTable(props: FileSelectionTableProps):
                         disableRipple = true
                         disabled = locations.isEmpty()
                         checked = allChecked
-                        indeterminate = anyChecked && ! allChecked
+                        indeterminate = anyChecked && !allChecked
                         asDynamic().inputProps = unsafeJso<Any> {
                             asDynamic()["aria-label"] =
                                 if (allChecked) "Clear selection" else "Select all selected files"
@@ -161,6 +163,11 @@ class FileSelectionTable(props: FileSelectionTableProps):
 
     private fun ChildrenBuilder.renderRow(entry: FileSelectionEntry, index: Int) {
         val checked = entry.location in props.checked
+        val readPercent = when (val status = props.statusByLocation?.get(entry.location.asString())) {
+            is FileRowStatus.Reading -> status.percent()
+            FileRowStatus.Done -> 100
+            else -> null
+        }
 
         tr {
             key = Key(entry.location.asString())
@@ -168,6 +175,12 @@ class FileSelectionTable(props: FileSelectionTableProps):
                 cursor = Cursor.pointer
                 if (checked) {
                     backgroundColor = FileTableColors.checkedRow
+                }
+                if (readPercent != null) {
+                    backgroundImage = linearGradient(
+                        90.deg,
+                        stop(readFill, readPercent.pct),
+                        stop(unreadFill, readPercent.pct))
                 }
                 hover {
                     backgroundColor =
@@ -261,31 +274,12 @@ class FileSelectionTable(props: FileSelectionTableProps):
                 +"done"
             }
 
-            is FileRowStatus.Reading -> {
-                val percent = status.percent()
-                div {
-                    css { display = Display.flex; alignItems = AlignItems.center; gap = 0.4.em }
-                    div {
-                        css {
-                            width = readBarWidth
-                            height = 0.4.em
-                            borderRadius = 2.px
-                            backgroundColor = readTrackColor
-                            overflow = Overflow.hidden
-                        }
-                        div {
-                            css {
-                                width = (percent ?: 0).pct
-                                height = 100.pct
-                                backgroundColor = readBarColor
-                            }
-                        }
-                    }
-                    span {
-                        css { fontSize = 0.85.em }
-                        +(percent?.let { "$it%" } ?: "reading")
-                    }
-                }
+            // The row behind it fills as it is read (see renderRow)
+            is FileRowStatus.Reading -> span {
+                +listOfNotNull(
+                    status.percent()?.let { "$it%" } ?: "reading",
+                    status.bytesPerSecond?.let { "${FormatUtils.readableFileSize(it.roundToLong())}/s" }
+                ).joinToString(" · ")
             }
         }
     }

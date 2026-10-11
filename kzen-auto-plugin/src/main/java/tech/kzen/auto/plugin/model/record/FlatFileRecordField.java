@@ -91,6 +91,14 @@ public class FlatFileRecordField
     }
 
 
+    /** Copies the characters from {@code srcBegin} to {@code srcEnd} in one block, rather than one at a time. */
+    @Override
+    public void getChars(int srcBegin, int srcEnd, char[] dst, int dstBegin) {
+        java.util.Objects.checkFromToIndex(srcBegin, srcEnd, valueLength);
+        System.arraycopy(host.fieldContents, valueOffset + srcBegin, dst, dstBegin, srcEnd - srcBegin);
+    }
+
+
     @Override
     public CharSequence subSequence(int start, int end) {
         throw new UnsupportedOperationException();

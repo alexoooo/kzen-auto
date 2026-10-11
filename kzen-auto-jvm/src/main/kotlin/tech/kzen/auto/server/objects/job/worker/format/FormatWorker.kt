@@ -11,6 +11,8 @@ import tech.kzen.auto.server.data.write.RecordEncoder
 import tech.kzen.auto.server.data.write.RecordWriterCapability
 import tech.kzen.auto.server.data.write.RecordWriterCapabilityRegistry
 import tech.kzen.auto.server.objects.job.expression.JobExpressionCompiler
+import tech.kzen.auto.server.objects.job.expression.evaluate
+import tech.kzen.auto.server.objects.job.value.ColumnProjections
 import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.auto.server.objects.job.value.recycle.RecyclablePool
 import tech.kzen.auto.server.objects.job.worker.Emitter
@@ -35,10 +37,11 @@ import tech.kzen.lib.common.util.digest.Digest
 
 
 /**
- * Encodes each incoming record in [format], emitting it as one chunk of [Bytes] with metadata
- * `{group, format, parent}` ([ChunkMetadata]): `group` is [groupBy]'s value for the record (a Kotlin expression with
- * Filter's scope, its value as text), `""` for every record when [groupBy] is blank; `format` holds the format's
- * extension; `parent` is the record's own metadata. Each group is one output: its first chunk begins with the
+ * Encodes each incoming record in [format], emitting chunks of [Bytes] with metadata `{group, format, parent}`
+ * ([ChunkMetadata]): the records of one input batch and group are one chunk, so a consumer such as `Write` handles a
+ * batch at a time, not a record. `group` is [groupBy]'s value for the record (a Kotlin expression with Filter's
+ * scope, its value as text), `""` for every record when [groupBy] is blank; `format` holds the format's extension;
+ * `parent` is the metadata of the chunk's first record. Each group is one output: its first chunk begins with the
  * format's header, and a last chunk holds its footer, marked as its end ([Bytes.endsOutput]). When outputs end is
  * [groupEnd]: `end` (the default) keeps every output open to the end of input, so a group's records may arrive
  * anywhere; `change` ends an output as soon as a record of another group arrives, so a group that comes back fails
@@ -142,6 +145,12 @@ class FormatWorker(
         adoptCarried(active)
         received += 1
         active.chunk(element, received, chunks)
+        send(emit)
+    }
+
+
+    override suspend fun onBatchEnd(emit: Emitter, control: JobControl) {
+        chunker?.flush(chunks)
         send(emit)
     }
 
@@ -297,9 +306,10 @@ class FormatWorker(
         }
         expression.setParameters(parameters.definitions.map { control.parameter(it.name.value) })
         val projected = contract.structural is DataType.Record || contract.structural is DataType.Scalar
+        val projections = ColumnProjections()
         return { element ->
-            val projection = if (projected) JobDataValues.projection(element) else null
-            expression.evaluate(JobDataValues.native(element), element, projection).toString()
+            val projection = if (projected) projections.of(element) else null
+            expression.evaluate(element, projection).toString()
         }
     }
 }

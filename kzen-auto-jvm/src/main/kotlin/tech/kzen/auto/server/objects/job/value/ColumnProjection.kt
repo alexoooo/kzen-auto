@@ -118,13 +118,43 @@ class ColumnProjectionDescriptor private constructor(
     val header: HeaderListing = HeaderListing(columns.map { it.label })
 
     fun bind(value: DataValue): ColumnProjection {
-        if (source.structural != value.contract.structural) {
-            val acceptance = DataTypeAlgebra.isAssignable(source.structural, value.contract.structural)
+        check(value)
+        return ColumnProjection(this, value, null)
+    }
+
+
+    /** Fails unless a value of [value]'s payload type can be read through these columns. */
+    internal fun check(value: DataValue) {
+        val structural = value.payloadContract.structural
+        if (source.structural !== structural && source.structural != structural) {
+            val acceptance = DataTypeAlgebra.isAssignable(source.structural, structural)
             if (acceptance is TypeAcceptance.Rejected) {
                 throw DataException(acceptance.problem)
             }
         }
-        return ColumnProjection(this, value)
+    }
+
+
+    /**
+     * The node of each column in [value], when each is a field of its root; null otherwise, or when one is not
+     * there. Only a flat record's nodes hold for every value of its contract (field token `n + 1` is field `n`).
+     */
+    internal fun rootFieldNodes(value: DataValue): Array<DataNode>? {
+        val nodes = arrayOfNulls<DataNode>(columns.size)
+        for ((index, column) in columns.withIndex()) {
+            val path = (column.address as? ColumnAddress.RecordPath)?.path
+                ?.takeIf { it.size == 1 }
+                ?: return null
+            nodes[index] =
+                try {
+                    value.access.field(value.root, path.single())
+                }
+                catch (_: DataAccessException) {
+                    return null
+                }
+        }
+        @Suppress("UNCHECKED_CAST")
+        return nodes as Array<DataNode>
     }
 }
 
@@ -167,10 +197,14 @@ internal sealed interface ColumnAddress {
 }
 
 
-/** A descriptor bound to one live value; child nodes remain backing-owned inline tokens. */
+/**
+ * A descriptor bound to one live value; child nodes remain backing-owned inline tokens. [nodes], when known, are the
+ * columns' nodes, resolved once for every value of a flat record contract ([ColumnProjections]).
+ */
 class ColumnProjection internal constructor(
     val descriptor: ColumnProjectionDescriptor,
-    val value: DataValue
+    val value: DataValue,
+    private val nodes: Array<DataNode>?
 ) {
     companion object {
         const val missingText = "<missing>"
@@ -200,7 +234,7 @@ class ColumnProjection internal constructor(
         }
 
     fun node(index: Int): DataNode =
-        when (val address = descriptor.columns[index].address) {
+        nodes?.get(index) ?: when (val address = descriptor.columns[index].address) {
             ColumnAddress.Root -> value.root
             is ColumnAddress.RecordPath -> address.path.fold(value.root) { node, field ->
                 value.access.field(node, field)

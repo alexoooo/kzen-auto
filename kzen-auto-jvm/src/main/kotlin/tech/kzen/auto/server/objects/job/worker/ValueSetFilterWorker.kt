@@ -7,7 +7,7 @@ import tech.kzen.auto.common.objects.document.report.spec.filter.FilterSpec
 import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
-import tech.kzen.auto.server.objects.job.value.JobDataValues
+import tech.kzen.auto.server.objects.job.value.ColumnProjections
 import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.auto.server.objects.job.value.ColumnProjection
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -65,6 +65,7 @@ class ValueSetFilterWorker(
     private var columnTypes: List<ColumnFilterType> = listOf()
     private var columnValues: List<Set<String>> = listOf()
 
+    private val projections = ColumnProjections()
     private var seen = 0L
     private var kept = 0L
 
@@ -73,7 +74,7 @@ class ValueSetFilterWorker(
     override suspend fun onElement(element: DataValue, emit: Emitter, control: JobControl) {
         seen += 1
 
-        val projection = JobDataValues.projection(element)
+        val projection = projections.of(element)
         val header = projection.header
         compileForHeader(header)
 

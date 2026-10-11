@@ -19,6 +19,16 @@ object JobReadConventions {
     const val detectedFileKey = "file"
     const val detectedLabelKey = "label"
 
+    /**
+     * The columns the sampled files hold together, in order: a list of `{name, files}` maps, where [sampledColumnNameKey]
+     * is the column as a header names it and [sampledColumnFilesKey] the files (by name) that hold it, of
+     * [sampledFilesKey] sampled.
+     */
+    const val sampledColumnsKey = "columns"
+    const val sampledColumnNameKey = "name"
+    const val sampledColumnFilesKey = "files"
+    const val sampledFilesKey = "sampledFiles"
+
     /** True when the Worker's input carries units of named parts, so choosing a part applies. */
     const val readsUnitsKey = "readsUnits"
 

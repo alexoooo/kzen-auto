@@ -86,6 +86,18 @@ class Emitter(
     fun batchSize(): Int = output.batchSize()
 
 
+    /**
+     * How many [send]s can follow before one flushes on the cadence and checkpoints: what a pull loop that claims
+     * each item at its send may read ahead by. Without a cadence the drive loop checkpoints, so 1.
+     */
+    fun sendsBeforeCheckpoint(): Int {
+        if (cadence == null) {
+            return 1
+        }
+        return (output.batchSize() - sinceFlush).coerceAtLeast(1)
+    }
+
+
     private class Cadence(
         val control: JobControl,
         val onFlush: () -> Unit

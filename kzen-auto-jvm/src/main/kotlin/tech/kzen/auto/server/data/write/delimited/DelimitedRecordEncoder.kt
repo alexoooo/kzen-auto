@@ -2,6 +2,7 @@ package tech.kzen.auto.server.data.write.delimited
 
 import tech.kzen.auto.common.data.read.DelimitedReadConfig
 import tech.kzen.auto.plugin.model.data.DataRecordBuffer
+import tech.kzen.auto.plugin.model.record.FlatFileRecordField
 import tech.kzen.auto.server.data.read.delimited.ConfiguredDelimitedReaderCapability
 import tech.kzen.auto.server.data.write.RecordCells
 import tech.kzen.auto.server.data.write.RecordEncoder
@@ -40,6 +41,7 @@ class DelimitedRecordEncoder(
         private const val byteOrderMark = '﻿'
         private const val commentMarker = '#'
         private val byteOrderMarkCharsets = setOf(Charsets.UTF_8, Charsets.UTF_16BE, Charsets.UTF_16LE)
+        private val asciiCompatibleCharsets = setOf(Charsets.UTF_8, Charsets.US_ASCII, Charsets.ISO_8859_1)
     }
 
 
@@ -70,6 +72,9 @@ class DelimitedRecordEncoder(
     private val charset: Charset
     private val encoder: CharsetEncoder
     private val maxBytesPerChar: Double
+
+    // Encodes each ASCII character as that one byte, so a line of only ASCII can skip the encoder
+    private val asciiCompatible: Boolean
 
     private val staging = DataRecordBuffer()
     private val fieldStarts = IntArray(columns.size)
@@ -129,6 +134,7 @@ class DelimitedRecordEncoder(
                 if (config.characters.unmappable.lowercase() == "replace") CodingErrorAction.REPLACE
                 else CodingErrorAction.REPORT)
         maxBytesPerChar = encoder.maxBytesPerChar().toDouble()
+        asciiCompatible = charset in asciiCompatibleCharsets
 
         writesByteOrderMark = config.characters.bom.lowercase() in setOf("require", "detect")
         require(!writesByteOrderMark || charset in byteOrderMarkCharsets) {
@@ -231,17 +237,24 @@ class DelimitedRecordEncoder(
     }
 
 
+    // Copied as is first, in one block, and then examined in place: most fields need no quotes
     private fun appendField(text: CharSequence, index: Int, header: Boolean, forceQuote: Boolean) {
         val length = text.length
+        reserve(2 * length + 2)
+        val chars = staging.chars
+        val start = staging.charsLength
+        val end = start + length
+        copyText(text, chars, start)
+
         var required: QuoteReason? = null
         var preferred = forceQuote
-        var containsQuote = false
+        var quotes = 0
         if (length == 0) {
             preferred = preferred || index == 0
         }
         else {
-            val head = text[0]
-            val tail = text[length - 1]
+            val head = chars[start]
+            val tail = chars[end - 1]
             preferred = preferred || head == commentMarker || tail <= ' '
             if (trimUnquoted && (head.isWhitespace() || tail.isWhitespace())) {
                 required = QuoteReason.EdgeWhitespace
@@ -249,45 +262,50 @@ class DelimitedRecordEncoder(
             if (index == 0 && !writesByteOrderMark && head == byteOrderMark) {
                 required = QuoteReason.ByteOrderMark
             }
-            for (i in 0 until length) {
-                val c = text[i]
+            for (i in start until end) {
+                val c = chars[i]
                 when {
                     c == delimiter -> required = QuoteReason.Delimiter
                     c == '\r' -> required = QuoteReason.CarriageReturn
                     c == '\n' -> required = QuoteReason.LineFeed
-                    quoting && c == quote -> containsQuote = true
+                    quoting && c == quote -> quotes++
                 }
             }
         }
 
-        require(!containsQuote || doubledQuote) {
+        require(quotes == 0 || doubledQuote) {
             "$title: ${subject(index, header)} contains the quote '$quote', which escape 'none' cannot write"
         }
-        val quoted = required != null || containsQuote || (preferred && quoting)
+        val quoted = required != null || quotes > 0 || (preferred && quoting)
         require(!quoted || quoting) {
             "$title: ${subject(index, header)} ${required!!.description}, and the format has no quote to protect it"
         }
+        if (!quoted) {
+            staging.charsLength = end
+            return
+        }
 
-        reserve(2 * length + 2)
-        val chars = staging.chars
-        var next = staging.charsLength
-        if (quoted) {
-            chars[next++] = quote
-            for (i in 0 until length) {
-                val c = text[i]
-                if (c == quote) {
-                    chars[next++] = quote
-                }
-                chars[next++] = c
-            }
-            chars[next++] = quote
-        }
-        else {
-            for (i in 0 until length) {
-                chars[next++] = text[i]
+        // Quoted in place from the back, where each write lands at or after the character it reads
+        var next = end + quotes + 1
+        staging.charsLength = next + 1
+        chars[next--] = quote
+        for (i in end - 1 downTo start) {
+            val c = chars[i]
+            chars[next--] = c
+            if (c == quote) {
+                chars[next--] = quote
             }
         }
-        staging.charsLength = next
+        chars[next] = quote
+    }
+
+
+    private fun copyText(text: CharSequence, chars: CharArray, at: Int) {
+        when (text) {
+            is FlatFileRecordField -> text.getChars(0, text.length, chars, at)
+            is String -> text.toCharArray(chars, at)
+            else -> for (i in 0 until text.length) chars[at + i] = text[i]
+        }
     }
 
 
@@ -332,6 +350,9 @@ class DelimitedRecordEncoder(
 
     // One encoding pass over the staged characters, as Report's CharsetExportEncoder does
     private fun encodeStaging(output: DataRecordBuffer, header: Boolean) {
+        if (asciiCompatible && encodeAscii(output)) {
+            return
+        }
         val charsLength = staging.charsLength
         val start = output.bytesLength
         val limit = start + ceil(maxBytesPerChar * charsLength).toInt()
@@ -351,6 +372,30 @@ class DelimitedRecordEncoder(
         }
         check(!result.isOverflow) { "Encoded record exceeds its reserved size" }
         output.bytesLength = target.position()
+    }
+
+
+    /**
+     * The staged characters as one byte each, which in an [asciiCompatible] charset is their encoding when all are
+     * ASCII; false, with nothing written, at the first that is not, which the charset's encoder then handles.
+     */
+    private fun encodeAscii(output: DataRecordBuffer): Boolean {
+        val charsLength = staging.charsLength
+        val start = output.bytesLength
+        if (start + charsLength > output.bytes.size) {
+            output.ensureByteCapacity(maxOf(start + charsLength, 2 * output.bytes.size))
+        }
+        val chars = staging.chars
+        val bytes = output.bytes
+        for (i in 0 until charsLength) {
+            val code = chars[i].code
+            if (code >= 0x80) {
+                return false
+            }
+            bytes[start + i] = code.toByte()
+        }
+        output.bytesLength = start + charsLength
+        return true
     }
 
 

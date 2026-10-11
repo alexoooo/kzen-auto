@@ -127,7 +127,7 @@ internal class FormatCells(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun readsPayload(): Boolean =
-        columns.spec.columns.isEmpty() || WriterColumn.PayloadFields in columns.spec.columns
+        columns.spec.readsPayload()
 
 
     private fun layout(): IntArray {
@@ -137,9 +137,12 @@ internal class FormatCells(
         }
         val sources = ArrayList<Int>()
         var pathIndex = 0
-        for (column in spec) {
+        for ((columnIndex, column) in spec.withIndex()) {
             when (column) {
-                WriterColumn.PayloadFields -> repeat(payloadSize) { sources += it }
+                is WriterColumn.PayloadFields ->
+                    for (index in columns.payloadIndices(columnIndex, checkNotNull(payload).header)) {
+                        sources += index
+                    }
                 is WriterColumn.Path -> sources += -(++pathIndex)
             }
         }

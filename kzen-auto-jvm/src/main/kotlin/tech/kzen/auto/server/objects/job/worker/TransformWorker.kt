@@ -99,6 +99,7 @@ abstract class TransformWorker(
                         break
                     }
                     active = null
+                    onBatchEnd(emitter, control)
 
                     // Send this input batch's whole output as one batch (park-on-backpressure is safe now: the
                     // input batch is fully consumed, so nothing is stranded on the stack).
@@ -147,6 +148,14 @@ abstract class TransformWorker(
 
 
     protected abstract suspend fun onElement(element: DataValue, emit: Emitter, control: JobControl)
+
+
+    /**
+     * Called once a whole input batch was dispatched, before its output is flushed: a subclass that gathers what
+     * the batch's elements produce (such as `Format`'s chunks) sends it here, so nothing it holds outlives the
+     * checkpoint. Not called for a batch cut short by [requestCompletion]; [onComplete] follows instead.
+     */
+    protected open suspend fun onBatchEnd(emit: Emitter, control: JobControl) {}
 
 
     protected open suspend fun onComplete(emit: Emitter, control: JobControl) {}
