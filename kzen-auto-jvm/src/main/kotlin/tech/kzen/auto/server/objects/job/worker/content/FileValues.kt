@@ -17,9 +17,8 @@ import kotlin.reflect.typeOf
 /**
  * A file as a value, whether a selected file (`File`) or a member of an archive (`Extract`): the payload is its
  * [Content] (an opaque native, read by `Parse`, `Extract` or `Write`), and the metadata is plain data describing
- * it — [name], [path], [size], [modified], then any values taken from its name (the Name pattern's
- * captures), then [parent], the metadata of the value it was found in (an archive member's archive). Nothing
- * here is a type of its own: the value is an ordinary payload with a metadata record.
+ * it — [name], [path], [size], [modified], then [parent], the metadata of the value it was found in (an archive
+ * member's archive). Nothing here is a type of its own: the value is an ordinary payload with a metadata record.
  */
 object FileValues {
     const val name = "name"
@@ -37,14 +36,13 @@ object FileValues {
     val contentContract: DataContract by lazy { JobDataValues.describe(typeOf<Content>()) }
 
 
-    /** The metadata's contract for a file whose name yields [captures], found in a value with [parent] metadata. */
-    fun metadataContract(captures: List<String>, parent: MetadataContract?): MetadataContract {
+    /** The metadata's contract for a file found in a value with [parent] metadata. */
+    fun metadataContract(parent: MetadataContract?): MetadataContract {
         val fields = ArrayList<Pair<FieldId, DataContract>>()
         fields += FieldId(name) to DataContract(text)
         fields += FieldId(path) to DataContract(text)
         fields += FieldId(size) to DataContract(size64)
         fields += FieldId(modified) to DataContract(nullableInstant)
-        captures.forEach { fields += FieldId(it) to DataContract(text) }
         if (parent != null) {
             fields += FieldId(FileValues.parent) to parent.contract
         }
@@ -53,8 +51,8 @@ object FileValues {
 
 
     /** The contract of a file value: [contentContract] with [metadataContract]. */
-    fun contract(captures: List<String>, parent: MetadataContract?): DataContract =
-        contentContract.withMetadata(metadataContract(captures, parent))
+    fun contract(parent: MetadataContract?): DataContract =
+        contentContract.withMetadata(metadataContract(parent))
 
 
     /** The metadata record of one file. */
@@ -63,7 +61,6 @@ object FileValues {
         path: String,
         size: Long,
         modifiedEpochMillis: Long?,
-        captures: Map<String, String>,
         parent: ValueMetadata?
     ): ValueMetadata {
         val fields = ArrayList<Pair<FieldId, DataValue>>()
@@ -72,7 +69,6 @@ object FileValues {
         fields += FieldId(FileValues.size) to literal(size, size64)
         fields += FieldId(modified) to literal(
             modifiedEpochMillis?.let { Instant.ofEpochMilli(it).toString() }, nullableInstant)
-        captures.forEach { (key, value) -> fields += FieldId(key) to literal(value, text) }
         if (parent != null) {
             fields += FieldId(FileValues.parent) to parent.value
         }

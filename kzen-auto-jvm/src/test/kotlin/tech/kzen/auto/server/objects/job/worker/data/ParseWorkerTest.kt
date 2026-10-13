@@ -148,7 +148,7 @@ class ParseWorkerTest {
         assertEquals(listOf("main", "reference"), attempt.details[JobReadConventions.rolesKey])
 
         val content = worker.payloadFlow(
-            JobLaneDescriptor(FileValues.contract(emptyList(), null)), laneContext())
+            JobLaneDescriptor(FileValues.contract(null)), laneContext())
         assertNull(content.details[JobReadConventions.readsUnitsKey], "a part never applies to content")
     }
 
@@ -655,7 +655,7 @@ class ParseWorkerTest {
         assertNull(valid.lane.flatColumns)
 
         val content = worker.payloadFlow(
-            JobLaneDescriptor(FileValues.contract(emptyList(), null)), laneContext())
+            JobLaneDescriptor(FileValues.contract(null)), laneContext())
         assertNull(content.errorMessage)
         assertNotNull(content.lane.contract.metadata)
 

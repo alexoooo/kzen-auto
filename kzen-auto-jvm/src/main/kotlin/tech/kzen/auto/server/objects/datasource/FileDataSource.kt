@@ -36,11 +36,8 @@ import tech.kzen.lib.common.reflect.Service
 
 @Reflect
 class FileDataSource(
-    private val directory: String,
-    private val filter: String,
     files: List<Map<String, String>>,
     private val format: ConfiguredRecordFormat,
-    private val groupPattern: String,
     private val missing: String,
     @Service private val fileListingAction: FileListingAction,
     @Service private val formatLookup: ConfiguredRecordFormatLookup = unavailableFormatLookup,
@@ -52,8 +49,6 @@ class FileDataSource(
     companion object {
         const val missingFail = "fail"
         const val missingSkip = "skip"
-
-        private const val groupAttribute = "group"
         private val unavailableFormatLookup = object: ConfiguredRecordFormatLookup {
             override suspend fun preflight(reference: String): ConfiguredRecordFormatPreflight {
                 throw IllegalArgumentException("Configured format lookup is unavailable for $reference")
@@ -101,19 +96,20 @@ class FileDataSource(
         context: DataContext,
         entry: FileSelectionEntry
     ): DataResolveResult {
+        // The client can ask for a row the server's copy of the selection does not hold yet (a write in flight)
+        require(files.isNotEmpty()) {
+            "Selected file is not in this source's selection: ${entry.location.asString()}"
+        }
+        require(entry in files) {
+            "The selected file row changed before resolution: ${entry.location.asString()}"
+        }
         return resolutionBudgetFactory.create().withinDeadline {
             val sourceFormat = formatAttribute?.let { formatLookup.preflight(format, it) }
-            val selected = selectedFile(context, entry)
-            require(selected.isNotEmpty()) {
-                "Selected file is not in this source's selection: ${entry.location.asString()}"
-            }
-            require(selected.size == 1) {
-                "Selected file is ambiguous: ${entry.location.asString()}"
-            }
+            val selected = entry to context.blocking { fileListingAction.fileInfoBlocking(entry.location) }
             val diagnostics = mutableListOf<DataDiagnostic>()
-            val regular = validateSelection(selected, diagnostics)
+            val regular = validateSelection(listOf(selected), diagnostics)
             require(regular.size == 1) { "Selected file is unavailable: ${entry.location.asString()}" }
-            val prepared = prepareOverrides(listOf(entry to regular.single().second)).single()
+            val prepared = prepareOverrides(regular).single()
             val resolved = resolveInput(context, prepared, sourceFormat, this)
             DataResolveResult(
                 DataManifest(listOf(resolved.unit)),
@@ -123,60 +119,26 @@ class FileDataSource(
     }
 
 
-    private suspend fun selectedFile(
-        context: DataContext,
-        entry: FileSelectionEntry
-    ): List<Pair<FileSelectionEntry?, DataLocationInfo>> {
-        if (files.isNotEmpty()) {
-            require(entry in files) {
-                "The selected file row changed before resolution: ${entry.location.asString()}"
-            }
-            return listOf(entry to context.blocking {
-                fileListingAction.fileInfoBlocking(entry.location)
-            })
-        }
-        return list(context).filter { (_, info) -> info.path == entry.location }
-    }
-
-
     /**
-     * The selected files with the values their names yield ([groupPattern] captures), without reading or
-     * resolving a format: `File` selects, `Parse` reads. Missing files follow [missing]; a directory fails.
+     * The selected files, without reading or resolving a format: `File` selects, `Parse` reads. Missing files
+     * follow [missing]; a directory fails.
      */
     suspend fun select(context: DataContext): List<SelectedFile> {
         require(missing == missingFail || missing == missingSkip) {
             "Unknown missing-file policy: $missing"
         }
         val regularFiles = validateSelection(list(context), mutableListOf())
-        return regularFiles.map { (entry, info) -> SelectedFile(info, groupAttributes(info.name), entry) }
-    }
-
-
-    /** The names of the values a file's name yields, in order: the named captures, or `group` for one unnamed. */
-    fun captureNames(): List<String> {
-        if (groupPattern.isBlank()) {
-            return emptyList()
-        }
-        val captures = captureGroups(groupPattern)
-        val named = captures.mapNotNull { it.name }
-        if (named.isNotEmpty()) {
-            return named
-        }
-        require(captures.size == 1) {
-            "Group pattern must contain named captures or exactly one unnamed capture: $groupPattern"
-        }
-        return listOf(groupAttribute)
+        return regularFiles.map { (entry, info) -> SelectedFile(info, entry) }
     }
 
 
     /**
-     * One file of [select]: its listing, the values its name yields, and the selection row naming it (null when a
-     * directory scan found it), whose location is as written rather than resolved like [DataLocationInfo.path].
+     * One file of [select]: its listing and the selection row naming it, whose location is as written rather
+     * than resolved like [DataLocationInfo.path].
      */
     class SelectedFile(
         val info: DataLocationInfo,
-        val captures: Map<String, String>,
-        val entry: FileSelectionEntry? = null
+        val entry: FileSelectionEntry
     )
 
 
@@ -197,29 +159,18 @@ class FileDataSource(
     }
 
 
-    private suspend fun list(context: DataContext): List<Pair<FileSelectionEntry?, DataLocationInfo>> {
+    private suspend fun list(context: DataContext): List<Pair<FileSelectionEntry, DataLocationInfo>> {
         return context.blocking {
-            if (files.isNotEmpty()) {
-                files.map { it to fileListingAction.fileInfoBlocking(it.location) }
-            }
-            else if (directory.isBlank()) {
-                emptyList()
-            }
-            else {
-                fileListingAction
-                    .scanInfoBlocking(DataLocation.of(directory), filter)
-                    .map { null to it }
-                    .sortedBy { it.second.path.asString() }
-            }
+            files.map { it to fileListingAction.fileInfoBlocking(it.location) }
         }
     }
 
 
     private fun validateSelection(
-        selected: List<Pair<FileSelectionEntry?, DataLocationInfo>>,
+        selected: List<Pair<FileSelectionEntry, DataLocationInfo>>,
         diagnostics: MutableList<DataDiagnostic>
-    ): List<Pair<FileSelectionEntry?, DataLocationInfo>> {
-        val regularFiles = mutableListOf<Pair<FileSelectionEntry?, DataLocationInfo>>()
+    ): List<Pair<FileSelectionEntry, DataLocationInfo>> {
+        val regularFiles = mutableListOf<Pair<FileSelectionEntry, DataLocationInfo>>()
         for ((entry, info) in selected) {
             if (info.isMissing()) {
                 if (missing == missingFail) {
@@ -238,11 +189,11 @@ class FileDataSource(
 
 
     private suspend fun prepareOverrides(
-        selected: List<Pair<FileSelectionEntry?, DataLocationInfo>>
+        selected: List<Pair<FileSelectionEntry, DataLocationInfo>>
     ): List<PreparedInput> {
         val preflights = mutableMapOf<String, ConfiguredRecordFormatPreflight>()
         return selected.map { (entry, info) ->
-            val reference = entry?.format?.asString()
+            val reference = entry.format?.asString()
             val preflight = if (reference == null) {
                 null
             }
@@ -293,7 +244,7 @@ class FileDataSource(
             ref,
             expectedFingerprint,
             FilenameDetection.hints(info.name),
-            input.entry?.encoding?.asString(),
+            input.entry.encoding?.asString(),
             sourceBudget)
         val resolution = try {
             input.formatOverride?.resolve(request)
@@ -305,7 +256,7 @@ class FileDataSource(
             // for whole-file consumers, refused only when read — unless the row demanded text by encoding
             val selected = input.formatOverride ?: sourceFormat
             val automatic = (selected?.selectionKind ?: format.selectionKind) == FormatSelectionKind.Automatic &&
-                input.entry?.encoding == null
+                input.entry.encoding == null
             if (!automatic || !UndetectedFormat.carries(failure)) throw failure
             UndetectedFormat.resolve(request, failure)
         }
@@ -317,98 +268,12 @@ class FileDataSource(
             ref,
             expectedFingerprint,
             resolution.resolvedRead)
-        return ResolvedInput(DataUnit(groupAttributes(info.name), listOf(part)), resolution)
+        return ResolvedInput(DataUnit(emptyMap(), listOf(part)), resolution)
     }
-
-
-    private fun groupAttributes(fileName: String): Map<String, String> {
-        if (groupPattern.isBlank()) {
-            return emptyMap()
-        }
-
-        val pattern = Regex(groupPattern)
-        val match = pattern.find(fileName) ?: return emptyMap()
-        val captures = captureGroups(groupPattern)
-        val named = captures.filter { it.name != null }
-        if (named.isNotEmpty()) {
-            val attributes = linkedMapOf<String, String>()
-            for (capture in named) {
-                attributes[capture.name!!] = match.groups[capture.name]?.value ?: ""
-            }
-            return attributes
-        }
-
-        val unnamed = captures.filter { it.name == null }
-        require(unnamed.size == 1) {
-            "Group pattern must contain named captures or exactly one unnamed capture: $groupPattern"
-        }
-        return mapOf(groupAttribute to (match.groups[unnamed.single().index]?.value ?: ""))
-    }
-
-
-    private fun captureGroups(pattern: String): List<Capture> {
-        val captures = mutableListOf<Capture>()
-        var groupIndex = 0
-        var escaped = false
-        var characterClass = false
-        var index = 0
-        while (index < pattern.length) {
-            val char = pattern[index]
-            if (escaped) {
-                escaped = false
-                index++
-                continue
-            }
-            if (char == '\\') {
-                escaped = true
-                index++
-                continue
-            }
-            if (char == '[') {
-                characterClass = true
-                index++
-                continue
-            }
-            if (char == ']' && characterClass) {
-                characterClass = false
-                index++
-                continue
-            }
-            if (char != '(' || characterClass) {
-                index++
-                continue
-            }
-
-            if (pattern.getOrNull(index + 1) != '?') {
-                groupIndex++
-                captures.add(Capture(groupIndex, null))
-                index++
-                continue
-            }
-
-            if (pattern.getOrNull(index + 2) == '<') {
-                val marker = pattern.getOrNull(index + 3)
-                if (marker != '=' && marker != '!') {
-                    val end = pattern.indexOf('>', index + 3)
-                    require(end != -1) { "Unclosed named capture: $groupPattern" }
-                    groupIndex++
-                    captures.add(Capture(groupIndex, pattern.substring(index + 3, end)))
-                }
-            }
-            index++
-        }
-        return captures
-    }
-
-
-    private data class Capture(
-        val index: Int,
-        val name: String?
-    )
 
 
     private data class PreparedInput(
-        val entry: FileSelectionEntry?,
+        val entry: FileSelectionEntry,
         val info: DataLocationInfo,
         val formatOverride: ConfiguredRecordFormatPreflight?
     )

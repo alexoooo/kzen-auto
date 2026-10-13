@@ -30,11 +30,8 @@ class LegacyMultiFileSourceWorker(
     openerLookup,
     DataReadCore.schemaSuperset,
     FileDataSource(
-        "",
-        "",
         paths.map { mapOf(FileSelectionEntry.locationKey to it) },
         compatibilityDelimitedFormat(delimiter, header),
-        "",
         FileDataSource.missingFail,
         fileListingAction),
     Digest.build {

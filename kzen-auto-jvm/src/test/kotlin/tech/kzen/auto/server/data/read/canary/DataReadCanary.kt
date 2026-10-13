@@ -112,11 +112,8 @@ object DataReadCanary {
         val repository = HostReportDefinitionRepository(emptyList())
         val listing = FileListingAction(repository)
         val localSource = FileDataSource(
-            "",
-            "",
             listOf(mapOf(FileSelectionEntry.locationKey to config.path.toString())),
             config.format,
-            "",
             FileDataSource.missingFail,
             listing)
         val opener = ConfiguredDataOpener(SchemaCache(WorkUtils(cacheDirectory)))

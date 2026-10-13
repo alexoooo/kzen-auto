@@ -158,7 +158,7 @@ class JobValidatorTest {
         val sourceEdit = NotationReducer().applyStructural(
             baseNotation,
             UpsertAttributeCommand(
-                source, AttributeName("groupPattern"), ScalarAttributeNotation("(?<group>.*)")))
+                source, AttributeName("missing"), ScalarAttributeNotation("skip")))
             .graphNotation
         val sourceKey = assertNotNull(JobValidationDigest.documentClosureKey(
             job, AutoTestUtils.graphDefinitionAttempt(sourceEdit).transitiveSuccessful))
@@ -191,7 +191,7 @@ class JobValidatorTest {
         val sourceEdit = NotationReducer().applyStructural(
             baseNotation,
             UpsertAttributeCommand(
-                source, AttributeName("groupPattern"), ScalarAttributeNotation("(?<group>.*)")))
+                source, AttributeName("missing"), ScalarAttributeNotation("skip")))
             .graphNotation
         val sourceKey = assertNotNull(JobValidationDigest.documentClosureKey(
             job, AutoTestUtils.graphDefinitionAttempt(sourceEdit).transitiveSuccessful))

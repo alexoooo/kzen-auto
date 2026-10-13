@@ -42,18 +42,9 @@ class FileListingAction(
     }
 
 
-    suspend fun scanInfo(pattern: DataLocation, filter: String): List<DataLocationInfo> {
-        return withContext(Dispatchers.IO) {
-            scanInfoBlocking(pattern, filter)
-        }
-    }
-
-
     /**
      * Lists one directory for an interactive chooser. Immediate directories are always included so an active
      * filename filter cannot hide navigation; directories sort before the matching files.
-     *
-     * Runtime source discovery remains [scanInfo], whose contract is files-only.
      */
     suspend fun browseInfo(directory: DataLocation, filter: String): List<DataLocationInfo> {
         return withContext(Dispatchers.IO) {
@@ -104,38 +95,6 @@ class FileListingAction(
         directories.sort()
         files.sort()
         return directories + files
-    }
-
-
-    fun scanInfoBlocking(pattern: DataLocation, filter: String): List<DataLocationInfo> {
-        val parsed = Paths.get(pattern.asString())
-            ?: return listOf()
-
-        if (Files.isRegularFile(parsed)) {
-            return listOf(toFileInfo(parsed))
-        }
-
-        if (!Files.isDirectory(parsed)) {
-            return listOf()
-        }
-
-        val filterFunction = parseFilter(filter)
-
-        val builder = mutableListOf<DataLocationInfo>()
-        Files.walkFileTree(
-            parsed,
-            EnumSet.noneOf(FileVisitOption::class.java),
-            1,
-            object: SimpleFileVisitor<Path>() {
-                override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
-                    if (!attrs.isDirectory && filterFunction(file)) {
-                        builder.add(toFileInfo(file, attrs))
-                    }
-                    return FileVisitResult.CONTINUE
-                }
-            })
-        builder.sort()
-        return builder
     }
 
 

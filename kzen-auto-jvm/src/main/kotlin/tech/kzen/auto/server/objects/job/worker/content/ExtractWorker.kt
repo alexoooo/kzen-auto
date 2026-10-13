@@ -98,7 +98,6 @@ class ExtractWorker(
             // A tar header always records the member's size
             checkNotNull(descriptor.length) { "Archive member '${descriptor.name}' has no size" },
             descriptor.modifiedEpochMillis,
-            emptyMap(),
             parent)
     }
 
@@ -180,7 +179,7 @@ class ExtractWorker(
      * file content (a file, or a member of an enclosing archive), never rows.
      */
     override fun payloadFlow(input: JobLaneDescriptor, context: JobLaneContext): JobLaneAttempt {
-        val lane = JobLaneDescriptor(FileValues.contract(emptyList(), input.contract.metadata))
+        val lane = JobLaneDescriptor(FileValues.contract(input.contract.metadata))
         if (input.contract.structural is DataType.Dynamic) {
             return JobLaneAttempt(lane, null)
         }

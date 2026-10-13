@@ -135,7 +135,7 @@ object CommonRestApi {
     const val objectStableMapperSnapshot = "/object-stable/snapshot"
 
     // file-system directory listing (document-agnostic browse) — GET /file-listing?directory=...&filter=...
-    // reuses FileListingAction.scanInfo; used by the Job MultiFileInputEditor to browse for input files.
+    // answered by FileListingAction.browseListing; used by the Job file chooser to browse for input files.
     const val fileListing = "/file-listing"
     const val paramDirectory = "directory"
     const val paramFilter = "filter"

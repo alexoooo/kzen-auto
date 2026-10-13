@@ -9,8 +9,9 @@ main:
 
 main.workers/files:
   is: FileSourceWorker
-  directory: build/parse-automatic/in
-  filter: .txt
+  files:
+    - location: build/parse-automatic/in/measurements-1.txt
+    - location: build/parse-automatic/in/measurements-2.txt
 
 main.workers/parse:
   is: Parse

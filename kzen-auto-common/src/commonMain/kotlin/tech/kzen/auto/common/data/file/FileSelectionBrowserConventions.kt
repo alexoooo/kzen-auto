@@ -6,12 +6,9 @@ import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
 
 
 /**
- * Locates the browser navigation state used by a file-selection attribute editor.
- *
- * The state is deliberately separate from a file source's runtime `directory` and `filter`: neither browsing nor
- * removing the last explicit selection may turn the directory last visited by the chooser into a runtime directory
- * query. A `browser: <attribute path>` scalar in the selection attribute's metadata opts into the separate state;
- * `FileSelectionConfig` declares it once, so every file source and the File Worker inherit it.
+ * Locates the browser navigation state used by a file-selection attribute editor: where the chooser was last
+ * browsing, which selects nothing. A `browser: <attribute path>` scalar in the selection attribute's metadata opts
+ * into persisting it; `FileSelectionConfig` declares it once, so every file source and the File Worker inherit it.
  *
  * An absent marker means the editor keeps navigation in component state and persists only the selection — the safe
  * default for any third-party attribute that has not

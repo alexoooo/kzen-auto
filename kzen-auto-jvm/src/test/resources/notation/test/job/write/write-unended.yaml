@@ -9,8 +9,12 @@ main:
 
 main.workers/files:
   is: FileSourceWorker
-  directory: build/write-worker/in
-  filter: .csv
+  files:
+    - location: build/write-worker/in/a.csv
+    - location: build/write-worker/in/b.csv
+    - location: build/write-worker/in/big.csv
+    - location: build/write-worker/in/c.csv
+  missing: skip
 
 main.workers/parse:
   is: Parse

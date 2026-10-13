@@ -727,7 +727,11 @@ class WriteWorkerTest {
 
         assertIs<Outcome.Success>(harness.run(bytesDocument))
         val written = collected(run(readDocument, AutoTestUtils.readNotation()))
-        val source = collected(run(readDocument, edited(readDocument, "files", "directory", inDirectory.toString())))
+        val inputs = ContentTestHarness.pick(
+            AutoTestUtils.readNotation(),
+            worker(readDocument, "files"),
+            listOf("a.csv", "b.csv").map(inDirectory::resolve))
+        val source = collected(run(readDocument, inputs))
 
         assertEquals(5, source.size)
         assertEquals(source, written)

@@ -3,8 +3,10 @@ main:
 
 main.workers/files:
   is: FileSourceWorker
-  directory: build/job-design-time/in
-  filter: .csv
+  files:
+    - location: build/job-design-time/in/a.csv
+    - location: build/job-design-time/in/b.csv
+  missing: skip
 
 main.workers/parse:
   is: Parse

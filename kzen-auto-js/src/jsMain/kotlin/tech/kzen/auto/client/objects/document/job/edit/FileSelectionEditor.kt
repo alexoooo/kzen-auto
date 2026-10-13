@@ -649,9 +649,8 @@ class FileSelectionEditor(
     /**
      * Where chooser navigation persists, or null when this attribute keeps it view-only.
      *
-     * A `browser: <attribute path>` marker in the attribute's metadata opts into a navigation pair held apart from
-     * a source's runtime directory query, so browsing can never turn the last visited folder into a directory scan.
-     * Without the marker — for any third-party attribute that has
+     * A `browser: <attribute path>` marker in the attribute's metadata opts into a persisted navigation pair, which
+     * selects nothing. Without the marker — for any third-party attribute that has
      * not opted in — navigation lives in component state and only the selection is written.
      */
     private fun browserPaths(): BrowserPaths? {

@@ -2,26 +2,15 @@
 # only selects them).
 FileSelectionConfig:
   abstract: true
-  directory: ""
-  filter: ""
   files: []
-  groupPattern: ""
   missing: fail
 
-  # Chooser navigation state, deliberately separate from the runtime `directory` / `filter` query above: browsing
-  # must never turn the last visited directory into a directory scan (FileSelectionBrowserConventions).
+  # Chooser navigation state (FileSelectionBrowserConventions): where the chooser was last browsing; it selects
+  # nothing.
   browser:
     directory: "./"
     filter: ""
   meta:
-    directory:
-      is: String
-      label: "Folder to scan"
-      description: "Optional: take every matching file in this folder, in addition to the files picked above."
-    filter:
-      is: String
-      label: "File name filter"
-      description: "Which files in the folder to take, for example *.csv"
     files:
       is: List
       editor: FileSelectionEditor
@@ -31,10 +20,6 @@ FileSelectionConfig:
         of:
           - String
           - String
-    groupPattern:
-      is: String
-      label: "Name pattern"
-      description: "Optional: picks values out of each file name by named group, for example (?<year>[0-9]{4})"
     missing:
       is: String
       editor: SelectValuesEditor

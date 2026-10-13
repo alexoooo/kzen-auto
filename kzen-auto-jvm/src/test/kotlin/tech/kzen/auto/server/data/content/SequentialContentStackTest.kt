@@ -36,7 +36,9 @@ import tech.kzen.lib.common.exec.data.type.DataType
 import tech.kzen.lib.common.exec.data.type.FieldId
 import tech.kzen.lib.common.exec.data.type.ScalarKind
 import tech.kzen.lib.common.exec.data.shape.ShapeStability
+import com.linkedin.migz.MiGzOutputStream
 import java.io.ByteArrayOutputStream
+import java.io.OutputStream
 import java.nio.file.Files
 import java.util.zip.GZIPOutputStream
 import org.junit.Rule
@@ -346,12 +348,41 @@ class SequentialContentStackTest {
         val trailingFailure = assertFailsWith<ContentCodingException> {
             memoryCharacters(trailing, ContentCodingSpec.gzip).readAllText()
         }
-        assertContains(trailingFailure.message.orEmpty(), "Trailing bytes")
+        assertContains(trailingFailure.message.orEmpty(), "after a valid .gz stream")
+        val memberThenTrailing = assertFailsWith<ContentCodingException> {
+            memoryCharacters(valid + valid + byteArrayOf(1), ContentCodingSpec.gzip).readAllText()
+        }
+        assertContains(memberThenTrailing.message.orEmpty(), "after a valid .gz stream")
 
         val smallPolicy = ContentReadPolicy(20, 10.seconds, 100)
         val limited = memoryCharacters(valid, ContentCodingSpec.gzip, smallPolicy)
         assertFailsWith<ContentCodingException> { limited.readAllText() }
         Unit
+    }
+
+
+    @Test
+    fun gzipOfManyMembersReadsEveryMemberAndChecksEach() = runBlocking {
+        val text = (0 until 20_000).joinToString("\n") { "row $it" }
+        val bytes = text.encodeToByteArray()
+        val runContent = ReaderExecutionPolicies().runContent
+
+        // Write's and Report's MiGz encoder: a member per block, members crossing the reader's input buffer.
+        val raw = ByteArrayOutputStream()
+        MiGzOutputStream(raw as OutputStream, 3, 1000).use { it.write(bytes) }
+        val migz = raw.toByteArray()
+        assertEquals(text, memoryCharacters(migz, ContentCodingSpec.gzip, runContent).readAllText())
+
+        val half = bytes.size / 2
+        val concatenated = gzip(bytes.copyOf(half)) + gzip(bytes.copyOfRange(half, bytes.size))
+        assertEquals(text, memoryCharacters(concatenated, ContentCodingSpec.gzip, runContent).readAllText())
+
+        val second = gzip(bytes.copyOfRange(half, bytes.size))
+        second[second.size - 8] = (second[second.size - 8] + 1).toByte()
+        val corruptSecond = assertFailsWith<ContentCodingException> {
+            memoryCharacters(gzip(bytes.copyOf(half)) + second, ContentCodingSpec.gzip, runContent).readAllText()
+        }
+        assertContains(corruptSecond.message.orEmpty(), "CRC32")
     }
 
 

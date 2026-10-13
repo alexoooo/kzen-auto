@@ -26,6 +26,7 @@ import kotlin.io.path.writeText
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 
@@ -48,7 +49,7 @@ class FileSourceWorkerTest {
 
             val messages = mutableListOf<DataValue>()
             FileSourceWorker(
-                capturing(messages), "", "", files, "(?<year>\\d{4})", "fail", workerLocation, listing)
+                capturing(messages), files, "fail", workerLocation, listing)
                 .run(DirectControl)
 
             assertEquals(2, messages.size)
@@ -59,11 +60,7 @@ class FileSourceWorkerTest {
             val metadata = JobDataValues.boundary(checkNotNull(messages.first().metadata).value) as Map<String, Any?>
             assertEquals("2026-a.csv", metadata["name"])
             assertEquals(16L, metadata["size"])
-            assertEquals("2026", metadata["year"])
-            assertEquals(
-                listOf("name", "path", "size", "modified", "year"),
-                metadata.keys.toList())
-            assertEquals("2027", (JobDataValues.boundary(checkNotNull(messages.last().metadata).value) as Map<*, *>)["year"])
+            assertEquals(listOf("name", "path", "size", "modified"), metadata.keys.toList())
         }
         finally {
             WorkUtils.recursivelyDeleteDir(directory)
@@ -85,7 +82,7 @@ class FileSourceWorkerTest {
 
 
     @Test
-    fun fileWorkerKeepsChooserStateSeparateFromRuntimeDirectoryQuery() {
+    fun fileWorkerPersistsChooserStateAndHasNoFolderScan() {
         val notation = AutoTestUtils.readNotation()
         val attempt = AutoTestUtils.graphDefinitionAttempt(notation)
         val location = ObjectLocation.parse("auto-jvm/job/job-worker.yaml#FileSourceWorker")
@@ -104,12 +101,8 @@ class FileSourceWorkerTest {
                 location,
                 FileSelectionBrowserConventions.filterAttributePath(
                     filesMetadata.attributeMetadataNotation)!!)!!.asString())
-        assertEquals(
-            "",
-            notation.firstAttribute(location, AttributePath.parse("directory"))!!.asString())
-        assertEquals(
-            "",
-            notation.firstAttribute(location, AttributePath.parse("filter"))!!.asString())
+        assertNull(notation.firstAttribute(location, AttributePath.parse("directory")))
+        assertNull(notation.firstAttribute(location, AttributePath.parse("filter")))
         assertFalse(AttributeName("browser") in metadata.attributes.map)
     }
 

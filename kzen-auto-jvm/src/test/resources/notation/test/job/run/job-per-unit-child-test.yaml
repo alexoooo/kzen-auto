@@ -46,13 +46,14 @@ main.workers/copy:
   is: FormulaWorker
   formula:
     copied: 'prefix + value'
+    date: flatDate
 
 main.workers/write:
   is: CsvWriterWorker
   path: 'build/job-per-unit/output/${outputDate}.csv'
   result: main
   columns:
-    - path: meta.parent.date
+    - path: meta.date
       as: date
     - "*"
     - meta.copied

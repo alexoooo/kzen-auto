@@ -4,6 +4,9 @@ import kotlinx.coroutines.runBlocking
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream
+import tech.kzen.auto.common.data.file.FileSelectionEntry
+import tech.kzen.auto.common.data.file.FileSelectionSpec
+import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.exec.LogicCompilerServices
 import tech.kzen.auto.server.exec.job.EngineJobControl
@@ -198,6 +201,13 @@ class ContentTestHarness: AutoCloseable {
 
         fun edit(notation: GraphNotation, objectLocation: ObjectLocation, attribute: String, value: String) =
             edit(notation, objectLocation, attribute, ScalarAttributeNotation(value))
+
+
+        /** [notation] with the File Worker at [objectLocation] picking [paths], in order. */
+        fun pick(notation: GraphNotation, objectLocation: ObjectLocation, paths: List<Path>): GraphNotation {
+            val entries = paths.map { FileSelectionEntry(DataLocation.of(it.toString()), null, null) }
+            return edit(notation, objectLocation, "files", FileSelectionSpec(entries).asNotation())
+        }
     }
 
 

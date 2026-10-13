@@ -5,8 +5,9 @@ main:
 
 main.workers/files:
   is: FileSourceWorker
-  directory: build/format-worker/superset
-  filter: .csv
+  files:
+    - location: build/format-worker/superset/a.csv
+    - location: build/format-worker/superset/b.csv
 
 main.workers/parse:
   is: Parse

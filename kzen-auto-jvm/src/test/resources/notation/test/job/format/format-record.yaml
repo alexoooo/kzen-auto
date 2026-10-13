@@ -9,8 +9,8 @@ main.formats/bare:
 
 main.workers/files:
   is: FileSourceWorker
-  directory: build/format-worker/record
-  filter: .csv
+  files:
+    - location: build/format-worker/record/r.csv
 
 main.workers/parse:
   is: Parse

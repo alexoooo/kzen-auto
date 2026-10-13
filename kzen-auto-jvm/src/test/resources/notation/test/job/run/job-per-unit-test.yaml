@@ -16,7 +16,6 @@ main.sources/input:
     - location: build/job-per-unit/input/2026-08-21.csv
     - location: build/job-per-unit/input/2026-08-22.csv
     - location: build/job-per-unit/input/2026-08-23.csv
-  groupPattern: "(?<date>\\d{4}-\\d{2}-\\d{2})"
 
 main.parameters/prefix:
   is: ParameterBinding
@@ -34,13 +33,13 @@ main.workers/units:
 main.workers/enrich:
   is: FormulaWorker
   formula:
-    flatDate: 'meta["date"] as String'
+    flatDate: 'Regex("[0-9]{4}-[0-9]{2}-[0-9]{2}").find(parts.single().ref.id)!!.value'
 
 main.workers/run:
   is: RunWorker
   instructions: test/job/run/job-per-unit-child-test.yaml#main
   arguments:
-    outputDate: 'meta["date"] as String'
+    outputDate: 'Regex("[0-9]{4}-[0-9]{2}-[0-9]{2}").find(parts.single().ref.id)!!.value'
     flatDate: flatDate
     prefix: prefix
 

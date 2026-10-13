@@ -61,17 +61,14 @@ class FileDataSourceTest {
     val temp: TemporaryFolder = TemporaryFolder.builder().assureDeletion().build()
 
     private fun source(
-        directory: String = "",
-        filter: String = "",
         files: List<Map<String, String>> = emptyList(),
         format: ConfiguredRecordFormat? = null,
-        groupPattern: String = "",
         missing: String = FileDataSource.missingFail,
         schema: DataSchemaDocument? = null,
         formatLookup: ConfiguredRecordFormatLookup = missingFormatLookup
     ): FileDataSource = FileDataSource(
-        directory, filter, files, format ?: ConfiguredDelimitedTestFormats.csv(schema),
-        groupPattern, missing, listing, formatLookup)
+        files, format ?: ConfiguredDelimitedTestFormats.csv(schema),
+        missing, listing, formatLookup)
 
     private fun resolve(source: FileDataSource) = runBlocking { source.resolve(DirectContext) }
 
@@ -87,12 +84,12 @@ class FileDataSourceTest {
 
 
     @Test
-    fun directoryResolutionIsOrderedAndFingerprintedOneUnitPerFile() {
+    fun resolutionIsFingerprintedOneUnitPerFile() {
         val directory = temp.newFolder("file-source-order").toPath()
-        val later = directory.resolve("z.csv").also { it.writeText("a\n2\n") }
         val first = directory.resolve("a.csv").also { it.writeText("a\n1\n") }
+        val later = directory.resolve("z.csv").also { it.writeText("a\n2\n") }
 
-        val result = resolve(source(directory = directory.toString()))
+        val result = resolve(source(files = listOf(picked(first), picked(later))))
 
         assertEquals(listOf(first, later).map(::canonical),
             result.manifest.units.map { it.parts.single().ref.id })
@@ -113,14 +110,12 @@ class FileDataSourceTest {
 
 
     @Test
-    fun explicitSelectionWinsAndOverridesDefaults() {
+    fun perFileOverridesReplaceTheDefaults() {
         val directory = temp.newFolder("file-source-explicit").toPath()
-        directory.resolve("ignored.csv").writeText("ignored")
         val picked = directory.resolve("chosen.tsv").also { it.writeText("a\tb") }
         val formatLookup = lookup(mapOf("Tsv" to ConfiguredDelimitedTestFormats.tsv()))
 
         val result = resolve(source(
-            directory = directory.toString(),
             files = listOf(picked(picked, "Tsv", "ISO-8859-1")),
             formatLookup = formatLookup))
         val part = result.manifest.units.single().parts.single()
@@ -250,7 +245,7 @@ class FileDataSourceTest {
     @Test
     fun singleFilePreviewOutsideAnEmptySelectionSaysSo() = runBlocking {
         // The client can ask for a row the server's copy of the selection does not hold yet (a notation write in
-        // flight): with no rows and no directory there is nothing to match, and the message must say which
+        // flight): with no rows there is nothing to match, and the message must say which
         val absent = temp.newFile("file-source-absent.csv").toPath().also { it.writeText("a") }
         val source = source()
 
@@ -273,42 +268,6 @@ class FileDataSourceTest {
         val withoutOverrides = resolve(source(files = listOf(picked(file))))
             .manifest.units.single().parts.single()
         assertEquals(withoutOverrides.resolvedRead, withDefaults.resolvedRead)
-    }
-
-
-    @Test
-    fun filterUsesContainsAllWordsRatherThanGlobSyntax() {
-        val directory = temp.newFolder("file-source-filter").toPath()
-        directory.resolve("2026-sales.csv").writeText("a")
-        directory.resolve("2026-sales.tsv").writeText("a")
-
-        assertEquals(1, resolve(source(directory.toString(), "sales csv")).manifest.units.size)
-        assertTrue(resolve(source(directory.toString(), "*.csv")).manifest.units.isEmpty())
-    }
-
-
-    @Test
-    fun groupPatternUsesOrderedNamedCapturesOrOneUnnamedCapture() {
-        val file = temp.newFile("2026-08-sales.csv").toPath().also { it.writeText("a") }
-        val named = resolve(source(
-            files = listOf(picked(file)),
-            groupPattern = "(?<year>\\d{4})-(?<month>\\d{2})"))
-        assertEquals(linkedMapOf("year" to "2026", "month" to "08"),
-            named.manifest.units.single().attributes)
-
-        val unnamed = resolve(source(files = listOf(picked(file)), groupPattern = "(sales)"))
-        assertEquals(mapOf("group" to "sales"), unnamed.manifest.units.single().attributes)
-        assertTrue(resolve(source(files = listOf(picked(file)), groupPattern = "nomatch-(\\d+)"))
-            .manifest.units.single().attributes.isEmpty())
-        assertTrue(resolve(source(files = listOf(picked(file)), groupPattern = ""))
-            .manifest.units.single().attributes.isEmpty())
-
-        assertFailsWith<IllegalArgumentException> {
-            resolve(source(files = listOf(picked(file)), groupPattern = "sales"))
-        }
-        assertFailsWith<IllegalArgumentException> {
-            resolve(source(files = listOf(picked(file)), groupPattern = "(2026).*?(sales)"))
-        }
     }
 
 
@@ -387,7 +346,6 @@ class FileDataSourceTest {
 
         assertEquals(shape, source(files = listOf(first, second), format = format).staticShape(null, noFormats))
         assertNull(source(files = listOf(first, csv), format = format).staticShape(null, noFormats))
-        assertNull(source(directory = directory.toString(), format = format).staticShape(null, noFormats))
     }
 
 

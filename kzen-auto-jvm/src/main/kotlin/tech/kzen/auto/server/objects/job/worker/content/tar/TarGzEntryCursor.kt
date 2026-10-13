@@ -38,8 +38,9 @@ class TarGzEntryCursor(
     }
 
     private val archiveName = parent.name
+    // Every member of a multi-member gzip (a parallel compressor writes many), not only the first.
     private val archive = TarArchiveInputStream(
-        GzipCompressorInputStream(BufferedInputStream(bytes, readBufferBytes)))
+        GzipCompressorInputStream(BufferedInputStream(bytes, readBufferBytes), true))
 
     private var pending: TarArchiveEntry? = null
     private var current: TarEntryContent? = null

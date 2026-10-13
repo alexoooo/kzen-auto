@@ -7,7 +7,6 @@ import kotlin.io.path.createDirectory
 import kotlin.io.path.writeText
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.common.util.data.FilePath
@@ -59,16 +58,17 @@ class FileListingActionTest {
 
 
     @Test
-    fun runtimeScanRemainsFilesOnly() {
-        val directory = Files.createTempDirectory("file-listing-scan")
+    fun filterUsesContainsAllWordsRatherThanGlobSyntax() {
+        val directory = Files.createTempDirectory("file-listing-filter")
         try {
-            directory.resolve("match-folder").createDirectory()
-            directory.resolve("match.csv").writeText("match")
+            directory.resolve("2026-sales.csv").writeText("a")
+            directory.resolve("2026-sales.tsv").writeText("a")
 
-            val result = listing.scanInfoBlocking(DataLocation.of(directory.toString()), "match")
+            val words = listing.browseInfoBlocking(DataLocation.of(directory.toString()), "sales csv")
+            val glob = listing.browseInfoBlocking(DataLocation.of(directory.toString()), "*.csv")
 
-            assertEquals(listOf("match.csv"), result.map { it.name })
-            assertFalse(result.single().directory)
+            assertEquals(listOf("2026-sales.csv"), words.map { it.name })
+            assertTrue(glob.isEmpty())
         }
         finally {
             WorkUtils.recursivelyDeleteDir(directory)

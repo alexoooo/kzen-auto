@@ -4,8 +4,8 @@ main:
 
 main.workers/files:
   is: FileSourceWorker
-  directory: build/format-worker/recycle
-  filter: .csv
+  files:
+    - location: build/format-worker/recycle/big.csv
 
 main.workers/parse:
   is: Parse

@@ -1,4 +1,4 @@
-  # WriteWorkerTest: the rows of the CSV files in a directory (the written outputs, or the inputs by an edit).
+  # WriteWorkerTest: the rows of the written output (or, by an edit, of the inputs).
 main:
   is: Job
   results:
@@ -9,8 +9,8 @@ main:
 
 main.workers/files:
   is: FileSourceWorker
-  directory: build/write-worker/out
-  filter: .csv
+  files:
+    - location: build/write-worker/out/output.csv
 
 main.workers/parse:
   is: Parse

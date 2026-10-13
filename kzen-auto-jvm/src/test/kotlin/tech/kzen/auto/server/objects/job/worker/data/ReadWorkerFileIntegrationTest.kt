@@ -202,12 +202,12 @@ class ReadWorkerFileIntegrationTest {
 
 
     @Test
-    fun realCursorAndCapturedDirectoryManifestTransferAcrossMigration() = runBlocking {
+    fun realCursorAndCapturedManifestTransferAcrossMigration() = runBlocking {
         withTempDir { directory ->
             val original = directory.resolve("a.csv")
                 .also { it.writeText("value\none\ntwo\nthree\n") }
             val format = CountingAutomaticFormat()
-            val source = directorySource(directory, format)
+            val source = source(listOf(original), format = format)
             val firstMessages = mutableListOf<DataValue>()
             val parked = CompletableDeferred<Unit>()
             val release = CompletableDeferred<Unit>()
@@ -222,7 +222,6 @@ class ReadWorkerFileIntegrationTest {
                 // Windows/JDK 26 permits unlinking this open stream. The live detached cursor must nevertheless
                 // retain ownership and deliver its already-open content to the resumed worker.
                 Files.delete(original)
-                directory.resolve("b.csv").writeText("value\nnew-file\n")
 
                 val resumedMessages = mutableListOf<DataValue>()
                 val resumed = readWorker(source, capturing(resumedMessages, batchSize = 1))
@@ -232,7 +231,7 @@ class ReadWorkerFileIntegrationTest {
                 assertEquals(
                     listOf(listOf("one"), listOf("two"), listOf("three")),
                     records(firstMessages + resumedMessages),
-                    "the captured manifest and cursor exclude files added after the migration cut")
+                    "the captured manifest and cursor outlive the file's deletion after the migration cut")
                 assertEquals(
                     1,
                     format.resolveCount,
@@ -347,23 +346,11 @@ class ReadWorkerFileIntegrationTest {
 
     private fun source(
         files: List<Path>,
-        groupPattern: String = "",
         format: ConfiguredRecordFormat = ConfiguredDelimitedTestFormats.csv()
     ): FileDataSource {
         return FileDataSource(
-            "", "",
             files.map { mapOf(FileSelectionEntry.locationKey to it.toString()) },
-            format, groupPattern, FileDataSource.missingFail, listing)
-    }
-
-
-    private fun directorySource(
-        directory: Path,
-        format: ConfiguredRecordFormat = ConfiguredDelimitedTestFormats.csv()
-    ): FileDataSource {
-        return FileDataSource(
-            directory.toString(), "", emptyList(), format, "",
-            FileDataSource.missingFail, listing)
+            format, FileDataSource.missingFail, listing)
     }
 
 

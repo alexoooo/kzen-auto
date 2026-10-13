@@ -4,8 +4,8 @@ main:
 
 main.workers/files:
   is: FileSourceWorker
-  directory: build/format-worker/empty
-  filter: .csv
+  files:
+    - location: build/format-worker/empty/e.csv
 
 main.workers/parse:
   is: Parse

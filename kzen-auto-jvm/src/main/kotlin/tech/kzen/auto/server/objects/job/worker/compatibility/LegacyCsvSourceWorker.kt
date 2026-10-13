@@ -30,11 +30,8 @@ class LegacyCsvSourceWorker(
     openerLookup,
     DataReadCore.schemaSuperset,
     FileDataSource(
-        "",
-        "",
         listOf(mapOf(FileSelectionEntry.locationKey to path)),
         compatibilityDelimitedFormat(delimiter, header),
-        "",
         FileDataSource.missingFail,
         fileListingAction),
     Digest.build {

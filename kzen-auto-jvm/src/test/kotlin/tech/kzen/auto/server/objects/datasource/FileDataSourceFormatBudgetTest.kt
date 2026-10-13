@@ -133,11 +133,8 @@ class FileDataSourceFormatBudgetTest {
         format: ConfiguredRecordFormat,
         policy: SourceFormatResolutionPolicy
     ): FileDataSource = FileDataSource(
-        "",
-        "",
         files.map { mapOf(FileSelectionEntry.locationKey to it.toString()) },
         format,
-        "",
         FileDataSource.missingFail,
         listing,
         resolutionBudgetFactory = SourceFormatResolutionBudgetFactory(policy))

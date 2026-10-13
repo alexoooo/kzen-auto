@@ -142,7 +142,7 @@ class FormatWorkerTest {
     @Test
     fun whenTheGroupChangesEachOutputEndsBeforeTheNextGroupsRecords() {
         val onChange = edited(column, "groupEnd", FormatWorker.groupEndOnChange)
-        val sorted = edit(onChange, "files", "directory", root.resolve("sorted").toString())
+        val sorted = ContentTestHarness.pick(onChange, worker(column, "files"), listOf(root.resolve("sorted/s.csv")))
 
         assertIs<Outcome.Success>(run(column, sorted))
 
