@@ -1,4 +1,4 @@
-# ParseWorkerAutomaticTest: small text files whose format and header Parse detects (Automatic), columns combined.
+# ParseWorkerAutomaticTest: small .csv files whose names choose CSV under Automatic, columns combined.
 main:
   is: Job
   results:
@@ -10,8 +10,8 @@ main:
 main.workers/files:
   is: FileSourceWorker
   files:
-    - location: build/parse-automatic/in/measurements-1.txt
-    - location: build/parse-automatic/in/measurements-2.txt
+    - location: build/parse-automatic/in/measurements-1.csv
+    - location: build/parse-automatic/in/measurements-2.csv
 
 main.workers/parse:
   is: Parse

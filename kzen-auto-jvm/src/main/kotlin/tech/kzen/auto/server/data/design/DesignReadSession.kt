@@ -3,11 +3,7 @@ package tech.kzen.auto.server.data.design
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import tech.kzen.auto.common.data.api.DataContext
-import tech.kzen.auto.common.data.format.ConfiguredRecordFormat
 import tech.kzen.auto.common.data.model.DataPart
-import tech.kzen.auto.common.data.model.DataRef
-import tech.kzen.auto.common.data.read.DataContentFingerprint
-import tech.kzen.auto.common.data.format.FormatResolutionResult
 import tech.kzen.auto.common.data.schema.DataShape
 import tech.kzen.auto.server.data.DataOpenerLookup
 import tech.kzen.auto.server.objects.datasource.DesignDataContext
@@ -102,28 +98,4 @@ class DesignReadSession internal constructor(
         return shape
     }
 
-
-    /**
-     * How [format] reads [ref], with how that read was chosen (the format automatic detection picked), resolved once
-     * per fingerprinted content (automatic detection samples it).
-     */
-    suspend fun resolvedRead(
-        format: ConfiguredRecordFormat,
-        ref: DataRef,
-        fingerprint: DataContentFingerprint?,
-        resolve: suspend () -> FormatResolutionResult
-    ): FormatResolutionResult {
-        val key = fingerprint?.let {
-            Digest.build {
-                addUtf8(format::class.qualifiedName ?: format::class.toString())
-                addDigestible(format)
-                addUtf8(ref.id)
-                addDigestible(it)
-            }
-        }
-        key?.let(reader::cachedRead)?.let { return it }
-        val read = resolve()
-        key?.let { reader.storeRead(it, read) }
-        return read
-    }
 }

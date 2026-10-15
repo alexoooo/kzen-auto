@@ -3,6 +3,7 @@ package tech.kzen.auto.server.objects.job.worker.data
 import tech.kzen.auto.common.data.api.DataContext
 import tech.kzen.auto.common.data.api.DataCursor
 import tech.kzen.auto.common.data.format.ConfiguredRecordFormat
+import tech.kzen.auto.common.data.format.FileFormatNames
 import tech.kzen.auto.common.data.format.FormatResolutionDetail
 import tech.kzen.auto.common.data.format.FormatResolutionRequest
 import tech.kzen.auto.common.data.format.FormatResolutionResult
@@ -18,10 +19,7 @@ import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.server.data.DataOpenerLookup
-import tech.kzen.auto.server.data.design.DesignReadSession
 import tech.kzen.auto.server.data.read.OperationalDataCursor
-import tech.kzen.auto.server.data.format.SourceFormatResolutionBudgetFactory
-import tech.kzen.auto.server.data.read.detection.FilenameDetection
 import tech.kzen.auto.server.objects.datasource.format.ConfiguredRecordFormatLookup
 import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.auto.server.objects.job.worker.Emitter
@@ -59,13 +57,13 @@ import tech.kzen.lib.platform.ClassName
  * `{parent}`, the incoming value's metadata — so a row knows its file (`parent.name`), or its archive member and
  * through it the archive (`parent.parent.name`) — and never the incoming payload, which is released once read.
  *
- * - **A file** (a [Content] with a [Content.reference], from `File`): [format] resolves against the file itself,
- *   automatic detection sampling it like any selected file, then the file is read as one part through the
- *   ordinary reader chain, so a resumed run adopts the open cursor or skips to its position.
+ * - **A file** (a [Content] with a [Content.reference], from `File`): [format] resolves against the file, an
+ *   automatic one by the file's name ([FileFormatNames]), then the file is read as one part through the ordinary
+ *   reader chain, so a resumed run adopts the open cursor or skips to its position.
  * - **Content read once** (an archive member from `Extract`, a lent element — borrowed elements, docs/plans/
- *   2026-09-16_borrowed-elements.md §3.8): it cannot be sampled ahead of reading, so automatic [format] picks by
- *   the member's name among the configured formats ([FilenameDetection.formatFor]) and fails by name when the
- *   name admits none; the bytes enter the reader chain below the content provider
+ *   2026-09-16_borrowed-elements.md §3.8): automatic [format] picks by the member's name among the configured
+ *   formats by the same rule and fails by name when the name selects none; the bytes enter the reader chain below
+ *   the content provider
  *   ([tech.kzen.auto.server.data.ContentDataOpener.openContent]). The first member fixes the item shape and
  *   every later one must match it (the `strict` rule of [DataReadCore.establishShape]). The cadence
  *   checkpoints inside a member do not park while it is lent ([tech.kzen.auto.server.objects.job.worker.
@@ -82,8 +80,8 @@ import tech.kzen.lib.platform.ClassName
  * every part to that validated type ([DataReadCore.fitShape], R6), so a part the data changed under fails by name
  * instead of changing the type the Workers below were compiled against.
  *
- * What it found out before Run and how far it has read are published under [JobReadConventions]: the format
- * automatic detection picked per sampled file and the part names the sampled units hold (validation details), then
+ * What it found out before Run and how far it has read are published under [JobReadConventions]: under Automatic,
+ * the format each sampled file's name chose, and the part names the sampled units hold (validation details), then
  * the content being read, its source bytes read so far and its size (run progress), which the File card above
  * follows per file.
  */
@@ -96,10 +94,8 @@ class ParseWorker(
     selfLocation: ObjectLocation,
     @Service private val openerLookup: DataOpenerLookup,
     @Service private val formatLookup: ConfiguredRecordFormatLookup,
-    private val schemaMode: String = DataReadCore.schemaSuperset,
-    @Service private val resolutionBudgetFactory: SourceFormatResolutionBudgetFactory =
-        SourceFormatResolutionBudgetFactory()
-): ExpandingTransformWorker(input, output, selfLocation) {
+    private val schemaMode: String = DataReadCore.schemaSuperset
+):ExpandingTransformWorker(input, output, selfLocation) {
     companion object {
         private val dataUnitClassName = ClassName(DataUnit::class.qualifiedName!!)
         private val contentClassName = ClassName(Content::class.qualifiedName!!)
@@ -219,29 +215,16 @@ class ParseWorker(
             // Migration replay of the file being read: its resolution is carried
             return active
         }
-        val (part, detail) = filePart(WorkerDataContext(control), ref, null)
+        val (part, detail) = filePart(WorkerDataContext(control), ref)
         currentFormat = formatLabel(detail)
         return DataUnit(emptyMap(), listOf(part))
     }
 
 
-    /**
-     * [ref] as a part read by [format], with how its read was chosen; before Run, [design] resolves each file's read
-     * once per content.
-     */
-    private suspend fun filePart(
-        context: DataContext,
-        ref: DataRef,
-        design: DesignReadSession?
-    ): Pair<DataPart, FormatResolutionDetail> {
+    /** [ref] as a part read by [format], with how its read was chosen. */
+    private suspend fun filePart(context: DataContext, ref: DataRef): Pair<DataPart, FormatResolutionDetail> {
         val fingerprint = DataContentFingerprint.localOrNull(ref)
-        val resolution =
-            if (design == null) {
-                resolveRead(context, ref, fingerprint)
-            }
-            else {
-                design.resolvedRead(format, ref, fingerprint) { resolveRead(context, ref, fingerprint) }
-            }
+        val resolution = resolveRead(context, ref)
         return DataPart(DataRole.main, ref, fingerprint, resolution.resolvedRead) to resolution.detail
     }
 
@@ -256,21 +239,11 @@ class ParseWorker(
 
     private suspend fun resolveRead(
         context: DataContext,
-        ref: DataRef,
-        fingerprint: DataContentFingerprint?
+        ref: DataRef
     ): FormatResolutionResult {
-        val resolution = resolutionBudgetFactory.create().withinDeadline {
-            val request = FormatResolutionRequest(
-                context,
-                ref,
-                fingerprint,
-                FilenameDetection.hints(ref.id.substringAfterLast('/').substringAfterLast('\\')),
-                null,
-                this)
-            formatLookup.preflight(format, formatAttribute)?.resolve(request)
-                ?: format.resolve(request)
-        }
-        return resolution
+        val request = FormatResolutionRequest(context, ref, null)
+        return formatLookup.preflight(format, formatAttribute)?.resolve(request)
+            ?: format.resolve(request)
     }
 
 
@@ -472,9 +445,10 @@ class ParseWorker(
         val ref = DataRef(null, display)
         val chosen =
             if (format.selectionKind == FormatSelectionKind.Automatic) {
-                FilenameDetection.formatFor(name, configuredFormats.value)
-                    ?: throw IllegalStateException(
-                        "Parse cannot tell the format of '$display' from its name; select a format")
+                when (val choice = FileFormatNames.choose(name, configuredFormats.value)) {
+                    is FileFormatNames.Choice.Named -> choice.format
+                    is FileFormatNames.Choice.Unnamed -> throw IllegalStateException(choice.reason)
+                }
             }
             else {
                 format
@@ -487,8 +461,7 @@ class ParseWorker(
                 "entry" to TextExecutionValue(name),
                 "size" to TextExecutionValue(descriptor.length?.toString() ?: ""),
                 "modified" to TextExecutionValue(descriptor.modifiedEpochMillis?.toString() ?: ""))))
-        // Content read once cannot be sampled, so there is no request to resolve against: the chosen format's
-        // own read applies
+        // Content read once has no data context to resolve a request in: the chosen format's own read applies
         @Suppress("DEPRECATION")
         val read = chosen.resolvedRead(ref)
         return DataPart(DataRole.main, ref, fingerprint, read) to chosen
@@ -657,16 +630,16 @@ class ParseWorker(
             return JobLaneAttempt(JobLaneDescriptor(unknown), null).withDetails(unitDetails)
         }
 
-        // The format automatic detection picks for each sampled file, collected as the inference resolves it
-        val detected = mutableListOf<Map<String, Any?>>()
+        // Under Automatic, the format each sampled file's name chooses, collected as the inference resolves it
+        val named = mutableListOf<Map<String, Any?>>()
             .takeIf { content && format.selectionKind == FormatSelectionKind.Automatic }
         val inference = DesignShapeInference
             .infer(sample.values.size, sample.total, design, openerLookup, schemaMode) { dataContext, index ->
-                partsOf(dataContext, sample.values[index], index, design, detected)
+                partsOf(dataContext, sample.values[index], index, named)
             }
-        val formatDetails = detected
+        val formatDetails = named
             ?.takeIf { it.isNotEmpty() }
-            ?.let { mapOf(JobReadConventions.detectedFormatsKey to it.toList()) }
+            ?.let { mapOf(JobReadConventions.namedFormatsKey to it.toList()) }
             ?: mapOf()
         return inference.attempt(unknown).withDetails(unitDetails + formatDetails + columnDetails(inference))
     }
@@ -681,7 +654,7 @@ class ParseWorker(
             mapOf(
                 JobReadConventions.sampledColumnNameKey to column.name,
                 JobReadConventions.sampledColumnFilesKey to
-                    column.origins.map { it.substringAfterLast('/').substringAfterLast('\\') })
+                    column.origins.map { FileFormatNames.fileName(it) })
         }
         return mapOf(
             JobReadConventions.sampledColumnsKey to columns,
@@ -703,22 +676,21 @@ class ParseWorker(
 
     /**
      * The parts a value holds, as a run reads them; null for content read once, which cannot be looked at ahead.
-     * A file's resolved format is added to [detected] when it is collected.
+     * A file's resolved format is added to [named] when it is collected.
      */
     private suspend fun partsOf(
         context: DataContext,
         value: DataValue,
         index: Int,
-        design: DesignReadSession,
-        detected: MutableList<Map<String, Any?>>?
+        named: MutableList<Map<String, Any?>>?
     ): List<DataPart>? =
         when (val incoming = JobDataValues.native(value)) {
             is DataUnit -> DataReadCore.parts(incoming, role, index)
             is Content -> incoming.reference()?.let { ref ->
-                val (part, detail) = filePart(context, ref, design)
-                detected?.add(mapOf(
-                    JobReadConventions.detectedFileKey to ref.id.substringAfterLast('/').substringAfterLast('\\'),
-                    JobReadConventions.detectedLabelKey to formatLabel(detail)))
+                val (part, detail) = filePart(context, ref)
+                named?.add(mapOf(
+                    JobReadConventions.namedFormatFileKey to FileFormatNames.fileName(ref.id),
+                    JobReadConventions.namedFormatLabelKey to formatLabel(detail)))
                 listOf(part)
             }
             else -> null
@@ -744,7 +716,7 @@ class ParseWorker(
 
         val active = cursor ?: return null
         val ref = readingPart?.ref ?: return null
-        val name = ref.id.substringAfterLast('/').substringAfterLast('\\')
+        val name = FileFormatNames.fileName(ref.id)
         return readProgress(name, ref.id, active, ref.attributes[DataRef.sizeKey]?.toLongOrNull())
     }
 

@@ -1,7 +1,6 @@
 package tech.kzen.auto.client.objects.document.job.source.file
 
 import tech.kzen.auto.client.service.rest.ClientRestApi
-import tech.kzen.auto.client.service.rest.RemoteApplyGate
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.common.data.DataSourceConventions
 import tech.kzen.auto.common.data.file.FileSelectionEntry
@@ -18,17 +17,11 @@ import tech.kzen.lib.common.model.location.ObjectLocation
 
 /**
  * Per-row file resolution for a `File` selection, keyed by source, row and format identity.
- *
- * A row's resolution is requested from the local commit publish, before the notation write that added or re-keyed
- * the row has reached the server (MirroredGraphStore applies local and remote concurrently); served early, the
- * server answers from a selection without the row and fails. So each fetch waits on the [RemoteApplyGate] until no
- * write is in flight - a plain failure carries no digest to retry on, unlike the validators' ValidationDigestEcho.
  */
 class FileResolutionStore internal constructor(
-    private val resolver: Resolver,
-    private val gate: RemoteApplyGate
+    private val resolver: Resolver
 ) {
-    constructor(restClient: ClientRestApi, gate: RemoteApplyGate): this(DetachedResolver(restClient), gate)
+    constructor(restClient: ClientRestApi): this(DetachedResolver(restClient))
 
     internal fun interface Resolver {
         suspend fun resolve(key: Key): ExecutionResult
@@ -163,12 +156,7 @@ class FileResolutionStore internal constructor(
 
         val epoch = epochs.issue(key)
         publish(key, State(true, states[key]?.resolution, null))
-        gate.whenSettled {
-            // Discarded or re-keyed while the write was in flight: nothing to fetch for
-            if (epochs.isCurrent(key, epoch)) {
-                fetch(key, epoch)
-            }
-        }
+        fetch(key, epoch)
     }
 
 

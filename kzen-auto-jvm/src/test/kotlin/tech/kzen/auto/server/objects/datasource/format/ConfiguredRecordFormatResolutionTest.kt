@@ -8,7 +8,6 @@ import tech.kzen.auto.common.data.format.FormatResolutionDetail
 import tech.kzen.auto.common.data.format.FormatResolutionResult
 import tech.kzen.auto.common.data.format.FormatSelectionKind
 import tech.kzen.auto.common.data.format.ConfiguredRecordFormat
-import tech.kzen.auto.common.data.format.detection.NormalizedFormatHints
 import tech.kzen.auto.common.data.model.DataRef
 import tech.kzen.auto.common.data.read.DelimitedReadConfig
 import tech.kzen.auto.common.data.schema.RecordSchema
@@ -63,7 +62,7 @@ class ConfiguredRecordFormatResolutionTest {
     @Test
     fun preflightKeepsAutomaticCandidateProvenanceAndPinsExplicitCoordinate() = runBlocking {
         val ref = DataRef(null, "orders.csv")
-        val concreteReference = "formats.yaml#DetectedSemicolon"
+        val concreteReference = "formats.yaml#NamedCsv"
         val concrete = ConfiguredDelimitedTestFormats.csv()
         val automatic = object: ConfiguredRecordFormat by concrete {
             override val selectionKind = FormatSelectionKind.Automatic
@@ -74,10 +73,10 @@ class ConfiguredRecordFormatResolutionTest {
                     FormatResolutionDetail(
                         request.ref,
                         concreteReference,
-                        "Semicolon",
+                        "CSV",
                         FormatSelectionKind.Automatic,
-                        FormatResolutionBasis.Content,
-                        "Semicolon-delimited records were detected"))
+                        FormatResolutionBasis.Extension,
+                        "The .csv extension names CSV"))
         }
 
         val automaticResult = ConfiguredRecordFormatPreflight(
@@ -108,8 +107,6 @@ class ConfiguredRecordFormatResolutionTest {
     private fun request(ref: DataRef, explicitEncoding: String? = null) = FormatResolutionRequest(
         DirectContext,
         ref,
-        null,
-        NormalizedFormatHints.of(ref.id.substringAfterLast('.', "")),
         explicitEncoding)
 
 

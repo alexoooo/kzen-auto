@@ -1,7 +1,6 @@
 package tech.kzen.auto.common.data.format
 
 import tech.kzen.auto.common.data.model.DataRef
-import tech.kzen.auto.common.data.format.detection.FormatHintMetadata
 import tech.kzen.auto.common.data.read.ResolvedReadSpec
 import tech.kzen.auto.common.data.schema.DataShape
 import tech.kzen.lib.common.util.digest.Digestible
@@ -16,29 +15,12 @@ interface ConfiguredRecordFormat: Digestible {
     val selectionKind: FormatSelectionKind
         get() = FormatSelectionKind.Explicit
 
-    val automaticDetectionCandidate: Boolean
-        get() = true
-
     /**
      * False for a format that passes each file on whole instead of opening it; such a format applies to a whole
      * source, never to one file.
      */
     val readsContent: Boolean
         get() = true
-
-    val automaticTextFallback: Boolean
-        get() = false
-
-    val automaticDetectionTemplate: Boolean
-        get() = false
-
-    val hintMetadata: List<FormatHintMetadata>
-        get() = extensions.map { extension ->
-            FormatHintMetadata.structured(extension, listOf(extension))
-        }
-
-    val compatibleStructuredFamilies: List<String>
-        get() = hintMetadata.mapNotNull(FormatHintMetadata::structuredFamily).distinct().sorted()
 
     val authoringCapabilityIdentity: String?
         get() = null
@@ -77,7 +59,7 @@ interface ConfiguredRecordFormat: Digestible {
     fun declaredShape(): DataShape?
 
     /**
-     * The shape of reading [fileName] when its name alone fixes it; a format that detects per file answers from
+     * The shape of reading [fileName]; a format that chooses per file by name (Automatic) answers from
      * [configuredFormats], the registered formats it chooses among.
      */
     fun declaredShape(fileName: String, configuredFormats: Lazy<List<ConfiguredRecordFormat>>): DataShape? =

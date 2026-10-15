@@ -1,18 +1,13 @@
 package tech.kzen.auto.server.data.read.archive
 
-import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import tech.kzen.auto.common.data.api.DataCursor
 import tech.kzen.auto.common.data.read.ContentCapabilityIdentity
 import tech.kzen.auto.common.data.read.ReaderCapabilityIdentity
 import tech.kzen.auto.common.data.read.ReaderConfig
 import tech.kzen.auto.common.data.schema.DataShape
 import tech.kzen.auto.plugin.api.data.BlockingReaderCapability
-import tech.kzen.auto.plugin.api.data.BlockingReaderProbe
 import tech.kzen.auto.plugin.api.data.ReaderInspectionRequest
 import tech.kzen.auto.plugin.api.data.ReaderOpenRequest
-import tech.kzen.auto.plugin.api.data.ReaderProbeRequest
-import tech.kzen.auto.plugin.api.data.ReaderProbeResult
-import tech.kzen.auto.plugin.api.data.ReaderProbeStrength
 import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.MapExecutionValue
 import tech.kzen.lib.common.exec.data.shape.ShapeProvenance
@@ -20,12 +15,11 @@ import tech.kzen.lib.common.exec.data.shape.ShapeStability
 
 
 /**
- * Reads a tar archive as its table of contents. Detection is by the header magic of the first member, over a
- * sample the host has already gunzipped, so `.tar`, `.tar.gz` and `.tgz` are one case here.
+ * Reads a tar archive as its table of contents. The host has already gunzipped a `.tar.gz` or `.tgz`, so all
+ * three are one case here.
  */
-object ArchiveListingReaderCapability: BlockingReaderCapability(), BlockingReaderProbe {
+object ArchiveListingReaderCapability: BlockingReaderCapability() {
     override val identity = ReaderCapabilityIdentity("tech.kzen.auto", "archive-listing", "1")
-    override val readerCompatibility: String = identity.compatibility
 
     val shape = DataShape(ArchiveListingCursor.contract, ShapeProvenance.Declared, ShapeStability.Stable)
 
@@ -74,21 +68,5 @@ object ArchiveListingReaderCapability: BlockingReaderCapability(), BlockingReade
     override fun inspectBlocking(request: ReaderInspectionRequest): DataShape {
         validate(request.open.config)
         return shape
-    }
-
-
-    override fun probeBlocking(request: ReaderProbeRequest): ReaderProbeResult {
-        val sample = request.sample.toByteArray()
-        if (TarArchiveInputStream.matches(sample, sample.size)) {
-            request.observer.completeLogicalRecordsConsidered(1)
-            return ReaderProbeResult.Matched(
-                ReaderProbeStrength.ContentSignature,
-                request.candidateConfig,
-                "Tar member header found at the start of the content")
-        }
-        if (request.structuredHint) {
-            return ReaderProbeResult.Rejected("Named as a tar archive but the content has no tar member header")
-        }
-        return ReaderProbeResult.NoMatch
     }
 }

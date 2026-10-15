@@ -200,8 +200,8 @@ class ScriptStore(
     // latest-armed refresh runs and settles. An earlier refresh completing mid-flight of a newer one would
     // drop the busy indicator early and publish a stale reason; and since one store instance serves successive
     // same-archetype documents (see dependencyAnalysis), a superseded async could otherwise settle the OLD
-    // document's channel with a reason computed from the NEW document's state. The epoch also aborts the fetch
-    // loop; what guards the STATE write against a stale server answer is the digest gate in ServerValidationFetch.
+    // document's channel with a reason computed from the NEW document's state. The epoch also drops a superseded
+    // answer before it reaches the state (ServerValidationFetch).
     private var validationEpoch = 0
 
 
@@ -216,18 +216,12 @@ class ScriptStore(
         val epoch = ++validationEpoch
         logicValidationGlobal.validation(documentPath, inFlight = true, errors = currentValidationErrors())
 
-        // Armed on every own-document notation change, so the arm-time digest IS the current local digest until
-        // a newer arm supersedes this epoch (which the lambda below signals by returning null).
-        val expectedDigest = currentState.documentNotation.digest()
-
         async {
             delay(refreshYieldMillis)
             if (epoch != validationEpoch || state == null) {
                 return@async
             }
-            validationStore.refresh {
-                if (epoch != validationEpoch || state == null) null else expectedDigest
-            }
+            validationStore.refresh { epoch == validationEpoch && state != null }
 
             if (epoch != validationEpoch || state == null) {
                 // Superseded while the fetch was in flight (or the store unmounted, dropping the result) — the

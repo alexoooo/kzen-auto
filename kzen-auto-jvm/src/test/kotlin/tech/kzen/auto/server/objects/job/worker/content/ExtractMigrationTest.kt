@@ -12,7 +12,7 @@ import tech.kzen.auto.server.objects.job.worker.content.ContentTestHarness.Compa
 import tech.kzen.auto.server.objects.job.worker.content.ContentTestHarness.Companion.listFiles
 import tech.kzen.auto.server.objects.job.worker.content.ContentTestHarness.Companion.prepare
 import tech.kzen.auto.server.objects.job.worker.content.ContentTestHarness.Companion.prepareCsvArchive
-import tech.kzen.auto.server.objects.job.worker.content.tar.TarGzEntryCursor
+import tech.kzen.auto.server.objects.job.worker.content.tar.TarEntryCursor
 import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.auto.server.util.hangGuardMillis
 import tech.kzen.lib.common.exec.engine.Outcome
@@ -71,21 +71,21 @@ class ExtractMigrationTest {
     private val summarySink = ObjectLocation(
         DocumentPath.parse(summaryDocument), ObjectPath.parse("main.workers/collect"))
 
-    private val cursors = CopyOnWriteArrayList<TarGzEntryCursor>()
+    private val cursors = CopyOnWriteArrayList<TarEntryCursor>()
     private val harness = ContentTestHarness()
 
 
     @Before
     fun setUp() {
         cursors.clear()
-        TarGzEntryCursor.observer = { cursors.add(it) }
+        TarEntryCursor.observer = { cursors.add(it) }
         EngineJobControl.drainingEnabled = true
     }
 
 
     @After
     fun tearDown() {
-        TarGzEntryCursor.observer = null
+        TarEntryCursor.observer = null
         WriteWorker.encoderInterceptor = null
         EngineJobControl.drainingEnabled = true
         harness.close()

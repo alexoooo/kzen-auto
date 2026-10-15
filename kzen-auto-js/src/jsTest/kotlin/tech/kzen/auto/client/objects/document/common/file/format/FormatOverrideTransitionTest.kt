@@ -118,8 +118,8 @@ class FormatOverrideTransitionTest {
             "formats.yaml#Delimited",
             "Delimited",
             FormatSelectionKind.Automatic,
-            FormatResolutionBasis.Content,
-            "Detected from the sample.")
+            FormatResolutionBasis.Extension,
+            "The file name chose Delimited.")
         return FormatOverrideEditorState(
             source,
             0,

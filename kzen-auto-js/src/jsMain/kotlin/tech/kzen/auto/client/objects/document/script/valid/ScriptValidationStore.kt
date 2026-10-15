@@ -5,22 +5,21 @@ import tech.kzen.auto.client.objects.document.script.model.ScriptStore
 import tech.kzen.auto.common.api.CommonRestApi
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.objects.document.script.model.ScriptValidation
-import tech.kzen.lib.common.util.digest.Digest
 
 
 class ScriptValidationStore(
     private val scriptStore: ScriptStore
 ) {
     //-----------------------------------------------------------------------------------------------------------------
-    suspend fun refresh(currentDigest: () -> Digest?) {
+    suspend fun refresh(isCurrent: () -> Boolean) {
         scriptStore.updateValidation {
             it.copy(loaded = false)
         }
 
         val mainLocation = scriptStore.mainLocation()
 
-        val outcome = ServerValidationFetch.fetchCurrent(
-            currentDigest = currentDigest,
+        val outcome = ServerValidationFetch.fetch(
+            isCurrent = isCurrent,
             perform = {
                 scriptStore.restClient.performDetached(
                     ScriptConventions.scriptValidatorLocation,

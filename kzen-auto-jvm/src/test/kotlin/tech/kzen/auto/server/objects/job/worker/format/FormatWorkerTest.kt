@@ -6,9 +6,6 @@ import org.junit.Before
 import org.junit.Test
 import tech.kzen.auto.common.objects.document.job.JobFieldConventions
 import tech.kzen.auto.common.objects.document.job.JobOutputConventions
-import tech.kzen.auto.server.data.design.DesignReadBudget
-import tech.kzen.auto.server.data.design.DesignReader
-import tech.kzen.auto.server.objects.job.JobValidator
 import tech.kzen.auto.server.objects.job.worker.content.Bytes
 import tech.kzen.auto.server.objects.job.worker.content.ContentTestHarness
 import tech.kzen.auto.server.objects.job.worker.content.FileValues
@@ -316,14 +313,9 @@ class FormatWorkerTest {
         ContentTestHarness.edit(notation, worker(column, worker), attribute, value)
 
 
+    // As the editor does: a pass its deadline cuts short is asked again, reading on from what the last one read
     private fun validate(document: String, notation: GraphNotation = AutoTestUtils.readNotation()) =
-        harness.fresh().let { context ->
-            val graphDefinition = AutoTestUtils.graphDefinitionAttempt(notation).transitiveSuccessful
-            val validation = JobValidator.validateDetached(
-                DocumentPath.parse(document), graphDefinition, context.notationMetadataReader,
-                context.graphEnvironment, DesignReader().session(DesignReadBudget.editor))
-            assertNotNull(validation.workerValidations[formatLocation(document).objectPath])
-        }
+        assertNotNull(harness.validate(document, notation).workerValidations[formatLocation(document).objectPath])
 
 
     private fun run(document: String, notation: GraphNotation): Outcome {

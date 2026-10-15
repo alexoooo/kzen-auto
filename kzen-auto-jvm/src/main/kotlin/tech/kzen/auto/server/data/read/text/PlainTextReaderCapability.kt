@@ -24,10 +24,8 @@ import tech.kzen.lib.common.exec.data.shape.ShapeProvenance
 import tech.kzen.lib.common.exec.data.shape.ShapeStability
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.structure.notation.AttributeNotation
-import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
-import tech.kzen.lib.platform.collect.toPersistentList
 import tech.kzen.lib.platform.collect.toPersistentMap
 import java.nio.charset.Charset
 import java.util.concurrent.CancellationException
@@ -97,13 +95,7 @@ object PlainTextReaderCapability: ReaderCapability, FormatAuthoringCapability {
             "unmappable" to canonical.characters.unmappable)
         val entries: Map<AttributeSegment, AttributeNotation> = values.map { (key, value) ->
             AttributeSegment.ofKey(key) to ScalarAttributeNotation(value)
-        }.toMap() + (AttributeSegment.ofKey("contentCodings") to ListAttributeNotation(
-            request.resolvedRead.contentCodings.map { coding ->
-                require(coding.config == MapExecutionValue(emptyMap())) {
-                    "Plain-text formats cannot author content-coding config for '${coding.identity}'"
-                }
-                ScalarAttributeNotation(coding.identity)
-            }.toPersistentList()))
+        }.toMap()
         return FormatMaterializationResult(
             MapAttributeNotation(entries.toPersistentMap()),
             null,

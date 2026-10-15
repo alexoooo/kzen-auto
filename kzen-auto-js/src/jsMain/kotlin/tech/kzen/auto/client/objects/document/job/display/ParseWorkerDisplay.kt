@@ -46,9 +46,8 @@ external interface ParseWorkerDisplayState: State {
  *
  * - "Part to read" shows only when it applies: the input carries units holding several named parts (or a part is
  *   already named). For files there is nothing to choose.
- * - Under the format (moved to the top of the card), the format automatic detection picked: per sampled file
- *   before Run, for the file being read during it. Shown only when the validation reported a detection, which it
- *   does only for Automatic.
+ * - Under the format (moved to the top of the card), the format each file's name chose: per sampled file before
+ *   Run, for the file being read during it. Shown only under Automatic, the one selection that goes by name.
  * - Under that, the columns the sampled files hold; a column not in all of them says in how many, in gray, and
  *   names them in its tooltip.
  * - The header gives the file being read, its bytes read of its size, and the rows sent.
@@ -201,7 +200,7 @@ class ParseWorkerDisplay(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    // Format comes first, rehomed from the generic editors so what was detected reads directly under it
+    // Format comes first, rehomed from the generic editors so what each file is read as shows directly under it
     private fun ChildrenBuilder.renderFormat() {
         div {
             css {
@@ -212,9 +211,9 @@ class ParseWorkerDisplay(
                 attributeName = formatAttributeName
             }
         }
-        val detected = detectedLines()
+        val readAs = readAsLines()
         val columns = SampledColumn.of(details())
-        if (detected.isEmpty() && columns == null) {
+        if (readAs.isEmpty() && columns == null) {
             return
         }
         div {
@@ -223,7 +222,7 @@ class ParseWorkerDisplay(
                 fontSize = 0.85.em
                 color = mutedColor
             }
-            for ((index, line) in detected.withIndex()) {
+            for ((index, line) in readAs.withIndex()) {
                 div {
                     key = Key("$index")
                     if (index > 0) {
@@ -266,12 +265,12 @@ class ParseWorkerDisplay(
     }
 
 
-    private fun detectedLines(): List<String> {
-        val detected = (details()[JobReadConventions.detectedFormatsKey] as? List<*>)
+    private fun readAsLines(): List<String> {
+        val named = (details()[JobReadConventions.namedFormatsKey] as? List<*>)
             ?.mapNotNull { it as? Map<*, *> }
             ?.mapNotNull { file ->
-                val name = file[JobReadConventions.detectedFileKey] as? String ?: return@mapNotNull null
-                val label = file[JobReadConventions.detectedLabelKey] as? String ?: return@mapNotNull null
+                val name = file[JobReadConventions.namedFormatFileKey] as? String ?: return@mapNotNull null
+                val label = file[JobReadConventions.namedFormatLabelKey] as? String ?: return@mapNotNull null
                 name to label
             }
             ?.takeIf { it.isNotEmpty() }
@@ -282,11 +281,11 @@ class ParseWorkerDisplay(
         val liveName = progressMap[JobReadConventions.readNameKey] as? String
         return when {
             liveFormat != null ->
-                listOf("Detected: $liveFormat" + (liveName?.let { " ($it)" } ?: ""))
-            detected.map { it.second }.distinct().size == 1 ->
-                listOf("Detected: ${detected.first().second}")
+                listOf("Read as: $liveFormat" + (liveName?.let { " ($it)" } ?: ""))
+            named.map { it.second }.distinct().size == 1 ->
+                listOf("Read as: ${named.first().second}")
             else ->
-                listOf("Detected:") + detected.map { (name, label) -> "$name: $label" }
+                listOf("Read as:") + named.map { (name, label) -> "$name: $label" }
         }
     }
 }

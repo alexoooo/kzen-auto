@@ -5,6 +5,7 @@ import tech.kzen.auto.common.data.format.FormatMaterializationRequest
 import tech.kzen.auto.common.data.format.FormatMaterializationResult
 import tech.kzen.auto.common.data.format.FormatOverrideEditorMetadata
 import tech.kzen.auto.common.data.model.DataRef
+import tech.kzen.auto.common.data.read.ContentCodingSpec
 import tech.kzen.auto.common.data.read.DelimitedReadConfig
 import tech.kzen.auto.common.data.read.HeaderReadSpec
 import tech.kzen.auto.common.data.schema.AuthoredRecordSchemaNotation
@@ -17,7 +18,6 @@ import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
 import tech.kzen.lib.common.model.structure.notation.DocumentNotation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
-import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.ObjectNotation
 import tech.kzen.lib.common.model.structure.notation.PositionIndex
@@ -32,6 +32,7 @@ import tech.kzen.lib.platform.collect.toPersistentMap
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
@@ -61,7 +62,7 @@ class SourceLocalFormatMaterializerTest {
         assertEquals("UTF-8", result.formatBody.text("charset"))
         assertEquals("2", result.formatBody.text("skipLeadingLines"))
         assertEquals("", result.formatBody.text("commentPrefix"))
-        assertEquals(listOf("identity"), result.formatBody.textList("contentCodings"))
+        assertFalse(AttributeSegment.ofKey("contentCodings") in result.formatBody.map)
 
         for (invalid in listOf("many", "-1")) {
             assertFailsWith<IllegalArgumentException> {
@@ -74,20 +75,19 @@ class SourceLocalFormatMaterializerTest {
 
     @Test
     @Suppress("DEPRECATION")
-    fun configuredDelimitedAuthoringFreezesGzipIndependentlyOfTheFutureFilename() {
-        val detected = ConfiguredDelimitedTestFormats.csv()
+    fun configuredDelimitedAuthoringLeavesCompressionToTheFileName() {
+        val gzipped = ConfiguredDelimitedTestFormats.csv()
             .resolvedRead(DataRef(null, "orders.csv.gz"))
 
         val result = ConfiguredDelimitedReaderCapability.materialize(FormatMaterializationRequest(
             "formats.yaml#Csv",
-            detected,
+            gzipped,
             observedSchema = null))
-        val authoredCodings = result.formatBody.textList("contentCodings")
-        val future = ConfiguredDelimitedTestFormats.csv(contentCodings = authoredCodings)
-            .resolvedRead(DataRef(null, "renamed-without-gzip-extension.csv"))
 
-        assertEquals(listOf("gzip"), authoredCodings)
-        assertEquals(detected.contentCodings, future.contentCodings)
+        assertFalse(AttributeSegment.ofKey("contentCodings") in result.formatBody.map)
+        assertEquals(listOf(ContentCodingSpec.gzip), gzipped.contentCodings)
+        assertEquals(listOf(ContentCodingSpec.identity), ConfiguredDelimitedTestFormats.csv()
+            .resolvedRead(DataRef(null, "renamed-without-gzip-extension.csv")).contentCodings)
     }
 
 
@@ -221,11 +221,6 @@ class SourceLocalFormatMaterializerTest {
 
     private fun MapAttributeNotation.text(key: String): String =
         (map.getValue(AttributeSegment.ofKey(key)) as ScalarAttributeNotation).value
-
-
-    private fun MapAttributeNotation.textList(key: String): List<String> =
-        (map.getValue(AttributeSegment.ofKey(key)) as ListAttributeNotation)
-            .values.map { requireNotNull(it.asString()) }
 
 
     private fun objectNotation(body: tech.kzen.lib.common.exec.MapExecutionValue): ObjectNotation =

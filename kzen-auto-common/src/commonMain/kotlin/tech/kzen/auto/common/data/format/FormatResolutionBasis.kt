@@ -12,9 +12,6 @@ enum class FormatResolutionBasis {
     @SerialName("extension")
     Extension,
 
-    @SerialName("content")
-    Content,
-
     @SerialName("fallback")
     Fallback;
 
@@ -22,7 +19,6 @@ enum class FormatResolutionBasis {
         get() = when (this) {
             Override -> "override"
             Extension -> "extension"
-            Content -> "content"
             Fallback -> "fallback"
         }
 

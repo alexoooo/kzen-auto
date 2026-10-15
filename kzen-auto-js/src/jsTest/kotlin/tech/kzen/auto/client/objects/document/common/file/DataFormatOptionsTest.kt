@@ -128,7 +128,7 @@ class DataFormatOptionsTest {
         assertEquals("", formats.first().value)
         assertEquals("Use source format", formats.first().label)
         assertEquals("", encodings.first().value)
-        assertEquals("Detect encoding", encodings.first().label)
+        assertEquals("Format's encoding", encodings.first().label)
     }
 
 

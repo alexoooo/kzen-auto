@@ -225,17 +225,21 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > relate it as `parent` on expansion and set it at sources; expressions see the payload by bare name or `this.x`,
 > metadata by bare name or `meta.x`. **Selecting and reading are separate Workers.** `File` selects files and reads
 > none — each value is the file's `Content` with `{name, path, size, modified}` plus Name-pattern values as
-> metadata (`FileValues`); `Extract` opens a file value as a `.tar.gz` and lends its members as the same kind of value
-> with the archive as `parent`; `Parse` owns `format` and reads what a value holds (a selected file, sampled for
-> automatic detection like any file; a member read once, picked by name via `FilenameDetection`; a `DataUnit`'s
-> parts) into items whose metadata is `{parent}`. Reading a tar(.gz) rather than extracting it yields its table of
+> metadata (`FileValues`); `Extract` opens a file value as a tar archive (gzip when its name ends `.gz` / `.tgz`)
+> and lends its members as the same kind of value with the archive as `parent`; `Parse` owns `format` and reads
+> what a value holds (a selected file or a member, under Automatic read as the format its name chooses; a
+> `DataUnit`'s parts) into items whose metadata is `{parent}`. Reading a tar(.gz) rather than extracting it yields its table of
 > contents (`ArchiveListingFormat`, one row per member whose `kind` is a DM14 symbol set
-> `{file, directory, link, other}`); a file no installed format claims is
-> `UndetectedFormat`, refused only when a reader opens it.
+> `{file, directory, link, other}`). **A file's name, never its content, decides how it is read**
+> (`FileFormatNames`, kzen-auto-common): a `.gz` / `.tgz` suffix means gzip, and under Automatic the extension
+> beneath it chooses the one registered, catalog-visible format whose `extensions` name it. No extension, no
+> format naming it, or more than one, and the file is `UnreadFormat`: carried whole (so `File → Extract` works),
+> refused with the reason only when a reader opens it. Nothing samples bytes to pick a format, a charset or a
+> compression; a format pins its charset (a `bom: detect` policy is the format's own, explicit choice).
 > **Types before Run (VM3).** Validation may look at data, but only through `DesignReader`
 > (`server/data/design/`): each validation pass gets a `DesignReadSession` bounded by a `DesignReadBudget` (256
 > values; 2.5 s for the editor, 30 s at run start), whose reads are recorded as `DesignEvidence` (what was looked
-> at, rechecked by digest) and whose part shapes and resolved read specs are cached by content fingerprint. A lane
+> at, rechecked by digest) and whose part shapes are cached by content fingerprint. A lane
 > can offer a sample of the values it would carry (`JobLaneSample` on `JobLaneDescriptor`: `File` its first selected
 > files, `Read` in units mode its data source's units; identity Workers pass it on), and `Parse` — or `Read` in
 > items mode, over its units — types itself from it through `DesignShapeInference`, merging by its `schemaMode`;
@@ -247,7 +251,7 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > and nothing else: in validation details, `File` lists its `files` (`location` as its selection row writes it,
 > `path` as a reader names it, `size`), and `Parse` / `Read` report `readsUnits`, the part names they sampled
 > (`roles`, which turn "Part to read" into a select and hide it on `Parse` when there is nothing to choose) and
-> `Parse`'s `detectedFormats` under Automatic; in progress, a reader publishes `units` (inputs read to the end)
+> `Parse`'s `namedFormats` under Automatic (the format each sampled file's name chose); in progress, a reader publishes `units` (inputs read to the end)
 > and, while one is open, `readName` / `readPath` / `readBytes` / `readSize` / `readFormat`, cleared between
 > inputs. `readBytes` counts the stored bytes beneath any content coding (`SourceByteCountingContent`, exposed as
 > `OperationalDataCursor.sourceBytesRead`), so a gzip file's progress runs against its size on disk. The client
@@ -564,19 +568,20 @@ Browser                                          Server
 6. Server `NotationCommandHandler` deserializes, applies to server-side graph store → server-side observers fire.
 7. Server response confirms; if mismatch, client could resync (rare in practice — commands are deterministic).
 
-Steps 4 and 5 run concurrently, so a server fetch launched from step 4 (a Job validation, a `File` row's format
-resolution) can be served from pre-commit server notation. Two client-side guards exist: validators echo the host
-document's digest (`ValidationDigestEcho`, retried by `ServerValidationFetch` until it matches), and fetches whose
-stale answer is a plain failure wait on `RemoteApplyGate` (jsMain `service/rest/`), which `ClientRestGraphStore`
-brackets around every remote apply (`FileResolutionStore`).
+Steps 4 and 5 run concurrently, so a server request launched from step 4 (a Job validation, a `File` row's
+resolution) would race the write. One rule in the client's only HTTP gateway closes that for every caller:
+`ClientRestApi` brackets each notation write in `NotationWriteBarrier` (jsMain `service/rest/`) and holds every other
+request until no write is in flight, so the server always answers from notation that includes every edit the
+browser has sent. Writes never wait. Overlapping refreshes of one view still need their own ordering: a validation
+store drops an answer that a newer refresh superseded (`ServerValidationFetch`, an epoch check).
 
 The **observer pattern in kzen-lib** is what makes this work — both sides subscribe to the same event stream from their respective local stores. No diffing, no syncing logic beyond replaying the command.
 
-**Gotcha — `MirroredGraphStore.apply` runs local + remote in parallel.** The two `apply` calls are wrapped in sibling `coroutineScope.async { ... }` blocks, so the local branch — which calls `publishSuccess(event)` → every observer's `onCommandSuccess` — executes concurrently with the in-flight remote POST. An observer that responds to a notation event by issuing its own remote query to the server can therefore race the original POST: the server may not yet have applied the command when the query arrives.
+**Gotcha — `MirroredGraphStore.apply` runs local + remote in parallel.** The two `apply` calls are wrapped in sibling `coroutineScope.async { ... }` blocks, so the local branch — which calls `publishSuccess(event)` → every observer's `onCommandSuccess` — executes concurrently with the in-flight remote POST. A server query an observer issues there is held by `NotationWriteBarrier` (above) until the POST has landed, so it sees the command.
 
 Two consequences:
 
-- Observers should compute derived state from the event payload + their own local cache only. Don't call back to the server inside `onCommandSuccess` (e.g. construct a fresh empty model locally on an `AddedObjectEvent` rather than fetching it from the server).
+- Observers should still prefer derived state from the event payload + their own local cache (e.g. construct a fresh empty model locally on an `AddedObjectEvent` rather than fetching it from the server): a server round trip per event is slower, though no longer stale.
 - If an observer invalidates its cached state in response to an event, it must also publish the new state to *its* observers (typically the UI), or downstream consumers stay frozen on the pre-event model.
 
 **Definition-error surfacing.** `GraphDefinitionAttempt.failures` is computed client-side too (`DirectGraphStore.graphDefinition()`) and already broadcast to every graph-store observer — surfacing definition failures needs no new detection machinery. kzen-auto funnels them through one shared helper, `DefinitionErrors` (kzen-auto-js `client/util/`): `all()` / `forDocument()` feed the global banner and the per-document panel (non-destructive — the editor still loads so the user can fix the problem; stage-side rendering in `StageErrorIndicator` / `StageObjectLocator`), and `runBlocker(attempt, root)` — the reason a root can't run, via `attempt.transitiveSuccessful`, the same predicate the server's `filterTransitive(root)` checks — folds into the existing `runnable` flag so every run button disables with the reason as tooltip; `ServerLogicController.start` wraps `filterTransitive` in a clean 400 as the server backstop. **Don't conflate the two absence channels**: `failures` = the object failed to *define* — always broken, safe to report unprompted; `transitiveFailures` / absence from `transitiveSuccessful` = defined fine but **pruned** over a dangling or required-but-empty reference — *not* always broken, because every saved Job worker is permanently pruned by design (its channel ports are blank until `JobChannelSynthesis` fills an in-memory run copy — see the Job note in § 1; Job `main` itself survives because `workers` is a weak `NestedList`). Report pruning only through a run-root-scoped blocker like `runBlocker`, never in an unprompted error list.
@@ -888,8 +893,8 @@ Kotlin typealias (`tech.kzen.auto.common.data.schema.DataShape` is one: import
 constructor arguments unless the constructor is `@JvmOverloads` (`ResolvedReadSpec`, `ContentCodingSpec`,
 kzen-lib's `DataContract` are); the live `DataNode` API is Kotlin value classes, so a Java reader builds rows
 through `LiteralDataValues.lift(RecordLiteral.of(map), contract)` and a Java test reads them back through a
-`DataSnapshot`. A probing reader is keyed by its full `ReaderCapabilityIdentity` — `compatibility` is that
-reader's own version tag (`"1"` is everyone's first), not a global probe name.
+`DataSnapshot`. A reader is keyed by its full `ReaderCapabilityIdentity` — `compatibility` is that reader's own
+version tag (`"1"` is everyone's first), not a global name.
 
 **Inspected shapes are cached per code, not just per content.** `ConfiguredDataOpener.inspectShape` persists each
 inspected shape under the work root's `index/` (`SchemaCache`), keyed by the part, the inspection policy, and a
@@ -900,12 +905,10 @@ whose shape its config alone determines (the archive listing) overrides `ReaderC
 returns it without reading content or caching it. Do not bump a reader's `compatibility` just to invalidate
 shapes: resolution matches it exactly, so a bump orphans every read already resolved against the old tag.
 
-**Detecting a plugin's format.** Automatic detection samples bytes, and a sample that is not text under any
-permitted encoding still reaches every eligible probe (no character view; the text failure is what the user sees
-only if nothing matched), so a binary feed such as ITCH is recognized by its framing and never by its extension
-alone — the `.itch` hint only narrows the candidates to that structured family. Among content matches,
-`ReaderProbeStrength.ContentSignature` (magic bytes, a fixed header row) outranks the built-in delimited reader's
-`ContentStrong` structural guess; two matches in the same tier are ambiguity, preserved as plain text.
+**Choosing a plugin's format.** A plugin format is chosen under Automatic exactly like a built-in one, by the
+extensions it declares (`FileFormatNames`); one that declares none (the sample's World cities) is only ever
+selected explicitly. Its `resolvedRead` takes the content coding from the name too
+(`FileFormatNames.contentCoding`), never from a flag or the bytes.
 
 **Embedding.** A foreign host embeds kzen-auto by initializing `KzenAutoRuntime` once, then creating one
 `KzenAutoContext` per workspace (`KzenAutoConfig`: its own module root, a claimed work root, `hostServices`,

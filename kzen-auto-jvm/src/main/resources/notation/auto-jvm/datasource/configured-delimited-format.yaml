@@ -46,9 +46,6 @@ ConfiguredDelimitedFormat:
   schema: ""
   skipLeadingLines: 0
   commentPrefix: ""
-  compatibleStructuredFamilies: []
-  automaticDetectionTemplate: false
-  contentCodings: []
   meta:
     delimiter: String
     quote: String
@@ -103,13 +100,6 @@ ConfiguredDelimitedFormat:
     nullToken: String
     skipLeadingLines: Int
     commentPrefix: String
-    compatibleStructuredFamilies:
-      is: List
-      of: String
-    automaticDetectionTemplate: Boolean
-    contentCodings:
-      is: List
-      of: String
     schema:
       is: RecordSchema
       nullable: true
@@ -128,9 +118,6 @@ ConfiguredCsv:
   title: "CSV"
   extensions:
     - csv
-  compatibleStructuredFamilies:
-    - csv
-  automaticDetectionTemplate: true
 
 ConfiguredTsv:
   is: ConfiguredDelimitedFormat
@@ -138,23 +125,16 @@ ConfiguredTsv:
   extensions:
     - tsv
   delimiter: "\t"
-  compatibleStructuredFamilies:
-    - tsv
-  automaticDetectionTemplate: true
 
 ConfiguredSemicolon:
   is: ConfiguredDelimitedFormat
   title: "Semicolon-delimited"
   delimiter: ";"
-  compatibleStructuredFamilies:
-    - csv
-  automaticDetectionTemplate: true
 
 ConfiguredPipe:
   is: ConfiguredDelimitedFormat
   title: "Pipe-delimited"
   delimiter: "|"
-  automaticDetectionTemplate: true
 
 PlainTextFormat:
   abstract: true
@@ -170,7 +150,6 @@ PlainTextFormat:
   bom: permit
   malformed: report
   unmappable: report
-  contentCodings: []
   meta:
     charset:
       is: String
@@ -195,9 +174,6 @@ PlainTextFormat:
       values:
         report: "Fail"
         replace: "Replace"
-    contentCodings:
-      is: List
-      of: String
 
 PlainText:
   is: PlainTextFormat
@@ -209,7 +185,6 @@ ArchiveListingFormat:
   title: "Archive listing"
   extensions:
     - tar
-    - tgz
   catalogVisible: true
 
 ArchiveListing:

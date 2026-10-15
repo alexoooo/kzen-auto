@@ -9,7 +9,7 @@ import tech.kzen.auto.server.objects.job.worker.content.ContentTestHarness.Compa
 import tech.kzen.auto.server.objects.job.worker.content.ContentTestHarness.Companion.prepare
 import tech.kzen.auto.server.objects.job.worker.content.ContentTestHarness.Companion.prepareBig
 import tech.kzen.auto.server.objects.job.worker.content.ContentTestHarness.Companion.prepareBigFile
-import tech.kzen.auto.server.objects.job.worker.content.tar.TarGzEntryCursor
+import tech.kzen.auto.server.objects.job.worker.content.tar.TarEntryCursor
 import tech.kzen.lib.common.exec.engine.Outcome
 import java.nio.file.Files
 import java.util.concurrent.CopyOnWriteArrayList
@@ -28,21 +28,21 @@ class ExtractReadPartTest {
     //-----------------------------------------------------------------------------------------------------------------
     private val barBytes = "a,b\n1,2\n3,4\n5,6\n7,8\n".toByteArray()
 
-    private val cursors = CopyOnWriteArrayList<TarGzEntryCursor>()
+    private val cursors = CopyOnWriteArrayList<TarEntryCursor>()
     private val harness = ContentTestHarness()
 
 
     @Before
     fun setUp() {
         cursors.clear()
-        TarGzEntryCursor.observer = { cursors.add(it) }
+        TarEntryCursor.observer = { cursors.add(it) }
         JobChannel.consumerCloseEnabled = true
     }
 
 
     @After
     fun tearDown() {
-        TarGzEntryCursor.observer = null
+        TarEntryCursor.observer = null
         JobChannel.consumerCloseEnabled = true
         harness.close()
     }

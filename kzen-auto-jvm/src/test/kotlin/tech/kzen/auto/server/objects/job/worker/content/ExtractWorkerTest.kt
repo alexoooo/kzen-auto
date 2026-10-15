@@ -13,7 +13,7 @@ import tech.kzen.auto.server.exec.job.JobOwnershipReport
 import tech.kzen.auto.server.objects.job.worker.content.ContentTestHarness.Companion.collected
 import tech.kzen.auto.server.objects.job.worker.content.ContentTestHarness.Companion.listFiles
 import tech.kzen.auto.server.objects.job.worker.content.ContentTestHarness.Companion.prepare
-import tech.kzen.auto.server.objects.job.worker.content.tar.TarGzEntryCursor
+import tech.kzen.auto.server.objects.job.worker.content.tar.TarEntryCursor
 import tech.kzen.auto.server.util.hangGuardMillis
 import tech.kzen.lib.common.exec.engine.Address
 import tech.kzen.lib.common.exec.engine.Outcome
@@ -55,14 +55,14 @@ class ExtractWorkerTest {
         "sub/data.bin" to nestedBytes,
         "baz.txt" to bazBytes)
 
-    private val cursors = CopyOnWriteArrayList<TarGzEntryCursor>()
+    private val cursors = CopyOnWriteArrayList<TarEntryCursor>()
     private val harness = ContentTestHarness()
 
 
     @Before
     fun setUp() {
         cursors.clear()
-        TarGzEntryCursor.observer = { cursors.add(it) }
+        TarEntryCursor.observer = { cursors.add(it) }
         WriteWorker.encoderInterceptor = null
         StashingWorker.reset()
         HoldingWorker.reset()
@@ -73,7 +73,7 @@ class ExtractWorkerTest {
 
     @After
     fun tearDown() {
-        TarGzEntryCursor.observer = null
+        TarEntryCursor.observer = null
         WriteWorker.encoderInterceptor = null
         HoldingWorker.reset()
         harness.close()
@@ -179,7 +179,7 @@ class ExtractWorkerTest {
             directory.resolve("second.tar.gz"), listOf("alpha.txt" to fooBytes, "beta.csv" to barBytes))
         val out = directory.resolve("out")
         val firstClosedBeforeSecondOpened = ArrayList<Boolean>()
-        TarGzEntryCursor.observer = { opened ->
+        TarEntryCursor.observer = { opened ->
             firstClosedBeforeSecondOpened.add(cursors.all { it.closeCount() == 1 })
             cursors.add(opened)
         }

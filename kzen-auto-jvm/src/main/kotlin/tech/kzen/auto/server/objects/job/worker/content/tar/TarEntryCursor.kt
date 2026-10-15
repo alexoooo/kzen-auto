@@ -3,6 +3,8 @@ package tech.kzen.auto.server.objects.job.worker.content.tar
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
+import tech.kzen.auto.common.data.format.FileFormatNames
+import tech.kzen.auto.common.data.read.ContentCodingSpec
 import tech.kzen.auto.server.objects.job.worker.content.ContentDescriptor
 import java.io.BufferedInputStream
 import java.io.InputStream
@@ -11,8 +13,9 @@ import java.nio.file.Path
 
 
 /**
- * Streams the file entries of a `.tar.gz` in archive order, one member's [TarEntryContent] at a time (spike: tar
- * over gzip is hard-wired; the design's negotiated container access is not built). The content's descriptor
+ * Streams the file entries of a tar archive in archive order, one member's [TarEntryContent] at a time. The archive's
+ * name decides whether it is gzip-compressed ([FileFormatNames.contentCoding]: `.tar.gz` or `.tgz`, against a plain
+ * `.tar`); its bytes are never inspected for that. The content's descriptor
  * carries the header's name, size and modification time. Only file entries are produced: directories, links
  * and other special entries are passed over. Advancing invalidates the previous entry's content and lets the
  * archive stream skip whatever of it was not read; closing the cursor closes the archive. The caller advances
@@ -20,7 +23,7 @@ import java.nio.file.Path
  * bytes come from a file ([Path]) or from any stream — an entry of an enclosing archive, for nested extraction
  * — described by [parent].
  */
-class TarGzEntryCursor(
+class TarEntryCursor(
     private val parent: ContentDescriptor,
     bytes: InputStream
 ): Iterator<TarEntryContent>, AutoCloseable {
@@ -34,13 +37,11 @@ class TarGzEntryCursor(
         /** Test seam: sees every cursor as it opens, for close and open counting (spike verification); null in
          *  production. */
         @Volatile
-        internal var observer: ((TarGzEntryCursor) -> Unit)? = null
+        internal var observer: ((TarEntryCursor) -> Unit)? = null
     }
 
     private val archiveName = parent.name
-    // Every member of a multi-member gzip (a parallel compressor writes many), not only the first.
-    private val archive = TarArchiveInputStream(
-        GzipCompressorInputStream(BufferedInputStream(bytes, readBufferBytes), true))
+    private val archive = TarArchiveInputStream(decoded(BufferedInputStream(bytes, readBufferBytes)))
 
     private var pending: TarArchiveEntry? = null
     private var current: TarEntryContent? = null
@@ -53,6 +54,15 @@ class TarGzEntryCursor(
 
     init {
         observer?.invoke(this)
+    }
+
+
+    private fun decoded(buffered: InputStream): InputStream {
+        return when (FileFormatNames.contentCoding(archiveName)) {
+            // Every member of a multi-member gzip (a parallel compressor writes many), not only the first.
+            ContentCodingSpec.gzip -> GzipCompressorInputStream(buffered, true)
+            else -> buffered
+        }
     }
 
 

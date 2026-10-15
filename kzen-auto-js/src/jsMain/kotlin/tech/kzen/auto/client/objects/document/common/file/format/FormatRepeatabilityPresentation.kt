@@ -26,7 +26,7 @@ data class FormatRepeatabilityPresentation(
 
     companion object {
         private const val makeExplicitCopy =
-            "Stops format detection for this file. Reader settings stay fixed, but columns may still change."
+            "Pins this format instead of the one the file name chooses. Columns may still change."
         private const val lockColumnsCopy =
             "Saves the observed columns and rejects header, width, or type drift."
 

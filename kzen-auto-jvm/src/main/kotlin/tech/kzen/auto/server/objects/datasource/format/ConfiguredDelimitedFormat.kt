@@ -2,12 +2,12 @@ package tech.kzen.auto.server.objects.datasource.format
 
 import tech.kzen.auto.common.data.model.DataRef
 import tech.kzen.auto.common.data.format.ConfiguredRecordFormat
+import tech.kzen.auto.common.data.format.FileFormatNames
 import tech.kzen.auto.common.data.format.FormatResolutionBasis
 import tech.kzen.auto.common.data.format.FormatResolutionDetail
 import tech.kzen.auto.common.data.format.FormatResolutionRequest
 import tech.kzen.auto.common.data.format.FormatResolutionResult
 import tech.kzen.auto.common.data.read.CharacterDecodingSpec
-import tech.kzen.auto.common.data.read.ContentCodingSpec
 import tech.kzen.auto.common.data.read.DelimitedDialectSpec
 import tech.kzen.auto.common.data.read.DelimitedReadConfig
 import tech.kzen.auto.common.data.read.HeaderReadSpec
@@ -40,10 +40,7 @@ class ConfiguredDelimitedFormat(
     nullToken: String,
     private val schema: RecordSchema?,
     skipLeadingLines: Int = 0,
-    commentPrefix: String = "",
-    override val compatibleStructuredFamilies: List<String> = extensions,
-    override val automaticDetectionTemplate: Boolean = false,
-    private val contentCodings: List<String> = emptyList()
+    commentPrefix: String = ""
 ): ConfiguredRecordFormat {
     override val authoringCapabilityIdentity: String
         get() = ConfiguredDelimitedReaderCapability.authoringIdentity
@@ -119,18 +116,9 @@ class ConfiguredDelimitedFormat(
 
     private fun resolvedRead(ref: DataRef, config: DelimitedReadConfig): ResolvedReadSpec {
         val encoded = ConfiguredDelimitedReaderCapability.encode(config)
-        val codings = if (contentCodings.isNotEmpty()) {
-            contentCodings.map { ContentCodingSpec(it) }
-        }
-        else if (ref.id.lowercase().endsWith(".gz")) {
-            listOf(ContentCodingSpec.gzip)
-        }
-        else {
-            listOf(ContentCodingSpec.identity)
-        }
         return ResolvedReadSpec(
             ConfiguredDelimitedReaderCapability.identity,
-            codings,
+            listOf(FileFormatNames.contentCoding(ref.id)),
             encoded)
     }
 
@@ -140,7 +128,5 @@ class ConfiguredDelimitedFormat(
 
     override fun digest(sink: Digest.Sink) {
         sink.addDigestible(baseConfig.asExecutionValue())
-        sink.addInt(contentCodings.size)
-        contentCodings.forEach(sink::addUtf8)
     }
 }

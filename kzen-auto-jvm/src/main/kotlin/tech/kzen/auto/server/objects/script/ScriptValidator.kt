@@ -9,7 +9,6 @@ import tech.kzen.auto.common.objects.document.script.model.ScriptResultAnalysis
 import tech.kzen.auto.common.objects.document.script.model.ScriptTree
 import tech.kzen.auto.common.objects.document.script.model.ScriptValidation
 import tech.kzen.auto.common.objects.document.logic.StepValidation
-import tech.kzen.auto.common.objects.document.logic.ValidationDigestEcho
 import tech.kzen.auto.common.paradigm.detached.DetachedAction
 import tech.kzen.auto.server.objects.logic.TypeAssignability
 import tech.kzen.auto.server.objects.script.api.ScriptStep
@@ -271,9 +270,7 @@ class ScriptValidator(
 
         val graphDefinitionAttempt = graphStore.graphDefinition()
 
-        // Resolved from the same snapshot the cache key and the compute use, so a cache hit echoes the digest
-        // of the notation its entry was computed against.
-        val documentNotation = graphDefinitionAttempt.graphStructure.graphNotation.documents[documentPath]
+        graphDefinitionAttempt.graphStructure.graphNotation.documents[documentPath]
             ?: return ExecutionResult.failure("Document not found: $documentPath")
 
         // A cache hit skips graph filtering and instantiation entirely (keyed on the FULL definition:
@@ -298,6 +295,5 @@ class ScriptValidator(
 
         return ExecutionSuccess
             .ofValue(scriptValidation.asExecutionValue())
-            .withDetail(ValidationDigestEcho.detail(documentNotation))
     }
 }

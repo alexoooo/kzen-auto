@@ -31,7 +31,7 @@ class FileResolutionPresentationTest {
     fun warningAndFailureRemainDistinctRowStates() {
         val warning = presentation(
             FormatSelectionKind.Automatic,
-            FormatResolutionBasis.Content,
+            FormatResolutionBasis.Extension,
             warning = "The file uses a regional delimiter.")
         val failure = FileResolutionPresentation.of(
             false,

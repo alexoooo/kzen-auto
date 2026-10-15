@@ -3,17 +3,16 @@ package tech.kzen.auto.server.objects.datasource.format
 import tech.kzen.auto.common.data.format.ConfiguredFormatDetail
 import tech.kzen.auto.common.data.format.ConfiguredRecordFormat
 import tech.kzen.auto.common.data.format.FileFormatCatalog
+import tech.kzen.auto.common.data.format.FileFormatNames
+import tech.kzen.auto.common.data.format.FormatResolutionBasis
 import tech.kzen.auto.common.data.format.FormatResolutionRequest
 import tech.kzen.auto.common.data.format.FormatResolutionResult
 import tech.kzen.auto.common.data.format.FormatMaterializationRequest
 import tech.kzen.auto.common.data.format.FormatMaterializationResult
 import tech.kzen.auto.common.data.format.FormatSelectionKind
-import tech.kzen.auto.common.data.format.detection.DetectionCandidateMetadata
-import tech.kzen.auto.common.data.format.detection.FormatHintMetadata
 import tech.kzen.auto.common.util.AutoConventions
 import tech.kzen.auto.server.data.TextEncodingCatalog
 import tech.kzen.auto.server.data.read.ReaderCapabilityRegistry
-import tech.kzen.auto.server.data.read.detection.FilenameDetection
 import tech.kzen.auto.server.data.write.RecordWriterCapabilityRegistry
 import tech.kzen.auto.server.service.exec.ExecutionGraphErrors
 import tech.kzen.auto.server.service.exec.GraphInstanceCache
@@ -42,10 +41,10 @@ class ConfiguredRecordFormatRegistry(
                 val authoring = registered.format.authoringCapabilityIdentity
                     ?.let(readerCapabilities::authoringFor)
                 val reference = registered.reference
-                val inProject = reference.documentPath.startsWith(NotationConventions.mainDocumentNesting)
+                val inProject = inProject(reference)
                 ConfiguredFormatDetail(
                     reference.asString(),
-                    if (inProject) projectLabel(graphNotation, reference) else registered.format.title,
+                    label(registered, graphNotation),
                     registered.format.extensions,
                     registered.format.authoringCapabilityIdentity,
                     registered.format.overrideEditorReference,
@@ -58,6 +57,15 @@ class ConfiguredRecordFormatRegistry(
             },
             TextEncodingCatalog.available())
     }
+
+
+    private fun inProject(reference: ObjectLocation): Boolean =
+        reference.documentPath.startsWith(NotationConventions.mainDocumentNesting)
+
+
+    private fun label(registered: RegisteredConfiguredFormat, graphNotation: GraphNotation): String =
+        if (inProject(registered.reference)) projectLabel(graphNotation, registered.reference)
+        else registered.format.title
 
 
     // A project format's own title, else its object name: the title it inherits names its format type ("Delimited"),
@@ -121,52 +129,26 @@ class ConfiguredRecordFormatRegistry(
     }
 
 
-    suspend fun candidates(request: FormatResolutionRequest): List<DetectionCandidateMetadata> {
-        return registeredFormats().mapNotNull { registered ->
-            val format = registered.format
-            if (!format.automaticDetectionCandidate) {
-                return@mapNotNull null
-            }
-            // A format that refuses the request outright (a binary one under an explicit text encoding) is simply
-            // not a candidate for it; the refusal must not fail detection for the formats that do apply.
-            val resolved = try {
-                format.resolve(request).resolvedRead
-            }
-            catch (_: IllegalArgumentException) {
-                return@mapNotNull null
-            }
-            if (readerCapabilities.probeFor(resolved.reader) == null) {
-                return@mapNotNull null
-            }
-            DetectionCandidateMetadata(
-                registered.reference.asString(),
-                format.digest(),
-                FilenameDetection.exactExtensions(format),
-                FilenameDetection.structuredFamilies(format),
-                resolved,
-                format.automaticDetectionTemplate,
-                format.authoringCapabilityIdentity,
-                format.overrideEditorReference,
-                format.columnsLocked)
-        }.sortedWith(compareBy(DetectionCandidateMetadata::formatReference)
-            .thenBy { it.formatDigest.asString() })
-    }
-
-
-    suspend fun hintMetadata(): List<FormatHintMetadata> = registeredFormats()
-        .flatMap { it.format.hintMetadata }
-        .distinct()
-        .sortedBy { it.digest().asString() }
-
-
-    suspend fun textFallback(request: FormatResolutionRequest): FormatResolutionResult {
-        val fallbacks = registeredFormats().filter { it.format.automaticTextFallback }
-        check(fallbacks.size == 1) {
-            "Exactly one automatic text fallback must be registered; found ${fallbacks.size}"
+    /**
+     * Automatic: the registered format the file name of [request] selects ([FileFormatNames]), or the file carried
+     * unread, refused only when read, when the name selects none.
+     */
+    suspend fun resolveByName(request: FormatResolutionRequest): FormatResolutionResult {
+        val registered = registeredFormats()
+        val choice = FileFormatNames.choose(request.ref.id, registered.map { it.format })
+        if (choice is FileFormatNames.Choice.Unnamed) {
+            return UnreadFormat.resolve(request, choice.reason)
         }
-        val fallback = fallbacks.single()
-        val result = fallback.format.resolve(request)
-        return result.copy(detail = result.detail.copy(concreteFormatReference = fallback.reference.asString()))
+        val chosen = registered.first { it.format === (choice as FileFormatNames.Choice.Named).format }
+        val label = label(chosen, graphStore.graphDefinition().graphStructure.graphNotation)
+        val extension = FileFormatNames.formatExtension(request.ref.id)
+        val result = chosen.format.resolve(request)
+        return result.copy(detail = result.detail.copy(
+            concreteFormatReference = chosen.reference.asString(),
+            displayLabel = label,
+            selection = FormatSelectionKind.Automatic,
+            basis = FormatResolutionBasis.Extension,
+            reason = "The .$extension extension names $label"))
     }
 
 
@@ -228,7 +210,7 @@ class ConfiguredRecordFormatRegistry(
         }
 
 
-        /** The formats automatic detection chooses among in the [definition] snapshot, created through [instances]. */
+        /** The formats Automatic chooses among by file name in the [definition] snapshot, made by [instances]. */
         fun formatsOf(
             definition: GraphDefinition,
             instances: GraphInstanceCache

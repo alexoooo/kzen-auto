@@ -364,7 +364,6 @@ class ReadWorkerFileIntegrationTest {
         override val extensions: List<String> = emptyList()
         override val catalogVisible: Boolean = false
         override val selectionKind: FormatSelectionKind = FormatSelectionKind.Automatic
-        override val automaticDetectionCandidate: Boolean = false
 
 
         override suspend fun resolve(request: FormatResolutionRequest): FormatResolutionResult {
@@ -374,8 +373,8 @@ class ReadWorkerFileIntegrationTest {
                 concreteFormatReference = "test/configured-format.yaml#ConfiguredCsv",
                 displayLabel = delegate.title,
                 selection = FormatSelectionKind.Automatic,
-                basis = FormatResolutionBasis.Content,
-                reason = "CSV was detected from content"))
+                basis = FormatResolutionBasis.Extension,
+                reason = "The .csv extension names CSV"))
         }
 
 
@@ -398,7 +397,6 @@ class ReadWorkerFileIntegrationTest {
         override val title: String get() = delegate.title
         override val extensions: List<String> get() = delegate.extensions
         override val catalogVisible: Boolean get() = delegate.catalogVisible
-        override val automaticDetectionCandidate: Boolean get() = delegate.automaticDetectionCandidate
         override val authoringCapabilityIdentity: String? get() = delegate.authoringCapabilityIdentity
         override val overrideEditorReference: String? get() = delegate.overrideEditorReference
         override val columnsLocked: Boolean get() = delegate.columnsLocked

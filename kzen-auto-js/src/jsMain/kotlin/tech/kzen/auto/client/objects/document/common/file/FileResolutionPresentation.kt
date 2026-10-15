@@ -24,7 +24,7 @@ data class FileResolutionPresentation(
     companion object {
         val loading = FileResolutionPresentation(
             Status.Loading,
-            "Detecting format…",
+            "Resolving format…",
             null,
             null,
             null,
@@ -75,8 +75,7 @@ data class FileResolutionPresentation(
         private fun basisLabel(basis: FormatResolutionBasis): String = when (basis) {
             FormatResolutionBasis.Override -> "explicit format"
             FormatResolutionBasis.Extension -> "file extension"
-            FormatResolutionBasis.Content -> "file contents"
-            FormatResolutionBasis.Fallback -> "no closer match"
+            FormatResolutionBasis.Fallback -> "no format for the file name"
         }
     }
 }

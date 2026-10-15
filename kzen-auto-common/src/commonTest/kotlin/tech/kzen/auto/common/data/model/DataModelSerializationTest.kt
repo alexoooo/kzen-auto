@@ -65,13 +65,13 @@ class DataModelSerializationTest {
                 "formats.yaml#Csv",
                 "CSV",
                 FormatSelectionKind.Automatic,
-                FormatResolutionBasis.Content,
-                "Comma-delimited records were detected")))
+                FormatResolutionBasis.Extension,
+                "The .csv extension names CSV")))
 
         val encoded = Json.encodeToString(result)
 
         assertTrue(encoded.contains("\"selection\":\"automatic\""), encoded)
-        assertTrue(encoded.contains("\"basis\":\"content\""), encoded)
+        assertTrue(encoded.contains("\"basis\":\"extension\""), encoded)
         assertEquals(result, Json.decodeFromString<DataResolveResult>(encoded))
 
         val legacy = Json.decodeFromString<DataResolveResult>(

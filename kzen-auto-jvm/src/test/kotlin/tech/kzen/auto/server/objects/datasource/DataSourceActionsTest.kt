@@ -14,7 +14,6 @@ import tech.kzen.auto.common.data.format.FormatMaterializationIntent
 import tech.kzen.auto.common.data.format.FormatResolutionBasis
 import tech.kzen.auto.common.data.format.FormatResolutionRequest
 import tech.kzen.auto.common.data.format.FormatSelectionKind
-import tech.kzen.auto.common.data.format.detection.NormalizedFormatHints
 import tech.kzen.auto.common.data.model.DataDiagnostic
 import tech.kzen.auto.common.data.model.DataResolveResult
 import tech.kzen.auto.common.data.model.DataPart
@@ -133,8 +132,6 @@ class DataSourceActionsTest {
                 main.declaredFormat:
                   is: ConfiguredCsv
                   extensions:
-                    - declared-csv
-                  compatibleStructuredFamilies:
                     - declared-csv
                   schema: main/data-source-actions-schema.yaml#main
 
@@ -379,10 +376,7 @@ class DataSourceActionsTest {
 
         assertEquals(",", result.formatBody.values.getValue("delimiter").get())
         assertEquals("false", result.formatBody.values.getValue("catalogVisible").get())
-        assertEquals(
-            listOf("identity"),
-            (result.formatBody.values.getValue("contentCodings")
-                    as tech.kzen.lib.common.exec.ListExecutionValue).values.map { it.get() })
+        assertEquals(false, "contentCodings" in result.formatBody.values)
         assertEquals("present", result.formatBody.values.getValue("header").get())
         assertEquals("UTF-8", result.formatBody.values.getValue("charset").get())
         assertEquals(null, result.schemaReference)
@@ -577,14 +571,12 @@ class DataSourceActionsTest {
             context.configuredRecordFormatRegistry.preflight(hiddenDelimited).reference)
         assertEquals(hiddenPlainText,
             context.configuredRecordFormatRegistry.preflight(hiddenPlainText).reference)
-        val candidates = context.configuredRecordFormatRegistry.candidates(FormatResolutionRequest(
+        // Hidden formats are never chosen by name, so .csv names only the built-in CSV
+        val byName = context.configuredRecordFormatRegistry.resolveByName(FormatResolutionRequest(
             DesignDataContext(ExecutionRequest(RequestParams.of(), null)),
             DataRef(null, "orders.csv"),
-            null,
-            NormalizedFormatHints.of("csv"),
             null))
-        assertTrue(candidates.none { it.formatReference == hiddenDelimited })
-        assertTrue(candidates.none { it.formatReference == hiddenPlainText })
+        assertEquals(builtInCsv.reference, byName.detail.concreteFormatReference)
 
         val programmatic = ConfiguredDelimitedTestFormats.csv(delimiter = "^")
         assertNull(context.configuredRecordFormatRegistry.preflight(

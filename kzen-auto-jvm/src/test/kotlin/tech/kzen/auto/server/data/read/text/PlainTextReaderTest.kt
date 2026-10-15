@@ -13,7 +13,6 @@ import tech.kzen.lib.common.exec.data.shape.ShapeStability
 import tech.kzen.lib.common.exec.data.type.FieldId
 import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.lib.common.model.attribute.AttributeSegment
-import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -40,10 +39,7 @@ class PlainTextReaderTest {
         assertEquals(
             "false",
             result.formatBody.map.getValue(AttributeSegment.ofKey("catalogVisible")).asString())
-        assertEquals(
-            listOf("gzip"),
-            (result.formatBody.map.getValue(AttributeSegment.ofKey("contentCodings"))
-                    as ListAttributeNotation).values.map { it.asString() })
+        assertEquals(false, AttributeSegment.ofKey("contentCodings") in result.formatBody.map)
         assertEquals(null, result.schemaBody)
         assertEquals(null, result.editor)
         assertEquals("UTF-8", result.encoding)

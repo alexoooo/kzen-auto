@@ -60,7 +60,7 @@ internal object DataFormatOptions {
 
 
     fun entryEncodings(catalog: FileFormatCatalog?, current: String): Array<SelectOption> =
-        withDefault(encodings(catalog, current), "Detect encoding")
+        withDefault(encodings(catalog, current), "Format's encoding")
 
 
     private fun withDefault(known: Array<SelectOption>, label: String): Array<SelectOption> =

@@ -36,7 +36,6 @@ import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.service.logic.LogicValidationGlobal
 import tech.kzen.auto.client.service.rest.ClientRestApi
-import tech.kzen.auto.client.service.rest.RemoteApplyGate
 import kotlinx.coroutines.delay
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
@@ -82,7 +81,6 @@ external interface JobControllerProps: Props {
     var clientStateGlobal: ClientStateGlobal
     var logicValidationGlobal: LogicValidationGlobal
     var restClient: ClientRestApi
-    var remoteApplyGate: RemoteApplyGate
     var objectStableMapper: ObjectStableMapper
     var mirroredGraphStore: MirroredGraphStore
     var workerDisplayManager: WorkerDisplayManager.Wrapper
@@ -178,7 +176,6 @@ class JobController(
         @Service private val clientStateGlobal: ClientStateGlobal,
         @Service private val logicValidationGlobal: LogicValidationGlobal,
         @Service private val restClient: ClientRestApi,
-        @Service private val remoteApplyGate: RemoteApplyGate,
         @Service private val objectStableMapper: ObjectStableMapper,
         @Service private val mirroredGraphStore: MirroredGraphStore
     ):
@@ -205,7 +202,6 @@ class JobController(
                         this.clientStateGlobal = this@Wrapper.clientStateGlobal
                         this.logicValidationGlobal = this@Wrapper.logicValidationGlobal
                         this.restClient = this@Wrapper.restClient
-                        this.remoteApplyGate = this@Wrapper.remoteApplyGate
                         this.objectStableMapper = this@Wrapper.objectStableMapper
                         this.mirroredGraphStore = this@Wrapper.mirroredGraphStore
                         this.workerDisplayManager = this@Wrapper.workerDisplayManager
@@ -264,7 +260,7 @@ class JobController(
     }
 
     private val fileResolutionStore by lazy {
-        FileResolutionStore(props.restClient, props.remoteApplyGate)
+        FileResolutionStore(props.restClient)
     }
 
     // Document-wide rather than per-source: the Format / Encoding option lists describe the server's installed
@@ -466,14 +462,8 @@ class JobController(
         props.logicValidationGlobal.validation(
             documentPath, inFlight = true, errors = jobValidationErrors(state.workerValidations, documentPath))
 
-        // The arm condition IS this notation's reference change, so the arm-time digest is the current local
-        // digest until a newer arm supersedes this epoch (which the lambda below signals by returning null).
-        val expectedDigest = documentNotation.digest()
-
         async {
-            val validation = jobValidationStore.fetch(documentPath) {
-                if (epoch != validationEpoch) null else expectedDigest
-            }
+            val validation = jobValidationStore.fetch(documentPath) { epoch == validationEpoch }
             // Value-equality gate (data class + map): skip setState when nothing changed. A failed fetch
             // (null) leaves the previous validation standing rather than flashing the chips away.
             if (validation != null && validation != state.workerValidations) {

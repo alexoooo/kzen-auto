@@ -11,13 +11,34 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 
-class TarGzEntryCursorTest {
+class TarEntryCursorTest {
     @Test
     fun anArchiveCompressedAsManyGzipMembersYieldsEveryEntryWhole() {
         val entries = (0 until 3).map { index ->
             "entry-$index.txt" to (0 until 2_000).joinToString("\n") { "$index:$it" }.encodeToByteArray()
         }
 
+        // A parallel compressor (Write's MiGz) writes a gzip member per block; the entries span many.
+        val compressed = ByteArrayOutputStream()
+        MiGzOutputStream(compressed as OutputStream, 3, 1000).use { it.write(tar(entries)) }
+
+        assertEquals(
+            entries.map { (name, bytes) -> name to bytes.decodeToString() },
+            read("input.tar.gz", compressed.toByteArray()))
+    }
+
+
+    @Test
+    fun aPlainTarNameIsReadWithoutInflating() {
+        val entries = listOf("a.txt" to "alpha".encodeToByteArray(), "b.txt" to "bravo".encodeToByteArray())
+
+        assertEquals(
+            entries.map { (name, bytes) -> name to bytes.decodeToString() },
+            read("input.tar", tar(entries)))
+    }
+
+
+    private fun tar(entries: List<Pair<String, ByteArray>>): ByteArray {
         val tar = ByteArrayOutputStream()
         TarArchiveOutputStream(tar).use { output ->
             for ((name, bytes) in entries) {
@@ -28,13 +49,13 @@ class TarGzEntryCursorTest {
                 output.closeArchiveEntry()
             }
         }
+        return tar.toByteArray()
+    }
 
-        // A parallel compressor (Write's MiGz) writes a gzip member per block; the entries span many.
-        val compressed = ByteArrayOutputStream()
-        MiGzOutputStream(compressed as OutputStream, 3, 1000).use { it.write(tar.toByteArray()) }
 
-        val descriptor = ContentDescriptor("input.tar.gz", compressed.size().toLong(), null)
-        val read = TarGzEntryCursor(descriptor, ByteArrayInputStream(compressed.toByteArray())).use { cursor ->
+    private fun read(archiveName: String, archive: ByteArray): List<Pair<String, String>> {
+        val descriptor = ContentDescriptor(archiveName, archive.size.toLong(), null)
+        return TarEntryCursor(descriptor, ByteArrayInputStream(archive)).use { cursor ->
             cursor.asSequence().map { content ->
                 content.descriptor().name to content.open().use { input ->
                     val bytes = ByteArrayOutputStream()
@@ -48,7 +69,5 @@ class TarGzEntryCursorTest {
                 }
             }.toList()
         }
-
-        assertEquals(entries.map { (name, bytes) -> name to bytes.decodeToString() }, read)
     }
 }

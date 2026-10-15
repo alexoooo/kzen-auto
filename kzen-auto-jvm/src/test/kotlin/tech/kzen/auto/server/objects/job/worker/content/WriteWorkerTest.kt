@@ -8,9 +8,6 @@ import org.junit.Test
 import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.auto.common.objects.document.job.JobFieldConventions
 import tech.kzen.auto.common.objects.document.job.JobOutputConventions
-import tech.kzen.auto.server.data.design.DesignReadBudget
-import tech.kzen.auto.server.data.design.DesignReader
-import tech.kzen.auto.server.objects.job.JobValidator
 import tech.kzen.auto.server.objects.job.worker.content.ContentTestHarness.Companion.collected
 import tech.kzen.auto.server.objects.job.worker.content.ContentTestHarness.Companion.edit
 import tech.kzen.auto.server.objects.job.worker.content.ContentTestHarness.Companion.jobLocation
@@ -912,13 +909,7 @@ class WriteWorkerTest {
 
 
     private fun validate(document: String, notation: GraphNotation = AutoTestUtils.readNotation()) =
-        harness.fresh().let { context ->
-            val graphDefinition = AutoTestUtils.graphDefinitionAttempt(notation).transitiveSuccessful
-            val validation = JobValidator.validateDetached(
-                DocumentPath.parse(document), graphDefinition, context.notationMetadataReader,
-                context.graphEnvironment, DesignReader().session(DesignReadBudget.editor))
-            assertNotNull(validation.workerValidations[worker(document, "write").objectPath])
-        }
+        assertNotNull(harness.validate(document, notation).workerValidations[worker(document, "write").objectPath])
 
 
     private fun run(document: String, notation: GraphNotation): Outcome {

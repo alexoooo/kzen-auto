@@ -1,7 +1,6 @@
 package tech.kzen.auto.server.objects.datasource.format
 
 import tech.kzen.auto.common.data.format.ConfiguredRecordFormat
-import tech.kzen.auto.common.data.format.detection.FormatHintMetadata
 import tech.kzen.auto.common.data.model.DataRef
 import tech.kzen.auto.common.data.read.ResolvedReadSpec
 import tech.kzen.auto.common.data.schema.DataShape
@@ -11,7 +10,7 @@ import tech.kzen.lib.common.util.digest.Digest
 
 /**
  * The opaque end of the format ladder: every selected file is handed on as a file (to be copied, compressed,
- * extracted) and none is opened, whatever it holds. Chosen for a whole source, never detected.
+ * extracted) and none is opened, whatever it holds. Chosen for a whole source, never by a file's name.
  */
 @Reflect
 class WholeFileFormat(
@@ -24,13 +23,11 @@ class WholeFileFormat(
     }
 
 
-    override val automaticDetectionCandidate: Boolean = false
     override val readsContent: Boolean = false
-    override val hintMetadata: List<FormatHintMetadata> = emptyList()
 
 
     @Suppress("OVERRIDE_DEPRECATION")
-    override fun resolvedRead(ref: DataRef): ResolvedReadSpec = UndetectedFormat.unread(reason)
+    override fun resolvedRead(ref: DataRef): ResolvedReadSpec = UnreadFormat.unread(reason)
 
 
     override fun declaredShape(): DataShape? = null

@@ -30,8 +30,8 @@ class FormatOverrideEditorHostTest {
         formatReference,
         "Contributed format",
         FormatSelectionKind.Automatic,
-        FormatResolutionBasis.Content,
-        "The contributed probe matched the file.")
+        FormatResolutionBasis.Extension,
+        "The .test extension names Contributed format.")
 
     @Test
     fun contributedMarkerSelectsItsEditorWithoutHostChanges() {

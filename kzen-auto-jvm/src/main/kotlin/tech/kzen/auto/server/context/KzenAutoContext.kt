@@ -30,10 +30,7 @@ import tech.kzen.auto.server.data.content.SequentialContentStack
 import tech.kzen.auto.server.data.content.local.LocalDataContentProvider
 import tech.kzen.auto.server.data.content.provider.DataContentProviderLookup
 import tech.kzen.auto.server.data.read.ReaderCapabilityRegistry
-import tech.kzen.auto.server.data.read.detection.AutomaticFormatResolver
-import tech.kzen.auto.server.data.read.detection.DetectionSampleAcquirer
 import tech.kzen.auto.server.data.write.RecordWriterCapabilityRegistry
-import tech.kzen.auto.server.data.format.SourceFormatResolutionBudgetFactory
 import tech.kzen.auto.server.objects.datasource.format.ConfiguredRecordFormatLookup
 import tech.kzen.auto.server.objects.datasource.format.ConfiguredRecordFormatRegistry
 import tech.kzen.auto.server.objects.report.service.ReportWorkPool
@@ -260,7 +257,6 @@ class KzenAutoContext private constructor(
     val schemaCache = SchemaCache(workUtils)
     val contentProviderLookup = DataContentProviderLookup(LocalDataContentProvider(), emptyMap())
     val sequentialContentStack = SequentialContentStack(contentProviderLookup)
-    val sourceFormatResolutionBudgetFactory = SourceFormatResolutionBudgetFactory()
     // Per-context capability instances from the runtime's provider descriptors (the SPI makes no thread-safety demand)
     val readerCapabilityRegistry = ReaderCapabilityRegistry.forRuntime(runtime)
     val recordWriterCapabilityRegistry = RecordWriterCapabilityRegistry.withBuiltInWriters()
@@ -296,8 +292,6 @@ class KzenAutoContext private constructor(
         .put(ClassName(SchemaCache::class.qualifiedName!!), schemaCache)
         .put(ClassName(DataOpenerLookup::class.qualifiedName!!), dataOpenerLookup)
         .put(ClassName(RecordWriterCapabilityRegistry::class.qualifiedName!!), recordWriterCapabilityRegistry)
-        .put(ClassName(SourceFormatResolutionBudgetFactory::class.qualifiedName!!), sourceFormatResolutionBudgetFactory)
-        .put(ClassName(AutomaticFormatResolver::class.qualifiedName!!)) { automaticFormatResolver }
         .put(ClassName(ConfiguredRecordFormatLookup::class.qualifiedName!!)) { configuredRecordFormatRegistry }
         .put(ClassName(ConfiguredRecordFormatRegistry::class.qualifiedName!!)) { configuredRecordFormatRegistry }
         .put(ClassName(GraphInstanceCache::class.qualifiedName!!)) { graphInstanceCache }
@@ -333,11 +327,6 @@ class KzenAutoContext private constructor(
 
     val configuredRecordFormatRegistry = ConfiguredRecordFormatRegistry(
         graphStore, graphInstanceCache, readerCapabilityRegistry, recordWriterCapabilityRegistry)
-
-    val automaticFormatResolver = AutomaticFormatResolver(
-        configuredRecordFormatRegistry,
-        readerCapabilityRegistry,
-        DetectionSampleAcquirer(sequentialContentStack))
 
     val detachedExecutor = ModelDetachedExecutor(
         graphStore, graphInstanceCache)

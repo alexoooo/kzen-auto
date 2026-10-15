@@ -14,10 +14,10 @@ object JobReadConventions {
     //-----------------------------------------------------------------------------------------------------------------
     // Validation details
 
-    /** The format automatic detection picked per sampled file: a list of `{file, label}` maps. */
-    const val detectedFormatsKey = "detectedFormats"
-    const val detectedFileKey = "file"
-    const val detectedLabelKey = "label"
+    /** Under Automatic, the format each sampled file's name chose: a list of `{file, label}` maps. */
+    const val namedFormatsKey = "namedFormats"
+    const val namedFormatFileKey = "file"
+    const val namedFormatLabelKey = "label"
 
     /**
      * The columns the sampled files hold together, in order: a list of `{name, files}` maps, where [sampledColumnNameKey]

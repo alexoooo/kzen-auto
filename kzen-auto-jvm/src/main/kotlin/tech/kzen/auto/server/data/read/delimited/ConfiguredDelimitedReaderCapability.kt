@@ -16,9 +16,6 @@ import tech.kzen.auto.common.data.schema.AuthoredRecordSchemaNotation
 import tech.kzen.auto.plugin.api.data.ReaderCapability
 import tech.kzen.auto.plugin.api.data.ReaderInspectionRequest
 import tech.kzen.auto.plugin.api.data.ReaderOpenRequest
-import tech.kzen.auto.plugin.api.data.ReaderProbeCapability
-import tech.kzen.auto.plugin.api.data.ReaderProbeRequest
-import tech.kzen.auto.plugin.api.data.ReaderProbeResult
 import tech.kzen.auto.plugin.api.data.FormatAuthoringCapability
 import tech.kzen.auto.common.data.format.DelimitedFormatOverrideConventions
 import tech.kzen.auto.common.data.format.FormatMaterializationRequest
@@ -39,10 +36,8 @@ import tech.kzen.lib.common.exec.data.shape.ShapeProvenance
 import tech.kzen.lib.common.exec.data.shape.ShapeStability
 import tech.kzen.lib.common.model.attribute.AttributeSegment
 import tech.kzen.lib.common.model.structure.notation.AttributeNotation
-import tech.kzen.lib.common.model.structure.notation.ListAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.MapAttributeNotation
 import tech.kzen.lib.common.model.structure.notation.ScalarAttributeNotation
-import tech.kzen.lib.platform.collect.toPersistentList
 import tech.kzen.lib.platform.collect.toPersistentMap
 import java.nio.charset.Charset
 import java.util.concurrent.CancellationException
@@ -50,12 +45,10 @@ import java.util.concurrent.CancellationException
 
 object ConfiguredDelimitedReaderCapability:
     ReaderCapability,
-    ReaderProbeCapability,
     FormatAuthoringCapability
 {
     override val identity = ReaderCapabilityIdentity(
         "tech.kzen.auto", "configured-delimited", "1")
-    override val readerCompatibility: String = identity.compatibility
     override val authoringIdentity = "tech.kzen.auto/configured-delimited-authoring-v1"
     override val supportsColumnLocking: Boolean = true
 
@@ -191,10 +184,6 @@ object ConfiguredDelimitedReaderCapability:
         }
 
 
-    override suspend fun probe(request: ReaderProbeRequest): ReaderProbeResult =
-        DelimitedProbe.probe(request)
-
-
     override fun materialize(request: FormatMaterializationRequest): FormatMaterializationResult {
         val unsupported = request.overrides.keys - DelimitedFormatOverrideConventions.supported
         require(unsupported.isEmpty()) { "Unsupported delimited overrides: ${unsupported.sorted().joinToString()}" }
@@ -259,13 +248,7 @@ object ConfiguredDelimitedReaderCapability:
             "commentPrefix" to canonical.commentPrefix.orEmpty())
         val entries: Map<AttributeSegment, AttributeNotation> = values.map { (key, value) ->
             AttributeSegment.ofKey(key) to ScalarAttributeNotation(value)
-        }.toMap() + (AttributeSegment.ofKey("contentCodings") to ListAttributeNotation(
-            request.resolvedRead.contentCodings.map { coding ->
-                require(coding.config == MapExecutionValue(emptyMap())) {
-                    "Configured delimited formats cannot author content-coding config for '${coding.identity}'"
-                }
-                ScalarAttributeNotation(coding.identity)
-            }.toPersistentList()))
+        }.toMap()
         val body = MapAttributeNotation(entries.toPersistentMap())
         val schemaBody = observedSchema?.let { contract ->
             AuthoredRecordSchemaNotation.body(contract)

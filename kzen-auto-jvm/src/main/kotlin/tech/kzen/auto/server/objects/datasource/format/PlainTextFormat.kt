@@ -1,14 +1,13 @@
 package tech.kzen.auto.server.objects.datasource.format
 
 import tech.kzen.auto.common.data.format.ConfiguredRecordFormat
+import tech.kzen.auto.common.data.format.FileFormatNames
 import tech.kzen.auto.common.data.format.FormatResolutionBasis
 import tech.kzen.auto.common.data.format.FormatResolutionDetail
 import tech.kzen.auto.common.data.format.FormatResolutionRequest
 import tech.kzen.auto.common.data.format.FormatResolutionResult
-import tech.kzen.auto.common.data.format.detection.FormatHintMetadata
 import tech.kzen.auto.common.data.model.DataRef
 import tech.kzen.auto.common.data.read.CharacterDecodingSpec
-import tech.kzen.auto.common.data.read.ContentCodingSpec
 import tech.kzen.auto.common.data.read.PlainTextReadConfig
 import tech.kzen.auto.common.data.read.ResolvedReadSpec
 import tech.kzen.auto.common.data.schema.DataShape
@@ -26,16 +25,10 @@ class PlainTextFormat(
     charset: String,
     bom: String,
     malformed: String,
-    unmappable: String,
-    private val contentCodings: List<String> = emptyList()
+    unmappable: String
 ): ConfiguredRecordFormat {
-    override val automaticDetectionCandidate: Boolean = false
-    override val automaticTextFallback: Boolean = true
     override val authoringCapabilityIdentity: String
         get() = PlainTextReaderCapability.authoringIdentity
-    override val hintMetadata: List<FormatHintMetadata> = listOf(
-        FormatHintMetadata.semanticText(listOf("md"), listOf("text/markdown")),
-        FormatHintMetadata.genericText(listOf("txt", "log"), listOf("text/plain")))
     private val baseConfig = PlainTextReadConfig(
         CharacterDecodingSpec(charset, bom, malformed, unmappable))
 
@@ -66,18 +59,9 @@ class PlainTextFormat(
     override fun resolvedRead(ref: DataRef): ResolvedReadSpec = resolvedRead(ref, baseConfig)
 
     private fun resolvedRead(ref: DataRef, config: PlainTextReadConfig): ResolvedReadSpec {
-        val codings = if (contentCodings.isNotEmpty()) {
-            contentCodings.map { ContentCodingSpec(it) }
-        }
-        else if (ref.id.lowercase().endsWith(".gz")) {
-            listOf(ContentCodingSpec.gzip)
-        }
-        else {
-            listOf(ContentCodingSpec.identity)
-        }
         return ResolvedReadSpec(
             PlainTextReaderCapability.identity,
-            codings,
+            listOf(FileFormatNames.contentCoding(ref.id)),
             PlainTextReaderCapability.encode(config))
     }
 
@@ -88,7 +72,5 @@ class PlainTextFormat(
 
     override fun digest(sink: Digest.Sink) {
         sink.addDigestible(baseConfig.asExecutionValue())
-        sink.addInt(contentCodings.size)
-        contentCodings.forEach(sink::addUtf8)
     }
 }

@@ -12,7 +12,7 @@ import tech.kzen.auto.server.objects.job.worker.JobLaneAttempt
 import tech.kzen.auto.server.objects.job.worker.JobLaneContext
 import tech.kzen.auto.server.objects.job.worker.JobLaneDescriptor
 import tech.kzen.auto.server.objects.job.worker.content.tar.TarEntryContent
-import tech.kzen.auto.server.objects.job.worker.content.tar.TarGzEntryCursor
+import tech.kzen.auto.server.objects.job.worker.content.tar.TarEntryCursor
 import tech.kzen.lib.common.exec.data.type.DataType
 import tech.kzen.lib.common.exec.data.type.DataTypePath
 import tech.kzen.lib.common.exec.data.value.DataValue
@@ -23,7 +23,8 @@ import tech.kzen.lib.platform.ClassName
 
 
 /**
- * Opens each incoming file's content as a `.tar.gz` and lends its members downstream, one at a time
+ * Opens each incoming file's content as a tar archive (gzip-compressed when its name says so: `.tar.gz`, `.tgz`)
+ * and lends its members downstream, one at a time
  * (docs/plans/2026-09-16_borrowed-elements.md §3.2, §3.5; the "Entries" transform of the 2026-09-15 content
  * analysis §7). The input is a file value — a selected file from `File`, or a member of an enclosing archive, so
  * `Extract → Extract` unpacks nested archives — and each member is the same kind of value (see [FileValues]):
@@ -66,7 +67,7 @@ class ExtractWorker(
     private val lending = CursorLending(selfLocation)
 
     @Volatile
-    private var cursor: TarGzEntryCursor? = null
+    private var cursor: TarEntryCursor? = null
 
     private var archives = 0L
 
@@ -79,7 +80,7 @@ class ExtractWorker(
             lending.drain(control, emit, FileValues.contentContract, open, { member ->
                 memberMetadata(member as TarEntryContent, parent)
             }) { iterator ->
-                cursor = iterator as TarGzEntryCursor
+                cursor = iterator as TarEntryCursor
             }
         }
         finally {
@@ -106,12 +107,12 @@ class ExtractWorker(
         return when (native) {
             is FileContent -> {
                 val path = native.path
-                ({ TarGzEntryCursor(path) })
+                ({ TarEntryCursor(path) })
             }
 
             is Content -> {
                 val descriptor = native.descriptor()
-                ({ TarGzEntryCursor(descriptor, SequentialByteContentInputStream(native.open())) })
+                ({ TarEntryCursor(descriptor, SequentialByteContentInputStream(native.open())) })
             }
 
             // Reached when the upstream lane was unknown statically, so the hint the validator would have given

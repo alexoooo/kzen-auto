@@ -21,7 +21,7 @@ interface DataSource {
 
     /**
      * The shape promised from compiled notation alone, never by I/O; [configuredFormats] are the graph's
-     * registered formats, for a source whose files are detected per name.
+     * registered formats, for a source whose files' names choose their format.
      */
     fun staticShape(role: DataRole?, configuredFormats: Lazy<List<ConfiguredRecordFormat>>): DataShape? = null
 

@@ -24,9 +24,6 @@ import tech.kzen.auto.server.data.read.delimited.ConfiguredDelimitedReaderCapabi
 import tech.kzen.auto.plugin.api.data.ReaderCapability
 import tech.kzen.auto.plugin.api.data.ReaderInspectionRequest
 import tech.kzen.auto.plugin.api.data.ReaderOpenRequest
-import tech.kzen.auto.plugin.api.data.ReaderProbeCapability
-import tech.kzen.auto.plugin.api.data.ReaderProbeRequest
-import tech.kzen.auto.plugin.api.data.ReaderProbeResult
 import tech.kzen.auto.plugin.api.data.FormatAuthoringCapability
 import tech.kzen.auto.common.data.format.FormatMaterializationRequest
 import tech.kzen.auto.common.data.format.FormatMaterializationResult
@@ -81,30 +78,17 @@ class ReaderCapabilityRegistryTest {
 
 
     @Test
-    fun optionalProbeIsIndexedByIdentityWhileOrdinaryReaderRemainsRunnable() {
-        val probeReader = ProbeReader("probe", "probe-v1")
-        val ordinaryReader = object: ReaderCapability by TestServiceReaderCapability() {}
-        val registry = ReaderCapabilityRegistry(listOf(probeReader, ordinaryReader))
-
-        assertEquals(probeReader, registry.probeFor(probeReader.identity))
-        assertEquals(null, registry.probeFor(ordinaryReader.identity))
-        assertEquals(setOf(probeReader.identity), registry.probeIdentities())
-        assertEquals(ordinaryReader, registry.resolve(ordinaryReader.identity))
-    }
-
-
-    @Test
-    fun probingReadersMaySharePlainCompatibilityTag() {
+    fun readersMaySharePlainCompatibilityTag() {
         // "1" is every reader's natural first compatibility; the built-in delimited reader and a plugin's reader
         // must coexist (the sample plugin's ITCH reader found the old compatibility-keyed index at boot).
-        val first = ProbeReader("first", "1")
-        val second = ProbeReader("second", "1")
+        val first = PlainReader("first", "1")
+        val second = PlainReader("second", "1")
         val registry = ReaderCapabilityRegistry(listOf(ConfiguredDelimitedReaderCapability, first, second))
 
-        assertEquals(first, registry.probeFor(first.identity))
-        assertEquals(second, registry.probeFor(second.identity))
+        assertEquals(first, registry.resolve(first.identity))
+        assertEquals(second, registry.resolve(second.identity))
         assertEquals(ConfiguredDelimitedReaderCapability,
-            registry.probeFor(ConfiguredDelimitedReaderCapability.identity))
+            registry.resolve(ConfiguredDelimitedReaderCapability.identity))
     }
 
 
@@ -274,14 +258,11 @@ class ReaderCapabilityRegistryTest {
     }
 
 
-    private class ProbeReader(
+    private class PlainReader(
         name: String,
         compatibility: String
-    ): ReaderCapability by TestServiceReaderCapability(), ReaderProbeCapability {
+    ): ReaderCapability by TestServiceReaderCapability() {
         override val identity = ReaderCapabilityIdentity("third.party.test", name, compatibility)
-        override val readerCompatibility: String = compatibility
-
-        override suspend fun probe(request: ReaderProbeRequest): ReaderProbeResult = ReaderProbeResult.NoMatch
     }
 
 

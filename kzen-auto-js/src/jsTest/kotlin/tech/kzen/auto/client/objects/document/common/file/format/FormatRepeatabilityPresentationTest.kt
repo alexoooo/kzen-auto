@@ -26,7 +26,7 @@ class FormatRepeatabilityPresentationTest {
 
         assertTrue(presentation.makeExplicit.enabled)
         assertTrue(presentation.lockColumns.enabled)
-        assertTrue(presentation.makeExplicit.explanation.contains("columns may still change"))
+        assertTrue(presentation.makeExplicit.explanation.contains("Columns may still change"))
         assertTrue(presentation.lockColumns.explanation.contains("width"))
         assertNull(presentation.inspection)
     }
@@ -130,7 +130,7 @@ class FormatRepeatabilityPresentationTest {
         "Delimited",
         selection,
         if (selection == FormatSelectionKind.Automatic) {
-            FormatResolutionBasis.Content
+            FormatResolutionBasis.Extension
         }
         else {
             FormatResolutionBasis.Override

@@ -48,6 +48,9 @@ class ClientRestApi(
     }
 
 
+    private val writes = NotationWriteBarrier()
+
+
     //-----------------------------------------------------------------------------------------------------------------
     suspend fun scanNotation(): NotationScan {
         val scanMap = clientJson.decodeFromString<Map<String, NotationScanDocument>>(getOrPut(
@@ -862,12 +865,19 @@ class ClientRestApi(
 
     //-----------------------------------------------------------------------------------------------------------------
     // TODO: change to POST to better align with HTTP semantics?
+    // A notation write: every request sent after it waits until it lands (NotationWriteBarrier)
     private suspend fun getOrPutDigest(
             commandPath: String,
             vararg parameters: Pair<String, String>
     ): Digest {
-        val response = getOrPut(commandPath, *parameters)
-        return Digest.parse(response)
+        writes.begin()
+        try {
+            val response = sendGetOrPut(commandPath, *parameters)
+            return Digest.parse(response)
+        }
+        finally {
+            writes.end()
+        }
     }
 
 
@@ -876,8 +886,14 @@ class ClientRestApi(
             body: ByteArray,
             vararg parameters: Pair<String, String>
     ): Digest {
-        val response = post(commandPath, body, *parameters)
-        return Digest.parse(response)
+        writes.begin()
+        try {
+            val response = sendPost(commandPath, body, *parameters)
+            return Digest.parse(response)
+        }
+        finally {
+            writes.end()
+        }
     }
 
 
@@ -907,6 +923,15 @@ class ClientRestApi(
             commandPath: String,
             vararg parameters: Pair<String, String>
     ): String {
+        writes.awaitSettled()
+        return sendGetOrPut(commandPath, *parameters)
+    }
+
+
+    private suspend fun sendGetOrPut(
+            commandPath: String,
+            vararg parameters: Pair<String, String>
+    ): String {
         val getUrl = url(commandPath, *parameters)
 
         return when {
@@ -923,6 +948,7 @@ class ClientRestApi(
             commandPath: String,
             vararg parameters: Pair<String, String>
     ): ByteArray {
+        writes.awaitSettled()
         return httpGetBytes(
             url(commandPath, *parameters))
     }
@@ -939,6 +965,16 @@ class ClientRestApi(
 
 
     private suspend fun post(
+            commandPath: String,
+            body: ByteArray,
+            vararg parameters: Pair<String, String>
+    ): String {
+        writes.awaitSettled()
+        return sendPost(commandPath, body, *parameters)
+    }
+
+
+    private suspend fun sendPost(
             commandPath: String,
             body: ByteArray,
             vararg parameters: Pair<String, String>

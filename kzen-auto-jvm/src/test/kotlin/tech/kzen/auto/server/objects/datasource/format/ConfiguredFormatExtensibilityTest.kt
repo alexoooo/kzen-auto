@@ -3,12 +3,11 @@ package tech.kzen.auto.server.objects.datasource.format
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import tech.kzen.auto.common.data.format.ConfiguredRecordFormat
+import tech.kzen.auto.common.data.format.FileFormatNames
 import tech.kzen.auto.common.data.format.FormatMaterializationRequest
 import tech.kzen.auto.common.data.format.FormatMaterializationResult
 import tech.kzen.auto.common.data.format.FormatResolutionRequest
-import tech.kzen.auto.common.data.format.detection.NormalizedFormatHints
 import tech.kzen.auto.common.data.model.DataRef
-import tech.kzen.auto.common.data.model.DataSourceId
 import tech.kzen.auto.common.data.read.ContentCodingSpec
 import tech.kzen.auto.common.data.read.CharacterDecodingSpec
 import tech.kzen.auto.common.data.read.PlainTextReadConfig
@@ -17,22 +16,9 @@ import tech.kzen.auto.common.data.read.ResolvedReadSpec
 import tech.kzen.auto.common.data.schema.DataShape
 import tech.kzen.auto.plugin.api.data.FormatAuthoringCapability
 import tech.kzen.auto.plugin.api.data.ReaderCapability
-import tech.kzen.auto.plugin.api.data.ReaderProbeCapability
-import tech.kzen.auto.plugin.api.data.ReaderProbeRequest
-import tech.kzen.auto.plugin.api.data.ReaderProbeResult
-import tech.kzen.auto.plugin.api.data.ReaderProbeStrength
 import tech.kzen.auto.server.context.KzenAutoConfig
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.data.content.DirectDataContext
-import tech.kzen.auto.server.data.content.FakeObjectStoreProvider
-import tech.kzen.auto.server.data.content.SequentialContentStack
-import tech.kzen.auto.server.data.content.fakeFingerprint
-import tech.kzen.auto.server.data.content.local.LocalDataContentProvider
-import tech.kzen.auto.server.data.content.provider.DataContentProviderLookup
-import tech.kzen.auto.server.data.read.detection.AutomaticFormatResolver
-import tech.kzen.auto.server.data.read.detection.AutomaticFormatResolutionObservation
-import tech.kzen.auto.server.data.read.detection.AutomaticFormatResolverObserver
-import tech.kzen.auto.server.data.read.detection.DetectionSampleAcquirer
 import tech.kzen.auto.server.data.read.text.PlainTextReaderCapability
 import tech.kzen.auto.server.util.WorkUtils
 import tech.kzen.lib.common.reflect.Reflect
@@ -50,9 +36,9 @@ import kotlin.test.assertTrue
 
 class ConfiguredFormatExtensibilityTest {
     @Test
-    fun contributedProbeDetectsWithoutGenericBranchesAndNonauthoringActionsStayDisabled() = runBlocking {
+    fun contributedFormatIsChosenByItsExtensionAndNonauthoringActionsStayDisabled() = runBlocking {
         withContext { context ->
-            val reference = "main/extensibility.yaml#main.detectable"
+            val reference = "main/extensibility.yaml#main.named"
             val catalogEntry = catalogEntry(context, reference)
 
             assertFalse(catalogEntry.authoringAvailable)
@@ -60,29 +46,16 @@ class ConfiguredFormatExtensibilityTest {
             assertEquals(null, catalogEntry.overrideEditorReference)
             assertTrue(catalogEntry.perFileOverrideAvailable)
 
-            val source = DataSourceId("contributed-format")
-            val fingerprint = fakeFingerprint("third-v1")
-            val provider = FakeObjectStoreProvider(
-                "THIRD:payload".encodeToByteArray(), fingerprint, expectedId = "sample.third")
-            val observations = mutableListOf<AutomaticFormatResolutionObservation>()
-            val resolver = AutomaticFormatResolver(
-                context.configuredRecordFormatRegistry,
-                context.readerCapabilityRegistry,
-                DetectionSampleAcquirer(SequentialContentStack(DataContentProviderLookup(
-                    LocalDataContentProvider(), mapOf(source to provider)))),
-                observer = AutomaticFormatResolverObserver(observations::add))
-            val result = resolver.resolve(FormatResolutionRequest(
-                DirectDataContext,
-                DataRef(source, "sample.third"),
-                fingerprint,
-                NormalizedFormatHints.of(filenameExtension = "third"),
-                null))
-
+            val result = context.configuredRecordFormatRegistry.resolveByName(
+                FormatResolutionRequest(DirectDataContext, DataRef(null, "sample.third"), null))
             assertEquals(reference, result.detail.concreteFormatReference)
-            assertEquals(TestContributedProbeReaderCapability.identity, result.resolvedRead.reader)
-            assertEquals(1, TestContributedProbeReaderCapability.probeCount)
-            assertEquals(1, observations.single().completeLogicalRecordsByCandidate[reference])
-            assertEquals(provider.acquireCount, provider.closeCount)
+            assertEquals(TestContributedReaderCapability.identity, result.resolvedRead.reader)
+            assertEquals(listOf(ContentCodingSpec.identity), result.resolvedRead.contentCodings)
+
+            val gzipped = context.configuredRecordFormatRegistry.resolveByName(
+                FormatResolutionRequest(DirectDataContext, DataRef(null, "sample.third.gz"), null))
+            assertEquals(reference, gzipped.detail.concreteFormatReference)
+            assertEquals(listOf(ContentCodingSpec.gzip), gzipped.resolvedRead.contentCodings)
 
             val failure = assertFailsWith<IllegalArgumentException> {
                 context.configuredRecordFormatRegistry.materialize(
@@ -93,78 +66,6 @@ class ConfiguredFormatExtensibilityTest {
                         null))
             }
             assertTrue(failure.message.orEmpty().contains("does not support quick correction"))
-        }
-    }
-
-
-    @Test
-    fun contributedProbeMatchesBinaryInputThatNoTextViewCanDecode() = runBlocking {
-        // A feed decoder's sample is bytes, not text: detection must still run the extension's probe over the
-        // bytes (no character view) and only report the text failure when nothing structured matched.
-        withContext { context ->
-            val reference = "main/extensibility.yaml#main.detectable"
-            val source = DataSourceId("contributed-binary")
-            val fingerprint = fakeFingerprint("third-binary-v1")
-            val payload = byteArrayOf(0, 0xff.toByte(), 0x81.toByte()) + "THIRD:payload".encodeToByteArray()
-            val provider = FakeObjectStoreProvider(payload, fingerprint, expectedId = "sample.third")
-            val resolver = AutomaticFormatResolver(
-                context.configuredRecordFormatRegistry,
-                context.readerCapabilityRegistry,
-                DetectionSampleAcquirer(SequentialContentStack(DataContentProviderLookup(
-                    LocalDataContentProvider(), mapOf(source to provider)))))
-            val result = resolver.resolve(FormatResolutionRequest(
-                DirectDataContext,
-                DataRef(source, "sample.third"),
-                fingerprint,
-                NormalizedFormatHints.of(filenameExtension = "third"),
-                null))
-
-            assertEquals(reference, result.detail.concreteFormatReference)
-            assertEquals(TestContributedProbeReaderCapability.identity, result.resolvedRead.reader)
-            assertEquals(null, result.detail.resolvedEncoding)
-
-            // Binary that no format claims still fails as not-text, in the decoder's own words.
-            val unclaimed = FakeObjectStoreProvider(
-                byteArrayOf(0, 0xff.toByte(), 0x81.toByte(), 0x00), fingerprint, expectedId = "sample.bin")
-            val unclaimedResolver = AutomaticFormatResolver(
-                context.configuredRecordFormatRegistry,
-                context.readerCapabilityRegistry,
-                DetectionSampleAcquirer(SequentialContentStack(DataContentProviderLookup(
-                    LocalDataContentProvider(), mapOf(source to unclaimed)))))
-            val failure = assertFailsWith<tech.kzen.auto.server.data.read.detection.FormatDetectionException> {
-                unclaimedResolver.resolve(FormatResolutionRequest(
-                    DirectDataContext, DataRef(source, "sample.bin"), fingerprint,
-                    NormalizedFormatHints.of(filenameExtension = null), null))
-            }
-            assertTrue(failure.message.orEmpty().contains("not valid UTF-8"), failure.message)
-        }
-    }
-
-
-    @Test
-    fun contributedSignatureOutranksTheBuiltInDelimitedGuess() = runBlocking {
-        // Regular comma-separated text is a structural match for the built-in delimited reader; a reader that
-        // recognizes the content's own signature must win rather than tie into the text fallback.
-        withContext { context ->
-            val source = DataSourceId("contributed-signature")
-            val fingerprint = fakeFingerprint("third-signature-v1")
-            val provider = FakeObjectStoreProvider(
-                "THIRD:,marker\n1,2\n3,4\n".encodeToByteArray(), fingerprint, expectedId = "table.txt")
-            val resolver = AutomaticFormatResolver(
-                context.configuredRecordFormatRegistry,
-                context.readerCapabilityRegistry,
-                DetectionSampleAcquirer(SequentialContentStack(DataContentProviderLookup(
-                    LocalDataContentProvider(), mapOf(source to provider)))))
-            val result = resolver.resolve(FormatResolutionRequest(
-                DirectDataContext,
-                DataRef(source, "table.txt"),
-                fingerprint,
-                NormalizedFormatHints.of(filenameExtension = "txt"),
-                null))
-
-            assertEquals("main/extensibility.yaml#main.detectable", result.detail.concreteFormatReference)
-            assertEquals(TestContributedProbeReaderCapability.identity, result.resolvedRead.reader)
-            assertEquals("UTF-8", result.detail.resolvedEncoding)
         }
     }
 
@@ -187,8 +88,6 @@ class ConfiguredFormatExtensibilityTest {
                 FormatResolutionRequest(
                     DirectDataContext,
                     DataRef(null, "opaque-object-without-a-suffix"),
-                    null,
-                    NormalizedFormatHints.empty,
                     null))
             val authoritative = resolved.resolvedRead.copy(
                 contentCodings = listOf(ContentCodingSpec("third-party/envelope-v2")))
@@ -213,7 +112,7 @@ class ConfiguredFormatExtensibilityTest {
               title: "Contributed format"
               extensions: []
               catalogVisible: true
-              readerMode: probe
+              readerMode: plain
               editorReference: ""
               meta:
                 readerMode: String
@@ -222,13 +121,13 @@ class ConfiguredFormatExtensibilityTest {
             main:
               is: Job
 
-            main.detectable:
+            main.named:
               is: TestContributedFormat
-              title: "Third-party detectable"
+              title: "Third-party named"
               extensions:
                 - third
               catalogVisible: true
-              readerMode: probe
+              readerMode: plain
               editorReference: ""
 
             main.editor:
@@ -245,7 +144,6 @@ class ConfiguredFormatExtensibilityTest {
             jsModuleName = "kzen-auto-js",
             moduleRoot = root))
         try {
-            TestContributedProbeReaderCapability.probeCount = 0
             TestContributedEditorReaderCapability.lastMaterializedRead = null
             block(context)
         }
@@ -278,15 +176,11 @@ class TestContributedFormat(
     private val editorReference: String
 ): ConfiguredRecordFormat {
     private val capability: ReaderCapability = when (readerMode) {
-        "probe" -> TestContributedProbeReaderCapability()
+        "plain" -> TestContributedReaderCapability()
         "editor" -> TestContributedEditorReaderCapability()
         else -> error("Unknown contributed reader mode: $readerMode")
     }
 
-    override val automaticDetectionCandidate: Boolean
-        get() = readerMode == "probe"
-    override val automaticDetectionTemplate: Boolean
-        get() = readerMode == "probe"
     override val authoringCapabilityIdentity: String?
         get() = if (readerMode == "editor") TestContributedEditorReaderCapability.authoringIdentity else null
     override val overrideEditorReference: String?
@@ -296,7 +190,7 @@ class TestContributedFormat(
     @Suppress("OVERRIDE_DEPRECATION")
     override fun resolvedRead(ref: DataRef): ResolvedReadSpec = ResolvedReadSpec(
         capability.identity,
-        listOf(ContentCodingSpec.identity),
+        listOf(FileFormatNames.contentCoding(ref.id)),
         capability.encode(PlainTextReadConfig(CharacterDecodingSpec(
             "UTF-8", "permit", "report", "report"))))
 
@@ -312,33 +206,14 @@ class TestContributedFormat(
 }
 
 
-class TestContributedProbeReaderCapability:
-    ReaderCapability by PlainTextReaderCapability,
-    ReaderProbeCapability {
+class TestContributedReaderCapability:
+    ReaderCapability by PlainTextReaderCapability {
     override val identity: ReaderCapabilityIdentity
         get() = Companion.identity
-    override val readerCompatibility: String = identity.compatibility
-
-
-    override suspend fun probe(request: ReaderProbeRequest): ReaderProbeResult {
-        probeCount += 1
-        // Text when the host could decode one, else the raw bytes — the sentinel may sit behind binary framing.
-        val text = request.characterViews.singleOrNull()?.text
-            ?: request.sample.toByteArray().toString(Charsets.ISO_8859_1)
-        return if (text.contains("THIRD:")) {
-            request.observer.completeLogicalRecordsConsidered(1)
-            ReaderProbeResult.Matched(
-                ReaderProbeStrength.ContentSignature,
-                request.candidateConfig,
-                "Third-party sentinel matched")
-        }
-        else ReaderProbeResult.NoMatch
-    }
 
 
     companion object {
-        val identity = ReaderCapabilityIdentity("third.party.test", "probe-reader", "third-probe-v1")
-        var probeCount: Int = 0
+        val identity = ReaderCapabilityIdentity("third.party.test", "contributed-reader", "1")
     }
 }
 

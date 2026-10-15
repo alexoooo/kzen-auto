@@ -1,6 +1,5 @@
 package tech.kzen.auto.server.objects.datasource
 
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
@@ -36,7 +35,6 @@ import tech.kzen.auto.server.objects.datasource.format.ConfiguredRecordFormatPre
 import tech.kzen.auto.server.service.plugin.HostReportDefinitionRepository
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.concurrent.atomic.AtomicInteger
 import kotlin.io.path.writeText
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -188,25 +186,6 @@ class FileDataSourceTest {
                 formatLookup = lookup(mapOf("Automatic" to automatic))))
         }
         assertTrue(invalidAutomatic.message!!.contains("must be concrete"), invalidAutomatic.message)
-    }
-
-
-    @Test
-    fun sourceResolutionRunsColdFormatsConcurrentlyButRetainsAuthoredOrder() {
-        val taskCount = 12
-        val directory = temp.newFolder("file-source-budget").toPath()
-        val paths = (0 until taskCount).map { index ->
-            directory.resolve("$index.csv").also { it.writeText("value\n$index\n") }
-        }
-        val budgeted = BudgetedFormat()
-
-        val result = resolve(source(
-            files = paths.map { picked(it) },
-            format = budgeted))
-
-        assertEquals(4, budgeted.peakActive.get())
-        assertEquals(paths.map(::canonical), result.manifest.units.map { it.parts.single().ref.id })
-        assertEquals(paths.map(::canonical), result.resolutionDetails.map { it.ref.id })
     }
 
 
@@ -375,38 +354,7 @@ class FileDataSourceTest {
     }
 
 
-    private class BudgetedFormat: ConfiguredRecordFormat by ConfiguredDelimitedTestFormats.csv() {
-        override val selectionKind = FormatSelectionKind.Automatic
-        val peakActive = AtomicInteger()
-        private val active = AtomicInteger()
-
-
-        override suspend fun resolve(request: FormatResolutionRequest): FormatResolutionResult {
-            val permit = request.budget.acquireColdPart()
-            val activeNow = active.incrementAndGet()
-            peakActive.updateAndGet { maxOf(it, activeNow) }
-            try {
-                delay(probeDelayMillis)
-                val resolved = ConfiguredDelimitedTestFormats.csv().resolve(request)
-                permit.completeSuccess()
-                return resolved.copy(detail = FormatResolutionDetail(
-                    request.ref,
-                    "test#CSV",
-                    "CSV",
-                    FormatSelectionKind.Automatic,
-                    FormatResolutionBasis.Content,
-                    "Test content matched CSV"))
-            }
-            finally {
-                active.decrementAndGet()
-                permit.close()
-            }
-        }
-    }
-
-
     companion object {
-        private const val probeDelayMillis = 10L
         private val missingFormatLookup = ConfiguredRecordFormatLookup { reference ->
             throw IllegalArgumentException("Unavailable configured format: $reference")
         }

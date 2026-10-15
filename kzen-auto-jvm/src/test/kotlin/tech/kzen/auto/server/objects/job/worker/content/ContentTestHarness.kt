@@ -6,12 +6,16 @@ import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream
 import tech.kzen.auto.common.data.file.FileSelectionEntry
 import tech.kzen.auto.common.data.file.FileSelectionSpec
+import tech.kzen.auto.common.objects.document.job.model.JobValidation
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.server.context.KzenAutoContext
+import tech.kzen.auto.server.data.design.DesignReadBudget
+import tech.kzen.auto.server.data.design.DesignReader
 import tech.kzen.auto.server.exec.LogicCompilerServices
 import tech.kzen.auto.server.exec.job.EngineJobControl
 import tech.kzen.auto.server.exec.job.JobLogic
 import tech.kzen.auto.server.exec.job.JobLogicCompiler
+import tech.kzen.auto.server.objects.job.JobValidator
 import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.lib.common.exec.data.binding.BindingName
@@ -242,6 +246,26 @@ class ContentTestHarness: AutoCloseable {
         val created = KzenAutoContext.forTest()
         context = created
         return created
+    }
+
+
+    /**
+     * The editor's validation of [document] over a fresh context. As in the editor, a pass its deadline cuts short
+     * is asked again, reading on from what the last one read, so a loaded machine gives the same answer.
+     */
+    fun validate(document: String, graphNotation: GraphNotation = AutoTestUtils.readNotation()): JobValidation {
+        val current = fresh()
+        val graphDefinition = AutoTestUtils.graphDefinitionAttempt(graphNotation).transitiveSuccessful
+        val reader = DesignReader()
+        while (true) {
+            val session = reader.session(DesignReadBudget.editor)
+            val validation = JobValidator.validateDetached(
+                DocumentPath.parse(document), graphDefinition, current.notationMetadataReader,
+                current.graphEnvironment, session)
+            if (!session.limited) {
+                return validation
+            }
+        }
     }
 
 

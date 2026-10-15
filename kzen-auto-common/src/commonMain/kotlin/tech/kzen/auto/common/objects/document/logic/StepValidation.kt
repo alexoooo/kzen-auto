@@ -39,9 +39,10 @@ import tech.kzen.lib.common.exec.data.type.DataContract
  * type read from only part of the data, because a design-time limit cut the reading short: a later validation
  * reads on.
  *
- * [details] is what a Worker found out about its input before Run beyond the type — the format it detected, the
- * parts its input's units hold, the sizes of the files it selected. Opaque like a Worker's run progress: any value
- * [ExecutionValue.of] accepts, keyed by names the Worker's own display / editors read (CC-17); empty for Script.
+ * [details] is what a Worker found out about its input before Run beyond the type — the format each file is read
+ * as, the parts its input's units hold, the sizes of the files it selected. Opaque like a Worker's run progress: any
+ * value [ExecutionValue.of] accepts, keyed by names the Worker's own display / editors read (CC-17); empty for
+ * Script.
  */
 data class StepValidation(
     val typeMetadata: TypeMetadata?,

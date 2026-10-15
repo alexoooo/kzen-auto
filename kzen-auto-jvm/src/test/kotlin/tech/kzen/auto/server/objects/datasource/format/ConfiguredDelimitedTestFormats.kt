@@ -8,8 +8,7 @@ object ConfiguredDelimitedTestFormats {
         schema: RecordSchema? = null,
         charset: String = "UTF-8",
         delimiter: String = ",",
-        recordSeparator: String = "lf",
-        contentCodings: List<String> = emptyList()
+        recordSeparator: String = "lf"
     ): ConfiguredDelimitedFormat = ConfiguredDelimitedFormat(
         "CSV",
         listOf("csv"),
@@ -25,8 +24,7 @@ object ConfiguredDelimitedTestFormats {
         "report",
         "report",
         "",
-        schema,
-        contentCodings = contentCodings)
+        schema)
 
 
     fun tsv(schema: RecordSchema? = null, charset: String = "UTF-8"): ConfiguredDelimitedFormat =

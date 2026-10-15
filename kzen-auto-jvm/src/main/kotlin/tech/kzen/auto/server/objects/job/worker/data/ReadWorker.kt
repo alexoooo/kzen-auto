@@ -87,7 +87,7 @@ open class ReadWorker(
 
     private var sourceResolution: WorkerDefinitionResolution =
         WorkerDefinitionResolution.Failed("Worker definition context is not loaded")
-    // Lazy: only a source detecting its files by name needs the registered formats instantiated
+    // Lazy: only a source whose files' names choose their format needs the registered formats instantiated
     private var configuredFormats: Lazy<List<ConfiguredRecordFormat>> =
         lazy { error("Worker definition context is not loaded") }
     private var compatibilityKey: Digest? = null

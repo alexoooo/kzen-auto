@@ -48,8 +48,8 @@ class FormatResolutionProvenanceTest {
             "formats.yaml#Csv",
             "CSV",
             FormatSelectionKind.Automatic,
-            FormatResolutionBasis.Content,
-            "Comma-delimited records were detected",
+            FormatResolutionBasis.Extension,
+            "The .csv extension names CSV",
             resolvedEncoding = "UTF-8"))
 
         DataResolveResult(DataManifest(listOf(DataUnit.of(part))), emptyList(), details)

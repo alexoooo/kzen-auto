@@ -27,7 +27,7 @@ import kotlin.math.ceil
  * schema. A non-null value equal to the token fails: the reader matches the token against a field's text whether or
  * not it was quoted, so quoting cannot protect it.
  *
- * `malformed` and `contentCodings` only apply to reading. A `require` or `detect` BOM policy writes a byte-order
+ * `malformed` only applies to reading. A `require` or `detect` BOM policy writes a byte-order
  * mark, since the reader then requires one. `skipLeadingLines` writes that many empty lines before the header, which
  * reading skips.
  */

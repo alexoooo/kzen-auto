@@ -1,8 +1,5 @@
 package tech.kzen.auto.server.objects.datasource
 
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
 import tech.kzen.auto.common.data.api.DataContext
 import tech.kzen.auto.common.data.api.DataSource
 import tech.kzen.auto.common.data.file.FileSelectionEntry
@@ -21,13 +18,8 @@ import tech.kzen.auto.common.data.read.DataContentFingerprint
 import tech.kzen.auto.common.util.data.DataLocation
 import tech.kzen.auto.common.util.data.DataLocationInfo
 import tech.kzen.auto.server.data.FileListingAction
-import tech.kzen.auto.server.data.format.SourceFormatResolutionBudget
-import tech.kzen.auto.server.data.format.SourceFormatResolutionBudgetFactory
-import tech.kzen.auto.server.data.read.detection.FilenameDetection
-import tech.kzen.auto.server.data.read.detection.FormatDetectionException
 import tech.kzen.auto.server.objects.datasource.format.ConfiguredRecordFormatLookup
 import tech.kzen.auto.server.objects.datasource.format.ConfiguredRecordFormatPreflight
-import tech.kzen.auto.server.objects.datasource.format.UndetectedFormat
 import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
@@ -41,8 +33,6 @@ class FileDataSource(
     private val missing: String,
     @Service private val fileListingAction: FileListingAction,
     @Service private val formatLookup: ConfiguredRecordFormatLookup = unavailableFormatLookup,
-    @Service private val resolutionBudgetFactory: SourceFormatResolutionBudgetFactory =
-        SourceFormatResolutionBudgetFactory(),
     // Absent when a Worker builds the source in code: its format then has no graph coordinate
     selfLocation: ObjectLocation? = null
 ): FileResolutionDataSource {
@@ -70,25 +60,18 @@ class FileDataSource(
             "Unknown missing-file policy: $missing"
         }
 
-        return resolutionBudgetFactory.create().withinDeadline {
-            val sourceFormat = formatAttribute?.let { formatLookup.preflight(format, it) }
-            val selected = list(context)
-            val diagnostics = mutableListOf<DataDiagnostic>()
-            val regularFiles = validateSelection(selected, diagnostics)
-            val prepared = prepareOverrides(regularFiles)
-            val sourceBudget = this
-            val resolved = coroutineScope {
-                prepared.map { input ->
-                    async {
-                        resolveInput(context, input, sourceFormat, sourceBudget)
-                    }
-                }.awaitAll()
-            }
-            DataResolveResult(
-                DataManifest(resolved.map(ResolvedInput::unit)),
-                diagnostics,
-                resolved.map { it.resolution.detail })
+        val sourceFormat = formatAttribute?.let { formatLookup.preflight(format, it) }
+        val selected = list(context)
+        val diagnostics = mutableListOf<DataDiagnostic>()
+        val regularFiles = validateSelection(selected, diagnostics)
+        val prepared = prepareOverrides(regularFiles)
+        val resolved = prepared.map { input ->
+            resolveInput(context, input, sourceFormat)
         }
+        return DataResolveResult(
+            DataManifest(resolved.map(ResolvedInput::unit)),
+            diagnostics,
+            resolved.map { it.resolution.detail })
     }
 
 
@@ -96,26 +79,23 @@ class FileDataSource(
         context: DataContext,
         entry: FileSelectionEntry
     ): DataResolveResult {
-        // The client can ask for a row the server's copy of the selection does not hold yet (a write in flight)
         require(files.isNotEmpty()) {
             "Selected file is not in this source's selection: ${entry.location.asString()}"
         }
         require(entry in files) {
             "The selected file row changed before resolution: ${entry.location.asString()}"
         }
-        return resolutionBudgetFactory.create().withinDeadline {
-            val sourceFormat = formatAttribute?.let { formatLookup.preflight(format, it) }
-            val selected = entry to context.blocking { fileListingAction.fileInfoBlocking(entry.location) }
-            val diagnostics = mutableListOf<DataDiagnostic>()
-            val regular = validateSelection(listOf(selected), diagnostics)
-            require(regular.size == 1) { "Selected file is unavailable: ${entry.location.asString()}" }
-            val prepared = prepareOverrides(regular).single()
-            val resolved = resolveInput(context, prepared, sourceFormat, this)
-            DataResolveResult(
-                DataManifest(listOf(resolved.unit)),
-                diagnostics,
-                listOf(resolved.resolution.detail))
-        }
+        val sourceFormat = formatAttribute?.let { formatLookup.preflight(format, it) }
+        val selected = entry to context.blocking { fileListingAction.fileInfoBlocking(entry.location) }
+        val diagnostics = mutableListOf<DataDiagnostic>()
+        val regular = validateSelection(listOf(selected), diagnostics)
+        require(regular.size == 1) { "Selected file is unavailable: ${entry.location.asString()}" }
+        val prepared = prepareOverrides(regular).single()
+        val resolved = resolveInput(context, prepared, sourceFormat)
+        return DataResolveResult(
+            DataManifest(listOf(resolved.unit)),
+            diagnostics,
+            listOf(resolved.resolution.detail))
     }
 
 
@@ -233,33 +213,15 @@ class FileDataSource(
     private suspend fun resolveInput(
         context: DataContext,
         input: PreparedInput,
-        sourceFormat: ConfiguredRecordFormatPreflight?,
-        sourceBudget: SourceFormatResolutionBudget
+        sourceFormat: ConfiguredRecordFormatPreflight?
     ): ResolvedInput {
         val info = input.info
         val ref = DataRef.of(info)
         val expectedFingerprint = DataContentFingerprint.localOrNull(ref)
-        val request = FormatResolutionRequest(
-            context,
-            ref,
-            expectedFingerprint,
-            FilenameDetection.hints(info.name),
-            input.entry.encoding?.asString(),
-            sourceBudget)
-        val resolution = try {
-            input.formatOverride?.resolve(request)
-                ?: sourceFormat?.resolve(request)
-                ?: format.resolve(request)
-        }
-        catch (failure: FormatDetectionException) {
-            // Automatic detection over a file no format claims (an archive, an image): kept as opaque bytes
-            // for whole-file consumers, refused only when read — unless the row demanded text by encoding
-            val selected = input.formatOverride ?: sourceFormat
-            val automatic = (selected?.selectionKind ?: format.selectionKind) == FormatSelectionKind.Automatic &&
-                input.entry.encoding == null
-            if (!automatic || !UndetectedFormat.carries(failure)) throw failure
-            UndetectedFormat.resolve(request, failure)
-        }
+        val request = FormatResolutionRequest(context, ref, input.entry.encoding?.asString())
+        val resolution = input.formatOverride?.resolve(request)
+            ?: sourceFormat?.resolve(request)
+            ?: format.resolve(request)
         require(resolution.detail.ref == ref && resolution.detail.role == DataRole.main) {
             "Format resolution returned mismatched provenance for ${ref.display()}"
         }
