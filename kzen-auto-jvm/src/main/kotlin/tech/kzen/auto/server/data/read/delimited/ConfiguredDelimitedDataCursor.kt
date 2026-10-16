@@ -7,11 +7,8 @@ import tech.kzen.lib.common.exec.data.value.DataValue
 
 class ConfiguredDelimitedDataCursor(
     private val reader: ConfiguredDelimitedReader,
-    override val shape: DataShape,
-    private val expandedBytes: () -> Long? = { reader.expandedBytesRead }
+    override val shape: DataShape
 ): DataCursor {
-    val expandedBytesRead: Long? get() = expandedBytes()
-
     private var buffered: DelimitedRecord? = null
     private var exhausted = false
     private var closed = false

@@ -35,10 +35,6 @@ class TargetLocator(
         private const val cropGridCacheMaxEntries = 64
         private const val cropGridCacheLoadFactor = 0.75f
 
-        // Per-crop scan cap: uniqueness only needs 2, but the error detail lists the ambiguity and
-        // preview exclusion needs surviving candidates, so keep a few more
-        private const val diagnosticMatchLimit = 8
-
         private val defaultLocators = listOf(
             FocusTargetLocator,
             TextTargetLocator,
@@ -69,9 +65,7 @@ class TargetLocator(
                     }
                     else {
                         val described = describe?.let { describer ->
-                            candidates
-                                .take(diagnosticMatchLimit)
-                                .joinToString(", ", prefix = ": ") { describer(it) }
+                            candidates.joinToString(", ", prefix = ": ") { describer(it) }
                         } ?: ""
                         PolicySelection.Rejected(
                             "More than one target found (${candidates.size})$described")
@@ -306,7 +300,7 @@ class TargetLocator(
         val screenshotImage = ImageIO.read(ByteArrayInputStream(screenshotPngBytes))
         val screenshotGrid = RgbGrid.ofImage(screenshotImage)
 
-        val matchesByCrop = locateAllByCrop(target, screenshotGrid, diagnosticMatchLimit)
+        val matchesByCrop = locateAllByCrop(target, screenshotGrid)
 
         val allMatches = matchesByCrop.flatMap { (resourcePath, cropMatches) ->
             cropMatches.matches.map { CropMatch(resourcePath, it) }
@@ -385,7 +379,7 @@ class TargetLocator(
 
     //-----------------------------------------------------------------------------------------------------------------
     /**
-     * Every crop's matches (up to [limitPerCrop] each), keyed by resource path — no uniqueness:
+     * Every crop's matches, keyed by resource path — no uniqueness:
      * the caller decides what multiple matches mean (preview overlay shows everything,
      * the click path reports them as an ambiguity).
      *
@@ -395,8 +389,7 @@ class TargetLocator(
      */
     suspend fun locateAllByCrop(
         target: TargetDocument,
-        screenshotGrid: RgbGrid,
-        limitPerCrop: Int = Int.MAX_VALUE
+        screenshotGrid: RgbGrid
     ): Map<ResourcePath, CropMatches> {
         val documentPath = target.objectLocation.documentPath
         val resourceListing = target.documentNotation.resources
@@ -423,7 +416,7 @@ class TargetLocator(
                 ResourceLocation(documentPath, resourcePath), digest)
 
             val exactMatches = TemplateMatcher.locate(
-                screenshotGrid, cropGrid, limitPerCrop, sourceHistogram)
+                screenshotGrid, cropGrid, sourceHistogram = sourceHistogram)
 
             val cropMatches =
                 if (exactMatches.isNotEmpty() || tolerantThreshold == null) {
@@ -442,7 +435,7 @@ class TargetLocator(
                     CropMatches(
                         cropGrid.width,
                         cropGrid.height,
-                        scored.matches.take(limitPerCrop),
+                        scored.matches,
                         if (scored.matches.isEmpty()) { scored.best } else { null })
                 }
 

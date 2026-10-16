@@ -13,7 +13,6 @@ import tech.kzen.auto.common.data.read.DataContentFingerprint
 import tech.kzen.auto.common.data.read.DelimitedDialectSpec
 import tech.kzen.auto.common.data.read.DelimitedReadConfig
 import tech.kzen.auto.common.data.read.HeaderReadSpec
-import tech.kzen.auto.common.data.read.InspectionPolicy
 import tech.kzen.auto.common.data.read.RecordFramingSpec
 import tech.kzen.auto.common.data.read.ResolvedReadSpec
 import tech.kzen.auto.common.data.read.TypedDecodePolicy
@@ -22,11 +21,8 @@ import tech.kzen.auto.common.util.data.FilePath
 import tech.kzen.auto.server.data.ConfiguredDataOpener
 import tech.kzen.auto.server.data.SchemaCache
 import tech.kzen.auto.server.data.content.local.LocalDataContentProvider
-import tech.kzen.auto.server.data.content.policy.ContentReadPolicy
-import tech.kzen.auto.server.data.content.policy.ContentTimeoutException
 import tech.kzen.auto.server.data.content.provider.DataContentProviderLookup
 import tech.kzen.auto.server.data.read.delimited.ConfiguredDelimitedReaderCapability
-import tech.kzen.auto.server.data.read.ReaderExecutionPolicies
 import tech.kzen.auto.server.util.WorkUtils
 import tech.kzen.lib.common.exec.MapExecutionValue
 import tech.kzen.lib.common.exec.TextExecutionValue
@@ -48,14 +44,10 @@ import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
-import kotlin.time.Duration
-import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Duration.Companion.seconds
 
 
 class SequentialContentStackTest {
     companion object {
-        private val policy = ContentReadPolicy(1024 * 1024, 10.seconds, 100)
         private val utf8 = CharacterDecodingSpec("UTF-8", "permit", "report", "report")
     }
 
@@ -74,9 +66,9 @@ class SequentialContentStackTest {
             val stack = localStack()
 
             val plainCharacters = stack.openCharacters(
-                DirectDataContext, localRef(plain), null, listOf(ContentCodingSpec.identity), utf8, policy)
+                DirectDataContext, localRef(plain), null, listOf(ContentCodingSpec.identity), utf8)
             val gzipCharacters = stack.openCharacters(
-                DirectDataContext, localRef(gzip), null, listOf(ContentCodingSpec.gzip), utf8, policy)
+                DirectDataContext, localRef(gzip), null, listOf(ContentCodingSpec.gzip), utf8)
 
             assertEquals(text, plainCharacters.readAllText())
             assertEquals(text, gzipCharacters.readAllText())
@@ -97,7 +89,7 @@ class SequentialContentStackTest {
             Files.write(file, stored)
             val input = localStack().openBytes(
                 DirectDataContext, localRef(file), null, listOf(ContentCodingSpec.gzip),
-                ContentCapabilityIdentity.sequentialBytes, policy)
+                ContentCapabilityIdentity.sequentialBytes)
             input.use {
                 assertEquals(0, it.sourceBytesRead)
                 val buffer = ByteArray(64)
@@ -128,7 +120,7 @@ class SequentialContentStackTest {
 
             val failure = assertFailsWith<ContentSourceException> {
                 localStack().openCharacters(
-                    DirectDataContext, ref, expected, listOf(ContentCodingSpec.identity), utf8, policy)
+                    DirectDataContext, ref, expected, listOf(ContentCodingSpec.identity), utf8)
             }
             assertContains(failure.message.orEmpty(), "Fingerprint changed")
         }
@@ -149,7 +141,7 @@ class SequentialContentStackTest {
         assertFailsWith<ContentSourceException> {
             stack.openCharacters(
                 DirectDataContext, ref, fakeFingerprint("v1"),
-                listOf(ContentCodingSpec.identity), utf8, policy, "payload")
+                listOf(ContentCodingSpec.identity), utf8, "payload")
         }
         assertEquals(1, provider.closeCount)
         assertEquals(0, provider.readCount)
@@ -162,7 +154,7 @@ class SequentialContentStackTest {
         val emptyLookup = SequentialContentStack(DataContentProviderLookup(LocalDataContentProvider(), emptyMap()))
         assertFailsWith<ContentSourceException> {
             emptyLookup.openCharacters(
-                DirectDataContext, unknownRef, null, listOf(ContentCodingSpec.identity), utf8, policy)
+                DirectDataContext, unknownRef, null, listOf(ContentCodingSpec.identity), utf8)
         }
 
         val source = DataSourceId("unsupported")
@@ -171,7 +163,7 @@ class SequentialContentStackTest {
         assertFailsWith<ContentSourceException> {
             stack.openCharacters(
                 DirectDataContext, DataRef(source, "opaque"), null,
-                listOf(ContentCodingSpec.identity), utf8, policy)
+                listOf(ContentCodingSpec.identity), utf8)
         }
         assertEquals(0, provider.acquireCount)
     }
@@ -191,7 +183,7 @@ class SequentialContentStackTest {
             val failure = assertFailsWith<ContentCodingException> {
                 stack.openCharacters(
                     DirectDataContext, DataRef(source, "opaque"), null,
-                    listOf(configured), utf8, policy)
+                    listOf(configured), utf8)
             }
 
             assertContains(failure.message.orEmpty(), "empty configuration map")
@@ -293,53 +285,35 @@ class SequentialContentStackTest {
 
 
     @Test
-    fun inspectionCoverageReportsActualRecordsBytesAndCompletion() = runBlocking {
-        data class Case(
-            val text: String,
-            val maximumRecords: Int,
-            val expectedRecords: Long,
-            val expectedComplete: Boolean)
+    fun inspectionReadsOnlyWhatTheReaderNeedsToStateTheShape() = runBlocking {
+        val source = DataSourceId("memory")
+        val bytes = ("a\n" + "b\n".repeat(100_000)).encodeToByteArray()
+        val provider = FakeObjectStoreProvider(bytes, fakeFingerprint("v1"))
+        val stack = SequentialContentStack(
+            DataContentProviderLookup(LocalDataContentProvider(), mapOf(source to provider)))
+        val config = configuredReadConfig(utf8, inferLabels = true)
+        val part = DataPart(
+            DataRole.main,
+            DataRef(source, "opaque"),
+            null,
+            ResolvedReadSpec(
+                ConfiguredDelimitedReaderCapability.identity,
+                listOf(ContentCodingSpec.identity),
+                ConfiguredDelimitedReaderCapability.encode(config)))
 
-        for (case in listOf(
-            Case("a\nb\nc\n", 2, 2, false),
-            Case("a\nb\n", 3, 2, true))) {
-            val source = DataSourceId("memory")
-            val bytes = case.text.encodeToByteArray()
-            val provider = FakeObjectStoreProvider(bytes, fakeFingerprint("v1"))
-            val stack = SequentialContentStack(
-                DataContentProviderLookup(LocalDataContentProvider(), mapOf(source to provider)))
-            val config = configuredReadConfig(utf8, inferLabels = true)
-            val encoded = ConfiguredDelimitedReaderCapability.encode(config)
-            val part = DataPart(
-                DataRole.main,
-                DataRef(source, "opaque"),
-                null,
-                ResolvedReadSpec(
-                    ConfiguredDelimitedReaderCapability.identity,
-                    listOf(ContentCodingSpec.identity),
-                    encoded))
-            val policies = ReaderExecutionPolicies(inspection = InspectionPolicy(
-                maximumRecords = case.maximumRecords,
-                maximumExpandedBytes = 1024,
-                timeoutMillis = 10_000))
+        val shape = ConfiguredDataOpener(
+            SchemaCache(WorkUtils(temp.newFolder().toPath())),
+            contentStack = stack
+        ).inspectShape(DirectDataContext, part)
+        val coverage = (shape.stability as ShapeStability.Provisional).coverage
 
-            val shape = ConfiguredDataOpener(
-                SchemaCache(WorkUtils(temp.newFolder().toPath())),
-                contentStack = stack,
-                policies = policies
-            ).inspectShape(DirectDataContext, part)
-            val coverage = (shape.stability as ShapeStability.Provisional).coverage
-
-            assertEquals(case.expectedRecords, coverage.observedItems)
-            assertEquals(bytes.size.toLong(), coverage.observedBytes)
-            assertEquals(case.expectedComplete, coverage.complete)
-            assertEquals(1, provider.closeCount)
-        }
+        assertEquals(1, coverage.observedItems)
+        assertEquals(1, provider.closeCount)
     }
 
 
     @Test
-    fun gzipCorruptionTrailingBytesAndExpansionLimitAreDeterministic() = runBlocking {
+    fun gzipCorruptionAndTrailingBytesAreDeterministic() = runBlocking {
         val valid = gzip("compressible".repeat(100).encodeToByteArray())
         val truncated = valid.copyOf(valid.size - 3)
         val trailing = valid + byteArrayOf(1)
@@ -353,10 +327,6 @@ class SequentialContentStackTest {
             memoryCharacters(valid + valid + byteArrayOf(1), ContentCodingSpec.gzip).readAllText()
         }
         assertContains(memberThenTrailing.message.orEmpty(), "after a valid .gz stream")
-
-        val smallPolicy = ContentReadPolicy(20, 10.seconds, 100)
-        val limited = memoryCharacters(valid, ContentCodingSpec.gzip, smallPolicy)
-        assertFailsWith<ContentCodingException> { limited.readAllText() }
         Unit
     }
 
@@ -365,36 +335,30 @@ class SequentialContentStackTest {
     fun gzipOfManyMembersReadsEveryMemberAndChecksEach() = runBlocking {
         val text = (0 until 20_000).joinToString("\n") { "row $it" }
         val bytes = text.encodeToByteArray()
-        val runContent = ReaderExecutionPolicies().runContent
 
         // Write's and Report's MiGz encoder: a member per block, members crossing the reader's input buffer.
         val raw = ByteArrayOutputStream()
         MiGzOutputStream(raw as OutputStream, 3, 1000).use { it.write(bytes) }
         val migz = raw.toByteArray()
-        assertEquals(text, memoryCharacters(migz, ContentCodingSpec.gzip, runContent).readAllText())
+        assertEquals(text, memoryCharacters(migz, ContentCodingSpec.gzip).readAllText())
 
         val half = bytes.size / 2
         val concatenated = gzip(bytes.copyOf(half)) + gzip(bytes.copyOfRange(half, bytes.size))
-        assertEquals(text, memoryCharacters(concatenated, ContentCodingSpec.gzip, runContent).readAllText())
+        assertEquals(text, memoryCharacters(concatenated, ContentCodingSpec.gzip).readAllText())
 
         val second = gzip(bytes.copyOfRange(half, bytes.size))
         second[second.size - 8] = (second[second.size - 8] + 1).toByte()
         val corruptSecond = assertFailsWith<ContentCodingException> {
-            memoryCharacters(gzip(bytes.copyOf(half)) + second, ContentCodingSpec.gzip, runContent).readAllText()
+            memoryCharacters(gzip(bytes.copyOf(half)) + second, ContentCodingSpec.gzip).readAllText()
         }
         assertContains(corruptSecond.message.orEmpty(), "CRC32")
     }
 
 
     @Test
-    fun fullRunIsBoundedByCancellationNotExpandedBytesOrTime() = runBlocking {
-        val runContent = ReaderExecutionPolicies().runContent
-        assertEquals(Long.MAX_VALUE, runContent.maximumExpandedBytes)
-        assertEquals(Duration.INFINITE, runContent.timeout)
-
-        // Expands past the inspection byte limit, which a run must not inherit.
+    fun aLargeExpansionReadsToTheEnd() = runBlocking {
         val text = "compressible".repeat(1024 * 1024)
-        val expanded = memoryCharacters(gzip(text.encodeToByteArray()), ContentCodingSpec.gzip, runContent)
+        val expanded = memoryCharacters(gzip(text.encodeToByteArray()), ContentCodingSpec.gzip)
         assertEquals(text.length, expanded.readAllText().length)
     }
 
@@ -440,7 +404,7 @@ class SequentialContentStackTest {
         assertFailsWith<CancellationException> {
             acquisitionStack.openCharacters(
                 DirectDataContext, DataRef(source, "opaque"), null,
-                listOf(ContentCodingSpec.identity), utf8, policy)
+                listOf(ContentCodingSpec.identity), utf8)
         }
         assertEquals(1, acquisitionProvider.closeCount)
 
@@ -450,7 +414,7 @@ class SequentialContentStackTest {
             DataContentProviderLookup(LocalDataContentProvider(), mapOf(source to pullProvider)))
         val characters = pullStack.openCharacters(
             DirectDataContext, DataRef(source, "opaque"), null,
-            listOf(ContentCodingSpec.identity), utf8, policy)
+            listOf(ContentCodingSpec.identity), utf8)
         assertFailsWith<CancellationException> { characters.readAllText() }
         assertEquals(1, pullProvider.closeCount)
         characters.close()
@@ -458,66 +422,9 @@ class SequentialContentStackTest {
     }
 
 
-    @Test
-    fun contentDeadlineIncludesTimeBetweenOpeningAndPull() {
-        val source = DataSourceId("memory")
-        val provider = FakeObjectStoreProvider("hello".encodeToByteArray(), fakeFingerprint("v1"))
-        val stack = SequentialContentStack(
-            DataContentProviderLookup(LocalDataContentProvider(), mapOf(source to provider)))
-        val shortOperationPolicy = ContentReadPolicy(1024, 10.milliseconds, 100)
-        val characters = runBlocking {
-            stack.openCharacters(
-                DirectDataContext, DataRef(source, "opaque"), null,
-                listOf(ContentCodingSpec.identity), utf8, shortOperationPolicy)
-        }
-
-        Thread.sleep(25)
-
-        assertFailsWith<ContentTimeoutException> { characters.readAllText() }
-        assertEquals(1, provider.closeCount)
-    }
-
-
-    @Test
-    fun inspectionTimeoutAccumulatesAcrossRepeatedSmallReads() = runBlocking {
-        val source = DataSourceId("memory")
-        val provider = FakeObjectStoreProvider(
-            "a\n".repeat(100).encodeToByteArray(),
-            fakeFingerprint("v1"),
-            readDelayMillis = 50,
-            maximumReadSize = 1)
-        val stack = SequentialContentStack(
-            DataContentProviderLookup(LocalDataContentProvider(), mapOf(source to provider)))
-        val config = configuredReadConfig(utf8, inferLabels = true)
-        val part = DataPart(
-            DataRole.main,
-            DataRef(source, "opaque"),
-            null,
-            ResolvedReadSpec(
-                ConfiguredDelimitedReaderCapability.identity,
-                listOf(ContentCodingSpec.identity),
-                ConfiguredDelimitedReaderCapability.encode(config)))
-        val policies = ReaderExecutionPolicies(inspection = InspectionPolicy(
-            maximumRecords = 100,
-            maximumExpandedBytes = 1024,
-            timeoutMillis = 500))
-
-        assertFailsWith<ContentTimeoutException> {
-            ConfiguredDataOpener(
-                SchemaCache(WorkUtils(temp.newFolder("inspection-repeated-read-timeout").toPath())),
-                contentStack = stack,
-                policies = policies
-            ).inspectShape(DirectDataContext, part)
-        }
-        assertEquals(1, provider.closeCount)
-        assertTrue(provider.readCount > 1)
-    }
-
-
     private suspend fun memoryCharacters(
         bytes: ByteArray,
         coding: ContentCodingSpec = ContentCodingSpec.identity,
-        readPolicy: ContentReadPolicy = policy,
         characters: CharacterDecodingSpec = utf8
     ): SequentialCharacterContent {
         val source = DataSourceId("memory")
@@ -526,7 +433,7 @@ class SequentialContentStackTest {
             DataContentProviderLookup(LocalDataContentProvider(), mapOf(source to provider)))
         return stack.openCharacters(
             DirectDataContext, DataRef(source, "opaque"), null,
-            listOf(coding), characters, readPolicy)
+            listOf(coding), characters)
     }
 
 

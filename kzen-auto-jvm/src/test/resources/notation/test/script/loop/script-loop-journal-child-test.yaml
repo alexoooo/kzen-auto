@@ -1,0 +1,19 @@
+# ForEach journal child fixture (ForEachJournalTest), hosted by script-loop-journal-test.yaml: a loop over 1..3
+# whose body produces Item * 10, so its journal is 1 -> 10, 2 -> 20, 3 -> 30.
+main:
+  is: Script
+
+main.steps/Range:
+  is: FormulaStep
+  code: "1..3"
+
+main.steps/Loop:
+  is: ForEachStep
+  items: Range
+
+main.steps/Loop.item/Item:
+  is: ForEachItemBinding
+
+main.steps/Loop.steps/Tens:
+  is: FormulaStep
+  code: "Item * 10"

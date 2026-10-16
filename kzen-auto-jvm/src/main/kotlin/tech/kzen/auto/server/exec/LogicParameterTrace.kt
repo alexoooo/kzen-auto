@@ -1,6 +1,5 @@
 package tech.kzen.auto.server.exec
 
-import tech.kzen.auto.common.util.TraceDisplay
 import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.NullExecutionValue
 import tech.kzen.lib.common.exec.engine.Address
@@ -31,7 +30,7 @@ object LogicParameterTrace {
                 NullExecutionValue
             }
             else {
-                ExecutionValue.of(TraceDisplay.truncatedToString(value, TraceDisplay.maxScriptTraceChars))
+                ExecutionValue.of(value.toString())
             }
         execution.emit(Address.of(stableId.value), display, retain = false)
     }

@@ -67,8 +67,7 @@ import kotlin.time.Clock
  * A content is read inside the callback, under [JobControl.runBlockingIo]; nothing of it is kept, so its source
  * advances as soon as the callback returns. The copy honours the interrupt a stop delivers between reads (file
  * reads do not), so stopping inside a large entry ends the Write as cancelled without publishing the partial file.
- * Each read is reported as activity ([JobControl.reportActivity]), so a long copy is not taken for a stall. A chunk
- * is pooled and recycled once its callback returns, so it is appended to its open output inside the callback.
+ * A chunk is pooled and recycled once its callback returns, so it is appended to its open output inside the callback.
  *
  * Over chunks, a live edit carries the open outputs into the edited instance, with the destinations taken, the
  * counts and `time`. An edit that leaves where and how outputs are written alone ([directory], [folder], [name],
@@ -118,7 +117,6 @@ class WriteWorker(
         private val contentClassName = ClassName(Content::class.qualifiedName!!)
         private val bytesClassName = ClassName(Bytes::class.qualifiedName!!)
 
-        private const val migzThreads = 7
         private const val streamBufferSize = 128 * 1024
         private const val copyBufferSize = 64 * 1024
 
@@ -506,8 +504,6 @@ class WriteWorker(
                         val count = source.read(buffer, 0, buffer.size)
                         if (count < 0) break
                         sink.write(buffer, 0, count)
-                        // One large member can take minutes, with no element moving meanwhile
-                        control.reportActivity()
                     }
                 }
             }
@@ -699,7 +695,7 @@ class WriteWorker(
     private fun encoder(raw: OutputStream): OutputStream {
         val encoded =
             if (gzip) {
-                MiGzOutputStream(raw, migzThreads, MiGzOutputStream.DEFAULT_BLOCK_SIZE)
+                MiGzOutputStream(raw)
             }
             else {
                 BufferedOutputStream(raw, streamBufferSize)

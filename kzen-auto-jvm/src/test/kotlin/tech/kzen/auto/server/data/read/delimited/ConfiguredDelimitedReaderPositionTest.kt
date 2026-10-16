@@ -4,7 +4,6 @@ import tech.kzen.auto.common.data.read.CharacterDecodingSpec
 import tech.kzen.auto.common.data.read.DelimitedDialectSpec
 import tech.kzen.auto.common.data.read.DelimitedReadConfig
 import tech.kzen.auto.common.data.read.HeaderReadSpec
-import tech.kzen.auto.common.data.read.ReadOperationalPolicy
 import tech.kzen.auto.common.data.read.RecordFramingSpec
 import tech.kzen.auto.common.data.read.TypedDecodePolicy
 import tech.kzen.auto.server.data.content.SequentialCharacterContent
@@ -88,7 +87,7 @@ class ConfiguredDelimitedReaderPositionTest {
     private fun failure(input: String, config: DelimitedReadConfig): DelimitedReadException =
         assertFailsWith<DelimitedReadException> {
             ConfiguredDelimitedReader.open(
-                StringContent(input), config, ReadOperationalPolicy(), DelimitedReadContext(source)
+                StringContent(input), config, DelimitedReadContext(source)
             ).use { reader ->
                 while (reader.read() != null) {
                     continue
@@ -121,7 +120,6 @@ class ConfiguredDelimitedReaderPositionTest {
 
     private class StringContent(private val text: String): SequentialCharacterContent {
         override val resolvedCharsetName = "UTF-8"
-        override val inspectionRecordLimit = Long.MAX_VALUE
         private var position = 0
 
         override fun read(buffer: CharArray, offset: Int, length: Int): Int {

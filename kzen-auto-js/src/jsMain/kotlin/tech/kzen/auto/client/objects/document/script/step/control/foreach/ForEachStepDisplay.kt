@@ -12,6 +12,7 @@ import tech.kzen.auto.client.objects.document.script.display.dependency.StepDepe
 import tech.kzen.auto.client.objects.document.script.model.ScriptState
 import tech.kzen.auto.client.objects.document.script.model.scriptDependencyAnalysis
 import tech.kzen.auto.client.objects.document.script.model.stepRowRefRegistry
+import tech.kzen.auto.client.objects.document.script.progress.TraceListRef
 import tech.kzen.auto.client.objects.document.script.step.control.BranchStepDisplayProps
 import tech.kzen.auto.client.service.global.ClientState
 import tech.kzen.auto.client.service.global.ClientStateGlobal
@@ -19,6 +20,7 @@ import tech.kzen.auto.client.wrap.*
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.objects.document.script.model.ForEachProgress
 import tech.kzen.auto.common.objects.document.script.model.StepTrace
+import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
 import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.obj.ObjectPath
@@ -38,6 +40,9 @@ external interface ForEachStepDisplayState: ScriptStepDisplayBaseState {
     // Dependency lanes for the single item row. The item's consumers are body steps, so its edges are always
     // cross-branch — this carries the phantom source marker ScriptDependencyOverlay's polyline emerges from.
     var itemEdges: StepDependencyEdges?
+
+    // Where the loop's journal is read from in the viewed run, null when there is no run to read.
+    var journal: TraceListRef?
 }
 
 
@@ -98,6 +103,8 @@ class ForEachStepDisplay(
 
     // The item's type is the items-collection element type, resolved server-side by ForEachItemBinding.definition
     // and delivered through validation. Null while the collection is still deferring its own type.
+    //
+    // The journal is read from the run and execution the trace snapshot came from, at the loop's own path.
     override fun onScriptStateExtra(scriptState: ScriptState) {
         val itemTypeMetadata = itemObjectPath(scriptState.documentNotation)?.let {
             scriptState
@@ -109,12 +116,21 @@ class ForEachStepDisplay(
                 ?.toSimple()
         }
 
-        if (state.itemTypeMetadata == itemTypeMetadata) {
+        val progress = scriptState.progress
+        val journal = progress.logicRunExecutionId?.let {
+            TraceListRef(
+                it.logicRunId,
+                progress.traceExecutionId,
+                LogicTracePath.ofObjectStableId(props.objectStableMapper.objectStableId(props.common.objectLocation)))
+        }
+
+        if (state.itemTypeMetadata == itemTypeMetadata && state.journal == journal) {
             return
         }
 
         setState {
             this.itemTypeMetadata = itemTypeMetadata
+            this.journal = journal
         }
     }
 
@@ -249,6 +265,7 @@ class ForEachStepDisplay(
             // Carries the live per-iteration item value AND the loop's counter / value journal — no separate
             // binding trace is needed, since the loop is the current step while its body runs.
             progress = progress,
+            journal = state.journal,
             registry = stepRowRefRegistry(),
             edges = state.itemEdges ?: StepDependencyEdges.EMPTY)
     }

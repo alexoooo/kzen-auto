@@ -2,7 +2,6 @@ package tech.kzen.auto.server.data.read.delimited
 
 import tech.kzen.auto.common.data.read.DelimitedReadConfig
 import tech.kzen.auto.common.data.read.FieldDecodeOverride
-import tech.kzen.auto.common.data.read.ReadOperationalPolicy
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.auto.plugin.model.record.FlatRecordHeader
 import tech.kzen.auto.server.data.content.SequentialCharacterContent
@@ -26,7 +25,6 @@ class ConfiguredDelimitedReader private constructor(
     private val typed: TypedDecoder,
     private var pending: RawRecord?
 ): AutoCloseable {
-    val expandedBytesRead: Long? get() = input.expandedBytesRead
     val skippedLeadingLines: Long get() = parser.skippedLeadingLines
     val skippedComments: Long get() = parser.skippedComments
 
@@ -34,23 +32,21 @@ class ConfiguredDelimitedReader private constructor(
         fun open(
             input: SequentialCharacterContent,
             config: DelimitedReadConfig,
-            policy: ReadOperationalPolicy,
             context: DelimitedReadContext,
             checkpoint: () -> Unit = {}
-        ): ConfiguredDelimitedReader = openSample(input, config, policy, context, true, checkpoint)
+        ): ConfiguredDelimitedReader = openSample(input, config, context, true, checkpoint)
 
 
         internal fun openSample(
             input: SequentialCharacterContent,
             config: DelimitedReadConfig,
-            policy: ReadOperationalPolicy,
             context: DelimitedReadContext,
             completeFinalRecord: Boolean,
             checkpoint: () -> Unit = {}
         ): ConfiguredDelimitedReader {
             try {
                 val parser = Parser(
-                    input, SyntaxSpec.of(config), Limits.of(policy), context,
+                    input, SyntaxSpec.of(config), context,
                     config.skipLeadingLines, config.commentPrefix, completeFinalRecord, checkpoint)
                 val declared = config.schema
                 val headerPolicy = config.header.policy
@@ -333,23 +329,12 @@ private data class SyntaxSpec(
 }
 
 
-private data class Limits(val record: Int, val field: Int, val fields: Int) {
-    companion object {
-        fun of(policy: ReadOperationalPolicy): Limits = Limits(
-            policy.maximumRecordCharacters ?: Int.MAX_VALUE,
-            policy.maximumFieldCharacters ?: Int.MAX_VALUE,
-            policy.maximumFields ?: Int.MAX_VALUE)
-    }
-}
-
-
 private enum class ParserState { Start, Unquoted, Quoted, AfterQuote }
 
 
 private class Parser(
     input: SequentialCharacterContent,
     private val syntax: SyntaxSpec,
-    private val limits: Limits,
     private val context: DelimitedReadContext,
     private val leadingLines: Int,
     private val commentPrefix: String?,
@@ -392,11 +377,11 @@ private class Parser(
                 // The characters that only extend the field, taken at once; whatever ends the run, or would exceed a
                 // limit, is read one at a time below
                 val taken = chars.takeRun(
-                    record, state == ParserState.Quoted, syntax.delimiter, runQuote, runLimit())
+                    record, state == ParserState.Quoted, syntax.delimiter, runQuote, runLength())
                 if (taken > 0) {
                     sawInput = true
                     if (state == ParserState.Start) state = ParserState.Unquoted
-                    budgetRun(taken)
+                    countRun(taken)
                 }
             }
 
@@ -428,7 +413,7 @@ private class Parser(
                 continue
             }
 
-            budgetCharacter()
+            countCharacter()
             when (state) {
                 ParserState.Start -> when {
                     c == syntax.delimiter -> commitField(chars.offset - 1)
@@ -454,34 +439,26 @@ private class Parser(
         }
     }
 
-    private fun budgetCharacter() {
+    private fun countCharacter() {
         recordCharacters++
-        if (recordCharacters > limits.record) budget("record-character", limits.record)
         if (recordCharacters and 1023 == 0) checkpoint()
     }
 
-    /**
-     * How many characters a run may take: up to the next checkpoint (each 1024 of the record), and none that would
-     * exceed the record or field limit.
-     */
-    private fun runLimit(): Int =
-        minOf(1024 - (recordCharacters and 1023),
-            limits.record - recordCharacters,
-            limits.field - record.openFieldLength())
+    /** How many characters a run may take: up to the next checkpoint (each 1024 of the record). */
+    private fun runLength(): Int =
+        1024 - (recordCharacters and 1023)
 
-    // A run within [runLimit] ends at most at a checkpoint, which it then takes as [budgetCharacter] would
-    private fun budgetRun(taken: Int) {
+    // A run within [runLength] ends at most at a checkpoint, which it then takes as [countCharacter] would
+    private fun countRun(taken: Int) {
         recordCharacters += taken
         if (recordCharacters and 1023 == 0) checkpoint()
     }
 
     private fun append(character: Char) {
         record.append(character)
-        if (record.openFieldLength() > limits.field) budget("field-character", limits.field)
     }
 
     private fun commitField(endOffset: Long) {
-        if (record.fieldCount >= limits.fields) budget("field-count", limits.fields)
         record.commit(
             syntax.trimUnquoted && !fieldQuoted,
             fieldStart,
@@ -530,10 +507,6 @@ private class Parser(
     private fun syntax(detail: String, offset: Long): Nothing = throw DelimitedReadException(
         DelimitedReadException.syntax, context, physicalRecordIndex + 1,
         span = offset..offset, detail = detail)
-
-    private fun budget(kind: String, limit: Int): Nothing = throw DelimitedReadException(
-        DelimitedReadException.budget, context, physicalRecordIndex + 1,
-        detail = "$kind limit $limit exceeded")
 }
 
 

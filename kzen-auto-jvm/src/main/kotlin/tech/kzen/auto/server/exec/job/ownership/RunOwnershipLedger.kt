@@ -39,8 +39,6 @@ class RunOwnershipLedger(
 
     private val lock = Any()
     private val entries = IdentityHashMap<Any, OwnedNative>()
-    private var closedCount = 0
-    private var adoptedCount = 0
     private val ownersByAccess = WeakHashMap<ValueAccess, OwnerSet>()
 
     // Fast paths for the unowned common case (E9 must not tax ordinary scalars): whether any value ever carried
@@ -74,7 +72,6 @@ class RunOwnershipLedger(
             if (!registry.adopt(native, runId)) {
                 return Adoption(native, inherited, ValueLease.none)
             }
-            adoptedCount++
             OwnedNative(native, ::onClosed).also { entries[native] = it }
         }
         val lease = entry.lease(holder)
@@ -215,29 +212,11 @@ class RunOwnershipLedger(
     private fun onClosed(entry: OwnedNative) {
         synchronized(lock) {
             entries.remove(entry.native)
-            closedCount++
         }
         registry.markClosed(entry.native)
     }
 
 
-    /** How many entries this run has closed, for diagnostics. */
-    fun closedCount(): Int = synchronized(lock) { closedCount }
-
-
-    /** Live (adopted, not yet closed) entries. */
-    fun liveCount(): Int = synchronized(lock) { entries.size }
-
-
-    /** Adoptions plus closes: a clock that advances whenever the run's ownership makes progress (E9 item 5). */
-    fun activityCount(): Long = synchronized(lock) { (adoptedCount + closedCount).toLong() }
-
-
     /** [holder]'s live holds across every entry. */
     fun holdsOf(holder: LeaseHolder): Int = holdsByHolder()[holder] ?: 0
-
-
-    /** A bounded description of the live natives (class and holds), for a warning — never the objects. */
-    fun describeLive(limit: Int): List<String> =
-        live().take(limit).map { entry -> "${entry.native.javaClass.simpleName}(${entry.holds()})" }
 }

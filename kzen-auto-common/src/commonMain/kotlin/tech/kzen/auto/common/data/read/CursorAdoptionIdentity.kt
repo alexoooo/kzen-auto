@@ -6,8 +6,7 @@ import tech.kzen.lib.common.util.digest.Digest
 
 @Serializable
 data class CursorAdoptionIdentity(
-    val partIdentity: Digest,
-    val runPolicyIdentity: Digest
+    val partIdentity: Digest
 ) {
     fun compatibleWith(other: CursorAdoptionIdentity): Boolean = this == other
 }

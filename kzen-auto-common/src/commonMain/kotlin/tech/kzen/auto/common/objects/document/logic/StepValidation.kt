@@ -3,7 +3,6 @@
 package tech.kzen.auto.common.objects.document.logic
 
 import tech.kzen.auto.common.data.schema.HeaderListing
-import tech.kzen.lib.common.exec.BooleanExecutionValue
 import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.ListExecutionValue
 import tech.kzen.lib.common.exec.MapExecutionValue
@@ -35,9 +34,7 @@ import tech.kzen.lib.common.exec.data.type.DataContract
  * rest of a joined message has no position by nature.
  *
  * [provenance] says where a type read from data came from (a Job Worker typed from the values its input lane
- * offered before Run, e.g. "Inferred from 41 of 256 values"); null for a declared type. [partial] marks such a
- * type read from only part of the data, because a design-time limit cut the reading short: a later validation
- * reads on.
+ * offered before Run, e.g. "Inferred from 41 of 41 values"); null for a declared type.
  *
  * [details] is what a Worker found out about its input before Run beyond the type — the format each file is read
  * as, the parts its input's units hold, the sizes of the files it selected. Opaque like a Worker's run progress: any
@@ -52,7 +49,6 @@ data class StepValidation(
     val flatColumns: HeaderListing? = null,
     val contract: DataContract? = null,
     val provenance: String? = null,
-    val partial: Boolean = false,
     val details: Map<String, Any?> = mapOf()
 ) {
     //-----------------------------------------------------------------------------------------------------------------
@@ -64,7 +60,6 @@ data class StepValidation(
         private const val flatColumnsKey = "flatColumns"
         private const val contractKey = "contract"
         private const val provenanceKey = "provenance"
-        private const val partialKey = "partial"
         private const val detailsKey = "details"
 
         fun ofMapExecutionValue(executionValue: MapExecutionValue): StepValidation {
@@ -138,7 +133,6 @@ data class StepValidation(
                 ?.let(DataContract::ofExecutionValue)
 
             val provenance = (executionValue[provenanceKey] as? TextExecutionValue)?.value
-            val partial = (executionValue[partialKey] as? BooleanExecutionValue)?.value ?: false
 
             // Lenient like `warning`: absent (or written by a peer that predates it) decodes as empty
             @Suppress("UNCHECKED_CAST")
@@ -153,7 +147,6 @@ data class StepValidation(
                 flatColumns,
                 contract,
                 provenance,
-                partial,
                 details)
         }
     }
@@ -172,8 +165,7 @@ data class StepValidation(
                 ListExecutionValue(it.asCollection().map(::TextExecutionValue))
             } ?: NullExecutionValue),
             contractKey to (contract?.asExecutionValue() ?: NullExecutionValue),
-            provenanceKey to ExecutionValue.of(provenance),
-            partialKey to BooleanExecutionValue.of(partial))
+            provenanceKey to ExecutionValue.of(provenance))
         if (details.isNotEmpty()) {
             values[detailsKey] = ExecutionValue.of(details)
         }

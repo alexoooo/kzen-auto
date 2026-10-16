@@ -13,7 +13,6 @@ import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import java.nio.file.Path
-import java.util.concurrent.atomic.AtomicLong
 
 
 /**
@@ -59,7 +58,6 @@ class WorkerLogic(
     private val ledger: RunOwnershipLedger,
     private val workerLocation: ObjectLocation,
     private val draining: () -> Boolean,
-    private val activity: AtomicLong,
     private val runStartedNanos: Long
 ): Logic {
     override fun signature(): LogicSignature {
@@ -77,7 +75,7 @@ class WorkerLogic(
         val control = EngineJobControl(
             execution, childLogicHost, objectStableMapper, scratchDir, outputDir,
             jobInputs, jobParameters, jobResults, inputPayloadType, inputContract, outputContract, resultCollector,
-            ledger, workerLocation, draining, activity, runStartedNanos)
+            ledger, workerLocation, draining, runStartedNanos)
 
         // The engine renders the failure (the run settles / parks per pause-on-error); the run-level ErrorPaused
         // state already surfaces which Worker halted (per-Worker error chips are a separate display gap).

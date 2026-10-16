@@ -244,7 +244,7 @@ private fun Routing.routeRequests(
 // documents, so buffered encoding is the correct, warning-free path.
 //
 // serverJson is deliberately the STOCK config: encodeDefaults=false + explicitNulls=true means a nullable property
-// WITH a `= null` default is omitted from the wire (StorageAreaInfo.budget, matching the legacy codec) while one
+// WITH a `= null` default is omitted from the wire while one
 // WITHOUT a default encodes as an explicit JSON null — which is exactly what SER4's LogicStatus.active
 // sentinel-kill needs. Do not set explicitNulls=false here.
 private val serverJson = Json

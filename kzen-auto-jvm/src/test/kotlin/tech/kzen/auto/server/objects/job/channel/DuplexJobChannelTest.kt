@@ -1,16 +1,20 @@
 package tech.kzen.auto.server.objects.job.channel
 
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertIs
 
 
 /**
  * Direct unit test of [DuplexJobChannel]'s request/reply mechanics — no graph, no notation. Verifies that a
  * client's request is matched to the server's reply, that concurrent in-flight requests each get their own
- * response, and that the server loop ends once the last client closes (close-on-last-client).
+ * response, that the server loop ends once the last client closes (close-on-last-client), and that a request
+ * nothing will answer fails then instead of waiting forever.
  */
 class DuplexJobChannelTest {
     //-----------------------------------------------------------------------------------------------------------------
@@ -84,5 +88,20 @@ class DuplexJobChannelTest {
 
         serverJob.join()
         assertEquals(listOf(1, 2), handled)
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    @Test
+    fun aWaitingRequestFailsWhenTheLastClientCloses(): Unit = runBlocking {
+        // No server: the run's teardown closes the external client while the UI's request still waits
+        val channel = DuplexJobChannel(1, external = true)
+        val client = channel.newClient()
+        val waiting = async(start = CoroutineStart.UNDISPATCHED) { runCatching { client.request(1) } }
+
+        client.close()
+
+        assertIs<DuplexChannelClosedException>(waiting.await().exceptionOrNull())
+        assertFailsWith<DuplexChannelClosedException> { client.request(2) }
     }
 }

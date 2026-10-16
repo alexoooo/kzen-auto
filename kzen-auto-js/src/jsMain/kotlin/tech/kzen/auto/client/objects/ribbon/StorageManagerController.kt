@@ -415,16 +415,6 @@ class StorageManagerController(
                     whiteSpace = WhiteSpace.nowrap
                 }
                 +FormatUtils.readableFileSize(area.sizeBytes)
-
-                val budget = area.budgetBytes
-                if (budget != null) {
-                    span {
-                        css {
-                            color = NamedColor.gray
-                        }
-                        +" of ${FormatUtils.readableFileSize(budget)}"
-                    }
-                }
             }
 
             td {

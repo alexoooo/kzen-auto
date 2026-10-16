@@ -3,10 +3,11 @@ package tech.kzen.auto.server.exec.script
 import kotlinx.coroutines.runBlocking
 import tech.kzen.auto.common.objects.document.script.model.ForEachProgress
 import tech.kzen.auto.common.objects.document.script.model.StepTrace
-import tech.kzen.auto.common.util.TraceDisplay
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.exec.LogicCompilerServices
 import tech.kzen.auto.server.util.AutoTestUtils
+import tech.kzen.lib.common.exec.ListExecutionValue
+import tech.kzen.lib.common.exec.MapExecutionValue
 import tech.kzen.lib.common.exec.TextExecutionValue
 import tech.kzen.lib.common.exec.engine.Address
 import tech.kzen.lib.common.exec.engine.Node
@@ -104,20 +105,12 @@ class ScriptTraceBoundingTest {
     }
 
 
-    //--------------------------------------------------------------------------------------------- display truncation
+    //--------------------------------------------------------------------------------------------------- big display
     @Test
-    fun bigValueSnapshotRejectionIsDiagnosticWhileTheValueItselfIsNot() {
+    fun aBigValueIsDisplayedInFull() {
         runScript("test/script/engine/script-display-truncation-test.yaml") { engine, documentPath, outcome ->
-            // The value graph is untouched: `Result` reads Big.length and sees the whole 10000 chars.
             assertEquals(10_000, assertIs<Outcome.Success>(outcome).value.mainBoundaryValue())
-
-            val display = displayOf(engine, documentPath, "main.steps/Big")
-            assertEquals(
-                "<preview unavailable: Text exceeds maximum length>",
-                display)
-            assertTrue(
-                display.length < 10_000,
-                "the display must be bounded, not the value")
+            assertEquals("x".repeat(10_000), displayOf(engine, documentPath, "main.steps/Big"))
         }
     }
 
@@ -133,7 +126,7 @@ class ScriptTraceBoundingTest {
             assertEquals(3, progress.producedCount)
             assertEquals(
                 listOf("1" to "2", "2" to "4", "3" to "6"),
-                progress.produced.map { it.item to it.value },
+                journalOf(engine, documentPath, "main.steps/Loop").map { it.item to it.value },
                 "every iteration is journalled even though the loop collected nothing")
             assertEquals(
                 2, progress.index,
@@ -145,18 +138,20 @@ class ScriptTraceBoundingTest {
 
 
     @Test
-    fun longLoopJournalIsCapped() {
+    fun aLongLoopJournalsEveryIterationBesideAFixedSizeDetail() {
         runScript("test/script/loop/script-loop-history-test.yaml") { engine, documentPath ->
             val progress = progressOf(engine, documentPath, "main.steps/Loop")
+            assertEquals(10_000, progress.producedCount)
 
-            assertEquals(10_000, progress.producedCount, "the total is untruncated")
-            assertEquals(
-                ForEachProgress.maxProducedEntries, progress.produced.size,
-                "a 10k-iteration loop must not put 10k entries into every client poll")
-            assertEquals(
-                ForEachProgress.Entry("10000", "20000"), progress.produced.last(),
-                "the journal keeps the most RECENT iterations")
-            assertEquals(10_000 - ForEachProgress.maxProducedEntries, progress.omittedCount())
+            val journal = journalOf(engine, documentPath, "main.steps/Loop")
+            assertEquals(10_000, journal.size, "every iteration is journalled")
+            assertEquals(ForEachProgress.Entry("1", "2"), journal.first())
+            assertEquals(ForEachProgress.Entry("10000", "20000"), journal.last())
+
+            // The journal is a list beside the detail, not in it: the detail every refresh carries holds no list,
+            // so it is the same size at iteration 10 as at iteration 10,000.
+            val detail = traceOf(engine, documentPath, "main.steps/Loop").detail as MapExecutionValue
+            assertTrue(detail.values.values.none { it is ListExecutionValue }, "the detail carries no entries")
         }
     }
 
@@ -171,6 +166,31 @@ class ScriptTraceBoundingTest {
     private fun progressOf(engine: RunEngine, documentPath: DocumentPath, objectPath: String): ForEachProgress {
         return ForEachProgress.ofExecutionValueOrNull(traceOf(engine, documentPath, objectPath).detail)
             ?: error("No ForEach progress traced for: $objectPath")
+    }
+
+
+    // The step's traced list, read off the engine's node tree like [traceOf].
+    private fun journalOf(
+        engine: RunEngine,
+        documentPath: DocumentPath,
+        objectPath: String
+    ): List<ForEachProgress.Entry> {
+        val stableId = context.objectStableMapper.objectStableId(
+            ObjectLocation(documentPath, ObjectPath.parse(objectPath)))
+
+        val list = findList(engine.snapshot().root, Address.of(stableId.value))
+            ?: error("No list traced for: $objectPath")
+
+        return list.map { ForEachProgress.entryOfExecutionValueOrNull(it) ?: error("Not an entry: $it") }
+    }
+
+
+    private fun findList(node: Node, address: Address): List<tech.kzen.lib.common.exec.ExecutionValue>? {
+        node.lists[address]?.let { return it }
+        for (child in node.children) {
+            findList(child, address)?.let { return it }
+        }
+        return null
     }
 
 

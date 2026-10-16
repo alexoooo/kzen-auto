@@ -5,14 +5,15 @@ import js.objects.unsafeJso
 import mui.material.Popover
 import mui.material.PopoverOrigin
 import react.ChildrenBuilder
-import react.Key
 import react.Props
 import react.RefObject
 import react.State
 import react.dom.html.ReactHTML.div
 import react.dom.html.ReactHTML.span
+import tech.kzen.auto.client.objects.document.script.progress.TraceListRef
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.createRef
+import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.client.wrap.setState
 import tech.kzen.auto.common.objects.document.script.model.ForEachProgress
 import web.cssom.*
@@ -22,6 +23,9 @@ import web.html.HTMLElement
 //---------------------------------------------------------------------------------------------------------------------
 external interface ForEachProgressButtonProps: Props {
     var progress: ForEachProgress
+
+    // Where the loop's journal is read from: the values are not in [progress], only their count.
+    var journal: TraceListRef
 }
 
 
@@ -33,12 +37,11 @@ external interface ForEachProgressButtonState: State {
 //---------------------------------------------------------------------------------------------------------------------
 /**
  * The loop's iteration counter, at the right edge of the ForEach's item row, and the journal it opens: the values
- * the body has produced so far, one row per completed iteration.
+ * the body has produced so far, one row per completed iteration ([ForEachJournal], which reads them by range).
  *
  * A component rather than a render function purely because the popover needs open/anchor state, which
  * [forEachItemRow] — a plain [ChildrenBuilder] extension — has nowhere to hold. Its props change every progress
- * tick (a fresh [ForEachProgress] per parse), so it re-renders while open, which is the point: the journal fills
- * in live as the loop runs.
+ * tick (a fresh [ForEachProgress] per parse), so the count and the journal's length update live while open.
  */
 class ForEachProgressButton(
     props: ForEachProgressButtonProps
@@ -192,7 +195,7 @@ class ForEachProgressButton(
             }
         }
 
-        if (progress.produced.isEmpty()) {
+        if (progress.producedCount == 0) {
             div {
                 css {
                     color = mutedColour
@@ -202,84 +205,9 @@ class ForEachProgressButton(
             return
         }
 
-        val omitted = progress.omittedCount()
-        if (omitted > 0) {
-            div {
-                css {
-                    color = mutedColour
-                    marginBottom = 0.25.em
-                }
-                +"… $omitted earlier omitted"
-            }
-        }
-
-        div {
-            css {
-                // Bounded height so a full (capped at ForEachProgress.maxProducedEntries) journal scrolls
-                // inside the popover rather than growing it past the viewport.
-                maxHeight = 24.em
-                overflowY = Auto.auto
-            }
-
-            for ((offset, entry) in progress.produced.withIndex()) {
-                renderEntry(omitted + offset + 1, entry)
-            }
-        }
-    }
-
-
-    private fun ChildrenBuilder.renderEntry(position: Int, entry: ForEachProgress.Entry) {
-        div {
-            key = Key("$position")
-
-            css {
-                display = Display.flex
-                alignItems = AlignItems.baseline
-                paddingTop = 0.15.em
-                paddingBottom = 0.15.em
-                borderRadius = 2.px
-
-                "&:hover" {
-                    backgroundColor = hoverColour
-                }
-            }
-
-            span {
-                css {
-                    flexShrink = number(0.0)
-                    minWidth = 2.5.em
-                    textAlign = TextAlign.right
-                    marginRight = 0.75.em
-                    color = mutedColour
-                }
-                +"$position"
-            }
-
-            span {
-                css {
-                    overflowWrap = OverflowWrap.anywhere
-                    color = mutedColour
-                }
-                +entry.item
-            }
-
-            span {
-                css {
-                    flexShrink = number(0.0)
-                    marginLeft = 0.5.em
-                    marginRight = 0.5.em
-                    color = mutedColour
-                }
-                +"→"
-            }
-
-            span {
-                css {
-                    overflowWrap = OverflowWrap.anywhere
-                    fontWeight = FontWeight.bold
-                }
-                +entry.value
-            }
+        ForEachJournal::class.react {
+            list = props.journal
+            producedCount = progress.producedCount
         }
     }
 }

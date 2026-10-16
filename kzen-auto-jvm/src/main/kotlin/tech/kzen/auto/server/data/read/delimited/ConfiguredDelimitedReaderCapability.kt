@@ -14,7 +14,6 @@ import tech.kzen.auto.common.data.api.DataCursor
 import tech.kzen.auto.common.data.schema.DataShape
 import tech.kzen.auto.common.data.schema.AuthoredRecordSchemaNotation
 import tech.kzen.auto.plugin.api.data.ReaderCapability
-import tech.kzen.auto.plugin.api.data.ReaderInspectionRequest
 import tech.kzen.auto.plugin.api.data.ReaderOpenRequest
 import tech.kzen.auto.plugin.api.data.FormatAuthoringCapability
 import tech.kzen.auto.common.data.format.DelimitedFormatOverrideConventions
@@ -23,7 +22,6 @@ import tech.kzen.auto.common.data.format.FormatMaterializationResult
 import tech.kzen.auto.common.data.format.FormatOverrideEditorMetadata
 import tech.kzen.auto.server.data.content.character.CharacterDecoder
 import tech.kzen.auto.server.data.content.policy.ContentReadControl
-import tech.kzen.auto.server.data.content.policy.ContentReadPolicy
 import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.ListExecutionValue
 import tech.kzen.lib.common.exec.LongExecutionValue
@@ -163,25 +161,36 @@ object ConfiguredDelimitedReaderCapability:
     }
 
 
-    override suspend fun open(request: ReaderOpenRequest): DataCursor =
-        openCursor(request, Long.MAX_VALUE)
-
-
-    override suspend fun inspect(request: ReaderInspectionRequest): DataShape =
-        openCursor(request.open, request.maximumRecords).use { cursor ->
-            var inspected = 0L
-            var complete = false
-            val limit = request.maximumRecords
-            while (inspected < limit) {
-                if (!cursor.hasNext()) {
-                    complete = true
-                    break
+    override suspend fun open(request: ReaderOpenRequest): DataCursor {
+        val delimited = request.config as? DelimitedReadConfig
+            ?: throw IllegalArgumentException("Delimited reader config expected")
+        val characters = CharacterDecoder.open(
+            ReaderByteSequentialContent(request.bytes),
+            delimited.characters,
+            ContentReadControl(),
+            request.sourceDisplay,
+            request.part)
+        val reader = ConfiguredDelimitedReader.open(
+            characters,
+            delimited,
+            DelimitedReadContext(request.sourceDisplay, part = request.part)) {
+                if (Thread.currentThread().isInterrupted) {
+                    throw CancellationException("Delimited read interrupted")
                 }
-                cursor.next()
-                inspected++
             }
-            inspectionShape(cursor, inspected, complete)
-        }
+        val declared = delimited.schema != null
+        val emptyObserved = !declared && reader.observedDuringOpen == 0L
+        val shape = DataShape(
+            reader.contract,
+            if (declared) ShapeProvenance.Declared else ShapeProvenance.Inferred,
+            if (declared || emptyObserved) {
+                ShapeStability.Stable
+            }
+            else {
+                ShapeStability.Provisional(SampleCoverage(reader.observedDuringOpen))
+            })
+        return ConfiguredDelimitedDataCursor(reader, shape)
+    }
 
 
     override fun materialize(request: FormatMaterializationRequest): FormatMaterializationResult {
@@ -271,66 +280,6 @@ object ConfiguredDelimitedReaderCapability:
     ): String {
         if (key !in overrides) return default
         return requireNotNull(overrides[key]) { "'$key' override must not be null" }
-    }
-
-
-    private fun openCursor(
-        request: ReaderOpenRequest,
-        inspectionRecordLimit: Long
-    ): ConfiguredDelimitedDataCursor {
-        val delimited = request.config as? DelimitedReadConfig
-            ?: throw IllegalArgumentException("Delimited reader config expected")
-        val characters = CharacterDecoder.open(
-            ReaderByteSequentialContent(request.bytes),
-            delimited.characters,
-            ContentReadControl(ContentReadPolicy.of(request.policy, inspectionRecordLimit)),
-            request.sourceDisplay,
-            request.part)
-        val reader = ConfiguredDelimitedReader.open(
-            characters,
-            delimited,
-            request.policy,
-            DelimitedReadContext(request.sourceDisplay, part = request.part)) {
-                if (Thread.currentThread().isInterrupted) {
-                    throw CancellationException("Delimited read interrupted")
-                }
-            }
-        val declared = delimited.schema != null
-        val emptyObserved = !declared && reader.observedDuringOpen == 0L
-        val shape = DataShape(
-            reader.contract,
-            if (declared) ShapeProvenance.Declared else ShapeProvenance.Inferred,
-            if (declared || emptyObserved) {
-                ShapeStability.Stable
-            }
-            else {
-                ShapeStability.Provisional(SampleCoverage(reader.observedDuringOpen))
-            })
-        return ConfiguredDelimitedDataCursor(
-            reader,
-            shape,
-            { request.bytes.expandedBytesRead })
-    }
-
-
-    private fun inspectionShape(
-        cursor: ConfiguredDelimitedDataCursor,
-        observedRecords: Long,
-        complete: Boolean
-    ): DataShape {
-        val shape = cursor.shape
-        if (shape.provenance == ShapeProvenance.Declared) return shape
-        val stability = if (observedRecords == 0L) {
-            check(complete) { "A positive inspection record limit cannot produce empty partial coverage" }
-            ShapeStability.Stable
-        }
-        else {
-            ShapeStability.Provisional(SampleCoverage(
-                observedRecords,
-                cursor.expandedBytesRead?.takeIf { it > 0 },
-                complete))
-        }
-        return DataShape(shape.itemType, shape.provenance, stability, shape.diagnostics)
     }
 
 

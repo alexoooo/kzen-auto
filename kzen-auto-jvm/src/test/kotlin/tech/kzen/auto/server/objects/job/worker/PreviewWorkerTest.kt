@@ -106,14 +106,12 @@ class PreviewWorkerTest {
     }
 
     @Test
-    fun previewWindowIsBoundedByBytesAsWellAsItemCount() = runBlocking {
+    fun previewWindowKeepsTheSampleCountHoweverLargeTheItems() = runBlocking {
         val worker = PreviewWorker(scalarInput(listOf(List(2200) { "x".repeat(4096) })), null, emptyServer, 3000, selfLocation)
         worker.run(RecordingJobControl())
         val snapshot = worker.captureMigrationState() as PreviewWorker.Snapshot
         assertEquals(2200L, snapshot.count)
-        assertTrue(snapshot.limited)
-        assertTrue(snapshot.items.sumOf { it.encode().toByteArray().size } <= 8 * 1024 * 1024)
-        assertTrue(snapshot.items.size < 2200)
+        assertEquals(2200, snapshot.items.size)
     }
 
     //-----------------------------------------------------------------------------------------------------------------

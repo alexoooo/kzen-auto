@@ -1,0 +1,8 @@
+# ForEach journal host fixture (ForEachJournalTest): runs script-loop-journal-child-test.yaml, whose loop's journal
+# therefore lives in the hosted child's execution, not this one's.
+main:
+  is: Script
+
+main.steps/Run:
+  is: RunStep
+  instructions: "test/script/loop/script-loop-journal-child-test.yaml#main"

@@ -4,7 +4,6 @@ import tech.kzen.auto.common.objects.document.logic.context.ContextDescriptor
 import tech.kzen.auto.common.objects.document.script.model.ScriptTree
 import tech.kzen.auto.common.objects.document.script.model.ScriptValidation
 import tech.kzen.auto.common.objects.document.script.model.StepTrace
-import tech.kzen.auto.common.util.TraceDisplay
 import tech.kzen.auto.server.exec.LogicCompiler
 import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.auto.server.objects.script.api.ScriptControlSignal
@@ -24,12 +23,12 @@ import tech.kzen.lib.common.exec.data.binding.BindingState
 import tech.kzen.lib.common.exec.data.binding.DataBindings
 import tech.kzen.lib.common.exec.data.value.DataSnapshot
 import tech.kzen.lib.common.exec.data.value.DataValue
-import tech.kzen.lib.common.exec.data.value.SnapshotPolicy
 import tech.kzen.lib.common.exec.data.value.SnapshotResult
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.service.store.normal.ObjectStableId
 import tech.kzen.lib.common.util.ExceptionUtils
+import tech.kzen.lib.platform.collect.PersistentList
 
 
 /**
@@ -220,6 +219,14 @@ class ScriptRunContext(
         if (detail is BinaryExecutionValue) {
             execution.log(detail)
         }
+    }
+
+
+    // The list lives in the engine beside the step's trace, so nothing here re-emits it when the step is done.
+    override fun traceList(entries: PersistentList<ExecutionValue>) {
+        val stableId = currentStableId
+            ?: error("No step is running")
+        execution.emitList(Address.of(stableId.value), entries)
     }
 
 
@@ -544,6 +551,7 @@ class ScriptRunContext(
         emitStepTrace(
             stableId, StepTrace.State.Done, displayOf(value),
             replay.partialDetailOrNull(stableId) ?: NullExecutionValue)
+        replay.partialListOrNull(stableId)?.let { execution.emitList(Address.of(stableId.value), it) }
         return value
     }
 
@@ -577,22 +585,14 @@ class ScriptRunContext(
     }
 
 
-    // Human-facing only, and bounded: the value graph ([stepValues]) keeps the whole value, so downstream
-    // expressions and the Script's result are unaffected — this caps just the string that reaches the trace,
-    // the wire, and every client poll.
+    // Human-facing only: the text of a detached copy of the whole value, while the value graph ([stepValues])
+    // keeps the value itself for downstream expressions and the Script's result.
     private fun displayOf(value: DataValue?): ExecutionValue {
         if (value == null) {
             return NullExecutionValue
         }
-        val snapshot = DataSnapshot.capture(value, SnapshotPolicy(
-            maximumDepth = 16,
-            maximumElements = 256,
-            maximumTextLength = TraceDisplay.maxScriptTraceChars,
-            maximumBinaryBytes = TraceDisplay.maxScriptTraceChars,
-            maximumDurationMillis = 100))
-        return when (snapshot) {
-            is SnapshotResult.Complete -> ExecutionValue.of(TraceDisplay.truncatedToString(
-                snapshot.snapshot.value.get(), TraceDisplay.maxScriptTraceChars))
+        return when (val snapshot = DataSnapshot.capture(value)) {
+            is SnapshotResult.Complete -> ExecutionValue.of(snapshot.snapshot.value.get().toString())
             SnapshotResult.Redacted -> ExecutionValue.of("<redacted>")
             is SnapshotResult.Rejected -> ExecutionValue.of(
                 "<preview unavailable: ${snapshot.problems.firstOrNull()?.message ?: "rejected"}>")
@@ -600,8 +600,7 @@ class ScriptRunContext(
     }
 
 
-    private fun displayTextOf(value: Any?): ExecutionValue = ExecutionValue.of(
-        TraceDisplay.truncatedToString(value, TraceDisplay.maxScriptTraceChars))
+    private fun displayTextOf(value: Any?): ExecutionValue = ExecutionValue.of(value.toString())
 
 
     // The trace label a container passed-through by a control signal shows (decision 17) — a clearly-non-value

@@ -1,6 +1,7 @@
 package tech.kzen.auto.server.objects.script.api
 
 import tech.kzen.lib.common.exec.ExecutionValue
+import tech.kzen.lib.platform.collect.PersistentList
 
 
 /**
@@ -9,9 +10,11 @@ import tech.kzen.lib.common.exec.ExecutionValue
  *
  * [detail] rather than a plain value because the skipped step is adopted, not run: the spine's replay
  * short-circuit re-emits its trace, which would otherwise blank the display the step had built up while it was
- * running (a loop's iteration journal). Carrying the detail with the value keeps the card explaining itself.
+ * running (a loop's progress). Carrying the detail with the value keeps the card explaining itself, and [list]
+ * does the same for the step's traced list ([StepExecution.traceList]: a loop's journal), null when it has none.
  */
 class PartialOutcome(
     val value: Any?,
-    val detail: ExecutionValue
+    val detail: ExecutionValue,
+    val list: PersistentList<ExecutionValue>?
 )

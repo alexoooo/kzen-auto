@@ -13,7 +13,6 @@ import tech.kzen.auto.server.objects.job.worker.Emitter
 import tech.kzen.auto.server.objects.job.worker.JobLaneAttempt
 import tech.kzen.auto.server.objects.job.worker.JobLaneContext
 import tech.kzen.auto.server.objects.job.worker.JobLaneDescriptor
-import tech.kzen.auto.server.objects.job.worker.JobLaneSample
 import tech.kzen.auto.server.objects.job.worker.SourceWorker
 import tech.kzen.auto.server.objects.job.worker.content.FileContent
 import tech.kzen.auto.server.objects.job.worker.content.FileValues
@@ -116,12 +115,8 @@ class FileSourceWorker(
                 return JobLaneAttempt(
                     JobLaneDescriptor(contract), null, "Files not read before Run: ${e.message}")
             }
-            ?: return JobLaneAttempt(JobLaneDescriptor(contract), null, partial = true)
 
-        val files = selection.value
-        val sample = JobLaneSample(
-            files.take(design.budget.maxValues).map(::lift),
-            files.size)
+        val files = selection
         // The selected files' sizes, for the File card to show each one's and to weigh read progress by bytes
         val listed = files.map {
             mapOf(
@@ -130,7 +125,7 @@ class FileSourceWorker(
                 JobReadConventions.fileSizeKey to it.info.size)
         }
         return JobLaneAttempt(
-            JobLaneDescriptor(contract, sample = sample),
+            JobLaneDescriptor(contract, values = files.map(::lift)),
             null,
             details = mapOf(JobReadConventions.filesKey to listed))
     }

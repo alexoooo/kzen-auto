@@ -40,8 +40,8 @@ import java.util.concurrent.atomic.AtomicInteger
  * **Consumer close (content streaming spike CS2):** a consumer that completes early closes its end through
  * [FrameworkChannelInput.closeConsumer]; from then on a producer's `send` / `flush` fails with
  * [DownstreamClosedException] (a parked one is resumed with it) and what the buffer holds is released. That is
- * the only way a producer can tell a CLOSED downstream from a PAUSED one; without it the deadlock monitor
- * would fail the run once the producer parked behind the finished consumer.
+ * the only way a producer can tell a CLOSED downstream from a PAUSED one; without it the producer would stay
+ * parked behind the finished consumer.
  *
  * **Ownership (E9).** Once [bindOwnership] has named the run's ledger and this channel's holder, a producer's
  * `send` is the transport-transfer boundary: a value the run owns (or a Worker-created `AutoCloseable` the run
@@ -90,14 +90,6 @@ class JobChannel(
 
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        /**
-         * Test seam (content streaming spike CS2): with this off, [FrameworkChannelInput.closeConsumer] is a
-         * no-op, which is the engine as it was before the spike — a consumer that completes early simply stops
-         * receiving, and its producer parks on the full channel exactly as it would behind a paused consumer.
-         */
-        @Volatile
-        internal var consumerCloseEnabled = true
-
         private const val downstreamClosedMessage =
             "Downstream of this channel has completed; it receives nothing more"
     }
@@ -115,23 +107,9 @@ class JobChannel(
     @Volatile
     private var producersClosed = false
 
-    // Endpoints currently suspended on a channel op: the consumer awaiting the next batch, and producers parked on
-    // a full channel. The Job-level deadlock monitor ([tech.kzen.auto.server.exec.job.JobDeadlockMonitor]) sums
-    // [blockedCount] across a run's stream channels — when EVERY non-terminal Worker is blocked on a channel, the
-    // pipeline can make no progress, so the Job is deadlocked.
-    private val blockedConsumers = AtomicInteger(0)
-    private val blockedProducers = AtomicInteger(0)
-
-    // Batches whose send has returned less those received: a suspended endpoint stays counted until its thread
-    // resumes it, so this tells one already handed a batch (or relieved of one) from one still waiting.
-    private val sentNotReceived = AtomicInteger(0)
-
-    // Elements sitting in the channel's buffer (batches sent, not yet received) — the occupancy the run's
-    // diagnostics report (E9 item 4/5); maintained around each send / receive, so momentarily approximate.
+    // Elements sitting in the channel's buffer (batches sent, not yet received); maintained around each send /
+    // receive, so momentarily approximate.
     private val queued = AtomicInteger(0)
-
-    // Elements handed to the consumer so far: with the ledger's activity, the run's progress clock.
-    private val transferred = AtomicInteger(0)
 
     // Elements carried over from a previous instance of this channel across a migration: delivered to the
     // consumer (via input) BEFORE the live channel, so the rebuilt graph resumes the stream without a gap.
@@ -170,44 +148,12 @@ class JobChannel(
 
 
     /**
-     * Endpoints suspended on a channel op that nothing has yet resumed: the consumer awaiting a batch while the
-     * stream is open and none is in transit, and producers parked on a full channel. One already resumed but
-     * still waiting for a thread is not blocked, however long a loaded machine leaves it undispatched.
-     */
-    fun blockedCount(): Int {
-        val inTransit = sentNotReceived.get()
-        val consumers = if (inTransit <= 0 && !producersClosed) blockedConsumers.get() else 0
-        val producers = if (inTransit >= capacity && !consumerClosed) blockedProducers.get() else 0
-        return consumers + producers
-    }
-
-
-    /** Elements the consumer has received so far (a progress clock for the run's stall detection). */
-    fun transferredElements(): Int {
-        return transferred.get()
-    }
-
-
-    /**
      * Elements this channel currently holds: buffered batches, a parked-mid-flush batch, undelivered carryover,
      * and the not-yet-dispatched remainder of the consumer's active batch. Approximate under concurrency.
      */
     fun queuedElements(): Int {
         val parked = producers.sumOf { it.inFlight?.size ?: 0 }
         return queued.get() + parked + carryover.size + (input as Input).undeliveredCount()
-    }
-
-
-    // Bracket a suspending channel op so a Worker parked in it counts toward [blockedCount] for the run's
-    // deadlock monitor until it resumes (a delivered batch, EOF, or cancellation).
-    private suspend fun <R> tracked(blocked: AtomicInteger, await: suspend () -> R): R {
-        blocked.incrementAndGet()
-        try {
-            return await()
-        }
-        finally {
-            blocked.decrementAndGet()
-        }
     }
 
 
@@ -260,7 +206,6 @@ class JobChannel(
             if (received.isSuccess) {
                 val batch = received.getOrThrow()
                 queued.addAndGet(-batch.size)
-                sentNotReceived.decrementAndGet()
                 bufferedByIdentity.add(batch)
                 add(batch)
             }
@@ -374,10 +319,9 @@ class JobChannel(
             try {
                 if (!channel.trySend(batch).isSuccess) {
                     parked = true
-                    tracked(blockedProducers) { channel.send(batch) }
+                    channel.send(batch)
                 }
                 queued.addAndGet(batch.size)
-                sentNotReceived.incrementAndGet()
             }
             catch (e: CancellationException) {
                 // Delivered or not, the batch is the teardown's (or, at a migration barrier, the carryover's)
@@ -434,7 +378,6 @@ class JobChannel(
             active = null
             val batch = nextBatch()
                 ?: return null
-            transferred.addAndGet(batch.size)
             val received = ReceivedBatch(batch.elements, batch.leases) { active = null }
             active = received
             return received
@@ -442,7 +385,7 @@ class JobChannel(
 
 
         override fun closeConsumer() {
-            if (!consumerCloseEnabled || consumerClosed) {
+            if (consumerClosed) {
                 return
             }
             consumerClosed = true
@@ -455,7 +398,6 @@ class JobChannel(
                 val batch = channel.tryReceive().getOrNull()
                     ?: break
                 queued.addAndGet(-batch.size)
-                sentNotReceived.decrementAndGet()
                 ValueLeases.releaseAll(batch.leases.filterNotNull())
             }
         }
@@ -465,7 +407,6 @@ class JobChannel(
             releaseRaw()
             val batch = nextBatch()
                 ?: return null
-            transferred.addAndGet(batch.size)
             for (lease in batch.leases) {
                 lease?.let(::handOut)
             }
@@ -566,7 +507,6 @@ class JobChannel(
                 }
                 val batch = nextBatch()
                     ?: return null
-                transferred.addAndGet(batch.size)
                 held = ArrayDeque(batch.elements.indices.map { Carried(batch.elements[it], batch.leases[it]) })
             }
         }
@@ -597,10 +537,9 @@ class JobChannel(
                 return Batch(elements, leases)
             }
 
-            val batch = tracked(blockedConsumers) { channel.receiveCatching().getOrNull() }
+            val batch = channel.receiveCatching().getOrNull()
                 ?: return null
             queued.addAndGet(-batch.size)
-            sentNotReceived.decrementAndGet()
             return batch
         }
     }

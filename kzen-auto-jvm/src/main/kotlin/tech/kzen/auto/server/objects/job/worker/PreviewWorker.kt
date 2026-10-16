@@ -34,23 +34,13 @@ class PreviewWorker(
     TransformWorker(input, output ?: Unconsumed, selfLocation, serve)
 {
     private val window = ArrayDeque<PreviewNode>()
-    private val sizes = ArrayDeque<Int>()
-    private var windowBytes = 0
     private var count = 0L
-    private var windowLimited = false
-    private val capture = PreviewCapture(maximumNanos = captureNanos)
 
     override suspend fun onElement(element: DataValue, emit: Emitter, control: JobControl) {
-        val item = capture.capture(element)
-        val size = item.encode().toByteArray(Charsets.UTF_8).size
         count++
-        window.addLast(item)
-        sizes.addLast(size)
-        windowBytes += size
-        while (window.size > sample.coerceAtLeast(0) || windowBytes > maximumWindowBytes) {
-            if (windowBytes > maximumWindowBytes) windowLimited = true
+        window.addLast(PreviewCapture.capture(element))
+        while (window.size > sample.coerceAtLeast(0)) {
             window.removeFirst()
-            windowBytes -= sizes.removeFirst()
         }
         if (output != null) {
             emit.send(element)
@@ -62,39 +52,25 @@ class PreviewWorker(
     override fun loadMigrationState(captured: Any?) {
         val snap = captured as Snapshot
         count = snap.count
-        windowLimited = snap.limited
         window.clear()
-        sizes.clear()
-        windowBytes = 0
-        for (item in snap.items.takeLast(sample.coerceAtLeast(0))) {
-            val size = item.encode().toByteArray(Charsets.UTF_8).size
-            window.addLast(item)
-            sizes.addLast(size)
-            windowBytes += size
-        }
-        while (windowBytes > maximumWindowBytes) {
-            window.removeFirst()
-            windowBytes -= sizes.removeFirst()
-            windowLimited = true
-        }
+        window.addAll(snap.items.takeLast(sample.coerceAtLeast(0)))
     }
 
-    override fun snapshot(): Snapshot = Snapshot(window.toList(), count, windowLimited)
+    override fun snapshot(): Snapshot = Snapshot(window.toList(), count)
 
     override fun progress(snapshot: Any?, force: Boolean): Map<String, Any?> {
         val snap = snapshot as Snapshot
         val items = if (force) snap.items else snap.items.takeLast(JobConventions.progressTeaserRowCount)
-        return wire(items, snap.count, snap.limited)
+        return wire(items, snap.count)
     }
 
-    private fun wire(items: List<PreviewNode>, count: Long, limited: Boolean): Map<String, Any?> {
+    private fun wire(items: List<PreviewNode>, count: Long): Map<String, Any?> {
         val table = PreviewTable(items)
         return mapOf(
             JobConventions.progressHeaderKey to table.columns.map { it.label },
             JobConventions.progressRowsKey to table.rows.map { row -> row.map { it.text } },
             JobConventions.progressCountKey to count,
-            PreviewNode.progressKey to items.map { it.encode() },
-            PreviewNode.limitedKey to limited)
+            PreviewNode.progressKey to items.map { it.encode() })
     }
 
     override fun onQuery(request: Any?, snapshot: Any?): ExecutionResult {
@@ -115,27 +91,14 @@ class PreviewWorker(
             }
 
         return ExecutionSuccess.ofValue(ExecutionValue.of(
-            wire(slice, snap?.count ?: 0L, snap?.limited ?: false) +
+            wire(slice, snap?.count ?: 0L) +
                     (JobConventions.previewOffsetParameter to offset.toLong())))
     }
 
-    class Snapshot(val items: List<PreviewNode>, val count: Long, val limited: Boolean) {
+    class Snapshot(val items: List<PreviewNode>, val count: Long) {
         val header: List<String> get() = PreviewTable(items).columns.map { it.label }
         val rows: List<List<String>> get() = PreviewTable(items).rows.map { row -> row.map { it.text } }
     }
-
-    companion object {
-        private const val maximumWindowBytes = 8 * 1_024 * 1_024
-
-        /**
-         * Test seam: the time budget of each item's capture, read when a Preview is created. A test asserting what
-         * a Preview shows lifts it: the budget is wall-clock, so on a loaded machine a reading thread that waits that
-         * long for a CPU truncates the item.
-         */
-        @Volatile
-        internal var captureNanos = PreviewCapture.defaultMaximumNanos
-    }
-
 
     // Stands in for an output nothing consumes: nothing is ever sent to it
     private object Unconsumed: ChannelOutput<DataValue> {

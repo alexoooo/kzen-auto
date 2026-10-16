@@ -33,8 +33,7 @@ import tech.kzen.auto.server.data.DataOpenerLookup
 import tech.kzen.auto.server.objects.datasource.format.ConfiguredDelimitedTestFormats
 import tech.kzen.auto.server.data.OperationalDataOpener
 import tech.kzen.auto.server.data.configuredTestDataPart
-import tech.kzen.auto.server.data.design.DesignReadBudget
-import tech.kzen.auto.server.data.design.DesignReader
+import tech.kzen.auto.server.data.design.DesignReadSession
 import tech.kzen.auto.server.data.read.OperationalDataCursor
 import tech.kzen.auto.server.objects.job.channel.JobChannel
 import tech.kzen.auto.server.objects.job.worker.testJobValue
@@ -43,7 +42,6 @@ import tech.kzen.auto.server.objects.job.worker.testRecord
 import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.auto.server.objects.job.worker.JobLaneDescriptor
 import tech.kzen.auto.server.objects.job.worker.JobLaneContext
-import tech.kzen.auto.server.objects.job.worker.JobLaneSample
 import tech.kzen.auto.server.objects.job.worker.content.FileValues
 import tech.kzen.auto.server.objects.job.worker.definition.WorkerDefinitionResolution
 import tech.kzen.auto.server.util.hangGuardMillis
@@ -72,7 +70,6 @@ import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import kotlin.time.Duration
 
 
 class ParseWorkerTest {
@@ -133,16 +130,15 @@ class ParseWorkerTest {
 
 
     @Test
-    fun beforeRunUnitInputReportsThatAPartAppliesAndTheSampledPartNames() {
+    fun beforeRunUnitInputReportsThatAPartAppliesAndThePartNames() {
         val worker = worker(BatchInput(emptyList()), FakeOpener(emptyMap()), CapturingOutput())
-        val sample = JobLaneSample(
-            listOf(
-                DataUnit.of(part("m", "main"), part("r1", "reference")),
-                DataUnit.of(part("r2", "reference"))
-            ).map(JobDataValues::lift), 2)
+        val values = listOf(
+            DataUnit.of(part("m", "main"), part("r1", "reference")),
+            DataUnit.of(part("r2", "reference"))
+        ).map(JobDataValues::lift)
         val dataUnit = TypeMetadata(dataUnitClassName(), emptyList(), false).toDataContract()
 
-        val attempt = worker.payloadFlow(JobLaneDescriptor(dataUnit, sample = sample), laneContext())
+        val attempt = worker.payloadFlow(JobLaneDescriptor(dataUnit, values = values), laneContext())
 
         assertEquals(true, attempt.details[JobReadConventions.readsUnitsKey])
         assertEquals(listOf("main", "reference"), attempt.details[JobReadConventions.rolesKey])
@@ -449,7 +445,7 @@ class ParseWorkerTest {
         val job = launch { first.run(ParkingControl(parked, release)) }
 
         withTimeout(hangGuardMillis) {
-            while (outputChannel.blockedCount() == 0) {
+            while (outputChannel.queuedElements() == 0) {
                 yield()
             }
         }
@@ -727,42 +723,24 @@ class ParseWorkerTest {
 
 
     @Test
-    fun beforeRunTypesItsOutputFromTheSampledValuesWithProvenance() {
+    fun beforeRunTypesItsOutputFromTheValuesWithProvenance() {
         val aShape = LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("id", "a")))
         val bShape = LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("id", "b")))
         val opener = FakeOpener(emptyMap(), mapOf("a" to aShape, "b" to bShape))
         val worker = worker(
             BatchInput(emptyList()), opener, CapturingOutput(), schemaMode = DataReadCore.schemaSuperset)
-        val sample = JobLaneSample(
-            listOf(DataUnit.of(part("a")), DataUnit.of(part("b"))).map(JobDataValues::lift), 5)
+        val values = listOf(DataUnit.of(part("a")), DataUnit.of(part("b"))).map(JobDataValues::lift)
         val dataUnit = TypeMetadata(dataUnitClassName(), emptyList(), false).toDataContract()
 
         val attempt = worker.payloadFlow(
-            JobLaneDescriptor(dataUnit, sample = sample), laneContext(DesignReadBudget.editor))
+            JobLaneDescriptor(dataUnit, values = values), laneContext(design = true))
 
         assertNull(attempt.errorMessage)
-        assertEquals("Inferred from 2 of 5 values", attempt.provenance)
-        assertEquals(false, attempt.partial)
+        assertEquals("Inferred from 2 of 2 values", attempt.provenance)
         val record = assertIs<DataType.Record>(attempt.lane.contract.payload().structural)
         assertEquals(listOf("id", "a", "b"), record.fields.map { it.id.name })
         assertEquals(listOf(false, true, true), record.fields.map { it.optional })
         assertEquals(2, opener.inspectCount)
-    }
-
-
-    @Test
-    fun beforeRunADeadlineReachedLeavesTheOutputUnknownAndPartial() {
-        val shape = LegacyDataShapeBridge.tabular(HeaderListing.ofUnique(listOf("a")))
-        val worker = worker(BatchInput(emptyList()), FakeOpener(emptyMap(), mapOf("a" to shape)), CapturingOutput())
-        val sample = JobLaneSample(listOf(JobDataValues.lift(DataUnit.of(part("a")))), 1)
-        val dataUnit = TypeMetadata(dataUnitClassName(), emptyList(), false).toDataContract()
-
-        val attempt = worker.payloadFlow(
-            JobLaneDescriptor(dataUnit, sample = sample), laneContext(DesignReadBudget(256, Duration.ZERO)))
-
-        assertNull(attempt.errorMessage)
-        assertTrue(attempt.partial)
-        assertIs<DataType.Dynamic>(attempt.lane.contract.payload().structural)
     }
 
 
@@ -826,10 +804,10 @@ class ParseWorkerTest {
         }
 
 
-    private fun laneContext(budget: DesignReadBudget? = null): JobLaneContext {
+    private fun laneContext(design: Boolean = false): JobLaneContext {
         return JobLaneContext(
             BindingSchema.empty, GraphStructure.empty, ParseWorker::class.java.classLoader,
-            budget?.let { DesignReader().session(it) })
+            DesignReadSession().takeIf { design })
     }
 
 
@@ -882,7 +860,7 @@ class ParseWorkerTest {
 
 
         override fun adoptionIdentity(part: DataPart): CursorAdoptionIdentity =
-            CursorAdoptionIdentity(part.digest(), Digest.ofUtf8("fake-read-policy"))
+            CursorAdoptionIdentity(part.digest())
     }
 
 

@@ -11,6 +11,7 @@ import tech.kzen.lib.common.exec.data.binding.BindingSchema
 import tech.kzen.lib.common.exec.data.binding.DataBindings
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
+import tech.kzen.lib.platform.collect.PersistentList
 
 
 /**
@@ -146,6 +147,14 @@ interface StepExecution {
     fun traceDetail(detail: Any?) {
         traceDetail(ExecutionValue.ofArbitrary(detail) ?: ExecutionValue.of(detail.toString()))
     }
+
+    /**
+     * Record the current version of an append-only list for the currently-running step — a loop's journal —
+     * beside its [detail][traceDetail]. The step keeps [entries] and records each new version: the list is
+     * immutable and shares structure with the last, so recording it costs the same however long it is, and a
+     * reader fetches a range of it rather than the whole (`LogicTrace.lookupRange`). Reset with the step's trace.
+     */
+    fun traceList(entries: PersistentList<ExecutionValue>)
 
     /**
      * Record a short human-readable diagnostic for the currently-running step — e.g. which target crop

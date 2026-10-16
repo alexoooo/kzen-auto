@@ -27,7 +27,6 @@ import tech.kzen.auto.server.objects.job.worker.ExpandingTransformWorker
 import tech.kzen.auto.server.objects.job.worker.JobLaneAttempt
 import tech.kzen.auto.server.objects.job.worker.JobLaneContext
 import tech.kzen.auto.server.objects.job.worker.JobLaneDescriptor
-import tech.kzen.auto.server.objects.job.worker.JobLaneSample
 import tech.kzen.auto.server.objects.job.worker.content.Content
 import tech.kzen.auto.server.objects.job.worker.content.FileValues
 import tech.kzen.auto.server.objects.job.worker.definition.WorkerDefinitionContext
@@ -81,7 +80,7 @@ import tech.kzen.lib.platform.ClassName
  * instead of changing the type the Workers below were compiled against.
  *
  * What it found out before Run and how far it has read are published under [JobReadConventions]: under Automatic,
- * the format each sampled file's name chose, and the part names the sampled units hold (validation details), then
+ * the format each file's name chose, and the part names the units hold (validation details), then
  * the content being read, its source bytes read so far and its size (run progress), which the File card above
  * follows per file.
  */
@@ -208,7 +207,7 @@ class ParseWorker(
     }
 
 
-    /** A file as a one-part unit, its read resolved by [format] against the file (sampled when automatic). */
+    /** A file as a one-part unit, its read resolved by [format] against the file. */
     private suspend fun fileUnit(ref: DataRef, control: JobControl): DataUnit {
         val active = currentUnit
         if (active != null && currentRef == ref) {
@@ -575,7 +574,7 @@ class ParseWorker(
     /**
      * The item's metadata is `{parent}` over the input's metadata (a unit's attributes are known only when read,
      * so its parent is dynamic); the payload is the declared shape of an explicit [format] over content, otherwise
-     * the shape read from the input lane's sample before Run ([DesignShapeInference]), and otherwise known only
+     * the shape read from the input lane's values before Run ([DesignShapeInference]), and otherwise known only
      * once read.
      */
     override fun payloadFlow(input: JobLaneDescriptor, context: JobLaneContext): JobLaneAttempt {
@@ -623,19 +622,19 @@ class ParseWorker(
         }
 
         val unknown = JobLaneDescriptor.unknown.contract.withMetadata(metadata)
-        val unitDetails = if (unit) unitDetails(input.sample) else mapOf()
+        val unitDetails = if (unit) unitDetails(input.values) else mapOf()
         val design = context.design
-        val sample = input.sample
-        if (design == null || sample == null) {
+        val values = input.values
+        if (design == null || values == null) {
             return JobLaneAttempt(JobLaneDescriptor(unknown), null).withDetails(unitDetails)
         }
 
-        // Under Automatic, the format each sampled file's name chooses, collected as the inference resolves it
+        // Under Automatic, the format each file's name chooses, collected as the inference resolves it
         val named = mutableListOf<Map<String, Any?>>()
             .takeIf { content && format.selectionKind == FormatSelectionKind.Automatic }
         val inference = DesignShapeInference
-            .infer(sample.values.size, sample.total, design, openerLookup, schemaMode) { dataContext, index ->
-                partsOf(dataContext, sample.values[index], index, named)
+            .infer(values.size, design, openerLookup, schemaMode) { dataContext, index ->
+                partsOf(dataContext, values[index], index, named)
             }
         val formatDetails = named
             ?.takeIf { it.isNotEmpty() }
@@ -645,26 +644,26 @@ class ParseWorker(
     }
 
 
-    /** The sampled files' columns, each with the files (by name) that hold it ([JobReadConventions.sampledColumnsKey]). */
+    /** The files' columns, each with the files (by name) that hold it ([JobReadConventions.columnsKey]). */
     private fun columnDetails(inference: DesignShapeInference.Inference): Map<String, Any?> {
         if (inference.columns.isEmpty()) {
             return mapOf()
         }
         val columns = inference.columns.map { column ->
             mapOf(
-                JobReadConventions.sampledColumnNameKey to column.name,
-                JobReadConventions.sampledColumnFilesKey to
+                JobReadConventions.columnNameKey to column.name,
+                JobReadConventions.columnFilesKey to
                     column.origins.map { FileFormatNames.fileName(it) })
         }
         return mapOf(
-            JobReadConventions.sampledColumnsKey to columns,
-            JobReadConventions.sampledFilesKey to inference.parts.toLong())
+            JobReadConventions.columnsKey to columns,
+            JobReadConventions.inspectedFilesKey to inference.parts.toLong())
     }
 
 
-    /** Units of named parts arrive, so choosing a part applies: with the part names the sampled units hold. */
-    private fun unitDetails(sample: JobLaneSample?): Map<String, Any?> {
-        val roles = sample?.values.orEmpty()
+    /** Units of named parts arrive, so choosing a part applies: with the part names the units hold. */
+    private fun unitDetails(values: List<DataValue>?): Map<String, Any?> {
+        val roles = values.orEmpty()
             .mapNotNull { JobDataValues.native(it) as? DataUnit }
             .flatMap { unit -> unit.parts.map { it.role.name } }
             .distinct()

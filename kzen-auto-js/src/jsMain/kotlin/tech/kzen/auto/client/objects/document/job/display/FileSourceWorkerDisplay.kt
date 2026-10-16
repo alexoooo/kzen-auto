@@ -54,8 +54,8 @@ external interface FileSourceWorkerDisplayState: State {
 
 
 /**
- * The ordinary Worker card with its inline file selection promoted above a collapsed advanced-configuration section,
- * and the browser's show/hide moved up into the card's title bar.
+ * The ordinary Worker card with its inline file selection promoted above its other settings, which hide behind a
+ * header toggle, and the browser's show/hide moved up into the card's title bar.
  *
  * The selection remains an attribute editor selected by `meta.files.editor`; this display only rehomes that editor,
  * so a plugin can contribute another file-selection editor without changing this component or the generic card.
@@ -205,7 +205,7 @@ class FileSourceWorkerDisplay(
             this.mirroredGraphStore = props.mirroredGraphStore
             this.common = props.common
             hiddenAttributes = setOf(filesAttributeName)
-            attributeDisclosure = "Advanced"
+            attributeDisclosure = "advanced settings"
             headerRight = toggleChannel?.let { channel -> { it: ChildrenBuilder -> it.renderToggle(channel) } }
             bodyBefore = { bodyBuilder -> bodyBuilder.renderFileSelection() }
             bodyExtra = null

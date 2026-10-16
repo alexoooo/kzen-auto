@@ -110,18 +110,4 @@ class ReadSpecTest {
             assertNotEquals(part.digest(), variant.digest(), "identity collision for $variant")
         }
     }
-
-    @Test
-    fun policyIdentityIsOperationalNotSemantic() {
-        val part = testDataPart(
-            DataRole.main,
-            DataRef(null, "input.csv", mapOf(DataRef.sizeKey to "10", DataRef.modifiedKey to "20")))
-        val first = CursorAdoptionIdentity(part.digest(), ReadOperationalPolicy(
-            maximumExpandedBytes = 100).digest())
-        val second = CursorAdoptionIdentity(part.digest(), ReadOperationalPolicy(
-            maximumExpandedBytes = 200).digest())
-
-        assertEquals(part.resolvedRead.digest(), part.resolvedRead.digest())
-        assertNotEquals(first, second)
-    }
 }

@@ -5,7 +5,6 @@ import tech.kzen.auto.common.data.read.ContentCapabilityIdentity;
 import tech.kzen.auto.common.data.read.ReaderCapabilityIdentity;
 import tech.kzen.auto.common.data.read.ReaderConfig;
 import tech.kzen.auto.plugin.api.data.BlockingReaderCapability;
-import tech.kzen.auto.plugin.api.data.ReaderInspectionRequest;
 import tech.kzen.auto.plugin.api.data.ReaderOpenRequest;
 import tech.kzen.lib.common.exec.ExecutionValue;
 import tech.kzen.lib.common.exec.MapExecutionValue;
@@ -58,15 +57,5 @@ public class JavaBlockingReader extends BlockingReaderCapability {
             }
             @Override public void close() { closed = true; }
         };
-    }
-
-    @Override
-    public DataShape inspectBlocking(ReaderInspectionRequest request) {
-        try (DataCursor cursor = openBlocking(request.getOpen())) {
-            return cursor.getShape();
-        }
-        catch (Exception e) {
-            throw new IllegalStateException(e);
-        }
     }
 }

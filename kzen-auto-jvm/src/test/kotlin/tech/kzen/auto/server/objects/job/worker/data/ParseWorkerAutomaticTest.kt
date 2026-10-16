@@ -73,7 +73,7 @@ class ParseWorkerAutomaticTest {
             })
 
         // Each column with the files that hold it: the card counts those some files lack
-        assertEquals(2L, parse.details[JobReadConventions.sampledFilesKey])
+        assertEquals(2L, parse.details[JobReadConventions.inspectedFilesKey])
         val both = listOf("measurements-1.csv", "measurements-2.csv")
         assertEquals(
             listOf(
@@ -81,9 +81,9 @@ class ParseWorkerAutomaticTest {
                 "date" to both,
                 "temperature" to listOf("measurements-1.csv"),
                 "humidity" to listOf("measurements-2.csv")),
-            (parse.details[JobReadConventions.sampledColumnsKey] as List<*>).map {
+            (parse.details[JobReadConventions.columnsKey] as List<*>).map {
                 val column = it as Map<*, *>
-                column[JobReadConventions.sampledColumnNameKey] to column[JobReadConventions.sampledColumnFilesKey]
+                column[JobReadConventions.columnNameKey] to column[JobReadConventions.columnFilesKey]
             })
     }
 

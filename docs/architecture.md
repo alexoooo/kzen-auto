@@ -13,7 +13,7 @@ The non-obvious parts — and what this doc covers — are:
 3. **REST API surface**: the wire endpoints that wrap the graph store and the four paradigms.
 4. **Server-side composition root** (`KzenAutoContext`): how the JVM wires its services.
 5. **Backend execution**: the three runners, and how reports actually run (LMAX Disruptor).
-6. **Managed storage**: the on-disk areas the server owns, with budgets and eviction.
+6. **Managed storage**: the on-disk areas the server owns, and their deletion.
 7. **Document types**: the UI document model.
 8. **Plugin SPI**: how third-party plugins extend reports.
 9. **Module registration**: how SPI implementations get wired into kzen-lib.
@@ -46,7 +46,7 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 |---------|---------------------------|-------|
 | **Script** | `ScriptDocument` → `ScriptLogicCompiler` → `ScriptLogic` / `ScriptRunContext` | Sequential steps, nested control flow, sub-script hosting |
 | **Flow** | `FlowDocument` → `FlowLogicCompiler` → `FlowLogic` / `FlowRun` | Synchronous vertex DAG; one vertex execution = one step |
-| **Job** | `JobDocument` → `JobLogicCompiler` → `JobLogic` / `JobRun` / `WorkerLogic` | Concurrent workers over channels, with a flavour-owned `JobDeadlockMonitor` |
+| **Job** | `JobDocument` → `JobLogicCompiler` → `JobLogic` / `JobRun` / `WorkerLogic` | Concurrent workers over channels |
 | **Report** | `ReportDocument` → `ReportLogicCompiler` → `ReportLogic` / `ReportRun` | The Disruptor record pipeline, driven through `Execution` (§ 5) |
 
 > **Making a new logic document runnable in the UI.** Whether a document gets the Run / Step / Pause ribbon (and run-blocking on definition errors) is gated by `AutoConventions.isLogic(graphNotation, documentPath)` in kzen-auto-common, and it is **notation-driven**: `isLogic` returns true when the document's `main` archetype's inheritance chain reaches the common `Logic` marker. So every runnable paradigm's `main` archetype declares `is: [Document, Logic]` (see `common-document.yaml`; `Logic` is a bare `abstract` marker composed *alongside* `Document`, never as an `is: Document` intermediate, so the sidebar archetype registry's direct-`is`-match autowire is undisturbed). The server-side twin is the `LogicDocument` interface each paradigm's `main` archetype implements — the authoritative runtime guard, enforced by `LogicCompiler`'s `as? LogicDocument` cast. **A new logic document type is runnable from the UI as soon as its `main` archetype declares `is: Logic` and implements `LogicDocument` — no edit to `isLogic` (or any other shared code) is required** (it still needs its client `DocumentController`: `…-js.yaml`, `archetype:` + `ribbonController: RibbonController`). This was formerly a hardcoded OR over the four `*Conventions.isX(...)` checks — a god-object edit that bit Job (M1 step 5) — replaced by the `Logic`-marker inheritance query (CC-17). `LogicCompiler` itself contains **no `when` over flavours**: it resolves the `main` archetype polymorphically from the graph and calls `toLogic`. One detail there is load-bearing — the archetype is instantiated from a graph narrowed by `filterTransitive` to the document's own closure, not the whole project. A full-document build would throw for Job, whose saved Worker ports are deliberately blank until channel synthesis runs.
@@ -133,14 +133,9 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > a live edit carries the ledger and every channel lease across the rebuild, and the run's post-join teardown
 > closes whatever is left, a processing failure staying primary over close failures. An owned native never
 > leaves the run: a Result sink keeps `JobControl.snapshot(value)` — a structural copy taken inside the
-> callback — and `yieldResult` refuses an owned value; an opaque owned native fails by name. Diagnostics are
-> aggregates: a Worker's progress carries its `holds`, the root emits a `$job-ownership` report (holds by
-> holder, queued elements per channel, live / closed counts), and `JobDeadlockMonitor`'s clock adds a lower,
-> non-failing no-progress threshold that logs and flags the holders (a stalled arena source behind a Sort
-> names the Sort) without touching the deadlock verdict; progress is elements moved, natives adopted or closed,
-> and in-item work a Worker reports via `JobControl.reportActivity` (Write's copy, per chunk) — never merely
-> being inside blocking I/O, which a permit-parked source's pull also is; the warning stays on while the run serves an external
-> channel (a Preview), where only the verdict is suspended. A `JavaTransformWorker` whose outputs are deliberate
+> callback — and `yieldResult` refuses an owned value; an opaque owned native fails by name. A Worker's progress
+> carries its `holds`. A run that can make no progress waits until it is cancelled: nothing watches for a
+> deadlock or a stall. A `JavaTransformWorker` whose outputs are deliberate
 > copies (rows of scalars read off a native) declares `independentOutputs()`: its rows carry no owner, the
 > element closes when the callback returns, and a Sort after it retains rows, not natives (HS25).
 > **Recyclable values (WR2).** A pooled value (`server/objects/job/value/recycle/`: a `Recyclable` reached through
@@ -194,8 +189,8 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > open output. For its own edit, `Write` keeps the header each output began with (each chunk marks its header
 > bytes) and puts it ahead of the group's next chunk. `existing` was judged when an output began and applies from
 > the next one. The `Content` path keeps no output open, so a live edit restarts it. Write's progress lists its
-> files by absolute path (`openFiles`, then `writtenFiles` with their sizes): a few while it runs, the bounded
-> teaser every retained emit keeps to, and all of them in the final publish. Every Worker's progress also carries
+> files by absolute path (`openFiles`, then `writtenFiles` with their sizes): a few while it runs, the
+> teaser each progress emit keeps to, and all of them in the final publish. Every Worker's progress also carries
 > `elapsed` (ms since the run started, a clock a live edit keeps), from which the cards show rates (MB/s, rows/s).
 > **Object-graph paths (E8).** `PathProjectionWorker` turns paths over the incoming contract (`executions[*].price`, `attributes[*].value.price`, an optional
 > alias) into a flat record of nullable scalars, unnesting `[*]` lists and maps (same list → one iteration,
@@ -203,9 +198,8 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > (`PathBinding`, kzen-auto-common) are shared with the design-time picker so both report the same errors,
 > and every cell is a text copy, so rows never alias an owned element's storage. Two things about Job are
 > worth knowing generally, because they are where
-> concurrency stops being free: quiescence (what pause / step / edit act on) is **not** liveness, so
-> deadlock detection is deliberately flavour-owned — `JobDeadlockMonitor` reads channel state and runs
-> **off** the engine dispatcher, since running on it would deadlock `awaitQuiescent`. And the run-level
+> concurrency stops being free: quiescence (what pause / step / edit act on) is **not** liveness — a
+> deadlocked run is quiescent too, and nothing tells the two apart, so it waits until cancelled. And the run-level
 > pause reason across concurrently-parked spines is chosen by tree position rather than severity, so an
 > error-parked Worker can be masked by a sibling at an ordinary boundary (a known gap, `logic-spec.md`
 > §4). Quiescence is also gated per Worker for lending sources (`BorrowingSource`, the borrowed-element
@@ -236,15 +230,14 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > format naming it, or more than one, and the file is `UnreadFormat`: carried whole (so `File → Extract` works),
 > refused with the reason only when a reader opens it. Nothing samples bytes to pick a format, a charset or a
 > compression; a format pins its charset (a `bom: detect` policy is the format's own, explicit choice).
-> **Types before Run (VM3).** Validation may look at data, but only through `DesignReader`
-> (`server/data/design/`): each validation pass gets a `DesignReadSession` bounded by a `DesignReadBudget` (256
-> values; 2.5 s for the editor, 30 s at run start), whose reads are recorded as `DesignEvidence` (what was looked
-> at, rechecked by digest) and whose part shapes are cached by content fingerprint. A lane
-> can offer a sample of the values it would carry (`JobLaneSample` on `JobLaneDescriptor`: `File` its first selected
-> files, `Read` in units mode its data source's units; identity Workers pass it on), and `Parse` — or `Read` in
-> items mode, over its units — types itself from it through `DesignShapeInference`, merging by its `schemaMode`;
-> the step's `StepValidation` then carries `provenance` ("Inferred from 41 of 256 values") and, when the deadline
-> cut the pass short, `partial`, which the editor shows as "Reading data…" and re-asks for after a second.
+> **Types before Run (VM3).** Validation may look at data, through the `DesignReadSession`
+> (`server/data/design/`) the pass shares: each read reads to the end and is recorded as `DesignEvidence` (what
+> was looked at, rechecked by digest), and a reader's shape is its `fixedShape`, else the one `SchemaCache` holds
+> for the content's fingerprint, else the shape of a cursor it opens. A lane can offer the values it would carry
+> (`values` on `JobLaneDescriptor`: `File` its selected files, `Read` in units mode its data source's units;
+> identity Workers pass them on), and `Parse` — or `Read` in items mode, over its units — types itself from all
+> of them through `DesignShapeInference`, merging by its `schemaMode`; the step's `StepValidation` then carries
+> `provenance` ("Inferred from 41 of 41 values"), and a run starts from the same full set of columns.
 > A step's `StepValidation` also carries `details`, an opaque `Map<String, Any?>` copied from
 > `JobLaneAttempt.details` (decoded leniently, like `provenance`) that only the Worker's own card and editors
 > read (CC-17). What one Worker says to another goes through the keys in `JobReadConventions` (kzen-auto-common)
@@ -654,7 +647,9 @@ Throttling at the publish rather than at each query is what makes this one decis
 
 `structureVersion` still **excludes raw frame position**, because a Script's frame position changes on essentially every step — folding it in would mark a plain run structure-changing throughout and defeat the throttle. But a *meaningful* frame transition — a stepped-over `RunStep` descending into its child — **creates a new execution**, so it now bumps `structureVersion` (via the node-id set) and that intermediate frame repaints immediately again (the per-emit intra-step animation E5 traded away, restored by TP4). Frames traversed *within* the child (its own position advancing, no new execution) still repaint at the throttle's cadence, not per emit — the documented, accepted trade (animating those would re-open the ~3.4-frames/s ×4-REST cost the throttle exists to remove). The remaining traffic (`lookup` + `lookupRunHistory`, both genuinely fresh per publish) is this design's floor; `traced` + `lookupRunExecutions` no longer ride it, having moved to the `structureVersion` gate above. **SER4 coordination:** `structureVersion` is a string-encoded `Long` sibling of `epoch`/`sequence` on `LogicStatus`; when SER4 migrates these DTOs to kotlinx it carries the field mechanically.
 
-> **Script's step traces are transient emits (S7).** Because E4 made the live map the sole source of trace *values* (`RunEngineLogicTrace.nodeEntries`) while `lookupRunHistory` filters history down to log-style events (null address — the screenshot film strip), a retained `emit` was storage no reader ever consulted. `ScriptRunContext.emitStepTrace` therefore passes `retain = false` (kzen-lib `Execution.emit`, logic-spec §7): a `StepTrace` is the step's *current* state, so it updates the live view and its observers but never appends to history. Consequences worth knowing: **a Script contributes nothing to run history** — the history of a Script run is its `execution.log` film strip alone — so a long loop no longer grows it (it previously appended ~2 events per body step per iteration, forever), and a screenshot is stored **once** rather than also inside the `Running` and `Done` traces that carried it as their detail. Flow and Job emits are unaffected (they still retain; `FlowNotationTest.tracedMessages` reads them). Two other Script-side bounds ride along: step displays are capped at `TraceDisplay.maxScriptTraceChars` (**display only** — `stepValues` keeps the whole value, so downstream expressions and the result are unaffected), and a `ForEachStep` whose own value nothing reads collects no per-iteration outputs (`StepExecution.isValueReferenced`, derived at compile time by `ScriptValueReferences`).
+> **Script's step traces are transient emits (S7).** Because E4 made the live map the sole source of trace *values* (`RunEngineLogicTrace.nodeEntries`) while `lookupRunHistory` filters history down to log-style events (null address — the screenshot film strip), a retained `emit` was storage no reader ever consulted. `ScriptRunContext.emitStepTrace` therefore passes `retain = false` (kzen-lib `Execution.emit`, logic-spec §7): a `StepTrace` is the step's *current* state, so it updates the live view and its observers but never appends to history. Consequences worth knowing: **a Script contributes nothing to run history** — the history of a Script run is its `execution.log` film strip alone — so a long loop no longer grows it (it previously appended ~2 events per body step per iteration, forever), and a screenshot is stored **once** rather than also inside the `Running` and `Done` traces that carried it as their detail. Flow emits are unaffected (they still retain; `FlowNotationTest.tracedMessages` reads them); a Job Worker's progress is transient on the same reasoning (`EngineJobControl.publishProgress`). A step's display is the text of a detached copy of its whole value (`stepValues` keeps the value itself). One other Script-side bound rides along: a `ForEachStep` whose own value nothing reads collects no per-iteration outputs (`StepExecution.isValueReferenced`, derived at compile time by `ScriptValueReferences`).
+>
+> **A loop's journal is a traced list, read by range (FJ).** A `ForEachStep` journals every completed iteration (`ForEachProgress.Entry`: item → body value, as text), whether or not it collects. The journal is not in the step's detail — the detail (`ForEachProgress`: item, index, size, `producedCount`, `partial`) stays the same size at every iteration, so the whole-map refresh stays cheap — but beside it, as a `PersistentList` the loop extends and re-emits each iteration (`StepExecution.traceList` → kzen-lib `Execution.emitList`, logic-spec §7). It resets with the loop's trace (an inner loop's journal holds the current outer pass only), crosses a live edit in the `LoopCursor`, and rides a forward move-to's `PartialOutcome.list`, which `ScriptRunContext.adoptOutcome` re-emits. A reader fetches a range: `LogicTraceEndpoint` action `lookup-range` (`run-id`, optional `execution-id`, `trace-path`, `offset`, optional `count`) → `RunEngineLogicTrace.lookupRange` → `LogicTraceRange`. The trace-path parameter is not `path`, which a detached request already uses for the endpoint's own document. A finished loop still loses its journal (with its detail) when a live edit rebuilds the run.
 
 ## 4. Server-side composition root
 
@@ -675,11 +670,11 @@ The companion-object `init` block registers SPI metadata with kzen-lib's `Reflec
 | `notationQueryHandler`, `notationCommandHandler`, `detachedActionHandler`, `taskHandler`, `logicHandler`, `objectStableHandler`, `fileListingHandler`, `storageHandler` | `server/api/handler/` | One handler per REST group (§ 3) — there is no single dispatch god-object |
 | `targetLocator` | `TargetLocator` | Resolves a `TargetSpec` to a `WebElement` via registered `TargetTypeLocator`s (§ 7) |
 | `workUtils`, `reportWorkPool`, `jobWorkPool` | work dirs | Sibling-relative working directories for run artifacts; the pools own the report / Job worker output + scratch trees |
-| `cachedKotlinCompiler`, `kotlinSyntaxValidator`, `calculatedColumnEval` | scripting | Embedded Kotlin scripting for Script formula steps and report formula columns; the compiler owns a disk-backed, budgeted code cache (§ 6) |
+| `cachedKotlinCompiler`, `kotlinSyntaxValidator`, `calculatedColumnEval` | scripting | Embedded Kotlin scripting for Script formula steps and report formula columns; the compiler owns a disk-backed code cache (§ 6) |
 | `scriptValidationCache`, `jobValidationCache` | validation caches | Digest-keyed `ScriptValidation` / Job-validation caches shared by the editor's detached validation and every run/hosted-child compile — the key covers the root document's closure ∪ linked logic documents' closures, so validation re-runs only when notation it depends on changed |
 | `filterIndex` | `FilterIndex` | Persistent column-value index backing report filtering |
 | `definitionRepository` | `HostReportDefinitionRepository` | Report definers: the built-ins only (`CsvReportDefiner` / `TsvReportDefiner` / `TextReportDefiner`); the per-document plugin-jar definer path (`jarPath`, `META-INF/kzen/plugins.yaml`) retired in HS21 — plugins extend Jobs through the runtime's scopes (§ 5), not Reports |
-| `managedStorageRegistry` | `ManagedStorageRegistry` | Every on-disk area the server owns, with budgets and eviction — see § 6 |
+| `managedStorageRegistry` | `ManagedStorageRegistry` | Every on-disk area the server owns — see § 6 |
 
 The Selenium / WebDriver browser handle is **no longer a context service**: it is a per-run resource keyed `"browser"`, registered **with the engine** — the kzen-lib `RunEngine` stores the live handle (value) alongside the disposal closer on the owning node. Steps reach it through a declared **Context** rather than a bare string: `BrowserOpenStep` declares `binds: BrowserContext` and calls `StepExecution.bindContext(...)`, the action steps declare `uses: [BrowserContext]` and read `execution.context<RemoteWebDriver>()` (an ancestor-chain walk, so **any** hosted child — Script, Flow, or Job — reads the handle its host opened), and `BrowserCloseStep` declares `releases: BrowserContext`. The raw string-keyed API (`openResource` / `resource` / `releaseResource`) survives as the escape hatch beneath it; a Context's `key:` IS that string, so a typed step and a raw one naming `browser` share one registration. There is no Script-side value registry (the former `ScriptRunResources` was deleted when the engine took over value storage); `WebDriverSupport` holds only that shared key + the quiet-quit helper. This replaced the former `webDriverContext` process singleton (removes a global; allows concurrent runs).
 
@@ -730,16 +725,13 @@ ReportInputFramer ─▶ decode ─▶ filter ─▶ pivot ─▶ output
 
 Subpackage: `kzen-auto-jvm/.../server/service/storage/`.
 
-The server writes a fair amount to disk that is neither notation nor user data — compiled Kotlin, report run output, column indexes, Job worker output and scratch, logs. Left alone, those grow without bound and invisibly. **`ManagedStorageRegistry`** is the central catalogue that makes them visible and, where appropriate, bounded.
+The server writes a fair amount to disk that is neither notation nor user data — compiled Kotlin, report run output, column indexes, Job worker output and scratch, logs. Left alone, those grow without bound and invisibly. **`ManagedStorageRegistry`** is the central catalogue that makes them visible and deletable.
 
 The convention is the point: **any service that resolves a new root under `WorkUtils` — or otherwise writes a server-owned directory — must register a `ManagedStorageArea` during `KzenAutoContext.init`**, even if its lifecycle is self-managed (then it registers *display-only*). Disk usage stays centrally accountable rather than being rediscovered later as a mystery directory.
 
-A `ManagedStorageArea` declares an id, display name, description, whether it is `deletable`, and an optional `budgetBytes`. Its contents are **bundles** — the smallest independently deletable unit, typically one child directory (a compiled-code signature, a report run, an index entry). Two mechanisms hang off that:
+A `ManagedStorageArea` declares an id, display name, description, and whether it is `deletable`. Its contents are **bundles** — the smallest independently deletable unit, typically one child directory (a compiled-code signature, a report run, an index entry). Deletion is manual: `deleteBundle` releases in-memory state referencing the bundle (classloaders, open files) **first**, then deletes from disk, and refuses outright when the bundle is `active`.
 
-- **Manual deletion.** `deleteBundle` releases in-memory state referencing the bundle (classloaders, open files) **first**, then deletes from disk, and refuses outright when the bundle is `active`.
-- **LRU eviction.** A non-null `budgetBytes` enables `StorageLruEvictor`, which deletes least-recently-modified bundles until the area fits. Owners trigger it after growing the area and once at boot (so overshoot accumulated by a prior process is reclaimed). It is single-flight — concurrent triggers collapse into one sweep — and the caller must hold no per-bundle lock, since `deleteBundle` takes those itself.
-
-The registered areas today: the Kotlin **code cache** (budgeted + evicting, the only one with an evictor attached), **reports**, the **filter index**, **Job worker output**, **Job scratch** (display-only — cleaned automatically when a run settles and at server start), and **logs** (display-only — self-pruning). Several are gated on an `anyRunActive` predicate so nothing deletes underneath a live run.
+The registered areas today: the Kotlin **code cache**, **reports**, the **filter index**, **Job worker output**, **Job scratch** (display-only — cleaned automatically when a run settles and at server start), and **logs** (display-only — self-pruning). Several are gated on an `anyRunActive` predicate so nothing deletes underneath a live run.
 
 Surfaced over `/storage/summary` / `/storage/bundles` / `/storage/delete` (§ 3) via `StorageHandler`, and driven by the client's `StorageManagerController` in the ribbon. `/storage/delete` deliberately answers `text/plain` (error message or empty) rather than JSON, matching `deleteBundle`'s return contract.
 
@@ -873,8 +865,8 @@ and expression identity — run it in its own process (`java -cp <kzen-auto-jvm 
 tech.kzen.auto.server.context.runtime.kit.PluginCompatibilityKit <root> --verify`). In-repo, boot-level plugin
 tests live in `server.context.runtime.boot` and run one universe per forked JVM under `pluginUniverseTest`.
 
-**Java-first authoring.** `BlockingReaderCapability` (SPI) provides the `suspend` pair over ordinary
-`openBlocking` / `inspectBlocking`; `CursorSourceWorker` and `JavaTransformWorker` (kzen-auto-jvm) let a Job
+**Java-first authoring.** `BlockingReaderCapability` (SPI) provides the `suspend` `open` over an ordinary
+`openBlocking`; `CursorSourceWorker` and `JavaTransformWorker` (kzen-auto-jvm) let a Job
 source or transform be written as iterator-returning callbacks with the framework owning pulls, emission,
 cancellation and close. Both bases take part in the static payload walk (HS22): a subclass declaring
 `outputContract()` / `elementContract()` (a literal record contract) or `outputClass()` / `elementClass()` (a

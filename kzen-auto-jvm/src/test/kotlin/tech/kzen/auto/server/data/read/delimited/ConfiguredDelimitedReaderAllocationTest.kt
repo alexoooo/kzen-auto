@@ -4,7 +4,6 @@ import tech.kzen.auto.common.data.read.CharacterDecodingSpec
 import tech.kzen.auto.common.data.read.DelimitedDialectSpec
 import tech.kzen.auto.common.data.read.DelimitedReadConfig
 import tech.kzen.auto.common.data.read.HeaderReadSpec
-import tech.kzen.auto.common.data.read.ReadOperationalPolicy
 import tech.kzen.auto.common.data.read.RecordFramingSpec
 import tech.kzen.auto.common.data.read.TypedDecodePolicy
 import tech.kzen.auto.common.data.schema.DataShape
@@ -127,7 +126,7 @@ class ConfiguredDelimitedReaderAllocationTest {
 
     private fun pass(config: DelimitedReadConfig, effective: (DataShape) -> DataReadCore.ShapeBaseline) {
         val reader = ConfiguredDelimitedReader.open(
-            StringContent(text), config, ReadOperationalPolicy(), DelimitedReadContext("memory://wide"))
+            StringContent(text), config, DelimitedReadContext("memory://wide"))
         reader.use {
             val cursorShape = shapeOf(reader.contract)
             val projection = DataReadCore.projection(null, cursorShape, effective(cursorShape), null)
@@ -148,7 +147,6 @@ class ConfiguredDelimitedReaderAllocationTest {
 
     private class StringContent(private val text: String): SequentialCharacterContent {
         override val resolvedCharsetName = "UTF-8"
-        override val inspectionRecordLimit = Long.MAX_VALUE
         private var position = 0
 
         override fun read(buffer: CharArray, offset: Int, length: Int): Int {

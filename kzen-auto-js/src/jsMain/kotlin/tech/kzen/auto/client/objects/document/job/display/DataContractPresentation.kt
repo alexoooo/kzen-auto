@@ -35,8 +35,6 @@ internal object DataContractPresentation {
             "Error", display.message, listOf(display.message), error)
         DataContractDisplay.Dynamic -> Presentation(
             "Dynamic", "Runtime-keyed dynamic contract", emptyList(), dynamic)
-        DataContractDisplay.Reading -> Presentation(
-            "Reading data…", "Reading data before Run; the type follows", emptyList(), muted)
         is DataContractDisplay.Contract -> contract(display.contract, display.shape, display.provenance)
     }
 

@@ -27,7 +27,6 @@ import tech.kzen.lib.common.exec.data.value.LiteralDataValues
 import tech.kzen.lib.common.exec.data.value.ValueMetadata
 import tech.kzen.auto.server.objects.job.worker.SourceWorker
 import tech.kzen.auto.server.objects.job.worker.JobLaneDescriptor
-import tech.kzen.auto.server.objects.job.worker.JobLaneSample
 import tech.kzen.auto.server.objects.job.worker.JobLaneAttempt
 import tech.kzen.auto.server.objects.job.worker.JobLaneContext
 import tech.kzen.auto.server.objects.job.worker.definition.WorkerDefinitionContext
@@ -400,12 +399,9 @@ open class ReadWorker(
             }
             return when (val read = designManifest(dataSource, design)) {
                 is DesignManifest.Read -> JobLaneAttempt(
-                    JobLaneDescriptor(lane, sample = JobLaneSample(
-                        read.manifest.units.take(design.budget.maxValues).map(::unitValue),
-                        read.manifest.units.size)),
+                    JobLaneDescriptor(lane, values = read.manifest.units.map(::unitValue)),
                     null)
                 is DesignManifest.Unread -> JobLaneAttempt(JobLaneDescriptor(lane), null, read.warning)
-                DesignManifest.Limited -> JobLaneAttempt(JobLaneDescriptor(lane), null, partial = true)
             }
         }
 
@@ -424,7 +420,7 @@ open class ReadWorker(
                 val roles = units.flatMap { unit -> unit.parts.map { it.role.name } }.distinct()
                 DesignShapeInference
                     .infer(
-                        minOf(units.size, design.budget.maxValues), units.size, design, openerLookup, schemaMode
+                        units.size, design, openerLookup, schemaMode
                     ) { _, index ->
                         DataReadCore.parts(units[index], role, index)
                     }
@@ -434,7 +430,6 @@ open class ReadWorker(
                         JobReadConventions.rolesKey to roles))
             }
             is DesignManifest.Unread -> JobLaneAttempt(JobLaneDescriptor.unknown, null, read.warning)
-            DesignManifest.Limited -> JobLaneAttempt(JobLaneDescriptor.unknown, null, partial = true)
         }
     }
 
@@ -442,7 +437,6 @@ open class ReadWorker(
     private sealed interface DesignManifest {
         class Read(val manifest: DataManifest): DesignManifest
         class Unread(val warning: String?): DesignManifest
-        data object Limited: DesignManifest
     }
 
 
@@ -454,8 +448,7 @@ open class ReadWorker(
                     "the data of ${selfLocation.objectPath.name.value}",
                     { dataSource.resolve(it).manifest },
                     DataManifest::digest)
-                ?.let { DesignManifest.Read(it.value) }
-                ?: DesignManifest.Limited
+                .let(DesignManifest::Read)
         }
         catch (_: UnsupportedOperationException) {
             // A source that runs logic to resolve is known only in a run

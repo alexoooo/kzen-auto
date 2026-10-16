@@ -128,8 +128,7 @@ object JobConventions {
     // per-type display renders it (the progressRowsKey / progressSummaryKey precedent).
     const val progressResultValueKey = "resultValue"
 
-    // Max rows a non-forced (periodic) progress push may carry: push is a teaser, pull is the payload — every
-    // emit is retained in engine history, so periodic pushes must be O(bounded).
+    // Max rows a non-forced (periodic) progress push carries: push is a teaser, pull is the payload.
     const val progressTeaserRowCount = 10
 
     // A Worker's live holds on owned natives (E9), added to its progress map by the server when non-zero — the
@@ -139,18 +138,6 @@ object JobConventions {
     // Milliseconds since the run started, stamped by the server on every Worker progress map: two maps give a
     // rate, and the final one gives the average. A live edit keeps the run's clock.
     const val progressElapsedKey = "elapsed"
-
-    // Keys of the run-level ownership report the Job root emits (E9 item 5): holds by holder name, queued
-    // elements per channel, live / closed native counts, and the stall flag set after the no-progress interval.
-    const val ownershipHoldsKey = "holds"
-    const val ownershipQueuedKey = "queued"
-    const val ownershipLiveKey = "live"
-    const val ownershipClosedKey = "closed"
-    const val ownershipStalledKey = "stalled"
-
-    // Bounded per-item detail in a stall warning: never an unbounded live-resource list.
-    const val ownershipDetailLimit = 5
-
 
     // Deterministic name for the one-way channel auto-synthesized to carry one adjacent-Worker connection
     // (order-driven wiring — see [JobChannelSynthesis]): `ch__<upstreamWorkerLeaf>__<outputPort>`. A pure

@@ -1,5 +1,5 @@
 # RecyclableRouteTest route "cancel" (archetypes in recycle-test.yaml): source → a gated sink that never drains, so
-# the run is cancelled with values in flight. The external duplex channel only suspends deadlock detection.
+# the run is cancelled with values in flight.
 main:
   is: Job
 
@@ -7,10 +7,6 @@ main.channels/items:
   is: Channel
   capacity: 2
   batchSize: 8
-
-main.channels/signal:
-  is: DuplexChannel
-  external: true
 
 main.workers/source:
   is: RecyclingSourceWorker

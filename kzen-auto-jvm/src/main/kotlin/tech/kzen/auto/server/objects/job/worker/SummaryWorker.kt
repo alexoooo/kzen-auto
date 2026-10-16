@@ -96,11 +96,10 @@ class SummaryWorker(
         currentAccumulation().tableSummary()
 
 
-    // Push is a teaser, pull is the payload: periodic pushes carry only the running row count (every emit is
-    // retained in engine history, so serializing the full TableSummary per publish grows it without bound);
-    // the final forced push adds the full summary, so the card renders it from the persisted push after the
-    // run (survives run-end + browser refresh, like Preview's teaser). During the run the full summary is
-    // served on demand (onQuery) for the downstream filter / pivot editors.
+    // Push is a teaser, pull is the payload: periodic pushes carry only the running row count; the final forced
+    // push adds the full summary, so the card renders it from the persisted push after the run (survives run-end
+    // + browser refresh, like Preview's teaser). During the run the full summary is served on demand (onQuery)
+    // for the downstream filter / pivot editors.
     override fun progress(snapshot: Any?, force: Boolean): Map<String, Any?> {
         if (!force) {
             return mapOf(JobConventions.progressCountKey to count)

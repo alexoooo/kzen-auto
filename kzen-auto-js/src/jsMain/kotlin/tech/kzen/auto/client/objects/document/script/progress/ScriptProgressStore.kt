@@ -17,6 +17,7 @@ import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceEvent
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceQuery
+import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceRange
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceSnapshot
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.obj.ObjectPath
@@ -86,6 +87,7 @@ class ScriptProgressStore(
                     it.copy(
                         logicRunExecutionId = null,
                         logicTraceSnapshot = null,
+                        traceExecutionId = null,
                         nextToRun = null,
                         traceEvents = listOf(),
                         runStepRepresentative = mapOf(),
@@ -131,6 +133,7 @@ class ScriptProgressStore(
                         it.copy(
                             logicRunExecutionId = logicRunExecutionId,
                             logicTraceSnapshot = null,
+                            traceExecutionId = null,
                             nextToRun = null,
                             traceEvents = listOf(),
                             runStepRepresentative = mapOf(),
@@ -197,6 +200,7 @@ class ScriptProgressStore(
                         it.copy(
                             logicRunExecutionId = logicRunExecutionId,
                             logicTraceSnapshot = snapshot,
+                            traceExecutionId = activeFrame?.let { logicRunExecutionId.logicExecutionId },
                             nextToRun = activeFrame?.position,
                             traceEvents = publishedEvents,
                             runStepRepresentative = representativeByStep,
@@ -378,6 +382,38 @@ class ScriptProgressStore(
         val changed = updates
             ?: return
         representativeByStep = representativeByStep + changed
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    /**
+     * Read [count] entries of a step's traced list from [offset] (to the end when [count] is null). Not part of
+     * [refresh]: a list can be any length, so its reader (the ForEach journal) fetches only the part it shows.
+     */
+    suspend fun lookupRange(
+        list: TraceListRef,
+        offset: Int,
+        count: Int?
+    ): ClientResult<LogicTraceRange> {
+        val parameters = buildList {
+            add(CommonRestApi.paramAction to LogicConventions.actionLookupRange)
+            add(CommonRestApi.paramRunId to list.runId.value)
+            list.executionId?.let { add(CommonRestApi.paramExecutionId to it.value) }
+            add(LogicConventions.paramPath to list.path.asString())
+            add(LogicConventions.paramOffset to offset.toString())
+            count?.let { add(LogicConventions.paramCount to it.toString()) }
+        }
+
+        val result = scriptStore.restClient.performDetached(
+            LogicConventions.logicTraceEndpointLocation, *parameters.toTypedArray())
+
+        return when (result) {
+            is ExecutionSuccess ->
+                ClientResult.ofSuccess(LogicTraceRange.ofExecutionValue(result.value))
+
+            is ExecutionFailure ->
+                ClientResult.ofError(result.errorMessage)
+        }
     }
 
 

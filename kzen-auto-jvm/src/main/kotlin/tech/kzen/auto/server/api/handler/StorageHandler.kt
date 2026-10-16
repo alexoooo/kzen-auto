@@ -20,8 +20,7 @@ class StorageHandler(
                 area.description,
                 bundles.sumOf { it.sizeBytes },
                 bundles.size,
-                area.deletable,
-                area.budgetBytes
+                area.deletable
             )
         }
     }

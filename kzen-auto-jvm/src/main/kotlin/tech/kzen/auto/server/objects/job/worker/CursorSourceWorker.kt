@@ -93,10 +93,6 @@ abstract class CursorSourceWorker(
         lending.lending()
 
 
-    final override fun awaitingRelease(): Boolean =
-        lending.awaitingRelease()
-
-
     //-----------------------------------------------------------------------------------------------------------------
     final override suspend fun produce(emit: Emitter, control: JobControl) {
         try {

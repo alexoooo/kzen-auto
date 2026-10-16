@@ -4,7 +4,6 @@ import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.exec.LogicCompilerServices
 import tech.kzen.auto.server.objects.job.worker.PreviewWorker
-import tech.kzen.auto.server.objects.job.worker.preview.PreviewCapture
 import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionSuccess
@@ -51,7 +50,6 @@ class JobExternalBridgeTest {
 
     @AfterTest
     fun tearDown() {
-        PreviewWorker.captureNanos = PreviewCapture.defaultMaximumNanos
         if (::context.isInitialized) {
             context.close()
         }
@@ -61,7 +59,6 @@ class JobExternalBridgeTest {
     //-----------------------------------------------------------------------------------------------------------------
     @Test
     fun externalBridgeServesLivePreviewSliceWhileRunning() {
-        PreviewWorker.captureNanos = Long.MAX_VALUE
         val rows = 100
         writeCsv(inputCsv, rows)
         context = KzenAutoContext.forTest()
@@ -110,7 +107,7 @@ class JobExternalBridgeTest {
         }
         finally {
             // Cancel the paused run before close, as the controller does: close only stops the pools, leaving the
-            // parked Job run (and its deadlock-monitor thread) suspended for the rest of the test JVM
+            // parked Job run suspended for the rest of the test JVM
             engine.cancel()
             engine.awaitQuiescent()
             engine.close()

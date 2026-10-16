@@ -10,8 +10,6 @@ class OpenedReaderByteInput internal constructor(
     private val control: ContentReadControl,
     val observedFingerprint: DataContentFingerprint
 ): ReaderByteInput, AutoCloseable {
-    override val expandedBytesRead: Long get() = control.expandedBytesRead
-
     /** The source bytes read so far, beneath any coding: the read's progress through the stored content. */
     val sourceBytesRead: Long get() = control.sourceBytesRead
 
@@ -20,23 +18,17 @@ class OpenedReaderByteInput internal constructor(
 
     override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
         check(!closed) { "Reader byte input is closed" }
-        control.beginOperation()
         try {
-            try {
-                return bytes.read(buffer, offset, length)
-            }
-            catch (failure: Throwable) {
-                try {
-                    close()
-                }
-                catch (closeFailure: Throwable) {
-                    failure.addSuppressed(closeFailure)
-                }
-                throw failure
-            }
+            return bytes.read(buffer, offset, length)
         }
-        finally {
-            control.endOperation()
+        catch (failure: Throwable) {
+            try {
+                close()
+            }
+            catch (closeFailure: Throwable) {
+                failure.addSuppressed(closeFailure)
+            }
+            throw failure
         }
     }
 

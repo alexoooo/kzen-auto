@@ -15,8 +15,6 @@ sealed interface DataContractDisplay {
         val provenance: String? = null
     ): DataContractDisplay
     data object Dynamic: DataContractDisplay
-    /** Not known yet: the server is still reading data to type it. */
-    data object Reading: DataContractDisplay
     data object Unavailable: DataContractDisplay
     data class Error(val message: String): DataContractDisplay
     data object Loading: DataContractDisplay
@@ -33,7 +31,6 @@ sealed interface DataContractDisplay {
             val contract = validation.contract ?: return Unavailable
             return when {
                 contract.structural !is DataType.Dynamic -> Contract(contract, provenance = validation.provenance)
-                validation.partial -> Reading
                 else -> Dynamic
             }
         }

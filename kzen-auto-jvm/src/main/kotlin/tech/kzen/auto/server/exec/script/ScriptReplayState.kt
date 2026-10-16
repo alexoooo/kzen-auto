@@ -7,6 +7,7 @@ import tech.kzen.lib.common.exec.data.binding.DataBindings
 import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.service.store.normal.ObjectStableId
+import tech.kzen.lib.platform.collect.PersistentList
 
 
 /**
@@ -65,6 +66,8 @@ class ScriptReplayState(
     // journal a loop the jump skipped over had built while it was running. Consulted by the spine's
     // adopt-outcome emit, which would otherwise blank it. Empty on an ordinary run / edit-migrate.
     private val partialDetails = HashMap<ObjectStableId, ExecutionValue>()
+    // ... and the traced list it brought with it ([PartialOutcome.list]: the loop's journal), re-emitted likewise.
+    private val partialLists = HashMap<ObjectStableId, PersistentList<ExecutionValue>>()
 
     // Opaque per-step mid-flight migration sub-state — a loop's iteration cursor — carried alongside
     // [completedOutcomes]: [carryStates] is the live capture source, [restoredCarries] the predecessor run's
@@ -91,6 +94,11 @@ class ScriptReplayState(
 
     fun partialDetailOrNull(stableId: ObjectStableId): ExecutionValue? {
         return partialDetails[stableId]
+    }
+
+
+    fun partialListOrNull(stableId: ObjectStableId): PersistentList<ExecutionValue>? {
+        return partialLists[stableId]
     }
 
 
@@ -247,6 +255,7 @@ class ScriptReplayState(
             else {
                 restoredOutcomes[stableId] = structure.liftStepResult(location, partial.value)
                 partialDetails[stableId] = partial.detail
+                partial.list?.let { partialLists[stableId] = it }
 
                 // It is adopted rather than re-run, so its cursor is spent — a stale one must not survive to be
                 // consumed by a later backward jump back into the loop.

@@ -8,7 +8,6 @@ import tech.kzen.auto.common.data.read.CursorAdoptionIdentity
 import tech.kzen.auto.common.data.read.ReaderConfig
 import tech.kzen.auto.common.data.schema.DataShape
 import tech.kzen.auto.plugin.api.data.ReaderCapability
-import tech.kzen.auto.plugin.api.data.ReaderInspectionRequest
 import tech.kzen.auto.plugin.api.data.ReaderOpenRequest
 import tech.kzen.auto.server.data.content.OpenedReaderByteInput
 import tech.kzen.auto.server.data.content.SequentialByteContent
@@ -20,7 +19,6 @@ import tech.kzen.auto.server.data.content.policy.ContentReadControl
 import tech.kzen.auto.server.data.content.provider.DataContentProviderLookup
 import tech.kzen.auto.server.data.read.OwnedReaderDataCursor
 import tech.kzen.auto.server.data.read.ReaderCapabilityRegistry
-import tech.kzen.auto.server.data.read.ReaderExecutionPolicies
 import tech.kzen.auto.server.objects.datasource.format.UnreadFormat
 
 
@@ -28,8 +26,7 @@ class ConfiguredDataOpener(
     private val schemaCache: SchemaCache,
     private val readerCapabilities: ReaderCapabilityRegistry = ReaderCapabilityRegistry.withConfiguredReaders(),
     private val contentStack: SequentialContentStack = SequentialContentStack(
-        DataContentProviderLookup(LocalDataContentProvider(), emptyMap())),
-    private val policies: ReaderExecutionPolicies = ReaderExecutionPolicies()
+        DataContentProviderLookup(LocalDataContentProvider(), emptyMap()))
 ): OperationalDataOpener, ContentDataOpener {
     override suspend fun open(context: DataContext, part: DataPart): DataCursor {
         val resolved = resolve(part)
@@ -40,15 +37,13 @@ class ConfiguredDataOpener(
             part.expectedFingerprint,
             part.resolvedRead.contentCodings,
             required,
-            policies.runContent,
             part.role.name)
         try {
             val cursor = resolved.capability.open(ReaderOpenRequest(
                 part.ref.display(),
                 part.role.name,
                 resolved.config,
-                bytes,
-                policies.run))
+                bytes))
             return OwnedReaderDataCursor(cursor, bytes, adoptionIdentity(part))
         }
         catch (failure: Throwable) {
@@ -74,7 +69,7 @@ class ConfiguredDataOpener(
             ?: throw IllegalArgumentException(
                 "Content opened from held bytes must carry its fingerprint: ${part.ref.display()}")
 
-        val control = ContentReadControl(policies.runContent)
+        val control = ContentReadControl()
         var owner: AutoCloseable = bytes
         try {
             val decodedBytes = ContentCodingStack.wrap(
@@ -90,8 +85,7 @@ class ConfiguredDataOpener(
                 part.ref.display(),
                 part.role.name,
                 resolved.config,
-                input,
-                policies.run))
+                input))
             return OwnedReaderDataCursor(cursor, input, adoptionIdentity(part))
         }
         catch (failure: Throwable) {
@@ -106,54 +100,23 @@ class ConfiguredDataOpener(
     }
 
 
+    /**
+     * The shape a part's reader states once open: fixed by its config, or read from the content as far as the
+     * reader needs to state it (a delimited file's header), cached against the content's fingerprint.
+     */
     override suspend fun inspectShape(context: DataContext, part: DataPart): DataShape {
         val resolved = resolve(part)
         resolved.capability.fixedShape(resolved.config)?.let { return it }
 
-        val key = SchemaCacheKey.of(
-            part, policies.inspection, CodeFingerprint.forReader(resolved.capability::class.java))
+        val key = SchemaCacheKey.of(part, CodeFingerprint.forReader(resolved.capability::class.java))
         key?.let(schemaCache::get)?.let { return it }
-        val required = resolved.capability.requiredContent(resolved.config)
-        val bytes = contentStack.openBytes(
-            context,
-            part.ref,
-            part.expectedFingerprint,
-            part.resolvedRead.contentCodings,
-            required,
-            policies.inspectionContent,
-            part.role.name)
-        var inspectionFailure: Throwable? = null
-        val shape = try {
-            resolved.capability.inspect(ReaderInspectionRequest(
-                ReaderOpenRequest(
-                    part.ref.display(),
-                    part.role.name,
-                    resolved.config,
-                    bytes,
-                    policies.run.copy(
-                        maximumExpandedBytes = policies.inspection.maximumExpandedBytes,
-                        timeoutMillis = policies.inspection.timeoutMillis)),
-                requireNotNull(policies.inspection.maximumRecords).toLong()))
-        }
-        catch (failure: Throwable) {
-            inspectionFailure = failure
-            throw failure
-        }
-        finally {
-            try {
-                bytes.close()
-            }
-            catch (closeFailure: Throwable) {
-                if (inspectionFailure == null) throw closeFailure
-                inspectionFailure.addSuppressed(closeFailure)
-            }
-        }
+        val shape = open(context, part).use { it.shape }
         return shape.also { if (key != null) schemaCache.put(key, it) }
     }
 
 
     override fun adoptionIdentity(part: DataPart): CursorAdoptionIdentity =
-        CursorAdoptionIdentity(part.digest(), policies.run.digest())
+        CursorAdoptionIdentity(part.digest())
 
 
     private fun resolve(part: DataPart): ResolvedCapability {

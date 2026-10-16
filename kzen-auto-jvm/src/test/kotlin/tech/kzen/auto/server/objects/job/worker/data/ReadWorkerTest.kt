@@ -28,8 +28,7 @@ import tech.kzen.auto.server.data.DataOpenerLookup
 import tech.kzen.auto.server.data.OperationalDataOpener
 import tech.kzen.auto.server.data.configuredTestDataPart
 import tech.kzen.auto.common.objects.document.job.JobReadConventions
-import tech.kzen.auto.server.data.design.DesignReadBudget
-import tech.kzen.auto.server.data.design.DesignReader
+import tech.kzen.auto.server.data.design.DesignReadSession
 import tech.kzen.auto.server.data.read.OperationalDataCursor
 import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.auto.server.objects.job.worker.testJobValue
@@ -499,7 +498,7 @@ class ReadWorkerTest {
         val opener = FakeOpener(emptyMap(), mapOf("a" to aShape, "b" to bShape))
 
         val items = worker(source, opener, CapturingOutput(), schemaMode = DataReadCore.schemaSuperset)
-            .payloadFlow(JobLaneDescriptor.unknown, laneContext(DesignReadBudget.editor))
+            .payloadFlow(JobLaneDescriptor.unknown, laneContext(design = true))
         assertNull(items.errorMessage)
         assertEquals("Inferred from 2 of 2 values", items.provenance)
         val record = assertIs<DataType.Record>(items.lane.contract.payload().structural)
@@ -508,9 +507,8 @@ class ReadWorkerTest {
         assertEquals(listOf("main"), items.details[JobReadConventions.rolesKey], "the source's part names")
 
         val units = worker(source, opener, CapturingOutput(), emit = ReadWorker.emitUnits)
-            .payloadFlow(JobLaneDescriptor.unknown, laneContext(DesignReadBudget.editor))
-        assertEquals(2, units.lane.sample?.values?.size)
-        assertEquals(true, units.lane.sample?.complete)
+            .payloadFlow(JobLaneDescriptor.unknown, laneContext(design = true))
+        assertEquals(2, units.lane.values?.size)
         assertEquals(2, opener.inspectCount, "offering units inspects nothing")
     }
 
@@ -621,10 +619,10 @@ class ReadWorkerTest {
     private fun manifest(vararg units: DataUnit): DataManifest = DataManifest(units.toList())
 
 
-    private fun laneContext(budget: DesignReadBudget? = null): JobLaneContext {
+    private fun laneContext(design: Boolean = false): JobLaneContext {
         return JobLaneContext(
             BindingSchema.empty, GraphStructure.empty, ReadWorker::class.java.classLoader,
-            budget?.let { DesignReader().session(it) })
+            DesignReadSession().takeIf { design })
     }
 
 
@@ -673,7 +671,7 @@ class ReadWorkerTest {
 
 
         override fun adoptionIdentity(part: DataPart): CursorAdoptionIdentity =
-            CursorAdoptionIdentity(part.digest(), Digest.ofUtf8("fake-read-policy"))
+            CursorAdoptionIdentity(part.digest())
     }
 
 

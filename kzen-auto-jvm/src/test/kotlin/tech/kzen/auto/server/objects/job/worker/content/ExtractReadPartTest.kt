@@ -3,19 +3,15 @@ package tech.kzen.auto.server.objects.job.worker.content
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import tech.kzen.auto.server.objects.job.channel.JobChannel
 import tech.kzen.auto.server.objects.job.worker.content.ContentTestHarness.Companion.collected
 import tech.kzen.auto.server.objects.job.worker.content.ContentTestHarness.Companion.listFiles
 import tech.kzen.auto.server.objects.job.worker.content.ContentTestHarness.Companion.prepare
 import tech.kzen.auto.server.objects.job.worker.content.ContentTestHarness.Companion.prepareBig
 import tech.kzen.auto.server.objects.job.worker.content.ContentTestHarness.Companion.prepareBigFile
 import tech.kzen.auto.server.objects.job.worker.content.tar.TarEntryCursor
-import tech.kzen.lib.common.exec.engine.Outcome
 import java.nio.file.Files
 import java.util.concurrent.CopyOnWriteArrayList
-import kotlin.test.assertContains
 import kotlin.test.assertEquals
-import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 
@@ -36,14 +32,12 @@ class ExtractReadPartTest {
     fun setUp() {
         cursors.clear()
         TarEntryCursor.observer = { cursors.add(it) }
-        JobChannel.consumerCloseEnabled = true
     }
 
 
     @After
     fun tearDown() {
         TarEntryCursor.observer = null
-        JobChannel.consumerCloseEnabled = true
         harness.close()
     }
 
@@ -98,19 +92,6 @@ class ExtractReadPartTest {
         assertTrue(cursor.isClosed)
         println("BE2 take-out: $rows-row entry, 10 taken, ${elapsedMillis} ms")
         assertTrue(elapsedMillis < 60_000, "Take(10) over $rows rows took $elapsedMillis ms")
-    }
-
-
-    @Test
-    fun withoutConsumerCloseTheEngineReportsTheCompletedTakeAsADeadlock() {
-        prepareBig()
-        JobChannel.consumerCloseEnabled = false
-
-        val outcome = harness.run("test/job/content/extract-take-out-test.yaml")
-
-        val failed = assertIs<Outcome.Failed>(outcome)
-        assertContains(failed.message, "deadlock")
-        assertEquals(1, cursors.single().closeCount())
     }
 
 

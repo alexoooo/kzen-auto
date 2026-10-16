@@ -24,11 +24,10 @@ interface ReaderCapability {
 
     suspend fun open(request: ReaderOpenRequest): DataCursor
 
-    suspend fun inspect(request: ReaderInspectionRequest): DataShape
-
     /**
      * The shape when [config] alone fixes it, so inspection reads no content and nothing is cached (a fixed shape
-     * is free to recompute, and a cached copy could only go stale); `null` when the shape depends on the content.
+     * is free to recompute, and a cached copy could only go stale); `null` when the shape depends on the content,
+     * which inspection then takes from the [open] cursor's [DataCursor.shape].
      */
     fun fixedShape(config: ReaderConfig): DataShape? = null
 }

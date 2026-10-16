@@ -5,7 +5,6 @@ import tech.kzen.auto.common.data.read.DelimitedDialectSpec
 import tech.kzen.auto.common.data.read.DelimitedReadConfig
 import tech.kzen.auto.common.data.read.FieldDecodeOverride
 import tech.kzen.auto.common.data.read.HeaderReadSpec
-import tech.kzen.auto.common.data.read.ReadOperationalPolicy
 import tech.kzen.auto.common.data.read.RecordFramingSpec
 import tech.kzen.auto.common.data.read.TypedDecodePolicy
 import tech.kzen.auto.common.data.schema.DataShape
@@ -220,22 +219,16 @@ class ConfiguredDelimitedReaderTest {
     }
 
     @Test
-    fun widthAndAllParserBudgetsFailWithLimits() {
+    fun moreFieldsThanTheContractFailsOnWidth() {
         val configured = config(textContract(2))
         val width = assertFailsWith<DelimitedReadException> {
             reader("a;b;c", configured).use { it.read() }
         }
         assertEquals(DelimitedReadException.width, width.category)
-        assertBudget("abcd;x", configured,
-            ReadOperationalPolicy(maximumRecordCharacters = 3), "record-character")
-        assertBudget("abcd;x", configured,
-            ReadOperationalPolicy(maximumFieldCharacters = 3), "field-character")
-        assertBudget("a;b;c", configured,
-            ReadOperationalPolicy(maximumFields = 2), "field-count")
     }
 
     @Test
-    fun fieldsReadAcrossTheInputBufferKeepTheirContentSpansAndLimits() {
+    fun fieldsReadAcrossTheInputBufferKeepTheirContentSpans() {
         // Long fields cross the 8192-character read buffer; quoted ones hold delimiters, quotes and line breaks
         val expected = mutableListOf<List<String>>()
         val input = StringBuilder()
@@ -265,22 +258,16 @@ class ConfiguredDelimitedReaderTest {
         assertEquals(badStart.toLong()..(badStart + 1L), failure.span)
 
         val field = 5000
-        reader("a".repeat(field) + ";b", config(textContract(2)),
-            ReadOperationalPolicy(maximumFieldCharacters = field, maximumRecordCharacters = field + 2)).use {
+        reader("a".repeat(field) + ";b", config(textContract(2))).use {
             assertEquals(listOf("a".repeat(field), "b"), it.read()!!.backing.toList())
         }
-        assertBudget("a".repeat(field + 1) + ";b", config(textContract(2)),
-            ReadOperationalPolicy(maximumFieldCharacters = field), "field-character")
-        assertBudget("a".repeat(field) + ";bc", config(textContract(2)),
-            ReadOperationalPolicy(maximumRecordCharacters = field + 2), "record-character")
     }
 
 
     @Test
     fun cancellationIsCheckedInsideLongRecordsAndKindsResolveBeforeContent() {
         var checks = 0
-        reader("a".repeat(2050) + ";x", config(textContract(2)),
-            ReadOperationalPolicy(maximumRecordCharacters = 3000)) { checks++ }.use { it.read() }
+        reader("a".repeat(2050) + ";x", config(textContract(2))) { checks++ }.use { it.read() }
         assertTrue(checks >= 3)
         assertFailsWith<DelimitedReadException> {
             reader("x", config(contract("when" to scalar(ScalarKind.Instant))))
@@ -310,8 +297,7 @@ class ConfiguredDelimitedReaderTest {
         val cancelledContent = StringContent("a".repeat(2050) + ";x")
         val cancelledCursor = cursor(
             cancelledContent,
-            config(textContract(2)),
-            ReadOperationalPolicy(maximumRecordCharacters = 3000)) {
+            config(textContract(2))) {
                 throw CancellationException("test cancellation")
             }
         assertFailsWith<CancellationException> { cancelledCursor.hasNext() }
@@ -320,36 +306,21 @@ class ConfiguredDelimitedReaderTest {
         assertEquals(1, cancelledContent.closeCount)
     }
 
-    private fun assertBudget(
-        text: String,
-        config: DelimitedReadConfig,
-        policy: ReadOperationalPolicy,
-        kind: String
-    ) {
-        val failure = assertFailsWith<DelimitedReadException> {
-            reader(text, config, policy).use { it.read() }
-        }
-        assertEquals(DelimitedReadException.budget, failure.category)
-        assertTrue(failure.message!!.contains(kind))
-    }
-
     private fun reader(
         text: String,
         config: DelimitedReadConfig,
-        policy: ReadOperationalPolicy = ReadOperationalPolicy(),
         checkpoint: () -> Unit = {}
     ) = ConfiguredDelimitedReader.open(
-        StringContent(text), config, policy,
+        StringContent(text), config,
         DelimitedReadContext("memory://fixture", "unit-1", "main"), checkpoint)
 
     private fun cursor(
         content: StringContent,
         config: DelimitedReadConfig,
-        policy: ReadOperationalPolicy = ReadOperationalPolicy(),
         checkpoint: () -> Unit = {}
     ): ConfiguredDelimitedDataCursor {
         val parser = ConfiguredDelimitedReader.open(
-            content, config, policy,
+            content, config,
             DelimitedReadContext("memory://fixture", "unit-1", "main"), checkpoint)
         return ConfiguredDelimitedDataCursor(
             parser,
@@ -384,7 +355,6 @@ class ConfiguredDelimitedReaderTest {
 
     private class StringContent(private val text: String): SequentialCharacterContent {
         override val resolvedCharsetName = "UTF-8"
-        override val inspectionRecordLimit = Long.MAX_VALUE
         var closeCount = 0
             private set
         private var position = 0

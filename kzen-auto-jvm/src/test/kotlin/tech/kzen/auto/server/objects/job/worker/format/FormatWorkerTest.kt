@@ -313,7 +313,6 @@ class FormatWorkerTest {
         ContentTestHarness.edit(notation, worker(column, worker), attribute, value)
 
 
-    // As the editor does: a pass its deadline cuts short is asked again, reading on from what the last one read
     private fun validate(document: String, notation: GraphNotation = AutoTestUtils.readNotation()) =
         assertNotNull(harness.validate(document, notation).workerValidations[formatLocation(document).objectPath])
 

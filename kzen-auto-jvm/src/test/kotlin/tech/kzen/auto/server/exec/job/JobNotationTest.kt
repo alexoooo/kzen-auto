@@ -29,8 +29,8 @@ import kotlin.test.assertTrue
  * order-synthesized Channels under the quiescence barrier, both run-to-completion and across a pause / resume.
  *
  * Jobs are nondeterministic, so assertions are on the drained output / terminal outcome — never interleaving
- * order or an exact pause count. Migration, the external duplex bridge, nested-logic (RunWorker), deadlock
- * detection and pause-on-error are intentionally not covered — they are tracked parity gaps for this first port
+ * order or an exact pause count. Migration, the external duplex bridge, nested-logic (RunWorker) and
+ * pause-on-error are intentionally not covered — they are tracked parity gaps for this first port
  * (see [JobRun]).
  */
 class JobNotationTest {

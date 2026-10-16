@@ -1,6 +1,5 @@
 # RecyclableRouteTest route "migration-buffered" (archetypes in recycle-test.yaml): source → gated sink, with two
-# batches buffered and one parked mid-flush at the cut, carried across a live edit of the sink. The external duplex
-# channel only suspends deadlock detection.
+# batches buffered and one parked mid-flush at the cut, carried across a live edit of the sink.
 main:
   is: Job
 
@@ -8,10 +7,6 @@ main.channels/items:
   is: Channel
   capacity: 2
   batchSize: 4
-
-main.channels/signal:
-  is: DuplexChannel
-  external: true
 
 main.workers/source:
   is: RecyclingSourceWorker

@@ -69,6 +69,7 @@ kotlin {
             implementation(kotlinWrappers.reactDom)
             implementation(kotlinWrappers.emotion.styled)
             implementation(kotlinWrappers.mui.material)
+            implementation(kotlinWrappers.tanstack.virtualCore)
 
             implementation(npm("cropperjs", cropperJsVersion))
             implementation(npm("lodash", lodashVersion))

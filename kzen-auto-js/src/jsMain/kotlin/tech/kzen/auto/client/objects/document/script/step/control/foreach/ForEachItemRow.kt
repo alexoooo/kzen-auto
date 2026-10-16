@@ -12,6 +12,7 @@ import tech.kzen.auto.client.objects.document.script.display.dependency.scriptGu
 import tech.kzen.auto.client.objects.document.script.display.dependency.scriptGutterRowBodyInset
 import tech.kzen.auto.client.objects.document.script.display.dependency.stepDependencyGutterCellForStep
 import tech.kzen.auto.client.objects.document.script.display.dependency.stepDependencyGutterWidthPx
+import tech.kzen.auto.client.objects.document.script.progress.TraceListRef
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.common.objects.document.script.model.ForEachProgress
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -43,6 +44,7 @@ fun ChildrenBuilder.forEachItemRow(
     itemLocation: ObjectLocation,
     itemType: String?,
     progress: ForEachProgress?,
+    journal: TraceListRef?,
     registry: StepRowRefRegistry?,
     edges: StepDependencyEdges
 ) {
@@ -54,7 +56,7 @@ fun ChildrenBuilder.forEachItemRow(
             // source marker the overlay's polyline emerges from.
             stepDependencyGutterCellForStep(0, edges)
         },
-        body = { renderItemBody(itemLocation, itemType, progress, counterInset(edges)) })
+        body = { renderItemBody(itemLocation, itemType, progress, journal, counterInset(edges)) })
 }
 
 
@@ -81,6 +83,7 @@ private fun ChildrenBuilder.renderItemBody(
     itemLocation: ObjectLocation,
     itemType: String?,
     progress: ForEachProgress?,
+    journal: TraceListRef?,
     counterInset: Length
 ) {
     div {
@@ -101,9 +104,9 @@ private fun ChildrenBuilder.renderItemBody(
 
         title = "Loop item — managed by the ForEach"
 
-        // Declaration cluster, growing to push the counter to the row's right edge. An item display runs to
-        // TraceDisplay.maxScriptTraceChars, so it is clipped rather than wrapped here (minWidth 0 is what lets a
-        // flex item shrink below its content at all) — the untruncated value is in the journal popover anyway.
+        // Declaration cluster, growing to push the counter to the row's right edge. An item display can be
+        // long, so it is clipped rather than wrapped here (minWidth 0 is what lets a flex item shrink below its
+        // content at all) — the whole value is in the journal popover anyway.
         div {
             css {
                 flexGrow = number(1.0)
@@ -135,9 +138,11 @@ private fun ChildrenBuilder.renderItemBody(
             renderItemValue(progress?.item)
         }
 
-        if (progress != null) {
+        // Both or neither: a progress detail comes from a run's trace, which is where its journal is read from.
+        if (progress != null && journal != null) {
             ForEachProgressButton::class.react {
                 this.progress = progress
+                this.journal = journal
             }
         }
     }

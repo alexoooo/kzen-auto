@@ -146,7 +146,8 @@ class PreviewSampleView(
 
 
     // Issue an `offset` / `limit` slice query over the (external) duplex `serve` channel via the running logic's
-    // request subscriber — the browser -> Worker request/reply path. The reply has the same shape as the teaser.
+    // request subscriber — the browser -> Worker request/reply path. The reply has the same shape as the teaser;
+    // with no limit it is the whole sample the Preview keeps.
     private suspend fun querySlice(clientState: ClientState): JobWorkerProgress? {
         val logicRunInfo = clientState.clientLogicState.logicStatus?.active
             ?: return null
@@ -158,8 +159,7 @@ class PreviewSampleView(
             logicRunInfo.id,
             logicRunInfo.frame.executionId,
             JobConventions.channelParameter to channelName,
-            JobConventions.previewOffsetParameter to "0",
-            JobConventions.previewLimitParameter to "200")
+            JobConventions.previewOffsetParameter to "0")
 
         return when (result) {
             is ExecutionSuccess ->
@@ -209,9 +209,6 @@ class PreviewSampleView(
                 renderPreviewTable(structured.columns.map { it.label }, structured.rows)
                 if (items.any { it.partial }) {
                     div { css { fontSize = 0.8.em; color = Color("#8a5a00") }; +"Partial preview — expand cells for details." }
-                }
-                if (shown.progressMap[PreviewNode.limitedKey] == true) {
-                    div { css { fontSize = 0.8.em }; +"Showing recent items within the preview memory limit." }
                 }
             }
             else if (header.isNotEmpty() || rows.isNotEmpty()) {

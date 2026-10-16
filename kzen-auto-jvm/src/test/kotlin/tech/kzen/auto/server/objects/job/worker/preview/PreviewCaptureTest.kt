@@ -7,13 +7,12 @@ import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.lib.common.exec.*
 import tech.kzen.lib.common.exec.data.type.*
 import tech.kzen.lib.common.exec.data.value.*
-import tech.kzen.lib.common.exec.data.value.budget.ReadPreparation
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import java.util.concurrent.CancellationException
 import kotlin.test.*
 
 class PreviewCaptureTest {
-    private val capture = PreviewCapture(maximumNanos = Long.MAX_VALUE)
+    private val capture = PreviewCapture
 
     @Test
     fun nestedNativeRecordIsDetachedAndReadableAfterClose() {
@@ -60,48 +59,12 @@ class PreviewCaptureTest {
     }
 
     @Test
-    fun boundedCapturePreservesPrefixAndMarksOmissions() {
-        val listing = LiteralDataValues.lift(listOf("abcdef", "second", "third"))
-        val snapshot = PreviewCapture(maximumChildren = 2, maximumText = 3, maximumNanos = Long.MAX_VALUE).capture(listing)
-        assertEquals("abc…", snapshot.children[0].text)
-        assertEquals("truncated", snapshot.children.last().kind)
-        assertTrue(snapshot.partial)
-        val huge = capture.capture(LiteralDataValues.lift(List(200) { "x".repeat(4096) }))
-        assertTrue(huge.partial)
-        assertTrue(huge.encode().toByteArray().size <= 256 * 1024)
-        val nodes = PreviewCapture(maximumNodes = 2, maximumNanos = Long.MAX_VALUE).capture(listing)
-        assertEquals("truncated", nodes.children.last().kind)
-        val deep = PreviewCapture(maximumDepth = 1, maximumNanos = Long.MAX_VALUE)
-            .capture(LiteralDataValues.lift(listOf(listOf(listOf(1)))))
-        assertEquals("truncated", deep.children.single().children.single().kind)
-        val timed = PreviewCapture(maximumNanos = -1).capture(listing)
-        assertEquals("truncated", timed.kind)
-    }
-
-    @Test
-    fun preparingATypesReaderIsNotChargedToTheTimeBudget() {
-        val original = LiteralDataValues.lift(recordOf("first" to "a", "second" to "b"))
-        var prepared = false
-        val coldType = object: ValueAccess by original.access {
-            override fun field(node: DataNode, field: FieldId): DataNode {
-                if (!prepared) {
-                    prepared = true
-                    ReadPreparation.prepare { Thread.sleep(overBudgetMillis) }
-                }
-                return original.access.field(node, field)
-            }
-        }
-        val snapshot = PreviewCapture().capture(DataValue(coldType, original.root))
-        assertFalse(snapshot.partial, snapshot.encode())
-        assertEquals(listOf("a", "b"), snapshot.children.map { it.text })
-    }
-
-    @Test
-    fun slowReadingIsStillCutAtTheTimeBudget() {
-        val snapshot = PreviewCapture().capture(JobDataValues.lift(List(3) { SlowGetter() }))
-        assertTrue(snapshot.partial)
-        assertEquals("Preview limit reached", snapshot.children.first().children.single().text)
-        assertEquals("2 more omitted", snapshot.children.last().text)
+    fun aLargeValueIsCopiedInFull() {
+        val text = "x".repeat(100_000)
+        val snapshot = capture.capture(LiteralDataValues.lift(List(1_000) { text }))
+        assertEquals(1_000, snapshot.children.size)
+        assertTrue(snapshot.children.all { it.text == text })
+        assertFalse(snapshot.partial)
     }
 
     @Test
@@ -158,18 +121,6 @@ class PreviewCaptureTest {
             override fun state(node: DataNode): DataState = throw CancellationException()
         }
         assertFailsWith<CancellationException> { capture.capture(DataValue(cancelled, backing.root)) }
-    }
-
-    companion object {
-        private const val overBudgetMillis = 3 * PreviewCapture.defaultMaximumNanos / 1_000_000
-    }
-
-    class SlowGetter {
-        val value: String
-            get() {
-                Thread.sleep(overBudgetMillis)
-                return "x"
-            }
     }
 
     class Detail(var open: Boolean)

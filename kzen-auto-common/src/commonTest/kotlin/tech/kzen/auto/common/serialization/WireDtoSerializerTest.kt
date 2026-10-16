@@ -14,7 +14,6 @@ import tech.kzen.auto.common.util.storage.StorageBundleInfo
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
-import kotlin.test.assertNull
 import kotlin.time.Instant
 
 
@@ -31,57 +30,13 @@ class WireDtoSerializerTest {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun area(budgetBytes: Long? = null) =
-        StorageAreaInfo("work", "Work", "Scratch space", 1234L, 4, true, budgetBytes)
+    private fun area() =
+        StorageAreaInfo("work", "Work", "Scratch space", 1234L, 4, true)
 
 
     @Test
     fun storageAreaInfoRoundTrip() {
         roundTrip(area())
-        roundTrip(area(budgetBytes = 999_000_000L))
-        roundTrip(area(budgetBytes = 0L))
-    }
-
-
-    @Test
-    fun storageAreaInfoOmitsNullBudget() {
-        // LOAD-BEARING. Stock Json has encodeDefaults=false, so `budgetBytes: Long? = null` holding null is skipped
-        // entirely and `budget` is absent — matching the legacy codec, which only put the key when non-null.
-        // If someone sets explicitNulls=false globally, or drops the `= null` default, this breaks — and the same
-        // config carries SER4's LogicStatus.active sentinel-kill (a nullable WITHOUT a default must encode as an
-        // explicit JSON null). Guard both here.
-        val expected = buildJsonObject {
-            put("id", "work")
-            put("name", "Work")
-            put("description", "Scratch space")
-            put("size", 1234L)
-            put("bundles", 4)
-            put("deletable", true)
-        }
-        assertEquals(expected, Json.encodeToJsonElement(area()))
-    }
-
-
-    @Test
-    fun storageAreaInfoIncludesNonNullBudget() {
-        val expected = buildJsonObject {
-            put("id", "work")
-            put("name", "Work")
-            put("description", "Scratch space")
-            put("size", 1234L)
-            put("bundles", 4)
-            put("deletable", true)
-            put("budget", 5000L)
-        }
-        assertEquals(expected, Json.encodeToJsonElement(area(budgetBytes = 5000L)))
-    }
-
-
-    @Test
-    fun storageAreaInfoDecodesAbsentBudget() {
-        val decoded = Json.decodeFromString<StorageAreaInfo>(
-            """{"id":"work","name":"Work","description":"d","size":1,"bundles":0,"deletable":false}""")
-        assertNull(decoded.budgetBytes)
     }
 
 

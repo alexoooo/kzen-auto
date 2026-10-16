@@ -11,6 +11,7 @@ import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
 import tech.kzen.lib.common.exec.logic.trace.LogicTrace
+import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceQuery
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -99,6 +100,27 @@ class LogicTraceEndpoint(
 
                 ExecutionSuccess.ofValue(ExecutionValue.of(
                     executions.map { it.toCollection() }))
+            }
+
+            LogicConventions.actionLookupRange -> {
+                val logicRunId = request.getSingle(CommonRestApi.paramRunId)?.let { LogicRunId(it) }
+                    ?: return ExecutionResult.failure("Logic Run ID missing: '${CommonRestApi.paramRunId}'")
+
+                // Optional: without it, the run's latest buffer holding the path (the lookup-run merge rule)
+                val logicExecutionId = request.getSingle(CommonRestApi.paramExecutionId)?.let { LogicExecutionId(it) }
+
+                val path = request.getSingle(LogicConventions.paramPath)?.let { LogicTracePath.parse(it) }
+                    ?: return ExecutionResult.failure("Trace path missing: '${LogicConventions.paramPath}'")
+
+                val offset = request.getSingle(LogicConventions.paramOffset)?.toInt()
+                    ?: return ExecutionResult.failure("Offset missing: '${LogicConventions.paramOffset}'")
+
+                val count = request.getSingle(LogicConventions.paramCount)?.toInt()
+
+                val range = logicTrace.lookupRange(logicRunId, logicExecutionId, path, offset, count)
+                    ?: return ExecutionResult.failure("No traced list at: $logicRunId / $logicExecutionId / $path")
+
+                ExecutionSuccess.ofValue(range.asExecutionValue())
             }
 
             LogicConventions.actionTraced -> {

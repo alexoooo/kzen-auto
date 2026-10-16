@@ -134,8 +134,6 @@ private class DecoderCharacterContent(
     }
 
     override val resolvedCharsetName: String = decoder.charset().name()
-    override val inspectionRecordLimit: Long = control.inspectionRecordLimit
-    override val expandedBytesRead: Long get() = control.expandedBytesRead
     private val input = ByteBuffer.allocate(byteBufferSize).apply { limit(0) }
     private var inputBaseOffset = initialByteOffset
     private var endOfInput = false
@@ -144,23 +142,17 @@ private class DecoderCharacterContent(
 
 
     override fun read(buffer: CharArray, offset: Int, length: Int): Int {
-        control.beginOperation()
         try {
-            try {
-                return readOpen(buffer, offset, length)
-            }
-            catch (t: Throwable) {
-                try {
-                    close()
-                }
-                catch (closeFailure: Throwable) {
-                    t.addSuppressed(closeFailure)
-                }
-                throw t
-            }
+            return readOpen(buffer, offset, length)
         }
-        finally {
-            control.endOperation()
+        catch (t: Throwable) {
+            try {
+                close()
+            }
+            catch (closeFailure: Throwable) {
+                t.addSuppressed(closeFailure)
+            }
+            throw t
         }
     }
 

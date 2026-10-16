@@ -8,8 +8,6 @@ package tech.kzen.auto.plugin.api.data
  * closing the returned cursor releases both the reader and the input.
  */
 interface ReaderByteInput {
-    val expandedBytesRead: Long
-
     /** Returns a positive count or `-1`; zero is reserved for zero-length requests. */
     fun read(buffer: ByteArray, offset: Int = 0, length: Int = buffer.size - offset): Int
 }

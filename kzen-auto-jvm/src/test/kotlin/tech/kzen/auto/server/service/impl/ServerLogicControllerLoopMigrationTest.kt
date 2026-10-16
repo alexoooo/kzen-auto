@@ -4,6 +4,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
+import tech.kzen.auto.common.objects.document.script.model.ForEachProgress
 import tech.kzen.auto.common.objects.document.script.model.StepTrace
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.exec.script.test.CountingStep
@@ -91,6 +92,9 @@ class ServerLogicControllerLoopMigrationTest {
         // Park mid-iteration-2 of 4: Count has run 3 times (iterations 0-1 complete, iteration 2's Count done)
         // and the park is at iteration 2's Second — the loop is mid-flight.
         stepUntilCount(runId, base, 3)
+        assertEquals(
+            listOf("1" to "10", "2" to "20"), journal(runId, forEachDocumentPath),
+            "paused mid-iteration 2, the journal holds the two completed iterations")
 
         runBlocking { controller.onStoreRefresh(edited) }
         controller.continueOrStart(runId, edited)
@@ -100,6 +104,9 @@ class ServerLogicControllerLoopMigrationTest {
             4, CountingStep.count.get(),
             "resume at iteration 2: iterations 0-1 and iteration 2's completed Count must NOT re-execute " +
                 "(a restart would re-run them, giving 7)")
+        assertEquals(
+            listOf("1" to "10", "2" to "20", "3" to "30", "4" to "40"), journal(runId, forEachDocumentPath),
+            "the journal crosses the edit with the cursor and keeps appending; it is still read after the run")
         assertEquals(
             "199", resultDisplay(runId, forEachDocumentPath),
             "4 outputs collected across the edit ([10, 20, 30, 40].sum() = 100) + the live Post edit (99)")
@@ -319,6 +326,15 @@ class ServerLogicControllerLoopMigrationTest {
     private fun resultDisplay(runId: LogicRunId, documentPath: DocumentPath): Any? {
         val resultLocation = ObjectLocation(documentPath, ObjectPath.parse("main.steps/Result"))
         return stepTrace(runId, resultLocation)?.displayValue?.get()
+    }
+
+
+    private fun journal(runId: LogicRunId, documentPath: DocumentPath): List<Pair<String, String>> {
+        val stableId = context.objectStableMapper.objectStableId(
+            ObjectLocation(documentPath, ObjectPath.parse("main.steps/Loop")))
+        val range = context.logicTrace.lookupRange(runId, null, LogicTracePath.ofObjectStableId(stableId), 0, null)
+            ?: fail("No journal")
+        return range.entries.map { ForEachProgress.entryOfExecutionValueOrNull(it)!!.let { e -> e.item to e.value } }
     }
 
 

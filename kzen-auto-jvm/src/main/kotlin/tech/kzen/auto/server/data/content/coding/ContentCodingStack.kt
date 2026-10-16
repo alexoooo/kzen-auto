@@ -18,7 +18,7 @@ object ContentCodingStack {
             throw ContentCodingException(source, part, 0, "Exactly one identity or gzip coding is required")
         }
         val coding = codings.single()
-        val decoded = when (coding.identity) {
+        return when (coding.identity) {
             ContentCodingSpec.identity.identity -> {
                 requireEmptyConfig(coding, source, part)
                 bytes
@@ -29,7 +29,6 @@ object ContentCodingStack {
             }
             else -> throw ContentCodingException(source, part, 0, "Unsupported coding '${coding.identity}'")
         }
-        return ExpandedByteLimitContent(decoded, control, source, part)
     }
 
 

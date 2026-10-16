@@ -16,11 +16,6 @@ main.channels/summarized:
   capacity: 4
   batchSize: 1
 
-# Suppresses deadlock detection while the first gated sink deliberately refuses to drain.
-main.channels/signal:
-  is: DuplexChannel
-  external: true
-
 main.sources/input:
   is: FileDataSource
   files:

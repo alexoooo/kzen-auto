@@ -16,7 +16,6 @@ import tech.kzen.auto.common.paradigm.flow.model.exec.VisualVertexModel
 import tech.kzen.auto.common.paradigm.flow.model.structure.FlowDag
 import tech.kzen.auto.common.paradigm.flow.model.structure.FlowMatrix
 import tech.kzen.auto.common.paradigm.flow.util.FlowUtils
-import tech.kzen.auto.common.util.TraceDisplay
 import tech.kzen.auto.server.exec.ContextCallSite
 import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.lib.common.exec.ExecutionValue
@@ -33,7 +32,6 @@ import tech.kzen.lib.common.exec.data.binding.DataBindings
 import tech.kzen.lib.common.exec.data.binding.ProducedBindingsBuilder
 import tech.kzen.lib.common.exec.data.value.DataSnapshot
 import tech.kzen.lib.common.exec.data.value.DataValue
-import tech.kzen.lib.common.exec.data.value.SnapshotPolicy
 import tech.kzen.lib.common.exec.data.value.SnapshotResult
 import tech.kzen.lib.common.exec.data.type.DataContract
 import tech.kzen.lib.common.exec.data.type.DefaultNativeTypeResolver
@@ -92,17 +90,6 @@ class FlowRun(
 
         // During free-running, emit at most one trace per vertex per this window.
         private const val traceThrottleNanos = 100_000_000L   // 100 ms
-
-        /** Wall-clock budget of a traced message's snapshot, so a slow-to-read value cannot hold up the run. */
-        const val defaultSnapshotMillis = 100L
-
-        /**
-         * Test seam: the time budget of each traced message's snapshot. A test asserting what a trace shows lifts
-         * it: the budget is wall-clock, so on a loaded machine a reading thread that waits that long for a CPU
-         * traces the message as unavailable.
-         */
-        @Volatile
-        var snapshotMillis = defaultSnapshotMillis
     }
 
 
@@ -694,14 +681,14 @@ class FlowRun(
         lastTraceNanos[stableId] = now
 
         // Inspection is non-fatal (a trace must never fail a run the vertex itself survived): fall back to a
-        // truncated toString if inspectState / inspectMessage throws.
+        // toString if inspectState / inspectMessage throws.
         val stateValue = model.state?.let { state ->
             try {
                 @Suppress("UNCHECKED_CAST")
                 (instance.reference as FlowVertex<Any>).inspectState(state)
             }
             catch (e: Exception) {
-                truncatedToString(state)
+                textOf(state)
             }
         }
 
@@ -732,19 +719,13 @@ class FlowRun(
     }
 
 
-    private fun truncatedToString(value: Any): ExecutionValue {
-        return ExecutionValue.of(
-            TraceDisplay.truncatedToString(value, TraceDisplay.maxFlowTraceChars))
+    private fun textOf(value: Any): ExecutionValue {
+        return ExecutionValue.of(value.toString())
     }
 
 
     private fun snapshotMessage(value: DataValue): ExecutionValue {
-        return when (val snapshot = DataSnapshot.capture(value, SnapshotPolicy(
-            maximumDepth = 16,
-            maximumElements = 256,
-            maximumTextLength = TraceDisplay.maxFlowTraceChars,
-            maximumBinaryBytes = TraceDisplay.maxFlowTraceChars,
-            maximumDurationMillis = snapshotMillis))) {
+        return when (val snapshot = DataSnapshot.capture(value)) {
             is SnapshotResult.Complete -> snapshot.snapshot.value
             SnapshotResult.Redacted -> ExecutionValue.of("<redacted>")
             is SnapshotResult.Rejected -> ExecutionValue.of(

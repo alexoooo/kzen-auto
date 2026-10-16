@@ -1,7 +1,6 @@
 package tech.kzen.auto.server.data.design
 
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeoutOrNull
 import tech.kzen.auto.common.data.api.DataContext
 import tech.kzen.auto.common.data.model.DataPart
 import tech.kzen.auto.common.data.schema.DataShape
@@ -10,34 +9,23 @@ import tech.kzen.auto.server.objects.datasource.DesignDataContext
 import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.RequestParams
 import tech.kzen.lib.common.util.digest.Digest
-import kotlin.time.TimeSource
 
 
 /**
- * One validation pass's reading, bounded by [budget] and shared by every Worker of the pass: each [read] runs within
- * what is left of the deadline, and a read the deadline cuts short marks the pass [limited]. [evidence] is what the
- * pass looked at, so its result is reused only while the data is unchanged.
+ * One validation pass's reading of data before Run (docs/plans/2026-09-24_values-metadata-and-design-time-types.md,
+ * R5), shared by every Worker of the pass: each [read] reads to the end. [evidence] is what the pass looked at, so
+ * its result is reused only while the data is unchanged; what a read inspects is cached by the opener against the
+ * content's fingerprint ([tech.kzen.auto.server.data.SchemaCache]), so a pass after an edit reads only what changed.
  *
- * The value limit is a fixed bound, not a cut: a lane longer than it offers its first values, and says so, in every
- * pass alike. A read blocks the calling thread, as the rest of validation does (its expression compiles); the
- * deadline is checked between suspensions, so one blocking inspection already begun completes before the read gives
- * up.
+ * A read blocks the calling thread, as the rest of validation does (its expression compiles).
  */
-class DesignReadSession internal constructor(
-    private val reader: DesignReader,
-    val budget: DesignReadBudget
-) {
+class DesignReadSession {
     //-----------------------------------------------------------------------------------------------------------------
-    private val started = TimeSource.Monotonic.markNow()
     private val context: DataContext = DesignDataContext(ExecutionRequest(RequestParams.empty, null))
     private val recorded = mutableListOf<DesignEvidence>()
 
     val evidence: List<DesignEvidence>
         get() = recorded
-
-    /** True when a limit cut this pass's reading short, so what it typed is partial. */
-    var limited = false
-        private set
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -48,54 +36,29 @@ class DesignReadSession internal constructor(
 
     /**
      * A [read] of [block] whose result the pass depends on: records it as evidence under [subject], digested by
-     * [digest], whose recheck runs [block] again (outside the budget: a cache hit's check is one read per piece of
-     * evidence, never a pass).
+     * [digest], whose recheck runs [block] again.
      */
     fun <T> observe(
         subject: String,
         block: suspend (DataContext) -> T,
         digest: (T) -> Digest
-    ): Read<T>? {
+    ): T {
         val result = read(block)
-            ?: return null
-        record(DesignEvidence(subject, digest(result.value)) {
+        record(DesignEvidence(subject, digest(result)) {
             runBlocking { digest(block(context)) }
         })
         return result
     }
 
 
-    /** Runs [block] within the deadline's remainder; null (and [limited]) when the deadline cuts it short. */
-    fun <T> read(block: suspend (DataContext) -> T): Read<T>? {
-        val remaining = budget.deadline - started.elapsedNow()
-        if (!remaining.isPositive()) {
-            limited = true
-            return null
+    fun <T> read(block: suspend (DataContext) -> T): T =
+        runBlocking {
+            block(context)
         }
-        val result = runBlocking {
-            withTimeoutOrNull(remaining) {
-                Read(block(context))
-            }
-        }
-        if (result == null) {
-            limited = true
-        }
-        return result
-    }
-
-
-    class Read<T>(val value: T)
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    /** The shape of [part], inspected once per fingerprinted content. */
-    suspend fun inspectShape(context: DataContext, openerLookup: DataOpenerLookup, part: DataPart): DataShape? {
-        val key = part.takeIf { it.expectedFingerprint != null }?.digest()
-        key?.let(reader::cachedShape)?.let { return it }
-        val shape = openerLookup.openerFor(part.ref).inspectShape(context, part)
-            ?: return null
-        key?.let { reader.storeShape(it, shape) }
-        return shape
-    }
-
+    /** The shape of [part], as its opener inspects it. */
+    suspend fun inspectShape(context: DataContext, openerLookup: DataOpenerLookup, part: DataPart): DataShape? =
+        openerLookup.openerFor(part.ref).inspectShape(context, part)
 }

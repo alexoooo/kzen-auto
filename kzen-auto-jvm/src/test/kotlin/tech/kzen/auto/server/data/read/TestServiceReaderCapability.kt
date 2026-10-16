@@ -6,7 +6,6 @@ import tech.kzen.auto.common.data.read.ReaderCapabilityIdentity
 import tech.kzen.auto.common.data.read.ReaderConfig
 import tech.kzen.auto.common.data.schema.DataShape
 import tech.kzen.auto.plugin.api.data.ReaderCapability
-import tech.kzen.auto.plugin.api.data.ReaderInspectionRequest
 import tech.kzen.auto.plugin.api.data.ReaderOpenRequest
 import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.MapExecutionValue
@@ -88,13 +87,6 @@ class TestServiceReaderCapability: ReaderCapability {
                 closed = true
                 value = null
             }
-        }
-    }
-
-    override suspend fun inspect(request: ReaderInspectionRequest): DataShape {
-        return open(request.open).use { cursor ->
-            if (request.maximumRecords > 0 && cursor.hasNext()) cursor.next()
-            cursor.shape
         }
     }
 }

@@ -8,7 +8,6 @@ import tech.kzen.auto.common.objects.document.job.JobSignatureCapability
 import tech.kzen.auto.common.objects.document.job.model.JobValidation
 import tech.kzen.auto.common.objects.document.logic.StepValidation
 import tech.kzen.auto.common.paradigm.detached.DetachedAction
-import tech.kzen.auto.server.data.design.DesignReadBudget
 import tech.kzen.auto.server.data.design.DesignReadSession
 import tech.kzen.auto.server.objects.job.worker.WorkerBase
 import tech.kzen.auto.server.objects.job.worker.JobLaneDescriptor
@@ -131,7 +130,6 @@ class JobValidator(
                     flatColumns = attempt.lane.flatColumns,
                     contract = attempt.lane.contract,
                     provenance = attempt.provenance,
-                    partial = attempt.partial,
                     details = attempt.details)
             }
 
@@ -232,7 +230,7 @@ class JobValidator(
         // A cache hit skips channel synthesis, graph filtering and instantiation entirely (keyed on the FULL
         // definition — linked-callee edits must invalidate — matching the run path's key).
         val jobValidation = jobValidationCache.jobValidation(
-            documentPath, transitiveSuccessful, DesignReadBudget.editor
+            documentPath, transitiveSuccessful
         ) { design ->
             validateDetached(documentPath, transitiveSuccessful, notationMetadataReader, environment, design)
         }

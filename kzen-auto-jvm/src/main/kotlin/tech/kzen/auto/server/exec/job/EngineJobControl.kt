@@ -32,7 +32,6 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableMapper
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicLong
 
 
 /**
@@ -83,8 +82,6 @@ class EngineJobControl(
     override val ledger: RunOwnershipLedger,
     private val workerLocation: ObjectLocation,
     private val draining: () -> Boolean,
-    /** The run's in-item activity count, read by the stall warning (see [reportActivity]). */
-    private val activity: AtomicLong = AtomicLong(),
     /** When the run started ([System.nanoTime]), for the elapsed time stamped on progress. */
     private val runStartedNanos: Long = System.nanoTime()
 ): JobControl, RunOwnershipControl {
@@ -159,12 +156,6 @@ class EngineJobControl(
     }
 
 
-    // Called from a blocking body on the elastic pool, concurrently with other Workers: hence the atomic
-    override fun reportActivity() {
-        activity.incrementAndGet()
-    }
-
-
     override fun scratchDir(): String {
         if (!scratchCreated) {
             Files.createDirectories(workerScratchDir)
@@ -201,12 +192,8 @@ class EngineJobControl(
 
         // The emit address is the Worker node's; the Worker's own stable id (the node's stableId) is what the
         // bridge keys the progress path on, so [location] (always this Worker's own location) is not needed here.
-        // NOTE: every emit is retained in the engine's unbounded history, and old progress values are never
-        // read back — payload bounding (WorkerBase's teaser-vs-final progress contract) is the mitigation
-        // until the engine gains transient (non-retained) emits (see
-        // kzen/plans/sprint-1/2026-07-05_logic-engine-improvements.md phase 4); then mark this emit
-        // non-retained — adoption is Job plan phase 7, kzen/plans/2026-07-25_job-improvements.md).
-        execution.emit(progressAddress, ExecutionValue.of(value))
+        // Transient: only the latest progress is read, from the live view, so none of it is kept in the history.
+        execution.emit(progressAddress, ExecutionValue.of(value), retain = false)
     }
 
 

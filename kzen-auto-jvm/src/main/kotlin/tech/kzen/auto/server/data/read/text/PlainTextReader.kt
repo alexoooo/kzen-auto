@@ -1,6 +1,5 @@
 package tech.kzen.auto.server.data.read.text
 
-import tech.kzen.auto.common.data.read.ReadOperationalPolicy
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.auto.plugin.model.record.FlatRecordHeader
 import tech.kzen.auto.server.data.content.SequentialCharacterContent
@@ -15,7 +14,6 @@ import tech.kzen.lib.common.exec.data.value.DataValue
 
 class PlainTextReader(
     private val input: SequentialCharacterContent,
-    policy: ReadOperationalPolicy,
     private val checkpoint: () -> Unit = {}
 ): AutoCloseable {
     companion object {
@@ -23,9 +21,6 @@ class PlainTextReader(
             DataField(FieldId("line", 0), DataType.Scalar(ScalarKind.Text)))))
     }
 
-    private val maximumLineCharacters = minOf(
-        policy.maximumRecordCharacters ?: Int.MAX_VALUE,
-        policy.maximumFieldCharacters ?: Int.MAX_VALUE)
     private val buffer = CharArray(8192)
     private var bufferSize = 0
     private var bufferIndex = 0
@@ -48,10 +43,6 @@ class PlainTextReader(
                 }
                 else -> {
                     line.append(character)
-                    if (line.length > maximumLineCharacters) {
-                        throw IllegalArgumentException(
-                            "Plain-text line exceeds character limit $maximumLineCharacters")
-                    }
                     if (line.length and 1023 == 0) checkpoint()
                 }
             }

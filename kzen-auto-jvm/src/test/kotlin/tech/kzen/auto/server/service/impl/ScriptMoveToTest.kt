@@ -185,7 +185,15 @@ class ScriptMoveToTest {
         val progress = ForEachProgress.ofExecutionValueOrNull(loopTrace.detail)
             ?: fail("The committed value must keep the loop's journal, not blank it")
         assertTrue(progress.partial, "committed short of a full run")
-        assertEquals(listOf("1" to "1", "2" to "2"), progress.produced.map { it.item to it.value })
+        assertEquals(2, progress.producedCount)
+        val journalPath = LogicTracePath.ofObjectStableId(context.objectStableMapper.objectStableId(
+            ObjectLocation(loopPath, ObjectPath.parse("main.steps/Loop"))))
+        val journal = context.logicTrace.lookupRange(runId, null, journalPath, 0, null)
+            ?: fail("The committed value must keep the loop's journal")
+        assertEquals(
+            listOf("1" to "1", "2" to "2"),
+            journal.entries.map { ForEachProgress.entryOfExecutionValueOrNull(it)!!.let { e -> e.item to e.value } },
+            "the journal lines up with the committed value [1, 2]")
 
         resume(runId)
         context.serverLogicController.awaitDone()

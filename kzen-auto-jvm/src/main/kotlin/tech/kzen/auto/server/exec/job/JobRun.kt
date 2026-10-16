@@ -5,22 +5,18 @@ import tech.kzen.auto.server.exec.job.ownership.RunOwnershipLedger
 import tech.kzen.lib.common.exec.data.binding.BindingSchema
 import tech.kzen.lib.common.exec.data.binding.DataBindings
 
-import kotlinx.coroutines.CompletableDeferred
-import org.slf4j.LoggerFactory
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeoutOrNull
 import tech.kzen.auto.common.objects.document.job.JobChannelDerivation
 import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.auto.common.paradigm.job.api.ChannelClient
-import tech.kzen.auto.server.data.design.DesignReadBudget
 import tech.kzen.auto.server.objects.job.JobValidator
 import tech.kzen.auto.common.paradigm.job.api.Worker
 import tech.kzen.auto.server.exec.LogicCompilerServices
 import tech.kzen.auto.server.exec.LogicParameterTrace
+import tech.kzen.auto.server.objects.job.channel.DuplexChannelClosedException
 import tech.kzen.auto.server.objects.job.channel.DuplexJobChannel
 import tech.kzen.auto.server.objects.job.channel.JobChannel
 import tech.kzen.auto.server.objects.job.worker.WorkerBase
@@ -29,17 +25,13 @@ import tech.kzen.auto.server.objects.job.worker.definition.WorkerDefinitionConte
 import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionResult
 import tech.kzen.lib.common.exec.engine.Execution
-import tech.kzen.lib.common.exec.engine.LogicFailure
 import tech.kzen.lib.common.exec.engine.disposal.SettleDisposalPolicy
 import tech.kzen.lib.common.exec.engine.restoredAs
-import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.atomic.AtomicLong
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.service.context.GraphCreator
 import tech.kzen.lib.common.service.store.normal.ObjectStableId
-import kotlin.time.Duration.Companion.milliseconds
 
 
 /**
@@ -62,8 +54,6 @@ import kotlin.time.Duration.Companion.milliseconds
  * - External duplex bridge (logic-spec §4): each `external` duplex Channel gets a UI-bridge client opened at
  *   every (re)launch and closed at teardown; the root node's [Execution.onRequest] router forwards inbound
  *   requests by `channel` name to the serving Worker (see [route]).
- * - Deadlock: [JobDeadlockMonitor] polls this run's stream channels off the engine dispatcher and fails the
- *   run through an exceptionally-completed signal; the open external bridge is its suppression signal.
  */
 class JobRun internal constructor(
     private val execution: Execution,
@@ -127,7 +117,6 @@ class JobRun internal constructor(
         // the Preview's slice query) so [route] can address its serving Worker by name. The deterministic
         // synthesized identity means a rebuilt run resolves the SAME stable ids / names, so a migrate lines up.
         val streamChannels = LinkedHashMap<ObjectStableId, JobChannel>()
-        val channelsByLocation = LinkedHashMap<ObjectLocation, JobChannel>()
         val externalClients = LinkedHashMap<String, ChannelClient<Any?, Any?>>()
         for (channelLocation in channelLocations) {
             when (val channel = graphInstance[channelLocation]?.reference) {
@@ -138,7 +127,6 @@ class JobRun internal constructor(
 
                 is JobChannel -> {
                     streamChannels[objectStableMapper.objectStableId(channelLocation)] = channel
-                    channelsByLocation[channelLocation] = channel
                     // Sends through this channel take its named hold on owned elements (E9)
                     channel.bindOwnership(ledger, LeaseHolder(channelLocation.asString()))
                 }
@@ -175,8 +163,7 @@ class JobRun internal constructor(
 
         // External duplex bridge: route an inbound UI request (addressed by `channel` name, e.g. the JS pulling a
         // larger Preview slice) to the serving Worker of that `external` duplex Channel. Registered on the Job's
-        // ROOT node, which is the frame the JS addresses (LogicRunInfo.frame = root). Also tells the engine the run
-        // is externally serviceable, so a Worker idle on an open serve port is not mistaken for a deadlock.
+        // ROOT node, which is the frame the JS addresses (LogicRunInfo.frame = root).
         if (externalClients.isNotEmpty()) {
             execution.onRequest { request -> route(request, externalClients) }
         }
@@ -206,7 +193,7 @@ class JobRun internal constructor(
         // outputs, one of them unconsumed) validates on the editor's own instances instead, so the shared entry
         // still types it.
         val jobValidation = services.jobValidationCache.jobValidation(
-            jobLocation.documentPath, graphDefinition, DesignReadBudget.run
+            jobLocation.documentPath, graphDefinition
         ) { design ->
             if (workers.size == workerLocations.size) {
                 JobValidator.validate(
@@ -244,55 +231,12 @@ class JobRun internal constructor(
             location to scopes.toList()
         }
 
-        // Channel-aware deadlock detection: fail the run if every non-terminal Worker becomes blocked on a channel
-        // with no way to progress. [activeWorkers] is the live non-terminal count (each Worker decrements it as it
-        // settles); the monitor polls the stream channels' blocked-endpoint counts against it and, on a sustained
-        // all-blocked verdict, completes the signal exceptionally. Suppressed while an external serve channel is
-        // open (see [JobDeadlockMonitor]).
-        val activeWorkers = AtomicInteger(workers.size)
-        val deadlockSignal = CompletableDeferred<Nothing>()
-        // The ownership report rides the monitor's clock (E9 item 5): after the no-progress interval, if owned
-        // natives are held, the log and the root's trace name the holders — a warning, never a verdict
-        val ownershipReport = JobOwnershipReport(execution, ledger, channelsByLocation)
-        // A source suspended awaiting the release of a lent element is blocked for the verdict (borrowed elements
-        // §3.3): a Deferred wait, not a channel op, so the channels alone would under-count it
-        val borrowingSources = workers.mapNotNull { it.second as? BorrowingSource }
-        // Progress a Worker makes inside one item (Write copying a large member) moves no channel element, so the
-        // Workers report it here (JobControl.reportActivity) for the stall warning to count
-        val activity = AtomicLong()
-        val deadlockMonitor = JobDeadlockMonitor(
-            streamChannels.values, activeWorkers, externalClients.isNotEmpty(),
-            awaitingRelease = { borrowingSources.count { it.awaitingRelease() } },
-            onDeadlock = {
-                deadlockSignal.completeExceptionally(
-                    LogicFailure("Job deadlock: all workers blocked on channels with no progress"))
-            },
-            progressMark = {
-                ledger.activityCount() + activity.get() +
-                    streamChannels.values.sumOf { it.transferredElements().toLong() }
-            },
-            onStall = { stalled ->
-                if (stalled && ledger.liveCount() > 0) {
-                    logger.warn("Job {} stalled: {}", jobLocation, ownershipReport.stallMessage())
-                    ownershipReport.emit(stalled = true)
-                }
-                else if (!stalled) {
-                    ownershipReport.emit(stalled = false)
-                }
-            })
-        deadlockMonitor.start()
-
         // Launch every Worker concurrently as its own confined node; the run settles when all of them do. The
         // external bridge clients are closed at teardown (run end, cancel, or migrate) so the serving Workers'
         // serve streams end and the rebuilt run re-opens fresh clients.
         var processingFailure: Throwable? = null
         try {
             coroutineScope {
-                // Fails the scope (and so the run) the instant the monitor declares a deadlock; cancelled once the
-                // Workers settle on their own. Awaiting a deferred suspends without occupying the dispatcher, so it
-                // never perturbs the engine's quiescence.
-                val deadlockGuard = launch { deadlockSignal.await() }
-
                 workers
                     .map { (location, worker) ->
                         val workerStableId = objectStableMapper.objectStableId(location)
@@ -312,40 +256,30 @@ class JobRun internal constructor(
                         val outputContract = jobValidation.workerValidations[location.objectPath]?.contract
                         val scopes = upstreamScopes.getValue(location)
                         async {
-                            try {
-                                execution.host(
-                                    workerStableId,
-                                    WorkerLogic(
-                                        worker, childLogicHost, objectStableMapper,
-                                        workerScratchDir, workerOutputDir,
-                                        execution.inputs, jobParameters, jobResults,
-                                        inputPayloadType, inputContract, outputContract, resultCollector,
-                                        ledger, location,
-                                        draining = { scopes.any { it.lending() } },
-                                        activity,
-                                        startedNanos),
-                                    inputs = DataBindings.bind(BindingSchema.empty),
-                                    // These frames are live SIMULTANEOUSLY, which is the one shape the engine's
-                                    // ambient-context model is not specified for (logic-spec §6): two Workers
-                                    // binding one exported key would collapse onto a single slot on this Job
-                                    // frame, where the second bind displaces the first, claims its disposal and
-                                    // runs the closer while that Worker is still using what it just closed. The
-                                    // engine lock makes that safe, not meaningful — the winner is whichever
-                                    // coroutine arrived second. The barrier removes the shared slot instead of
-                                    // policing it, so there is no order for the outcome to depend on. Reads are
-                                    // unaffected: a Worker still inherits everything this frame bound.
-                                    contextBarrier = true)
-                            }
-                            finally {
-                                activeWorkers.decrementAndGet()
-                            }
+                            execution.host(
+                                workerStableId,
+                                WorkerLogic(
+                                    worker, childLogicHost, objectStableMapper,
+                                    workerScratchDir, workerOutputDir,
+                                    execution.inputs, jobParameters, jobResults,
+                                    inputPayloadType, inputContract, outputContract, resultCollector,
+                                    ledger, location,
+                                    draining = { scopes.any { it.lending() } },
+                                    startedNanos),
+                                inputs = DataBindings.bind(BindingSchema.empty),
+                                // These frames are live SIMULTANEOUSLY, which is the one shape the engine's
+                                // ambient-context model is not specified for (logic-spec §6): two Workers
+                                // binding one exported key would collapse onto a single slot on this Job
+                                // frame, where the second bind displaces the first, claims its disposal and
+                                // runs the closer while that Worker is still using what it just closed. The
+                                // engine lock makes that safe, not meaningful — the winner is whichever
+                                // coroutine arrived second. The barrier removes the shared slot instead of
+                                // policing it, so there is no order for the outcome to depend on. Reads are
+                                // unaffected: a Worker still inherits everything this frame bound.
+                                contextBarrier = true)
                         }
                     }
                     .awaitAll()
-
-                deadlockGuard.cancel()
-                // The run's final ownership accounting, on its ordinary trace
-                ownershipReport.emit(stalled = false)
             }
         }
         catch (e: Throwable) {
@@ -354,7 +288,6 @@ class JobRun internal constructor(
         }
         finally {
             registration.close()
-            deadlockMonitor.close()
             externalClients.values.forEach { it.close() }
             // Every Worker has joined (a Worker parked in runBlockingIo delays this until its call returns), so no
             // callback can be using an owned native: close them all, best-effort. A processing failure stays the
@@ -372,8 +305,8 @@ class JobRun internal constructor(
     //-----------------------------------------------------------------------------------------------------------------
     // Bridge an inbound UI [ExecutionRequest] to the serving Worker of the addressed `external` duplex Channel:
     // forward it as-is over the channel's client and return the Worker's reply (the Worker owns the request/reply
-    // protocol via its serve loop). Runs on the controller thread while it holds its monitor, so the round-trip is
-    // bounded ([externalRequestTimeoutMillis]) — a paused / slow Worker yields a timeout rather than stalling.
+    // protocol via its serve loop). It waits for the reply, however long the Worker takes; the request fails when
+    // the run's teardown closes the channel first.
     private fun route(
         request: ExecutionRequest,
         externalClients: Map<String, ChannelClient<Any?, Any?>>
@@ -384,25 +317,13 @@ class JobRun internal constructor(
         val client = externalClients[channelName]
             ?: return ExecutionResult.failure("Not an open external channel: $channelName")
 
-        return runBlocking {
-            val reply = withTimeoutOrNull(externalRequestTimeoutMillis) {
-                client.request(request)
-            }
-            reply as? ExecutionResult
-                ?: ExecutionResult.failure("External channel request timed out: $channelName")
+        val reply = try {
+            runBlocking { client.request(request) }
         }
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    companion object {
-        private val logger = LoggerFactory.getLogger(JobRun::class.java)
-
-        // Upper bound a UI -> Worker external round-trip blocks the controller monitor (request is @Synchronized);
-        // a well-behaved serving Worker replies well within this. A blocked / paused Worker makes the request time
-        // out rather than stalling status / pause / cancel. KNOWN BOUNDED SEAM: this is a `runBlocking` on the
-        // controller thread; moving the wait off-monitor is only cheap once the controller is per-run (engine
-        // plan E6, deferred), so the timeout-capped wait stands rather than redesigning the duplex bridge.
-        private val externalRequestTimeoutMillis = 1000.milliseconds
+        catch (_: DuplexChannelClosedException) {
+            return ExecutionResult.failure("External channel closed: $channelName")
+        }
+        return reply as? ExecutionResult
+            ?: ExecutionResult.failure("Unexpected reply on external channel $channelName: $reply")
     }
 }

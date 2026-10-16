@@ -46,7 +46,6 @@ class FlowNotationTest {
 
     @AfterTest
     fun tearDown() {
-        FlowRun.snapshotMillis = FlowRun.defaultSnapshotMillis
         if (::context.isInitialized) {
             context.close()
         }
@@ -219,9 +218,8 @@ class FlowNotationTest {
 
     @Test
     fun arbitraryDomainObjectMessageDoesNotKillRun() {
-        // Tracing is non-fatal: a non-basic message is rendered through its bounded structural snapshot
+        // Tracing is non-fatal: a non-basic message is rendered through its structural snapshot
         // instead of failing the run, even though inspection runs outside pause-on-error's reach.
-        FlowRun.snapshotMillis = Long.MAX_VALUE
         val widget = ArbitraryMessage(7)
         val engine = engineFor("test/flow/flow-execution-test.yaml", argument("x", widget))
         try {

@@ -6,7 +6,9 @@ import tech.kzen.auto.common.paradigm.job.api.ChannelClient
 import tech.kzen.auto.common.paradigm.job.api.ChannelServer
 import tech.kzen.auto.common.paradigm.job.api.ChannelServerIterator
 import tech.kzen.auto.common.paradigm.job.api.ServedRequest
+import kotlinx.coroutines.channels.ClosedSendChannelException
 import tech.kzen.lib.common.reflect.Reflect
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
 
@@ -17,7 +19,8 @@ import java.util.concurrent.atomic.AtomicInteger
  * concurrent in-flight requests are correlated to their own responses — no serialization or correlation ids.
  *
  * Lifecycle mirrors [JobChannel]'s close-on-last-producer: the request stream closes (ending the server's
- * `for (served in serve)` loop) only once every client endpoint has closed (close-on-last-client).
+ * `for (served in serve)` loop) only once every client endpoint has closed (close-on-last-client). A request
+ * still waiting then fails with [DuplexChannelClosedException]: nothing is left to reply to it.
  *
  * Non-generic (element type erased to `Any?`) so `@Reflect` instantiates it cleanly, like [JobChannel].
  *
@@ -49,6 +52,9 @@ class DuplexJobChannel(
 
     private val openClients = AtomicInteger(0)
 
+    // Requests sent and not yet replied to, failed when the last client closes
+    private val outstanding: MutableSet<Pending> = ConcurrentHashMap.newKeySet()
+
     val server: ChannelServer<Any?, Any?> = Server()
 
 
@@ -62,6 +68,9 @@ class DuplexJobChannel(
     private fun closeOneClient() {
         if (openClients.decrementAndGet() <= 0) {
             requests.close()
+            for (pending in outstanding) {
+                pending.response.completeExceptionally(DuplexChannelClosedException())
+            }
         }
     }
 
@@ -71,9 +80,20 @@ class DuplexJobChannel(
         private var closed = false
 
         override suspend fun request(request: Any?): Any? {
-            val response = CompletableDeferred<Any?>()
-            requests.send(Pending(request, response))
-            return response.await()
+            val pending = Pending(request, CompletableDeferred())
+            outstanding.add(pending)
+            try {
+                try {
+                    requests.send(pending)
+                }
+                catch (_: ClosedSendChannelException) {
+                    throw DuplexChannelClosedException()
+                }
+                return pending.response.await()
+            }
+            finally {
+                outstanding.remove(pending)
+            }
         }
 
         override fun close() {

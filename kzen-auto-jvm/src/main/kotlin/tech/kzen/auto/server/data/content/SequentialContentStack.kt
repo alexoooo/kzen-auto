@@ -9,7 +9,6 @@ import tech.kzen.auto.common.data.read.DataContentFingerprint
 import tech.kzen.auto.server.data.content.character.CharacterDecoder
 import tech.kzen.auto.server.data.content.coding.ContentCodingStack
 import tech.kzen.auto.server.data.content.policy.ContentReadControl
-import tech.kzen.auto.server.data.content.policy.ContentReadPolicy
 import tech.kzen.auto.server.data.content.provider.DataContentDescriptor
 import tech.kzen.auto.server.data.content.provider.DataContentProviderLookup
 
@@ -23,44 +22,37 @@ class SequentialContentStack(
         expectedFingerprint: DataContentFingerprint?,
         codings: List<ContentCodingSpec>,
         required: ContentCapabilityIdentity,
-        policy: ContentReadPolicy,
         part: String? = null
     ): OpenedReaderByteInput {
-        val control = ContentReadControl(policy)
-        control.beginOperation()
+        val control = ContentReadControl()
+        val provider = providers.get(ref, part)
+        val descriptor = provider.describe(context, ref, control)
+        requireCapability(ref, part, descriptor, required)
+
+        var owner: AutoCloseable? = null
         try {
-            val provider = providers.get(ref, part)
-            val descriptor = provider.describe(context, ref, control)
-            requireCapability(ref, part, descriptor, required)
-
-            var owner: AutoCloseable? = null
-            try {
-                val handle = provider.acquire(context, ref, control)
-                owner = handle
-                control.checkpoint()
-                requireCapability(ref, part, handle.descriptor, required)
-                if (expectedFingerprint != null && expectedFingerprint != handle.observedFingerprint) {
-                    throw ContentSourceException(
-                        ref.display(), part,
-                        "Fingerprint changed: expected ${expectedFingerprint.digest()}, " +
-                            "observed ${handle.observedFingerprint.digest()}")
-                }
-
-                check(required == ContentCapabilityIdentity.sequentialBytes) {
-                    "No consumer is implemented for content capability $required"
-                }
-                val sourceBytes = SourceByteCountingContent(handle.bytes, control)
-                val decodedBytes = ContentCodingStack.wrap(sourceBytes, codings, control, ref.display(), part)
-                owner = null
-                return OpenedReaderByteInput(decodedBytes, control, handle.observedFingerprint)
+            val handle = provider.acquire(context, ref, control)
+            owner = handle
+            control.checkpoint()
+            requireCapability(ref, part, handle.descriptor, required)
+            if (expectedFingerprint != null && expectedFingerprint != handle.observedFingerprint) {
+                throw ContentSourceException(
+                    ref.display(), part,
+                    "Fingerprint changed: expected ${expectedFingerprint.digest()}, " +
+                        "observed ${handle.observedFingerprint.digest()}")
             }
-            catch (failure: Throwable) {
-                closeSuppressing(owner, failure)
-                throw failure
+
+            check(required == ContentCapabilityIdentity.sequentialBytes) {
+                "No consumer is implemented for content capability $required"
             }
+            val sourceBytes = SourceByteCountingContent(handle.bytes, control)
+            val decodedBytes = ContentCodingStack.wrap(sourceBytes, codings, control, ref.display(), part)
+            owner = null
+            return OpenedReaderByteInput(decodedBytes, control, handle.observedFingerprint)
         }
-        finally {
-            control.endOperation()
+        catch (failure: Throwable) {
+            closeSuppressing(owner, failure)
+            throw failure
         }
     }
 
@@ -71,44 +63,37 @@ class SequentialContentStack(
         expectedFingerprint: DataContentFingerprint?,
         codings: List<ContentCodingSpec>,
         characters: CharacterDecodingSpec,
-        policy: ContentReadPolicy,
         part: String? = null
     ): SequentialCharacterContent {
-        val control = ContentReadControl(policy)
-        control.beginOperation()
+        val control = ContentReadControl()
+        val provider = providers.get(ref, part)
+        val descriptor = provider.describe(context, ref, control)
+        requireCapability(ref, part, descriptor, ContentCapabilityIdentity.sequentialBytes)
+
+        var owner: AutoCloseable? = null
         try {
-            val provider = providers.get(ref, part)
-            val descriptor = provider.describe(context, ref, control)
-            requireCapability(ref, part, descriptor, ContentCapabilityIdentity.sequentialBytes)
-
-            var owner: AutoCloseable? = null
-            try {
-                val handle = provider.acquire(context, ref, control)
-                owner = handle
-                control.checkpoint()
-                requireCapability(ref, part, handle.descriptor, ContentCapabilityIdentity.sequentialBytes)
-                if (expectedFingerprint != null && expectedFingerprint != handle.observedFingerprint) {
-                    throw ContentSourceException(
-                        ref.display(), part,
-                        "Fingerprint changed: expected ${expectedFingerprint.digest()}, " +
-                            "observed ${handle.observedFingerprint.digest()}")
-                }
-
-                val decodedBytes = ContentCodingStack.wrap(handle.bytes, codings, control, ref.display(), part)
-                owner = decodedBytes
-                val decodedCharacters = context.blocking {
-                    CharacterDecoder.open(decodedBytes, characters, control, ref.display(), part)
-                }
-                owner = null
-                return decodedCharacters
+            val handle = provider.acquire(context, ref, control)
+            owner = handle
+            control.checkpoint()
+            requireCapability(ref, part, handle.descriptor, ContentCapabilityIdentity.sequentialBytes)
+            if (expectedFingerprint != null && expectedFingerprint != handle.observedFingerprint) {
+                throw ContentSourceException(
+                    ref.display(), part,
+                    "Fingerprint changed: expected ${expectedFingerprint.digest()}, " +
+                        "observed ${handle.observedFingerprint.digest()}")
             }
-            catch (t: Throwable) {
-                closeSuppressing(owner, t)
-                throw t
+
+            val decodedBytes = ContentCodingStack.wrap(handle.bytes, codings, control, ref.display(), part)
+            owner = decodedBytes
+            val decodedCharacters = context.blocking {
+                CharacterDecoder.open(decodedBytes, characters, control, ref.display(), part)
             }
+            owner = null
+            return decodedCharacters
         }
-        finally {
-            control.endOperation()
+        catch (t: Throwable) {
+            closeSuppressing(owner, t)
+            throw t
         }
     }
 

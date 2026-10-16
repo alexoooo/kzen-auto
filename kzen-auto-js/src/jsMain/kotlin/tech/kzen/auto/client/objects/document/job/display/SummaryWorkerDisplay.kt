@@ -91,16 +91,6 @@ class SummaryWorkerDisplay(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    @Suppress("ConstPropertyName")
-    companion object {
-        // How many top nominal values / sample entries a column's compact detail line shows before eliding with "…".
-        private const val topNominalValues = 5
-        private const val topSampleValues = 5
-        private const val maxValueLength = 40
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
     init {
         installContextType(DocumentBridgeContext)
     }
@@ -285,11 +275,17 @@ class SummaryWorkerDisplay(
                 }
             }
 
+            // One line, cut by the card's width; the whole of it is the tooltip
+            val detail = columnDetail(numeric, nominal, opaque)
             div {
                 css {
                     marginLeft = 1.em
+                    whiteSpace = WhiteSpace.nowrap
+                    overflow = Overflow.hidden
+                    textOverflow = TextOverflow.ellipsis
                 }
-                +columnDetail(numeric, nominal, opaque)
+                title = detail
+                +detail
             }
         }
     }
@@ -310,17 +306,13 @@ class SummaryWorkerDisplay(
         }
 
         if (!nominal.isEmpty()) {
-            val top = nominal.histogram.entries
+            return nominal.histogram.entries
                 .sortedByDescending { it.value }
-                .take(topNominalValues)
-            val rendered = top.joinToString(" · ") { "${abbreviate(it.key)} ${FormatUtils.decimalSeparator(it.value)}" }
-            return if (nominal.histogram.size > top.size) "$rendered …" else rendered
+                .joinToString(" · ") { "${it.key} ${FormatUtils.decimalSeparator(it.value)}" }
         }
 
         if (!opaque.isEmpty()) {
-            val sample = opaque.sample.take(topSampleValues)
-            val rendered = sample.joinToString(" · ") { abbreviate(it) }
-            return if (opaque.sample.size > sample.size) "$rendered …" else rendered
+            return opaque.sample.joinToString(" · ")
         }
 
         return ""
@@ -339,16 +331,6 @@ class SummaryWorkerDisplay(
         }
         else {
             rounded.toString()
-        }
-    }
-
-
-    private fun abbreviate(value: String): String {
-        return if (value.length > maxValueLength) {
-            value.substring(0, maxValueLength) + "…"
-        }
-        else {
-            value
         }
     }
 }

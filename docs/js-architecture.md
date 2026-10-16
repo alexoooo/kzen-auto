@@ -205,6 +205,33 @@ the single definition of strip order, shared by `RunStepDisplay` (which labels t
 `ScreenshotFullscreen`), distinct from the location-keyed `StepImageThumbnail` / `StepImageFullscreen`
 used for a single step's current frame on the main canvas.
 
+### ForEach journal = a virtualized list, read by range
+
+A loop's journal (every completed iteration, see [`architecture.md` § 3](architecture.md#3-rest-api-surface))
+can be any length, so it is not in the refreshed trace snapshot: `ForEachJournal`, in the counter's popover,
+renders only the rows in view and fetches only a window around them through
+`ScriptProgressStore.lookupRange(TraceListRef, offset, count)`. `TraceListRef` (run, execution, trace path) is
+built by `ForEachStepDisplay` from `ScriptProgressState.traceExecutionId` — the execution the snapshot itself
+was read from (the live frame's, or null for the run merge) — so the rows come from the same place as the
+count beside them.
+
+- **Virtualizer.** TanStack `virtual-core` (`kotlinWrappers.tanstack.virtualCore`), driven from the class
+  component the way its React adapter drives it from hooks: `setOptions` on every render, `_willUpdate` after
+  every commit, `_didMount`'s cleanup on unmount (the two lifecycle methods are not in the Kotlin wrapper, so
+  they go through `asDynamic()`); its `onChange` is `forceUpdate`. Rows are measured (`measureElement` as the
+  row's callback ref, `data-index` on the row), so a long value wraps; the scroll box has a set width because
+  absolutely-positioned rows cannot size the popover.
+- **Reads.** The window is re-read when the rows in view leave it, and with every new trace snapshot while
+  the journal is open (`ScriptStore.Observer`): a list can change in place — an inner loop's journal resets
+  each outer pass and may refill to the same length between two refreshes — so a length check alone would show
+  a stale pass. One read at a time, the latest wanted read next; none while scrolling (the virtualizer's
+  scroll-end notice re-renders, and the update reads). A row not yet read shows `…`. A failed read — refused
+  by the server (e.g. the run is gone) or with no answer — is shown above the rows, which keep what was last
+  read, until a read succeeds; the reads go on either way.
+- **Following.** It opens at the end and follows new rows while the last row is among those rendered. Not
+  TanStack's `followOnAppend`: that needs the view within a pixel of the end (and `anchorTo = end`, which
+  undoes the opening scroll), and measuring the newest rows moves the end by more than that on every tick.
+
 ## 3. Document folder convention
 
 Every document type under `objects/document/<type>/` follows this layout:

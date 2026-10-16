@@ -46,9 +46,9 @@ external interface ParseWorkerDisplayState: State {
  *
  * - "Part to read" shows only when it applies: the input carries units holding several named parts (or a part is
  *   already named). For files there is nothing to choose.
- * - Under the format (moved to the top of the card), the format each file's name chose: per sampled file before
+ * - Under the format (moved to the top of the card), the format each file's name chose: per file before
  *   Run, for the file being read during it. Shown only under Automatic, the one selection that goes by name.
- * - Under that, the columns the sampled files hold; a column not in all of them says in how many, in gray, and
+ * - Under that, the columns the files hold; a column not in all of them says in how many, in gray, and
  *   names them in its tooltip.
  * - The header gives the file being read, its bytes read of its size, and the rows sent.
  */
@@ -148,7 +148,7 @@ class ParseWorkerDisplay(
         props.common.validation?.details.orEmpty()
 
 
-    // Units whose part names were not sampled (a Logic source before Run) may still hold several, so the field stays
+    // Units whose part names are not known (a Logic source before Run) may still hold several, so the field stays
     private fun partApplies(): Boolean {
         val details = details()
         val roles = details[JobReadConventions.rolesKey] as? List<*>
@@ -212,7 +212,7 @@ class ParseWorkerDisplay(
             }
         }
         val readAs = readAsLines()
-        val columns = SampledColumn.of(details())
+        val columns = InferredColumn.of(details())
         if (readAs.isEmpty() && columns == null) {
             return
         }
@@ -238,8 +238,8 @@ class ParseWorkerDisplay(
     }
 
 
-    // "Columns: a, b, extra (1)", the count and its tooltip only on a column some sampled files lack
-    private fun ChildrenBuilder.renderColumns(columns: SampledColumn.Sampled) {
+    // "Columns: a, b, extra (1)", the count and its tooltip only on a column some files lack
+    private fun ChildrenBuilder.renderColumns(columns: InferredColumn.Inferred) {
         div {
             +"Columns: "
             for ((index, column) in columns.columns.withIndex()) {

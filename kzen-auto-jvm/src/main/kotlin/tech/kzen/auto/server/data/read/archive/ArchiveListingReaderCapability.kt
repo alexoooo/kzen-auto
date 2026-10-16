@@ -6,7 +6,6 @@ import tech.kzen.auto.common.data.read.ReaderCapabilityIdentity
 import tech.kzen.auto.common.data.read.ReaderConfig
 import tech.kzen.auto.common.data.schema.DataShape
 import tech.kzen.auto.plugin.api.data.BlockingReaderCapability
-import tech.kzen.auto.plugin.api.data.ReaderInspectionRequest
 import tech.kzen.auto.plugin.api.data.ReaderOpenRequest
 import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.MapExecutionValue
@@ -62,11 +61,4 @@ object ArchiveListingReaderCapability: BlockingReaderCapability() {
         return shape
     }
 
-
-    // The columns are fixed, and walking headers to confirm them would decompress past the inspection byte limit
-    // on any archive whose first member is large.
-    override fun inspectBlocking(request: ReaderInspectionRequest): DataShape {
-        validate(request.open.config)
-        return shape
-    }
 }

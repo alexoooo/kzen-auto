@@ -14,25 +14,25 @@ object JobReadConventions {
     //-----------------------------------------------------------------------------------------------------------------
     // Validation details
 
-    /** Under Automatic, the format each sampled file's name chose: a list of `{file, label}` maps. */
+    /** Under Automatic, the format each file's name chose: a list of `{file, label}` maps. */
     const val namedFormatsKey = "namedFormats"
     const val namedFormatFileKey = "file"
     const val namedFormatLabelKey = "label"
 
     /**
-     * The columns the sampled files hold together, in order: a list of `{name, files}` maps, where [sampledColumnNameKey]
-     * is the column as a header names it and [sampledColumnFilesKey] the files (by name) that hold it, of
-     * [sampledFilesKey] sampled.
+     * The columns the files hold together, in order: a list of `{name, files}` maps, where [columnNameKey]
+     * is the column as a header names it and [columnFilesKey] the files (by name) that hold it, of
+     * [inspectedFilesKey] read.
      */
-    const val sampledColumnsKey = "columns"
-    const val sampledColumnNameKey = "name"
-    const val sampledColumnFilesKey = "files"
-    const val sampledFilesKey = "sampledFiles"
+    const val columnsKey = "columns"
+    const val columnNameKey = "name"
+    const val columnFilesKey = "files"
+    const val inspectedFilesKey = "inspectedFiles"
 
     /** True when the Worker's input carries units of named parts, so choosing a part applies. */
     const val readsUnitsKey = "readsUnits"
 
-    /** The distinct part names the sampled units hold, in first-seen order. */
+    /** The distinct part names the units hold, in first-seen order. */
     const val rolesKey = "roles"
 
     /**

@@ -181,8 +181,8 @@ abstract class WorkerBase(
 
     /**
      * Force-aware variant of [progress]: force = true only on the final end-of-stream publish, letting a
-     * Worker push a bounded teaser periodically but the full payload once at the end (every emit is retained
-     * in engine history, so periodic pushes must be O(bounded) — see JobConventions.progressTeaserRowCount).
+     * Worker push a teaser periodically but the full payload once at the end (see
+     * JobConventions.progressTeaserRowCount).
      * Defaults to the force-agnostic [progress]; override exactly one of the two.
      */
     protected open fun progress(snapshot: Any?, force: Boolean): Map<String, Any?>? = progress(snapshot)

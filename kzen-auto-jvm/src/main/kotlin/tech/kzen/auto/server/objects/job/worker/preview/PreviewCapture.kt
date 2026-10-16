@@ -4,46 +4,28 @@ import tech.kzen.auto.common.objects.document.job.preview.PreviewNode
 import tech.kzen.lib.common.exec.*
 import tech.kzen.lib.common.exec.data.type.*
 import tech.kzen.lib.common.exec.data.value.*
-import tech.kzen.lib.common.exec.data.value.budget.ReadBudget
 import tech.kzen.lib.platform.ClassNames.simple
 import java.util.IdentityHashMap
 import java.util.concurrent.CancellationException
-import kotlin.time.Duration.Companion.nanoseconds
 
-/** Partial display capture; strict result snapshots remain governed by DataSnapshot. */
-class PreviewCapture(
-    private val maximumDepth: Int = 16,
-    private val maximumChildren: Int = 200,
-    private val maximumNodes: Int = 2_000,
-    private val maximumText: Int = 4_096,
-    private val maximumBytes: Int = 256 * 1_024,
-    private val maximumNanos: Long = defaultMaximumNanos
-) {
+/**
+ * Detached display copy of a value, read in full; strict result snapshots remain governed by DataSnapshot. A branch
+ * that cannot be shown (an opaque native, a cycle, a read that fails) becomes a marker beside its readable siblings.
+ */
+object PreviewCapture {
     fun capture(value: DataValue): PreviewNode {
         val payload = Writer(value).capture()
         val metadata = value.metadata ?: return payload
         return payload.copy(metadata = Writer(metadata.value).capture())
     }
 
-    private inner class Writer(private val value: DataValue) {
-        private val budget = ReadBudget(maximumNanos.nanoseconds)
+    private class Writer(private val value: DataValue) {
         private val ancestors = IdentityHashMap<Any, Boolean>()
-        private var nodes = 0
-        private var bytes = 0
 
-        fun capture(): PreviewNode {
-            val result = read(value.root, value.contract, 0)
-            return if (result.encode().toByteArray(Charsets.UTF_8).size <= maximumBytes) result
-                else marker("truncated", "Item exceeds preview size limit")
-        }
+        fun capture(): PreviewNode =
+            read(value.root, value.contract)
 
-        private fun exhausted(): Boolean = nodes >= maximumNodes || bytes >= maximumBytes - markerReserveBytes ||
-                budget.exhausted()
-
-        private fun read(node: DataNode, declared: DataContract, depth: Int): PreviewNode = guarded {
-            if (depth > maximumDepth || exhausted()) return@guarded marker("truncated", "Preview limit reached")
-            nodes++
-            bytes += nodeOverheadBytes
+        private fun read(node: DataNode, declared: DataContract): PreviewNode = guarded {
             when (value.access.state(node)) {
                 DataState.Absent -> return@guarded PreviewNode("absent", "Absent")
                 DataState.Null -> return@guarded PreviewNode("null", "null")
@@ -69,15 +51,14 @@ class PreviewCapture(
                     is DataType.Record -> container("record", "${type.fields.size} ${if (type.fields.size == 1) "field" else "fields"}", type.fields.size) { index ->
                         val field = type.fields[index]
                         val child = guarded {
-                            read(value.access.field(node, field.id), contract.child(DataPathSegment.Field(field.id)), depth + 1)
+                            read(value.access.field(node, field.id), contract.child(DataPathSegment.Field(field.id)))
                         }
-                        bytes += field.id.name.length * maximumEncodedBytesPerChar
                         child.copy(name = field.id.name, occurrence = field.id.occurrence)
                     }
                     is DataType.Listing -> {
                         val size = value.access.size(node)
                         container("list", "$size items", size) { index ->
-                            read(value.access.element(node, index), contract.child(DataPathSegment.ListingElement), depth + 1)
+                            read(value.access.element(node, index), contract.child(DataPathSegment.ListingElement))
                                 .copy(name = "[$index]")
                         }
                     }
@@ -85,12 +66,10 @@ class PreviewCapture(
                         val size = value.access.size(node)
                         container("map", "$size entries", size) { index ->
                             guarded {
-                                nodes += 2
-                                bytes += 2 * nodeOverheadBytes
-                                if (exhausted()) return@guarded marker("truncated", "Preview limit reached")
                                 val key = value.access.keyAt(node, index)
                                 val keyCopy = scalar(key).copy(name = "key")
-                                val child = read(value.access.entry(node, key), contract.child(DataPathSegment.MappingValue), depth + 1)
+                                val child = read(
+                                    value.access.entry(node, key), contract.child(DataPathSegment.MappingValue))
                                     .copy(name = "value")
                                 PreviewNode("entry", keyCopy.text, listOf(keyCopy, child), "[$index]",
                                     partial = keyCopy.partial || child.partial)
@@ -99,7 +78,7 @@ class PreviewCapture(
                     }
                     is DataType.Union -> {
                         val active = value.access.activeVariant(node)
-                        val child = read(value.access.selected(node), contract.child(DataPathSegment.Variant(active)), depth + 1)
+                        val child = read(value.access.selected(node), contract.child(DataPathSegment.Variant(active)))
                         PreviewNode("union", active.value, listOf(child.copy(name = active.value)), partial = child.partial)
                     }
                 }
@@ -110,14 +89,7 @@ class PreviewCapture(
         }
 
         private fun container(kind: String, text: String, size: Int, child: (Int) -> PreviewNode): PreviewNode {
-            val children = mutableListOf<PreviewNode>()
-            for (index in 0 until minOf(size, maximumChildren)) {
-                if (exhausted()) break
-                children += guarded { child(index) }
-            }
-            if (children.size < size) {
-                children += marker("truncated", "${size - children.size} more omitted").copy(name = "…", occurrence = -1)
-            }
+            val children = List(size) { index -> guarded { child(index) } }
             return PreviewNode(kind, text, children.toList(), partial = children.any { it.partial })
         }
 
@@ -133,10 +105,7 @@ class PreviewCapture(
                 }
                 is BinaryHandleExecutionValue -> return marker("unavailable", "Binary content is not copied")
             }
-            val length = minOf(maximumText, ((maximumBytes - bytes - markerReserveBytes) / maximumEncodedBytesPerChar).coerceAtLeast(0))
-            val clipped = text.take(length)
-            bytes += clipped.length * maximumEncodedBytesPerChar
-            return PreviewNode("scalar", clipped + if (text.length > length) "…" else "", partial = text.length > length)
+            return PreviewNode("scalar", text)
         }
 
         private inline fun guarded(block: () -> PreviewNode): PreviewNode = try {
@@ -149,15 +118,8 @@ class PreviewCapture(
         }
     }
 
-    companion object {
-        /** Wall-clock [ReadBudget] of one capture, so a slow-to-read value cannot hold up the Worker sampling it. */
-        const val defaultMaximumNanos = 50_000_000L
-
-        private const val markerReserveBytes = 1_024
-        private const val nodeOverheadBytes = 128
-        private const val maximumEncodedBytesPerChar = 6
-        private const val binaryExcerptBytes = 64
-    }
+    // A binary scalar shows as a hex excerpt with its size
+    private const val binaryExcerptBytes = 64
 
     private fun marker(kind: String, text: String) = PreviewNode(kind, text, partial = true)
 }

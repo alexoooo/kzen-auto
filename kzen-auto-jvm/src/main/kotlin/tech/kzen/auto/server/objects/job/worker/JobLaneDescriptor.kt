@@ -20,13 +20,16 @@ import tech.kzen.lib.platform.ClassName
 
 
 /**
- * The single static authority for a Job lane. [sample] is a few of the values the lane would carry, when its producer
- * can offer them at design time (see [JobLaneSample]); it is not part of the lane's type.
+ * The single static authority for a Job lane. [values] are the values the lane would carry, when its producer can
+ * offer them at design time (docs/plans/2026-09-24_values-metadata-and-design-time-types.md, R5): the same values a
+ * run would send (lifted payload and metadata), holding no open resource. They are not part of the lane's type. A
+ * Worker that forwards its input unchanged forwards them too, so a filter above a reader widens what the reader
+ * types itself from, never narrows it.
  */
 class JobLaneDescriptor(
     val contract: DataContract,
     val resolved: ResolvedDataContract? = null,
-    val sample: JobLaneSample? = null
+    val values: List<DataValue>? = null
 ) {
     constructor(
         payloadType: TypeMetadata?,
@@ -137,9 +140,8 @@ class JobLaneDescriptor(
 
 
 /**
- * [provenance] says where a type read from data came from, e.g. how many of the lane's values it was inferred from;
- * [partial] marks it read from only part of them, because a design-time limit cut the reading short. [details] is
- * what the Worker found out about its input beyond the type, read by its own display / editors
+ * [provenance] says where a type read from data came from, e.g. how many of the lane's values it was inferred from.
+ * [details] is what the Worker found out about its input beyond the type, read by its own display / editors
  * ([tech.kzen.auto.common.objects.document.logic.StepValidation.details]).
  */
 class JobLaneAttempt(
@@ -147,31 +149,16 @@ class JobLaneAttempt(
     val errorMessage: String?,
     val warningMessage: String? = null,
     val provenance: String? = null,
-    val partial: Boolean = false,
     val details: Map<String, Any?> = mapOf()
 ) {
     fun withDetails(added: Map<String, Any?>): JobLaneAttempt {
         if (added.isEmpty()) {
             return this
         }
-        return JobLaneAttempt(lane, errorMessage, warningMessage, provenance, partial, details + added)
+        return JobLaneAttempt(lane, errorMessage, warningMessage, provenance, details + added)
     }
 }
 
-
-/**
- * A few of the values a lane would carry, offered at design time (docs/plans/2026-09-24_values-metadata-and-design-
- * time-types.md, R5): the first [values] of [total], the same values a run would send (lifted payload and metadata),
- * holding no open resource. A Worker that forwards its input unchanged forwards the sample too, so a filter above a
- * reader widens what the reader types itself from, never narrows it.
- */
-class JobLaneSample(
-    val values: List<DataValue>,
-    val total: Int
-) {
-    val complete: Boolean
-        get() = values.size == total
-}
 
 
 /** [design] reads data for this validation pass; null where validation may not look at data. */

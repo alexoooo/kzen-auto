@@ -49,7 +49,6 @@ import tech.kzen.auto.server.service.storage.SchemaCacheStorageArea
 import tech.kzen.auto.server.service.storage.JobOutputStorageArea
 import tech.kzen.auto.server.service.storage.ManagedStorageRegistry
 import tech.kzen.auto.server.service.storage.ReportStorageArea
-import tech.kzen.auto.server.service.storage.StorageLruEvictor
 import tech.kzen.auto.server.service.target.TargetLocator
 import org.slf4j.LoggerFactory
 import tech.kzen.auto.server.context.runtime.KzenAutoRuntime
@@ -180,10 +179,6 @@ class KzenAutoContext private constructor(
             }
         }
 
-
-        // Size budget for the compiled-expression cache; least recently used entries beyond it are
-        // evicted (transparently recompiled on next use).
-        private const val codeCacheBudgetBytes = 1024L * 1024 * 1024
 
         // Rolling server logs, cwd-relative (see logback.xml LOG_DIR).
         private val logDir = Paths.get("logs")
@@ -334,7 +329,7 @@ class KzenAutoContext private constructor(
     val modelTaskRepository = ModelTaskRepository(
         graphStore, graphInstanceCache)
 
-    // Areas are registered (and the code-cache evictor attached) in init(), where the
+    // Areas are registered in init(), where the
     // active-run checks can capture serverLogicController without construction-order cycles.
     val managedStorageRegistry = ManagedStorageRegistry()
 
@@ -376,11 +371,7 @@ class KzenAutoContext private constructor(
     private fun initManagedStorage() {
         val anyRunActive = { serverLogicController.status().active != null }
 
-        val codeCacheArea = cachedKotlinCompiler.storageArea(codeCacheBudgetBytes)
-        val codeCacheEvictor = StorageLruEvictor(codeCacheArea)
-        cachedKotlinCompiler.attachEvictor(codeCacheEvictor)
-
-        managedStorageRegistry.register(codeCacheArea)
+        managedStorageRegistry.register(cachedKotlinCompiler.storageArea())
 
         managedStorageRegistry.register(ReportStorageArea(
             workUtils.resolve(ReportWorkPool.defaultReportDir), reportWorkPool))
@@ -409,17 +400,13 @@ class KzenAutoContext private constructor(
                 logDir,
                 deletable = false))
         }
-
-        // Reclaims budget overshoot accumulated while no evictor was attached (prior process).
-        codeCacheEvictor.maybeEvict()
     }
 
 
     /**
      * Shutdown order for any owner: stop and await the HTTP server first (the server is created outside the
-     * context by `ktorMain`'s caller), then this — which cancels the active run, joins its executor, and only
-     * then releases the work-root claim. If the run cannot be joined the claim is kept: the root is not
-     * advertised as reusable while a Worker could still be writing to it. Idempotent.
+     * context by `ktorMain`'s caller), then this — which cancels the active run, waits for it to finish, and
+     * only then releases the work-root claim, so no Worker can still be writing to the root. Idempotent.
      */
     override fun close() {
         if (temporaryWorkRoot) {
@@ -428,17 +415,13 @@ class KzenAutoContext private constructor(
 
         // Cancelling the active run settles its root node, which disposes the run-scoped resources (a browser
         // opened with closePolicy Auto/KeepOnFailure) via the engine.
-        val joined = serverLogicController.closeAndJoin()
-        if (joined) {
-            // Nothing runs any more: release the compiled-code jar handles rather than leave them to GC
-            cachedKotlinCompiler.releaseLoaded()
-            workRootClaim.release()
-            if (temporaryWorkRoot) {
-                deleteTemporaryWorkRoot(workRootClaim.realPath)
-            }
-        }
-        else {
-            logger.error("Active execution did not join during close; work root {} stays claimed", workUtils.base())
+        serverLogicController.close()
+
+        // Nothing runs any more: release the compiled-code jar handles rather than leave them to GC
+        cachedKotlinCompiler.releaseLoaded()
+        workRootClaim.release()
+        if (temporaryWorkRoot) {
+            deleteTemporaryWorkRoot(workRootClaim.realPath)
         }
     }
 

@@ -33,6 +33,7 @@ object LogicConventions {
     const val actionLookupRun = "lookup-run"
     const val actionLookupRunHistory = "lookup-run-history"
     const val actionLookupRunExecutions = "lookup-run-executions"
+    const val actionLookupRange = "lookup-range"
     const val actionMostRecent = "recent"
     const val actionTraced = "traced"
     const val actionReset = "reset"
@@ -43,6 +44,12 @@ object LogicConventions {
 
     const val paramQuery = "query"
     const val paramSinceSequence = "since-sequence"
+
+    // lookup-range: the traced list's path, and the range of it to read (no count = to the end). Not "path",
+    // which a detached action's request already uses for the endpoint's own document (CommonRestApi).
+    const val paramPath = "trace-path"
+    const val paramOffset = "offset"
+    const val paramCount = "count"
 
     // The `parameters` branch of typed ParameterBinding declarations, shared by every Logic flavour that
     // declares one (Script and Job); ScriptConventions aliases these so script-side code reads naturally.

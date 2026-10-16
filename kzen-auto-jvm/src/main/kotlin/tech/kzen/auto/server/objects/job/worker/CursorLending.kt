@@ -31,21 +31,15 @@ internal class CursorLending(
     private var pending: ArrayDeque<AcquiredItem> = ArrayDeque()
     private var delivered = 0L
 
-    // The lent element in flight, read from other Workers' coroutines and the deadlock monitor's thread
+    // The lent element in flight, read from other Workers' coroutines
     @Volatile private var lent: OwnedNative? = null
     @Volatile private var lentName: String? = null
-    @Volatile private var awaiting = false
 
 
     //-----------------------------------------------------------------------------------------------------------------
     /** True from the emit of a lent element until its release. */
     fun lending(): Boolean =
         lent?.isClosed == false
-
-
-    /** True while suspended waiting for the lent element's release. */
-    fun awaitingRelease(): Boolean =
-        awaiting
 
 
     /** Elements delivered downstream so far, across every cursor drained by this instance. */
@@ -128,13 +122,7 @@ internal class CursorLending(
 
     /** The wait of §3.2 step 3: outside any checkpoint, then a checkpoint at the boundary before the next pull. */
     private suspend fun awaitRelease(owned: OwnedNative, control: JobControl) {
-        awaiting = true
-        try {
-            owned.awaitClosed()
-        }
-        finally {
-            awaiting = false
-        }
+        owned.awaitClosed()
         lent = null
         lentName = null
         control.checkpoint()

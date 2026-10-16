@@ -1,6 +1,6 @@
 # RecyclableRouteTest route "migration-expanding" (archetypes in recycle-test.yaml): source → fan-out (expanding) →
 # gated sink. At the cut the fan-out holds its active batch mid-expansion, and both channels hold buffered and
-# parked values. The external duplex channel only suspends deadlock detection.
+# parked values.
 main:
   is: Job
 
@@ -13,10 +13,6 @@ main.channels/expanded:
   is: Channel
   capacity: 1
   batchSize: 1
-
-main.channels/signal:
-  is: DuplexChannel
-  external: true
 
 main.workers/source:
   is: RecyclingSourceWorker

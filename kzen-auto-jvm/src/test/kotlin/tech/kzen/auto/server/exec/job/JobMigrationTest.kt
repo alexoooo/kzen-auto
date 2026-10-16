@@ -152,7 +152,7 @@ class JobMigrationTest {
         val engine = RunEngine(baseLogic, context.objectStableMapper.objectStableId(carryoverJobLocation))
         try {
             // The gated sink (#1) never drains, so the source fills the buffer and parks mid-send at exactly
-            // buffer + 1 sends — a stable state the engine quiesces at (no deadlock detection in this port).
+            // buffer + 1 sends — a stable state the engine quiesces at.
             engine.resume()
             val deadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(hangGuardMillis)
             while (GatedSourceWorker.sendsStarted.get() < channelBuffer + 1) {

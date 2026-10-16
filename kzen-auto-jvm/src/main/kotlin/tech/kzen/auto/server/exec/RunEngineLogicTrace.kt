@@ -18,6 +18,7 @@ import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceEntry
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceEvent
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTracePath
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceQuery
+import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceRange
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceSnapshot
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.service.store.normal.ObjectStableId
@@ -146,17 +147,9 @@ class RunEngineLogicTrace(
         // clearing generically — a superseded invocation of a hosted sub-logic (a loop iteration, or a
         // second RunStep invoking the same document) drops out of the merged live view, while its
         // append-only history (the film strip) survives via lookupRunHistory.
-        val latestByStableId = HashMap<ObjectStableId, Node>()
-        forEachNode(access.engine.snapshot().root) { node ->
-            val previous = latestByStableId[node.stableId]
-            if (previous == null || nodeOrdinal(node.id) > nodeOrdinal(previous.id)) {
-                latestByStableId[node.stableId] = node
-            }
-        }
-
         val time = Clock.System.now()
         val merged = LinkedHashMap<LogicTracePath, LogicTraceEntry>()
-        for (node in latestByStableId.values) {
+        for (node in latestNodes(access.engine.snapshot().root)) {
             for ((path, entry) in nodeEntries(node, time, access.runId)) {
                 val existing = merged[path]
                 if (existing == null || entry.sequence > existing.sequence) {
@@ -169,6 +162,51 @@ class RunEngineLogicTrace(
                 access.engine.snapshot().sequence)
         }
         return LogicTraceSnapshot(filterAndRetain(merged, logicTraceQuery))
+    }
+
+
+    // Reads one immutable snapshot, so the list cannot change under the read. With no [executionId], the list
+    // comes from the run's latest nodes, latest write winning: the lookupRun merge rule.
+    override fun lookupRange(
+        logicRunId: LogicRunId,
+        executionId: LogicExecutionId?,
+        path: LogicTracePath,
+        offset: Int,
+        count: Int?
+    ): LogicTraceRange? {
+        val access = activeRun()
+            ?: return null
+        if (access.runId != logicRunId) {
+            return null
+        }
+        val root = access.engine.snapshot().root
+
+        val nodes =
+            if (executionId == null) {
+                latestNodes(root)
+            }
+            else {
+                listOf(findNode(root, NodeId(executionId.value)) ?: return null)
+            }
+
+        var latest: List<ExecutionValue>? = null
+        var latestSequence = Long.MIN_VALUE
+        for (node in nodes) {
+            for ((address, list) in node.lists) {
+                val sequence = node.listSequence[address] ?: 0L
+                if (tracePathOf(address, node.stableId) == path && sequence > latestSequence) {
+                    latest = list
+                    latestSequence = sequence
+                }
+            }
+        }
+        val list = latest
+            ?: return null
+
+        val start = offset.coerceIn(0, list.size)
+        val end = if (count == null) list.size else (start + count.coerceAtLeast(0)).coerceAtMost(list.size)
+        val entries = (start until end).map { toWireValue(list[it], access.runId) }
+        return LogicTraceRange(list.size, start, entries)
     }
 
 
@@ -383,6 +421,20 @@ class RunEngineLogicTrace(
             findNode(child, target)?.let { return it }
         }
         return null
+    }
+
+
+    // The latest node per stable id (highest node ordinal): a superseded invocation of a hosted sub-logic (a loop
+    // iteration, or a second RunStep invoking the same document) drops out of a whole-run read.
+    private fun latestNodes(root: Node): Collection<Node> {
+        val latestByStableId = HashMap<ObjectStableId, Node>()
+        forEachNode(root) { node ->
+            val previous = latestByStableId[node.stableId]
+            if (previous == null || nodeOrdinal(node.id) > nodeOrdinal(previous.id)) {
+                latestByStableId[node.stableId] = node
+            }
+        }
+        return latestByStableId.values
     }
 
 

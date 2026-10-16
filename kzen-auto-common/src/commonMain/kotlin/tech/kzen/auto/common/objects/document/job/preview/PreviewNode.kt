@@ -21,7 +21,6 @@ data class PreviewNode(
 
     companion object {
         const val progressKey = "previewItems"
-        const val limitedKey = "previewWindowLimited"
 
         fun decode(text: String): PreviewNode = Json.decodeFromString(serializer(), text)
     }

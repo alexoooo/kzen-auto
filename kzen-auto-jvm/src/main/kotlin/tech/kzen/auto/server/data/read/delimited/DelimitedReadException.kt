@@ -24,7 +24,6 @@ class DelimitedReadException(
         const val width = "record-width"
         const val header = "header-mapping"
         const val typedValue = "typed-value"
-        const val budget = "read-budget"
         const val configuration = "reader-configuration"
     }
 }

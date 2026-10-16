@@ -8,7 +8,6 @@ import tech.kzen.auto.common.data.read.ContentCodingSpec
 import tech.kzen.auto.common.data.read.DelimitedDialectSpec
 import tech.kzen.auto.common.data.read.DelimitedReadConfig
 import tech.kzen.auto.common.data.read.HeaderReadSpec
-import tech.kzen.auto.common.data.read.ReadOperationalPolicy
 import tech.kzen.auto.common.data.read.RecordFramingSpec
 import tech.kzen.auto.common.data.read.TypedDecodePolicy
 import tech.kzen.auto.common.util.data.DataLocation
@@ -16,8 +15,6 @@ import tech.kzen.auto.common.util.data.FilePath
 import tech.kzen.auto.server.data.read.delimited.ConfiguredDelimitedReader
 import tech.kzen.auto.server.data.read.delimited.DelimitedReadContext
 import tech.kzen.auto.server.data.content.local.LocalDataContentProvider
-import tech.kzen.auto.server.data.content.policy.ContentReadPolicy
-import tech.kzen.auto.server.data.content.policy.ContentTimeoutException
 import tech.kzen.auto.server.data.content.provider.DataContentProvider
 import tech.kzen.auto.server.data.content.provider.DataContentProviderLookup
 import tech.kzen.lib.common.exec.data.type.DataContract
@@ -32,14 +29,11 @@ import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Duration.Companion.seconds
 
 
 class FakeObjectStoreConformanceTest {
     companion object {
         private val characters = CharacterDecodingSpec("UTF-8", "permit", "report", "report")
-        private val policy = ContentReadPolicy(1024 * 1024, 10.seconds, 100)
     }
 
 
@@ -97,10 +91,10 @@ class FakeObjectStoreConformanceTest {
 
         val plain = stack("plain", plainProvider).openCharacters(
             DirectDataContext, ref("plain", "bucket-a/reports/opaque-42"), null,
-            listOf(ContentCodingSpec.identity), characters, policy)
+            listOf(ContentCodingSpec.identity), characters)
         val compressed = stack("gzip", gzipProvider).openCharacters(
             DirectDataContext, ref("gzip", "bucket-b/archive/key-without-extension"), null,
-            listOf(ContentCodingSpec.gzip), characters, policy)
+            listOf(ContentCodingSpec.gzip), characters)
 
         assertEquals(text, plain.readAllText())
         assertEquals(text, compressed.readAllText())
@@ -110,39 +104,15 @@ class FakeObjectStoreConformanceTest {
 
 
     @Test
-    fun operationalLimitsRemainAboveOpaqueProviderDispatch() = runBlocking {
-        val compressed = gzip("value".repeat(100).encodeToByteArray())
-        val expansionProvider = FakeObjectStoreProvider(
-            compressed, fakeFingerprint("expanded-v1"), expectedId = "opaque-compressed")
-        val expansionLimit = ContentReadPolicy(20, 10.seconds, 100)
-        val content = stack("expanded", expansionProvider).openCharacters(
-            DirectDataContext, ref("expanded", "opaque-compressed"), null,
-            listOf(ContentCodingSpec.gzip), characters, expansionLimit)
-        val reader = ConfiguredDelimitedReader.open(
-            content, oneTextFieldConfig(), ReadOperationalPolicy(), DelimitedReadContext("opaque-compressed"))
-        assertFailsWith<ContentCodingException> { reader.use { it.read() } }
-        assertEquals(1, expansionProvider.closeCount)
-
-        val timeoutProvider = FakeObjectStoreProvider(
-            "value".encodeToByteArray(), fakeFingerprint("timeout-v1"), acquisitionDelayMillis = 25,
-            expectedId = "opaque-slow")
-        val timeoutPolicy = ContentReadPolicy(1024, 5.milliseconds, 100)
-        assertFailsWith<ContentTimeoutException> {
-            stack("timeout", timeoutProvider).openCharacters(
-                DirectDataContext, ref("timeout", "opaque-slow"), null,
-                listOf(ContentCodingSpec.identity), characters, timeoutPolicy)
-        }
-        assertEquals(1, timeoutProvider.closeCount)
-
+    fun cancellationRemainsAboveOpaqueProviderDispatch() = runBlocking {
         val cancellationProvider = FakeObjectStoreProvider(
             "value".encodeToByteArray(), fakeFingerprint("cancel-v1"), cancelOnRead = true,
             expectedId = "opaque-cancelled")
         val cancellationContent = stack("cancel", cancellationProvider).openCharacters(
             DirectDataContext, ref("cancel", "opaque-cancelled"), null,
-            listOf(ContentCodingSpec.identity), characters, policy)
+            listOf(ContentCodingSpec.identity), characters)
         val cancellationReader = ConfiguredDelimitedReader.open(
-            cancellationContent, oneTextFieldConfig(), ReadOperationalPolicy(),
-            DelimitedReadContext("opaque-cancelled"))
+            cancellationContent, oneTextFieldConfig(), DelimitedReadContext("opaque-cancelled"))
         assertFailsWith<java.util.concurrent.CancellationException> {
             cancellationReader.use { it.read() }
         }
@@ -158,7 +128,7 @@ class FakeObjectStoreConformanceTest {
         assertFailsWith<ContentSourceException> {
             stack("stale", staleProvider).openCharacters(
                 DirectDataContext, ref("stale", "opaque-versioned"), fakeFingerprint("expected-v1"),
-                listOf(ContentCodingSpec.identity), characters, policy)
+                listOf(ContentCodingSpec.identity), characters)
         }
         assertEquals(0, staleProvider.readCount)
         assertEquals(1, staleProvider.closeCount)
@@ -169,7 +139,7 @@ class FakeObjectStoreConformanceTest {
         val failure = assertFailsWith<ContentSourceException> {
             stack("capability", unavailableProvider).openCharacters(
                 DirectDataContext, ref("capability", "opaque-native-rows"), null,
-                listOf(ContentCodingSpec.identity), characters, policy)
+                listOf(ContentCodingSpec.identity), characters)
         }
         assertContains(failure.message.orEmpty(), "sequential-bytes")
         assertContains(failure.message.orEmpty(), "available capabilities: none")
@@ -195,9 +165,9 @@ class FakeObjectStoreConformanceTest {
             .openCharacters(
                 DirectDataContext, ref,
                 null,
-                listOf(coding), config.characters, policy)
+                listOf(coding), config.characters)
         return ConfiguredDelimitedReader.open(
-            content, config, ReadOperationalPolicy(), DelimitedReadContext(ref.display())).use { reader ->
+            content, config, DelimitedReadContext(ref.display())).use { reader ->
             val rows = mutableListOf<List<String>>()
             while (true) {
                 val record = reader.read() ?: break

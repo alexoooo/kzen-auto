@@ -11,11 +11,9 @@ import tech.kzen.auto.common.data.read.ReaderConfig
 import tech.kzen.auto.common.data.schema.DataShape
 import tech.kzen.auto.plugin.api.data.ReaderCapability
 import tech.kzen.auto.plugin.api.data.FormatAuthoringCapability
-import tech.kzen.auto.plugin.api.data.ReaderInspectionRequest
 import tech.kzen.auto.plugin.api.data.ReaderOpenRequest
 import tech.kzen.auto.server.data.content.character.CharacterDecoder
 import tech.kzen.auto.server.data.content.policy.ContentReadControl
-import tech.kzen.auto.server.data.content.policy.ContentReadPolicy
 import tech.kzen.auto.server.data.read.delimited.ReaderByteSequentialContent
 import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.MapExecutionValue
@@ -65,17 +63,7 @@ object PlainTextReaderCapability: ReaderCapability, FormatAuthoringCapability {
         return ContentCapabilityIdentity.sequentialBytes
     }
 
-    override suspend fun open(request: ReaderOpenRequest): DataCursor = openCursor(request, Long.MAX_VALUE)
-
-    override suspend fun inspect(request: ReaderInspectionRequest): DataShape =
-        openCursor(request.open, request.maximumRecords).use { cursor ->
-            var count = 0L
-            while (count < request.maximumRecords && cursor.hasNext()) {
-                cursor.next()
-                count++
-            }
-            cursor.shape
-        }
+    override suspend fun open(request: ReaderOpenRequest): DataCursor = openCursor(request)
 
     override fun materialize(request: FormatMaterializationRequest): FormatMaterializationResult {
         require(request.overrides.isEmpty()) { "Plain-text format authoring does not accept quick overrides" }
@@ -104,16 +92,16 @@ object PlainTextReaderCapability: ReaderCapability, FormatAuthoringCapability {
             canonical.characters.charset)
     }
 
-    private fun openCursor(request: ReaderOpenRequest, inspectionRecordLimit: Long): PlainTextDataCursor {
+    private fun openCursor(request: ReaderOpenRequest): PlainTextDataCursor {
         val config = request.config as? PlainTextReadConfig
             ?: throw IllegalArgumentException("Plain-text reader config expected")
         val characters = CharacterDecoder.open(
             ReaderByteSequentialContent(request.bytes),
             config.characters,
-            ContentReadControl(ContentReadPolicy.of(request.policy, inspectionRecordLimit)),
+            ContentReadControl(),
             request.sourceDisplay,
             request.part)
-        val reader = PlainTextReader(characters, request.policy) {
+        val reader = PlainTextReader(characters) {
             if (Thread.currentThread().isInterrupted) {
                 throw CancellationException("Plain-text read interrupted")
             }

@@ -36,7 +36,6 @@ import tech.kzen.auto.client.service.global.ClientStateGlobal
 import tech.kzen.auto.client.service.global.InsertionGlobal
 import tech.kzen.auto.client.service.logic.LogicValidationGlobal
 import tech.kzen.auto.client.service.rest.ClientRestApi
-import kotlinx.coroutines.delay
 import tech.kzen.auto.client.util.async
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.contextValue
@@ -160,7 +159,6 @@ class JobController(
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private val dragHandleColor = Color("rgba(0, 0, 0, 0.45)")
-        private const val partialValidationRetryMillis = 1000L
 
         // The insert "+" (32px) at a gap's left edge, and the room the pipe beside it leaves for it
         private val insertColumnWidth = 2.5.em
@@ -319,7 +317,7 @@ class JobController(
 
 
     override fun componentWillUnmount() {
-        // Supersedes any fetch in flight, and a pending re-ask for a partial validation with it
+        // Supersedes any fetch in flight
         validationEpoch++
         insertion()?.unsubscribe(this)
         props.clientStateGlobal.unobserve(this)
@@ -485,16 +483,6 @@ class JobController(
             val settled = validation ?: state.workerValidations
             props.logicValidationGlobal.validation(
                 documentPath, inFlight = false, errors = jobValidationErrors(settled, documentPath))
-
-            // A type read from only part of the data, because a design-time limit cut the reading short: ask again,
-            // and the server reads on from what it already inspected
-            if (validation?.workerValidations?.values?.any { it.partial } == true) {
-                delay(partialValidationRetryMillis)
-                if (epoch == validationEpoch) {
-                    lastValidationNotation = null
-                    props.clientStateGlobal.current()?.let(::refreshValidationIfNeeded)
-                }
-            }
         }
     }
 

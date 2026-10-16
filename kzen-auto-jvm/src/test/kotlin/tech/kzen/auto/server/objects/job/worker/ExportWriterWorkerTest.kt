@@ -9,7 +9,6 @@ import tech.kzen.auto.common.data.read.CharacterDecodingSpec
 import tech.kzen.auto.common.data.read.DelimitedDialectSpec
 import tech.kzen.auto.common.data.read.DelimitedReadConfig
 import tech.kzen.auto.common.data.read.HeaderReadSpec
-import tech.kzen.auto.common.data.read.ReadOperationalPolicy
 import tech.kzen.auto.common.data.read.RecordFramingSpec
 import tech.kzen.auto.common.data.read.TypedDecodePolicy
 import tech.kzen.auto.common.paradigm.job.api.ChannelInput
@@ -239,7 +238,6 @@ class ExportWriterWorkerTest {
         return ConfiguredDelimitedReader.open(
             ByteStringContent(bytes.decodeToString()),
             config,
-            ReadOperationalPolicy(),
             DelimitedReadContext("memory://export-round-trip"))
             .use { reader ->
                 generateSequence(reader::read).map { it.backing.toList() }.toList()
@@ -249,7 +247,6 @@ class ExportWriterWorkerTest {
 
     private class ByteStringContent(private val text: String): SequentialCharacterContent {
         override val resolvedCharsetName = "UTF-8"
-        override val inspectionRecordLimit = Long.MAX_VALUE
         private var position = 0
 
         override fun read(buffer: CharArray, offset: Int, length: Int): Int {

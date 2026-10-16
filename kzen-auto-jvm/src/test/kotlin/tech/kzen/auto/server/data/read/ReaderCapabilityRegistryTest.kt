@@ -22,7 +22,6 @@ import tech.kzen.auto.server.data.content.provider.DataContentProviderLookup
 import tech.kzen.auto.server.objects.datasource.format.ConfiguredDelimitedTestFormats
 import tech.kzen.auto.server.data.read.delimited.ConfiguredDelimitedReaderCapability
 import tech.kzen.auto.plugin.api.data.ReaderCapability
-import tech.kzen.auto.plugin.api.data.ReaderInspectionRequest
 import tech.kzen.auto.plugin.api.data.ReaderOpenRequest
 import tech.kzen.auto.plugin.api.data.FormatAuthoringCapability
 import tech.kzen.auto.common.data.format.FormatMaterializationRequest
@@ -253,7 +252,7 @@ class ReaderCapabilityRegistryTest {
         override val identity = ReaderCapabilityIdentity(
             "third.party.test", "inspection-failure", "1")
 
-        override suspend fun inspect(request: ReaderInspectionRequest): DataShape =
+        override suspend fun open(request: ReaderOpenRequest): DataCursor =
             throw IllegalArgumentException("plugin inspection failed")
     }
 

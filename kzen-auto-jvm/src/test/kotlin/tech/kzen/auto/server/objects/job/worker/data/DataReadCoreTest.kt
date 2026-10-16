@@ -9,7 +9,6 @@ import tech.kzen.auto.common.data.model.DataRef
 import tech.kzen.auto.common.data.model.DataRole
 import tech.kzen.auto.common.data.model.DataUnit
 import tech.kzen.auto.common.data.read.CursorAdoptionIdentity
-import tech.kzen.auto.common.data.read.ReadOperationalPolicy
 import tech.kzen.auto.common.data.schema.DataShape
 import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.auto.common.data.schema.LegacyDataShapeBridge
@@ -489,7 +488,7 @@ class DataReadCoreTest {
     @Test
     fun detachedCursorCanBeAdoptedOnlyOnce() {
         val tracking = TrackingCursor(emptyList(), null)
-        val identity = CursorAdoptionIdentity(Digest.ofUtf8("part"), Digest.ofUtf8("policy"))
+        val identity = CursorAdoptionIdentity(Digest.ofUtf8("part"))
         val cursor = object: OperationalDataCursor, DataCursor by tracking {
             override val adoptionIdentity = identity
         }
@@ -556,14 +555,10 @@ class DataReadCoreTest {
 
 
     @Test
-    fun detachedConfiguredCursorRejectsOneChangedRunLimitAndCloses() {
+    fun detachedConfiguredCursorRejectsAChangedPartAndCloses() {
         var closed = false
-        val partIdentity = Digest.ofUtf8("part")
-        val capturedPolicy = ReadOperationalPolicy(maximumFields = 10)
-        val currentPolicy = ReadOperationalPolicy(maximumFields = 11)
         val cursor = object: OperationalDataCursor {
-            override val adoptionIdentity = CursorAdoptionIdentity(
-                partIdentity, capturedPolicy.digest())
+            override val adoptionIdentity = CursorAdoptionIdentity(Digest.ofUtf8("part"))
             override val shape = LegacyDataShapeBridge.runtimeUnknown()
             override fun hasNext() = false
             override fun next(): DataValue = error("empty")
@@ -572,7 +567,7 @@ class DataReadCoreTest {
 
         val detached = DataReadCore.detach(cursor)
         val failure = assertFailsWith<IllegalStateException> {
-            DataReadCore.adopt(detached, CursorAdoptionIdentity(partIdentity, currentPolicy.digest()))
+            DataReadCore.adopt(detached, CursorAdoptionIdentity(Digest.ofUtf8("changed part")))
         }
 
         assertTrue(closed)

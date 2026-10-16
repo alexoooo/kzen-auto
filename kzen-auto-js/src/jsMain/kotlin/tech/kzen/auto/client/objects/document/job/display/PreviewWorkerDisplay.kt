@@ -9,7 +9,6 @@ import tech.kzen.auto.client.service.rest.ClientRestApi
 import tech.kzen.auto.client.wrap.RPureComponent
 import tech.kzen.auto.client.wrap.react
 import tech.kzen.auto.common.objects.document.job.JobConventions
-import tech.kzen.auto.common.objects.document.job.preview.PreviewNode
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
@@ -70,7 +69,7 @@ class PreviewWorkerDisplay(
             this.mirroredGraphStore = props.mirroredGraphStore
             val progress = props.common.progress
             this.common = props.common.copy(progress = progress?.copy(
-                progressMap = progress.progressMap - setOf(PreviewNode.limitedKey, JobConventions.progressCountKey)))
+                progressMap = progress.progressMap - JobConventions.progressCountKey))
             this.bodyExtra = { bodyBuilder ->
                 with(bodyBuilder) {
                     PreviewSampleView::class.react {

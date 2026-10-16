@@ -65,7 +65,6 @@ class RunOwnershipLedgerTest {
             assertTrue(resource.isClosed)
             assertEquals(1, resource.closeCount.get())
             assertNull(ledger.entryOf(resource), "a closed entry leaves the ledger")
-            assertEquals(1, ledger.closedCount())
 
             // The tombstone: navigating to the closed resource is fine (the holder is live), reading through it
             // fails by name; a re-adoption is use-after-close
@@ -194,7 +193,6 @@ class RunOwnershipLedgerTest {
         assertTrue(fine.isClosed && broken.isClosed && alsoBroken.isClosed, "every close is attempted")
         assertEquals(setOf("close failed", "also failed"), processing.suppressed.map { it.message }.toSet())
         assertTrue(ledger.live().isEmpty())
-        assertEquals(3, ledger.closedCount())
 
         // Without a processing failure the first close failure is primary and the rest suppressed
         val second = RunOwnershipLedger(runB, registry)

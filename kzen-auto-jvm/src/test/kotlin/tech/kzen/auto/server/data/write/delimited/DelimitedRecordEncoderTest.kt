@@ -1,7 +1,6 @@
 package tech.kzen.auto.server.data.write.delimited
 
 import kotlinx.coroutines.runBlocking
-import tech.kzen.auto.common.data.read.ReadOperationalPolicy
 import tech.kzen.auto.common.data.schema.RecordSchema
 import tech.kzen.auto.plugin.api.data.ReaderByteInput
 import tech.kzen.auto.plugin.api.data.ReaderOpenRequest
@@ -406,7 +405,7 @@ class DelimitedRecordEncoderTest {
     private fun read(format: ConfiguredDelimitedFormat, bytes: ByteArray): ReadBack {
         val config = ConfiguredDelimitedReaderCapability.canonicalize(format.baseConfig)
         val request = ReaderOpenRequest(
-            "memory://round-trip", null, config, ByteInput(bytes), ReadOperationalPolicy())
+            "memory://round-trip", null, config, ByteInput(bytes))
         return runBlocking { ConfiguredDelimitedReaderCapability.open(request) }.use { cursor ->
             val fields = (cursor.shape.itemType.structural as DataType.Record).fields
             val read = mutableListOf<List<String?>>()
@@ -424,7 +423,6 @@ class DelimitedRecordEncoderTest {
 
     private class ByteInput(private val bytes: ByteArray): ReaderByteInput {
         private var position = 0
-        override val expandedBytesRead: Long get() = position.toLong()
         override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
             if (length == 0) return 0
             if (position >= bytes.size) return -1

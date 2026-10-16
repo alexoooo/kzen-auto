@@ -13,7 +13,6 @@ object PluginFixtures {
             import tech.kzen.auto.common.data.read.ReaderCapabilityIdentity;
             import tech.kzen.auto.common.data.read.ReaderConfig;
             import tech.kzen.auto.plugin.api.data.ReaderCapability;
-            import tech.kzen.auto.plugin.api.data.ReaderInspectionRequest;
             import tech.kzen.auto.plugin.api.data.ReaderOpenRequest;
             import tech.kzen.lib.common.exec.ExecutionValue;
             import tech.kzen.lib.common.exec.MapExecutionValue;
@@ -33,7 +32,6 @@ object PluginFixtures {
                 @Override public ExecutionValue encode(ReaderConfig config) { return new MapExecutionValue(Map.of()); }
                 @Override public ContentCapabilityIdentity requiredContent(ReaderConfig config) { return ContentCapabilityIdentity.Companion.getSequentialBytes(); }
                 @Override public Object open(ReaderOpenRequest request, Continuation<? super tech.kzen.auto.common.data.api.DataCursor> c) { throw new UnsupportedOperationException(); }
-                @Override public Object inspect(ReaderInspectionRequest request, Continuation<? super tech.kzen.lib.common.exec.data.shape.DataShape> c) { throw new UnsupportedOperationException(); }
             }
         """.trimIndent()
     }

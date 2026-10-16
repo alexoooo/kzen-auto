@@ -13,9 +13,9 @@ import tech.kzen.lib.common.exec.data.type.DataType
 
 /**
  * Types a reading Worker from data before Run (docs/plans/2026-09-24_values-metadata-and-design-time-types.md, R5):
- * the parts of each of [count] values are inspected through a [DesignReadSession], within its budget, and their
- * shapes merge by the Worker's schema mode exactly as a run's parts do ([DataReadCore.planShape]). Shared by `Parse`
- * (the values its input lane offers) and `Read` (the units of its data source).
+ * the parts of each of [count] values are inspected through a [DesignReadSession], and their shapes merge by the
+ * Worker's schema mode exactly as a run's parts do ([DataReadCore.planShape]). Shared by `Parse` (the values its
+ * input lane offers) and `Read` (the units of its data source).
  */
 internal object DesignShapeInference {
     /** A column of the merged payload, rendered as a header names it, and the inspected parts that hold it. */
@@ -30,7 +30,6 @@ internal object DesignShapeInference {
         val payload: DataContract?,
         val read: Int,
         val total: Int,
-        val partial: Boolean,
         val error: String?,
         val columns: List<InferredColumn> = listOf(),
         val parts: Int = 0
@@ -41,13 +40,11 @@ internal object DesignShapeInference {
                 return JobLaneAttempt(JobLaneDescriptor(unknown), error)
             }
             if (payload == null) {
-                return JobLaneAttempt(JobLaneDescriptor(unknown), null, partial = partial)
+                return JobLaneAttempt(JobLaneDescriptor(unknown), null)
             }
-            val provenance = "Inferred from $read of $total values" +
-                (if (partial) " (time limit reached; reading on)" else "")
             return JobLaneAttempt(
                 JobLaneDescriptor(payload.withMetadata(unknown.metadata)), null,
-                provenance = provenance, partial = partial)
+                provenance = "Inferred from $read of $total values")
         }
     }
 
@@ -58,7 +55,6 @@ internal object DesignShapeInference {
      */
     fun infer(
         count: Int,
-        total: Int,
         design: DesignReadSession,
         openerLookup: DataOpenerLookup,
         schemaMode: String,
@@ -66,7 +62,6 @@ internal object DesignShapeInference {
     ): Inference {
         val candidates = mutableListOf<DataReadCore.ShapeCandidate>()
         var read = 0
-        var partial = false
         for (index in 0 until count) {
             val inspected =
                 try {
@@ -80,29 +75,25 @@ internal object DesignShapeInference {
                 }
                 catch (e: Exception) {
                     return Inference(
-                        null, read, total, false, "Unable to read value ${index + 1} before Run: ${e.message}")
+                        null, read, count, "Unable to read value ${index + 1} before Run: ${e.message}")
                 }
-            if (inspected == null) {
-                partial = true
-                break
-            }
-            val shapes = inspected.value
+            val shapes = inspected
                 ?: continue
             candidates.addAll(shapes)
             read += 1
         }
         if (candidates.isEmpty()) {
-            return Inference(null, read, total, partial, null)
+            return Inference(null, read, count, null)
         }
         val planned =
             try {
                 DataReadCore.planShape(candidates, schemaMode)
             }
             catch (e: IllegalStateException) {
-                return Inference(null, read, total, partial, e.message)
+                return Inference(null, read, count, e.message)
             }
         return Inference(
-            planned.shape.itemType, read, total, partial, null, columns(planned.shape.itemType, candidates),
+            planned.shape.itemType, read, count, null, columns(planned.shape.itemType, candidates),
             candidates.size)
     }
 

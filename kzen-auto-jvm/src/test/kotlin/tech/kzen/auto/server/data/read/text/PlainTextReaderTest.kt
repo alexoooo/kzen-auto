@@ -1,6 +1,5 @@
 package tech.kzen.auto.server.data.read.text
 
-import tech.kzen.auto.common.data.read.ReadOperationalPolicy
 import tech.kzen.auto.common.data.read.CharacterDecodingSpec
 import tech.kzen.auto.common.data.read.ContentCodingSpec
 import tech.kzen.auto.common.data.read.PlainTextReadConfig
@@ -49,7 +48,7 @@ class PlainTextReaderTest {
     @Test
     fun recognizesAllLineEndingsAndPreservesBlankAndFinalLines() {
         val content = StringContent("\nalpha\r\n\rbravo\rtail")
-        PlainTextReader(content, ReadOperationalPolicy()).use { reader ->
+        PlainTextReader(content).use { reader ->
             assertEquals(listOf("", "alpha", "", "bravo", "tail"), generateSequence(reader::read)
                 .map(::line).toList())
             assertNull(reader.read())
@@ -59,23 +58,11 @@ class PlainTextReaderTest {
 
     @Test
     fun emptyInputEmitsNoRowsAndTerminatedInputAddsNoPhantomRow() {
-        PlainTextReader(StringContent(""), ReadOperationalPolicy()).use { assertNull(it.read()) }
-        PlainTextReader(StringContent("value\n"), ReadOperationalPolicy()).use {
+        PlainTextReader(StringContent("")).use { assertNull(it.read()) }
+        PlainTextReader(StringContent("value\n")).use {
             assertEquals("value", line(it.read()!!))
             assertNull(it.read())
         }
-    }
-
-    @Test
-    fun lineLimitFailureClosesThroughTheCursor() {
-        val content = StringContent("abcd")
-        val reader = PlainTextReader(content, ReadOperationalPolicy(maximumRecordCharacters = 3))
-        val cursor = PlainTextDataCursor(reader, DataShape(
-            PlainTextReader.contract, ShapeProvenance.Declared, ShapeStability.Stable))
-        assertFailsWith<IllegalArgumentException> { cursor.hasNext() }
-        assertEquals(1, content.closeCount)
-        cursor.close()
-        assertEquals(1, content.closeCount)
     }
 
     private fun line(value: DataValue): String {
@@ -85,7 +72,6 @@ class PlainTextReaderTest {
 
     private class StringContent(private val text: String): SequentialCharacterContent {
         override val resolvedCharsetName = "UTF-8"
-        override val inspectionRecordLimit = Long.MAX_VALUE
         var closeCount = 0
             private set
         private var position = 0

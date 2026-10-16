@@ -3,16 +3,11 @@ package tech.kzen.auto.server.exec.job.ownership
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.Test
-import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.exec.LogicCompilerServices
-import tech.kzen.auto.server.exec.job.JobDeadlockMonitor
 import tech.kzen.auto.server.exec.job.JobLogic
 import tech.kzen.auto.server.exec.job.JobLogicCompiler
-import tech.kzen.auto.server.exec.job.JobOwnershipReport
 import tech.kzen.auto.server.objects.job.value.JobDataValues
-import tech.kzen.auto.server.objects.job.worker.PreviewWorker
-import tech.kzen.auto.server.objects.job.worker.preview.PreviewCapture
 import tech.kzen.auto.server.objects.job.worker.test.GatedCountingSinkWorker
 import tech.kzen.auto.server.util.AutoTestUtils
 import tech.kzen.auto.server.util.hangGuardMillis
@@ -38,7 +33,6 @@ import kotlin.test.BeforeTest
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 
@@ -46,8 +40,9 @@ import kotlin.test.assertTrue
  * The E9 boundary, diagnostics and acceptance gate (HS18): a Result keeps a structural snapshot of an owned
  * element and stays readable after the run closed it; an opaque owned native fails by name at the boundary;
  * a Borrowed child is never closed while its parent still is; a Sort's explicit leases survive a live edit;
- * a source stalled behind a Sort produces the delayed, named, non-failing warning while a copied projection
- * before the Sort (independent outputs) keeps the same source flowing on one permit; and the failure paths of
+ * a source parked behind a Sort waits without failing and a cancel closes what it holds, while a copied
+ * projection before the Sort (independent outputs) keeps the same source flowing on one permit; and the failure
+ * paths of
  * the earlier sessions still close exactly once.
  */
 class OwnershipBoundaryTest {
@@ -66,7 +61,6 @@ class OwnershipBoundaryTest {
 
     @AfterTest
     fun tearDown() {
-        PreviewWorker.captureNanos = PreviewCapture.defaultMaximumNanos
         if (::context.isInitialized) {
             context.close()
         }
@@ -77,7 +71,6 @@ class OwnershipBoundaryTest {
     @Test
     fun previewReleasesNestedOwnedValuesAndKeepsDetachedContent() {
         OwnedSourceWorker.kind = OwnedSourceWorker.kindOrder
-        PreviewWorker.captureNanos = Long.MAX_VALUE
         val engine = newEngine(document("preview"))
         try {
             engine.resume()
@@ -99,7 +92,6 @@ class OwnershipBoundaryTest {
     @Test
     fun formulaPreviewReleasesNestedOwnedValuesAndKeepsCalculatedContent() {
         OwnedSourceWorker.kind = OwnedSourceWorker.kindOrder
-        PreviewWorker.captureNanos = Long.MAX_VALUE
         val engine = newEngine(document("formula-preview"))
         try {
             engine.resume()
@@ -234,25 +226,14 @@ class OwnershipBoundaryTest {
 
 
     @Test
-    fun aSourceStalledBehindASortWarnsNamingTheSortOnlyAfterTheInterval() {
+    fun aSourceParkedBehindASortWaitsWithoutFailingAndCancelClosesWhatItHolds() {
         OwnedSourceWorker.names = listOf("d", "c", "b", "a")
         OwnedSourceWorker.permits = Semaphore(2)
         val engine = newEngine(document("stall"))
         try {
             engine.resume()
             awaitCondition("two items adopted") { OwnedSourceWorker.resources.size == 2 }
-            // Not from the state combination alone: no report before the interval
-            Thread.sleep(JobDeadlockMonitor.stallIntervalMillis / 4)
-            assertNull(ownershipReport(engine), "nothing reported before the no-progress interval")
-            awaitCondition("the stall warning", JobDeadlockMonitor.stallIntervalMillis * 2) {
-                ownershipReport(engine)?.get(JobConventions.ownershipStalledKey) == true
-            }
-            val report = ownershipReport(engine)!!
-            val holds = assertIs<Map<*, *>>(report[JobConventions.ownershipHoldsKey])
-            val sortHolder = holds.keys.map { it.toString() }.firstOrNull { it.endsWith("main.workers/sort") }
-            assertTrue(sortHolder != null, "the Sort is named as a holder: $holds")
-            assertEquals(2L, (holds[sortHolder] as Number).toLong())
-            assertFalse(engine.snapshot().root.status.toString().contains("Failed"), "a warning, not a verdict")
+            assertFalse(engine.snapshot().root.status.toString().contains("Failed"), "waiting is not a failure")
             engine.cancel()
             assertIs<Outcome.Cancelled>(runBlocking { withTimeout(hangGuardMillis) { engine.await() } })
         }
@@ -280,10 +261,6 @@ class OwnershipBoundaryTest {
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private fun ownershipReport(engine: RunEngine): Map<*, *>? =
-        engine.snapshot().root.live[Address.of(JobOwnershipReport.addressMarker)]?.get() as? Map<*, *>
-
-
     private fun awaitCondition(what: String, timeoutMillis: Long = hangGuardMillis, condition: () -> Boolean) {
         val deadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMillis)
         while (!condition()) {

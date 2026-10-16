@@ -5,13 +5,10 @@ import com.github.benmanes.caffeine.cache.Caffeine
 import com.google.common.util.concurrent.Striped
 import tech.kzen.auto.server.service.storage.DirectoryStorageArea
 import tech.kzen.auto.server.service.storage.ManagedStorageArea
-import tech.kzen.auto.server.service.storage.StorageLruEvictor
 import tech.kzen.auto.server.util.WorkUtils
 import java.net.URLClassLoader
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.attribute.FileTime
-import java.time.Instant
 import java.time.LocalDateTime
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.jar.JarFile
@@ -88,9 +85,6 @@ class CachedKotlinCompiler(
         .maximumSize(loadedClassCacheSize)
         .removalListener<String, LoadedCode> { _, value, _ -> value?.close() }
         .build()
-
-    @Volatile
-    private var evictor: StorageLruEvictor? = null
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -236,7 +230,6 @@ class CachedKotlinCompiler(
 
         val lock = compileLocks.get(signature)
 
-        var compiledNew = false
         val error: KotlinCompilerError?
 
         lock.lock()
@@ -246,7 +239,6 @@ class CachedKotlinCompiler(
             val previouslyCompiled = Files.exists(codeDir)
             if (!previouslyCompiled) {
                 error = tryCompileNew(kotlinCode, codeDir, classLoader)
-                compiledNew = error == null
             }
             else {
                 val previousError = readErrorFile(codeDir)
@@ -254,14 +246,11 @@ class CachedKotlinCompiler(
                     error = previousError
                 }
                 else if (hasSuccess(codeDir)) {
-                    // Refresh the LRU signal so a hot entry isn't the next eviction candidate.
-                    Files.setLastModifiedTime(successFile(codeDir), FileTime.from(Instant.now()))
                     error = null
                 }
                 else {
                     WorkUtils.deleteDirThrowing(codeDir)
                     error = tryCompileNew(kotlinCode, codeDir, classLoader)
-                    compiledNew = error == null
                 }
             }
         }
@@ -269,9 +258,6 @@ class CachedKotlinCompiler(
             lock.unlock()
         }
 
-        if (compiledNew) {
-            evictor?.maybeEvict()
-        }
         return error
     }
 
@@ -358,20 +344,13 @@ class CachedKotlinCompiler(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    fun attachEvictor(evictor: StorageLruEvictor) {
-        check(this.evictor == null) { "Evictor already attached" }
-        this.evictor = evictor
-    }
-
-
-    fun storageArea(budgetBytes: Long): ManagedStorageArea {
+    fun storageArea(): ManagedStorageArea {
         return object: DirectoryStorageArea(
             "code-cache",
             "Compiled formulas",
             "Kotlin expressions (formula columns, script steps) compiled to jars. Rebuilt on demand if " +
-                "deleted; least recently used entries are evicted automatically over the size budget.",
-            cacheDir,
-            budgetBytes = budgetBytes
+                "deleted.",
+            cacheDir
         ) {
             override fun bundleLastModified(bundleDir: Path): Long {
                 val success = successFile(bundleDir)

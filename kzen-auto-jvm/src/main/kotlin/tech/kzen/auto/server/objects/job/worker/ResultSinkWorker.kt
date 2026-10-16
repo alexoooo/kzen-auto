@@ -68,23 +68,9 @@ class ResultSinkWorker(
         const val last = "last"
         const val all = "all"
 
-        // Upper bound on the pushed value's display text — every progress emit is retained in the engine's
-        // unbounded history, so a Worker's published payload must stay O(bounded) (the WorkerBase teaser rule).
-        // A larger result is elided with "…"; the box shows the head, which is what a card preview needs.
-        private const val maxDisplayValueLength = 10_000
-
         private fun noResultDeclared(component: String): String =
             "No result type declared in the Job signature for '$component'"
 
-        private fun displayText(value: Any?): String {
-            val text = value.toString()
-            return if (text.length > maxDisplayValueLength) {
-                text.substring(0, maxDisplayValueLength) + "…"
-            }
-            else {
-                text
-            }
-        }
     }
 
 
@@ -197,7 +183,7 @@ class ResultSinkWorker(
         val progress = LinkedHashMap<String, Any?>()
         progress["collected"] = collected
         kept?.let(JobDataValues::boundary)?.let { value ->
-            progress[JobConventions.progressResultValueKey] = listOf(displayText(value))
+            progress[JobConventions.progressResultValueKey] = listOf(value.toString())
         }
         return progress
     }

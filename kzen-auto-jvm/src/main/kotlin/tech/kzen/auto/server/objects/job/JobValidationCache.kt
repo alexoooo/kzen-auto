@@ -4,9 +4,7 @@ import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
 import tech.kzen.auto.common.objects.document.job.model.JobValidation
 import tech.kzen.auto.server.data.design.DesignEvidence
-import tech.kzen.auto.server.data.design.DesignReadBudget
 import tech.kzen.auto.server.data.design.DesignReadSession
-import tech.kzen.auto.server.data.design.DesignReader
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.document.DocumentPath
 import tech.kzen.lib.common.util.digest.Digest
@@ -29,14 +27,11 @@ import tech.kzen.lib.common.util.digest.Digest
  * uncomputable — then the compute runs uncached. The cached value is a defensive copy, safe to share.
  *
  * A validation that looked at data (docs/plans/2026-09-24_values-metadata-and-design-time-types.md, R5/R6) is also
- * keyed by what it looked at: each compute runs with its own [DesignReadSession] from [designReader], and a hit is
- * reused only while every piece of that session's evidence rechecks unchanged, so a run revalidates against the data
- * as it is at run start. A validation a design-time limit cut short is never reused: the next request computes again,
- * reading on from what [designReader] already inspected.
+ * keyed by what it looked at: each compute runs with its own [DesignReadSession], and a hit is reused only while
+ * every piece of that session's evidence rechecks unchanged, so a run revalidates against the data as it is at run
+ * start.
  */
-class JobValidationCache(
-    private val designReader: DesignReader = DesignReader()
-) {
+class JobValidationCache {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         // Distinct (document closure × notation version) entries live at once: bounded by open editors plus
@@ -48,11 +43,10 @@ class JobValidationCache(
     //-----------------------------------------------------------------------------------------------------------------
     private class Entry(
         val validation: JobValidation,
-        val evidence: List<DesignEvidence>,
-        val limited: Boolean
+        val evidence: List<DesignEvidence>
     ) {
         fun current(): Boolean =
-            !limited && evidence.all { it.unchanged() }
+            evidence.all { it.unchanged() }
     }
 
 
@@ -65,20 +59,19 @@ class JobValidationCache(
     fun jobValidation(
         documentPath: DocumentPath,
         graphDefinition: GraphDefinition,
-        budget: DesignReadBudget,
         compute: (DesignReadSession) -> JobValidation
     ): JobValidation {
         val key = JobValidationDigest.documentClosureKey(documentPath, graphDefinition)
-            ?: return compute(designReader.session(budget))
+            ?: return compute(DesignReadSession())
 
         val cached = cache.getIfPresent(key)
         if (cached != null && cached.current()) {
             return cached.validation
         }
 
-        val session = designReader.session(budget)
+        val session = DesignReadSession()
         val validation = JobValidation(compute(session).workerValidations.toMap())
-        cache.put(key, Entry(validation, session.evidence.toList(), session.limited))
+        cache.put(key, Entry(validation, session.evidence.toList()))
         return validation
     }
 }

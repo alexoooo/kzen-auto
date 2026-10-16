@@ -1,5 +1,4 @@
-# The display-only bounding contract: `Big`'s 10k-char value is capped in the TRACE, while the value graph
-# keeps it whole — `Result` reads Big.length and must still see all 10000.
+# A big value is traced whole: `Big`'s trace shows all 10k chars, and `Result` reads Big.length.
 
 main:
   is: Script

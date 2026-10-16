@@ -2,7 +2,6 @@ package tech.kzen.auto.server.objects.script.step.control.foreach
 
 import tech.kzen.auto.common.objects.document.script.ScriptConventions
 import tech.kzen.auto.common.objects.document.script.model.ForEachProgress
-import tech.kzen.auto.common.util.TraceDisplay
 import tech.kzen.auto.server.objects.logic.ExpressionReturnTypeInference
 import tech.kzen.auto.server.objects.script.api.PartialOutcome
 import tech.kzen.auto.server.objects.script.api.ScriptControlSignal
@@ -11,6 +10,7 @@ import tech.kzen.auto.server.objects.script.api.ScriptStepDefinition
 import tech.kzen.auto.server.objects.script.api.StepExecution
 import tech.kzen.auto.server.objects.script.model.ScriptDefinitionContext
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
+import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.model.location.AttributeLocation
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
@@ -18,6 +18,7 @@ import tech.kzen.lib.common.model.structure.notation.GraphNotation
 import tech.kzen.lib.common.reflect.Reflect
 import tech.kzen.lib.common.reflect.Service
 import tech.kzen.lib.platform.ClassNames
+import tech.kzen.lib.platform.collect.PersistentList
 
 
 /**
@@ -67,9 +68,8 @@ class ForEachStep(
      * loop quadratic. Aliasing is sound because a migration barrier can only land on a `checkpoint`, which the
      * spine takes per body step: at every reachable capture point the live list holds exactly the completed
      * iterations, which is what a snapshot taken at this iteration's start would have held. Restore copies it
-     * ([ArrayList] below), so the rebuilt run never mutates the carried list. [producedEntries] (the display
-     * journal) is carried on the same terms, and [producedCount] with it because the journal is capped and so
-     * cannot report the true total on its own.
+     * ([ArrayList] below), so the rebuilt run never mutates the carried list. [journal] (the display journal) is
+     * an immutable persistent list, so it is carried and restored by reference.
      */
     private class LoopCursor(
         val iterator: Iterator<*>,
@@ -77,8 +77,7 @@ class ForEachStep(
         val currentIndex: Int,
         val collectedOutputs: List<Any?>,
         val totalSize: Int?,
-        val producedEntries: List<ForEachProgress.Entry>,
-        val producedCount: Int
+        val journal: PersistentList<ExecutionValue>
     )
 
 
@@ -117,11 +116,11 @@ class ForEachStep(
         var item: Any?
         var replayInFlight: Boolean
 
-        // The display journal (see [ForEachProgress]) and its untruncated total. Maintained regardless of
-        // [collecting] — a loop nothing references still shows what it computed, at the cost of a bounded
-        // string per iteration rather than a retained object graph.
-        val journal: ArrayDeque<ForEachProgress.Entry>
-        var producedCount: Int
+        // The display journal (see [ForEachProgress]), one entry per collected iteration. Maintained regardless of
+        // [collecting] — a loop nothing references still shows what it computed, at the cost of a string per
+        // iteration rather than a retained object graph. A persistent list, so extending it and tracing it cost
+        // the same at every iteration.
+        var journal: PersistentList<ExecutionValue>
 
         if (cursor != null) {
             iterator = cursor.iterator
@@ -129,8 +128,7 @@ class ForEachStep(
             size = cursor.totalSize
             index = cursor.currentIndex
             item = cursor.currentItem
-            journal = ArrayDeque(cursor.producedEntries)
-            producedCount = cursor.producedCount
+            journal = cursor.journal
             replayInFlight = true
         }
         else {
@@ -144,8 +142,7 @@ class ForEachStep(
             size = (stream as? Collection<*>)?.size
             index = 0
             item = null
-            journal = ArrayDeque()
-            producedCount = 0
+            journal = PersistentList()
             replayInFlight = false
         }
 
@@ -167,17 +164,15 @@ class ForEachStep(
             // with the live iterator and this iteration's item. Re-recording on the resumed run's first pass
             // matters too: its carry starts empty, so a SECOND edit must still capture the cursor.
             execution.recordCarry(
-                selfLocation, LoopCursor(iterator, item, index, output, size, journal, producedCount))
+                selfLocation, LoopCursor(iterator, item, index, output, size, journal))
             replayInFlight = false
 
             // Live loop progress on the ForEach card: the loop is the current step here, so the detail
-            // attributes to it, and markDone carries the final iteration's detail into the Done trace. The
-            // item is capped like any other trace display — it is built here rather than passed through the
-            // spine's displayOf, so it bounds itself.
-            val itemDisplay = TraceDisplay.truncatedToString(item, TraceDisplay.maxScriptTraceChars)
+            // attributes to it, and markDone carries the final iteration's detail into the Done trace.
+            val itemDisplay = item.toString()
             lastItemDisplay = itemDisplay
             lastIndex = index
-            traceProgress(execution, itemDisplay, index, size, journal, producedCount)
+            traceProgress(execution, itemDisplay, index, size, journal)
 
             execution.recordValue(itemBinding, item)
             val bodyValue = execution.runSteps(bodySteps)
@@ -189,7 +184,7 @@ class ForEachStep(
             when (execution.consumeLoopSignal(selfLocation)) {
                 is ScriptControlSignal.FinishLoop -> {
                     execution.recordCarry(selfLocation, null)
-                    traceProgress(execution, itemDisplay, index, size, journal, producedCount)
+                    traceProgress(execution, itemDisplay, index, size, journal)
                     return output
                 }
                 is ScriptControlSignal.SkipIteration ->
@@ -197,7 +192,7 @@ class ForEachStep(
                 else -> {
                     if (execution.pendingControlSignal() != null) {
                         execution.recordCarry(selfLocation, null)
-                        traceProgress(execution, itemDisplay, index, size, journal, producedCount)
+                        traceProgress(execution, itemDisplay, index, size, journal)
                         return output
                     }
                     if (collecting) {
@@ -205,8 +200,7 @@ class ForEachStep(
                     }
                     // The journal entry is appended at exactly the point the value is collected, so the two
                     // stay index-for-index aligned — which is what lets a partial commit be read against it.
-                    journal.append(item, bodyValue)
-                    producedCount += 1
+                    journal = journal.add(ForEachProgress.entryOf(item, bodyValue).asExecutionValue())
                 }
             }
             index += 1
@@ -216,7 +210,7 @@ class ForEachStep(
         // collected AFTER its start-of-iteration progress emit, so without this the Done trace's detail (which
         // markDone carries over from the last emit) would be one iteration behind.
         execution.recordCarry(selfLocation, null)
-        lastItemDisplay?.let { traceProgress(execution, it, lastIndex, size, journal, producedCount) }
+        lastItemDisplay?.let { traceProgress(execution, it, lastIndex, size, journal) }
         return output
     }
 
@@ -232,14 +226,13 @@ class ForEachStep(
             ?: return null
 
         val progress = ForEachProgress(
-            TraceDisplay.truncatedToString(cursor.currentItem, TraceDisplay.maxScriptTraceChars),
+            cursor.currentItem.toString(),
             cursor.currentIndex,
             cursor.totalSize,
-            cursor.producedEntries,
-            cursor.producedCount,
+            cursor.journal.size,
             partial = true)
 
-        return PartialOutcome(ArrayList(cursor.collectedOutputs), progress.asExecutionValue())
+        return PartialOutcome(ArrayList(cursor.collectedOutputs), progress.asExecutionValue(), cursor.journal)
     }
 
 
@@ -255,21 +248,10 @@ class ForEachStep(
         itemDisplay: String,
         index: Int,
         size: Int?,
-        journal: List<ForEachProgress.Entry>,
-        producedCount: Int
+        journal: PersistentList<ExecutionValue>
     ) {
-        execution.traceDetail(
-            ForEachProgress(itemDisplay, index, size, journal.toList(), producedCount).asExecutionValue())
-    }
-
-
-    // Bounded append (see [ForEachProgress] retention): the journal keeps the most recent entries, so a
-    // million-iteration loop costs a fixed amount of trace rather than growing one per iteration.
-    private fun ArrayDeque<ForEachProgress.Entry>.append(item: Any?, value: Any?) {
-        while (size >= ForEachProgress.maxProducedEntries) {
-            removeFirst()
-        }
-        addLast(ForEachProgress.entryOf(item, value))
+        execution.traceDetail(ForEachProgress(itemDisplay, index, size, journal.size).asExecutionValue())
+        execution.traceList(journal)
     }
 
 

@@ -17,8 +17,7 @@ open class DirectoryStorageArea(
     override val displayName: String,
     override val description: String,
     protected val root: Path,
-    override val deletable: Boolean = true,
-    override val budgetBytes: Long? = null
+    override val deletable: Boolean = true
 ): ManagedStorageArea {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {

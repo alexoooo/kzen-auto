@@ -43,7 +43,6 @@ import tech.kzen.lib.common.util.digest.Digest
 import tech.kzen.lib.server.exec.engine.RunEngine
 import java.util.concurrent.CopyOnWriteArraySet
 import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 
 
 /**
@@ -85,9 +84,6 @@ class ServerLogicController(
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         private val logger = LoggerFactory.getLogger(ServerLogicController::class.java)
-
-        // How long close waits for the driving executor to finish cancelling before interrupting it
-        private const val closeJoinTimeoutSeconds = 10L
     }
 
 
@@ -449,21 +445,25 @@ class ServerLogicController(
     }
 
 
-    @Synchronized
+    // The run is looked up under the monitor, the request answered outside it: a node takes as long as it takes
+    // to answer (a paused Worker answers once resumed), and status / pause / cancel must not wait for it.
     override fun request(
         runId: LogicRunId,
         executionId: LogicExecutionId,
         request: ExecutionRequest
     ): ExecutionResult {
-        val state = stateOrNull?.takeIf { !it.settled }
-            ?: return ExecutionResult.failure(LogicConventions.notRunningError())
+        val engine = synchronized(this) {
+            val state = stateOrNull?.takeIf { !it.settled }
+                ?: return ExecutionResult.failure(LogicConventions.notRunningError())
 
-        if (state.runId != runId) {
-            return ExecutionResult.failure(
-                LogicConventions.wrongRunningError(runId, state.runId))
+            if (state.runId != runId) {
+                return ExecutionResult.failure(
+                    LogicConventions.wrongRunningError(runId, state.runId))
+            }
+            state.engine
         }
 
-        return state.engine.request(NodeId(executionId.value), request)
+        return engine.request(NodeId(executionId.value), request)
     }
 
 
@@ -1033,29 +1033,16 @@ class ServerLogicController(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    /** Cancels the active run and waits for the driving executor to finish, however long cancelling takes. */
     override fun close() {
-        closeAndJoin()
-    }
-
-
-    /**
-     * Cancels the active run and joins the driving executor; false when the join timed out and the run was
-     * interrupted instead — the owner then must not treat the work root as safely reusable.
-     */
-    fun closeAndJoin(): Boolean {
         synchronized(this) {
             stateOrNull?.engine?.cancel()
         }
 
-        executor.shutdown()
-        val joined = executor.awaitTermination(closeJoinTimeoutSeconds, TimeUnit.SECONDS)
-        if (!joined) {
-            executor.shutdownNow()
-        }
+        executor.close()
 
         synchronized(this) {
             stateOrNull?.let { disposeState(it) }
         }
-        return joined
     }
 }

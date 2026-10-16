@@ -2,20 +2,15 @@ package tech.kzen.auto.server.objects.job.worker.content
 
 import com.linkedin.migz.MiGzOutputStream
 import kotlinx.coroutines.async
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
 import org.junit.Test
-import tech.kzen.auto.common.objects.document.job.JobConventions
-import tech.kzen.auto.server.exec.job.JobDeadlockMonitor
-import tech.kzen.auto.server.exec.job.JobOwnershipReport
 import tech.kzen.auto.server.objects.job.worker.content.ContentTestHarness.Companion.collected
 import tech.kzen.auto.server.objects.job.worker.content.ContentTestHarness.Companion.listFiles
 import tech.kzen.auto.server.objects.job.worker.content.ContentTestHarness.Companion.prepare
 import tech.kzen.auto.server.objects.job.worker.content.tar.TarEntryCursor
 import tech.kzen.auto.server.util.hangGuardMillis
-import tech.kzen.lib.common.exec.engine.Address
 import tech.kzen.lib.common.exec.engine.Outcome
 import java.io.ByteArrayOutputStream
 import java.io.FilterOutputStream
@@ -362,51 +357,6 @@ class ExtractWorkerTest {
         assertTrue(cursor.produced.single().isInvalidated)
         // Nothing published, and the temporary is gone
         assertEquals(emptySet(), listFiles(outDirectory))
-    }
-
-
-    @Test
-    fun writeCopyingOneLargeEntryIsNotReportedAsStalled() {
-        // Copying one entry moves no element for its whole duration, yet it is progress: the stall warning must
-        // stay quiet while the bytes flow, though the archive and its entry are held throughout
-        val big = ByteArray(4 * 1024 * 1024) { (it % 251).toByte() }
-        prepare("stop-write", listOf("big.bin" to big))
-        val chunkDelayMillis = JobDeadlockMonitor.stallIntervalMillis * 3 / 2 / (big.size / (64 * 1024))
-        WriteWorker.encoderInterceptor = { encoded ->
-            object: FilterOutputStream(encoded) {
-                override fun write(b: ByteArray, off: Int, len: Int) {
-                    Thread.sleep(chunkDelayMillis)
-                    this.out.write(b, off, len)
-                }
-            }
-        }
-
-        val engine = harness.start("test/job/content/extract-stop-write-test.yaml")
-        val stalls = CopyOnWriteArrayList<Map<*, *>>()
-        val outcome = try {
-            runBlocking {
-                val terminal = async { engine.await() }
-                engine.resume()
-                while (!terminal.isCompleted) {
-                    // The run's final ownership accounting lands on the same address as it settles, so only a
-                    // report marked stalled is a warning
-                    val report = engine.snapshot().root.live[Address.of(JobOwnershipReport.addressMarker)]?.get()
-                        as? Map<*, *>
-                    if (report?.get(JobConventions.ownershipStalledKey) == true) {
-                        stalls.add(report)
-                    }
-                    // Suspends, so the awaiting coroutine on this same thread gets to see the run settle
-                    delay(10)
-                }
-                terminal.await()
-            }
-        }
-        finally {
-            engine.close()
-        }
-
-        assertIs<Outcome.Success>(outcome)
-        assertEquals(emptyList(), stalls.distinct(), "no stall reported while the entry was copied")
     }
 
 

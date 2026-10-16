@@ -38,8 +38,8 @@ class RecyclableAllocationTest {
         val pool = RecyclablePool { PooledRecord(it) }
         val names = (0 until batchSize).map { "r$it" }
         val ordinary = (0 until batchSize).map { JobDataValues.lift(it.toLong()) }
-        val ordinaryValue = { index: Int -> ordinary[index] }
-        val pooledValue = { index: Int -> pool.acquire().fill(index.toLong(), names[index]) }
+        val ordinaryValue = ValueAt { index -> ordinary[index] }
+        val pooledValue = ValueAt { index -> pool.acquire().fill(index.toLong(), names[index]) }
         repeat(rounds) {
             stream(ordinaryValue)
             stream(pooledValue)
@@ -64,14 +64,14 @@ class RecyclableAllocationTest {
 
     // One batch at a time through an unbound channel and the framework receive path: send, flush, receive,
     // dispatch, release — no suspension, so everything runs on this thread
-    private fun stream(value: (Int) -> DataValue) {
+    private fun stream(value: ValueAt) {
         val channel = JobChannel(capacity = 1, batchSize = batchSize)
         val input = channel.input as FrameworkChannelInput
         runBlocking {
             val producer = channel.newProducer()
             repeat(elements / batchSize) {
                 for (index in 0 until batchSize) {
-                    producer.send(value(index))
+                    producer.send(value.at(index))
                 }
                 producer.flush()
                 val batch = input.receiveFrameworkBatch()!!
@@ -82,6 +82,13 @@ class RecyclableAllocationTest {
             }
             producer.close()
         }
+    }
+
+
+    // Takes a primitive index: a `(Int) -> DataValue` boxes every index above 127, and whether the JIT has removed
+    // that boxing yet differed between the two measured paths under load, which made the comparison flaky
+    private fun interface ValueAt {
+        fun at(index: Int): DataValue
     }
 
 

@@ -2,17 +2,18 @@ package tech.kzen.auto.client.objects.document.job.display
 
 import emotion.react.css
 import js.objects.unsafeJso
+import mui.material.Button
+import mui.material.ButtonVariant
 import mui.material.IconButton
 import mui.material.Size
 import mui.material.Tooltip
+import mui.system.sx
 import react.ChildrenBuilder
 import react.Key
 import react.ReactNode
 import react.State
 import react.dom.html.ReactHTML.div
-import react.dom.html.ReactHTML.details
 import react.dom.html.ReactHTML.span
-import react.dom.html.ReactHTML.summary
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeEditorManager
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeViewManager
 import tech.kzen.auto.client.objects.document.common.attribute.AttributeWrapperLookup
@@ -61,7 +62,8 @@ external interface WorkerDisplayDefaultProps: WorkerDisplayProps {
 
     // Open display-composition seams used by a specialised card without teaching this generic renderer which
     // Worker it is rendering. Hidden attributes are rehomed by the composing display; a non-null disclosure label
-    // places the remaining ordinary editors behind a native, keyboard-accessible details control.
+    // hides the remaining ordinary editors behind a settings toggle in the header, the label naming them in its
+    // tooltip ("Show advanced settings").
     var hiddenAttributes: Set<AttributeName>?
     var attributeDisclosure: String?
 
@@ -73,6 +75,9 @@ external interface WorkerDisplayDefaultProps: WorkerDisplayProps {
 
 external interface WorkerDisplayDefaultState: State {
     var objectMetadata: ObjectMetadata?
+
+    // Whether the editors behind [WorkerDisplayDefaultProps.attributeDisclosure] are showing
+    var disclosureOpen: Boolean
 }
 
 
@@ -98,6 +103,10 @@ class WorkerDisplayDefault(
         // different colours. Deliberately darker than the validation error's red-orange (#d84315), which is a
         // different kind of problem: that one is wrong before the run, this one happened during it.
         private val failureColor = Color("#c62828")
+
+        // Report's toggle palette, shared with the File card's Browser toggle beside it
+        private val toggleSelectedColor = Color("#e0e0e0")
+        private val toggleBorderColor = Color("#777777")
 
         // `meta.<attr>.row`: attributes naming the same row render side by side (see renderAttributeEditors)
         private val rowAttributePath = AttributePath.parse("row")
@@ -128,6 +137,11 @@ class WorkerDisplayDefault(
 
 
     //-----------------------------------------------------------------------------------------------------------------
+    override fun WorkerDisplayDefaultState.init(props: WorkerDisplayDefaultProps) {
+        disclosureOpen = false
+    }
+
+
     override fun componentDidMount() {
         props.clientStateGlobal.observe(this)
     }
@@ -169,6 +183,8 @@ class WorkerDisplayDefault(
     override fun ChildrenBuilder.render() {
         val objectMetadata = state.objectMetadata
             ?: return
+        val editableAttributes = editableAttributes(objectMetadata)
+        val disclosure = props.attributeDisclosure?.takeIf { editableAttributes.isNotEmpty() }
 
         div {
             css {
@@ -178,7 +194,7 @@ class WorkerDisplayDefault(
                 backgroundColor = NamedColor.white
             }
 
-            cardHeader {
+            cardHeader(disclosure) {
                 val progress = props.common.progress
                 (props.statusText?.invoke(progress) ?: statusText(progress))?.let { status ->
                     span {
@@ -207,29 +223,15 @@ class WorkerDisplayDefault(
 
             props.bodyBefore?.invoke(this)
 
-            val editableAttributes = editableAttributes(objectMetadata)
-            val disclosure = props.attributeDisclosure
-            if (disclosure == null) {
+            if (props.attributeDisclosure == null) {
                 renderAttributeEditors(objectMetadata, editableAttributes)
             }
-            else if (editableAttributes.isNotEmpty()) {
-                details {
+            else if (disclosure != null && state.disclosureOpen) {
+                div {
                     css {
                         marginTop = 0.5.em
                     }
-                    summary {
-                        css {
-                            cursor = Cursor.pointer
-                            color = Color("rgba(0, 0, 0, 0.65)")
-                        }
-                        +disclosure
-                    }
-                    div {
-                        css {
-                            marginTop = 0.5.em
-                        }
-                        renderAttributeEditors(objectMetadata, editableAttributes)
-                    }
+                    renderAttributeEditors(objectMetadata, editableAttributes)
                 }
             }
 
@@ -240,6 +242,7 @@ class WorkerDisplayDefault(
 
     //-----------------------------------------------------------------------------------------------------------------
     private fun ChildrenBuilder.cardHeader(
+        disclosure: String?,
         trailing: ChildrenBuilder.() -> Unit
     ) {
         div {
@@ -266,12 +269,42 @@ class WorkerDisplayDefault(
 
             props.headerRight?.invoke(this)
 
+            disclosure?.let { renderDisclosureToggle(it) }
+
             IconButton {
                 title = "Delete"
                 size = Size.small
                 onClick = { onDelete() }
                 icon("material-symbols:delete-outline") {}
             }
+        }
+    }
+
+
+    // Icon-only and filled while open, as Report Output's Settings toggle
+    private fun ChildrenBuilder.renderDisclosureToggle(disclosure: String) {
+        val open = state.disclosureOpen
+        Button {
+            variant = ButtonVariant.outlined
+            size = Size.small
+            title = (if (open) "Hide " else "Show ") + disclosure
+            onClick = {
+                setState {
+                    disclosureOpen = !open
+                }
+            }
+
+            sx {
+                marginLeft = 0.5.em
+                minWidth = 0.px
+                if (open) {
+                    backgroundColor = toggleSelectedColor
+                }
+                color = NamedColor.black
+                borderColor = toggleBorderColor
+            }
+
+            icon("material-symbols:settings") {}
         }
     }
 

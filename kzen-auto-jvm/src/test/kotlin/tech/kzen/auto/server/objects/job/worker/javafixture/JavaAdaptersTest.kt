@@ -1,9 +1,7 @@
 package tech.kzen.auto.server.objects.job.worker.javafixture
 
 import kotlinx.coroutines.runBlocking
-import tech.kzen.auto.common.data.read.ReadOperationalPolicy
 import tech.kzen.auto.plugin.api.data.ReaderByteInput
-import tech.kzen.auto.plugin.api.data.ReaderInspectionRequest
 import tech.kzen.auto.plugin.api.data.ReaderOpenRequest
 import tech.kzen.auto.server.context.KzenAutoContext
 import tech.kzen.auto.server.exec.LogicCompilerServices
@@ -123,7 +121,6 @@ class JavaAdaptersTest {
         val bytes = "alpha\nbeta\ngamma".toByteArray()
         val input = object: ReaderByteInput {
             private var position = 0
-            override val expandedBytesRead: Long get() = position.toLong()
             override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
                 if (position >= bytes.size) return -1
                 val n = minOf(length, bytes.size - position)
@@ -132,7 +129,7 @@ class JavaAdaptersTest {
                 return n
             }
         }
-        val request = ReaderOpenRequest("fixture", null, reader.decode(MapExecutionValue(mapOf())), input, ReadOperationalPolicy())
+        val request = ReaderOpenRequest("fixture", null, reader.decode(MapExecutionValue(mapOf())), input)
         val lines = runBlocking {
             val cursor = reader.open(request)
             val read = mutableListOf<Any?>()
@@ -146,8 +143,6 @@ class JavaAdaptersTest {
         }
         assertEquals(3, lines.size)
 
-        val shape = runBlocking { reader.inspect(ReaderInspectionRequest(request, 1)) }
-        assertTrue(shape.itemType.toString().isNotEmpty())
         assertEquals("java.fixture", reader.identity.namespace)
         assertEquals(MapExecutionValue(mapOf()), reader.encode(reader.canonicalize(reader.decode(MapExecutionValue(mapOf())))))
     }

@@ -128,10 +128,6 @@ class ExtractWorker(
         lending.lending()
 
 
-    override fun awaitingRelease(): Boolean =
-        lending.awaitingRelease()
-
-
     override fun onExpansionClose() {
         lending.close()
     }

@@ -50,7 +50,6 @@ class ClientLogicGlobal(
         // imperceptible, while a no-push deployment polls status at ~5/s. When push is healthy this loop
         // issues no requests at all (see awaitStepSettled), so this only bounds detection latency there.
         private const val slowSettlePollMillis = 200
-        private const val slowSettleMaxMillis = 30_000
 
         // Settle before re-reading status after a control verb landed: the server submits the verb to its
         // executor and answers immediately, so an instant read would race the state change it asked for.
@@ -813,8 +812,8 @@ class ClientLogicGlobal(
     }
 
 
-    // Wait until the in-flight step has settled back to Paused (no longer Stepping) or the run finished
-    // (active == null), bounded by a defensive cap.
+    // Wait until the in-flight step has settled back to Paused (no longer Stepping) or the run finished or was
+    // stopped (active == null), however long the step takes.
     //
     // Observers (the sidebar run-highlight + depth badge, the frame tree) must see the intermediate frames a
     // single step traverses while it's mid-flight — e.g. a stepped-over RunStep child lit up in the sidebar
@@ -829,10 +828,8 @@ class ClientLogicGlobal(
     //     branch is the norm whenever push is available.)
     //   - push absent/dead: fall back to polling status here at slowSettlePollMillis and publishing each poll.
     private suspend fun awaitStepSettled() {
-        var waited = 0
-        while (waited < slowSettleMaxMillis) {
+        while (true) {
             delay(slowSettlePollMillis.toLong())
-            waited += slowSettlePollMillis
 
             if (!sseHealthy) {
                 // Through the same throttle as the pushed path, so a dead stream changes the SAMPLING rate,

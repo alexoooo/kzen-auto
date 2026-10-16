@@ -2,10 +2,8 @@
 
 package tech.kzen.auto.common.objects.document.script.model
 
-import tech.kzen.auto.common.util.TraceDisplay
 import tech.kzen.lib.common.exec.BooleanExecutionValue
 import tech.kzen.lib.common.exec.ExecutionValue
-import tech.kzen.lib.common.exec.ListExecutionValue
 import tech.kzen.lib.common.exec.LongExecutionValue
 import tech.kzen.lib.common.exec.MapExecutionValue
 import tech.kzen.lib.common.exec.NullExecutionValue
@@ -14,23 +12,20 @@ import tech.kzen.lib.common.exec.TextExecutionValue
 
 /**
  * A ForEach loop's live iteration progress, carried as the loop step's [StepTrace] detail: which item it is on,
- * how far through it is, and the values its body has produced so far.
+ * how far through it is, and how many values its body has produced so far.
  *
- * The value journal ([produced]) is display strings only, and is kept regardless of whether the loop is
- * COLLECTING its real values (`StepExecution.isValueReferenced` — see ForEachStep) — a loop nothing references
- * still shows what it computed, without the collected list that would pin every iteration's object for the run.
- * That also makes this the one thing to read after a jump commits a loop's partial value: the committed list and
- * this journal are built at the same point in the iteration, so their entries line up index-for-index.
- *
- * BOUNDED (logic-spec §7): the whole thing ships on every client poll of the live trace, so it caps both the
- * number of retained entries ([maxProducedEntries], keeping the most recent) and each entry's length
- * ([maxProducedEntryChars]). [producedCount] is the untruncated total, so a reader can tell how much was elided.
+ * The values themselves are the loop's journal, one [Entry] per completed iteration, traced as a list beside this
+ * detail (`StepExecution.traceList`) and read by range (`LogicTrace.lookupRange`), so this detail is the same size
+ * at every iteration. The journal is kept regardless of whether the loop is COLLECTING its real values
+ * (`StepExecution.isValueReferenced` — see ForEachStep) — a loop nothing references still shows what it computed,
+ * without the collected list that would pin every iteration's object for the run. That also makes it the one
+ * thing to read after a jump commits a loop's partial value: the committed list and the journal are built at the
+ * same point in the iteration, so their entries line up index-for-index.
  */
 data class ForEachProgress(
     val item: String,
     val index: Int,
     val size: Int?,
-    val produced: List<Entry>,
     val producedCount: Int,
 
     // Committed mid-flight by a forward move-to (Set Next Statement) that skipped over the loop: the value the
@@ -42,22 +37,21 @@ data class ForEachProgress(
     data class Entry(
         val item: String,
         val value: String
-    )
+    ) {
+        fun asExecutionValue(): ExecutionValue {
+            return MapExecutionValue(mapOf(
+                entryItemKey to TextExecutionValue(item),
+                entryValueKey to TextExecutionValue(value)
+            ))
+        }
+    }
 
 
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
-        /** How many of the most recent iterations the journal retains. */
-        const val maxProducedEntries = 100
-
-        /** The cap on each journal entry's item / value display (well under a step display's own cap). */
-        const val maxProducedEntryChars = 120
-
-
         private const val itemKey = "item"
         private const val indexKey = "index"
         private const val sizeKey = "size"
-        private const val producedKey = "produced"
         private const val producedCountKey = "producedCount"
         private const val partialKey = "partial"
 
@@ -65,11 +59,9 @@ data class ForEachProgress(
         private const val entryValueKey = "value"
 
 
-        /** Build a capped [Entry] from the raw iteration values (the only sanctioned constructor). */
+        /** Build an [Entry] from the raw iteration values (the only sanctioned constructor). */
         fun entryOf(item: Any?, value: Any?): Entry {
-            return Entry(
-                TraceDisplay.truncatedToString(item, maxProducedEntryChars),
-                TraceDisplay.truncatedToString(value, maxProducedEntryChars))
+            return Entry(item.toString(), value.toString())
         }
 
 
@@ -91,18 +83,14 @@ data class ForEachProgress(
 
             val size = (executionValue.values[sizeKey] as? LongExecutionValue)?.value?.toInt()
 
-            val produced = (executionValue.values[producedKey] as? ListExecutionValue)
-                ?.values
-                ?.mapNotNull { entryOfExecutionValueOrNull(it) }
-                ?: listOf()
-
             val partial = (executionValue.values[partialKey] as? BooleanExecutionValue)?.value == true
 
-            return ForEachProgress(item, index, size, produced, producedCount, partial)
+            return ForEachProgress(item, index, size, producedCount, partial)
         }
 
 
-        private fun entryOfExecutionValueOrNull(executionValue: ExecutionValue): Entry? {
+        /** Read one journal entry, as traced in the loop's list, or null when [executionValue] is not one. */
+        fun entryOfExecutionValueOrNull(executionValue: ExecutionValue): Entry? {
             if (executionValue !is MapExecutionValue) {
                 return null
             }
@@ -126,24 +114,8 @@ data class ForEachProgress(
             itemKey to TextExecutionValue(item),
             indexKey to LongExecutionValue(index.toLong()),
             sizeKey to (size?.let { LongExecutionValue(it.toLong()) } ?: NullExecutionValue),
-            producedKey to ListExecutionValue(produced.map { it.asExecutionValue() }),
             producedCountKey to LongExecutionValue(producedCount.toLong()),
             partialKey to BooleanExecutionValue.of(partial)
         ))
-    }
-
-
-    private fun Entry.asExecutionValue(): ExecutionValue {
-        return MapExecutionValue(mapOf(
-            entryItemKey to TextExecutionValue(item),
-            entryValueKey to TextExecutionValue(value)
-        ))
-    }
-
-
-    //-----------------------------------------------------------------------------------------------------------------
-    /** How many journal entries were dropped by [maxProducedEntries] — zero when the journal is complete. */
-    fun omittedCount(): Int {
-        return producedCount - produced.size
     }
 }

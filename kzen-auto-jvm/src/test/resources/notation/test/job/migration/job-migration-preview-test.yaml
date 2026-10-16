@@ -7,8 +7,7 @@ main.channels/raw:
   is: Channel
   capacity: 1
 
-# PreviewWorker requires a serve endpoint; non-external (no UI bridge) keeps the run on the plain
-# quiescence/deadlock path (no external-channel suspension of deadlock detection).
+# PreviewWorker requires a serve endpoint; non-external (no UI bridge).
 main.channels/queries:
   is: DuplexChannel
 

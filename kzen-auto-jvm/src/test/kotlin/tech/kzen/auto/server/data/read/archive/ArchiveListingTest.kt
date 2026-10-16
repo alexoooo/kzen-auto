@@ -93,9 +93,8 @@ class ArchiveListingTest {
     private fun input(bytes: ByteArray): ReaderByteInput {
         val stream = ByteArrayInputStream(bytes)
         return object: ReaderByteInput {
-            override var expandedBytesRead = 0L
             override fun read(buffer: ByteArray, offset: Int, length: Int): Int =
-                stream.read(buffer, offset, length).also { if (it > 0) expandedBytesRead += it }
+                stream.read(buffer, offset, length)
         }
     }
 }

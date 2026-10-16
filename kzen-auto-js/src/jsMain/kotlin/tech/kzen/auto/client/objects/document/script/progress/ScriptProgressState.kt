@@ -1,6 +1,7 @@
 package tech.kzen.auto.client.objects.document.script.progress
 
 import tech.kzen.lib.common.exec.BinaryValue
+import tech.kzen.lib.common.exec.logic.run.model.LogicExecutionId
 import tech.kzen.lib.common.exec.logic.run.model.LogicRunExecutionId
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceEvent
 import tech.kzen.lib.common.exec.logic.trace.model.LogicTraceSnapshot
@@ -12,6 +13,11 @@ data class ScriptProgressState(
     val loaded: Boolean = false,
     val logicRunExecutionId: LogicRunExecutionId? = null,
     val logicTraceSnapshot: LogicTraceSnapshot? = null,
+
+    // The execution [logicTraceSnapshot] was read from: the viewed document's live frame. Null when the snapshot
+    // is merged across the run (the document is not live). A step's traced list is read from the same place
+    // (TraceListRef), so it matches the detail beside it.
+    val traceExecutionId: LogicExecutionId? = null,
 
     // The "next step to run" highlight: the viewed document's live frame position from the LogicStatus
     // poll (engine-owned, checkpoint at:) — null when the document isn't live (which clears the highlight
