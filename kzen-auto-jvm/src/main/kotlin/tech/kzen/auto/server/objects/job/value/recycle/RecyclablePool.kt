@@ -10,9 +10,10 @@ import java.util.concurrent.atomic.AtomicReference
  * consumer, and an object at zero holds cannot be pushed twice. A releaser's last read happens before its
  * decrement, which happens before its push, which happens before the producer's take.
  *
- * Empty, the pool creates; it never waits. A kept value is forfeited rather than held, so the pool never holds
- * more objects than were in flight at once, and needs no cap. A carried object released after its producer was
- * replaced (a live edit) returns to this pool, which is then unreachable and collected with it.
+ * Empty, the pool creates; it never waits. A value kept past the run's view is forfeited rather than held, so
+ * the pool never holds more objects than were in flight at once, and needs no cap. A carried object released
+ * after its producer was replaced (a live edit) returns to this pool, which is then unreachable and collected
+ * with it. An object handed out again gets a fresh [Recyclable.resource]: the previous trip's is closed.
  */
 class RecyclablePool<T: Recyclable>(
     private val create: (RecyclablePool<T>) -> T
@@ -41,6 +42,7 @@ class RecyclablePool<T: Recyclable>(
         }
         free = head.next
         head.next = null
+        head.reissue()
         @Suppress("UNCHECKED_CAST")
         return head as T
     }

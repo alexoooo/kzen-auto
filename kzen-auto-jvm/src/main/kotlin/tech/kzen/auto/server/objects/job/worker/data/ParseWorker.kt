@@ -477,7 +477,7 @@ class ParseWorker(
         if (metadata.access.state(node) != DataState.Present) {
             return null
         }
-        return DataValue(metadata.access, node)
+        return metadata.child(node)
     }
 
 

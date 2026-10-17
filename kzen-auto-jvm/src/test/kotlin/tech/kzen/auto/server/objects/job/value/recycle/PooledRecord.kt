@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 
 /**
- * Test recyclable: a pooled record `{id, name}` that is its own access, with one cached [value]. Every read
+ * Test recyclable: a pooled record `{id, name}` that is its own access, with one cached [value] per trip. Every read
  * compares the object's generation with the one it was filled at, so a read after the object went back to its
  * pool fails by name and is counted in [useAfterRecycle] (a reader that swallows the failure, like a preview's
  * capture, still leaves the count behind). It has no native type, so a boundary materializes it as a map.
@@ -53,7 +53,9 @@ class PooledRecord(
     private var name = ""
     private var filledGeneration = 0
 
-    val value = DataValue(this, root)
+    /** The one value over this record for its current trip out of the pool: it owns the trip's resource. */
+    var value = DataValue(this, root, null, owners)
+        private set
 
     override val recyclable: Recyclable
         get() = this
@@ -63,6 +65,9 @@ class PooledRecord(
         this.id = id
         this.name = name
         filledGeneration = generation
+        if (value.owners !== owners) {
+            value = DataValue(this, root, null, owners)
+        }
         return value
     }
 

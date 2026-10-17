@@ -4,6 +4,7 @@ import tech.kzen.lib.common.exec.data.binding.BindingSchema
 import tech.kzen.lib.common.exec.data.binding.DataBindings
 import tech.kzen.lib.common.exec.data.type.DataContract
 import tech.kzen.lib.common.exec.data.value.DataValue
+import tech.kzen.lib.common.exec.engine.resource.Hold
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 
@@ -138,24 +139,14 @@ interface JobControl {
 
 
     /**
-     * A named hold on the native resources behind [value] for a Worker that keeps it **beyond the callback that
-     * delivered it** (an accumulator buffering to end-of-stream, a window); the run closes those resources only
-     * after every hold, this one included, is released. The framework's own holds cover the callback itself —
-     * ordinary Workers never call this; anything a Worker needs later it copies, or leases. A value the run does
-     * not own yields [ValueLease.none].
+     * A hold on the resources behind [value] for a Worker that keeps it **beyond the callback that delivered
+     * it** (an accumulator buffering to end-of-stream, a window); those resources close only after every hold,
+     * this one included, is released. The hold is the Worker's frame's: released by the Worker when it is done
+     * with the value, and at the latest when the Worker's node settles. The framework's own holds cover the
+     * callback itself — ordinary Workers never call this; anything a Worker needs later it copies, or holds. A
+     * value that depends on no resource yields [Hold.none].
      */
-    fun retain(value: DataValue): ValueLease = ValueLease.none
-
-
-    /**
-     * A run-independent copy of [value] for anything that leaves the run — a Result, a retained trace, a
-     * preview: a value the run owns is materialized structurally (record → map, listing → list, scalars),
-     * **never** as the native identity the run closes at its end, and must be taken while the caller still
-     * holds it (inside the callback that delivered it); an unowned value is returned as is, so ordinary
-     * results keep today's identity-preserving path. An owned native that cannot be materialized (an opaque
-     * handle) fails by name rather than escaping.
-     */
-    fun snapshot(value: DataValue): DataValue = value
+    fun retain(value: DataValue): Hold = Hold.none
 
 
     /** Append one immutable structured event to this Worker's run history. */

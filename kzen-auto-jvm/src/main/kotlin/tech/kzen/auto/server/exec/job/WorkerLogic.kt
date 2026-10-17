@@ -1,7 +1,6 @@
 package tech.kzen.auto.server.exec.job
 
 import tech.kzen.auto.common.paradigm.job.api.Worker
-import tech.kzen.auto.server.exec.job.ownership.RunOwnershipLedger
 import tech.kzen.auto.server.objects.job.worker.WorkerBase
 import tech.kzen.lib.common.exec.data.binding.BindingSchema
 import tech.kzen.lib.common.exec.data.binding.DataBindings
@@ -55,7 +54,8 @@ class WorkerLogic(
     private val inputContract: DataContract?,
     private val outputContract: DataContract?,
     private val resultCollector: JobResultCollector,
-    private val ledger: RunOwnershipLedger,
+    /** The Job root's own [Execution]: the frame that holds what a Worker yields as a Result, until it settles. */
+    private val jobExecution: Execution,
     private val workerLocation: ObjectLocation,
     private val draining: () -> Boolean,
     private val runStartedNanos: Long
@@ -75,12 +75,26 @@ class WorkerLogic(
         val control = EngineJobControl(
             execution, childLogicHost, objectStableMapper, scratchDir, outputDir,
             jobInputs, jobParameters, jobResults, inputPayloadType, inputContract, outputContract, resultCollector,
-            ledger, workerLocation, draining, runStartedNanos)
+            jobExecution, workerLocation, draining, runStartedNanos)
 
         // The engine renders the failure (the run settles / parks per pause-on-error); the run-level ErrorPaused
         // state already surfaces which Worker halted (per-Worker error chips are a separate display gap).
-        execution.recoverable({ }) {
-            worker.run(control)
+        try {
+            execution.recoverable({ }) {
+                worker.run(control)
+            }
+        }
+        catch (e: Throwable) {
+            // Failed for good or cancelled, never to be captured: what the Worker carries of its input goes with it
+            if (workerBase != null) {
+                try {
+                    workerBase.releaseCarried()
+                }
+                catch (close: Exception) {
+                    e.addSuppressed(close)
+                }
+            }
+            throw e
         }
         return DataBindings.bind(BindingSchema.empty)
     }

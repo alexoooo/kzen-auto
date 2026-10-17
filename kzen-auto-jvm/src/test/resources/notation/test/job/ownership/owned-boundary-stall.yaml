@@ -1,4 +1,4 @@
-# OwnershipBoundaryTest route "stall": a two-permit arena source behind a Sort — the source parks on its third
+# ResourceBoundaryTest route "stall": a two-permit arena source behind a Sort — the source parks on its third
 # permit, which only the Sort's completion could return; the run waits (it does not fail) until cancelled.
 main:
   is: Job

@@ -5,9 +5,10 @@ import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.api.ChannelServer
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.server.objects.job.value.JobDataValues
-import tech.kzen.auto.server.objects.job.value.recycle.Recyclable
 import tech.kzen.lib.common.exec.data.type.DataContract
+import tech.kzen.lib.common.exec.data.type.DataType
 import tech.kzen.lib.common.exec.data.value.DataValue
+import tech.kzen.lib.common.exec.engine.resource.ResourceOwners
 import tech.kzen.lib.common.model.location.ObjectLocation
 import kotlin.reflect.full.createType
 
@@ -75,32 +76,35 @@ abstract class JavaTransformWorker @JvmOverloads constructor(
     final override suspend fun onElement(element: DataValue, emit: Emitter, control: JobControl) {
         val native = JobDataValues.boundary(element)
         val outputs = control.runBlockingIo { onElementBlocking(native, control) }
-        emitAll(outputs, emit, element, control)
+        emitAll(outputs, emit, element)
     }
 
 
     final override suspend fun onComplete(emit: Emitter, control: JobControl) {
         val outputs = control.runBlockingIo { onCompleteBlocking(control) }
-        emitAll(outputs, emit, null, control)
+        emitAll(outputs, emit, null)
     }
 
 
     // An output derived from an element may hold anything reachable from it, so a non-scalar output inherits
     // the element's owners (E9 item 3) unless the subclass declares its outputs independent copies; a closeable
     // the callback constructed is adopted when it is sent either way.
-    private suspend fun emitAll(outputs: Iterator<*>?, emit: Emitter, element: DataValue?, control: JobControl) {
+    private suspend fun emitAll(outputs: Iterator<*>?, emit: Emitter, element: DataValue?) {
         if (outputs == null) {
             return
         }
-        val inheriting = element != null && !independentOutputs()
+        val inherited = element?.owners?.takeIf { !independentOutputs() }
         try {
             while (outputs.hasNext()) {
                 val lifted = JobDataValues.lift(outputs.next(), staticOutputContract())
-                val output = element?.metadata?.let { lifted.withMetadata(it) } ?: lifted
-                if (inheriting) {
-                    control.ownership()?.inherit(output, element)
-                    Recyclable.forfeitDerived(output, element)
-                }
+                val withMetadata = element?.metadata?.let { lifted.withMetadata(it) } ?: lifted
+                val output =
+                    if (inherited != null && withMetadata.type !is DataType.Scalar) {
+                        withMetadata.withOwners((withMetadata.owners ?: ResourceOwners.empty) + inherited)
+                    }
+                    else {
+                        withMetadata
+                    }
                 emit.send(output)
             }
         }

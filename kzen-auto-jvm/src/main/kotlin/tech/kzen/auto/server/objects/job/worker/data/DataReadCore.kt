@@ -9,9 +9,9 @@ import tech.kzen.auto.common.data.read.CursorAdoptionIdentity
 import tech.kzen.auto.common.data.schema.DataShape
 import tech.kzen.auto.common.data.schema.LegacyDataShapeBridge
 import tech.kzen.auto.common.paradigm.job.control.JobControl
-import tech.kzen.auto.server.objects.job.worker.ownership
-import tech.kzen.auto.server.exec.job.ownership.LeaseHolder
-import tech.kzen.auto.common.paradigm.job.control.ValueLease
+import tech.kzen.auto.server.objects.job.worker.SourceIngress
+import tech.kzen.auto.server.objects.job.worker.resources
+import tech.kzen.auto.server.objects.job.worker.runBlockingIoAcquiring
 import tech.kzen.auto.server.data.DataOpenerLookup
 import tech.kzen.auto.server.data.read.OperationalDataCursor
 import tech.kzen.lib.common.exec.BinaryExecutionValue
@@ -29,6 +29,7 @@ import tech.kzen.lib.common.exec.data.type.ScalarKind
 import tech.kzen.lib.common.exec.data.shape.ShapeProvenance
 import tech.kzen.lib.common.exec.data.shape.ShapeStability
 import tech.kzen.lib.common.exec.data.value.DataValue
+import tech.kzen.lib.common.exec.engine.resource.Hold
 
 
 /**
@@ -44,7 +45,7 @@ object DataReadCore {
     data class Pull(
         val hasItem: Boolean,
         val item: DataValue?,
-        val hold: ValueLease? = null
+        val hold: Hold? = null
     )
 
 
@@ -146,8 +147,8 @@ object DataReadCore {
      * SourceIngress.pull]'s rule).
      */
     suspend fun pullBatch(control: JobControl, cursor: DataCursor, limit: Int): PullBatch {
-        val ledger = control.ownership()
-        return control.runBlockingIo {
+        val registry = control.resources()
+        return control.runBlockingIoAcquiring { acquired ->
             val pulled = ArrayList<Pull>()
             var exhausted = false
             while (pulled.size < limit.coerceAtLeast(1)) {
@@ -156,10 +157,12 @@ object DataReadCore {
                     break
                 }
                 val item = cursor.next()
-                // Adopted inside the blocking body: a cancel winning the return cannot lose a closeable item
-                val hold = ledger?.hold(item, LeaseHolder.producer)
-                pulled.add(Pull(true, item, hold))
-                if (hold != null) {
+                // Adopted inside the blocking body, as its acquisition: a cancel winning the return lets the
+                // closeable item go
+                val held = registry?.hold(item, SourceIngress.producerHolder)
+                pulled.add(Pull(true, held?.value ?: item, held?.hold))
+                if (held != null) {
+                    acquired.record(held.hold::release)
                     break
                 }
             }

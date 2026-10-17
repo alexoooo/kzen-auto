@@ -4,7 +4,6 @@ import kotlinx.coroutines.awaitCancellation
 import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
-import tech.kzen.auto.common.paradigm.job.control.ValueLease
 import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.auto.server.objects.job.worker.Emitter
 import tech.kzen.auto.server.objects.job.worker.TransformWorker
@@ -13,6 +12,7 @@ import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
+import tech.kzen.lib.common.exec.engine.resource.Hold
 
 
 /**
@@ -62,19 +62,19 @@ class HoldingWorker(
     selfLocation: ObjectLocation
 ): TransformWorker(input, output, selfLocation) {
     companion object {
-        val leases = mutableListOf<ValueLease>()
+        val holds = mutableListOf<Hold>()
         @Volatile var seen = 0
 
         fun reset() {
-            leases.forEach { it.release() }
-            leases.clear()
+            holds.forEach { it.release() }
+            holds.clear()
             seen = 0
         }
     }
 
     override suspend fun onElement(element: DataValue, emit: Emitter, control: JobControl) {
         seen += 1
-        leases.add(control.retain(element))
+        holds.add(control.retain(element))
     }
 }
 

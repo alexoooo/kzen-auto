@@ -1,12 +1,12 @@
-# Test fixture for RunOwnershipTeardownTest: a source that adopts resources into the run's ownership ledger and
-# emits scalars, feeding the collecting sink; the run's teardown must close every adopted resource.
+# Test fixture for ResourceTeardownTest: a source that retains resources through its own frame and
+# emits scalars, feeding the collecting sink; the frame's settle must close every retained resource.
 
 
 AdoptingSourceWorker:
   abstract: true
   is: Worker
   title: "Adopting Source (test)"
-  class: tech.kzen.auto.server.exec.job.ownership.AdoptingSourceWorker
+  class: tech.kzen.auto.server.objects.job.worker.test.AdoptingSourceWorker
   output: ""
   meta:
     output:

@@ -1,7 +1,5 @@
 package tech.kzen.auto.server.exec.job
 
-import tech.kzen.auto.server.exec.job.ownership.LeaseHolder
-import tech.kzen.auto.server.exec.job.ownership.RunOwnershipLedger
 import tech.kzen.lib.common.exec.data.binding.BindingSchema
 import tech.kzen.lib.common.exec.data.binding.DataBindings
 
@@ -26,6 +24,7 @@ import tech.kzen.lib.common.exec.ExecutionRequest
 import tech.kzen.lib.common.exec.ExecutionResult
 import tech.kzen.lib.common.exec.engine.Execution
 import tech.kzen.lib.common.exec.engine.disposal.SettleDisposalPolicy
+import tech.kzen.lib.common.exec.engine.resource.Holder
 import tech.kzen.lib.common.exec.engine.restoredAs
 import tech.kzen.lib.common.model.definition.GraphDefinition
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -94,12 +93,10 @@ class JobRun internal constructor(
         // re-yields at its onComplete (yield is last-write-wins).
         val resultCollector = JobResultCollector(jobResults)
 
-        // One ownership ledger per run (E9): every native the run adopts, closed after the Workers have joined —
-        // in the finally below, which runs only once the coroutineScope has joined every child. A live edit
-        // rebuilds the graph but not the run: the ledger rides the root's carryover, and the rebuilt run resumes
-        // it with every carried element still held by its channel or Worker.
+        // A live edit rebuilds the graph but not the run: the channels' in-flight elements ride the root's
+        // carryover, each still held by its channel in the run's resource registry (the engine's, surviving the
+        // edit), and the rebuilt run resumes them.
         val carried = execution.restoredAs<JobCarryover>()
-        val ledger = carried?.ledger ?: RunOwnershipLedger(runId)
 
         // The clock each Worker's progress is stamped with (see EngineJobControl.publishProgress), so the client
         // can tell how fast it goes; it rides the carryover, so a live edit doesn't restart it
@@ -128,7 +125,7 @@ class JobRun internal constructor(
                 is JobChannel -> {
                     streamChannels[objectStableMapper.objectStableId(channelLocation)] = channel
                     // Sends through this channel take its named hold on owned elements (E9)
-                    channel.bindOwnership(ledger, LeaseHolder(channelLocation.asString()))
+                    channel.bindResources(execution.resources, Holder(channelLocation.asString()))
                 }
             }
         }
@@ -145,11 +142,11 @@ class JobRun internal constructor(
         // payloads so the rebuilt run can re-seed them. Safe to drain here because the engine pauses the run
         // before invoking this, so a Worker an in-progress drain unparks re-parks at its next checkpoint rather
         // than producing more (and drainBuffered dedups a sender that completes mid-drain — see JobChannel).
-        // The teardown that follows is a migration's, not the run's end: the ledger goes with the carryover.
+        // The teardown that follows is a migration's, not the run's end: the channel holds go with the carryover.
         var migrating = false
         execution.onCapture {
             migrating = true
-            JobCarryover(streamChannels.mapValues { (_, channel) -> channel.drainBuffered() }, ledger, startedNanos)
+            JobCarryover(streamChannels.mapValues { (_, channel) -> channel.drainBuffered() }, startedNanos)
         }
 
         // Sweep this run's whole scratch tree (every file-backed Worker's on-disk store) when the run settles —
@@ -263,7 +260,7 @@ class JobRun internal constructor(
                                     workerScratchDir, workerOutputDir,
                                     execution.inputs, jobParameters, jobResults,
                                     inputPayloadType, inputContract, outputContract, resultCollector,
-                                    ledger, location,
+                                    execution, location,
                                     draining = { scopes.any { it.lending() } },
                                     startedNanos),
                                 inputs = DataBindings.bind(BindingSchema.empty),
@@ -290,15 +287,38 @@ class JobRun internal constructor(
             registration.close()
             externalClients.values.forEach { it.close() }
             // Every Worker has joined (a Worker parked in runBlockingIo delays this until its call returns), so no
-            // callback can be using an owned native: close them all, best-effort. A processing failure stays the
-            // run's outcome with close failures suppressed; a close failure alone becomes the outcome. Not at a
-            // migration barrier: the rebuilt run carries the ledger on.
+            // callback can be using an element a channel still holds: let those holds go, attempting every
+            // channel. A processing failure stays the run's outcome with close failures suppressed; a close
+            // failure alone becomes the outcome. Not at a migration barrier: the carryover carries the holds on.
+            // (Workers' own holds are their frames', released as each settled.)
             if (!migrating) {
-                ledger.closeAll(processingFailure)?.let { throw it }
+                releaseChannelHolds(streamChannels.values, processingFailure)
             }
         }
 
         return resultCollector.settle()
+    }
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    private fun releaseChannelHolds(channels: Collection<JobChannel>, processingFailure: Throwable?) {
+        var failure: Throwable? = null
+        for (channel in channels) {
+            try {
+                channel.releaseHeld()
+            }
+            catch (e: Exception) {
+                if (failure == null) failure = e else failure.addSuppressed(e)
+            }
+        }
+        val closeFailure = failure
+            ?: return
+        if (processingFailure != null) {
+            processingFailure.addSuppressed(closeFailure)
+        }
+        else {
+            throw closeFailure
+        }
     }
 
 

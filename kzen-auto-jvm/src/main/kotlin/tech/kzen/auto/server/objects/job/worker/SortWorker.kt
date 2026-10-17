@@ -5,10 +5,9 @@ import tech.kzen.auto.common.objects.document.report.spec.sort.SortSpec
 import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
-import tech.kzen.auto.common.paradigm.job.control.ValueLease
-import tech.kzen.auto.server.exec.job.ownership.ValueLeases
 import tech.kzen.auto.server.objects.job.value.ColumnProjections
 import tech.kzen.lib.common.exec.data.value.DataValue
+import tech.kzen.lib.common.exec.engine.resource.Hold
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.reflect.Reflect
 
@@ -31,10 +30,10 @@ import tech.kzen.lib.common.reflect.Reflect
  * follow-up — this Worker is the in-memory baseline the plan calls for. It has NO `serve` port and opens NO
  * scratch dir.
  *
- * OWNERSHIP (E9): a buffered element the run owns is kept beyond its callback, so the Sort takes an explicit
- * [JobControl.retain] lease per such element — the ledger names this Sort as the holder — and releases them
- * only after [onComplete] has sent the sorted stream on (each send took the output channel's hold first). The
- * leases migrate with the buffer; a Sort the edit removed drops its buffer and its holds with it.
+ * RESOURCES (E9): a buffered element that depends on a resource is kept beyond its callback, so the Sort takes an
+ * explicit [JobControl.retain] hold per such element — a hold of this Sort's frame — and releases them only after
+ * [onComplete] has sent the sorted stream on (each send took the output channel's hold first). The holds migrate
+ * with the buffer; a Sort the edit removed drops its buffer and its holds with it.
  *
  * LIVE-EDIT MIGRATION: the accumulated [buffer] is carried forward into the rebuilt instance
  * ([captureMigrationState] / [loadMigrationState]) — like [SummaryWorker]'s builders, it is pure in-memory data
@@ -69,8 +68,8 @@ class SortWorker(
     private var buffered = 0L
     private var emitted = 0L
 
-    // The explicit holds on the owned elements in the buffer (E9): only owned elements cost a lease.
-    private var leases = ArrayList<ValueLease>()
+    // The explicit holds on the owned elements in the buffer (E9): only owned elements cost a hold.
+    private var holds = ArrayList<Hold>()
 
     // The sorted stream being drained by onComplete and how far it got: a migration cut while a send is parked
     // carries the unsent remainder (claimed before each send). @Volatile: read at the capture barrier.
@@ -85,9 +84,9 @@ class SortWorker(
     //-----------------------------------------------------------------------------------------------------------------
     override suspend fun onElement(element: DataValue, emit: Emitter, control: JobControl) {
         // Accumulate only: the sorted stream is emitted once, at end-of-stream (onComplete).
-        val lease = control.retain(element)
-        if (lease.isActive) {
-            leases.add(lease)
+        val hold = control.retain(element)
+        if (hold.isActive) {
+            holds.add(hold)
         }
         buffer.add(element)
         buffered += 1
@@ -118,9 +117,9 @@ class SortWorker(
         // Release the buffered input; a rebuilt instance (post-completion live edit) must not re-emit it. The
         // output channel holds every owned element now, so letting go of this Worker's holds closes nothing.
         buffer = ArrayList()
-        val held = leases
-        leases = ArrayList()
-        ValueLeases.releaseAll(held)
+        val held = holds
+        holds = ArrayList()
+        Hold.releaseAll(held)
     }
 
 
@@ -194,7 +193,7 @@ class SortWorker(
     override fun captureMigrationState(): Any {
         // Mid-drain: only what has not been sent yet is the rebuilt instance's to emit
         val remainder = draining?.let { sorted -> ArrayList(sorted.drop(drained).map { it.message }) }
-        return BufferState(remainder ?: buffer, buffered, leases)
+        return BufferState(remainder ?: buffer, buffered, holds)
     }
 
 
@@ -203,7 +202,7 @@ class SortWorker(
             ?: return
         buffer = state.buffer
         buffered = state.buffered
-        leases = state.adoptLeases()
+        holds = state.adoptHolds()
     }
 
 
@@ -214,19 +213,19 @@ class SortWorker(
     private class BufferState(
         val buffer: ArrayList<DataValue>,
         val buffered: Long,
-        private var leases: ArrayList<ValueLease>?
+        private var holds: ArrayList<Hold>?
     ): AutoCloseable {
-        fun adoptLeases(): ArrayList<ValueLease> {
-            val adopted = leases ?: ArrayList()
-            leases = null
+        fun adoptHolds(): ArrayList<Hold> {
+            val adopted = holds ?: ArrayList()
+            holds = null
             return adopted
         }
 
 
         override fun close() {
-            val dropped = leases ?: return
-            leases = null
-            ValueLeases.releaseAll(dropped)
+            val dropped = holds ?: return
+            holds = null
+            Hold.releaseAll(dropped)
         }
     }
 

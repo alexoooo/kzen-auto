@@ -100,7 +100,7 @@ class FormulaSourceWorker(
         val parameters = control.parameters()
         val parameterValues = parameters.definitions.map { control.parameter(it.name.value) }
 
-        val evaluated = control.runBlockingIo {
+        val evaluated = control.runBlockingIoAcquiring { acquired ->
             val attempt = jobExpressionCompiler.compile(
                 selfLocation.objectPath.name.value, code,
                 sourceInput, TypeMetadata.unit, classLoader, parameters)
@@ -108,8 +108,12 @@ class FormulaSourceWorker(
             val compiled = checkNotNull(attempt.compiled)
             compiled.expression.setParameters(parameterValues)
             val value = compiled.expression.evaluate(Unit, sourceValue, null)
-            // Adopted inside the blocking body that produced it: a cancel winning the return cannot lose it
+            // Adopted inside the blocking body that produced it, as the body's acquisition: a cancel winning
+            // the return lets it go
             val opened = if (compiled.streams) ingress.adoptStream(value) else null
+            if (opened != null && opened.closeable) {
+                acquired.record(opened::close)
+            }
             Evaluated(compiled, value, opened)
         }
 
@@ -154,7 +158,7 @@ class FormulaSourceWorker(
                 val item = pending.removeFirst()
                 nextIndex += 1
                 try {
-                    emit.send(item.lift(ingress.ledger(), elementContract))
+                    emit.send(item.lift(elementContract))
                 }
                 finally {
                     item.release()

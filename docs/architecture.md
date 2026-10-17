@@ -113,39 +113,69 @@ Each is a document type whose `main` archetype declares `is: [Document, Logic]` 
 > a `ColumnProjection` only when needed, while Formula/output Workers use exclusive `RecordOutputBuilder` claims
 > for widening and replacement. The static wiring walk uses `JobLaneDescriptor` as its sole type authority.
 > Logic boundaries materialize through the explicit `JobDataValues.boundary` policy; the former payload/flat
-> carrier and lane façades were deleted. **Resource-owning values (E9).** An `AutoCloseable` a Worker emits
-> becomes the run's to close: the send adopts it into the run's `RunOwnershipLedger` (`server/exec/job/ownership/`,
-> keyed by native identity, with named leases — a process-wide weak `NativeIdentityRegistry` makes ownership
-> linear across runs and a read through a closed native fail by name), each channel hop and each framework
-> callback holds it, and it closes exactly once when the last holder lets go — a Transform / Sink holds an element
-> only for the duration of `onElement`, an accumulator (Sort) takes an explicit `JobControl.retain` lease, a
-> non-scalar Formula output inherits its input's owners, a scalar never does, and `Borrowed.of(x)`
-> (kzen-auto-plugin) marks a host object the run must not close. Where the framework owns the pull (`CursorSourceWorker`,
-> `ReadWorker` / `DataReadCore`, `FormulaSourceWorker` over the stream an expression returned — `Iterable`,
-> `Sequence`, `Iterator` or `java.util.stream.Stream`) the item and the stream's closeable iterator / container
-> are adopted **inside the blocking acquisition** (`SourceIngress`), so a cancel that wins the return dispatch
-> cannot lose them; a producer hold lasts through lift and send, and a closeable stream is detached across a
-> live edit rather than re-evaluated. A pull takes a batch per blocking trip, stopping after an owned item;
-> `Parse` reads ahead only up to its next cadence checkpoint (`DataReadCore.emitBatch`,
-> `Emitter.sendsBeforeCheckpoint`), because a carried cursor must have nothing pulled and unsent when it is
-> captured. An owned element flushes the moment it is sent
-> (channel capacity unchanged), so an item whose close returns a host permit never waits in a producer's buffer;
-> a live edit carries the ledger and every channel lease across the rebuild, and the run's post-join teardown
-> closes whatever is left, a processing failure staying primary over close failures. An owned native never
-> leaves the run: a Result sink keeps `JobControl.snapshot(value)` — a structural copy taken inside the
-> callback — and `yieldResult` refuses an owned value; an opaque owned native fails by name. A Worker's progress
-> carries its `holds`. A run that can make no progress waits until it is cancelled: nothing watches for a
-> deadlock or a stall. A `JavaTransformWorker` whose outputs are deliberate
-> copies (rows of scalars read off a native) declares `independentOutputs()`: its rows carry no owner, the
-> element closes when the callback returns, and a Sort after it retains rows, not natives (HS25).
+> carrier and lane façades were deleted. **Resource-owning values (E9).** The Job has no disposal mechanism of its
+> own: it is a set of *holders* over kzen-lib's run-scoped resource registry (`exec/engine/resource/` — `Resource`,
+> `Hold`, `Holder`, `ResourceOwners`, `ResourceRegistry`; reached as `Execution.resources`, logic-spec §6). An
+> `AutoCloseable` a Worker emits becomes the run's to close at the send: `JobChannel.send` asks the registry for a
+> hold under the channel's holder (its notation location, so a live-edit replacement is the same holder), which
+> adopts a native the run does not know (closer = `close`, indexed by identity so a re-wrap attaches the same
+> entry) and hands back the value that carries its `owners`; the channel passes *that* value on. A framework
+> drive loop converts the channel's hold into the Worker's per-callback hold (`CallbackLeases`, taken through
+> `RunResourceControl.holdForCallback` under the Worker's location *before* the channel's is released, so the
+> count never touches zero mid-hop) and releases it when `onElement` returns; an accumulator (Sort, ResultSink)
+> takes `JobControl.retain(value): Hold` — a hold of its own frame, released when it lets go or at the latest when
+> its node settles; a non-scalar Formula / Java output inherits its input's owners (`withOwners`), a scalar never
+> does; and `Borrowed.of(x)` (kzen-auto-plugin) lifts as a counted `Resource.borrowed` owner the run never closes.
+> Ownership is a field of the value (`DataValue.owners`, copied by `withMetadata` and `child`), so a view into an
+> owned batch keeps the batch open by construction, and every `JobDataValues.native` / `callbackObject` read calls
+> `requireOpen()` — a read through a closed owner fails by name. The resource closes exactly once, on the last
+> release across all holders. Where the framework owns the pull (`CursorSourceWorker`, `ReadWorker` /
+> `DataReadCore`, `FormulaSourceWorker` over the stream an expression returned — `Iterable`, `Sequence`,
+> `Iterator` or `java.util.stream.Stream`) the item and the stream's closeable iterator / container are adopted
+> **inside the blocking acquisition** (`SourceIngress`, over `JobControl.runBlockingIoAcquiring`): a cancel that
+> wins the return dispatch, or a body that fails after acquiring, releases what the body recorded, so a hold is
+> never dropped; the item's `producer` hold lasts through lift and send, the stream's holds (under the source's
+> location) until the source lets the stream go, and a closeable stream is detached across a live edit rather
+> than re-evaluated. A pull takes a batch per blocking trip, stopping after an owned item; `Parse` reads ahead
+> only up to its next cadence checkpoint (`DataReadCore.emitBatch`, `Emitter.sendsBeforeCheckpoint`), because a
+> carried cursor must have nothing pulled and unsent when it is captured. An owned element flushes the moment it
+> is sent (channel capacity unchanged), so an item whose close returns a host permit never waits in a producer's
+> buffer; a batch the transport drops undelivered (a cancelled sender or receiver) releases its holds unless a
+> migration's drain already made them the carryover's. A live edit keeps the registry (it is the engine's run
+> state) and carries each channel's in-flight elements *with their channel holds* in `JobCarryover` /
+> `ChannelCarryover` by stable id — no close, no re-adoption — while the engine lifts Worker frame holds and an
+> accumulator's `retain` holds ride its own migration state; a carryover or capture nothing adopts releases its
+> holds. The run's post-join teardown releases every channel hold still outstanding (`JobChannel.releaseHeld`), a
+> processing failure staying primary over close failures; a Worker done for good without a capture lets go of
+> what it carried outside the channel (`WorkerBase.releaseCarried`); a close failure at a frame's settle is
+> logged by the engine, never folded into the outcome. **A Result is handed over live.** `ResultSinkWorker` keeps
+> its element under `retain` and yields it with its owners; `EngineJobControl.yieldResult` takes a hold of the
+> Job root's frame on it (`jobExecution.hold`), and the engine's host boundary gives the hosting frame its own
+> hold before the Job frame settles — so a `RunStep` / Flow `Run` / `RunWorker` reads the Result open and the
+> native closes at the host's settle. A top-level Job has no receiver, so its owned Result closes at the root's
+> settle; the review surface reads display text (`DataSnapshot`), never the native. The one value `retain` and
+> `yieldResult` refuse, by name, is a `LentElement`. A Worker's progress carries its callback `holds`
+> (`ResourceRegistry.holdsOf` under the Worker's holder) and the run view lists every open registry entry with
+> its holders (`RunState.resources`). A run that can make no progress waits until it is cancelled: nothing
+> watches for a deadlock or a stall. A `JavaTransformWorker` whose outputs are deliberate copies (rows of scalars
+> read off a native) declares `independentOutputs()`: its rows carry no owner, the element closes when the
+> callback returns, and a Sort after it retains rows, not natives (HS25).
 > **Recyclable values (WR2).** A pooled value (`server/objects/job/value/recycle/`: a `Recyclable` reached through
-> its `RecyclableAccess`, from its producing Worker's `RecyclablePool`) returns to its pool once nothing can read
-> it, without the ledger: each channel slot takes one hold and carries the object's shared token as its lease (no
-> flush at send), a Transform / Sink callback takes that token over, and the last release recycles the object.
-> Whatever may keep a value past its callback forfeits it instead — `retain`, `snapshot`, `JobDataValues.boundary`
-> (a Run child, a `JavaTransformWorker`), a non-scalar Formula / Java output computed from it, a raw channel read —
-> and it becomes an ordinary value the GC reclaims; a Job expression reads through `JobDataValues.callbackObject`,
-> which keeps it pooled. The rule: a pooled object may leak, but is never recycled early.
+> its `RecyclableAccess`, from its producing Worker's `RecyclablePool`) is an owned value whose close is a recycle:
+> each trip out of the pool mints a fresh `Resource` (`Recyclable.resource`, closer `pool.recycle`; `RecyclablePool.acquire`
+> reissues it) and the value over the object carries it as its `owners`, so channel holds, callback holds and
+> `retain` hold the object like any other and the last release returns it to the pool — a closed resource refuses
+> holds, which is the "never read after recycle" rule. The resource is minted by the `Recyclable`, not adopted
+> through the registry, so it is counted by its holders but absent from the run's live view. A pooled element is
+> owned, so it flushes at send like any owned element. Where a value may outlive its callback inside code the
+> framework cannot see — `JobDataValues.boundary` (a Run child, a `JavaTransformWorker`, the ResultSink's yield)
+> and a raw channel read — the object is **forfeited**: a permanent hold under `Holder("forfeited")`, never
+> `detach()` (a detached owner would fail the still-valid value's `requireOpen()` under a callback still
+> reading it), so it is never recycled and the GC reclaims it with whoever kept it. `retain` does not forfeit
+> (the value stays pooled and held), and a Job expression reads through `JobDataValues.callbackObject`, which
+> keeps it pooled. The rule: a pooled object may leak, but is never recycled early. `OwnershipOverheadTest`
+> (`objects/job/channel/`) is the unowned hot-path gate (300,000 lifted scalars, bound ≤ 4.0× unbound) and
+> `FormatAllocationTest` the pooled one (`64 KiB + chunks × 1024 B`: a `Resource` per chunk, nothing per record).
 > **Bytes and Format (WR3).** Bytes travel two ways. `Content` is a handle the consumer pulls (`open()`), one element
 > per file. `Bytes` (`worker/content/`) is a chunk the producer pushes in-band, one output spanning many elements:
 > like `Content` an opaque native with no properties, read only inside the callback (`length()`,
@@ -651,6 +681,8 @@ Throttling at the publish rather than at each query is what makes this one decis
 >
 > **A loop's journal is a traced list, read by range (FJ).** A `ForEachStep` journals every completed iteration (`ForEachProgress.Entry`: item → body value, as text), whether or not it collects. The journal is not in the step's detail — the detail (`ForEachProgress`: item, index, size, `producedCount`, `partial`) stays the same size at every iteration, so the whole-map refresh stays cheap — but beside it, as a `PersistentList` the loop extends and re-emits each iteration (`StepExecution.traceList` → kzen-lib `Execution.emitList`, logic-spec §7). It resets with the loop's trace (an inner loop's journal holds the current outer pass only), crosses a live edit in the `LoopCursor`, and rides a forward move-to's `PartialOutcome.list`, which `ScriptRunContext.adoptOutcome` re-emits. A reader fetches a range: `LogicTraceEndpoint` action `lookup-range` (`run-id`, optional `execution-id`, `trace-path`, `offset`, optional `count`) → `RunEngineLogicTrace.lookupRange` → `LogicTraceRange`. The trace-path parameter is not `path`, which a detached request already uses for the endpoint's own document. A finished loop still loses its journal (with its detail) when a live edit rebuilds the run.
 
+> **Script and Flow hold what they record (RH).** Every write to a Script's value graph goes through one `ScriptRunContext.record`: it takes the frame's hold on the value (kzen-lib `Execution.hold`, logic-spec §6), stores the `Held.value` — the value that carries its `owners` — in `stepValues`, keeps the `Hold` in `stepHolds`, and only then releases the slot's previous hold. So a step's `AutoCloseable` result is adopted by the run at the record, is live for every later step that reads it, closes when a loop body re-records the slot (hold-before-release — re-recording the same resource never touches zero) if nothing else holds it, and otherwise closes at the Script's settle. A `ForEachStep` that collects closeables keeps closed handles for the superseded iterations. A sub-Script's returned closeable belongs to the caller's frame: the engine's host boundary gives the `RunStep`'s frame its hold before the child settles, and the caller's `record` of that value adds its own. `FlowRun` does the same per vertex (`vertexHolds`: one list per vertex covering the message and its undrained batch remainder), released when the vertex next produces — clearing a message at a loop iteration or the end of the run touches no hold; the frame's settle closes what remains — and `outputBindings()` reads the held values, so a Flow's owned output is live in its host. A live edit never closes an owned value: the engine lifts the frame holds across the barrier, and `ScriptMigrationState.stepHolds` / `FlowMigrationState.vertexHolds` carry the references so the rebuilt run releases the stale hold when it re-records that slot (`adoptOutcome` re-records a replayed outcome, net one hold). Two bounds: the host-boundary hold on a `RunStep`'s result is the caller frame's and is released at the caller's settle, so a sub-Script hosted inside a loop keeps each iteration's returned closeable open until the loop's Script settles; and the Script boundary (`boundary()` + `lift()`) re-attaches an `AutoCloseable` root by native identity but drops the owners of a derived non-closeable value. Tests: `ScriptResourceHoldTest`, `FlowResourceHoldTest`.
+
 ## 4. Server-side composition root
 
 The JVM-side analogue of the client's `ClientContext` (see [`js-architecture.md` § 4](js-architecture.md#4-service-layer-plumbing)). `KzenAutoContext` (`kzen-auto-jvm/.../server/context/KzenAutoContext.kt`) is built once via the self-initializing factory `KzenAutoContext.create(config)` at `KzenAutoMain.main` time (tests use `KzenAutoContext.forTest()`) and threaded explicitly to everything that needs it. Hand-constructed services (`ServerLogicController`, the REST handlers, …) receive their dependencies as constructor arguments. Graph-instantiated objects — which the notation system constructs from YAML, so they can't be hand-injected — receive runtime services through **construction-time dependency injection**: a constructor parameter annotated `@Service` (kzen-lib) is filled by kzen-lib's `GraphCreator` from a `GraphEnvironment` registry rather than from notation (see [`../../kzen-lib/docs/architecture.md`](../../kzen-lib/docs/architecture.md) for the `@Service` / `GraphEnvironment` mechanism). `KzenAutoContext` builds that `graphEnvironment` (keyed by each service's declared type) eagerly, and threads it as a plain `GraphEnvironment` into every server-side `createGraph` call. The construction cycle — a registered service (`serverLogicController`, `logicTrace`) is itself constructed *below* the environment — is broken by kzen-lib's provider registration: those two go in as `put(className) { service }` lambdas, memoized on first resolve, which happens at request/run time long after construction completes. (Correspondingly, nothing may resolve the environment *during* `KzenAutoContext` construction.) Consequently `Logic.execute` and `DetachedAction.execute` now carry only per-run handles (no host/context parameter), and a step like `FormulaStep` simply declares `@Service private val cachedKotlinCompiler: CachedKotlinCompiler`. This replaced the earlier `LogicHost` / `DetachedActionContext` marker-and-downcast role interfaces (and, before those, the `setGlobal` / `global()` process-global). There is **no process-global singleton.** **Each kzen-auto JVM process owns exactly one `KzenAutoContext` — there is no internal notion of multiple "projects" inside the server.** The project layer lives one level up in `kzen-launcher` / `kzen-shell`, which front-ends multiple JVM processes (see umbrella `AGENTS.md`); plugin authors should treat the in-process world as single-tenant.
@@ -676,7 +708,7 @@ The companion-object `init` block registers SPI metadata with kzen-lib's `Reflec
 | `definitionRepository` | `HostReportDefinitionRepository` | Report definers: the built-ins only (`CsvReportDefiner` / `TsvReportDefiner` / `TextReportDefiner`); the per-document plugin-jar definer path (`jarPath`, `META-INF/kzen/plugins.yaml`) retired in HS21 — plugins extend Jobs through the runtime's scopes (§ 5), not Reports |
 | `managedStorageRegistry` | `ManagedStorageRegistry` | Every on-disk area the server owns — see § 6 |
 
-The Selenium / WebDriver browser handle is **no longer a context service**: it is a per-run resource keyed `"browser"`, registered **with the engine** — the kzen-lib `RunEngine` stores the live handle (value) alongside the disposal closer on the owning node. Steps reach it through a declared **Context** rather than a bare string: `BrowserOpenStep` declares `binds: BrowserContext` and calls `StepExecution.bindContext(...)`, the action steps declare `uses: [BrowserContext]` and read `execution.context<RemoteWebDriver>()` (an ancestor-chain walk, so **any** hosted child — Script, Flow, or Job — reads the handle its host opened), and `BrowserCloseStep` declares `releases: BrowserContext`. The raw string-keyed API (`openResource` / `resource` / `releaseResource`) survives as the escape hatch beneath it; a Context's `key:` IS that string, so a typed step and a raw one naming `browser` share one registration. There is no Script-side value registry (the former `ScriptRunResources` was deleted when the engine took over value storage); `WebDriverSupport` holds only that shared key + the quiet-quit helper. This replaced the former `webDriverContext` process singleton (removes a global; allows concurrent runs).
+The Selenium / WebDriver browser handle is **no longer a context service**: it is a per-run resource keyed `"browser"`, registered **with the engine** — the kzen-lib `RunEngine` stores the live handle (value) on the owning node together with that frame's hold on the resource its disposal closer stands for (a plain ambient value carries no hold; logic-spec §6). Steps reach it through a declared **Context** rather than a bare string: `BrowserOpenStep` declares `binds: BrowserContext` and calls `StepExecution.bindContext(...)`, the action steps declare `uses: [BrowserContext]` and read `execution.context<RemoteWebDriver>()` (an ancestor-chain walk, so **any** hosted child — Script, Flow, or Job — reads the handle its host opened), and `BrowserCloseStep` declares `releases: BrowserContext`. The raw string-keyed API (`openResource` / `resource` / `releaseResource`) survives as the escape hatch beneath it; a Context's `key:` IS that string, so a typed step and a raw one naming `browser` share one registration. There is no Script-side value registry (the former `ScriptRunResources` was deleted when the engine took over value storage); `WebDriverSupport` holds only that shared key + the quiet-quit helper. This replaced the former `webDriverContext` process singleton (removes a global; allows concurrent runs).
 
 **Ownership is offered by the binder, not claimed by an ancestor.** A Script document's **context signature** has two halves: `context: { exports: [...] }` lists the Contexts it offers upward to its caller, and `context: { requires: [...] }` names the ambient Contexts a caller must already have bound (reads walk self → root, like Kotlin `context(...)` receivers). A binding the opening document does not export is **private** to that document's frame, disposed at its settle per `closePolicy`; an exported one climbs one hop per `exports` declaration and rests at the first frame that does not export it onward, or at the run root. So a sub-script opens the SUT and the enclosing test owns it — because the sub-script offered it up and the test did not pass it on. Resolution happens at **bind time**, in one inverted walk as the registration is made, and matching is family-granular (the part of the key before `':'`, so one `sut` export carries `sut:main` and `sut:other` as independent registrations). Only `Script` carries a context signature, so a resource opened inside a hosted Flow or Job is permanently private. `closePolicy` is the disposal rule alone — `auto` / `manual` / `keepOnFailure`, with no scope dimension — and applies at the frame where the registration rests. A `manual` handle outlives that frame by a second, orthogonal mechanism: at the resting frame's settle the engine hands the registration up one level (cascading toward the run root), so a browser opened in one sub-script stays readable and explicitly closeable by later sibling sub-scripts (logic-spec §6); it is also the only way an un-exported resource survives the frame that bound it. Statically, a step whose `uses` nothing satisfies is a **blocking error** that greys Run out client-side — naming the document that binds the Context without exporting it, when that is the cause — while a binding nothing consumes draws no diagnostic at all. Open resources **survive live-edit migration**: the engine lifts registrations at the `migrate` barrier and re-adopts them by owning frame's stable identity (logic-spec §5), so pause → edit → resume keeps the same browser window; export declarations are not lifted, because each rebuilt `Logic.run` re-declares them.
 

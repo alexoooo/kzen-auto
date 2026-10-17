@@ -7,7 +7,6 @@ import tech.kzen.auto.plugin.model.record.FlatRecordHeader
 import tech.kzen.auto.server.data.write.delimited.ConfiguredDelimitedWriterCapability
 import tech.kzen.auto.server.objects.datasource.format.ConfiguredDelimitedTestFormats
 import tech.kzen.auto.server.objects.job.value.JobDataValues
-import tech.kzen.auto.server.objects.job.value.recycle.Recyclable
 import tech.kzen.auto.server.objects.job.value.recycle.RecyclablePool
 import tech.kzen.auto.server.objects.job.worker.WriterColumns
 import tech.kzen.auto.server.objects.job.worker.content.Bytes
@@ -25,6 +24,7 @@ import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.lib.common.exec.data.value.LiteralDataValues
 import tech.kzen.lib.common.exec.data.value.ValueMetadata
 import tech.kzen.lib.common.exec.data.value.overlay.MetadataShape
+import tech.kzen.lib.common.exec.engine.resource.Holder
 import tech.kzen.lib.common.util.digest.Digest
 import java.io.ByteArrayOutputStream
 import java.lang.management.ManagementFactory
@@ -36,13 +36,18 @@ import kotlin.test.assertTrue
  * Format's steady state allocates nothing per record when records are not grouped: a flat record (Parse's rows,
  * including a superset's absent field) is read in place and encoded into a recycled chunk that keeps its value, one
  * chunk per input batch. Measured as this thread's allocated bytes, a chunk's cycle through a channel (hold, release)
- * included; the number is printed for the session record.
+ * included; the number is printed for the session record. Per chunk, a pool trip costs its resource (RH4: a fresh
+ * [tech.kzen.lib.common.exec.engine.resource.Resource], whose hold map and close signal are created only when
+ * first needed, the owners and the value over it) — measured at 640 bytes, which the budget allows twice over;
+ * nothing per record.
  */
 class FormatAllocationTest {
     // The records of an input batch, flushed as one chunk
     private val batchSize = 1024
     private val warmupRecords = 50_000
     private val measuredRecords = 200_000
+    // A chunk's pool trip as measured (125,800 bytes over 195 chunks, about 1 KB of it fixed)
+    private val perChunkResourceBytes = 640L
 
     private val freshMetadataCount = 1024
     private val freshMetadataWarmup = 20_000
@@ -93,9 +98,11 @@ class FormatAllocationTest {
         }
         val allocated = threads.currentThreadAllocatedBytes - before
 
-        println("WR3 Format allocation: $allocated bytes over $measuredRecords records")
-        // Anything per record would cost at least one object header (16 bytes) per record
-        val budgetBytes = 64 * 1024
+        val chunks = measuredRecords / batchSize
+        println("WR3 Format allocation: $allocated bytes over $measuredRecords records in $chunks chunks")
+        // Anything per record would cost at least one object header (16 bytes) per record, over 3 MB here; a
+        // chunk's pool trip costs its resource, allowed at twice the measured cost
+        val budgetBytes = 2 * chunks * perChunkResourceBytes
         assertTrue(allocated < budgetBytes, "$allocated bytes allocated over $measuredRecords records")
     }
 
@@ -201,11 +208,11 @@ class FormatAllocationTest {
 
 
     // What a channel does with each sent chunk: holds it, then releases it once its consumer's callback returns
+    private val holder = Holder("test")
+
     private fun recycle(chunks: MutableList<DataValue>) {
         for (chunk in chunks) {
-            val slot = Recyclable.of(chunk)!!
-            slot.hold()
-            slot.release()
+            chunk.owners!!.hold(holder).release()
         }
         chunks.clear()
     }

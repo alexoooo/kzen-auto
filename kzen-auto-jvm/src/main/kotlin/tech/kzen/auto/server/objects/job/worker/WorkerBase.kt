@@ -128,6 +128,14 @@ abstract class WorkerBase(
 
 
     /**
+     * This instance is done for good and was never captured — its run failed without pausing, or was cancelled
+     * (a pause-on-error park included): whatever of its input it still carries outside its channel's capture
+     * (an expansion's active batch) is let go here. Default: nothing is carried.
+     */
+    internal open fun releaseCarried() {}
+
+
+    /**
      * Live-edit compatibility (borrowed elements §3.6, docs/plans/2026-09-16_borrowed-elements.md): the part of
      * this Worker's NOTATION that its run-scoped state was opened over (a source's selection — the archive
      * path, the file selection), or null when every edit is compatible or is judged only in

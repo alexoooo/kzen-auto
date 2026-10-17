@@ -1,0 +1,19 @@
+# Sub-Script result fixture (ScriptResourceHoldTest): Run hosts a child whose result is an AutoCloseable; Check
+# reads it after the child has settled, throwing if the child's settle had closed it. Success proves the value is
+# live in the caller; the close count after the run proves it closed exactly once, with the caller.
+
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.String
+      generics: []
+      nullable: false
+
+main.steps/Run:
+  is: RunStep
+  instructions: "test/script/resource/script-closeable-child-test.yaml#main"
+
+main.steps/Check:
+  is: CheckOpenStep
+  input: main.steps/Run

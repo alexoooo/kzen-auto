@@ -1,0 +1,40 @@
+# Test-only Script step archetypes for ScriptResourceHoldTest, declared once here (see
+# ../engine/script-step-test-archetypes.yaml for why an archetype is never declared in a scenario document).
+# Each is a `@Reflect` test-source class served by the JVM reflective mirror. Together they make the value-graph
+# ownership rule observable: a step's AutoCloseable value is held by the Script frame, live for later steps,
+# and closed when superseded or when the frame settles.
+
+# Returns a fresh CloseCountingResource (AutoCloseable) named `name`, doing nothing else with it.
+OpenCloseableStep:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.server.exec.script.test.OpenCloseableStep
+  icon: "material-symbols:lock-open"
+  title: "Open closeable (test)"
+  name: ""
+  meta:
+    name:
+      is: String
+
+
+# Reads the referenced `input` as a still-open CloseCountingResource (throwing otherwise) and returns its name.
+CheckOpenStep:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.server.exec.script.test.CheckOpenStep
+  icon: "material-symbols:visibility"
+  title: "Check open (test)"
+  input: ""
+  meta:
+    input:
+      is: ObjectLocation
+      by: Nominal
+
+
+# Returns how many CloseCountingResources have closed so far.
+ClosedCountStep:
+  abstract: true
+  is: ScriptStep
+  class: tech.kzen.auto.server.exec.script.test.ClosedCountStep
+  icon: "material-symbols:tag"
+  title: "Closed count (test)"

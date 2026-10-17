@@ -9,7 +9,6 @@ import tech.kzen.auto.server.objects.job.expression.JobExpressionCompiler
 import tech.kzen.auto.server.objects.job.expression.JobExpressionValues
 import tech.kzen.auto.server.objects.job.value.ColumnProjections
 import tech.kzen.auto.server.objects.job.value.JobDataValues
-import tech.kzen.auto.server.objects.job.value.recycle.Recyclable
 import tech.kzen.auto.server.util.ClassLoaderUtils
 import tech.kzen.lib.common.exec.BinaryExecutionValue
 import tech.kzen.lib.common.exec.BooleanExecutionValue
@@ -25,6 +24,7 @@ import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.lib.common.exec.data.value.LiteralDataValues
 import tech.kzen.lib.common.exec.data.value.ValueMetadata
 import tech.kzen.lib.common.exec.data.value.overlay.MetadataShape
+import tech.kzen.lib.common.exec.engine.resource.ResourceOwners
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.reflect.Reflect
@@ -115,18 +115,19 @@ class FormulaWorker(
             else metadataShape(element.metadata, calculated).metadata(element.metadata, calculated)
 
         computed += 1
-        emit.send(inheriting(outputPayload.withMetadata(metadata), element, control))
+        emit.send(inheriting(outputPayload.withMetadata(metadata), element))
     }
 
 
     // E9 item 3: the output may hold anything reachable from the input (a replaced payload, the kept one), so a
-    // non-scalar output keeps the input's native open until its own consumer is done; a scalar carries no owner.
-    // Nothing is copied or inspected — only the ledger's owner set is propagated. For the same reason a pooled input
-    // behind a payload transform is forfeited.
-    private fun inheriting(output: DataValue, input: DataValue, control: JobControl): DataValue {
-        control.ownership()?.inherit(output, input)
-        Recyclable.forfeitDerived(output, input)
-        return output
+    // non-scalar output keeps the input's resources open until its own consumer is done; a scalar carries no
+    // owner. Nothing is copied or inspected — only the owners are propagated, a pooled input's among them.
+    private fun inheriting(output: DataValue, input: DataValue): DataValue {
+        val inherited = input.owners
+        if (output === input || inherited == null || output.type is DataType.Scalar) {
+            return output
+        }
+        return output.withOwners((output.owners ?: ResourceOwners.empty) + inherited)
     }
 
 

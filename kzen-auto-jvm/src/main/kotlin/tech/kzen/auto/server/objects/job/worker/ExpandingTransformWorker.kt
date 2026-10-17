@@ -24,7 +24,9 @@ import tech.kzen.lib.common.exec.data.value.DataValue
  * OWNERSHIP (E9): the channel's hold on an owned element stays in place until that element's expansion has
  * completed (the batch travels with its leases across a migration, so a replacement instance resumes the
  * element still held), and the callback holds its own per-callback lease alongside; a batch a removed Worker
- * carried is released when the engine closes its orphaned state.
+ * carried is released when the engine closes its orphaned state, and a Worker done for good without a capture
+ * — failed, or cancelled mid-expansion — releases the batch with itself ([releaseCarried]: the channel's capture
+ * no longer sees a detached batch). A failure that pauses the run keeps the batch, so an edit resumes the element.
  *
  * EARLY COMPLETION (borrowed elements §3.7): a closed downstream ([DownstreamClosedException] from the emitter)
  * ends the expansion and the Worker — the active batch's remaining channel holds are released, and the input is
@@ -38,6 +40,10 @@ abstract class ExpandingTransformWorker(
     private val emitter = Emitter(output)
     private var activeBatch: ReceivedBatch? = null
     private var nextIndex = 0
+
+    // Set by captureMigrationState: the active batch is the captured state's from then on, so the teardown that
+    // follows the barrier leaves it to the rebuilt instance
+    private var batchCaptured = false
 
 
     final override suspend fun drive(control: JobControl) {
@@ -81,7 +87,7 @@ abstract class ExpandingTransformWorker(
                 // then let the channel's hold go
                 nextIndex = index + 1
                 batch.markDispatched(index)
-                batch.channelLease(index)?.release()
+                batch.channelHold(index)?.release()
             }
 
             activeBatch = null
@@ -124,7 +130,19 @@ abstract class ExpandingTransformWorker(
 
 
     final override fun captureMigrationState(): Any {
+        batchCaptured = true
         return ExpansionState(activeBatch, nextIndex, captureExpansionState())
+    }
+
+
+    final override fun releaseCarried() {
+        if (batchCaptured) {
+            return
+        }
+        val dropped = activeBatch
+            ?: return
+        activeBatch = null
+        dropped.releaseRemaining()
     }
 
 
@@ -134,9 +152,21 @@ abstract class ExpandingTransformWorker(
             (captured as? AutoCloseable)?.close()
             return
         }
+        try {
+            loadExpansionState(state.adoptSubclassState())
+        }
+        catch (e: Throwable) {
+            // The expansion is never resumed: the batch's holds go with the refused state
+            try {
+                state.close()
+            }
+            catch (close: Exception) {
+                e.addSuppressed(close)
+            }
+            throw e
+        }
         activeBatch = state.adoptBatch()
         nextIndex = state.nextIndex
-        loadExpansionState(state.adoptSubclassState())
     }
 
 

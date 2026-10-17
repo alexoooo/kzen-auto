@@ -24,6 +24,7 @@ import tech.kzen.lib.common.exec.engine.Address
 import tech.kzen.lib.common.exec.engine.Execution
 import tech.kzen.lib.common.exec.engine.LogicFailure
 import tech.kzen.lib.common.exec.engine.context.InitialBinding
+import tech.kzen.lib.common.exec.engine.resource.Hold
 import tech.kzen.lib.common.exec.engine.restoredAs
 import tech.kzen.lib.common.exec.data.binding.BindingName
 import tech.kzen.lib.common.exec.data.binding.BindingSchema
@@ -98,6 +99,13 @@ class FlowRun(
     private val activeVertices = mutableMapOf<ObjectStableId, ActiveVertexModel>()
     private val outputAccumulator = mutableMapOf<BindingName, DataValue?>()
 
+    // This frame's holds on what each vertex last produced ([Execution.hold]) — its message and any batch
+    // remainder, stored as the values that carry their owners, so a downstream vertex and the harvested result
+    // read live resources. Released when the vertex next produces, so a superseded output closes if nothing
+    // else holds it. Carried across a live edit beside the messages ([FlowMigrationState.vertexHolds]): the
+    // engine lifts the holds themselves with the frame, and this map is what lets the rebuilt run release them.
+    private val vertexHolds = HashMap<ObjectStableId, List<Hold>>()
+
     // Per-vertex call-site context declarations, read from notation once per location — a host vertex inside a
     // stream/batch loop is re-visited every iteration. Confined to the run coroutine.
     private val callContextsCache = HashMap<ObjectLocation, List<ContextCallBinding>>()
@@ -119,9 +127,10 @@ class FlowRun(
         execution.restoredAs<FlowMigrationState>()?.let { carried ->
             activeVertices.putAll(carried.activeVertices)
             outputAccumulator.putAll(carried.outputAccumulator)
+            vertexHolds.putAll(carried.vertexHolds)
         }
         execution.onCapture {
-            FlowMigrationState(activeVertices.toMap(), outputAccumulator.toMap())
+            FlowMigrationState(activeVertices.toMap(), outputAccumulator.toMap(), vertexHolds.toMap())
         }
 
         val matrix = FlowMatrix.ofDocument(documentPath, graphDefinition.graphStructure)
@@ -250,13 +259,14 @@ class FlowRun(
                 as? MutableFlowOutput<*>)?.contract
             ?: DataContract(tech.kzen.lib.common.exec.data.type.DataType.Dynamic(nullable = true))
         val mainName = BindingName("main")
-        activeVertexModel.message = if (result.schema.find(mainName) == null) {
+        val main = if (result.schema.find(mainName) == null) {
             JobDataValues.lift(null, outputContract)
         }
-        else when (val main = result[mainName]) {
+        else when (val bound = result[mainName]) {
             BindingState.Unbound -> JobDataValues.lift(null, outputContract)
-            is BindingState.Bound -> main.value
+            is BindingState.Bound -> bound.value
         }
+        activeVertexModel.message = produced(stableId, main)
         activeVertexModel.epoch++
     }
 
@@ -354,19 +364,20 @@ class FlowRun(
 
         // Input vertices have no upstream; their message is the named run argument.
         if (reference is FlowRunInput) {
-            activeVertexModel.message = when (
-                val input = execution.inputs[reference.bindingName]) {
+            val input = when (val state = execution.inputs[reference.bindingName]) {
                 BindingState.Unbound -> null
-                is BindingState.Bound -> input.value
+                is BindingState.Bound -> state.value
             }
+            activeVertexModel.message = produced(stableId, input)
             activeVertexModel.epoch++
             return
         }
 
         // Output (sink) vertices have no output channel: capture the single upstream input as this vertex's
-        // message, which the run loop then harvests into the result bindings.
+        // message, which the run loop then harvests into the result bindings. Held here in its own right, so
+        // the harvested value outlives the upstream vertex's next production.
         if (reference is FlowRunOutput) {
-            activeVertexModel.message = singleInputMessage(vertexLocation, matrix)
+            activeVertexModel.message = produced(stableId, singleInputMessage(vertexLocation, matrix))
             activeVertexModel.epoch++
             return
         }
@@ -406,8 +417,11 @@ class FlowRun(
             }
 
             if (output.bufferHasMultiple()) {
+                val batch = ArrayList<DataValue>()
                 output.consumeAndClear { payload ->
-                    val value = edgeValue(output.contract, payload)
+                    batch.add(edgeValue(output.contract, payload))
+                }
+                for (value in produced(stableId, batch)) {
                     if (activeVertexModel.message == null) {
                         activeVertexModel.message = value
                     }
@@ -417,15 +431,39 @@ class FlowRun(
                 }
             }
             else {
-                activeVertexModel.message = output.getAndClear()?.let {
+                activeVertexModel.message = produced(stableId, output.getAndClear()?.let {
                     edgeValue(output.contract, it)
-                }
+                })
             }
             activeVertexModel.streamHasNext = output.streamHasNext()
         }
 
         activeVertexModel.state = nextState
         activeVertexModel.epoch++
+    }
+
+
+    // A vertex produced [values] (its message, then any batch remainder): this frame holds their resources and
+    // the vertex stores the values that carry them. Its previous production's holds are released AFTER the new
+    // ones are taken, so a value re-produced in its own place never has its count touch zero.
+    private fun produced(stableId: ObjectStableId, values: List<DataValue>): List<DataValue> {
+        val holds = ArrayList<Hold>(values.size)
+        val stored = values.map { value ->
+            val held = execution.hold(value)
+                ?: return@map value
+            holds.add(held.hold)
+            held.value
+        }
+        val previous =
+            if (holds.isEmpty()) vertexHolds.remove(stableId)
+            else vertexHolds.put(stableId, holds)
+        previous?.let { Hold.releaseAll(it) }
+        return stored
+    }
+
+
+    private fun produced(stableId: ObjectStableId, value: DataValue?): DataValue? {
+        return produced(stableId, listOfNotNull(value)).firstOrNull()
     }
 
 

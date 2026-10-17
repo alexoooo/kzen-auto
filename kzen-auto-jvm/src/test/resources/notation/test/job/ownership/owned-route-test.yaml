@@ -7,7 +7,7 @@ OwnedSourceWorker:
   abstract: true
   is: Worker
   title: "Owned Source (test)"
-  class: tech.kzen.auto.server.exec.job.ownership.OwnedSourceWorker
+  class: tech.kzen.auto.server.objects.job.worker.test.OwnedSourceWorker
   output: ""
   meta:
     output:
@@ -22,7 +22,7 @@ ForwardingTransformWorker:
   abstract: true
   is: Worker
   title: "Forwarding Transform (test)"
-  class: tech.kzen.auto.server.exec.job.ownership.ForwardingTransformWorker
+  class: tech.kzen.auto.server.objects.job.worker.test.ForwardingTransformWorker
   input: ""
   output: ""
   mode: forward
@@ -43,7 +43,7 @@ TeeTransformWorker:
   abstract: true
   is: Worker
   title: "Tee Transform (test)"
-  class: tech.kzen.auto.server.exec.job.ownership.TeeTransformWorker
+  class: tech.kzen.auto.server.objects.job.worker.test.TeeTransformWorker
   input: ""
   output: ""
   second: ""
@@ -66,7 +66,7 @@ ObservingSinkWorker:
   abstract: true
   is: Worker
   title: "Observing Sink (test)"
-  class: tech.kzen.auto.server.exec.job.ownership.ObservingSinkWorker
+  class: tech.kzen.auto.server.objects.job.worker.test.ObservingSinkWorker
   input: ""
   label: sink
   meta:
@@ -83,7 +83,7 @@ CopyingTransformWorker:
   abstract: true
   is: Worker
   title: "Copying Transform (test)"
-  class: tech.kzen.auto.server.exec.job.ownership.CopyingTransformWorker
+  class: tech.kzen.auto.server.objects.job.worker.test.CopyingTransformWorker
   input: ""
   output: ""
   independent: false

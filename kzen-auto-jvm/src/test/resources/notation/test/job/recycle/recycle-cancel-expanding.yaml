@@ -1,0 +1,31 @@
+# RecyclableRouteTest route "cancel-expanding" (archetypes in recycle-test.yaml): source → fan-out (expanding) →
+# gated sink. The run is cancelled while the fan-out holds its active batch mid-expansion, and both channels hold
+# buffered and parked values.
+main:
+  is: Job
+
+main.channels/items:
+  is: Channel
+  capacity: 1
+  batchSize: 4
+
+main.channels/expanded:
+  is: Channel
+  capacity: 1
+  batchSize: 1
+
+main.workers/source:
+  is: RecyclingSourceWorker
+  output: main.channels/items
+  count: 1000000
+
+main.workers/fanOut:
+  is: FanOutRecordWorker
+  input: main.channels/items
+  output: main.channels/expanded
+  fanOut: 3
+
+main.workers/sink:
+  is: RecyclableSinkWorker
+  input: main.channels/expanded
+  gate: true

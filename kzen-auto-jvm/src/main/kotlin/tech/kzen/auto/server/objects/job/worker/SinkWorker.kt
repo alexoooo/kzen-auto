@@ -40,7 +40,7 @@ abstract class SinkWorker(
             for (index in 0 until batch.size) {
                 val element = batch.elements[index]
                 batch.markDispatched(index)
-                CallbackLeases.transferring(control, element, batch.channelLease(index)) {
+                CallbackLeases.transferring(control, element, batch.channelHold(index)) {
                     onElement(element, control)
                 }
             }

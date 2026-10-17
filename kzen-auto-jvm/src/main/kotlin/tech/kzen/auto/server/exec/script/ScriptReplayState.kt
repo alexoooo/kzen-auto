@@ -3,6 +3,7 @@ package tech.kzen.auto.server.exec.script
 import tech.kzen.auto.common.objects.document.script.model.ScriptJumpAnalysis
 import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.engine.Execution
+import tech.kzen.lib.common.exec.engine.resource.Hold
 import tech.kzen.lib.common.exec.data.binding.DataBindings
 import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -143,8 +144,9 @@ class ScriptReplayState(
 
 
     /** Snapshot the run's completed work for carry-over at the migration barrier (see [ScriptMigrationState]). */
-    fun captureState(result: DataBindings?): ScriptMigrationState {
-        return ScriptMigrationState(LinkedHashMap(completedOutcomes), LinkedHashMap(carryStates), result)
+    fun captureState(result: DataBindings?, stepHolds: Map<ObjectStableId, Hold>): ScriptMigrationState {
+        return ScriptMigrationState(
+            LinkedHashMap(completedOutcomes), LinkedHashMap(carryStates), result, HashMap(stepHolds))
     }
 
 

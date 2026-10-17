@@ -13,9 +13,10 @@ import tech.kzen.lib.common.exec.data.value.DataState
 import tech.kzen.lib.common.exec.data.value.DataNode
 import tech.kzen.lib.common.exec.data.value.DataValue
 import tech.kzen.auto.plugin.api.data.Borrowed
-import tech.kzen.auto.server.exec.job.ownership.NativeIdentityRegistry
 import tech.kzen.auto.server.objects.job.value.recycle.Recyclable
 import tech.kzen.lib.common.exec.data.value.DefaultDataAdapterRegistry
+import tech.kzen.lib.common.exec.engine.resource.Resource
+import tech.kzen.lib.common.exec.engine.resource.ResourceOwners
 import tech.kzen.lib.common.exec.data.value.DataAccessException
 import tech.kzen.lib.common.exec.data.value.ValueAccess
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
@@ -32,16 +33,15 @@ import kotlin.reflect.KType
 
 /** Process-lifetime adapter entry point for values entering Job transport from native Logic boundaries. */
 internal object JobDataValues {
-    // A read through a native some run has closed fails by name (E9): the process-wide identity registry guards it
-    private val adapters = DefaultDataAdapterRegistry(livenessGuard = NativeIdentityRegistry.global.guard)
+    private val adapters = DefaultDataAdapterRegistry()
     private val flatHeaders = ConcurrentHashMap<HeaderListing, FlatRecordHeader>()
 
     fun lift(value: Any?, expected: DataContract? = null): DataValue {
         if (value is Borrowed<*>) {
-            // The wrapper is an ownership declaration, not data: the value reads as the wrapped object, and no
-            // run adopts it (E9)
-            NativeIdentityRegistry.global.markBorrowed(value.value)
+            // The wrapper is an ownership declaration, not data: the value reads as the wrapped object, and its
+            // owner is a borrowed resource, so no run adopts (and later closes) it (E9)
             return adapters.lift(value.value, expected)
+                .withOwners(ResourceOwners.of(Resource.borrowed(value.value)))
         }
         return adapters.lift(value, expected)
     }
@@ -124,6 +124,7 @@ internal object JobDataValues {
 
     /** The payload a framework Worker reads inside its callback; a pooled value stays pooled (see [callbackObject]). */
     fun native(value: DataValue): Any? {
+        value.requireOpen()
         if (value.access.state(value.root) == DataState.Null) {
             return null
         }
@@ -152,16 +153,17 @@ internal object JobDataValues {
      * may keep it, so a pooled value is forfeited.
      */
     fun boundary(value: DataValue): Any? {
-        Recyclable.forfeit(value)
+        value.owners?.entries()?.forEach { (it.native as? Recyclable)?.forfeit() }
         return callbackObject(value)
     }
 
     /**
      * [value] as [boundary] materializes it, for code that runs inside the current callback and keeps nothing
      * past it (a Job expression's reads): a pooled value stays pooled. What such code returns leaves through a
-     * Worker's own output, which forfeits the input when it may carry it (`Recyclable.forfeitDerived`).
+     * Worker's own output, which carries the input's owners when it may be derived from it.
      */
     fun callbackObject(value: DataValue): Any? {
+        value.requireOpen()
         scalarNativeProjection(value)?.let { return it }
         return boundaryNode(value.access, value.root)
     }
@@ -183,7 +185,7 @@ internal object JobDataValues {
             if (current.access.state(node) != DataState.Present) {
                 return ""
             }
-            current = DataValue(current.access, node)
+            current = current.child(node)
         }
         if (current.type !is DataType.Scalar) {
             return null

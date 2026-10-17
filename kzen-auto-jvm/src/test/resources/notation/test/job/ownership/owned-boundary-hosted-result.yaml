@@ -1,0 +1,16 @@
+# ResourceBoundaryTest route "hosted-result": a RunWorker hosts the child Job once and emits its result — the
+# live owned record, held by the hosting frame — to an observing sink.
+main:
+  is: Job
+
+main.workers/source:
+  is: FormulaSourceWorker
+  code: "listOf(1)"
+
+main.workers/run:
+  is: RunWorker
+  instructions: "test/job/ownership/owned-boundary-hosted-child.yaml#main"
+
+main.workers/sink:
+  is: ObservingSinkWorker
+  label: sink

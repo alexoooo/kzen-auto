@@ -8,7 +8,7 @@ main.channels/items:
 main.workers/source:
   is: FormulaSourceWorker
   output: main.channels/items
-  code: 'tech.kzen.auto.server.exec.job.ownership.ClosingStreams.stream(3)'
+  code: 'tech.kzen.auto.server.objects.job.worker.test.ClosingStreams.stream(3)'
 
 main.workers/sink:
   is: ObservingSinkWorker

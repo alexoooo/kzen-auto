@@ -16,6 +16,7 @@ import tech.kzen.lib.common.exec.engine.Execution
 import tech.kzen.lib.common.exec.engine.Logic
 import tech.kzen.lib.common.exec.engine.PauseReason
 import tech.kzen.lib.common.exec.engine.disposal.SettleDisposalPolicy
+import tech.kzen.lib.common.exec.engine.resource.Hold
 import tech.kzen.lib.common.exec.logic.ResourceClosePolicy
 import tech.kzen.lib.common.exec.data.binding.BindingName
 import tech.kzen.lib.common.exec.data.binding.BindingSchema
@@ -70,8 +71,15 @@ class ScriptRunContext(
 
 
     //----------------------------------------------------------------------------------------------- per-run state
-    // The live value graph downstream expressions reference (step outcomes + non-step bindings).
+    // The live value graph downstream expressions reference (step outcomes + non-step bindings), each entry the
+    // value as this frame holds it (see [record]).
     private val stepValues = HashMap<ObjectStableId, DataValue?>()
+
+    // This frame's hold on each slot's resources ([Execution.hold]), released when the slot is re-recorded so
+    // a superseded closeable (a loop body's previous iteration) closes if nothing else holds it. Carried across
+    // a live edit beside the values ([ScriptMigrationState.stepHolds]): the engine lifts the hold itself with
+    // the frame, and this map is what lets the rebuilt run release it on the next re-record.
+    private val stepHolds = HashMap<ObjectStableId, Hold>()
 
     // The replay / migration / move-to bookkeeping (see [ScriptReplayState]) and the typed context
     // resolution (see [ScriptStepContexts]) — both run-confined like this orchestrator.
@@ -457,7 +465,7 @@ class ScriptRunContext(
      * separately, once at run start, by [ScriptLogic] via [tech.kzen.auto.server.exec.LogicParameterTrace].
      */
     fun recordValue(stableId: ObjectStableId, value: DataValue?) {
-        stepValues[stableId] = value
+        record(stableId, value)
     }
 
 
@@ -499,16 +507,34 @@ class ScriptRunContext(
             state, moveTarget, moveDescendCallSite, removedStableIds,
             discardCaptured = { execution.discardCaptured(it) },
             emitIdle = { emitStepTrace(it, StepTrace.State.Idle, NullExecutionValue) })
+
+        // Every carried hold, whatever the restore above did with its slot's value: a slot the edit dropped
+        // re-records when its step runs again and releases the stale hold then; one that never re-records is
+        // released by the frame's settle like any other.
+        state?.stepHolds?.let(stepHolds::putAll)
     }
 
 
     /** Snapshot the run's completed work for carry-over at the migration barrier (see [ScriptMigrationState]). */
     fun captureState(): ScriptMigrationState {
-        return replay.captureState(resultValue)
+        return replay.captureState(resultValue, stepHolds)
     }
 
 
     //----------------------------------------------------------------------------------------------------- internals
+    // The one write to the value graph. This frame holds the value's resources and stores the value that carries
+    // them, so a later reader sees its owners; the slot's previous hold is released AFTER the new one is taken, so
+    // a value re-recorded in its own place never has its count touch zero.
+    private fun record(stableId: ObjectStableId, value: DataValue?): DataValue? {
+        val held = value?.let { execution.hold(it) }
+        val stored = held?.value ?: value
+        stepValues[stableId] = stored
+        val previous =
+            if (held == null) stepHolds.remove(stableId)
+            else stepHolds.put(stableId, held.hold)
+        previous?.release()
+        return stored
+    }
 
 
     // This step's stable id plus those of every step nested within it (an If's branches, a loop's body),
@@ -545,8 +571,7 @@ class ScriptRunContext(
 
 
     private fun adoptOutcome(stableId: ObjectStableId): DataValue? {
-        val value = replay.restoredOutcome(stableId)
-        stepValues[stableId] = value
+        val value = record(stableId, replay.restoredOutcome(stableId))
         replay.recordCompleted(stableId, value)
         emitStepTrace(
             stableId, StepTrace.State.Done, displayOf(value),
@@ -557,9 +582,9 @@ class ScriptRunContext(
 
 
     private fun markDone(stableId: ObjectStableId, value: DataValue?) {
-        stepValues[stableId] = value
-        replay.recordCompleted(stableId, value)
-        emitStepTrace(stableId, StepTrace.State.Done, displayOf(value), currentDetail)
+        val stored = record(stableId, value)
+        replay.recordCompleted(stableId, stored)
+        emitStepTrace(stableId, StepTrace.State.Done, displayOf(stored), currentDetail)
     }
 
 

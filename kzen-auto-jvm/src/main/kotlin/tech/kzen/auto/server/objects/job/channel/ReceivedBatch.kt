@@ -1,12 +1,12 @@
 package tech.kzen.auto.server.objects.job.channel
 
 import tech.kzen.auto.common.paradigm.job.api.ChannelInput
-import tech.kzen.auto.common.paradigm.job.control.ValueLease
 import tech.kzen.lib.common.exec.data.value.DataValue
+import tech.kzen.lib.common.exec.engine.resource.Hold
 
 
 /**
- * One physical batch as a framework drive loop consumes it: the elements, the channel lease each owned element
+ * One physical batch as a framework drive loop consumes it: the elements, the channel hold each owned element
  * carries, and how far the loop has dispatched. A [TransformWorker][tech.kzen.auto.server.objects.job.worker.TransformWorker]
  * / Sink marks an element dispatched before its callback (the element is the callback's from then on, and a
  * migration re-delivers only the [remaining] ones — the channel captures them while the batch stays attached);
@@ -16,12 +16,12 @@ import tech.kzen.lib.common.exec.data.value.DataValue
  */
 internal class ReceivedBatch(
     val elements: List<DataValue>,
-    private val leases: List<ValueLease?>,
+    private val holds: List<Hold?>,
     private var onDetach: (() -> Unit)?
 ) {
     companion object {
         /**
-         * The next batch of [input] for a framework loop: through the lease-carrying path when the input is a
+         * The next batch of [input] for a framework loop: through the hold-carrying path when the input is a
          * [JobChannel]'s, otherwise the SPI batch, unowned, converted element by element.
          */
         suspend fun receive(input: ChannelInput<*>, convert: (Any?) -> DataValue): ReceivedBatch? {
@@ -45,7 +45,7 @@ internal class ReceivedBatch(
 
 
     /** The channel's hold on the element at [index], or null for an unowned element. */
-    fun channelLease(index: Int): ValueLease? = leases[index]
+    fun channelHold(index: Int): Hold? = holds[index]
 
 
     /** Elements before and including [index] are the consumer's now; a migration re-delivers only those after. */
@@ -57,14 +57,14 @@ internal class ReceivedBatch(
     fun remainingCount(): Int = size - dispatched
 
 
-    /** The not-yet-dispatched tail, with its leases, for a migration's carryover. */
+    /** The not-yet-dispatched tail, with its holds, for a migration's carryover. */
     fun remaining(): ChannelCarryover {
         val from = dispatched
-        return ChannelCarryover(elements.subList(from, size), leases.subList(from, size))
+        return ChannelCarryover(elements.subList(from, size), holds.subList(from, size))
     }
 
 
-    /** Takes the batch off the channel's capture: the caller carries it (and releases its leases) from here on. */
+    /** Takes the batch off the channel's capture: the caller carries it (and releases its holds) from here on. */
     fun detach() {
         onDetach?.invoke()
         onDetach = null

@@ -1,4 +1,4 @@
-# OwnershipBoundaryTest route "borrowed": a transform emits a Borrowed closeable child of each owned parent.
+# ResourceBoundaryTest route "borrowed": a transform emits a Borrowed closeable child of each owned parent.
 main:
   is: Job
 

@@ -1,6 +1,8 @@
 package tech.kzen.auto.server.objects.job.value.recycle
 
 import org.junit.Test
+import tech.kzen.lib.common.exec.engine.resource.Hold
+import tech.kzen.lib.common.exec.engine.resource.Holder
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -13,6 +15,7 @@ class RecyclablePoolTest {
     private val elements = 200_000
     private val queueCapacity = 64
     private val releasers = 4
+    private val holder = Holder("test")
 
 
     @Test
@@ -21,10 +24,8 @@ class RecyclablePoolTest {
         val pool = RecyclablePool { PooledRecord(it).also(created::add) }
         val first = pool.acquire()
         val second = pool.acquire()
-        first.hold()
-        second.hold()
-        first.release()
-        second.release()
+        first.resource.hold(holder).release()
+        second.resource.hold(holder).release()
         val reused = setOf(pool.acquire(), pool.acquire())
         assertEquals(setOf(first, second), reused)
         assertEquals(2, pool.created)
@@ -39,17 +40,17 @@ class RecyclablePoolTest {
         // handed out again while still held, or recycled twice, would show a hold at acquire or an extra generation
         val created = mutableListOf<PooledRecord>()
         val pool = RecyclablePool { PooledRecord(it).also(created::add) }
-        val queue = ArrayBlockingQueue<PooledRecord>(queueCapacity)
+        val queue = ArrayBlockingQueue<Hold>(queueCapacity)
         val stillHeld = AtomicInteger(0)
-        val done = PooledRecord(RecyclablePool { PooledRecord(it) })
+        val done = Hold.none
         val workers = (1..releasers).map {
             thread {
                 while (true) {
-                    val record = queue.take()
-                    if (record === done) {
+                    val hold = queue.take()
+                    if (hold === done) {
                         break
                     }
-                    record.release()
+                    hold.release()
                 }
             }
         }
@@ -59,8 +60,7 @@ class RecyclablePoolTest {
             if (record.holds() != 0) {
                 stillHeld.incrementAndGet()
             }
-            record.hold()
-            queue.put(record)
+            queue.put(record.resource.hold(holder))
         }
         repeat(releasers) {
             queue.put(done)

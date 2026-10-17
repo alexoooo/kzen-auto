@@ -13,12 +13,6 @@ import tech.kzen.auto.common.data.schema.DataShape
 import tech.kzen.auto.common.data.schema.HeaderListing
 import tech.kzen.auto.common.data.schema.LegacyDataShapeBridge
 import tech.kzen.auto.common.paradigm.job.control.JobControl
-import tech.kzen.auto.common.paradigm.job.control.ValueLease
-import tech.kzen.auto.server.exec.job.ownership.CloseCountingResource
-import tech.kzen.auto.server.exec.job.ownership.NativeIdentityRegistry
-import tech.kzen.auto.server.exec.job.ownership.RunOwnershipControl
-import tech.kzen.auto.server.exec.job.ownership.RunOwnershipLedger
-import tech.kzen.lib.common.exec.logic.run.model.LogicRunId
 import tech.kzen.auto.plugin.model.record.FlatFileRecord
 import tech.kzen.auto.plugin.model.record.FlatRecordHeader
 import tech.kzen.lib.common.exec.data.value.DataNode
@@ -47,6 +41,10 @@ import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
+import tech.kzen.auto.server.exec.job.RunResourceControl
+import tech.kzen.auto.server.objects.job.worker.test.CloseCountingResource
+import tech.kzen.lib.common.exec.engine.resource.Hold
+import tech.kzen.lib.common.exec.engine.resource.ResourceRegistry
 
 
 class DataReadCoreTest {
@@ -649,11 +647,11 @@ class DataReadCoreTest {
     }
 
 
-    /** A control inside a run: the pulled items are adopted by its ledger. */
-    private class OwningControl: TrackingControl(), RunOwnershipControl {
-        override val ledger = RunOwnershipLedger(LogicRunId("data-read-core"), NativeIdentityRegistry())
+    /** A control inside a run: the pulled items are adopted by its resource registry. */
+    private class OwningControl: TrackingControl(), RunResourceControl {
+        override val resources = ResourceRegistry()
 
-        override fun holdForCallback(value: DataValue): ValueLease =
+        override fun holdForCallback(value: DataValue): Hold =
             throw UnsupportedOperationException("DataReadCore holds no callback")
     }
 

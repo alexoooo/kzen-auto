@@ -18,12 +18,12 @@ import kotlin.reflect.typeOf
 
 
 /**
- * The pool slot of one [Bytes]: the value's access, so [Recyclable.of] finds it, and its [bytes] as the native the
- * value hands out by identity. The slot is separate from the [Bytes] it owns because a [Recyclable]'s public members
- * would otherwise make the native describe as a record of them.
+ * The pool slot of one [Bytes]: the value's access, carrying the slot's resource as the value's owners, and its
+ * [bytes] as the native the value hands out by identity. The slot is separate from the [Bytes] it owns because a
+ * [Recyclable]'s public members would otherwise make the native describe as a record of them.
  *
- * Holds one value per slot, made again only when the metadata object changes, so a producer that reuses its
- * metadata emits without allocating.
+ * Holds one value per slot, made again only when the metadata object or the slot's trip out of the pool changes,
+ * so a producer that reuses its metadata emits one value per chunk.
  */
 class PooledBytes(
     pool: RecyclablePool<PooledBytes>
@@ -43,7 +43,7 @@ class PooledBytes(
     //-----------------------------------------------------------------------------------------------------------------
     val bytes = Bytes()
 
-    private var value = DataValue(this, root)
+    private var value = DataValue(this, root, null, owners)
 
     override val recyclable: Recyclable
         get() = this
@@ -52,10 +52,11 @@ class PooledBytes(
     /** The slot's value with [metadata]; the slot's own until it is sent. */
     fun value(metadata: ValueMetadata?): DataValue {
         val current = value
-        if (current.metadata === metadata) {
+        val owners = owners
+        if (current.metadata === metadata && current.owners === owners) {
             return current
         }
-        val next = DataValue(this, root, metadata)
+        val next = DataValue(this, root, metadata, owners)
         value = next
         return next
     }

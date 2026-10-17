@@ -8,7 +8,6 @@ import tech.kzen.auto.server.data.write.RecordCells
 import tech.kzen.auto.server.data.write.RecordEncoder
 import tech.kzen.auto.server.data.write.RecordOutputState
 import tech.kzen.auto.server.objects.job.value.JobDataValues
-import tech.kzen.auto.server.objects.job.value.recycle.Recyclable
 import tech.kzen.auto.server.objects.job.value.recycle.RecyclablePool
 import tech.kzen.auto.server.objects.job.worker.WriterColumns
 import tech.kzen.auto.server.objects.job.worker.content.Bytes
@@ -30,6 +29,7 @@ import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import tech.kzen.lib.common.exec.engine.resource.Holder
 
 
 /**
@@ -206,9 +206,7 @@ class FormatChunkerTest {
             bytes.headerLength(),
             bytes.endsOutput(),
             JobDataValues.metadataText(chunk.metadata?.value, FileValues.parent, "file"))
-        val slot = Recyclable.of(chunk)!!
-        slot.hold()
-        slot.release()
+        chunk.owners!!.hold(Holder("test")).release()
         return seen
     }
 }

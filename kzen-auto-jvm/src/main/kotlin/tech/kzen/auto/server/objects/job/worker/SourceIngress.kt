@@ -1,43 +1,56 @@
 package tech.kzen.auto.server.objects.job.worker
 
 import tech.kzen.auto.common.paradigm.job.control.JobControl
-import tech.kzen.auto.common.paradigm.job.control.ValueLease
 import tech.kzen.auto.plugin.api.data.Borrowed
-import tech.kzen.auto.server.exec.job.ownership.LeaseHolder
-import tech.kzen.auto.server.exec.job.ownership.OwnerSet
-import tech.kzen.auto.server.exec.job.ownership.RunOwnershipLedger
 import tech.kzen.auto.server.objects.logic.ExpressionReturnTypeInference
+import tech.kzen.lib.common.exec.engine.resource.Hold
+import tech.kzen.lib.common.exec.engine.resource.Holder
+import tech.kzen.lib.common.exec.engine.resource.Resource
+import tech.kzen.lib.common.exec.engine.resource.ResourceOwners
+import tech.kzen.lib.common.exec.engine.resource.ResourceRegistry
 import tech.kzen.lib.common.model.location.ObjectLocation
 
 
 /**
  * The framework's source-ingress boundary (E9 item 2): where the framework owns the pull, a native is adopted
- * **inside the blocking acquisition body, before the cancellable return to the coroutine** — so a cancel that
- * wins the return dispatch cannot discard an acquired resource (the run's teardown closes it instead). The
- * producer hold taken here is released by the source after its send (the channel holds from then on) or on
- * any earlier exit, which closes the item. An opened stream's closeable iterator and container are adopted the
- * same way, held by the source's location until the source lets the stream go.
+ * **inside the blocking acquisition body, before the cancellable return to the coroutine** — and recorded as the
+ * body's acquisition ([BlockingAcquisitions]), so a cancel that wins the return dispatch lets the hold go
+ * instead of dropping it. The producer hold taken here is released by the source after its send (the channel
+ * holds from then on) or on any earlier exit, which closes the item. An opened stream's closeable iterator and
+ * container are adopted the same way, held by the source's location until the source lets the stream go.
  *
  * [pull] takes up to [Emitter.batchSize] elements per blocking trip — one dispatcher hop amortized over a
  * batch of scalars — but returns as soon as it adopted a closeable: an owned item is never pulled ahead of, so
  * an arena-backed source parks on its next permit only after the item that would return it has been sent.
- * Outside a run (no ledger) nothing is adopted and the source behaves as a plain pull loop.
+ * Outside a run (no registry) nothing is adopted and the source behaves as a plain pull loop.
  */
 internal class SourceIngress(
     private val control: JobControl,
     selfLocation: ObjectLocation
 ) {
-    private val ledger: RunOwnershipLedger? = control.ownership()
-    private val streamHolder = LeaseHolder(selfLocation.asString())
+    companion object {
+        /** The holder of the pull-to-send hold on an adopted item, before its channel takes over. */
+        val producerHolder = Holder("producer")
+    }
 
 
-    /** The run's ledger, for lifting acquired items with their owners; null outside a run. */
-    fun ledger(): RunOwnershipLedger? = ledger
+    private val registry: ResourceRegistry? = control.resources()
+    private val streamHolder = Holder(selfLocation.asString())
+
+
+    /** The run's resource registry, for what a source adopts beyond this ingress; null outside a run. */
+    fun registry(): ResourceRegistry? = registry
 
 
     /** Opens a stream on the blocking dispatcher, adopting its closeable parts before returning. */
     suspend fun openStream(open: () -> Any?): OpenedStream? {
-        return control.runBlockingIo { adoptStream(open()) }
+        return control.runBlockingIoAcquiring { acquired ->
+            adoptStream(open())?.also { stream ->
+                if (stream.closeable) {
+                    acquired.record(stream::close)
+                }
+            }
+        }
     }
 
 
@@ -54,12 +67,12 @@ internal class SourceIngress(
         if (value !== iterator) {
             (value as? AutoCloseable)?.let { closeables.add(it) }
         }
-        if (ledger == null) {
+        if (registry == null) {
             return OpenedStream(iterator, closeables, emptyList())
         }
-        val adoptions = closeables.map { closeable -> ledger.adopt(closeable, streamHolder) }
-        val owners = adoptions.fold(OwnerSet.empty) { acc, adoption -> acc + adoption.owners }
-        return OpenedStream(iterator, closeables, adoptions.map { it.producerLease }, owners)
+        val adoptions = closeables.map { closeable -> registry.adopt(closeable, closeable::close, streamHolder) }
+        val owners = adoptions.fold(ResourceOwners.empty) { acc, adoption -> acc + ResourceOwners.of(adoption.resource) }
+        return OpenedStream(iterator, closeables, adoptions.map { it.hold }, owners)
     }
 
 
@@ -71,13 +84,14 @@ internal class SourceIngress(
      */
     suspend fun pull(stream: OpenedStream, limit: Int): List<AcquiredItem> {
         val iterator = stream.iterator
-        return control.runBlockingIo {
+        return control.runBlockingIoAcquiring { acquired ->
             val pulled = ArrayList<AcquiredItem>()
             while (pulled.size < limit.coerceAtLeast(1) && iterator.hasNext()) {
                 val element = iterator.next()
-                val item = adopt(element, if (element is LentElement) stream.owners else OwnerSet.empty)
+                val item = adopt(element, if (element is LentElement) stream.owners else ResourceOwners.empty)
                 pulled.add(item)
                 if (item.owned) {
+                    acquired.record(item::release)
                     break
                 }
             }
@@ -86,14 +100,24 @@ internal class SourceIngress(
     }
 
 
-    /** Adopts one pulled element (inside a blocking body). */
-    fun adopt(element: Any?, inherited: OwnerSet = OwnerSet.empty): AcquiredItem {
-        if (ledger == null) {
+    /**
+     * Adopts one pulled element (inside a blocking body). A `Borrowed` native is unwrapped and carries a borrowed
+     * resource instead of being adopted: the run never closes it, and a channel's hold on the lifted value finds
+     * the owner already named rather than adopting the closeable itself.
+     */
+    fun adopt(element: Any?, inherited: ResourceOwners = ResourceOwners.empty): AcquiredItem {
+        if (registry == null) {
             val native = if (element is Borrowed<*>) element.value else element
-            return AcquiredItem(native, OwnerSet.empty, ValueLease.none)
+            return AcquiredItem(native, ResourceOwners.empty, Hold.none)
         }
-        val adoption = ledger.adopt(element, LeaseHolder.producer, inherited)
-        return AcquiredItem(adoption.native, adoption.owners, adoption.producerLease)
+        if (element is Borrowed<*>) {
+            return AcquiredItem(element.value, ResourceOwners.of(Resource.borrowed(element.value)) + inherited, Hold.none)
+        }
+        if (element !is AutoCloseable) {
+            return AcquiredItem(element, inherited, Hold.none)
+        }
+        val adoption = registry.adopt(element, element::close, producerHolder)
+        return AcquiredItem(element, ResourceOwners.of(adoption.resource) + inherited, adoption.hold)
     }
 
 

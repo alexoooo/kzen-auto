@@ -4,6 +4,7 @@ import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.server.objects.job.value.recycle.Recyclable
+import tech.kzen.auto.server.objects.job.value.recycle.RecyclableAccess
 import tech.kzen.auto.server.objects.job.worker.Emitter
 import tech.kzen.auto.server.objects.job.worker.TransformWorker
 import tech.kzen.lib.common.exec.data.value.DataValue
@@ -70,7 +71,7 @@ class ChunkStampWorker(
 
 
     override suspend fun onElement(element: DataValue, emit: Emitter, control: JobControl) {
-        val slot = checkNotNull(Recyclable.of(element) as? PooledBytes) { "A chunk must be pooled" }
+        val slot = checkNotNull((element.access as? RecyclableAccess)?.recyclable as? PooledBytes) { "A chunk must be pooled" }
         stamps[slot.bytes.buffer().bytes] = Stamp(slot, slot.generation)
         stamped.incrementAndGet()
         emit.send(element)

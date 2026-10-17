@@ -3,6 +3,7 @@ package tech.kzen.auto.server.exec.flow
 import tech.kzen.auto.common.paradigm.flow.model.exec.ActiveVertexModel
 import tech.kzen.lib.common.exec.data.binding.BindingName
 import tech.kzen.lib.common.exec.data.value.DataValue
+import tech.kzen.lib.common.exec.engine.resource.Hold
 import tech.kzen.lib.common.service.store.normal.ObjectStableId
 
 
@@ -21,8 +22,14 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableId
  *
  * A vertex the edit removed simply isn't re-selected by the rebuilt DAG (the walker, snapshot and end-of-run
  * clearing all iterate the new matrix), so its carried entry is inert — the best-effort default of spec §5.
+ *
+ * [vertexHolds] are the frame's holds on what each vertex last produced
+ * ([tech.kzen.lib.common.exec.engine.Execution.hold]). A migration never releases one — the engine lifts the
+ * holds with the frame, so an owned message stays open across the edit — and the rebuilt run releases a carried
+ * hold only when that vertex produces again (or at its settle, for a vertex that never does).
  */
 data class FlowMigrationState(
     val activeVertices: Map<ObjectStableId, ActiveVertexModel>,
-    val outputAccumulator: Map<BindingName, DataValue?>
+    val outputAccumulator: Map<BindingName, DataValue?>,
+    val vertexHolds: Map<ObjectStableId, List<Hold>>
 )

@@ -2,6 +2,7 @@ package tech.kzen.auto.server.exec.script
 
 import tech.kzen.lib.common.exec.data.binding.DataBindings
 import tech.kzen.lib.common.exec.data.value.DataValue
+import tech.kzen.lib.common.exec.engine.resource.Hold
 import tech.kzen.lib.common.service.store.normal.ObjectStableId
 
 
@@ -18,9 +19,13 @@ import tech.kzen.lib.common.service.store.normal.ObjectStableId
  *   derived from the old definition keeps its pre-edit course to its natural end rather than re-running
  *   completed side effects.
  * - [result]: the captured Result value.
+ * - [stepHolds]: the frame's hold on each value-graph slot's resources ([tech.kzen.lib.common.exec.engine.Execution.hold]).
+ *   A migration never releases one — the engine lifts the holds with the frame, so an owned step value stays
+ *   open across the edit — and the rebuilt run releases a carried hold only when it re-records that slot.
  */
 data class ScriptMigrationState(
     val completedOutcomes: Map<ObjectStableId, DataValue?>,
     val stepCarry: Map<ObjectStableId, Any?>,
-    val result: DataBindings?
+    val result: DataBindings?,
+    val stepHolds: Map<ObjectStableId, Hold>
 )

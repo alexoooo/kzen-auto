@@ -11,7 +11,7 @@ main.channels/items:
 main.workers/source:
   is: FormulaSourceWorker
   output: main.channels/items
-  code: 'tech.kzen.auto.server.exec.job.ownership.ClosingStreams.resources(40)'
+  code: 'tech.kzen.auto.server.objects.job.worker.test.ClosingStreams.resources(40)'
 
 main.workers/sink:
   is: GatedCountingSinkWorker

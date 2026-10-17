@@ -1,0 +1,28 @@
+# ResourceBoundaryTest route "hosted-result", the hosted child: an owned record kept (last) as the Job's result,
+# handed live to the hosting frame. The `trigger` parameter only gives the host's RunWorker an input to bind.
+main:
+  is: Job
+  results:
+    main:
+      class: kotlin.Any
+      generics: []
+      nullable: true
+
+main.parameters/trigger:
+  is: ParameterBinding
+  type:
+    class: kotlin.Any
+    generics: []
+    nullable: true
+
+main.channels/items:
+  is: Channel
+
+main.workers/source:
+  is: OwnedSourceWorker
+  output: main.channels/items
+
+main.workers/collect:
+  is: ResultSinkWorker
+  input: main.channels/items
+  keep: last

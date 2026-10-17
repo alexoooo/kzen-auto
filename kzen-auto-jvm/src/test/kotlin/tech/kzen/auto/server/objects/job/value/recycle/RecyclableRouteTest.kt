@@ -35,11 +35,13 @@ import kotlin.test.assertTrue
 
 
 /**
- * Pooled values (WR2) through the Job's channels and Workers. A record goes back to its pool after its last
- * reader on the routes that only read it (Filter, a metadata-only or scalar Formula, Preview, an expanding
- * transform), and is forfeited — never recycled — wherever it may be kept (Sort, Result, a non-scalar Formula
- * payload, a child Logic, plain-Java code). Early close, failure mid-batch, cancellation and live-edit migration
- * with values in flight never recycle a record anything can still read; the pool stays at the in-flight count.
+ * Pooled values (WR2 over RH4) through the Job's channels and Workers. A record is an owned element: it goes
+ * back to its pool after its last holder on every route the framework can see end to end (Filter, Formula —
+ * a derived payload inherits the record as an owner — Preview, Sort's retention, an expanding transform, the
+ * elements a Result does not keep), and is forfeited — never recycled — only where it crosses into code the
+ * framework cannot see (a Result's boundary, a child Logic, plain-Java code). Early close, failure mid-batch,
+ * cancellation and live-edit migration with values in flight never recycle a record anything can still read;
+ * the pool stays at the in-flight count.
  *
  * Every record counts its returns to the pool in its generation, so the sum over every created record is the
  * number of recycles; a read of a recycled record fails by name and is counted.
@@ -63,7 +65,7 @@ class RecyclableRouteTest {
             context.close()
         }
         assertEquals(0, PooledRecord.useAfterRecycle.get(), "a record was read after it was recycled")
-        assertEquals(0, RecyclableSinkWorker.ledgerOwned.get(), "a pooled record had ledger owners")
+        assertEquals(0, RecyclableSinkWorker.foreignOwned.get(), "a pooled record carried a foreign owner")
     }
 
 
@@ -93,11 +95,11 @@ class RecyclableRouteTest {
 
 
     @Test
-    fun nonScalarFormulaPayloadForfeitsTheRecord() {
+    fun nonScalarFormulaPayloadInheritsTheRecordAndRecyclesItAfterTheSink() {
         assertIs<Outcome.Success>(run("formula-listing"))
         val received = RecyclableSinkWorker.of("sink")
         assertEquals((0 until 50).map { listOf(it.toLong(), RecyclingSourceWorker.name(it, 50)) }, received)
-        assertAllForfeited()
+        assertAllRecycled()
     }
 
 
@@ -105,17 +107,21 @@ class RecyclableRouteTest {
     fun takeClosingEarlyRecyclesTheAbandonedRemainder() {
         assertIs<Outcome.Success>(run("take"))
         assertEquals((0L until 5L).toList(), sinkIds())
-        // The Take's whole first input batch: five through the sink, the rest abandoned and released by the Take
-        assertTrue(recycles() >= 1024, "recycled ${recycles()} of ${RecyclingSourceWorker.acquired.get()}")
+        // Five through the sink, the buffered rest released by the Take's close; the one send that found the
+        // downstream already closed never took a hold, so that record is the pool's loss (a leak, never an early
+        // recycle)
+        val acquired = RecyclingSourceWorker.acquired.get()
+        assertTrue(recycles() >= 5, "recycled ${recycles()} of $acquired")
+        assertTrue(acquired - recycles() <= 1, "recycled ${recycles()} of $acquired")
         assertEquals(0, forfeited())
     }
 
 
     @Test
-    fun sortRetainingForfeitsEveryRecordAndStillEmitsThemReadable() {
+    fun sortRetainingHoldsEveryRecordUntilItsEmissionAndRecyclesThemAfterTheSink() {
         assertIs<Outcome.Success>(run("sort"))
         assertEquals((19L downTo 0L).toList(), sinkIds(), "sorted by name, the reverse of the ids")
-        assertAllForfeited()
+        assertAllRecycled()
     }
 
 
@@ -148,10 +154,11 @@ class RecyclableRouteTest {
 
 
     @Test
-    fun resultKeepingTheLastForfeitsEveryRecordItSnapshotted() {
+    fun resultKeepingTheLastReleasesEachReplacedRecordAndForfeitsOnlyTheKeptOne() {
         val result = assertIs<Map<*, *>>(mainResult(assertIs<Outcome.Success>(run("result-last")).value))
         assertEquals(4L, (result["id"] as Number).toLong())
-        assertAllForfeited()
+        assertEquals(1, forfeited())
+        assertEquals(4, recycles())
     }
 
 
@@ -180,40 +187,58 @@ class RecyclableRouteTest {
 
 
     @Test
-    fun sinkFailingMidBatchRecyclesWhatItReadAndLeaksTheRemainder() {
+    fun sinkFailingMidStreamRecyclesEveryRecordTheRunHeld() {
         val failed = assertIs<Outcome.Failed>(run("sink-failure"))
         assertTrue(failed.toString().contains("recycle fixture failure at 3"), failed.toString())
-        // Three callbacks returned and the failing one's lease was released; the rest of the batch leaks
-        assertEquals(4, recycles())
-        assertEquals(0, forfeited())
+        // Three callbacks returned and the failing one's hold was released; whatever the source had buffered or
+        // parked is released by the teardown
+        assertAllRecycled()
     }
 
 
     @Test
-    fun transformFailingMidBatchRecyclesOnlyTheFailingElement() {
+    fun transformFailingMidStreamRecyclesEveryRecordTheRunHeld() {
         val failed = assertIs<Outcome.Failed>(run("transform-failure"))
         assertTrue(failed.toString().contains("recycle fixture failure"), failed.toString())
-        // The earlier outputs share their records and wait unflushed in the Formula's output: they leak with it
-        assertEquals(1, recycles())
-        assertEquals(0, forfeited())
+        // Owned elements flush at once, so the earlier outputs reached the sink; the failing element, the
+        // buffered rest and a parked send are released by the teardown
+        assertAllRecycled()
     }
 
 
     @Test
-    fun cancellingWithValuesInFlightRecyclesNothing() {
+    fun cancellingWithValuesInFlightRecyclesThemOnlyAtTheTeardown() {
         val engine = newEngine(document("cancel"))
         try {
             engine.resume()
-            // Two batches of eight buffered and one parked mid-flush behind the gated sink
-            awaitStable("the source parked") { RecyclingSourceWorker.acquired.get() == 24 }
+            // Owned elements flush at once: two single-record batches buffered and one parked behind the gated sink
+            awaitStable("the source parked") { RecyclingSourceWorker.acquired.get() == 3 }
             engine.cancel()
             assertIs<Outcome.Cancelled>(runBlocking { withTimeout(hangGuardMillis) { engine.await() } })
         }
         finally {
             engine.close()
         }
-        assertEquals(0, recycles())
-        assertEquals(24, RecyclingSourceWorker.created.size)
+        assertEquals(3, RecyclingSourceWorker.created.size)
+        assertEquals(3, recycles(), "the teardown released what the channel held")
+    }
+
+
+    @Test
+    fun cancellingMidExpansionRecyclesTheRecordInHand() {
+        val engine = newEngine(document("cancel-expanding"))
+        try {
+            engine.resume()
+            // The fan-out expands its first record while the second is buffered and the third parked
+            awaitStable("the pipeline parked") { RecyclingSourceWorker.acquired.get() == 3 }
+            engine.cancel()
+            assertIs<Outcome.Cancelled>(runBlocking { withTimeout(hangGuardMillis) { engine.await() } })
+        }
+        finally {
+            engine.close()
+        }
+        assertEquals(3, RecyclingSourceWorker.created.size)
+        assertAllRecycled()
     }
 
 
@@ -234,8 +259,8 @@ class RecyclableRouteTest {
     fun liveEditCarriesBufferedAndParkedRecordsAndTheNewSinkRecyclesThem() {
         val documentPath = document("migration-buffered")
         migrate(documentPath) {
-            // Two batches of four buffered and one parked mid-flush behind the gated sink
-            awaitStable("the source parked") { RecyclingSourceWorker.acquired.get() == 12 }
+            // Owned elements flush at once: two single-record batches buffered and one parked behind the gated sink
+            awaitStable("the source parked") { RecyclingSourceWorker.acquired.get() == 3 }
         }
         assertEquals((0L until 40L).toList(), sinkIds(), "every record once, in order")
         assertEquals(2, RecyclingSourceWorker.pools.size, "the edit replaced the source")
@@ -246,9 +271,10 @@ class RecyclableRouteTest {
     @Test
     fun liveEditResumesAnExpandingTransformMidBatchOnItsCarriedHolds() {
         val documentPath = document("migration-expanding")
-        migrate(documentPath) {
-            // The fan-out expands its first batch while the second is buffered and the third parked
-            awaitStable("the pipeline parked") { RecyclingSourceWorker.acquired.get() == 12 }
+        // The record inside the active expansion is held by the channel and the callback alike
+        migrate(documentPath, heldBy = 1..2) {
+            // The fan-out expands its first record while the second is buffered and the third parked
+            awaitStable("the pipeline parked") { RecyclingSourceWorker.acquired.get() == 3 }
         }
         val expected = (0 until 16).flatMap { id -> (0 until 3).map { "$id-$it" } }
         assertEquals(expected, RecyclableSinkWorker.of("sink"), "every output once, in order")
@@ -299,15 +325,17 @@ class RecyclableRouteTest {
     private fun awaitStable(what: String, condition: () -> Boolean) {
         val deadlineNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(hangGuardMillis)
         while (!condition()) {
-            assertTrue(System.nanoTime() < deadlineNanos, "timed out waiting for $what")
+            assertTrue(
+                System.nanoTime() < deadlineNanos,
+                "timed out waiting for $what (acquired ${RecyclingSourceWorker.acquired.get()})")
             Thread.sleep(10)
         }
         Thread.sleep(settleMillis)
-        assertTrue(condition(), "$what, and stayed")
+        assertTrue(condition(), "$what, and stayed (acquired ${RecyclingSourceWorker.acquired.get()})")
     }
 
 
-    private fun migrate(documentPath: DocumentPath, awaitInFlight: () -> Unit) {
+    private fun migrate(documentPath: DocumentPath, heldBy: IntRange = 1..1, awaitInFlight: () -> Unit) {
         context = KzenAutoContext.forTest()
         val jobLocation = ObjectLocation(documentPath, ObjectPath.parse("main"))
         val sinkLocation = ObjectLocation(documentPath, ObjectPath.parse("main.workers/sink"))
@@ -321,7 +349,9 @@ class RecyclableRouteTest {
             engine.pause()
             engine.awaitQuiescent()
             assertEquals(0, recycles(), "nothing was released before the cut")
-            assertTrue(RecyclingSourceWorker.created.all { it.holds() == 1 }, "each in-flight record held once")
+            assertTrue(
+                RecyclingSourceWorker.created.all { it.holds() in heldBy },
+                "each in-flight record held: ${RecyclingSourceWorker.created.map { it.holds() }}")
             engine.migrate(editedLogic, paused = false)
             assertIs<Outcome.Success>(runBlocking { withTimeout(hangGuardMillis) { engine.await() } })
         }

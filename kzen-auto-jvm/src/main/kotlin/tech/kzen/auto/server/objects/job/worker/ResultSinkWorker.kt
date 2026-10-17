@@ -11,6 +11,8 @@ import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.auto.server.service.compile.CachedKotlinCompiler
 import tech.kzen.lib.common.exec.data.binding.BindingName
 import tech.kzen.lib.common.exec.data.value.DataValue
+import tech.kzen.lib.common.exec.engine.resource.Hold
+import tech.kzen.lib.common.exec.engine.resource.ResourceOwners
 import tech.kzen.lib.common.model.location.ObjectLocation
 import tech.kzen.lib.common.model.structure.metadata.TypeMetadata
 import tech.kzen.lib.common.reflect.Reflect
@@ -36,9 +38,10 @@ import tech.kzen.lib.platform.ClassNames
  * a single sink with default config satisfies it with zero configuration. A Job may carry several ResultSinks,
  * each yielding its own declared named component. [progress] also pushes the kept value's display text so the
  * card's ResultWorkerDisplay shows it in a value box (live for [last], settled on the forced final publish).
- * An element the run OWNS (E9) is kept as a [JobControl.snapshot] — a structural copy taken inside the
- * callback — so the Result stays readable after the run closed the native and never carries its identity;
- * an opaque owned native fails the run by name here rather than escaping.
+ * An element that depends on a resource (E9) is kept under a [JobControl.retain] hold of this sink, so it stays
+ * open while the sink keeps it, and yielded as the live value with its owners: the Job's root frame holds it from
+ * the yield until it settles (plan §3.3), so a hosting frame reads the Result open and the resource closes once
+ * nothing holds it any more.
  *
  * LIVE-EDIT MIGRATION: the kept element (and the seen-count) is carried across a live edit ([SortWorker]'s-buffer
  * precedent) — REQUIRED for correctness, since an unchanged upstream resumes rather than replays, so a sink that
@@ -47,9 +50,9 @@ import tech.kzen.lib.platform.ClassNames
  * [tech.kzen.auto.server.exec.job.JobResultCollector], so the relaunched sink (a Job relaunches completed
  * Workers — logic-spec §5) re-drains the now-instantly-closed channel and re-yields at [onComplete] — which
  * works for free precisely because yield is an idempotent overwrite and the kept element survived. Capture is
- * same-mode only: editing [keep] restarts rather than interpreting old state under new semantics. [all] keeps
- * raw boundary values in encounter order and is intentionally unbounded in memory; migration defensively copies
- * its list. Capture is unconditional of [result]; [SinkWorker]'s
+ * same-mode only: editing [keep] restarts rather than interpreting old state under new semantics, and the
+ * carried holds are released. [all] keeps the elements in encounter order and is intentionally unbounded in
+ * memory; migration defensively copies its list. Capture is unconditional of [result]; [SinkWorker]'s
  * pre-receive checkpoint is the only park point, so capture never cuts mid-[onComplete].
  */
 @Reflect
@@ -76,7 +79,9 @@ class ResultSinkWorker(
 
     //-----------------------------------------------------------------------------------------------------------------
     private var kept: DataValue? = null
-    private val keptAll = mutableListOf<Any?>()
+    private var keptHold: Hold = Hold.none
+    private val keptAll = mutableListOf<DataValue>()
+    private val keptAllHolds = mutableListOf<Hold>()
     private var hasAny = false
     private var collected = 0L
 
@@ -91,13 +96,21 @@ class ResultSinkWorker(
         if (keep == first && hasAny) {
             return
         }
-        // The kept element outlives this callback and leaves the run: an owned value is snapshotted here, while
-        // the callback still holds it (E9 boundary rule); an unowned one keeps its identity as before
-        val retained = control.snapshot(element)
+        // The kept element outlives this callback: the sink holds its resources, taken while the callback still
+        // holds them, until the result is yielded; a replaced element lets go of its hold
+        val hold = control.retain(element)
         if (keep == all) {
-            keptAll.add(JobDataValues.boundary(retained))
+            keptAll.add(element)
+            if (hold.isActive) {
+                keptAllHolds.add(hold)
+            }
         }
-        kept = retained
+        else {
+            val replaced = keptHold
+            keptHold = hold
+            replaced.release()
+        }
+        kept = element
         hasAny = true
     }
 
@@ -108,7 +121,11 @@ class ResultSinkWorker(
             ?: error(noResultDeclared(component))
 
         if (keep == all) {
-            control.yieldResult(component, JobDataValues.lift(keptAll.toList(), definition.contract))
+            val owners = keptAll.fold(ResourceOwners.empty) { acc, element -> acc + element.owners }
+            control.yieldResult(
+                component,
+                JobDataValues.lift(keptAll.map(JobDataValues::boundary), definition.contract).withOwners(owners))
+            releaseHolds()
             return
         }
 
@@ -123,10 +140,21 @@ class ResultSinkWorker(
         val keptValue = requireNotNull(kept)
         control.yieldResult(
             component,
-            JobDataValues.lift(JobDataValues.boundary(keptValue), definition.contract))
-        // NB: kept is deliberately NOT cleared — a post-completion live edit relaunches this worker, which
-        // adopts the carried element and re-yields into the rebuilt run's fresh collector (yield is an
-        // idempotent overwrite; clearing would lose the result).
+            JobDataValues.lift(JobDataValues.boundary(keptValue), definition.contract).withOwners(keptValue.owners))
+        // The Job's root frame holds the result from here on; this sink's own hold has done its part. NB: kept is
+        // deliberately NOT cleared — a post-completion live edit relaunches this worker, which adopts the carried
+        // element and re-yields into the rebuilt run's fresh collector (yield is an idempotent overwrite; clearing
+        // would lose the result).
+        releaseHolds()
+    }
+
+
+    private fun releaseHolds() {
+        val replaced = keptHold
+        keptHold = Hold.none
+        val all = keptAllHolds.toList()
+        keptAllHolds.clear()
+        Hold.releaseAll(all + replaced)
     }
 
 
@@ -182,7 +210,7 @@ class ResultSinkWorker(
     override fun progress(snapshot: Any?): Map<String, Any?> {
         val progress = LinkedHashMap<String, Any?>()
         progress["collected"] = collected
-        kept?.let(JobDataValues::boundary)?.let { value ->
+        kept?.let(JobDataValues::callbackObject)?.let { value ->
             progress[JobConventions.progressResultValueKey] = listOf(value.toString())
         }
         return progress
@@ -190,26 +218,51 @@ class ResultSinkWorker(
 
 
     override fun captureMigrationState(): Any =
-        KeptState(keep, kept, keptAll.toList(), hasAny, collected)
+        KeptState(keep, kept, keptAll.toList(), hasAny, collected, (keptAllHolds + keptHold).toList())
 
 
     override fun loadMigrationState(captured: Any?) {
         val state = captured as? KeptState
             ?: return
         if (state.keep != keep) {
+            state.close()
             return
         }
         kept = state.kept
         keptAll.addAll(state.keptAll)
         hasAny = state.hasAny
         collected = state.collected
+        val adopted = state.adoptHolds()
+        if (keep == all) {
+            keptAllHolds.addAll(adopted)
+        }
+        else {
+            keptHold = adopted.singleOrNull() ?: Hold.none
+        }
     }
 
 
+    // The carried kept element(s) with this sink's holds on them. Closed when the state is not adopted (the edit
+    // removed the sink, or changed its keep): the elements are dropped, so the holds are let go.
     private class KeptState(
         val keep: String,
         val kept: DataValue?,
-        val keptAll: List<Any?>,
+        val keptAll: List<DataValue>,
         val hasAny: Boolean,
-        val collected: Long)
+        val collected: Long,
+        private var holds: List<Hold>?
+    ): AutoCloseable {
+        fun adoptHolds(): List<Hold> {
+            val adopted = holds ?: emptyList()
+            holds = null
+            return adopted
+        }
+
+
+        override fun close() {
+            val dropped = holds ?: return
+            holds = null
+            Hold.releaseAll(dropped)
+        }
+    }
 }

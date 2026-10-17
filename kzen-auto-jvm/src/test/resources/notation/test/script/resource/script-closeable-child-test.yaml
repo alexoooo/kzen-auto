@@ -1,0 +1,15 @@
+# Child Script for script-closeable-parent-test.yaml: its last (and only) step returns an AutoCloseable, which
+# is therefore the Script's own result. The child frame holds it while it runs; the host boundary hands it to
+# the caller live before this frame settles.
+
+main:
+  is: Script
+  results:
+    main:
+      class: tech.kzen.auto.server.objects.job.worker.test.CloseCountingResource
+      generics: []
+      nullable: false
+
+main.steps/Open:
+  is: OpenCloseableStep
+  name: child

@@ -1,13 +1,13 @@
 # Worker archetypes for OwnedSourceRouteTest (E9 source ingress, streams and migration, HS17). One Job per
 # document: see owned-source-<route>.yaml. The expression routes use FormulaSourceWorker with fixtures from
-# tech.kzen.auto.server.exec.job.ownership.ClosingStreams by qualified name.
+# tech.kzen.auto.server.objects.job.worker.test.ClosingStreams by qualified name.
 
 
 ContractMismatchSource:
   abstract: true
   is: Worker
   title: "Contract Mismatch Source (test)"
-  class: tech.kzen.auto.server.exec.job.ownership.ContractMismatchSource
+  class: tech.kzen.auto.server.objects.job.worker.test.ContractMismatchSource
   output: ""
   meta:
     output:
@@ -22,7 +22,7 @@ ParkingSinkWorker:
   abstract: true
   is: Worker
   title: "Parking Sink (test)"
-  class: tech.kzen.auto.server.exec.job.ownership.ParkingSinkWorker
+  class: tech.kzen.auto.server.objects.job.worker.test.ParkingSinkWorker
   input: ""
   meta:
     input:

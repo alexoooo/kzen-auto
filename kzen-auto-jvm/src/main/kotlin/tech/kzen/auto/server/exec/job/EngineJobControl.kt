@@ -1,14 +1,8 @@
 package tech.kzen.auto.server.exec.job
 
 import tech.kzen.auto.common.paradigm.job.control.JobControl
-import tech.kzen.auto.common.paradigm.job.control.ValueLease
-import tech.kzen.auto.server.exec.job.ownership.LeaseHolder
-import tech.kzen.auto.server.exec.job.ownership.OwnerSet
-import tech.kzen.auto.server.exec.job.ownership.RunOwnershipControl
-import tech.kzen.auto.server.exec.job.ownership.RunOwnershipLedger
 import tech.kzen.auto.server.objects.job.worker.LentElement
 import tech.kzen.auto.server.objects.job.value.JobDataValues
-import tech.kzen.auto.server.objects.job.value.recycle.Recyclable
 import tech.kzen.lib.common.exec.ExecutionValue
 import tech.kzen.lib.common.exec.ListExecutionValue
 import tech.kzen.lib.common.exec.MapExecutionValue
@@ -20,10 +14,10 @@ import tech.kzen.lib.common.exec.data.binding.BindingState
 import tech.kzen.lib.common.exec.data.binding.DataBindings
 import tech.kzen.lib.common.exec.data.type.DataContract
 import tech.kzen.lib.common.exec.data.value.DataValue
-import tech.kzen.lib.common.exec.data.value.SnapshotResult
-import tech.kzen.lib.common.exec.data.value.DataSnapshot
-import tech.kzen.lib.common.exec.data.value.DataAccessException
-import tech.kzen.lib.common.exec.data.problem.DataProblem
+import tech.kzen.lib.common.exec.engine.resource.Hold
+import tech.kzen.lib.common.exec.engine.resource.Holder
+import tech.kzen.lib.common.exec.engine.resource.ResourceOwners
+import tech.kzen.lib.common.exec.engine.resource.ResourceRegistry
 import tech.kzen.auto.common.objects.document.job.JobConventions
 import tech.kzen.lib.common.exec.engine.Logic
 import tech.kzen.lib.common.model.location.ObjectLocation
@@ -78,13 +72,13 @@ class EngineJobControl(
     private val inputContract: DataContract?,
     private val outputContract: DataContract?,
     private val resultCollector: JobResultCollector,
-    /** The run's ownership ledger (E9): shared by every Worker of the run, torn down after they join. */
-    override val ledger: RunOwnershipLedger,
+    /** The Job root's [Execution]: the frame that holds a yielded Result until the Job settles (E9, plan §3.3). */
+    private val jobExecution: Execution,
     private val workerLocation: ObjectLocation,
     private val draining: () -> Boolean,
     /** When the run started ([System.nanoTime]), for the elapsed time stamped on progress. */
     private val runStartedNanos: Long = System.nanoTime()
-): JobControl, RunOwnershipControl {
+): JobControl, RunResourceControl {
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
         // Reserved emit address tagging a Worker's live-progress payload, distinct from any other value the
@@ -124,9 +118,13 @@ class EngineJobControl(
     //-----------------------------------------------------------------------------------------------------------------
     private val progressAddress = Address.of(workerProgressAddressMarker)
 
-    // The holder every hold of this Worker is named by: its notation location, so a live-edit replacement
-    // instance is the same holder
-    private val workerHolder = LeaseHolder(workerLocation.asString())
+    // The holder every callback hold of this Worker is named by: its notation location, so a live-edit
+    // replacement instance is the same holder
+    private val workerHolder = Holder(workerLocation.asString())
+
+    /** The run's resource registry (E9): shared by every Worker of the run, surviving a live edit. */
+    override val resources: ResourceRegistry
+        get() = execution.resources
 
     // This Worker runs single-threaded on its own node coroutine, so a plain field suffices (no concurrent
     // publishProgress for one Worker).
@@ -178,9 +176,9 @@ class EngineJobControl(
         if (!force && lastProgressNanos != 0L && now - lastProgressNanos < progressThrottleNanos) {
             return
         }
-        // This Worker's live holds on owned natives ride its ordinary progress (E9 item 5), aggregated only, and
-        // the run's elapsed time stamps it, so the client can work out a rate from two of them
-        val holds = ledger.holdsOf(workerHolder)
+        // This Worker's live callback holds ride its ordinary progress (E9 item 5), aggregated only, and the
+        // run's elapsed time stamps it, so the client can work out a rate from two of them
+        val holds = resources.holdsOf(workerHolder)
         @Suppress("NAME_SHADOWING")
         val value = LinkedHashMap(value).also {
             if (holds != 0) {
@@ -240,72 +238,44 @@ class EngineJobControl(
     }
 
 
-    // A Worker's own hold past its callback (an accumulator). A lent element is refused by name (borrowed
-    // elements §3.3): its source waits for the release before it advances, so a hold that outlives the callback
-    // would hang the run rather than keep the element. A pooled value is forfeited: kept, it is an ordinary value.
-    override fun retain(value: DataValue): ValueLease {
-        Recyclable.of(value)?.let { recyclable ->
-            recyclable.forfeit()
-            return ValueLease.none
-        }
-        val owners = ledger.owners(value)
-        lentOwner(owners)?.let { lent ->
+    // A Worker's own hold past its callback (an accumulator): a hold of this Worker's frame, released by the
+    // Worker or at the latest when its node settles. A lent element is refused by name (borrowed elements §3.3):
+    // its source waits for the release before it advances, so a hold that outlives the callback would hang the
+    // run rather than keep the element.
+    override fun retain(value: DataValue): Hold {
+        lentOwner(value.owners)?.let { lent ->
             throw IllegalStateException(
                 "$workerLocation cannot keep ${lent.lentName()}: it is borrowed from ${lent.lender()} and is " +
                         "only valid until the source advances. Snapshot it, read it, or write it.")
         }
-        return owners.lease(workerHolder)
+        return execution.hold(value)?.hold ?: Hold.none
     }
 
 
-    override fun holdForCallback(value: DataValue): ValueLease {
-        return ledger.retain(value, workerHolder)
+    // The per-callback hold is a plain registry hold under this Worker's name: the per-element path takes no
+    // engine lock, and the run's progress counts it (publishProgress)
+    override fun holdForCallback(value: DataValue): Hold {
+        return resources.hold(value, workerHolder)?.hold ?: Hold.none
     }
 
 
-    private fun lentOwner(owners: OwnerSet): LentElement? =
-        owners.entries().firstNotNullOfOrNull { it.native as? LentElement }
+    private fun lentOwner(owners: ResourceOwners?): LentElement? =
+        owners?.entries()?.firstNotNullOfOrNull { it.native as? LentElement }
 
 
     // Contribute a ResultSink Worker's named binding to the run's output (harvested by JobRun once the run
     // settles). Last write per component wins, so a re-yield after a live-edit migrate is idempotent.
     override fun yieldResult(component: String, value: DataValue) {
-        // An owned native never escapes the run (E9): the run closes it at its end, so a Result holding its
-        // identity would read as closed later — the sink snapshots what it keeps; a lent element is named
-        val owners = ledger.owners(value)
-        lentOwner(owners)?.let { lent ->
+        // A Result over a resource is the live value: the Job's root frame holds it from here until the Job
+        // settles, so a hosting frame reads it open (plan §3.3); a lent element is named, its source would wait
+        lentOwner(value.owners)?.let { lent ->
             throw IllegalStateException(
                 "Result '$component' of $workerLocation cannot keep ${lent.lentName()}: it is borrowed from " +
                         "${lent.lender()} and is only valid until the source advances. " +
                         "Snapshot it, read it, or write it.")
         }
-        check(owners.isEmpty) {
-            "Result '$component' of $workerLocation holds a native the run owns and will close; " +
-                "snapshot it (JobControl.snapshot) before yielding"
-        }
-        resultCollector.yieldResult(BindingName(component), value)
-    }
-
-
-    // A pooled value is forfeited and kept as it is, like an unowned one
-    override fun snapshot(value: DataValue): DataValue {
-        Recyclable.of(value)?.let { recyclable ->
-            recyclable.forfeit()
-            return value
-        }
-        if (ledger.owners(value).isEmpty) {
-            return value
-        }
-        return when (val result = DataSnapshot.capture(value)) {
-            is SnapshotResult.Complete -> result.snapshot.asDataValue()
-            is SnapshotResult.Rejected -> throw DataAccessException(DataProblem(
-                DataProblem.snapshotRejected,
-                "Boundary of $workerLocation: an owned ${JobDataValues.native(value)?.javaClass?.name} cannot " +
-                    "leave the run and cannot be snapshotted: ${result.problems.joinToString { it.message }}"))
-            SnapshotResult.Redacted -> throw DataAccessException(DataProblem(
-                DataProblem.snapshotRejected,
-                "Boundary of $workerLocation: an owned value was redacted and cannot leave the run"))
-        }
+        val held = jobExecution.hold(value)
+        resultCollector.yieldResult(BindingName(component), held?.value ?: value)
     }
 
 

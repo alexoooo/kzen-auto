@@ -1,4 +1,4 @@
-# OwnershipBoundaryTest route "opaque": an owned opaque handle reaching a Result fails by name.
+# ResourceBoundaryTest route "opaque": an owned opaque handle reaching a Result fails by name.
 main:
   is: Job
   results:

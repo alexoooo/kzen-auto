@@ -26,9 +26,7 @@ object JobExpressionValues {
     fun projected(projection: ColumnProjection, ordinal: Int): Any? {
         return when (projection.state(ordinal)) {
             DataState.Absent, DataState.Null -> null
-            DataState.Present -> boundary(DataValue(
-                projection.value.access,
-                projection.node(ordinal)))
+            DataState.Present -> boundary(projection.value.child(projection.node(ordinal)))
         }
     }
 
@@ -42,7 +40,7 @@ object JobExpressionValues {
         }
         return when (value.access.state(node)) {
             DataState.Absent, DataState.Null -> null
-            DataState.Present -> boundary(DataValue(value.access, node))
+            DataState.Present -> boundary(value.child(node))
         }
     }
 
@@ -72,7 +70,7 @@ object JobExpressionValues {
                 check(nullable) { "The value's metadata '$name' is missing" }
                 null
             }
-            DataState.Present -> DataValue(record.access, node)
+            DataState.Present -> record.child(node)
         }
     }
 

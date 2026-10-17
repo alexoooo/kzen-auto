@@ -5,12 +5,11 @@ import kotlinx.coroutines.channels.Channel
 import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.api.ChannelInputIterator
 import tech.kzen.auto.common.paradigm.job.api.ChannelOutput
-import tech.kzen.auto.common.paradigm.job.control.ValueLease
-import tech.kzen.auto.server.exec.job.ownership.LeaseHolder
-import tech.kzen.auto.server.exec.job.ownership.RunOwnershipLedger
-import tech.kzen.auto.server.exec.job.ownership.ValueLeases
 import tech.kzen.auto.server.objects.job.value.recycle.Recyclable
 import tech.kzen.lib.common.exec.data.value.DataValue
+import tech.kzen.lib.common.exec.engine.resource.Hold
+import tech.kzen.lib.common.exec.engine.resource.Holder
+import tech.kzen.lib.common.exec.engine.resource.ResourceRegistry
 import tech.kzen.lib.common.reflect.Reflect
 import java.util.Collections
 import java.util.IdentityHashMap
@@ -43,28 +42,27 @@ import java.util.concurrent.atomic.AtomicInteger
  * the only way a producer can tell a CLOSED downstream from a PAUSED one; without it the producer would stay
  * parked behind the finished consumer.
  *
- * **Ownership (E9).** Once [bindOwnership] has named the run's ledger and this channel's holder, a producer's
- * `send` is the transport-transfer boundary: a value the run owns (or a Worker-created `AutoCloseable` the run
- * does not own yet, adopted right there) takes one channel lease per send, held until the consumer is done with
- * the element — a framework drive loop converts it into its per-callback lease ([FrameworkChannelInput]); the
- * raw `receive` / `iterator` / SPI `receiveBatch` paths release the previously handed-out element(s) on each
- * further pull and at end-of-stream. An owned element never waits in a producer's buffer: it flushes at once,
- * together with whatever unowned elements were buffered before it, so an item whose close releases the host's
- * next permit cannot deadlock behind the batch it belongs to (channel capacity is unchanged). A send that fails
- * releases the batch's leases — a failed send closes what it adopted — except under cancellation, where the
- * run's teardown (or a migration's carryover) owns them. Unbound (no ledger), the channel behaves as before.
- *
- * **Recyclable values.** A pooled element ([Recyclable]) never reaches the ledger, bound or not: its send takes
- * one hold and puts the object's shared token in the lease slot, so it batches like an unowned element and every
- * lease release path above and below lets it go exactly once. A raw read forfeits it as it is handed out.
+ * **Resources (E9).** Once [bindResources] has named the run's resource registry and this channel's holder, a
+ * producer's `send` is the transport-transfer boundary: a value that depends on a resource (or a Worker-created
+ * `AutoCloseable` the run does not own yet, adopted right there) takes one channel hold per send, held until the
+ * consumer is done with the element — a framework drive loop converts it into its per-callback hold
+ * ([FrameworkChannelInput]); the raw `receive` / `iterator` / SPI `receiveBatch` paths release the previously
+ * handed-out element(s) on each further pull and at end-of-stream. An owned element never waits in a producer's
+ * buffer: it flushes at once, together with whatever unowned elements were buffered before it, so an item whose
+ * close releases the host's next permit cannot deadlock behind the batch it belongs to (channel capacity is
+ * unchanged). A send that fails releases the batch's holds — a failed send closes what it adopted — except under
+ * cancellation, where the run's teardown (or a migration's carryover) owns them. Unbound (no registry), the
+ * channel behaves as before. A pooled element is an owned element like any other: its channel hold is one more
+ * hold on its pool resource, and the last release recycles it. A raw read forfeits it as it is handed out, since a
+ * raw reader is untrusted to drop what it read by its next pull.
  *
  * **Migration carryover:** a state migration (pause / edit config / continue) tears the running graph down and
  * rebuilds it, so the in-flight elements a live channel holds would otherwise be lost. [drainBuffered] snapshots
  * everything a channel still holds — the not-yet-dispatched remainder of a framework loop's active batch, a raw
  * reader's partially consumed batch, carryover not yet delivered, buffered batches, and any batch a producer is
- * parked mid-[Producer.flush] on — FLATTENED to elements in delivery order with their channel leases, while the
+ * parked mid-[Producer.flush] on — FLATTENED to elements in delivery order with their channel holds, while the
  * Workers are parked (quiescent) and BEFORE teardown; the rebuilt channel is seeded via [preload] and holds the
- * same leases (no close, no re-adoption); [input] then delivers that carryover BEFORE the live channel, so the
+ * same holds (no close, no re-adoption); [input] then delivers that carryover BEFORE the live channel, so the
  * consumer sees the exact same element stream it would have without the migration. (A producer's `pending`
  * buffer is provably EMPTY at any quiescent barrier — the framework flushes it before every checkpoint, and an
  * owned element flushes at send — so only the parked-mid-flush batch needs the volatile capture.)
@@ -81,12 +79,7 @@ class JobChannel(
     private val capacity: Int = capacity.coerceAtLeast(0)
 
     private val channel: Channel<Batch> =
-        if (capacity <= 0) {
-            Channel(Channel.RENDEZVOUS)
-        }
-        else {
-            Channel(capacity)
-        }
+        Channel(if (capacity <= 0) Channel.RENDEZVOUS else capacity, onUndeliveredElement = ::undelivered)
 
     //-----------------------------------------------------------------------------------------------------------------
     companion object {
@@ -107,6 +100,16 @@ class JobChannel(
     @Volatile
     private var producersClosed = false
 
+
+    // A batch the transport took from its sender that no receiver will ever see: the receiver was cancelled as
+    // the batch was handed to it, or the sender was cancelled while parked (prompt cancellation, delivered or
+    // not). Its holds are let go here — unless a migration barrier's drain already made them the carryover's.
+    private fun undelivered(batch: Batch) {
+        if (!batch.carried) {
+            Hold.releaseAll(batch.holds)
+        }
+    }
+
     // Elements sitting in the channel's buffer (batches sent, not yet received); maintained around each send /
     // receive, so momentarily approximate.
     private val queued = AtomicInteger(0)
@@ -116,9 +119,9 @@ class JobChannel(
     // Seeded by preload before any worker launches; thereafter read only by the single consumer coroutine.
     private val carryover = ArrayDeque<Carried>()
 
-    // The run's ledger and this channel's lease holder, once JobRun has bound them (null in a bare channel).
+    // The run's resource registry and this channel's holder, once JobRun has bound them (null in a bare channel).
     @Volatile
-    private var ownership: Ownership? = null
+    private var resources: Resources? = null
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -133,9 +136,9 @@ class JobChannel(
     }
 
 
-    /** Names the run's ledger and this channel's holder (E9): from here on, sends take channel leases. */
-    fun bindOwnership(ledger: RunOwnershipLedger, holder: LeaseHolder) {
-        ownership = Ownership(ledger, holder)
+    /** Names the run's resource registry and this channel's holder (E9): from here on, sends take channel holds. */
+    fun bindResources(registry: ResourceRegistry, holder: Holder) {
+        resources = Resources(registry, holder)
     }
 
 
@@ -158,12 +161,12 @@ class JobChannel(
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    // Seed the carryover (elements with their channel leases) drained from a previous instance of this channel
+    // Seed the carryover (elements with their channel holds) drained from a previous instance of this channel
     // (by stable id) during a migration. Called from the run driver before any worker launches, so no consumer is
     // reading yet.
     fun preload(items: ChannelCarryover) {
         for (index in items.elements.indices) {
-            carryover.addLast(Carried(items.elements[index], items.lease(index)))
+            carryover.addLast(Carried(items.elements[index], items.hold(index)))
         }
     }
 
@@ -185,16 +188,17 @@ class JobChannel(
         val parkedSends = producers.mapNotNull { it.inFlight }
 
         val elements = ArrayList<DataValue>()
-        val leases = ArrayList<ValueLease?>()
+        val holds = ArrayList<Hold?>()
         fun add(batch: Batch) {
+            batch.carried = true
             elements.addAll(batch.elements)
-            leases.addAll(batch.leases)
+            holds.addAll(batch.holds)
         }
 
-        (input as Input).drainUndelivered(elements, leases)
+        (input as Input).drainUndelivered(elements, holds)
         for (carried in carryover) {
             elements.add(carried.element)
-            leases.add(carried.lease)
+            holds.add(carried.hold)
         }
         carryover.clear()
 
@@ -219,44 +223,65 @@ class JobChannel(
                 add(batch)
             }
         }
-        return ChannelCarryover(elements, leases)
+        return ChannelCarryover(elements, holds)
+    }
+
+
+    /**
+     * Lets go of every channel hold still outstanding once the run is over (not migrating): what a raw reader
+     * was handed and never pulled past, and everything [drainBuffered] would capture. The elements are dropped.
+     */
+    fun releaseHeld() {
+        (input as Input).releaseRaw()
+        drainBuffered().release()
     }
 
 
     //-----------------------------------------------------------------------------------------------------------------
-    private class Ownership(
-        val ledger: RunOwnershipLedger,
-        val holder: LeaseHolder
+    private class Resources(
+        val registry: ResourceRegistry,
+        val holder: Holder
     )
 
 
-    // One physical transfer unit: the elements and, index-aligned, the channel lease each owned element carries.
+    // One physical transfer unit: the elements and, index-aligned, the channel hold each owned element carries.
     private class Batch(
         val elements: List<DataValue>,
-        val leases: List<ValueLease?>
+        val holds: List<Hold?>
     ) {
         val size: Int
             get() = elements.size
 
-        fun releaseLeases(primary: Throwable) {
-            ValueLeases.releaseAllSuppressed(leases, primary)
+        // Set by drainBuffered (run-driver thread, at a migration barrier or the run's teardown) once the holds
+        // are the carryover's: the transport dropping this batch (see undelivered) must then not release them.
+        @Volatile
+        var carried = false
+
+        /** Releases every hold; a close failure is suppressed on [primary], which stays the failure reported. */
+        fun releaseHolds(primary: Throwable) {
+            try {
+                Hold.releaseAll(holds)
+            }
+            catch (e: Exception) {
+                primary.addSuppressed(e)
+            }
         }
     }
 
 
     private class Carried(
         val element: DataValue,
-        val lease: ValueLease?
+        val hold: Hold?
     )
 
 
     //-----------------------------------------------------------------------------------------------------------------
     private inner class Producer: ChannelOutput<DataValue>, FrameworkChannelOutput {
-        // Buffered elements (and their channel leases) not yet flushed to the channel. Confined to the owning
+        // Buffered elements (and their channel holds) not yet flushed to the channel. Confined to the owning
         // Worker's coroutine (send / flush run there); provably empty whenever the run driver inspects the
         // channel (quiescent barrier), so it needs no cross-thread synchronization.
         private val pending = ArrayList<DataValue>()
-        private val pendingLeases = ArrayList<ValueLease?>()
+        private val pendingHolds = ArrayList<Hold?>()
 
         // The batch currently being sent, while a full-channel flush is parked (null otherwise). Read by
         // drainBuffered from the run-driver thread to capture a suspended sender's batch (not in the buffer).
@@ -286,19 +311,12 @@ class JobChannel(
             if (consumerClosed) {
                 throw downstreamClosed()
             }
-            val recyclable = Recyclable.of(element)
-            if (recyclable != null) {
-                recyclable.hold()
-                pending.add(element)
-                pendingLeases.add(recyclable.token)
-                return
-            }
             // The transport-transfer boundary (E9): the channel's hold is taken here, before whoever handed the
             // value over lets go of theirs, so the count never touches zero mid-hop.
-            val lease = ownership?.let { it.ledger.hold(element, it.holder) }
-            pending.add(element)
-            pendingLeases.add(lease)
-            if (lease != null) {
+            val held = resources?.let { it.registry.hold(element, it.holder) }
+            pending.add(held?.value ?: element)
+            pendingHolds.add(held?.hold)
+            if (held != null) {
                 flush()
             }
         }
@@ -311,9 +329,9 @@ class JobChannel(
 
             // Move the whole buffer into one batch BEFORE sending: a park mid-send then holds the entire batch in
             // inFlight (captured by drainBuffered) with pending empty — no partial-buffer capture is needed.
-            val batch = Batch(ArrayList(pending), ArrayList(pendingLeases))
+            val batch = Batch(ArrayList(pending), ArrayList(pendingHolds))
             pending.clear()
-            pendingLeases.clear()
+            pendingHolds.clear()
 
             inFlight = batch
             try {
@@ -324,19 +342,20 @@ class JobChannel(
                 queued.addAndGet(batch.size)
             }
             catch (e: CancellationException) {
-                // Delivered or not, the batch is the teardown's (or, at a migration barrier, the carryover's)
+                // A sender cancelled while parked: the transport hands the batch back through undelivered, which
+                // lets its holds go (or leaves them to the carryover that captured the parked batch)
                 throw e
             }
             catch (e: DownstreamClosedException) {
                 // The consumer closed while this batch was buffered or parked: nobody will receive it, so its
-                // leases are released here and the producer learns the downstream is gone (a fresh instance —
+                // holds are released here and the producer learns the downstream is gone (a fresh instance —
                 // the one the close resumed a parked send with is the closer's, shared by every sender)
                 val closed = downstreamClosed()
-                batch.releaseLeases(closed)
+                batch.releaseHolds(closed)
                 throw closed
             }
             catch (e: Throwable) {
-                batch.releaseLeases(e)
+                batch.releaseHolds(e)
                 throw e
             }
             finally {
@@ -364,9 +383,9 @@ class JobChannel(
         @Volatile
         private var held: ArrayDeque<Carried>? = null
 
-        // Channel leases of the element(s) a raw path handed out most recently: released on the next pull and
+        // Channel holds of the element(s) a raw path handed out most recently: released on the next pull and
         // at end-of-stream — the consumer is done with them by then.
-        private val rawOutstanding = ArrayList<ValueLease>()
+        private val rawOutstanding = ArrayList<Hold>()
 
         // The framework drive loop's active batch, until it is fully dispatched or detached; its remainder is
         // captured by drainBuffered.
@@ -378,7 +397,7 @@ class JobChannel(
             active = null
             val batch = nextBatch()
                 ?: return null
-            val received = ReceivedBatch(batch.elements, batch.leases) { active = null }
+            val received = ReceivedBatch(batch.elements, batch.holds) { active = null }
             active = received
             return received
         }
@@ -398,7 +417,7 @@ class JobChannel(
                 val batch = channel.tryReceive().getOrNull()
                     ?: break
                 queued.addAndGet(-batch.size)
-                ValueLeases.releaseAll(batch.leases.filterNotNull())
+                Hold.releaseAll(batch.holds)
             }
         }
 
@@ -407,8 +426,8 @@ class JobChannel(
             releaseRaw()
             val batch = nextBatch()
                 ?: return null
-            for (lease in batch.leases) {
-                lease?.let(::handOut)
+            for (index in batch.elements.indices) {
+                batch.holds[index]?.let { handOut(batch.elements[index], it) }
             }
             return batch.elements
         }
@@ -418,7 +437,7 @@ class JobChannel(
             releaseRaw()
             val carried = nextElement()
                 ?: return null
-            carried.lease?.let(::handOut)
+            carried.hold?.let { handOut(carried.element, it) }
             return carried.element
         }
 
@@ -442,7 +461,7 @@ class JobChannel(
                         ended = true
                         return false
                     }
-                    carried.lease?.let(::handOut)
+                    carried.hold?.let { handOut(carried.element, it) }
                     nextElement = carried.element
                     hasNextElement = true
                     return true
@@ -461,19 +480,19 @@ class JobChannel(
             (active?.remainingCount() ?: 0) + (held?.size ?: 0)
 
 
-        fun drainUndelivered(elements: MutableList<DataValue>, leases: MutableList<ValueLease?>) {
+        fun drainUndelivered(elements: MutableList<DataValue>, holds: MutableList<Hold?>) {
             active?.let { batch ->
                 val remaining = batch.remaining()
                 elements.addAll(remaining.elements)
                 for (index in remaining.elements.indices) {
-                    leases.add(remaining.lease(index))
+                    holds.add(remaining.hold(index))
                 }
                 batch.detach()
             }
             held?.let { remaining ->
                 for (carried in remaining) {
                     elements.add(carried.element)
-                    leases.add(carried.lease)
+                    holds.add(carried.hold)
                 }
                 remaining.clear()
                 held = null
@@ -482,20 +501,20 @@ class JobChannel(
 
 
         // A raw reader is untrusted to drop what it read by its next pull, so a pooled element is forfeited
-        // as it is handed out; its token is then released like any other lease
-        private fun handOut(lease: ValueLease) {
-            (lease as? Recyclable.Token)?.recyclable?.forfeit()
-            rawOutstanding.add(lease)
+        // as it is handed out; its channel hold is then released like any other
+        private fun handOut(element: DataValue, hold: Hold) {
+            element.owners?.entries()?.forEach { (it.native as? Recyclable)?.forfeit() }
+            rawOutstanding.add(hold)
         }
 
 
-        private fun releaseRaw() {
+        fun releaseRaw() {
             if (rawOutstanding.isEmpty()) {
                 return
             }
             val outstanding = ArrayList(rawOutstanding)
             rawOutstanding.clear()
-            ValueLeases.releaseAll(outstanding)
+            Hold.releaseAll(outstanding)
         }
 
 
@@ -507,7 +526,7 @@ class JobChannel(
                 }
                 val batch = nextBatch()
                     ?: return null
-                held = ArrayDeque(batch.elements.indices.map { Carried(batch.elements[it], batch.leases[it]) })
+                held = ArrayDeque(batch.elements.indices.map { Carried(batch.elements[it], batch.holds[it]) })
             }
         }
 
@@ -516,7 +535,7 @@ class JobChannel(
             // Drain any partially-consumed held batch first (if receive() was interleaved on this input).
             held?.let { remaining ->
                 if (remaining.isNotEmpty()) {
-                    val out = Batch(remaining.map { it.element }, remaining.map { it.lease })
+                    val out = Batch(remaining.map { it.element }, remaining.map { it.hold })
                     remaining.clear()
                     held = null
                     return out
@@ -528,13 +547,13 @@ class JobChannel(
             if (carryover.isNotEmpty()) {
                 val n = minOf(batchSize, carryover.size)
                 val elements = ArrayList<DataValue>(n)
-                val leases = ArrayList<ValueLease?>(n)
+                val holds = ArrayList<Hold?>(n)
                 repeat(n) {
                     val carried = carryover.removeFirst()
                     elements.add(carried.element)
-                    leases.add(carried.lease)
+                    holds.add(carried.hold)
                 }
-                return Batch(elements, leases)
+                return Batch(elements, holds)
             }
 
             val batch = channel.receiveCatching().getOrNull()

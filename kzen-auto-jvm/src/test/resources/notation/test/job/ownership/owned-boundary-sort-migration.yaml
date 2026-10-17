@@ -1,4 +1,4 @@
-# OwnershipBoundaryTest route "sort-migration": owned elements retained by a Sort across a live edit of the sink.
+# ResourceBoundaryTest route "sort-migration": owned elements retained by a Sort across a live edit of the sink.
 main:
   is: Job
 

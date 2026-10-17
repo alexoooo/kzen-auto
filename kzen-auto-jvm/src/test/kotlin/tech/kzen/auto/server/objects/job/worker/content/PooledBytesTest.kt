@@ -2,7 +2,7 @@ package tech.kzen.auto.server.objects.job.worker.content
 
 import org.junit.Test
 import tech.kzen.auto.server.objects.job.value.JobDataValues
-import tech.kzen.auto.server.objects.job.value.recycle.Recyclable
+import tech.kzen.auto.server.objects.job.value.recycle.RecyclableAccess
 import tech.kzen.auto.server.objects.job.value.recycle.RecyclablePool
 import tech.kzen.lib.common.exec.data.type.DataType
 import tech.kzen.lib.common.exec.data.type.DataTypePath
@@ -18,7 +18,7 @@ import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 
-/** A pooled chunk of [Bytes] is an opaque native, handed out by identity and found by [Recyclable.of]. */
+/** A pooled chunk of [Bytes] is an opaque native, handed out by identity and found through its [RecyclableAccess]. */
 class PooledBytesTest {
     @Test
     fun bytesDescribeAsAnOpaqueNative() {
@@ -39,7 +39,7 @@ class PooledBytesTest {
         buffer.bytesLength = 3
         val value = slot.value(null)
 
-        assertSame(slot, Recyclable.of(value))
+        assertSame(slot, (value.access as RecyclableAccess).recyclable)
         assertSame(slot.bytes, JobDataValues.native(value))
         assertSame(slot.bytes, JobDataValues.callbackObject(value))
         assertFalse(slot.isForfeited)

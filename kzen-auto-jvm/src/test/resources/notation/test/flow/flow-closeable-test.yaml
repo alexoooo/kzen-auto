@@ -1,0 +1,62 @@
+# Owned vertex output fixture (FlowResourceHoldTest): a test-only source emits an AutoCloseable, a test-only
+# check vertex fails unless it arrives still open and emits its name, and the production FlowOutput harvests
+# that name as the run's `out`. Success with the name proves the owned message is live downstream; the close
+# count after the run proves it closed exactly once, at the Flow's settle. Vertical adjacency in column 0 is
+# the edge.
+
+
+#######################################################################################################################
+# Test-only vertex archetypes (the production analogues live in notation/auto-jvm/flow/flow-vertex.yaml).
+
+CloseableSourceVertex:
+  abstract: true
+  is: FlowVertex
+  icon: "material-symbols:lock-open"
+  title: "Closeable Source (test)"
+  class: tech.kzen.auto.server.exec.flow.test.CloseableSourceVertex
+  meta:
+    output:
+      is: RequiredOutput
+      by: FlowWiring
+
+
+OpenCheckVertex:
+  abstract: true
+  is: FlowVertex
+  icon: "material-symbols:visibility"
+  title: "Open Check (test)"
+  class: tech.kzen.auto.server.exec.flow.test.OpenCheckVertex
+  meta:
+    input:
+      is: RequiredInput
+      by: FlowWiring
+    output:
+      is: RequiredOutput
+      by: FlowWiring
+
+
+#######################################################################################################################
+
+main:
+  is: Flow
+  vertices:
+  - FclSource
+  - FclCheck
+  - FclOutput
+  edges: []
+
+FclSource:
+  is: CloseableSourceVertex
+  row: 0
+  column: 0
+
+FclCheck:
+  is: OpenCheckVertex
+  row: 1
+  column: 0
+
+FclOutput:
+  is: FlowOutput
+  result: "out"
+  row: 2
+  column: 0

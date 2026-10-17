@@ -1,9 +1,9 @@
 package tech.kzen.auto.server.objects.job.worker
 
 import tech.kzen.auto.common.paradigm.job.control.JobControl
-import tech.kzen.auto.server.exec.job.ownership.OwnedNative
 import tech.kzen.lib.common.exec.data.type.DataContract
 import tech.kzen.lib.common.exec.data.value.ValueMetadata
+import tech.kzen.lib.common.exec.engine.resource.Resource
 import tech.kzen.lib.common.model.location.ObjectLocation
 
 
@@ -32,7 +32,7 @@ internal class CursorLending(
     private var delivered = 0L
 
     // The lent element in flight, read from other Workers' coroutines
-    @Volatile private var lent: OwnedNative? = null
+    @Volatile private var lent: Resource? = null
     @Volatile private var lentName: String? = null
 
 
@@ -96,13 +96,13 @@ internal class CursorLending(
                 val item = pending.removeFirst()
                 delivered += 1
                 val lentItem = item.native as? LentElement
-                val owned = lentItem?.let { ingress.ledger()?.entryOf(it) }
+                val owned = lentItem?.let { ingress.registry()?.entryOf(it) }
                 if (owned != null) {
                     lent = owned
                     lentName = lentItem.lentName()
                 }
                 try {
-                    emit.send(item.lift(ingress.ledger(), contract, metadataOf(item.native)))
+                    emit.send(item.lift(contract, metadataOf(item.native)))
                 }
                 finally {
                     item.release()
@@ -121,7 +121,7 @@ internal class CursorLending(
 
 
     /** The wait of §3.2 step 3: outside any checkpoint, then a checkpoint at the boundary before the next pull. */
-    private suspend fun awaitRelease(owned: OwnedNative, control: JobControl) {
+    private suspend fun awaitRelease(owned: Resource, control: JobControl) {
         owned.awaitClosed()
         lent = null
         lentName = null
@@ -172,9 +172,11 @@ internal class CursorLending(
         val interrupted = detached.lentName
         if (interrupted != null) {
             // Impossible while downstream draining holds (BorrowingSource); the guard against a capture taken
-            // mid-element: the lent element is still someone's, and the cursor cannot advance under it. The
-            // cursor is NOT closed here — the run's ledger owns it and closes it at teardown — so the holder
-            // does not see its element invalidated first and report a released entry instead of this refusal
+            // mid-element: the lent element is still someone's, and the cursor cannot advance under it. Letting
+            // the stream's holds go here does not close the cursor under its reader — the lent element carries
+            // the cursor's owners, so it closes with the element's last release — and the holder never sees its
+            // element invalidated first and reports a released entry instead of this refusal
+            detached.close()
             error("Source was interrupted inside $interrupted; a live edit applies only between elements. " +
                     "Start a new run to apply it.")
         }

@@ -1,0 +1,20 @@
+# Owned step value fixture (ScriptResourceHoldTest): Open returns an AutoCloseable and does nothing else with
+# it; Check reads it back through the value graph, throwing if it had already been closed. Success proves the
+# value is live for a later step; the close count after the run proves it closed exactly once, at the Script's
+# settle. Also the live-edit fixture: parked before Check, the migration barrier must leave the value open.
+
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.String
+      generics: []
+      nullable: false
+
+main.steps/Open:
+  is: OpenCloseableStep
+  name: step
+
+main.steps/Check:
+  is: CheckOpenStep
+  input: main.steps/Open

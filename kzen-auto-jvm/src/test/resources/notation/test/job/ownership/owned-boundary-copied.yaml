@@ -1,4 +1,4 @@
-# OwnershipBoundaryTest route "copied": a one-permit arena source, a transform projecting each owned element to
+# ResourceBoundaryTest route "copied": a one-permit arena source, a transform projecting each owned element to
 # a row of scalars it declares an independent copy, then a Sort — the rows carry no owner, each element closes
 # when the projecting callback returns, and the source's next permit is free: the run completes, sorted.
 main:

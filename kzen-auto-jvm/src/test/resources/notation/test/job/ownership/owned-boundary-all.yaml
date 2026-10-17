@@ -1,4 +1,4 @@
-# OwnershipBoundaryTest route "all": owned records kept (all) as the Job's result.
+# ResourceBoundaryTest route "all": owned records kept (all) as the Job's result.
 main:
   is: Job
   results:

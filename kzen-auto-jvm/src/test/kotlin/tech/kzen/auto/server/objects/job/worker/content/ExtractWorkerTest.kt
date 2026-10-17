@@ -252,7 +252,7 @@ class ExtractWorkerTest {
         assertContains(failed.message, "cannot keep entry 'foo.txt'")
         assertContains(failed.message, "borrowed from 'input.tar.gz'")
         assertEquals(1, HoldingWorker.seen)
-        assertTrue(HoldingWorker.leases.isEmpty(), "no lease was handed out")
+        assertTrue(HoldingWorker.holds.isEmpty(), "no hold was handed out")
         // The refusal releases the entry, so the source may advance one pull (never opened) before the run's
         // cancellation reaches it — as the take-in test allows
         val cursor = cursors.single()

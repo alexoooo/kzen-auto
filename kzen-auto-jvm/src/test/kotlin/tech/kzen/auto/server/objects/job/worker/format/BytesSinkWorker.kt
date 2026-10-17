@@ -4,6 +4,7 @@ import tech.kzen.auto.common.paradigm.job.api.ChannelInput
 import tech.kzen.auto.common.paradigm.job.control.JobControl
 import tech.kzen.auto.server.objects.job.value.JobDataValues
 import tech.kzen.auto.server.objects.job.value.recycle.Recyclable
+import tech.kzen.auto.server.objects.job.value.recycle.RecyclableAccess
 import tech.kzen.auto.server.objects.job.worker.SinkWorker
 import tech.kzen.auto.server.objects.job.worker.content.Bytes
 import tech.kzen.auto.server.objects.job.worker.content.FileValues
@@ -61,7 +62,7 @@ class BytesSinkWorker(
 
 
     override suspend fun onElement(element: DataValue, control: JobControl) {
-        val slot = checkNotNull(Recyclable.of(element)) { "A chunk must be pooled" }
+        val slot = checkNotNull((element.access as? RecyclableAccess)?.recyclable) { "A chunk must be pooled" }
         slots += slot
         val generation = slot.generation
 

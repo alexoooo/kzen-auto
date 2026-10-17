@@ -1,0 +1,36 @@
+# Loop supersession fixture (ScriptResourceHoldTest): the body opens a fresh AutoCloseable each iteration and
+# then records how many have closed so far. Re-recording Open's slot releases the previous iteration's hold, so
+# the collected counts are 0, 1, 2 — each superseded value closes at the next iteration, not at the Script's
+# settle (which closes only the last). Also the mid-loop live-edit fixture: parked before the second
+# iteration's Open, the migration must carry the first iteration's hold so the resumed loop still releases it
+# on re-record.
+
+main:
+  is: Script
+  results:
+    main:
+      class: kotlin.String
+      generics: []
+      nullable: false
+
+main.steps/Range:
+  is: FormulaStep
+  code: "1..3"
+
+main.steps/Loop:
+  is: ForEachStep
+  items: Range
+
+main.steps/Loop.item/Item:
+  is: ForEachItemBinding
+
+main.steps/Loop.steps/Open:
+  is: OpenCloseableStep
+  name: loop
+
+main.steps/Loop.steps/Tally:
+  is: ClosedCountStep
+
+main.steps/Result:
+  is: ResultStep
+  code: 'Loop.joinToString(",")'
